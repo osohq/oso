@@ -1,0 +1,15 @@
+[package]
+name = "polar"
+version = "0.1.0"
+authors = ["oso <dev@osohq.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+
+[build_dependencies]
+cbindgen = "0.14.2"
