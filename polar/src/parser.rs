@@ -203,7 +203,7 @@ pub fn parse_str(src: String) -> Result<Vec<Term>, ParseError> {
     // let mut lex = Lexer::new(&src)?;
     // let clauses = parse_polar_file(&mut lex)?;
     // Ok(clauses)
-    Err(ParseError::InvalidTokenCharacter {c: '\0'})
+    Err(ParseError::InvalidTokenCharacter { c: '\0' })
 }
 
 #[cfg(test)]

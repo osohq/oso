@@ -3,6 +3,7 @@ use super::types::*;
 
 use std::collections::HashMap;
 use std::f32::consts::E;
+use std::rc::Rc;
 
 // Api for polar.
 // Everything here has a corollary in lib that exposes it over ffi.
@@ -21,8 +22,68 @@ pub struct Query {
 
     // WOW HACK
     done: bool,
-    results: Vec<Environment>,
-    results_returned: usize,
+}
+
+type Match = Option<Env>;
+
+fn unify(left: &Term, right: &Term, env: &Env) -> Match {
+    // TODO make parent environment and make env not mut
+    let new_env = Environment::new(env);
+    unify_inner(&left, &right, new_env).map(Rc::new)
+}
+
+fn unify_inner(left: &Term, right: &Term, env: Environment) -> Option<Environment> {
+    match (&left.value, &right.value) {
+        (Value::Symbol(_), _) => unify_var(left, right, env),
+        (_, Value::Symbol(_)) => unify_var(right, left, env),
+        (Value::List(left), Value::List(right)) => {
+            if left.len() != right.len() {
+                return None;
+            }
+
+            let mut env = env;
+            for (left, right) in left.iter().zip(right) {
+                let maybe_match = unify_inner(left, &right, env);
+                if let Some(match_) = maybe_match {
+                    env = match_;
+                } else {
+                    return None;
+                }
+            }
+
+            Some(env)
+        }
+        (Value::Integer(left), Value::Integer(right)) => {
+            if left == right {
+                Some(env)
+            } else {
+                None
+            }
+        }
+        // TODO other cases
+        (_, _) => unimplemented!(),
+    }
+}
+
+fn unify_var(left: &Term, right: &Term, mut env: Environment) -> Option<Environment> {
+    let left_sym = if let Value::Symbol(left_sym) = &left.value {
+        left_sym
+    } else {
+        panic!("unify_var must be called with left as a Symbol.");
+    };
+
+    if let Some(left_value) = env.get(&left_sym) {
+        return unify_inner(&left_value.clone(), right, env);
+    }
+
+    if let Value::Symbol(right_sym) = &right.value {
+        if let Some(right_value) = env.get(&right_sym) {
+            return unify_inner(left, &right_value.clone(), env);
+        }
+    }
+
+    env.set(left_sym.clone(), right.clone());
+    return Some(env);
 }
 
 impl Query {
@@ -40,17 +101,12 @@ impl Query {
     // }
 
     pub fn new_from_pred(predicate: Predicate) -> Self {
-        let results = vec![
-            Environment{ bindings: HashMap::new()}
-        ];
+        let results = vec![Environment::empty()];
         Query {
             predicate,
-            results,
             done: false,
-            results_returned: 0
         }
     }
-
 }
 
 pub struct Polar {
@@ -60,19 +116,16 @@ pub struct Polar {
 impl Polar {
     pub fn new() -> Self {
         let foo_rule = Rule {
-
-            params: vec![
-                Term {
-                    id: 0,
-                    value: Value::Symbol(Symbol("a".to_owned())),
-                }
-            ],
+            params: vec![Term {
+                id: 0,
+                value: Value::Symbol(Symbol("a".to_owned())),
+            }],
             body: vec![],
         };
 
         let generic_rule = GenericRule {
             name: "foo".to_owned(),
-            rules: vec![foo_rule]
+            rules: vec![foo_rule],
         };
 
         let mut generic_rules = HashMap::new();
@@ -82,7 +135,7 @@ impl Polar {
             knowledge_base: KnowledgeBase {
                 types: HashMap::new(),
                 rules: generic_rules,
-            }
+            },
         }
     }
 
@@ -98,22 +151,24 @@ impl Polar {
 
     pub fn query(&mut self, query: &mut Query) -> QueryEvent {
         if query.done {
-            return QueryEvent::Done
+            return QueryEvent::Done;
         }
+
         if let Some(generic_rule) = self.knowledge_base.rules.get(&query.predicate.name) {
             assert_eq!(generic_rule.name, query.predicate.name);
             let rule = &generic_rule.rules[0]; // just panic.
             let var = &rule.params[0]; // is a variable
             let val = &query.predicate.args[0]; // is a integer.
-            assert!(matches!(val.value, Value::Integer(_)));
-            if let Value::Symbol(s) = &var.value {
-                let mut bindings = HashMap::new();
-                bindings.insert(s.clone(), val.clone());
-                let environment = Environment {
-                    bindings
-                };
+
+            let env = Rc::new(Environment::empty());
+
+            let matched = unify(var, val, &env);
+            if let Some(match_) = matched {
+                assert!(matches!(val.value, Value::Integer(_)));
                 query.done = true;
-                return QueryEvent::Result {environment}
+                return QueryEvent::Result {
+                    bindings: match_.flatten_bindings(),
+                };
             }
         }
         panic!("Make this return a result anyway");
@@ -126,18 +181,27 @@ mod tests {
     #[test]
     fn it_works() {
         let mut polar = Polar::new();
-        let mut query = Query::new_from_pred(Predicate{ name: "foo".to_owned(), args: vec![Term{id: 2, value: Value::Integer(0)}]});
+        let mut query = Query::new_from_pred(Predicate {
+            name: "foo".to_owned(),
+            args: vec![Term {
+                id: 2,
+                value: Value::Integer(0),
+            }],
+        });
         let mut results = 0;
         loop {
             let event = polar.query(&mut query);
             match event {
                 QueryEvent::Done => break,
-                QueryEvent::Result {environment} => {
+                QueryEvent::Result { bindings } => {
                     results += 1;
-                    assert_eq!(environment.bindings[&Symbol("a".to_owned())].value, Term{id: 99, value: Value::Integer(0)}.value);
+                    assert_eq!(
+                        bindings[&Symbol("a".to_owned())].value,
+                        Value::Integer(0)
+                    );
                 }
             }
         }
-        assert!(results == 1);
+        assert_eq!(results, 1);
     }
 }
