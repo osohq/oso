@@ -8,96 +8,159 @@ pub enum Token {
     EOF,
     LP,
     RP,
-    QuestionMark,
+    Dot,
     SemiColon,
+    Comma,
     Name(String),
+    String(String),
+    Int(i64),
 }
 
 #[derive(Debug)]
 pub enum ParseError {
-    InvalidTokenCharacter { c: char },
+    InvalidTokenCharacter(char),
     InvalidToken { expected: Token, got: Token },
+    ErrorParsingNumber(String),
     //InvalidTokenName { expected: Token, got: Token },
+    Unimplemented
 }
 
 fn get_next_token(src: &mut Peekable<Chars>) -> Result<Token, ParseError> {
-    'restart: loop {
-        loop {
-            match src.peek() {
-                Some(' ') | Some('\n') | Some('\r') | Some('\t') => {
-                    src.next();
+    loop {
+        match src.peek() {
+            Some(' ') | Some('\n') | Some('\r') | Some('\t') => {
+                src.next();
+            },
+            Some('#') => {
+                src.next();
+                loop {
+                    match src.peek() {
+                        // @TODO: Handle \r\n for windows.
+                        None | Some('\n') => break,
+                        _ => src.next()
+                    };
                 }
-                _ => break,
+            }
+            _ => break,
+        }
+    }
+
+    let t = match src.peek().cloned() {
+        None => Ok(Token::EOF),
+        Some(c) => {
+            match c {
+                // Name
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let mut name = String::new();
+                    name.push(c);
+                    src.next();
+                    loop {
+                        if let Some(c) = src.peek().cloned() {
+                            match c {
+                                'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                                    name.push(c);
+                                    src.next();
+                                    continue;
+                                }
+                                _ => (),
+                            }
+                        }
+                        break;
+                    }
+                    Ok(Token::Name(name))
+                }
+                '0'..='9' => {
+                    let mut num = String::new();
+                    num.push(c);
+                    src.next();
+                    loop {
+                        if let Some(c) = src.peek().cloned() {
+                            match c {
+                                '0'..='9' => {
+                                    num.push(c);
+                                    src.next();
+                                    continue;
+                                }
+                                _ => (),
+                            }
+                        }
+                        break;
+                    }
+                    if let Ok(i) = num.parse::<i64>() {
+                        Ok(Token::Int(i))
+                    } else {
+                        Err(ParseError::ErrorParsingNumber(num))
+                    }
+
+                }
+                '"' => {
+                    let mut s = String::new();
+                    src.next();
+                    // @TODO: Handle escapes.
+                    loop {
+                        match src.peek().cloned() {
+                            Some('"') | None => {
+                                src.next();
+                                break;
+                            }
+                            Some(c) => {
+                                s.push(c);
+                                src.next();
+                            }
+                        }
+                    }
+                    Ok(Token::String(s))
+                }
+                '(' => {
+                    src.next();
+                    Ok(Token::LP)
+                }
+                ')' => {
+                    src.next();
+                    Ok(Token::RP)
+                }
+                ';' => {
+                    src.next();
+                    Ok(Token::SemiColon)
+                }
+                ',' => {
+                    src.next();
+                    Ok(Token::Comma)
+                }
+                '.' => {
+                    src.next();
+                    Ok(Token::Dot)
+                }
+                _ => Err(ParseError::InvalidTokenCharacter(c)),
             }
         }
-
-        let t = match src.peek().cloned() {
-            None => Ok(Token::EOF),
-            Some(c) => {
-                match c {
-                    // Name
-                    'a'..='z' | 'A'..='Z' | '_' => {
-                        let mut name = String::new();
-                        name.push(c);
-                        src.next();
-                        loop {
-                            if let Some(c) = src.peek().cloned() {
-                                match c {
-                                    'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
-                                        name.push(c);
-                                        src.next();
-                                        continue;
-                                    }
-                                    _ => (),
-                                }
-                            }
-                            break;
-                        }
-                        Ok(Token::Name(name))
-                    }
-                    '(' => {
-                        src.next();
-                        Ok(Token::LP)
-                    }
-                    ')' => {
-                        src.next();
-                        Ok(Token::RP)
-                    }
-                    ';' => {
-                        src.next();
-                        Ok(Token::SemiColon)
-                    }
-                    _ => Err(ParseError::InvalidTokenCharacter { c }),
-                }
-            }
-        };
-        return t;
-    }
+    };
+    return t;
 }
 
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     src: Peekable<Chars<'a>>,
     pub token: Token,
 }
 
 impl<'a> Lexer<'a> {
-    fn new(s: &'a str) -> Result<Self, ParseError> {
+    pub fn new(s: &'a str) -> Result<Self, ParseError> {
         let mut src = s.chars().peekable();
         let token = get_next_token(&mut src)?;
         Ok(Lexer { src, token })
     }
 
-    fn next_token(&mut self) -> Result<(), ParseError> {
+    pub fn next_token(&mut self) -> Result<(), ParseError> {
         let token = get_next_token(&mut self.src)?;
         self.token = token;
         Ok(())
     }
 
-    fn is_token(&mut self, t: Token) -> bool {
+    pub fn is_token(&self, t: Token) -> bool {
         t == self.token
     }
 
-    fn match_token(&mut self, t: Token) -> Result<bool, ParseError> {
+    pub fn match_token(&mut self, t: Token) -> Result<bool, ParseError> {
         if self.is_token(t) {
             self.next_token()?;
             Ok(true)
@@ -106,7 +169,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn expect_token(&mut self, t: Token) -> Result<(), ParseError> {
+    pub fn expect_token(&mut self, t: Token) -> Result<(), ParseError> {
         if !self.match_token(t.clone())? {
             Err(ParseError::InvalidToken {
                 expected: t,
@@ -117,7 +180,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn expect_a_name(&mut self) -> Result<String, ParseError> {
+    pub fn expect_a_name(&mut self) -> Result<String, ParseError> {
         if let Token::Name(n) = self.token.clone() {
             self.next_token()?;
             Ok(n)
@@ -129,22 +192,22 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // fn is_name(&mut self, string: &str) -> bool {
-    //     if let Token::Name(ref s) = self.token {
-    //         s == string
-    //     } else {
-    //         false
-    //     }
-    // }
+    pub fn is_name(&self, string: &str) -> bool {
+        if let Token::Name(ref s) = self.token {
+            s == string
+        } else {
+            false
+        }
+    }
 
-    // fn match_name(&mut self, string: &str) -> Result<bool, ParseError> {
-    //     if self.is_name(string) {
-    //         self.next_token()?;
-    //         Ok(true)
-    //     } else {
-    //         Ok(false)
-    //     }
-    // }
+    pub fn match_name(&mut self, string: &str) -> Result<bool, ParseError> {
+        if self.is_name(string) {
+            self.next_token()?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
 
     // fn expect_name(&mut self, string: &str) -> Result<(), ParseError> {
     //     if !self.match_name(string)? {
@@ -199,33 +262,156 @@ impl<'a> Lexer<'a> {
 //     Ok(clauses)
 // }
 
-pub fn parse_str(src: String) -> Result<Vec<Term>, ParseError> {
+pub fn parse_term(mut lexer: &mut Lexer) -> Result<Term, ParseError> {
+    if lexer.is_token(Token::LP) {
+        let list = parse_term_list(&mut lexer)?;
+        Ok(Term{id: 0, value: Value::List(list)})
+    } else if lexer.match_name("true")? {
+        lexer.next_token()?;
+        Ok(Term{id: 0, value: Value::Boolean(true)})
+    } else if lexer.match_name("false")? {
+        lexer.next_token()?;
+        Ok(Term{id: 0, value: Value::Boolean(true)})
+    } else if let Token::Int(i) = lexer.token {
+        lexer.next_token()?;
+        Ok(Term{id: 0, value: Value::Integer(i)})
+    } else {
+        match lexer.token.clone() {
+            Token::String(s) => {
+                lexer.next_token()?;
+                Ok(Term{id: 0, value: Value::String(s)})
+            },
+            Token::Name(n) => {
+                lexer.next_token()?;
+                if lexer.match_token(Token::Dot)? {
+                    let mut args = vec![];
+                    args.push(Term{id: 0, value: Value::Symbol(Symbol(n))});
+                    let attribute = lexer.expect_a_name()?;
+                    args.push(Term{id: 0, value: Value::Symbol(Symbol(attribute))});
+                    if lexer.is_token(Token::LP) {
+                        let call_args = parse_term_list(&mut lexer)?;
+                        for a in call_args {
+                            args.push(a);
+                        }
+                    }
+                    let name = ".".to_owned();
+                    Ok(Term{id: 0, value: Value::Call(Predicate{name, args})})
+                } else {
+                    Ok(Term{id: 0, value: Value::Symbol(Symbol(n))})
+                }
+            },
+            // @TODO: Instance
+            _ => Err(ParseError::Unimplemented)
+        }
+    }
+}
+
+pub fn parse_term_list(mut lexer: &mut Lexer) -> Result<TermList, ParseError> {
+    lexer.expect_token(Token::LP)?;
+    let mut terms = vec![];
+    while !lexer.is_token(Token::RP) {
+        let val = parse_term(&mut lexer)?;
+        terms.push(val);
+        lexer.match_token(Token::Comma)?;
+    }
+    lexer.expect_token(Token::RP)?;
+    Ok(terms)
+}
+
+pub fn parse_predicate(mut lexer: &mut Lexer) -> Result<Predicate, ParseError> {
+    let name = lexer.expect_a_name()?;
+    let args = parse_term_list(&mut lexer)?;
+    Ok(Predicate{name, args})
+}
+
+pub fn parse_query(src: String) -> Result<Predicate, ParseError> {
+    let mut lex = Lexer::new(&src)?;
+    let pred = parse_predicate(&mut lex)?;
+    Ok(pred)
+}
+
+pub fn parse_source(src: String) -> Result<Vec<Term>, ParseError> {
     // let mut lex = Lexer::new(&src)?;
     // let clauses = parse_polar_file(&mut lex)?;
     // Ok(clauses)
-    Err(ParseError::InvalidTokenCharacter { c: '\0' })
+    Err(ParseError::InvalidTokenCharacter('\0'))
 }
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
-    // #[test]
-    // fn it_works() {
-    //     let query = parse_str(
-    //         r#"
-    //         foo(a)
-    //         "#
-    //             .to_owned(),
-    //     )
-    //         .unwrap();
-    //     let rule = parse_str(
-    //         r#"
-    //         foo(a);
-    //         "#
-    //             .to_owned(),
-    //     )
-    //         .unwrap();
-    //     println!("{:?}", kb);
-    //     println!("{:?}", query);
+    use proptest::prelude::*;
+    use proptest::test_runner::Config;
+    use super::*;
+
+    #[test]
+    fn test_simple_lex() {
+        let input: &'static str = r#"abc hello "string" (what, up) #comment
+foo;"#;
+        let mut l = Lexer::new(input).unwrap();
+
+        let mut assert_token = |token| {
+            assert_eq!(l.token, token);
+            l.next_token().unwrap();
+        };
+
+        assert_token(Token::Name("abc".to_string()));
+        assert_token(Token::Name("hello".to_string()));
+        assert_token(Token::String("string".to_string()));
+        assert_token(Token::LP);
+        assert_token(Token::Name("what".to_string()));
+        assert_token(Token::Comma);
+        assert_token(Token::Name("up".to_string()));
+        assert_token(Token::RP);
+        assert_token(Token::Name("foo".to_string()));
+        assert_token(Token::SemiColon);
+        assert_token(Token::EOF);
+    }
+
+    #[test]
+    fn test_example_predicates() {
+        let input: &'static str = r#"foo(a, b, "c", d.e(f.g("x")))"#;
+        let mut l = Lexer::new(input).unwrap();
+        let pred = parse_predicate(&mut l);
+        println!("{}", input);
+        println!("{:#?}", pred);
+    }
+
+    // @TODO: Get proptest working.
+    // fn print_value(val: &Value) -> String {
+    //     match val {
+    //         Value::Integer(i) => format!("{}", i),
+    //         Value::String(s) => format!("\"{}\"", s),
+    //         Value::Boolean(true) => "true".to_owned(),
+    //         Value::Boolean(false) => "false".to_owned(),
+    //         Value::Instance(i) => "instance".to_owned(), // @TODO
+    //         Value::Call(predicate) => "call".to_owned(), // @TODO
+    //         Value::List(terms) => "list".to_owned(), // @TODO
+    //         Value::Symbol(symbol) => "symbol".to_owned(), // @TODO
+    //     }
     // }
+    // // @TODO: Needs to be a recursive BoxedStrategy
+    //
+    //
+    // fn gen_value() -> BoxedStrategy<Value> {
+    //     let leaf = prop_oneof![
+    //         any::<i64>().prop_map(Value::Integer),
+    //         //gen_name().prop_map(Value::Variable),
+    //         //"[^\"]*".prop_map(Value::StringValue),
+    //         any::<bool>().prop_map(Value::BoolValue),
+    //     ];
+    //     leaf.prop_recursive(
+    //         3,
+    //         50,
+    //         10,
+    //         |inner| prop_oneof![
+    //             prop::collection::vec(innter.clone(), 0..10).prop_map(Value::List),
+    //
+    //         ]
+    //     )
+    // }
+    //
+    // prop_compose! {
+    //     fn gen_name()(n in "")
+    // }
+
 }

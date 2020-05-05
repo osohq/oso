@@ -34,7 +34,7 @@ pub struct Context {
     // maybe for ffi, you say the method on what python class you called or whatever.
 }
 
-type TermList = Vec<Term>;
+pub type TermList = Vec<Term>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Symbol(pub String);
@@ -51,7 +51,7 @@ pub enum Value {
     String(String),
     Boolean(bool),
     Instance(Instance),
-    Call(Predicate),
+    Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
     Symbol(Symbol),
 }
@@ -61,6 +61,7 @@ pub struct Term {
     pub id: u64,
     pub value: Value,
 }
+
 
 // steve here's how u parse stuff
 // ( + 1 2 (* 3 4))

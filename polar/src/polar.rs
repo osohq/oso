@@ -4,6 +4,7 @@ use super::types::*;
 use std::collections::HashMap;
 use std::f32::consts::E;
 use std::rc::Rc;
+use crate::parser::{parse_predicate, parse_query};
 
 // Api for polar.
 // Everything here has a corollary in lib that exposes it over ffi.
@@ -87,18 +88,14 @@ fn unify_var(left: &Term, right: &Term, mut env: Environment) -> Option<Environm
 }
 
 impl Query {
-    // pub fn new_from_string(query_string: String) -> Self {
-    //     let results = vec![
-    //         Environment{ bindings: HashMap::new()}
-    //     ];
-    //
-    //     Query {
-    //         query_string,
-    //
-    //         results,
-    //         results_returned: 0,
-    //     }
-    // }
+    pub fn new_from_string(query_string: String) -> Self {
+        let predicate = parse_query(query_string).unwrap(); // @TODO: Errors.
+        let results = vec![Environment::empty()];
+        Query {
+            predicate,
+            done: false,
+        }
+    }
 
     pub fn new_from_pred(predicate: Predicate) -> Self {
         let results = vec![Environment::empty()];
@@ -143,7 +140,7 @@ impl Polar {
     // Use when reading in a polar file.
     pub fn load_str(&mut self, src: String) {
         // @TODO: Return Errors
-        let clauses = parser::parse_str(src).unwrap();
+        let clauses = parser::parse_source(src).unwrap();
         for clause in clauses {
             //self.knowledge_base.push(clause)
         }
@@ -180,28 +177,35 @@ mod tests {
     use super::*;
     #[test]
     fn it_works() {
+
         let mut polar = Polar::new();
-        let mut query = Query::new_from_pred(Predicate {
+
+        let mut queries = vec![];
+        queries.push(Query::new_from_pred(Predicate {
             name: "foo".to_owned(),
             args: vec![Term {
                 id: 2,
                 value: Value::Integer(0),
             }],
-        });
-        let mut results = 0;
-        loop {
-            let event = polar.query(&mut query);
-            match event {
-                QueryEvent::Done => break,
-                QueryEvent::Result { bindings } => {
-                    results += 1;
-                    assert_eq!(
-                        bindings[&Symbol("a".to_owned())].value,
-                        Value::Integer(0)
-                    );
+        }));
+        queries.push(Query::new_from_string("foo(0)".to_owned()));
+
+        for mut query in &mut queries {
+            let mut results = 0;
+            loop {
+                let event = polar.query(&mut query);
+                match event {
+                    QueryEvent::Done => break,
+                    QueryEvent::Result { bindings } => {
+                        results += 1;
+                        assert_eq!(
+                            bindings[&Symbol("a".to_owned())].value,
+                            Value::Integer(0)
+                        );
+                    }
                 }
             }
+            assert_eq!(results, 1);
         }
-        assert_eq!(results, 1);
     }
 }
