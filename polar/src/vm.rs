@@ -2,38 +2,38 @@ use super::types::*;
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub enum Instruction {
+pub enum Goal {
     Backtrack,
-    Bind(Symbol, Term),
+    Bind { variable: Symbol, value: Term },
     Bindings,
-    Choice(Vec<InstructionStream>, usize),
+    Choice { choices: Vec<Goals>, bsp: usize }, // binding stack pointer
     Cut,
-    External(Symbol), // POC
+    External { name: Symbol }, // POC
     Halt,
-    Isa(Term, Term),
-    Lookup(Instance, Term),
-    LookupExternal(Instance, Term),
-    Query(Predicate),
-    Result(i64),
-    Unify(Term, Term),
+    Isa { left: Term, right: Term },
+    Lookup { instance: Instance, field: Term },
+    LookupExternal { instance: Instance, field: Term },
+    Query { predicate: Predicate },
+    Result { value: i64 },
+    Unify { left: Term, right: Term },
 }
 
-type InstructionStream = Vec<Instruction>;
+type Goals = Vec<Goal>;
 
 #[derive(Debug)]
 struct Binding(Symbol, Term);
 
 pub struct PolarVirtualMachine {
-    instructions: InstructionStream,
+    goals: Goals,
     bindings: Vec<Binding>,
     result: i64,
     kb: KnowledgeBase,
 }
 
 impl PolarVirtualMachine {
-    pub fn new(kb: KnowledgeBase, instructions: InstructionStream) -> Self {
+    pub fn new(kb: KnowledgeBase, goals: Goals) -> Self {
         Self {
-            instructions,
+            goals,
             bindings: vec![],
             result: 0,
             kb,
@@ -41,35 +41,35 @@ impl PolarVirtualMachine {
     }
 
     pub fn run(&mut self) -> QueryEvent {
-        while let Some(instruction) = self.instructions.pop() {
-            match instruction {
-                Instruction::Backtrack => self.backtrack(),
-                Instruction::Bind(var, value) => self.bind(&var, &value),
-                Instruction::Bindings => {
+        while let Some(goal) = self.goals.pop() {
+            match goal {
+                Goal::Backtrack => self.backtrack(),
+                Goal::Bind { variable, value } => self.bind(&variable, &value),
+                Goal::Bindings => {
                     return QueryEvent::Result {
                         bindings: self.bindings(),
                     };
                 }
-                Instruction::Choice(choices, index) => self.choice(choices, index),
-                Instruction::Cut => self.cut(),
-                Instruction::External(name) => return QueryEvent::External(name), // POC
-                Instruction::Halt => self.halt(),
-                Instruction::Isa(_, _) => unimplemented!("isa"),
-                Instruction::Lookup(_, _) => unimplemented!("lookup"),
-                Instruction::LookupExternal(_, _) => unimplemented!("lookup external"),
-                Instruction::Query(predicate) => self.query(&predicate),
-                Instruction::Result(result) => self.result(result),
-                Instruction::Unify(left, right) => self.unify(&left, &right),
+                Goal::Choice { choices, bsp } => self.choice(choices, bsp),
+                Goal::Cut => self.cut(),
+                Goal::External { name } => return QueryEvent::External(name), // POC
+                Goal::Halt => self.halt(),
+                Goal::Isa { .. } => unimplemented!("isa"),
+                Goal::Lookup { .. } => unimplemented!("lookup"),
+                Goal::LookupExternal { .. } => unimplemented!("lookup external"),
+                Goal::Query { predicate } => self.query(&predicate),
+                Goal::Result { value } => self.result(value),
+                Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
         QueryEvent::Done
     }
 
     fn backtrack(&mut self) {
-        while let Some(instruction) = self.instructions.pop() {
-            match instruction {
-                Instruction::Choice(choices, index) => {
-                    self.bindings.drain(index..);
+        while let Some(goal) = self.goals.pop() {
+            match goal {
+                Goal::Choice { choices, bsp } => {
+                    self.bindings.drain(bsp..);
                     if choices.len() == 0 {
                         break;
                     }
@@ -77,6 +77,15 @@ impl PolarVirtualMachine {
                 _ => (),
             }
         }
+    }
+
+    fn push_goal(&mut self, goal: Goal) {
+        self.goals.push(goal);
+    }
+
+    fn append_goals(&mut self, mut goals: Goals) {
+        goals.reverse();
+        self.goals.append(&mut goals);
     }
 
     fn query(&mut self, predicate: &Predicate) {
@@ -93,13 +102,18 @@ impl PolarVirtualMachine {
                 let var = &rule.params[0];
                 let val = &predicate.args[0];
                 choices.push(vec![
-                    Instruction::Unify(var.clone(), val.clone()),
-                    Instruction::Bindings,
+                    Goal::Unify {
+                        left: var.clone(),
+                        right: val.clone(),
+                    },
+                    Goal::Bindings,
                 ]);
             }
 
-            self.instructions
-                .push(Instruction::Choice(choices, self.bindings.len()));
+            self.push_goal(Goal::Choice {
+                choices,
+                bsp: self.bindings.len(),
+            });
         } else {
             self.backtrack();
         }
@@ -114,9 +128,12 @@ impl PolarVirtualMachine {
     }
 
     fn cut(&mut self) {
-        for instruction in self.instructions.iter_mut().rev() {
-            match instruction {
-                Instruction::Choice(ref mut choices, _) => {
+        for goal in self.goals.iter_mut().rev() {
+            match goal {
+                Goal::Choice {
+                    ref mut choices,
+                    bsp: _,
+                } => {
                     choices.clear();
                     break;
                 }
@@ -135,17 +152,16 @@ impl PolarVirtualMachine {
     //
     // [a,b.c] [other choices later]
 
-    fn choice(&mut self, mut choices: Vec<InstructionStream>, index: usize) {
+    fn choice(&mut self, mut choices: Vec<Goals>, bsp: usize) {
         if choices.len() > 0 {
-            let mut choice = choices.remove(0);
-            self.instructions.push(Instruction::Choice(choices, index));
-            choice.reverse();
-            self.instructions.append(&mut choice);
+            let choice = choices.remove(0);
+            self.push_goal(Goal::Choice { choices, bsp });
+            self.append_goals(choice);
         }
     }
 
     pub fn halt(&mut self) {
-        self.instructions.clear();
+        self.goals.clear();
     }
 
     pub fn result(&mut self, result: i64) {
@@ -215,7 +231,10 @@ mod tests {
         let zero = Term::new(Value::Integer(0));
         let mut vm = PolarVirtualMachine::new(
             KnowledgeBase::new(),
-            vec![Instruction::Bind(x.clone(), zero.clone())],
+            vec![Goal::Bind {
+                variable: x.clone(),
+                value: zero.clone(),
+            }],
         );
         vm.run();
         assert_eq!(vm.value(&x), Some(&zero));
@@ -224,9 +243,9 @@ mod tests {
 
     #[test]
     fn halt() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![Instruction::Halt]);
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![Goal::Halt]);
         vm.run();
-        assert_eq!(vm.instructions.len(), 0);
+        assert_eq!(vm.goals.len(), 0);
         assert_eq!(vm.bindings.len(), 0);
     }
 
@@ -239,8 +258,14 @@ mod tests {
         let mut vm = PolarVirtualMachine::new(
             KnowledgeBase::new(),
             vec![
-                Instruction::Unify(Term::new(Value::Symbol(x.clone())), zero.clone()), // binds x
-                Instruction::Unify(Term::new(Value::Symbol(y.clone())), one.clone()),  // binds y
+                Goal::Unify {
+                    left: Term::new(Value::Symbol(x.clone())),
+                    right: zero.clone(),
+                },
+                Goal::Unify {
+                    left: Term::new(Value::Symbol(y.clone())),
+                    right: one.clone(),
+                },
             ],
         );
         vm.run();

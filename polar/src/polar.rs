@@ -47,7 +47,7 @@ impl Polar {
     }
 
     pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
-        let query = Instruction::Query(predicate.clone());
+        let query = Goal::Query{predicate: predicate.clone()};
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { predicate, vm }
     }
