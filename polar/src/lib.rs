@@ -37,7 +37,7 @@ pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) {
     let polar = unsafe { &mut *polar_ptr };
     let cs = unsafe { CStr::from_ptr(src) };
     let s = cs.to_str().expect("to_str() failed");
-    polar.load_str(s.to_owned());
+    polar.load_str(s);
 }
 
 #[no_mangle]

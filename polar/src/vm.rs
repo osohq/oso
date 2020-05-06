@@ -1,10 +1,12 @@
 use super::types::*;
 use std::collections::HashMap;
+use std::ops::Index;
 
 #[derive(Debug)]
 pub enum Instruction {
     Backtrack,
     Bind(Symbol, Term),
+    Bindings,
     Choice(Vec<InstructionStream>, usize),
     Cut,
     External(Symbol), // POC
@@ -44,16 +46,17 @@ impl PolarVirtualMachine {
             match instruction {
                 Instruction::Backtrack => self.backtrack(),
                 Instruction::Bind(var, value) => self.bind(&var, &value),
-                Instruction::Choice(choices, _) => self.choice(choices),
+                Instruction::Bindings => {
+                    return QueryEvent::Result{ bindings: self.bindings() };
+                },
+                Instruction::Choice(choices, index) => self.choice(choices, index),
                 Instruction::Cut => self.cut(),
                 Instruction::External(name) => return QueryEvent::External(name), // POC
                 Instruction::Halt => self.halt(),
                 Instruction::Isa(_, _) => unimplemented!("isa"),
                 Instruction::Lookup(_, _) => unimplemented!("lookup"),
                 Instruction::LookupExternal(_, _) => unimplemented!("lookup external"),
-                Instruction::Query(predicate) => {
-                    return QueryEvent::Result{ bindings: self.query(&predicate) };
-                }
+                Instruction::Query(predicate) => self.query(&predicate),
                 Instruction::Result(result) => self.result(result),
                 Instruction::Unify(left, right) => self.unify(&left, &right),
             }
@@ -75,22 +78,32 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn query(&mut self, predicate: &Predicate) -> Bindings {
+    fn query(&mut self, predicate: &Predicate) {
         // Select applicable rules for predicate.
         // Sort applicable rules by specificity.
         // Create a choice over the applicable rules.
 
-
         if let Some(generic_rule) = self.kb.rules.get(&predicate.name) {
             let generic_rule = generic_rule.clone();
             assert_eq!(generic_rule.name, predicate.name);
-            let rule = &generic_rule.rules[0]; // just panic
-            let var = &rule.params[0];
-            let val = &predicate.args[0];
 
-            self.unify(var,val); // @TODO: make instruction.
+            let mut choices = vec![];
+            for rule in &generic_rule.rules {
+                let var = &rule.params[0];
+                let val = &predicate.args[0];
+                choices.push(vec![
+                    Instruction::Unify(var.clone(), val.clone()),
+                    Instruction::Bindings,
+                ]);
+            }
+
+            self.instructions.push(Instruction::Choice(choices, self.bindings.len()));
+        } else {
+            self.backtrack();
         }
-        
+    }
+
+    fn bindings(&mut self) -> Bindings {
         let mut bindings = HashMap::new();
         for binding in &self.bindings {
             bindings.insert(binding.0.clone(), binding.1.clone());
@@ -114,10 +127,17 @@ impl PolarVirtualMachine {
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
-    fn choice(&mut self, mut choices: Vec<InstructionStream>) {
-        if let Some(mut choice) = choices.pop() {
-            let index = self.bindings.len();
+    // sp [[a,b,c][d,e,f]]
+    // [[d,e,f] a, b, c]
+    // [[] a, b, c, d, e, f]
+    //
+    // [a,b.c] [other choices later]
+
+    fn choice(&mut self, mut choices: Vec<InstructionStream>, index: usize) {
+        if choices.len() > 0 {
+            let mut choice = choices.remove(0);
             self.instructions.push(Instruction::Choice(choices, index));
+            choice.reverse();
             self.instructions.append(&mut choice);
         }
     }
