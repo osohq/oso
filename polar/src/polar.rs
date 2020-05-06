@@ -194,4 +194,33 @@ mod tests {
             assert_eq!(results, 1);
         }
     }
+
+    fn external_query() {
+        let mut polar = Polar::new();
+        let mut query = polar.new_query(Predicate {
+            name: "foo".to_owned(),
+            args: vec![Term {
+                id: 1,
+                value: Value::Integer(1),
+            }],
+        });
+
+        /* The "external" loop. */
+        let mut results = 0;
+        loop {
+            let event = polar.query(&mut query);
+            match event {
+                QueryEvent::Done => break,
+                QueryEvent::External(_) => polar.result(&mut query, 1),
+                QueryEvent::Result { bindings } => {
+                    results += 1;
+                    assert_eq!(
+                        bindings[&Symbol("a".to_owned())].value,
+                        Value::Integer(1)
+                    );
+                }
+            }
+        }
+        assert_eq!(results, 1);
+    }
 }
