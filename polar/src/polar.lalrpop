@@ -37,7 +37,7 @@ Terms: Vec<Term> = {
     <head:Exp> "," <mut tail:Terms> => {tail.insert(0, head); tail}
 };
 
-Term: Term = {
+pub Term: Term = {
     <term:Integer> => term,
     <term:PolarString> => term,
     <term:Boolean> => term,
