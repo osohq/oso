@@ -14,7 +14,7 @@ pub enum Goal {
     Lookup { instance: Instance, field: Term },
     LookupExternal { instance: Instance, field: Term },
     Query { predicate: Predicate },
-    Result { value: i64 },
+    Result { name: Symbol, value: i64 },
     Unify { left: Term, right: Term },
 }
 
@@ -26,7 +26,6 @@ struct Binding(Symbol, Term);
 pub struct PolarVirtualMachine {
     goals: Goals,
     bindings: Vec<Binding>,
-    result: i64,
     kb: KnowledgeBase,
 }
 
@@ -35,13 +34,13 @@ impl PolarVirtualMachine {
         Self {
             goals,
             bindings: vec![],
-            result: 0,
             kb,
         }
     }
 
     pub fn run(&mut self) -> QueryEvent {
         while let Some(goal) = self.goals.pop() {
+            //println!("{:?}", goal);
             match goal {
                 Goal::Backtrack => self.backtrack(),
                 Goal::Bind { variable, value } => self.bind(&variable, &value),
@@ -52,13 +51,13 @@ impl PolarVirtualMachine {
                 }
                 Goal::Choice { choices, bsp } => self.choice(choices, bsp),
                 Goal::Cut => self.cut(),
-                Goal::External { name } => return QueryEvent::External(name), // POC
+                Goal::External { name } => return QueryEvent::External { name }, // POC
                 Goal::Halt => self.halt(),
                 Goal::Isa { .. } => unimplemented!("isa"),
                 Goal::Lookup { .. } => unimplemented!("lookup"),
                 Goal::LookupExternal { .. } => unimplemented!("lookup external"),
                 Goal::Query { predicate } => self.query(&predicate),
-                Goal::Result { value } => self.result(value),
+                Goal::Result { name, value } => self.result(&name, value),
                 Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
@@ -143,6 +142,7 @@ impl PolarVirtualMachine {
     }
 
     fn bind(&mut self, var: &Symbol, value: &Term) {
+        //println!("{:?} ← {:?}", var, value);
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -164,8 +164,11 @@ impl PolarVirtualMachine {
         self.goals.clear();
     }
 
-    pub fn result(&mut self, result: i64) {
-        self.result = result;
+    pub fn result(&mut self, name: &Symbol, value: i64) {
+        self.push_goal(Goal::Bind {
+            variable: name.clone(),
+            value: Term::new(Value::Integer(value)),
+        });
     }
 
     fn unify(&mut self, left: &Term, right: &Term) {

@@ -8,7 +8,7 @@ use super::parser::{parse_file, parse_query};
 
 pub struct Query {
     //query_string: String,
-    predicate: Predicate,
+    //predicate: Predicate,
     vm: PolarVirtualMachine,
 }
 
@@ -47,9 +47,20 @@ impl Polar {
     }
 
     pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
-        let query = Goal::Query{predicate: predicate.clone()};
+        let query = Goal::Query {
+            predicate: predicate.clone(),
+        };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
-        Query { predicate, vm }
+        Query { vm }
+    }
+
+    #[cfg(test)]
+    pub fn new_query_from_external(&self, name: Symbol) -> Query {
+        let vm = PolarVirtualMachine::new(
+            self.kb.clone(),
+            vec![Goal::Bindings, Goal::External { name }],
+        );
+        Query { vm }
     }
 
     pub fn load_str(&mut self, src: &str) {
@@ -72,8 +83,8 @@ impl Polar {
         query.vm.run()
     }
 
-    pub fn result(&mut self, query: &mut Query, result: i64) {
-        query.vm.result(result)
+    pub fn result(&mut self, query: &mut Query, name: &Symbol, result: i64) {
+        query.vm.result(name, result)
     }
 }
 
@@ -87,21 +98,49 @@ mod tests {
         polar.load_str("foo(1);foo(2);");
         let mut query = polar.new_query("foo(a)");
 
-        /* The "external" loop. */
         let mut results = vec![];
         loop {
             let event = polar.query(&mut query);
             match event {
                 QueryEvent::Done => break,
-                QueryEvent::External(_) => panic!("no external call"),
+                QueryEvent::External { .. } => panic!("no external call"),
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
                 }
             }
         }
         assert_eq!(
-            results.iter().map(|result| result.value.clone()).collect::<Vec<Value>>(),
+            results
+                .iter()
+                .map(|result| result.value.clone())
+                .collect::<Vec<Value>>(),
             vec![Value::Integer(1), Value::Integer(2)]
+        );
+    }
+
+    #[test]
+    fn test_external() {
+        let a = Symbol("a".to_string());
+        let mut polar = Polar::new();
+        let mut query = polar.new_query_from_external(a.clone());
+
+        let mut results = vec![];
+        loop {
+            let event = polar.query(&mut query);
+            match event {
+                QueryEvent::Done => break,
+                QueryEvent::External { name } => polar.result(&mut query, &name, 1),
+                QueryEvent::Result { bindings } => {
+                    results.push(bindings.get(&a).unwrap().clone());
+                }
+            }
+        }
+        assert_eq!(
+            results
+                .iter()
+                .map(|result| result.value.clone())
+                .collect::<Vec<Value>>(),
+            vec![Value::Integer(1)]
         );
     }
 }

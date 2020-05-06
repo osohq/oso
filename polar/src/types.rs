@@ -48,7 +48,13 @@ pub type TermList = Vec<Term>;
 
 impl ToPolarString for TermList {
     fn to_polar(&self) -> String {
-        format!("({})", self.iter().map(|t| t.to_polar()).collect::<Vec<String>>().join(","))
+        format!(
+            "({})",
+            self.iter()
+                .map(|t| t.to_polar())
+                .collect::<Vec<String>>()
+                .join(",")
+        )
     }
 }
 
@@ -113,7 +119,11 @@ pub struct Term {
 
 impl Term {
     pub fn new(value: Value) -> Self {
-        Self { id: 0, offset: 0, value }
+        Self {
+            id: 0,
+            offset: 0,
+            value,
+        }
     }
 }
 
@@ -122,7 +132,6 @@ impl ToPolarString for Term {
         self.value.to_polar()
     }
 }
-
 
 // steve here's how u parse stuff
 // ( + 1 2 (* 3 4))
@@ -146,7 +155,12 @@ pub struct Rule {
 
 impl ToPolarString for Rule {
     fn to_polar(&self) -> String {
-        format!("{}{} := {};", self.name, self.params.to_polar(), self.body.to_polar())
+        format!(
+            "{}{} := {};",
+            self.name,
+            self.params.to_polar(),
+            self.body.to_polar()
+        )
     }
 }
 
@@ -193,7 +207,7 @@ pub struct Environment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     Done,
-    External(Symbol), // POC
+    External { name: Symbol }, // POC
     Result { bindings: Bindings },
 }
 
