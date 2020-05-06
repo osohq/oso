@@ -4,7 +4,7 @@ use super::types::*;
 use std::collections::HashMap;
 use std::f32::consts::E;
 use std::rc::Rc;
-//use crate::parser::{parse_predicate, parse_query};
+use crate::parser::{parse_query, parse_file};
 
 // Api for polar.
 // Everything here has a corollary in lib that exposes it over ffi.
@@ -88,14 +88,14 @@ fn unify_var(left: &Term, right: &Term, mut env: Environment) -> Option<Environm
 }
 
 impl Query {
-    // pub fn new_from_string(query_string: String) -> Self {
-    //     let predicate = parse_query(query_string).unwrap(); // @TODO: Errors.
-    //     let results = vec![Environment::empty()];
-    //     Query {
-    //         predicate,
-    //         done: false,
-    //     }
-    // }
+    pub fn new_from_string(query_string: String) -> Self {
+        let predicate = parse_query(&query_string);
+        let results = vec![Environment::empty()];
+        Query {
+            predicate,
+            done: false,
+        }
+    }
 
     pub fn new_from_pred(predicate: Predicate) -> Self {
         let results = vec![Environment::empty()];
@@ -191,7 +191,7 @@ mod tests {
                 value: Value::Integer(0),
             }],
         }));
-        //queries.push(Query::new_from_string("foo(0)".to_owned()));
+        queries.push(Query::new_from_string("foo(0)".to_owned()));
 
         for mut query in &mut queries {
             let mut results = 0;
