@@ -1,10 +1,10 @@
 use super::types::*;
 use super::vm::*;
 
+use super::parser::{parse_file, parse_query};
 use std::collections::HashMap;
 use std::f32::consts::E;
 use std::rc::Rc;
-use super::parser::{parse_query, parse_file};
 
 // Api for polar.
 // Everything here has a corollary in lib that exposes it over ffi.
@@ -42,7 +42,7 @@ impl Polar {
         // generic_rules.insert("foo".to_owned(), generic_rule);
 
         Self {
-            kb: KnowledgeBase::new()
+            kb: KnowledgeBase::new(),
         }
     }
 
@@ -54,17 +54,21 @@ impl Polar {
     pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
         let query = Instruction::Query(predicate.clone());
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
-        Query {
-            predicate,
-            vm,
-        }
+        Query { predicate, vm }
     }
 
     pub fn load_str(&mut self, src: &str) {
         // @TODO: Return Errors
         let rules = parse_file(src);
         for rule in rules {
-            let generic_rule = self.kb.rules.entry(rule.name.clone()).or_insert(GenericRule{name: rule.name.clone(), rules: vec![]});
+            let generic_rule = self
+                .kb
+                .rules
+                .entry(rule.name.clone())
+                .or_insert(GenericRule {
+                    name: rule.name.clone(),
+                    rules: vec![],
+                });
             generic_rule.rules.push(rule);
         }
     }
@@ -81,63 +85,9 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn it_works() {
-        let mut polar = Polar::new();
-        let mut query = polar.new_query_from_predicate(Predicate {
-            name: "foo".to_owned(),
-            args: vec![Term {
-                id: 2,
-                offset: 0,
-                value: Value::Integer(1),
-            }],
-        });
-
-        /* The "external" loop. */
-        let mut results = 0;
-        loop {
-            let event = polar.query(&mut query);
-            match event {
-                QueryEvent::Done => break,
-                QueryEvent::External(_) => polar.result(&mut query, 1),
-                QueryEvent::Result { bindings } => {
-                    results += 1;
-                    assert_eq!(
-                        bindings[&Symbol("a".to_owned())].value,
-                        Value::Integer(1)
-                    );
-                }
-            }
-        }
-        assert_eq!(results, 1);
-    }
 
     #[test]
-    fn it_works_as_a_string() {
-        let mut polar = Polar::new();
-        let mut query = polar.new_query("foo(1)");
-
-        /* The "external" loop. */
-        let mut results = 0;
-        loop {
-            let event = polar.query(&mut query);
-            match event {
-                QueryEvent::Done => break,
-                QueryEvent::External(_) => polar.result(&mut query, 1),
-                QueryEvent::Result { bindings } => {
-                    results += 1;
-                    assert_eq!(
-                        bindings[&Symbol("a".to_owned())].value,
-                        Value::Integer(1)
-                    );
-                }
-            }
-        }
-        assert_eq!(results, 1);
-    }
-
-    #[test]
-    fn real_test() {
+    fn test_results() {
         let mut polar = Polar::new();
         polar.load_str("foo(1);foo(2);");
         let mut query = polar.new_query("foo(a)");
@@ -148,12 +98,15 @@ mod tests {
             let event = polar.query(&mut query);
             match event {
                 QueryEvent::Done => break,
-                QueryEvent::External(_) => panic!("No external call"),
+                QueryEvent::External(_) => panic!("no external call"),
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
                 }
             }
         }
-        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results.iter().map(|result| result.value.clone()).collect::<Vec<Value>>(),
+            vec![Value::Integer(1), Value::Integer(2)]
+        );
     }
 }
