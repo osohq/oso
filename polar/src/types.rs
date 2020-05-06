@@ -2,6 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::rc::Rc;
 
+pub trait ToPolarString {
+    fn to_polar(&self) -> String;
+}
+
 // AST type for polar expressions / rules / etc
 // Internal knowledge base types.
 // FFI types for passing polar values back and forth.
@@ -23,6 +27,12 @@ pub struct Instance {
     //pub fields: HashMap<String, Term>,
 }
 
+impl ToPolarString for Instance {
+    fn to_polar(&self) -> String {
+        format!("Instance<{}>", self.class)
+    }
+}
+
 // Context stored somewhere by id.
 
 // parser outputs
@@ -36,13 +46,31 @@ pub struct Context {
 
 pub type TermList = Vec<Term>;
 
+impl ToPolarString for TermList {
+    fn to_polar(&self) -> String {
+        format!("({})", self.iter().map(|t| t.to_polar()).collect::<Vec<String>>().join(","))
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Symbol(pub String);
+
+impl ToPolarString for Symbol {
+    fn to_polar(&self) -> String {
+        format!("{}", self.0)
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Predicate {
     pub name: String,
     pub args: TermList,
+}
+
+impl ToPolarString for Predicate {
+    fn to_polar(&self) -> String {
+        format!("{}{}", self.name, self.args.to_polar())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
@@ -56,10 +84,37 @@ pub enum Value {
     Symbol(Symbol),
 }
 
+impl ToPolarString for Value {
+    fn to_polar(&self) -> String {
+        match self {
+            Value::Integer(i) => format!("{}", i),
+            Value::String(s) => format!("\"{}\"", s),
+            Value::Boolean(b) => {
+                if *b {
+                    format!("{}", "true")
+                } else {
+                    format!("{}", "false")
+                }
+            }
+            Value::Instance(i) => i.to_polar(),
+            Value::Call(c) => c.to_polar(),
+            Value::List(l) => l.to_polar(),
+            Value::Symbol(s) => s.to_polar(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Term {
     pub id: u64,
+    pub offset: usize,
     pub value: Value,
+}
+
+impl ToPolarString for Term {
+    fn to_polar(&self) -> String {
+        self.value.to_polar()
+    }
 }
 
 
@@ -76,9 +131,17 @@ pub struct Term {
 // :=(foo(), baz(a))
 
 // internal knowledge base types.
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Rule {
+    pub name: String,
     pub params: TermList,
     pub body: TermList,
+}
+
+impl ToPolarString for Rule {
+    fn to_polar(&self) -> String {
+        format!("{}{} := {};", self.name, self.params.to_polar(), self.body.to_polar())
+    }
 }
 
 pub struct GenericRule {
@@ -182,6 +245,7 @@ mod tests {
             name: "foo".to_owned(),
             args: vec![Term {
                 id: 2,
+                offset: 0,
                 value: Value::Integer(0),
             }],
         };

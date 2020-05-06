@@ -1,10 +1,10 @@
-use super::parser;
+//use super::parser;
 use super::types::*;
 
 use std::collections::HashMap;
 use std::f32::consts::E;
 use std::rc::Rc;
-use crate::parser::{parse_predicate, parse_query};
+//use crate::parser::{parse_predicate, parse_query};
 
 // Api for polar.
 // Everything here has a corollary in lib that exposes it over ffi.
@@ -88,14 +88,14 @@ fn unify_var(left: &Term, right: &Term, mut env: Environment) -> Option<Environm
 }
 
 impl Query {
-    pub fn new_from_string(query_string: String) -> Self {
-        let predicate = parse_query(query_string).unwrap(); // @TODO: Errors.
-        let results = vec![Environment::empty()];
-        Query {
-            predicate,
-            done: false,
-        }
-    }
+    // pub fn new_from_string(query_string: String) -> Self {
+    //     let predicate = parse_query(query_string).unwrap(); // @TODO: Errors.
+    //     let results = vec![Environment::empty()];
+    //     Query {
+    //         predicate,
+    //         done: false,
+    //     }
+    // }
 
     pub fn new_from_pred(predicate: Predicate) -> Self {
         let results = vec![Environment::empty()];
@@ -113,8 +113,10 @@ pub struct Polar {
 impl Polar {
     pub fn new() -> Self {
         let foo_rule = Rule {
+            name: "foo".to_owned(),
             params: vec![Term {
                 id: 0,
+                offset: 0,
                 value: Value::Symbol(Symbol("a".to_owned())),
             }],
             body: vec![],
@@ -140,10 +142,10 @@ impl Polar {
     // Use when reading in a polar file.
     pub fn load_str(&mut self, src: String) {
         // @TODO: Return Errors
-        let clauses = parser::parse_source(src).unwrap();
-        for clause in clauses {
-            //self.knowledge_base.push(clause)
-        }
+        // let clauses = parser::parse_source(src).unwrap();
+        // for clause in clauses {
+        //     //self.knowledge_base.push(clause)
+        // }
     }
 
     pub fn query(&mut self, query: &mut Query) -> QueryEvent {
@@ -185,10 +187,11 @@ mod tests {
             name: "foo".to_owned(),
             args: vec![Term {
                 id: 2,
+                offset: 0,
                 value: Value::Integer(0),
             }],
         }));
-        queries.push(Query::new_from_string("foo(0)".to_owned()));
+        //queries.push(Query::new_from_string("foo(0)".to_owned()));
 
         for mut query in &mut queries {
             let mut results = 0;

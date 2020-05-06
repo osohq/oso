@@ -1,7 +1,9 @@
 use std::iter::Peekable;
 use std::str::Chars;
+use std::collections::HashMap;
 
 use super::types::*;
+
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Token {
@@ -11,6 +13,7 @@ pub enum Token {
     Dot,
     SemiColon,
     Comma,
+    Define,
     Name(String),
     String(String),
     Int(i64),
@@ -130,6 +133,15 @@ fn get_next_token(src: &mut Peekable<Chars>) -> Result<Token, ParseError> {
                 '.' => {
                     src.next();
                     Ok(Token::Dot)
+                }
+                ':' => {
+                    src.next();
+                    if let Some('=') = src.peek() {
+                        src.next();
+                        Ok(Token::Define)
+                    } else {
+                        Err(ParseError::InvalidTokenCharacter(':'))
+                    }
                 }
                 _ => Err(ParseError::InvalidTokenCharacter(c)),
             }
@@ -282,8 +294,7 @@ pub fn parse_term(mut lexer: &mut Lexer) -> Result<Term, ParseError> {
                 Ok(Term{id: 0, value: Value::String(s)})
             },
             Token::Name(n) => {
-                lexer.next_token()?;
-                if lexer.match_token(Token::Dot)? {
+                lexer.next_token()?;if lexer.match_token(Token::Dot)? {
                     let mut args = vec![];
                     args.push(Term{id: 0, value: Value::Symbol(Symbol(n))});
                     let attribute = lexer.expect_a_name()?;
@@ -297,7 +308,12 @@ pub fn parse_term(mut lexer: &mut Lexer) -> Result<Term, ParseError> {
                     let name = ".".to_owned();
                     Ok(Term{id: 0, value: Value::Call(Predicate{name, args})})
                 } else {
-                    Ok(Term{id: 0, value: Value::Symbol(Symbol(n))})
+                    if lexer.is_token(Token::LP) {
+                        let call_args = parse_term_list(&mut lexer)?;
+                        Ok(Term{id: 0, value: Value::Call(Predicate{name: n, args: call_args})})
+                    } else {
+                        Ok(Term{id: 0, value: Value::Symbol(Symbol(n))})
+                    }
                 }
             },
             // @TODO: Instance
@@ -324,17 +340,35 @@ pub fn parse_predicate(mut lexer: &mut Lexer) -> Result<Predicate, ParseError> {
     Ok(Predicate{name, args})
 }
 
+pub fn parse_rule(mut lexer: &mut Lexer) -> Result<Rule, ParseError> {
+    let head = parse_predicate(&mut lexer)?;
+    let mut body = vec![];
+    if lexer.match_token(Token::Define)? {
+        while !lexer.is_token(Token::SemiColon) {
+            let term = parse_term(&mut lexer)?;
+            body.push(term);
+            lexer.match_token(Token::Comma)?;
+        }
+        lexer.expect_token(Token::SemiColon)?;
+    }
+    Ok(Rule{name: head.name, params: head.args, body})
+}
+
 pub fn parse_query(src: String) -> Result<Predicate, ParseError> {
     let mut lex = Lexer::new(&src)?;
     let pred = parse_predicate(&mut lex)?;
     Ok(pred)
 }
 
-pub fn parse_source(src: String) -> Result<Vec<Term>, ParseError> {
-    // let mut lex = Lexer::new(&src)?;
-    // let clauses = parse_polar_file(&mut lex)?;
-    // Ok(clauses)
-    Err(ParseError::InvalidTokenCharacter('\0'))
+pub fn parse_source(src: String) -> Result<Vec<Rule>, ParseError> {
+    let mut lex = Lexer::new(&src)?;
+    let mut rules = vec![];
+    while !lex.is_token(Token::EOF) {
+        let rule = parse_rule(&mut lex)?;
+        rules.push(rule);
+    }
+    lex.expect_token(Token::EOF)?;
+    Ok(rules)
 }
 
 #[cfg(test)]
@@ -374,6 +408,44 @@ foo;"#;
         let pred = parse_predicate(&mut l);
         println!("{}", input);
         println!("{:#?}", pred);
+    }
+
+    #[test]
+    fn test_example_file() {
+        let input: &'static str = r#"
+foo(a,b) := bar(baz(1,2,3,(4,5,6),"hello")), what(up);
+bar(a,b) := bar(baz(1,2,3,(4,5,6),"hello")),
+    what(up),
+    tho;
+        "#;
+        let rules = parse_source(input.to_owned()).unwrap();
+        println!("{}", input);
+        for rule in rules {
+            println!("{}", rule.to_polar());
+        }
+    }
+
+    #[test]
+    fn test_example_rule() {
+        let input: &'static str = r#"
+        foo(a,b) := bar(1);
+        "#;
+        let rules = parse_source(input.to_owned()).unwrap();
+        println!("{}", input);
+        for rule in rules {
+            println!("{}", rule.to_polar());
+            println!("{:#?}", rule);
+        }
+    }
+
+    #[test]
+    fn test_dot_operator() {
+        let input: &'static str = r#"
+        test(foo.bar(1,2,3), hello)
+        "#;
+        let pred = parse_query(input.to_owned()).unwrap();
+        println!("{}", input);
+        println!("{}", pred.to_polar());
     }
 
     // @TODO: Get proptest working.

@@ -1,0 +1,74 @@
+use std::str::FromStr;
+
+use crate::types::*;
+
+use lalrpop_util::ParseError;
+
+grammar;
+
+pub Integer: Term = <start:@L> <s:r"[0-9]+"> => {
+    Term{id: 0, offset: start, value: Value::Integer(i64::from_str(s).unwrap())}
+};
+// @TODO: Do this right.
+pub PolarString: Term = <start:@L> <s:r#""(\\.|[^"\\])*""#> => {
+    Term{id: 0, offset: start, value: Value::String(s[1..s.len()-1].to_string())}
+};
+True: Term = <start:@L> "true" => {
+    Term{id: 0, offset: start, value: Value::Boolean(true)}
+};
+False: Term = <start:@L> "false" => {
+    Term{id: 0, offset: start, value: Value::Boolean(true)}
+};
+pub Boolean: Term = {
+    <bool:True> => bool,
+    <bool:False> => bool
+};
+
+pub Call: Term = {
+    <start:@L> <head:Term> "(" ")" => {
+        let pred = Predicate{
+        Term{id: 0, offset: start, value: Value::Call(Symbol(s.to_string()))}
+    },
+    <start:@L> <head:Term> "(" <terms:Terms> ")" => {
+
+    },
+};
+
+pub Symbol: Term  = <start:@L> <s:r"[\w&&[^\d]]\w*"> => {
+    Term{id: 0, offset: start, value: Value::Symbol(Symbol(s.to_string()))}
+};
+
+pub Terms: Vec<Term> = {
+    <term:Term> => vec![term],
+    <head:Term> "," <mut tail:Terms> => {tail.insert(0, head); tail}
+};
+
+pub Term: Term = {
+    <term:Integer> => term,
+    <term:PolarString> => term,
+    <term:Boolean> => term,
+    <start:@L> "(" ")" => Term{id: 0, offset: start, value: Value::List(vec![])},
+    <start:@L> "(" <terms:Terms> ")" => Term{id: 0, offset: start, value: Value::List(terms)},
+    <term:Symbol> => term
+};
+
+
+
+
+// Ok, you can get the byte offset with @L, that's enough for me.
+// I can return that, use that to build the id and also use that to figure out
+// the line and column from the input for error messages.
+
+//pub Rule: Rule = {
+//    <head:Predicate>,
+//    <head:Predicate> ":=" <body:Body>;
+
+//pub Body: Vec<Predicate> = {
+//    <pred:Predicate>,
+//    <pred:Predicate> "," <body:Body>
+
+//pub Term: i32 = {
+//    <n:Num> => n,
+//    "(" <t:Term> ")" => t,
+//};
+
