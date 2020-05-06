@@ -1,17 +1,15 @@
-use crate::types::*;
-
 /// Helper macros to create AST types
+///
 use std::sync::atomic::{AtomicU64, Ordering};
+
+use crate::types::*;
 
 pub const ORD: Ordering = Ordering::SeqCst;
 pub const NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
-/// This already exists but is nightly only:
-/// https://doc.rust-lang.org/std/any/fn.type_name_of_val.html
-pub fn type_name_of_val<T: ?Sized>(_val: &T) -> &'static str {
-    std::any::type_name::<T>()
-}
-
+/// Special struct which is way more eager at implementing `From`
+/// for a bunch of things, so that in the macros we can use `FromHelper<Term>::from`
+/// and try and convert things as often as possible.
 pub struct FromHelper<T>(pub T);
 
 impl<T> From<T> for FromHelper<T> {
