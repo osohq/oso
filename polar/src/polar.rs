@@ -1,11 +1,10 @@
-//use super::parser;
 use super::types::*;
 use super::vm::*;
 
 use std::collections::HashMap;
 use std::f32::consts::E;
 use std::rc::Rc;
-use crate::parser::{parse_query, parse_file};
+use super::parser::{parse_query, parse_file};
 
 // Api for polar.
 // Everything here has a corollary in lib that exposes it over ffi.
@@ -86,18 +85,6 @@ fn unify_var(left: &Term, right: &Term, mut env: Environment) -> Option<Environm
     return Some(env);
 }
 
-impl Query {
-    pub fn new_from_string(query_string: String) -> Self {
-        let predicate = parse_query(&query_string);
-        let results = vec![Environment::empty()];
-        Query {
-            predicate,
-            done: false,
-        }
-    }
-
-}
-
 pub struct Polar {
     pub kb: KnowledgeBase,
 }
@@ -130,7 +117,12 @@ impl Polar {
         }
     }
 
-    pub fn new_query(&self, predicate: Predicate) -> Query {
+    pub fn new_query(&self, query_string: String) -> Query {
+        let pred = parse_query(&query_string);
+        self.new_query_from_predicate(pred)
+    }
+
+    pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
         let query = Instruction::Query(predicate.clone());
         let ext = Instruction::External(Symbol("a".to_owned()));
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query, ext]);
@@ -145,7 +137,7 @@ impl Polar {
     // Use when reading in a polar file.
     pub fn load_str(&mut self, src: String) {
         // @TODO: Return Errors
-        let clauses = parser::parse_str(src).unwrap();
+        let clauses = parse_file(&src);
         for clause in clauses {
             //self.kb.push(clause)
         }
@@ -165,14 +157,13 @@ mod tests {
     use super::*;
     #[test]
     fn it_works() {
-
         let mut polar = Polar::new();
-        let mut query = polar.new_query(Predicate {
+        let mut query = polar.new_query_from_predicate(Predicate {
             name: "foo".to_owned(),
             args: vec![Term {
                 id: 2,
                 offset: 0,
-                value: Value::Integer(0),
+                value: Value::Integer(1),
             }],
         });
 
@@ -191,16 +182,17 @@ mod tests {
                     );
                 }
             }
-            assert_eq!(results, 1);
         }
+        assert_eq!(results, 1);
     }
 
     fn external_query() {
         let mut polar = Polar::new();
-        let mut query = polar.new_query(Predicate {
+        let mut query = polar.new_query_from_predicate(Predicate {
             name: "foo".to_owned(),
             args: vec![Term {
                 id: 1,
+                offset: 0,
                 value: Value::Integer(1),
             }],
         });

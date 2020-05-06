@@ -113,7 +113,7 @@ pub struct Term {
 
 impl Term {
     pub fn new(value: Value) -> Self {
-        Self { id: 0, value }
+        Self { id: 0, offset: 0, value }
     }
 }
 
