@@ -52,7 +52,7 @@ impl PolarVirtualMachine {
                 Instruction::Lookup(_, _) => unimplemented!("lookup"),
                 Instruction::LookupExternal(_, _) => unimplemented!("lookup external"),
                 Instruction::Query(predicate) => {
-                    return QueryEvent::Result{ bindings: self.call(&predicate) };
+                    return QueryEvent::Result{ bindings: self.query(&predicate) };
                 }
                 Instruction::Result(result) => self.result(result),
                 Instruction::Unify(left, right) => self.unify(&left, &right),
@@ -75,28 +75,21 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn call(&self, _predicate: &Predicate) -> Bindings {
+    fn query(&mut self, predicate: &Predicate) -> Bindings {
         // Select applicable rules for predicate.
         // Sort applicable rules by specificity.
         // Create a choice over the applicable rules.
 
-        // if let Some(generic_rule) = self.knowledge_base.rules.get(&query.predicate.name) {
-        //     assert_eq!(generic_rule.name, query.predicate.name);
-        //     let rule = &generic_rule.rules[0]; // just panic.
-        //     let var = &rule.params[0]; // is a variable
-        //     let val = &query.predicate.args[0]; // is a integer.
 
-        //     let env = Rc::new(Environment::empty());
+        if let Some(generic_rule) = self.kb.rules.get(&predicate.name) {
+            let generic_rule = generic_rule.clone();
+            assert_eq!(generic_rule.name, predicate.name);
+            let rule = &generic_rule.rules[0]; // just panic
+            let var = &rule.params[0];
+            let val = &predicate.args[0];
 
-        //     let matched = unify(var, val, &env);
-        //     if let Some(match_) = matched {
-        //         assert!(matches!(val.value, Value::Integer(_)));
-        //         query.done = true;
-        //         return QueryEvent::Result {
-        //             bindings: match_.flatten_bindings(),
-        //         };
-        //     }
-        // }
+            self.unify(var,val); // @TODO: make instruction.
+        }
         
         let mut bindings = HashMap::new();
         for binding in &self.bindings {
