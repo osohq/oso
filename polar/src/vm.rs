@@ -47,8 +47,10 @@ impl PolarVirtualMachine {
                 Instruction::Backtrack => self.backtrack(),
                 Instruction::Bind(var, value) => self.bind(&var, &value),
                 Instruction::Bindings => {
-                    return QueryEvent::Result{ bindings: self.bindings() };
-                },
+                    return QueryEvent::Result {
+                        bindings: self.bindings(),
+                    };
+                }
                 Instruction::Choice(choices, index) => self.choice(choices, index),
                 Instruction::Cut => self.cut(),
                 Instruction::External(name) => return QueryEvent::External(name), // POC
@@ -97,7 +99,8 @@ impl PolarVirtualMachine {
                 ]);
             }
 
-            self.instructions.push(Instruction::Choice(choices, self.bindings.len()));
+            self.instructions
+                .push(Instruction::Choice(choices, self.bindings.len()));
         } else {
             self.backtrack();
         }
@@ -211,7 +214,10 @@ mod tests {
         let x = Symbol("x".to_string());
         let y = Symbol("y".to_string());
         let zero = Term::new(Value::Integer(0));
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![Instruction::Bind(x.clone(), zero.clone())]);
+        let mut vm = PolarVirtualMachine::new(
+            KnowledgeBase::new(),
+            vec![Instruction::Bind(x.clone(), zero.clone())],
+        );
         vm.run();
         assert_eq!(vm.value(&x), Some(&zero));
         assert_eq!(vm.value(&y), None);
@@ -234,17 +240,8 @@ mod tests {
         let mut vm = PolarVirtualMachine::new(
             KnowledgeBase::new(),
             vec![
-                Instruction::Unify(Term::new(Value::Symbol(x.clone())), zero.clone()),
-                Instruction::Choice(
-                    vec![
-                        vec![Instruction::Unify(zero.clone(), one.clone())],
-                        vec![Instruction::Unify(
-                            Term::new(Value::Symbol(y.clone())),
-                            one.clone(),
-                        )],
-                    ],
-                    0,
-                ),
+                Instruction::Unify(Term::new(Value::Symbol(x.clone())), zero.clone()), // binds x
+                Instruction::Unify(Term::new(Value::Symbol(y.clone())), one.clone()),  // binds y
             ],
         );
         vm.run();
