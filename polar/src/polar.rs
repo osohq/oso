@@ -2,9 +2,6 @@ use super::types::*;
 use super::vm::*;
 
 use super::parser::{parse_file, parse_query};
-use std::collections::HashMap;
-use std::f32::consts::E;
-use std::rc::Rc;
 
 // Api for polar.
 // Everything here has a corollary in lib that exposes it over ffi.
@@ -14,8 +11,6 @@ pub struct Query {
     predicate: Predicate,
     vm: PolarVirtualMachine,
 }
-
-type Match = Option<Env>;
 
 pub struct Polar {
     pub kb: KnowledgeBase,

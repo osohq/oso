@@ -1,6 +1,5 @@
 use super::types::*;
 use std::collections::HashMap;
-use std::ops::Index;
 
 #[derive(Debug)]
 pub enum Instruction {

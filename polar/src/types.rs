@@ -182,71 +182,12 @@ impl KnowledgeBase {
     }
 }
 
-pub type Env = Rc<Environment>;
 pub type Bindings = HashMap<Symbol, Term>;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
     bindings: Bindings,
     parent: Option<Rc<Environment>>,
-}
-
-// TODO: Might be able to shorten this a bit by having a special empty environment.
-
-impl Environment {
-    pub fn empty() -> Self {
-        Environment {
-            bindings: HashMap::new(),
-            parent: None,
-        }
-    }
-
-    pub fn new(parent: &Rc<Environment>) -> Self {
-        Environment {
-            bindings: HashMap::new(),
-            parent: Some(Rc::clone(parent)),
-        }
-    }
-
-    pub fn get(&self, symbol: &Symbol) -> Option<&Term> {
-        if let Some(value) = self.bindings.get(symbol) {
-            return Some(value);
-        }
-
-        if let Some(parent) = &self.parent {
-            return parent.get(symbol);
-        }
-
-        None
-    }
-
-    pub fn set(&mut self, symbol: Symbol, value: Term) {
-        self.bindings.insert(symbol, value);
-    }
-
-    pub fn contains(&self, symbol: &Symbol) -> bool {
-        if self.bindings.contains_key(symbol) {
-            return true;
-        }
-
-        if let Some(parent) = &self.parent {
-            return parent.contains(symbol);
-        }
-
-        false
-    }
-
-    pub fn flatten_bindings(&self) -> Bindings {
-        let mut bindings = self.bindings.clone();
-        if let Some(parent) = &self.parent {
-            let parent_bindings = parent.flatten_bindings();
-            for (k, v) in parent_bindings.iter() {
-                bindings.insert(k.clone(), v.clone());
-            }
-        }
-
-        bindings
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
