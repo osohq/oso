@@ -2,6 +2,7 @@
 mod parser;
 mod polar;
 mod types;
+mod vm;
 
 pub use polar::{Polar, Query};
 
@@ -15,15 +16,15 @@ static mut DATA: *const CString = 0 as *const CString;
 
 // @TODO: Have a way to return errors, don't do any of these panics, that's gonna
 // be real bad.
-#[no_mangle]
-pub extern "C" fn query_new_from_pred(query_pred: *const c_char) -> *mut Query {
-    let cs = unsafe { CStr::from_ptr(query_pred) };
-    let s = cs.to_str().expect("to_str() failed");
-    let predicate: types::Predicate = serde_json::from_str(s).unwrap();
+// #[no_mangle]
+// pub extern "C" fn query_new_from_pred(query_pred: *const c_char) -> *mut Query {
+//     let cs = unsafe { CStr::from_ptr(query_pred) };
+//     let s = cs.to_str().expect("to_str() failed");
+//     let predicate: types::Predicate = serde_json::from_str(s).unwrap();
 
-    let q = Box::new(Query::new_from_pred(predicate));
-    unsafe { transmute(q) }
-}
+//     let q = Box::new(Query::new_from_pred(predicate));
+//     unsafe { transmute(q) }
+// }
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {

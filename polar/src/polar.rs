@@ -1,5 +1,6 @@
 //use super::parser;
 use super::types::*;
+use super::vm::*;
 
 use std::collections::HashMap;
 use std::f32::consts::E;
@@ -20,14 +21,12 @@ pub enum QueryState {
 pub struct Query {
     //query_string: String,
     predicate: Predicate,
-
-    // WOW HACK
-    done: bool,
+    vm: PolarVirtualMachine,
 }
 
 type Match = Option<Env>;
 
-fn unify(left: &Term, right: &Term, env: &Env) -> Match {
+pub fn unify(left: &Term, right: &Term, env: &Env) -> Match {
     // TODO make parent environment and make env not mut
     let new_env = Environment::new(env);
     unify_inner(&left, &right, new_env).map(Rc::new)
@@ -97,17 +96,10 @@ impl Query {
         }
     }
 
-    pub fn new_from_pred(predicate: Predicate) -> Self {
-        let results = vec![Environment::empty()];
-        Query {
-            predicate,
-            done: false,
-        }
-    }
 }
 
 pub struct Polar {
-    pub knowledge_base: KnowledgeBase,
+    pub kb: KnowledgeBase,
 }
 
 impl Polar {
@@ -131,46 +123,40 @@ impl Polar {
         generic_rules.insert("foo".to_owned(), generic_rule);
 
         Self {
-            knowledge_base: KnowledgeBase {
+            kb: KnowledgeBase {
                 types: HashMap::new(),
                 rules: generic_rules,
             },
         }
     }
 
+    pub fn new_query(&self, predicate: Predicate) -> Query {
+        let query = Instruction::Query(predicate.clone());
+        let ext = Instruction::External(Symbol("a".to_owned()));
+        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query, ext]);
+        Query {
+            predicate,
+            vm,
+        }
+    }
+
+
     // Takes in a string of polar syntax and adds it to the knowledge base.
     // Use when reading in a polar file.
     pub fn load_str(&mut self, src: String) {
         // @TODO: Return Errors
-        // let clauses = parser::parse_source(src).unwrap();
-        // for clause in clauses {
-        //     //self.knowledge_base.push(clause)
-        // }
+        let clauses = parser::parse_str(src).unwrap();
+        for clause in clauses {
+            //self.kb.push(clause)
+        }
     }
 
     pub fn query(&mut self, query: &mut Query) -> QueryEvent {
-        if query.done {
-            return QueryEvent::Done;
-        }
+        query.vm.run()
+    }
 
-        if let Some(generic_rule) = self.knowledge_base.rules.get(&query.predicate.name) {
-            assert_eq!(generic_rule.name, query.predicate.name);
-            let rule = &generic_rule.rules[0]; // just panic.
-            let var = &rule.params[0]; // is a variable
-            let val = &query.predicate.args[0]; // is a integer.
-
-            let env = Rc::new(Environment::empty());
-
-            let matched = unify(var, val, &env);
-            if let Some(match_) = matched {
-                assert!(matches!(val.value, Value::Integer(_)));
-                query.done = true;
-                return QueryEvent::Result {
-                    bindings: match_.flatten_bindings(),
-                };
-            }
-        }
-        panic!("Make this return a result anyway");
+    pub fn result(&mut self, query: &mut Query, result: i64) {
+        query.vm.result(result)
     }
 }
 
@@ -181,31 +167,28 @@ mod tests {
     fn it_works() {
 
         let mut polar = Polar::new();
-
-        let mut queries = vec![];
-        queries.push(Query::new_from_pred(Predicate {
+        let mut query = polar.new_query(Predicate {
             name: "foo".to_owned(),
             args: vec![Term {
                 id: 2,
                 offset: 0,
                 value: Value::Integer(0),
             }],
-        }));
-        queries.push(Query::new_from_string("foo(0)".to_owned()));
+        });
 
-        for mut query in &mut queries {
-            let mut results = 0;
-            loop {
-                let event = polar.query(&mut query);
-                match event {
-                    QueryEvent::Done => break,
-                    QueryEvent::Result { bindings } => {
-                        results += 1;
-                        assert_eq!(
-                            bindings[&Symbol("a".to_owned())].value,
-                            Value::Integer(0)
-                        );
-                    }
+        /* The "external" loop. */
+        let mut results = 0;
+        loop {
+            let event = polar.query(&mut query);
+            match event {
+                QueryEvent::Done => break,
+                QueryEvent::External(_) => polar.result(&mut query, 1),
+                QueryEvent::Result { bindings } => {
+                    results += 1;
+                    assert_eq!(
+                        bindings[&Symbol("a".to_owned())].value,
+                        Value::Integer(1)
+                    );
                 }
             }
             assert_eq!(results, 1);

@@ -111,6 +111,12 @@ pub struct Term {
     pub value: Value,
 }
 
+impl Term {
+    pub fn new(value: Value) -> Self {
+        Self { id: 0, value }
+    }
+}
+
 impl ToPolarString for Term {
     fn to_polar(&self) -> String {
         self.value.to_polar()
@@ -144,23 +150,36 @@ impl ToPolarString for Rule {
     }
 }
 
+#[derive(Clone)]
 pub struct GenericRule {
     pub name: String,
     pub rules: Vec<Rule>,
 }
 
+#[derive(Clone)]
 pub struct Class {
     foo: i64,
 }
 
+#[derive(Clone)]
 pub enum Type {
     Class { class: Class },
     // groups?
 }
 
+#[derive(Clone)]
 pub struct KnowledgeBase {
     pub types: HashMap<String, Type>,
     pub rules: HashMap<String, GenericRule>,
+}
+
+impl KnowledgeBase {
+    pub fn new() -> Self {
+        Self {
+            types: HashMap::new(),
+            rules: HashMap::new(),
+        }
+    }
 }
 
 pub type Env = Rc<Environment>;
@@ -233,6 +252,7 @@ impl Environment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     Done,
+    External(Symbol), // POC
     Result { bindings: Bindings },
 }
 
