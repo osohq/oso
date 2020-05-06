@@ -115,7 +115,7 @@ impl PolarVirtualMachine {
                 bsp: self.bindings.len(),
             });
         } else {
-            self.backtrack();
+            self.push_goal(Goal::Backtrack)
         }
     }
 
@@ -166,7 +166,6 @@ impl PolarVirtualMachine {
 
     pub fn result(&mut self, result: i64) {
         self.result = result;
-        self.bind(&Symbol("a".to_string()), &Term::new(Value::Integer(result)));
     }
 
     fn unify(&mut self, left: &Term, right: &Term) {
@@ -175,16 +174,19 @@ impl PolarVirtualMachine {
             (_, Value::Symbol(_)) => self.unify_var(right, left),
             (Value::List(left), Value::List(right)) => {
                 if left.len() != right.len() {
-                    self.backtrack();
+                    self.push_goal(Goal::Backtrack);
                 }
 
                 for (left, right) in left.iter().zip(right) {
-                    self.unify(&left, &right);
+                    self.push_goal(Goal::Unify {
+                        left: left.clone(),
+                        right: right.clone(),
+                    });
                 }
             }
             (Value::Integer(left), Value::Integer(right)) => {
                 if left != right {
-                    self.backtrack();
+                    self.push_goal(Goal::Backtrack);
                 }
             }
             (_, _) => unimplemented!("unhandled unification {:?} = {:?}", left, right),
@@ -208,7 +210,10 @@ impl PolarVirtualMachine {
         //     }
         // }
 
-        self.bind(left_sym, right);
+        self.push_goal(Goal::Bind {
+            variable: left_sym.clone(),
+            value: right.clone(),
+        });
     }
 
     fn value(&self, variable: &Symbol) -> Option<&Term> {
