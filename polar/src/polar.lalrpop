@@ -79,20 +79,18 @@ Body: Vec<Term> = {
 };
 
 pub Rule: Rule = {
-    <head:Predicate> => {
+    <head:Predicate> ";" => {
+
         let name = head.name;
         let params = head.args;
         let body = vec![];
         Rule{name, params, body}
     },
-    <head:Predicate> ":=" <body:Body> => {
+    <head:Predicate> ":=" <body:Body> ";" => {
         let name = head.name;
         let params = head.args;
         Rule{name, params, body}
     }
 }
 
-pub Rules: Vec<Rule> = {
-    <rule:Rule> => vec![rule],
-    <head:Rule> ";" <mut tail:Rules> => {tail.insert(0, head); tail}
-};
+pub Rules: Vec<Rule> = <Rule*>;

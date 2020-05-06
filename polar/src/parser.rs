@@ -34,7 +34,20 @@ mod tests {
         assert_eq!(exp.to_polar(), r#"foo(a,b(c),"d")"#);
         let exp2 = polar::ExpParser::new().parse(r#"foo.bar(a, b(c.d(e,(f,g))))"#).unwrap();
         assert_eq!(exp2.to_polar(), r#".(foo,bar,a,b(.(c,d,e,(f,g))))"#);
-        let rule = polar::RuleParser::new().parse(r#"f(x) := g(x)"#).unwrap();
+        let rule = polar::RuleParser::new().parse(r#"f(x) := g(x);"#).unwrap();
         assert_eq!(rule.to_polar(), r#"f(x) := (g(x));"#);
+        let rule = polar::RuleParser::new().parse(r#"f(x);"#).unwrap();
+        assert_eq!(rule.to_polar(), r#"f(x) := ();"#);
+    }
+
+    #[test]
+    fn test_parse_file() {
+        let f = r#"
+        a(1);b(2);c(3);
+        "#;
+        let results = parse_file(f);
+        assert_eq!(results[0].to_polar(), r#"a(1) := ();"#);
+        assert_eq!(results[1].to_polar(), r#"b(2) := ();"#);
+        assert_eq!(results[2].to_polar(), r#"c(3) := ();"#);
     }
 }
