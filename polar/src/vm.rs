@@ -18,6 +18,7 @@ pub enum Goal {
     Unify { left: Term, right: Term },
 }
 
+// Stack of goals.
 type Goals = Vec<Goal>;
 
 #[derive(Debug)]
@@ -78,7 +79,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn push_goal(&mut self, goal: Goal) {
+    pub fn push_goal(&mut self, goal: Goal) {
         self.goals.push(goal);
     }
 

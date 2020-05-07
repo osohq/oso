@@ -20,16 +20,20 @@ pub trait ToPolarString {
 // Internal only instance
 // interal rep of external class (has fields, was constructed in polar)
 // external only instance (id only)
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Instance {
     pub class: String,
     pub external_id: u64,
-    //pub fields: HashMap<String, Term>,
+    pub fields: HashMap<Symbol, Term>,
 }
 
 impl ToPolarString for Instance {
     fn to_polar(&self) -> String {
-        format!("Instance<{}>", self.class)
+        let fields = self.fields.iter()
+            .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
+            .collect::<Vec<String>>()
+            .join(", ");
+        format!("{}{{{}}}", self.class, fields)
     }
 }
 
@@ -67,7 +71,7 @@ impl ToPolarString for Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Predicate {
     pub name: String,
     pub args: TermList,
@@ -79,7 +83,7 @@ impl ToPolarString for Predicate {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Value {
     Integer(i64),
     String(String),
@@ -110,7 +114,7 @@ impl ToPolarString for Value {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Term {
     pub id: u64,
     pub offset: usize,
@@ -146,7 +150,7 @@ impl ToPolarString for Term {
 // :=(foo(), baz(a))
 
 // internal knowledge base types.
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Rule {
     pub name: String,
     pub params: TermList,

@@ -83,8 +83,8 @@ impl Polar {
         query.vm.run()
     }
 
-    pub fn result(&mut self, query: &mut Query, name: &Symbol, result: i64) {
-        query.vm.result(name, result)
+    pub fn result(&mut self, query: &mut Query, name: &Symbol, value: i64) {
+        query.vm.push_goal(Goal::Result{name: name.clone(), value})
     }
 }
 
@@ -146,7 +146,8 @@ mod tests {
 
     #[test]
     fn test_debugger() {
-        let i = Instruction::Backtrack;
+        use std::collections::HashMap;
+        let g = Goal::Backtrack;
         let mut v = vec![];
         v.push(1);
         v.push(2);
