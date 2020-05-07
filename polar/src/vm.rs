@@ -283,4 +283,17 @@ mod tests {
         assert_eq!(vm.value(&x), Some(&zero));
         assert_eq!(vm.value(&y), Some(&one));
     }
+
+    #[test]
+    fn unify_var() {
+        let x = Symbol("x".to_string());
+        let y = Symbol("y".to_string());
+
+        let mut vm = PolarVirtualMachine::new(
+            KnowledgeBase::new(),
+            vec![Goal::Unify {
+
+            }]
+        );
+    }
 }
