@@ -176,15 +176,18 @@ impl PolarVirtualMachine {
             (Value::Symbol(_), _) => self.unify_var(left, right),
             (_, Value::Symbol(_)) => self.unify_var(right, left),
             (Value::List(left), Value::List(right)) => {
-                if left.len() != right.len() {
+                if left.len() == right.len() {
+                    self.append_goals(
+                        left.iter()
+                            .zip(right)
+                            .map(|(left, right)| Goal::Unify {
+                                left: left.clone(),
+                                right: right.clone(),
+                            })
+                            .collect(),
+                    )
+                } else {
                     self.push_goal(Goal::Backtrack);
-                }
-
-                for (left, right) in left.iter().zip(right) {
-                    self.push_goal(Goal::Unify {
-                        left: left.clone(),
-                        right: right.clone(),
-                    });
                 }
             }
             (Value::Integer(left), Value::Integer(right)) => {
@@ -261,20 +264,19 @@ mod tests {
     fn unify() {
         let x = Symbol("x".to_string());
         let y = Symbol("y".to_string());
+        let vars = Term::new(Value::List(vec![
+            Term::new(Value::Symbol(x.clone())),
+            Term::new(Value::Symbol(y.clone())),
+        ]));
         let zero = Term::new(Value::Integer(0));
         let one = Term::new(Value::Integer(1));
+        let vals = Term::new(Value::List(vec![zero.clone(), one.clone()]));
         let mut vm = PolarVirtualMachine::new(
             KnowledgeBase::new(),
-            vec![
-                Goal::Unify {
-                    left: Term::new(Value::Symbol(x.clone())),
-                    right: zero.clone(),
-                },
-                Goal::Unify {
-                    left: Term::new(Value::Symbol(y.clone())),
-                    right: one.clone(),
-                },
-            ],
+            vec![Goal::Unify {
+                left: vars.clone(),
+                right: vals.clone(),
+            }],
         );
         vm.run();
         assert_eq!(vm.value(&x), Some(&zero));
