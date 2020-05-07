@@ -2,6 +2,7 @@
 .idea
 *.log
 tmp/
+*~
 
 
 .mypy_cache
