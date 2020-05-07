@@ -143,4 +143,17 @@ mod tests {
             vec![Value::Integer(1)]
         );
     }
+
+    #[test]
+    fn test_debugger() {
+        let i = Instruction::Backtrack;
+        let mut v = vec![];
+        v.push(1);
+        v.push(2);
+        v.push(3);
+        let mut h = HashMap::new();
+        h.insert(1, 1);
+        h.insert(2, 2);
+        h.insert(3, 3);        
+    }
 }
