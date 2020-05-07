@@ -7,9 +7,24 @@ use super::parser::{parse_file, parse_query};
 // Everything here has a corollary in lib that exposes it over ffi.
 
 pub struct Query {
-    //query_string: String,
-    //predicate: Predicate,
     vm: PolarVirtualMachine,
+    done: bool,
+}
+
+// Query as an iterator returns `None` after the first time `Done` is seen
+impl Iterator for Query {
+    type Item = QueryEvent;
+
+    fn next(&mut self) -> Option<QueryEvent> {
+        if self.done {
+            return None;
+        }
+        let event = self.vm.run();
+        if let QueryEvent::Done = event {
+            self.done = true;
+        }
+        Some(event)
+    }
 }
 
 pub struct Polar {
@@ -51,7 +66,7 @@ impl Polar {
             predicate: predicate.clone(),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
-        Query { vm }
+        Query { vm, done: false }
     }
 
     #[cfg(test)]
@@ -60,7 +75,7 @@ impl Polar {
             self.kb.clone(),
             vec![Goal::Bindings, Goal::External { name }],
         );
-        Query { vm }
+        Query { vm, done: false }
     }
 
     pub fn load_str(&mut self, src: &str) {

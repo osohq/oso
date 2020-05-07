@@ -5,7 +5,7 @@ authors = ["oso <dev@osohq.com>"]
 edition = "2018"
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["lib", "staticlib"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"]}

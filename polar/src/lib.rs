@@ -1,7 +1,7 @@
 //mod parser;
 mod parser;
 mod polar;
-mod types;
+pub mod types;
 mod vm;
 
 pub use polar::{Polar, Query};
