@@ -55,9 +55,24 @@ use super::parser::{parse_file, parse_query};
 // @TODO: Once the external constructor stuff and instance ids are worked out explain them.
 
 pub struct Query {
-    //query_string: String,
-    //predicate: Predicate,
     vm: PolarVirtualMachine,
+    done: bool,
+}
+
+// Query as an iterator returns `None` after the first time `Done` is seen
+impl Iterator for Query {
+    type Item = QueryEvent;
+
+    fn next(&mut self) -> Option<QueryEvent> {
+        if self.done {
+            return None;
+        }
+        let event = self.vm.run();
+        if let QueryEvent::Done = event {
+            self.done = true;
+        }
+        Some(event)
+    }
 }
 
 pub struct Polar {
@@ -97,7 +112,7 @@ impl Polar {
             predicate: predicate.clone(),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
-        Query { vm }
+        Query { vm, done: false }
     }
 
     // @TODO: Direct load_rules endpoint.
@@ -112,7 +127,10 @@ impl Polar {
 
     #[cfg(test)]
     pub fn test_result(&mut self, query: &mut Query, name: &Symbol, value: i64) {
-        query.vm.push_goal(Goal::Result{name: name.clone(), value});
+        query.vm.push_goal(Goal::Result {
+            name: name.clone(),
+            value,
+        });
         query.vm.push_goal(Goal::Result {
             name: name.clone(),
             value,
@@ -148,7 +166,7 @@ mod tests {
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
                 }
-                _ => ()
+                _ => (),
             }
         }
         assert_eq!(
@@ -174,8 +192,8 @@ mod tests {
                 QueryEvent::TestExternal { name } => polar.test_result(&mut query, &name, 1),
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.get(&a).unwrap().clone());
-                },
-                _ => ()
+                }
+                _ => (),
             }
         }
         assert_eq!(
