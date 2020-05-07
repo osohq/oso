@@ -99,8 +99,10 @@ impl PolarVirtualMachine {
 
             let mut choices = vec![];
             for rule in &generic_rule.rules {
-                let var = &rule.params[0];
-                let val = &predicate.args[0];
+                // TODO: Should maybe parse these as terms.
+                let var = Term::new(Value::List(rule.params.clone()));
+                let val = Term::new(Value::List(predicate.args.clone()));
+
                 choices.push(vec![
                     Goal::Unify {
                         left: var.clone(),
@@ -207,15 +209,17 @@ impl PolarVirtualMachine {
             panic!("unify_var must be called with left as a Symbol");
         };
 
-        // if let Some(left_value) = self.value(&left_sym) {
-        //     return self.unify(&left_value, right);
-        // }
+        if let Some(left_value) = self.value(&left_sym) {
+            let left_value = left_value.clone();
+            return self.push_goal(Goal::Unify { left: left_value, right: right.clone() });
+        }
 
-        // if let Value::Symbol(right_sym) = &right.value {
-        //     if let Some(right_value) = self.value(&right_sym) {
-        //         return self.unify(left, &right_value);
-        //     }
-        // }
+        if let Value::Symbol(right_sym) = &right.value {
+            if let Some(right_value) = self.value(&right_sym) {
+                let right_value = right_value.clone();
+                return self.push_goal(Goal::Unify { left: left.clone(), right: right_value });
+            }
+        }
 
         self.push_goal(Goal::Bind {
             variable: left_sym.clone(),
@@ -286,14 +290,71 @@ mod tests {
 
     #[test]
     fn unify_var() {
-        let x = Symbol("x".to_string());
-        let y = Symbol("y".to_string());
+        let x = Value::Symbol(Symbol("x".to_string()));
+        let y = Value::Symbol(Symbol("y".to_string()));
+        let one = Term::new(Value::Integer(1));
 
         let mut vm = PolarVirtualMachine::new(
             KnowledgeBase::new(),
-            vec![Goal::Unify {
-
-            }]
+            vec![
+                Goal::Unify {
+                    left: Term::new(x),
+                    right: Term::new(y),
+                },
+                Goal::Bind {
+                    variable: Symbol("y".to_string()),
+                    value: one.clone(),
+                },
+            ],
         );
+
+        vm.run();
+
+        // Left variable bound to bound right variable
+        assert_eq!(vm.value(&Symbol("x".to_string())), Some(&one));
+
+        // Left variable bound to value
+        vm.append_goals(vec![
+            Goal::Bind {
+                variable: Symbol("z".to_string()),
+                value: one.clone()
+            },
+            Goal::Unify {
+                left: Term::new(Value::Symbol(Symbol("z".to_string()))),
+                right: Term::new(Value::Integer(1))
+            },
+            // If unify failed, then backtrack instruction would throw away bind because
+            // it pops stack until choice instruction is found.
+            Goal::Bind {
+                variable: Symbol("success".to_string()),
+                value: one.clone()
+            }
+        ]);
+
+        vm.run();
+
+        assert_eq!(vm.value(&Symbol("success".to_string())), Some(&one));
+
+        // Left variable bound to value
+        vm.append_goals(vec![
+            Goal::Bind {
+                variable: Symbol("z".to_string()),
+                value: one.clone()
+            },
+            Goal::Unify {
+                left: Term::new(Value::Symbol(Symbol("z".to_string()))),
+                right: Term::new(Value::Integer(2))
+            },
+            // If unify failed, then backtrack instruction would throw away bind because
+            // it pops stack until choice instruction is found.
+            Goal::Bind {
+                variable: Symbol("not_success".to_string()),
+                value: one.clone()
+            }
+        ]);
+
+        vm.run();
+
+        assert_ne!(vm.value(&Symbol("not_success".to_string())), Some(&one));
     }
 }
