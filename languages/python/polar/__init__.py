@@ -1,6 +1,15 @@
 from _polar_lib import ffi, lib
 import json
 
+def to_python(v):
+    """ Convert Terms to python values"""
+    #i = v['id']
+    #offset = v['offset']
+    value = v['value']
+    tag = [*value][0]
+    if tag == 'Integer':
+        return value[tag]
+
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
@@ -16,9 +25,8 @@ class Polar:
         lib.polar_load_str(self.polar, c_str)
 
     def query(self, query_str):
-        query_pred = '{"name":"foo","args":[{"id":2,"value":{"Integer":0}}]}'
-        c_pred = ffi.new("char[]", query_pred.encode())
-        query = lib.query_new_from_pred(c_pred)
+        c_str = ffi.new("char[]", query_str.encode())
+        query = lib.polar_new_query(self.polar, c_str)
 
         while True:
             event_s = lib.polar_query(self.polar, query)
@@ -30,14 +38,4 @@ class Polar:
             data = event[kind]
 
             if kind == "Result":
-                yield data["environment"]["bindings"]
-
-            # if kind == "ExternalCall":
-            #     name = data["name"]
-            #     args = data["args"]
-            #
-            #     results = self.external_functions[name](*args)
-            #     for result in results:
-            #         lib.polar_external_result(
-            #             self.polar, query, ffi.new("char[]", result.encode())
-            #         )
+                yield {k: to_python(v) for k,v in data['bindings'].items()}
