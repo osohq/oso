@@ -114,7 +114,7 @@ impl ToPolarString for Value {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct Term {
     pub id: u64,
     pub offset: usize,
