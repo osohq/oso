@@ -65,6 +65,7 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
     let polar = unsafe { &mut *polar_ptr };
     let query = unsafe { &mut *query_ptr };
     let event = polar.query(query);
+    // eprintln!("event: {:?}", event);
     let event_json = serde_json::to_string(&event).unwrap();
     let boxed_json = Box::new(CString::new(event_json).unwrap());
     // @TODO: If there's something at ptr free it, so we don't leak stuff.

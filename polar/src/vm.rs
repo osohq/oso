@@ -46,7 +46,7 @@ impl PolarVirtualMachine {
 
     pub fn run(&mut self) -> QueryEvent {
         while let Some(goal) = self.goals.pop() {
-            //println!("{:?}", goal);
+            eprintln!("goal: {:?}", goal);
             match goal {
                 Goal::Backtrack => self.backtrack(),
                 Goal::Bind { variable, value } => self.bind(&variable, &value),

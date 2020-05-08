@@ -61,9 +61,7 @@ def qvar(polar, query):
 
     return _qvar
 
-def test_helpers(load_file, query, qeval, qvar):
+def test_helpers(polar, load_file, query, qeval, qvar):
     load_file("test_file.polar") # f(1);
-    assert query("f(x)") == [{'x': 1}]
-    assert qeval("f(x)")
-    assert qvar("f(x)", "x") == [1]
-    assert qvar("f(x)", "x", one=True) == 1
+    assert query("f(x)") == [{'x': 1}, {'x': 2}, {'x': 3}]
+    assert qvar("f(x)", "x") == [1,2,3]
