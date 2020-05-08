@@ -45,6 +45,10 @@ mod tests {
         assert_eq!(rule.to_polar(), r#"f(x) := (g(x));"#);
         let rule = polar::RuleParser::new().parse(r#"f(x);"#).unwrap();
         assert_eq!(rule.to_polar(), r#"f(x) := ();"#);
+        let instance = polar::InstanceParser::new().parse(r#"Foo{bar: 1, baz: y, biz: "hi"}"#).unwrap();
+        println!("{}", instance.to_polar());
+        // This won't work. There's no ordering to fields. Need to use sam macros.
+        // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
     }
 
     #[test]

@@ -5,6 +5,7 @@ pub mod macros;
 mod parser;
 mod polar;
 mod types;
+mod vm;
 
 pub use polar::{Polar, Query};
 
@@ -18,15 +19,15 @@ static mut DATA: *const CString = 0 as *const CString;
 
 // @TODO: Have a way to return errors, don't do any of these panics, that's gonna
 // be real bad.
-#[no_mangle]
-pub extern "C" fn query_new_from_pred(query_pred: *const c_char) -> *mut Query {
-    let cs = unsafe { CStr::from_ptr(query_pred) };
-    let s = cs.to_str().expect("to_str() failed");
-    let predicate: types::Predicate = serde_json::from_str(s).unwrap();
+// #[no_mangle]
+// pub extern "C" fn query_new_from_pred(query_pred: *const c_char) -> *mut Query {
+//     let cs = unsafe { CStr::from_ptr(query_pred) };
+//     let s = cs.to_str().expect("to_str() failed");
+//     let predicate: types::Predicate = serde_json::from_str(s).unwrap();
 
-    let q = Box::new(Query::new_from_pred(predicate));
-    unsafe { transmute(q) }
-}
+//     let q = Box::new(Query::new_from_pred(predicate));
+//     unsafe { transmute(q) }
+// }
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
@@ -39,7 +40,27 @@ pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) {
     let polar = unsafe { &mut *polar_ptr };
     let cs = unsafe { CStr::from_ptr(src) };
     let s = cs.to_str().expect("to_str() failed");
-    polar.load_str(s.to_owned());
+    polar.load_str(s);
+}
+
+#[no_mangle]
+pub extern "C" fn polar_new_query_from_predicate(polar_ptr: *mut Polar, query_pred: *const c_char) -> *mut Query {
+    let polar = unsafe { &mut *polar_ptr };
+    let cs = unsafe { CStr::from_ptr(query_pred) };
+    let s = cs.to_str().expect("to_str() failed");
+    let predicate: types::Predicate = serde_json::from_str(s).unwrap();
+
+    let q = Box::new(polar.new_query_from_predicate(predicate));
+    unsafe { transmute(q) }
+}
+
+#[no_mangle]
+pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_char) -> *mut Query {
+    let polar = unsafe { &mut *polar_ptr };
+    let cs = unsafe { CStr::from_ptr(query_str) };
+    let s = cs.to_str().expect("to_str() failed");
+    let q = Box::new(polar.new_query(s));
+    unsafe { transmute(q) }
 }
 
 #[no_mangle]

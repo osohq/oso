@@ -20,16 +20,20 @@ pub trait ToPolarString {
 // Internal only instance
 // interal rep of external class (has fields, was constructed in polar)
 // external only instance (id only)
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Instance {
     pub class: String,
     pub external_id: u64,
-    //pub fields: HashMap<String, Term>,
+    pub fields: HashMap<Symbol, Term>,
 }
 
 impl ToPolarString for Instance {
     fn to_polar(&self) -> String {
-        format!("Instance<{}>", self.class)
+        let fields = self.fields.iter()
+            .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
+            .collect::<Vec<String>>()
+            .join(", ");
+        format!("{}{{{}}}", self.class, fields)
     }
 }
 
@@ -67,7 +71,7 @@ impl ToPolarString for Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Predicate {
     pub name: String,
     pub args: TermList,
@@ -79,7 +83,7 @@ impl ToPolarString for Predicate {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Value {
     Integer(i64),
     String(String),
@@ -123,6 +127,16 @@ impl PartialEq for Term {
     }
 }
 
+impl Term {
+    pub fn new(value: Value) -> Self {
+        Self {
+            id: 0,
+            offset: 0,
+            value,
+        }
+    }
+}
+
 impl ToPolarString for Term {
     fn to_polar(&self) -> String {
         self.value.to_polar()
@@ -142,7 +156,7 @@ impl ToPolarString for Term {
 // :=(foo(), baz(a))
 
 // internal knowledge base types.
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Rule {
     pub name: String,
     pub params: TermList,
@@ -160,26 +174,38 @@ impl ToPolarString for Rule {
     }
 }
 
+#[derive(Clone)]
 pub struct GenericRule {
     pub name: String,
     pub rules: Vec<Rule>,
 }
 
+#[derive(Clone)]
 pub struct Class {
     foo: i64,
 }
 
+#[derive(Clone)]
 pub enum Type {
     Class { class: Class },
     // groups?
 }
 
+#[derive(Clone)]
 pub struct KnowledgeBase {
     pub types: HashMap<String, Type>,
     pub rules: HashMap<String, GenericRule>,
 }
 
-pub type Env = Rc<Environment>;
+impl KnowledgeBase {
+    pub fn new() -> Self {
+        Self {
+            types: HashMap::new(),
+            rules: HashMap::new(),
+        }
+    }
+}
+
 pub type Bindings = HashMap<Symbol, Term>;
 
 #[derive(Debug, Clone)]
@@ -188,67 +214,23 @@ pub struct Environment {
     parent: Option<Rc<Environment>>,
 }
 
-// TODO: Might be able to shorten this a bit by having a special empty environment.
-
-impl Environment {
-    pub fn empty() -> Self {
-        Environment {
-            bindings: HashMap::new(),
-            parent: None,
-        }
-    }
-
-    pub fn new(parent: &Rc<Environment>) -> Self {
-        Environment {
-            bindings: HashMap::new(),
-            parent: Some(Rc::clone(parent)),
-        }
-    }
-
-    pub fn get(&self, symbol: &Symbol) -> Option<&Term> {
-        if let Some(value) = self.bindings.get(symbol) {
-            return Some(value);
-        }
-
-        if let Some(parent) = &self.parent {
-            return parent.get(symbol);
-        }
-
-        None
-    }
-
-    pub fn set(&mut self, symbol: Symbol, value: Term) {
-        self.bindings.insert(symbol, value);
-    }
-
-    pub fn contains(&self, symbol: &Symbol) -> bool {
-        if self.bindings.contains_key(symbol) {
-            return true;
-        }
-
-        if let Some(parent) = &self.parent {
-            return parent.contains(symbol);
-        }
-
-        false
-    }
-
-    pub fn flatten_bindings(&self) -> Bindings {
-        let mut bindings = self.bindings.clone();
-        if let Some(parent) = &self.parent {
-            let parent_bindings = parent.flatten_bindings();
-            for (k, v) in parent_bindings.iter() {
-                bindings.insert(k.clone(), v.clone());
-            }
-        }
-
-        bindings
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     Done,
+    ExternalConstructor {
+        instance: Instance,
+    },
+    ExternalCall {
+        call_id: i64,
+        instance_id: i64,
+        class: String,
+        attribute: String,
+        args: Vec<Term>,
+    },
+    // poc
+    TestExternal {
+        name: Symbol
+    },
     Result { bindings: Bindings },
 }
 

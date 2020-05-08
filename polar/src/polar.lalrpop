@@ -3,6 +3,7 @@
 // parser later.
 
 use std::str::FromStr;
+use std::collections::HashMap;
 use crate::types::*;
 
 use lalrpop_util::ParseError;
@@ -28,8 +29,32 @@ pub Boolean: Term = {
 };
 // @TODO: Better name token.
 Name: String = <s:r"[\w&&[^\d]]\w*"> => s.to_string();
+
 pub Symbol: Term  = <start:@L> <n:Name> => {
     Term{id: 0, offset: start, value: Value::Symbol(Symbol(n))}
+};
+
+//Body: Vec<Term> = {
+    //<term:Exp> => vec![term],
+    //<head:Exp> "," <mut tail:Body> => {tail.insert(0, head); tail}
+//};
+
+Fields: HashMap<Symbol, Term> = {
+    <name:Name> ":" <value:Term> => {
+        let mut fields = HashMap::new();
+        fields.insert(Symbol(name), value);
+        fields
+    },
+    <name:Name> ":" <value:Term> "," <mut fields:Fields> => {
+        fields.insert(Symbol(name), value);
+        fields
+    }
+};
+
+pub Instance: Instance = <tag:Name> "{" <fields:Fields> "}" => Instance {
+    class: tag,
+    external_id: 0,
+    fields,
 };
 
 Terms: Vec<Term> = {
