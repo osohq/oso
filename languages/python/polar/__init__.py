@@ -3,12 +3,14 @@ import json
 
 def to_python(v):
     """ Convert Terms to python values"""
-    #i = v['id']
-    #offset = v['offset']
+    # i = v['id']
+    # offset = v['offset']
     value = v['value']
     tag = [*value][0]
     if tag == 'Integer':
         return value[tag]
+    # TODO
+    return None
 
 class Polar:
     def __init__(self):
