@@ -24,10 +24,14 @@ type Goals = Vec<Goal>;
 #[derive(Debug)]
 struct Binding(Symbol, Term);
 
+#[derive(Default)]
 pub struct PolarVirtualMachine {
     goals: Goals,
     bindings: Vec<Binding>,
     kb: KnowledgeBase,
+
+    /// Used to track temporary variable names.
+    genvar_counter: usize
 }
 
 impl PolarVirtualMachine {
@@ -36,6 +40,7 @@ impl PolarVirtualMachine {
             goals,
             bindings: vec![],
             kb,
+            genvar_counter: 0
         }
     }
 
@@ -70,9 +75,10 @@ impl PolarVirtualMachine {
             match goal {
                 Goal::Choice { choices, bsp } => {
                     self.bindings.drain(bsp..);
-                    if choices.len() == 0 {
-                        break;
+                    if choices.len() > 0 {
+                        self.push_goal(Goal::Choice { choices, bsp });
                     }
+                    break;
                 }
                 _ => (),
             }
@@ -126,6 +132,7 @@ impl PolarVirtualMachine {
         for binding in &self.bindings {
             bindings.insert(binding.0.clone(), binding.1.clone());
         }
+        self.push_goal(Goal::Backtrack);
         bindings
     }
 
@@ -233,6 +240,26 @@ impl PolarVirtualMachine {
             .rev()
             .find(|binding| binding.0 == *variable)
             .map(|binding| &binding.1)
+    }
+
+    /// Generate a new temporary for a name.
+    fn genvar(&mut self, name: &str) -> Symbol {
+        let counter = self.genvar_counter;
+        self.genvar_counter += 1;
+
+        Symbol(format!("_{name}_{counter}", name = name, counter = counter))
+    }
+
+    /// Rename variables in a term to generate a fresh set.
+    fn rename_vars(&mut self, term: &Term) -> Term {
+        term.map(&mut |value| {
+            match value {
+                Value::Symbol(sym) => {
+                    Value::Symbol(self.genvar(&sym.0))
+                },
+                _ => value.clone()
+            }
+        })
     }
 }
 
@@ -356,5 +383,50 @@ mod tests {
         vm.run();
 
         assert_ne!(vm.value(&Symbol("not_success".to_string())), Some(&one));
+    }
+
+    #[test]
+    fn test_gen_var() {
+        let term = Term::new(Value::List(vec![
+            Term::new(Value::Integer(1)),
+            Term::new(Value::Symbol(Symbol("x".to_string()))),
+            Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol("y".to_string())))])),
+            ]));
+
+        let mut vm = PolarVirtualMachine::default();
+
+        let renamed_term = vm.rename_vars(&term);
+        let x_value = match renamed_term.clone().value {
+            Value::List(terms) => {
+                match &terms[1].value {
+                    Value::Symbol(sym) => {
+                        Some(sym.0.clone())
+                    },
+                    _ => None
+                }
+            },
+            _ => None
+        };
+
+        assert_eq!(x_value.unwrap(), "_x_0");
+
+        let y_value = match renamed_term.value {
+            Value::List(terms) => {
+                match &terms[2].value {
+                    Value::List(terms) => {
+                        match &terms[0].value {
+                            Value::Symbol(sym) => {
+                                Some(sym.0.clone())
+                            },
+                            _ => None
+                        }
+                    },
+                    _ => None
+                }
+            },
+            _ => None
+        };
+
+        assert_eq!(y_value.unwrap(), "_y_1");
     }
 }

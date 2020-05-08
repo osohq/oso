@@ -4,7 +4,7 @@ mod polar;
 mod types;
 mod vm;
 
-pub use polar::{Polar, Query};
+pub use self::polar::{Polar, Query};
 
 use std::ffi::{CStr, CString};
 use std::mem::transmute;

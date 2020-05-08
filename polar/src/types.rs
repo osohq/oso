@@ -77,6 +77,14 @@ pub struct Predicate {
     pub args: TermList,
 }
 
+impl Predicate {
+    fn map<F>(&self, f: &mut F) -> Predicate
+    where F: FnMut(&Value) -> Value
+    {
+        Predicate { name: self.name.clone(), args: self.args.iter().map(|term| term.map(f)).collect() }
+    }
+}
+
 impl ToPolarString for Predicate {
     fn to_polar(&self) -> String {
         format!("{}{}", self.name, self.args.to_polar())
@@ -92,6 +100,25 @@ pub enum Value {
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
     Symbol(Symbol),
+}
+
+impl Value {
+    pub fn map<F>(&self, f: &mut F) -> Value
+    where F: FnMut(&Value) -> Value
+    {
+        match self {
+            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {
+                f(&self)
+            },
+            Value::List(terms) => {
+                Value::List(terms.iter().map(|term| term.map(f)).collect())
+            },
+            Value::Call(predicate) => {
+                Value::Call(predicate.map(f))
+            },
+            Value::Instance(_) => { unimplemented!() },
+        }
+    }
 }
 
 impl ToPolarString for Value {
@@ -129,7 +156,15 @@ impl Term {
             value,
         }
     }
+
+    /// Apply `f` to value and return a new term.
+    pub fn map<F>(&self, f: &mut F) -> Term
+    where F: FnMut(&Value) -> Value
+    {
+        Term { id: self.id, offset: self.offset, value: self.value.map(f) }
+    }
 }
+
 
 impl ToPolarString for Term {
     fn to_polar(&self) -> String {
@@ -185,7 +220,7 @@ pub enum Type {
     // groups?
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct KnowledgeBase {
     pub types: HashMap<String, Type>,
     pub rules: HashMap<String, GenericRule>,
