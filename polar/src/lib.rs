@@ -41,6 +41,26 @@ pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) {
 }
 
 #[no_mangle]
+pub extern "C" fn polar_new_query_from_predicate(polar_ptr: *mut Polar, query_pred: *const c_char) -> *mut Query {
+    let polar = unsafe { &mut *polar_ptr };
+    let cs = unsafe { CStr::from_ptr(query_pred) };
+    let s = cs.to_str().expect("to_str() failed");
+    let predicate: types::Predicate = serde_json::from_str(s).unwrap();
+
+    let q = Box::new(polar.new_query_from_predicate(predicate));
+    unsafe { transmute(q) }
+}
+
+#[no_mangle]
+pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_char) -> *mut Query {
+    let polar = unsafe { &mut *polar_ptr };
+    let cs = unsafe { CStr::from_ptr(query_str) };
+    let s = cs.to_str().expect("to_str() failed");
+    let q = Box::new(polar.new_query(s));
+    unsafe { transmute(q) }
+}
+
+#[no_mangle]
 pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *const c_char {
     let polar = unsafe { &mut *polar_ptr };
     let query = unsafe { &mut *query_ptr };

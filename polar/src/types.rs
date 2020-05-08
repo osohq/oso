@@ -211,7 +211,20 @@ pub struct Environment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     Done,
-    External { name: Symbol }, // POC
+    ExternalConstructor {
+        instance: Instance,
+    },
+    ExternalCall {
+        call_id: i64,
+        instance_id: i64,
+        class: String,
+        attribute: String,
+        args: Vec<Term>,
+    },
+    // poc
+    TestExternal {
+        name: Symbol
+    },
     Result { bindings: Bindings },
 }
 

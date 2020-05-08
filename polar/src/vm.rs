@@ -8,7 +8,7 @@ pub enum Goal {
     Bindings,
     Choice { choices: Vec<Goals>, bsp: usize }, // binding stack pointer
     Cut,
-    External { name: Symbol }, // POC
+    TestExternal { name: Symbol }, // POC
     Halt,
     Isa { left: Term, right: Term },
     Lookup { instance: Instance, field: Term },
@@ -52,7 +52,7 @@ impl PolarVirtualMachine {
                 }
                 Goal::Choice { choices, bsp } => self.choice(choices, bsp),
                 Goal::Cut => self.cut(),
-                Goal::External { name } => return QueryEvent::External { name }, // POC
+                Goal::TestExternal { name } => return QueryEvent::TestExternal { name }, // POC
                 Goal::Halt => self.halt(),
                 Goal::Isa { .. } => unimplemented!("isa"),
                 Goal::Lookup { .. } => unimplemented!("lookup"),
