@@ -29,7 +29,9 @@ pub struct Instance {
 
 impl ToPolarString for Instance {
     fn to_polar(&self) -> String {
-        let fields = self.fields.iter()
+        let fields = self
+            .fields
+            .iter()
             .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
             .collect::<Vec<String>>()
             .join(", ");
@@ -79,9 +81,13 @@ pub struct Predicate {
 
 impl Predicate {
     fn map<F>(&self, f: &mut F) -> Predicate
-    where F: FnMut(&Value) -> Value
+    where
+        F: FnMut(&Value) -> Value,
     {
-        Predicate { name: self.name.clone(), args: self.args.iter().map(|term| term.map(f)).collect() }
+        Predicate {
+            name: self.name.clone(),
+            args: self.args.iter().map(|term| term.map(f)).collect(),
+        }
     }
 }
 
@@ -104,19 +110,14 @@ pub enum Value {
 
 impl Value {
     pub fn map<F>(&self, f: &mut F) -> Value
-    where F: FnMut(&Value) -> Value
+    where
+        F: FnMut(&Value) -> Value,
     {
         match self {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {
-                f(&self)
-            },
-            Value::List(terms) => {
-                Value::List(terms.iter().map(|term| term.map(f)).collect())
-            },
-            Value::Call(predicate) => {
-                Value::Call(predicate.map(f))
-            },
-            Value::Instance(_) => { unimplemented!() },
+            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => f(&self),
+            Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
+            Value::Call(predicate) => Value::Call(predicate.map(f)),
+            Value::Instance(_) => unimplemented!(),
         }
     }
 }
@@ -159,12 +160,16 @@ impl Term {
 
     /// Apply `f` to value and return a new term.
     pub fn map<F>(&self, f: &mut F) -> Term
-    where F: FnMut(&Value) -> Value
+    where
+        F: FnMut(&Value) -> Value,
     {
-        Term { id: self.id, offset: self.offset, value: self.value.map(f) }
+        Term {
+            id: self.id,
+            offset: self.offset,
+            value: self.value.map(f),
+        }
     }
 }
-
 
 impl ToPolarString for Term {
     fn to_polar(&self) -> String {
@@ -243,6 +248,7 @@ pub struct Environment {
     parent: Option<Rc<Environment>>,
 }
 
+#[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     Done,
@@ -258,9 +264,11 @@ pub enum QueryEvent {
     },
     // poc
     TestExternal {
-        name: Symbol
+        name: Symbol,
     },
-    Result { bindings: Bindings },
+    Result {
+        bindings: Bindings,
+    },
 }
 
 #[cfg(test)]

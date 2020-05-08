@@ -110,6 +110,7 @@ impl Polar {
     pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
         let query = Goal::Query {
             predicate: predicate.clone(),
+            tail: vec![],
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -121,20 +122,16 @@ impl Polar {
         query.vm.run()
     }
 
-    pub fn result(&mut self, query: &mut Query, call_id: i64, value: Term) {
+    pub fn result(&mut self, _query: &mut Query, _call_id: i64, _value: Term) {
         unimplemented!();
     }
 
     #[cfg(test)]
-    pub fn test_result(&mut self, query: &mut Query, name: &Symbol, value: i64) {
+    pub fn test_result(&mut self, query: &mut Query, name: &Symbol, value: Option<i64>) {
         query.vm.push_goal(Goal::Result {
             name: name.clone(),
             value,
         });
-        query.vm.push_goal(Goal::Result {
-            name: name.clone(),
-            value,
-        })
     }
 
     #[cfg(test)]
@@ -143,7 +140,7 @@ impl Polar {
             self.kb.clone(),
             vec![Goal::Bindings, Goal::TestExternal { name }],
         );
-        Query { vm }
+        Query { vm, done: false }
     }
 }
 
@@ -184,12 +181,15 @@ mod tests {
         let mut polar = Polar::new();
         let mut query = polar.new_query_from_external(a.clone());
 
+        let mut externals = vec![1, 2, 3];
         let mut results = vec![];
         loop {
             let event = polar.query(&mut query);
             match event {
                 QueryEvent::Done => break,
-                QueryEvent::TestExternal { name } => polar.test_result(&mut query, &name, 1),
+                QueryEvent::TestExternal { name } => {
+                    polar.test_result(&mut query, &name, externals.pop())
+                }
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.get(&a).unwrap().clone());
                 }
