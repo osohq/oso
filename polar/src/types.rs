@@ -138,11 +138,17 @@ impl ToPolarString for Value {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct Term {
     pub id: u64,
     pub offset: usize,
     pub value: Value,
+}
+
+impl PartialEq for Term {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
 }
 
 impl Term {
