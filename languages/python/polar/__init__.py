@@ -16,11 +16,9 @@ class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
 
-    def destroy(self):
-        # TODO
-        pass
+    def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
-        # lib.polar_free(self.polar)
+        lib.polar_free(self.polar)
 
     def load_str(self, src_str):
         c_str = ffi.new("char[]", src_str.encode())
@@ -33,6 +31,7 @@ class Polar:
         while True:
             event_s = lib.polar_query(self.polar, query)
             event = json.loads(ffi.string(event_s).decode())
+            lib.free_string(event_s)
             if event == "Done":
                 break
 
@@ -41,3 +40,5 @@ class Polar:
 
             if kind == "Result":
                 yield {k: to_python(v) for k,v in data['bindings'].items()}
+
+        lib.query_free(query)

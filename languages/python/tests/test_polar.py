@@ -11,13 +11,14 @@ def test_anything_works():
     assert results[0]["x"] == 1
     results = list(p.query("f(y)"))
     assert results[0]["y"] == 1
-    p.destroy()
+    del p
 
 @pytest.fixture
 def polar():
     """ Set up a polar instance and tear it down after the test."""
     p = Polar()
     yield p
+    del p
 
 @pytest.fixture
 def load_file(polar):

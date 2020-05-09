@@ -7,73 +7,102 @@ mod vm;
 pub use self::polar::{Polar, Query};
 
 use std::ffi::{CStr, CString};
-use std::mem::transmute;
 use std::os::raw::c_char;
 
 use serde_json;
 
-static mut DATA: *const CString = 0 as *const CString;
-
 // @TODO: Have a way to return errors, don't do any of these panics, that's gonna
 // be real bad.
-// #[no_mangle]
-// pub extern "C" fn query_new_from_pred(query_pred: *const c_char) -> *mut Query {
-//     let cs = unsafe { CStr::from_ptr(query_pred) };
-//     let s = cs.to_str().expect("to_str() failed");
-//     let predicate: types::Predicate = serde_json::from_str(s).unwrap();
 
-//     let q = Box::new(Query::new_from_pred(predicate));
-//     unsafe { transmute(q) }
-// }
+/// Get a reference to an object from a pointer
+macro_rules! ffi_ref {
+    ($name:ident) => {{
+        assert!(!$name.is_null());
+        &mut *$name
+    }};
+}
+
+/// Get a `Cow<str>` back from a C-style string
+macro_rules! ffi_string {
+    ($name:ident) => {{
+        assert!(!$name.is_null());
+        CStr::from_ptr($name).to_string_lossy()
+    }};
+}
+
+/// Returns a raw pointer from an object
+macro_rules! box_ptr {
+    ($x:expr) => {
+        Box::into_raw(Box::new($x))
+    };
+}
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
-    let p = Box::new(Polar::new());
-    unsafe { transmute(p) }
+    box_ptr!(Polar::new())
 }
 
 #[no_mangle]
 pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) {
-    let polar = unsafe { &mut *polar_ptr };
-    let cs = unsafe { CStr::from_ptr(src) };
-    let s = cs.to_str().expect("to_str() failed");
-    polar.load_str(s);
+    let polar = unsafe { ffi_ref!(polar_ptr) };
+    let s = unsafe { ffi_string!(src) };
+    polar.load_str(&s);
 }
 
 #[no_mangle]
-pub extern "C" fn polar_new_query_from_predicate(polar_ptr: *mut Polar, query_pred: *const c_char) -> *mut Query {
-    let polar = unsafe { &mut *polar_ptr };
-    let cs = unsafe { CStr::from_ptr(query_pred) };
-    let s = cs.to_str().expect("to_str() failed");
-    let predicate: types::Predicate = serde_json::from_str(s).unwrap();
+pub extern "C" fn polar_new_query_from_predicate(
+    polar_ptr: *mut Polar,
+    query_pred: *const c_char,
+) -> *mut Query {
+    let polar = unsafe { ffi_ref!(polar_ptr) };
+    let s = unsafe { ffi_string!(query_pred) };
+    let predicate: types::Predicate = serde_json::from_str(&s).unwrap();
 
-    let q = Box::new(polar.new_query_from_predicate(predicate));
-    unsafe { transmute(q) }
+    box_ptr!(polar.new_query_from_predicate(predicate))
 }
 
 #[no_mangle]
 pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_char) -> *mut Query {
-    let polar = unsafe { &mut *polar_ptr };
-    let cs = unsafe { CStr::from_ptr(query_str) };
-    let s = cs.to_str().expect("to_str() failed");
-    let q = Box::new(polar.new_query(s));
-    unsafe { transmute(q) }
+    let polar = unsafe { ffi_ref!(polar_ptr) };
+    let s = unsafe { ffi_string!(query_str) };
+    box_ptr!(polar.new_query(&s))
 }
 
 #[no_mangle]
 pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *const c_char {
-    let polar = unsafe { &mut *polar_ptr };
-    let query = unsafe { &mut *query_ptr };
+    let polar = unsafe { ffi_ref!(polar_ptr) };
+    let query = unsafe { ffi_ref!(query_ptr) };
     let event = polar.query(query);
     // eprintln!("event: {:?}", event);
     let event_json = serde_json::to_string(&event).unwrap();
-    let boxed_json = Box::new(CString::new(event_json).unwrap());
-    // @TODO: If there's something at ptr free it, so we don't leak stuff.
-    unsafe {
-        DATA = transmute(boxed_json);
-        (&*DATA).as_ptr()
-    }
+    CString::new(event_json)
+        .expect("JSON should not contain any 0 bytes")
+        .into_raw()
 }
+
+/// Required to free strings properly
+#[no_mangle]
+pub extern "C" fn free_string(s: *mut c_char) {
+    if s.is_null() {
+        return;
+    }
+    unsafe { CString::from_raw(s) };
+}
+
+/// Recovers the original boxed version of `polar` so that
+/// it can be properly freed
+#[no_mangle]
+pub extern "C" fn polar_free(polar: *mut Polar) {
+    let _polar = unsafe { Box::from_raw(polar) };
+}
+
+/// Recovers the original boxed version of `query` so that
+/// it can be properly freed
+#[no_mangle]
+pub extern "C" fn query_free(query: *mut Query) {
+    let _query = unsafe { Box::from_raw(query) };
+}
+
 //
 // #[no_mangle]
 // pub extern "C" fn polar_external_result(
