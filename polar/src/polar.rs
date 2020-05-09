@@ -109,7 +109,7 @@ impl Polar {
 
     pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
         let query = Goal::Query {
-            predicate: predicate.clone(),
+            head: predicate.clone(),
             tail: vec![],
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
@@ -138,7 +138,7 @@ impl Polar {
     pub fn new_query_from_external(&self, name: Symbol) -> Query {
         let vm = PolarVirtualMachine::new(
             self.kb.clone(),
-            vec![Goal::Bindings, Goal::TestExternal { name }],
+            vec![Goal::TestExternal { name }, Goal::Return],
         );
         Query { vm, done: false }
     }

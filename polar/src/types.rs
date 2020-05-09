@@ -1,20 +1,16 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::rc::Rc;
 
 pub trait ToPolarString {
     fn to_polar(&self) -> String;
 }
 
-// AST type for polar expressions / rules / etc
+// AST type for polar expressions / rules / etc.
 // Internal knowledge base types.
 // FFI types for passing polar values back and forth.
 // FFI event types.
-// Debugger events
+// Debugger events.
 //
-
-// Knowledge base organized around rules.
-// what's in those rules?
 
 // @TODO flesh out.
 // Internal only instance
@@ -127,13 +123,13 @@ impl ToPolarString for Value {
         match self {
             Value::Integer(i) => format!("{}", i),
             Value::String(s) => format!("\"{}\"", s),
-            Value::Boolean(b) => {
+            Value::Boolean(b) => format!("{}", {
                 if *b {
-                    format!("{}", "true")
+                    "true"
                 } else {
-                    format!("{}", "false")
+                    "false"
                 }
-            }
+            }),
             Value::Instance(i) => i.to_polar(),
             Value::Call(c) => c.to_polar(),
             Value::List(l) => l.to_polar(),
@@ -189,7 +185,7 @@ impl ToPolarString for Term {
 // foo(a: Foo{a: b}) := baz(a);
 // :=(foo(), baz(a))
 
-// internal knowledge base types.
+// Knowledge base internal types.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Rule {
     pub name: String,
@@ -216,13 +212,14 @@ pub struct GenericRule {
 
 #[derive(Clone)]
 pub struct Class {
-    foo: i64,
+    pub id: i64,
+    pub name: String,
 }
 
 #[derive(Clone)]
 pub enum Type {
     Class { class: Class },
-    // groups?
+    Group { members: Vec<Type> },
 }
 
 #[derive(Default, Clone)]
@@ -240,13 +237,7 @@ impl KnowledgeBase {
     }
 }
 
-pub type Bindings = HashMap<Symbol, Term>;
-
-#[derive(Debug, Clone)]
-pub struct Environment {
-    bindings: Bindings,
-    parent: Option<Rc<Environment>>,
-}
+type Bindings = HashMap<Symbol, Term>;
 
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -262,9 +253,8 @@ pub enum QueryEvent {
         attribute: String,
         args: Vec<Term>,
     },
-    // poc
     TestExternal {
-        name: Symbol,
+        name: Symbol, // POC
     },
     Result {
         bindings: Bindings,
@@ -284,6 +274,9 @@ mod tests {
                 value: Value::Integer(0),
             }],
         };
-        println!("{}", serde_json::to_string(&pred).unwrap());
+        assert_eq!(
+            serde_json::to_string(&pred).unwrap(),
+            r#"{"name":"foo","args":[{"id":2,"offset":0,"value":{"Integer":0}}]}"#
+        );
     }
 }

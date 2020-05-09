@@ -22,7 +22,9 @@ mod tests {
         let int = polar::IntegerParser::new().parse(" 123").unwrap();
         assert_eq!(int.to_polar(), "123");
         assert_eq!(int.offset, 1);
-        let s = polar::PolarStringParser::new().parse(r#""string literal""#).unwrap();
+        let s = polar::PolarStringParser::new()
+            .parse(r#""string literal""#)
+            .unwrap();
         assert_eq!(s.to_polar(), r#""string literal""#);
         let t = polar::BooleanParser::new().parse(r#"true"#).unwrap();
         assert_eq!(t.to_polar(), r#"true"#);
@@ -30,17 +32,23 @@ mod tests {
         assert_eq!(sym.to_polar(), r#"foo_qwe"#);
         let l = polar::ExpParser::new().parse(r#"(foo, bar, baz)"#).unwrap();
         assert_eq!(l.to_polar(), r#"(foo,bar,baz)"#);
-        let exp = polar::ExpParser::new().parse(r#"foo(a, b(c), "d")"#).unwrap();
+        let exp = polar::ExpParser::new()
+            .parse(r#"foo(a, b(c), "d")"#)
+            .unwrap();
         assert_eq!(exp.to_polar(), r#"foo(a,b(c),"d")"#);
-        let exp2 = polar::ExpParser::new().parse(r#"foo.bar(a, b(c.d(e,(f,g))))"#).unwrap();
+        let exp2 = polar::ExpParser::new()
+            .parse(r#"foo.bar(a, b(c.d(e,(f,g))))"#)
+            .unwrap();
         assert_eq!(exp2.to_polar(), r#".(foo,bar,a,b(.(c,d,e,(f,g))))"#);
         let rule = polar::RuleParser::new().parse(r#"f(x) := g(x);"#).unwrap();
         assert_eq!(rule.to_polar(), r#"f(x) := (g(x));"#);
         let rule = polar::RuleParser::new().parse(r#"f(x);"#).unwrap();
         assert_eq!(rule.to_polar(), r#"f(x) := ();"#);
-        let instance = polar::InstanceParser::new().parse(r#"Foo{bar: 1, baz: y, biz: "hi"}"#).unwrap();
-        println!("{}", instance.to_polar());
+        let instance = polar::InstanceParser::new()
+            .parse(r#"Foo{bar: 1, baz: y, biz: "hi"}"#)
+            .unwrap();
         // This won't work. There's no ordering to fields. Need to use sam macros.
+        // println!("{}", instance.to_polar());
         // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
     }
 
