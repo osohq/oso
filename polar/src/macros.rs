@@ -1,5 +1,6 @@
 /// Helper macros to create AST types
 ///
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::types::*;
@@ -40,6 +41,7 @@ impl<S: AsRef<str>> From<S> for FromHelper<Instance> {
         Self(Instance {
             class: other.as_ref().to_string(),
             external_id: NEXT_ID.fetch_add(1, ORD),
+            fields: HashMap::default(),
         })
     }
 }
