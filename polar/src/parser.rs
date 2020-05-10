@@ -17,7 +17,7 @@ pub fn parse_file(src: &str) -> Vec<Rule> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::macros::*;
+
     #[test]
     fn try_it() {
         let int = polar::IntegerParser::new().parse(" 123").unwrap();

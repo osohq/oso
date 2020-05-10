@@ -109,8 +109,7 @@ impl Polar {
 
     pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
         let query = Goal::Query {
-            head: predicate.clone(),
-            tail: vec![],
+            predicate: predicate.clone(),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -136,10 +135,7 @@ impl Polar {
 
     #[cfg(test)]
     pub fn new_query_from_external(&self, name: Symbol) -> Query {
-        let vm = PolarVirtualMachine::new(
-            self.kb.clone(),
-            vec![Goal::TestExternal { name }, Goal::Return],
-        );
+        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Goal::TestExternal { name }]);
         Query { vm, done: false }
     }
 }
@@ -148,10 +144,35 @@ impl Polar {
 mod tests {
     use super::*;
 
+    fn result_values(mut results: Vec<Term>) -> Vec<Value> {
+        results.iter().map(|result| result.value.clone()).collect()
+    }
+
+    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
+    #[test]
+    fn test_query() {
+        let mut polar = Polar::new();
+        polar.load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), g(x), h(x);");
+        let mut query = polar.new_query("k(a)");
+        let mut results = vec![];
+        loop {
+            let event = polar.query(&mut query);
+            match event {
+                QueryEvent::Done => break,
+                QueryEvent::TestExternal { .. } => panic!("no external call"),
+                QueryEvent::Result { bindings } => {
+                    results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
+                }
+                _ => (),
+            }
+        }
+        assert_eq!(result_values(results), vec![value!(2)]);
+    }
+
     #[test]
     fn test_results() {
         let mut polar = Polar::new();
-        polar.load_str("foo(1);foo(2);");
+        polar.load_str("foo(1); foo(2);");
         let mut query = polar.new_query("foo(a)");
 
         let mut results = vec![];
@@ -166,13 +187,7 @@ mod tests {
                 _ => (),
             }
         }
-        assert_eq!(
-            results
-                .iter()
-                .map(|result| result.value.clone())
-                .collect::<Vec<Value>>(),
-            vec![Value::Integer(1), Value::Integer(2)]
-        );
+        assert_eq!(result_values(results), vec![value!(1), value!(2)]);
     }
 
     #[test]
@@ -196,12 +211,6 @@ mod tests {
                 _ => (),
             }
         }
-        assert_eq!(
-            results
-                .iter()
-                .map(|result| result.value.clone())
-                .collect::<Vec<Value>>(),
-            vec![Value::Integer(1)]
-        );
+        assert_eq!(result_values(results), vec![value!(1)]);
     }
 }

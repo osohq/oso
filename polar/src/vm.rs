@@ -3,18 +3,9 @@ use std::fmt;
 
 use super::types::*;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
 pub enum Goal {
-    Backtrack,
-    Bind {
-        variable: Symbol,
-        value: Term,
-    },
-    Choice {
-        choices: Vec<Goals>,
-        bsp: usize, // binding stack pointer
-    },
     Cut,
     TestExternal {
         name: Symbol, // POC
@@ -33,14 +24,12 @@ pub enum Goal {
         field: Term,
     },
     Query {
-        head: Predicate,
-        tail: Vec<Predicate>,
+        predicate: Predicate,
     },
     Result {
         name: Symbol,
         value: Option<i64>,
     },
-    Return,
     Unify {
         left: Term,
         right: Term,
@@ -50,29 +39,6 @@ pub enum Goal {
 impl fmt::Display for Goal {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Goal::Bind { variable, value } => write!(
-                fmt,
-                "Bind {{ {} ← {} }}",
-                variable.to_polar(),
-                value.to_polar()
-            ),
-            Goal::Choice { choices, bsp } => write!(
-                fmt,
-                "Choice {{ bsp: {}, choices: [{}] }}",
-                bsp,
-                choices
-                    .iter()
-                    .map(|goals| format!(
-                        "[{}]",
-                        goals
-                            .iter()
-                            .map(|g| format!("{}", g))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    ))
-                    .collect::<Vec<String>>()
-                    .join("\n\t")
-            ),
             Goal::Unify { left, right } => write!(
                 fmt,
                 "Unify {{ left: {}, right: {} }}",
@@ -87,17 +53,23 @@ impl fmt::Display for Goal {
 #[derive(Debug)]
 struct Binding(Symbol, Term);
 
-type Goals = Vec<Goal>;
-type Choices = Vec<Goals>;
+#[derive(Debug)]
+pub struct Choice {
+    alternatives: Alternatives,
+    bsp: usize, // binding stack pointer
+}
+
+type Alternatives = Vec<Goals>;
 type Bindings = Vec<Binding>;
+type Choices = Vec<Choice>;
+type Goals = Vec<Goal>;
 
 #[derive(Default)]
 pub struct PolarVirtualMachine {
-    /// Stack of goals.
+    /// Stacks.
     goals: Goals,
-
-    /// Stack of bindings.
     bindings: Bindings,
+    choices: Choices,
 
     /// Rules and types.
     kb: KnowledgeBase,
@@ -106,9 +78,60 @@ pub struct PolarVirtualMachine {
     genvar_counter: usize,
 }
 
-// Methods which aren't goals/instructions
+// Methods which aren't goals/instructions.
 impl PolarVirtualMachine {
-    /// Push a new goal onto the stack.
+    /// Make a new virtual machine with an initial list of goals.
+    /// Reverse the goal list for the sanity of callers.
+    pub fn new(kb: KnowledgeBase, mut goals: Goals) -> Self {
+        goals.reverse();
+        Self {
+            goals,
+            bindings: vec![],
+            choices: vec![],
+            kb,
+            genvar_counter: 0,
+        }
+    }
+
+    /// Run the virtual machine. While there are goals on the stack,
+    /// pop them off and execute them one at at time until we have a
+    /// `QueryEvent` to return. May be called multiple times to restart
+    /// the machine.
+    pub fn run(&mut self) -> QueryEvent {
+        if self.goals.is_empty() {
+            if self.choices.is_empty() {
+                return QueryEvent::Done;
+            } else {
+                self.backtrack();
+            }
+        }
+
+        while let Some(goal) = self.goals.pop() {
+            eprintln!("{}", goal);
+            match goal {
+                Goal::Cut => self.cut(),
+                Goal::Halt => return self.halt(),
+                Goal::Isa { .. } => unimplemented!("isa"),
+                Goal::Lookup { .. } => unimplemented!("lookup"),
+                Goal::LookupExternal { .. } => unimplemented!("lookup external"),
+                Goal::Query { predicate } => self.query(predicate),
+                Goal::Result { name, value } => self.result(&name, value),
+                Goal::TestExternal { name } => return self.test_external(name), // POC
+                Goal::Unify { left, right } => self.unify(&left, &right),
+            }
+        }
+
+        QueryEvent::Result {
+            bindings: self.bindings(),
+        }
+    }
+
+    /// Push a choice onto the choice stack.
+    fn push_choice(&mut self, choice: Choice) {
+        self.choices.push(choice);
+    }
+
+    /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) {
         self.goals.push(goal);
     }
@@ -119,54 +142,56 @@ impl PolarVirtualMachine {
         self.goals.append(&mut goals);
     }
 
-    /// Make a new virtual machine with an initial list of goals.
-    /// Reverse the list for the sanity of callers.
-    pub fn new(kb: KnowledgeBase, mut goals: Goals) -> Self {
-        goals.reverse();
-        Self {
-            goals,
-            bindings: vec![],
-            kb,
-            genvar_counter: 0,
+    /// Remove all bindings after the last choice point, and try the next
+    /// available alternative. If no choice is possible, halt.
+    fn backtrack(&mut self) {
+        if let Some(Choice {
+            ref mut alternatives,
+            ref bsp,
+        }) = self.choices.pop()
+        {
+            if let Some(alternative) = alternatives.pop() {
+                self.append_goals(alternative);
+                self.bindings.drain(bsp..);
+                if !alternatives.is_empty() {
+                    self.push_choice(Choice {
+                        alternatives: alternatives.clone(),
+                        bsp: *bsp,
+                    });
+                }
+            } else {
+                panic!("no alternatives found")
+            }
+        } else {
+            self.push_goal(Goal::Halt);
         }
     }
 
-    /// Run the virtual machine: while there are goals on the stack,
-    /// pop them off and execute them one at at time until we have a
-    /// `QueryEvent` to return. May be called multiple times to restart
-    /// the machine.
-    pub fn run(&mut self) -> QueryEvent {
-        while let Some(goal) = self.goals.pop() {
-            /*eprintln!(
-                "{} stack [{}]",
-                goal,
-                self.goals
-                    .iter()
-                    .map(std::string::ToString::to_string)
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            );*/
-            match goal {
-                Goal::Backtrack => self.backtrack(),
-                Goal::Bind { variable, value } => self.bind(&variable, &value),
-                Goal::Choice { choices, bsp } => self.choice(choices, bsp),
-                Goal::Cut => self.cut(),
-                Goal::Halt => self.halt(),
-                Goal::Isa { .. } => unimplemented!("isa"),
-                Goal::Lookup { .. } => unimplemented!("lookup"),
-                Goal::LookupExternal { .. } => unimplemented!("lookup external"),
-                Goal::Query { head, tail } => self.query(head, tail),
-                Goal::Result { name, value } => self.result(&name, value),
-                Goal::Return => {
-                    return QueryEvent::Result {
-                        bindings: self.return_bindings(),
-                    };
-                }
-                Goal::TestExternal { name } => return self.test_external(name), // POC
-                Goal::Unify { left, right } => self.unify(&left, &right),
-            }
+    /// Push a binding onto the binding stack.
+    fn bind(&mut self, var: &Symbol, value: &Term) {
+        self.bindings.push(Binding(var.clone(), value.clone()));
+    }
+
+    /// Retrieve the current bindings and return them as a hash map.
+    fn bindings(&mut self) -> HashMap<Symbol, Term> {
+        let mut bindings = HashMap::new();
+        for Binding(var, value) in &self.bindings {
+            bindings.insert(
+                var.clone(),
+                if let Value::Symbol(sym) = &value.value {
+                    // Try to look up the value as a variable.
+                    self.value(&sym).unwrap_or(value).clone()
+                } else {
+                    value.clone()
+                },
+            );
         }
-        QueryEvent::Done
+        bindings
+    }
+
+    /// Return the current binding stack pointer.
+    fn bsp(&self) -> usize {
+        self.bindings.len()
     }
 
     /// Look up a variable in the bindings stack and return
@@ -189,8 +214,17 @@ impl PolarVirtualMachine {
     /// Generate a fresh set of variables for a term
     /// by renaming them to temporaries.
     fn rename_vars(&mut self, term: &Term) -> Term {
+        let mut renames = HashMap::<Symbol, Symbol>::new();
         term.map(&mut |value| match value {
-            Value::Symbol(sym) => Value::Symbol(self.genvar(&sym.0)),
+            Value::Symbol(sym) => {
+                if let Some(new) = renames.get(sym) {
+                    Value::Symbol(new.clone())
+                } else {
+                    let new = self.genvar(&sym.0);
+                    renames.insert(sym.clone(), new.clone());
+                    Value::Symbol(new)
+                }
+            }
             _ => value.clone(),
         })
     }
@@ -198,79 +232,13 @@ impl PolarVirtualMachine {
 
 /// Implementations of instructions.
 impl PolarVirtualMachine {
-    /// Backtrack from the current goal, stopping once we reach
-    /// a choice point with no more choices (which means this).
-    ///
-    /// Remove all bindings that were added after the last choice point.
-    fn backtrack(&mut self) {
-        while let Some(goal) = self.goals.pop() {
-            match goal {
-                Goal::Choice {
-                    ref choices,
-                    ref bsp,
-                } => {
-                    self.bindings.drain(bsp..);
-                    if !choices.is_empty() {
-                        self.push_goal(goal);
-                    }
-                    break;
-                }
-                _ => (),
-            }
-        }
-    }
-
-    /// Bind a variable to a value, i.e., directly "write" to memory.
-    fn bind(&mut self, var: &Symbol, value: &Term) {
-        self.bindings.push(Binding(var.clone(), value.clone()));
-    }
-
-    /// Retrieve the current bindings and return them as a hash map.
-    fn return_bindings(&mut self) -> HashMap<Symbol, Term> {
-        let mut bindings = HashMap::new();
-        for binding in &self.bindings {
-            bindings.insert(binding.0.clone(), binding.1.clone());
-        }
-        self.push_goal(Goal::Backtrack);
-        bindings
-    }
-
-    // sp [[a,b,c][d,e,f]]
-    // [[d,e,f] a, b, c]
-    // [[] a, b, c, d, e, f]
-    //
-    // [a,b.c] [other choices later]
-
-    /// Resolves a choice by removing the next list of goals
-    /// and adding them to the stack.
-    ///
-    /// If there are no more choices, then this goal is a no-op.
-    fn choice(&mut self, mut choices: Choices, bsp: usize) {
-        if !choices.is_empty() {
-            let choice = choices.remove(0);
-            self.push_goal(Goal::Choice { choices, bsp });
-            self.append_goals(choice);
-        }
-    }
-
     /// A cut operation indicates that no other choices should
     /// be considered.
     ///
     /// This goal implements this by iterating through all
     /// goals and clearing all other choice branches.
     fn cut(&mut self) {
-        for goal in self.goals.iter_mut().rev() {
-            match goal {
-                Goal::Choice {
-                    ref mut choices,
-                    bsp: _,
-                } => {
-                    choices.clear();
-                    break;
-                }
-                _ => (),
-            }
-        }
+        unimplemented!("cut!");
     }
 
     /// Test goal: wait for external input.
@@ -285,9 +253,11 @@ impl PolarVirtualMachine {
         QueryEvent::TestExternal { name }
     }
 
-    /// Halt the VM by clearing all goals.
-    pub fn halt(&mut self) {
+    /// Halt the VM by clearing all goals and choices.
+    pub fn halt(&mut self) -> QueryEvent {
         self.goals.clear();
+        self.choices.clear();
+        QueryEvent::Done
     }
 
     // pub fn isa(&mut self) {}
@@ -297,68 +267,76 @@ impl PolarVirtualMachine {
     /// Query for the provided predicate.
     ///
     /// Uses the knowledge base to get an ordered list of rules.
-    /// Creates a choice point over each rule, where the choice point
-    /// consists of (a) unifying the arguments (unifying the head),
-    /// and (b) appending all clauses from the body onto the query
-    /// and (c) concluding the query with a new `Return` goal if there
-    /// are no further causes, or creating a new query otherwise.
-    fn query(&mut self, head: Predicate, tail: Vec<Predicate>) {
+    /// Creates a choice point over each rule, where each alternative
+    /// consists of unifying the rule head with the arguments, then
+    /// querying for each body clause.
+    fn query(&mut self, predicate: Predicate) {
         // Select applicable rules for predicate.
         // Sort applicable rules by specificity.
         // Create a choice over the applicable rules.
 
-        if let Some(generic_rule) = self.kb.rules.get(&head.name) {
+        if let Some(generic_rule) = self.kb.rules.get(&predicate.name) {
             let generic_rule = generic_rule.clone();
-            assert_eq!(generic_rule.name, head.name);
+            assert_eq!(generic_rule.name, predicate.name);
 
-            let mut choices = vec![];
-            for rule in generic_rule.rules {
+            let mut alternatives = vec![];
+            for rule in generic_rule.rules.iter().rev() {
+                // Rename the parameters and body at the same time.
+                // FIXME: This is terrible right now.
                 // TODO(?): Should maybe parse these as terms.
-                let parameter = Term::new(Value::List(rule.params.clone()));
-                let argument = Term::new(Value::List(head.args.clone()));
+                let renames = self.rename_vars(&Term::new(Value::List(vec![
+                    Term::new(Value::List(rule.params.clone())),
+                    Term::new(Value::List(rule.body.clone())),
+                ])));
+                if let Value::List(renames) = renames.value {
+                    let params = &renames[0];
+                    let body = &renames[1];
+                    let mut goals = vec![];
 
-                // (a) First goal is to unify the heads.
-                let mut goals = vec![Goal::Unify {
-                    left: parameter.clone(),
-                    right: argument.clone(),
-                }];
+                    // Unify the arguments with the formal parameters.
+                    goals.push(Goal::Unify {
+                        left: Term::new(Value::List(predicate.args.clone())),
+                        right: params.clone(),
+                    });
 
-                let mut tail = tail.clone();
-
-                // (b) Add clauses from body to query tail.
-                for clause in rule.body.into_iter() {
-                    if let Value::Call(predicate) = clause.value {
-                        tail.push(predicate);
-                    } else {
-                        todo!("can clauses in a rule body be anything but predicates?")
+                    // Query for the body clauses.
+                    if let Value::List(clauses) = &body.value {
+                        for clause in clauses.iter() {
+                            if let Value::Call(predicate) = &clause.value {
+                                goals.push(Goal::Query {
+                                    predicate: predicate.clone(),
+                                });
+                            } else {
+                                panic!("body clause is not a predicate");
+                            }
+                        }
                     }
-                }
-
-                if tail.is_empty() {
-                    // (c) This is the last goal; return bindings.
-                    goals.push(Goal::Return);
+                    alternatives.push(goals)
                 } else {
-                    // (c) Create a new query from the tail.
-                    let head = tail.remove(0);
-                    goals.push(Goal::Query { head, tail });
+                    panic!("expected a list of renamed parameters and body");
                 }
-                choices.push(goals)
             }
-
-            self.push_goal(Goal::Choice {
-                choices,
-                bsp: self.bindings.len(),
-            });
+            if let Some(choice) = alternatives.pop() {
+                self.append_goals(choice);
+                if !alternatives.is_empty() {
+                    self.push_choice(Choice {
+                        alternatives,
+                        bsp: self.bsp(),
+                    });
+                }
+            } else {
+                panic!("no alternatives");
+            }
         } else {
-            // No applicable rules, so backtrack.
-            self.push_goal(Goal::Backtrack)
+            // No applicable rules.
+            self.backtrack();
         }
     }
 
     /// Handle an external result provided by the application.
     ///
-    /// If the value is `Some(_)` then we have a result and
-    /// add a new `Bind` goal to bind the symbol to the value.
+    /// If the value is `Some(_)` then we have a result,
+    /// and bind the symbol to the result value.
     ///
     /// If the value is `None` then the external has no (more)
     /// results, so we make sure to clear the trailing `TestExternal`
@@ -369,10 +347,7 @@ impl PolarVirtualMachine {
 
         if let Some(value) = value {
             // We have a value and should bind our variable to it.
-            self.push_goal(Goal::Bind {
-                variable: name.clone(),
-                value: Term::new(Value::Integer(value)),
-            });
+            self.bind(name, &Term::new(Value::Integer(value)))
         } else {
             // No more values, so no further queries to resolve.
             assert!(matches!(
@@ -385,9 +360,9 @@ impl PolarVirtualMachine {
     /// Unify `left` and `right` terms.
     ///
     /// Outcomes of a unification are:
-    ///  - Successful unification => a `Bind` goal is created for a symbol
-    ///  - Recursive unification => more `Unify` goals are created
-    ///  - Failure => this branch is false, and a `Backtrack` goal is created
+    ///  - Successful unification => bind zero or more variables to values
+    ///  - Recursive unification => more `Unify` goals are pushed onto the stack
+    ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) {
         // Unify a symbol `left` with a term `right`.
         // This is sort of a "sub-goal" of `Unify`.
@@ -413,20 +388,12 @@ impl PolarVirtualMachine {
                 (None, Some(value)) => {
                     // Left is unbound, right is bound;
                     // bind left to the value of right.
-                    // TODO(?): could merge this branch and the (None, None)
-                    // branch, but this avoids an additional goal.
-                    self.push_goal(Goal::Bind {
-                        variable: left.clone(),
-                        value,
-                    });
+                    self.bind(left, &value);
                 }
                 (None, None) => {
                     // Neither is bound, so bind them together.
                     // TODO: should theoretically bind the earliest one here?
-                    self.push_goal(Goal::Bind {
-                        variable: left.clone(),
-                        value: right.clone(),
-                    });
+                    self.bind(left, right);
                 }
             }
         };
@@ -450,28 +417,28 @@ impl PolarVirtualMachine {
                             .collect(),
                     )
                 } else {
-                    self.push_goal(Goal::Backtrack);
+                    self.backtrack();
                 }
             }
 
             // Unify integers by value.
             (Value::Integer(left), Value::Integer(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack);
+                    self.backtrack();
                 }
             }
 
             // Unify strings by value.
             (Value::String(left), Value::String(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack);
+                    self.backtrack();
                 }
             }
 
             // Unify bools by value.
             (Value::Boolean(left), Value::Boolean(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack);
+                    self.backtrack();
                 }
             }
 
@@ -490,13 +457,8 @@ mod tests {
         let x = Symbol("x".to_string());
         let y = Symbol("y".to_string());
         let zero = Term::new(Value::Integer(0));
-        let mut vm = PolarVirtualMachine::new(
-            KnowledgeBase::new(),
-            vec![Goal::Bind {
-                variable: x.clone(),
-                value: zero.clone(),
-            }],
-        );
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        vm.bind(&x, &zero);
         let _ = vm.run();
         assert_eq!(vm.value(&x), Some(&zero));
         assert_eq!(vm.value(&y), None);
@@ -535,63 +497,41 @@ mod tests {
 
     #[test]
     fn unify_var() {
-        let x = Value::Symbol(Symbol("x".to_string()));
-        let y = Value::Symbol(Symbol("y".to_string()));
+        let x = Symbol("x".to_string());
+        let y = Symbol("y".to_string());
+        let z = Symbol("z".to_string());
         let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
 
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
 
         // Left variable bound to bound right variable.
-        vm.append_goals(vec![
-            Goal::Bind {
-                variable: Symbol("y".to_string()),
-                value: one.clone(),
-            },
-            Goal::Unify {
-                left: Term::new(x),
-                right: Term::new(y),
-            },
-        ]);
+        vm.bind(&y, &one);
+        vm.append_goals(vec![Goal::Unify {
+            left: Term::new(Value::Symbol(x.clone())),
+            right: Term::new(Value::Symbol(y.clone())),
+        }]);
         let _ = vm.run();
         assert_eq!(vm.value(&Symbol("x".to_string())), Some(&one));
+        vm.backtrack();
 
         // Left variable bound to value.
-        vm.append_goals(vec![
-            Goal::Bind {
-                variable: Symbol("z".to_string()),
-                value: one.clone(),
-            },
-            Goal::Unify {
-                left: Term::new(Value::Symbol(Symbol("z".to_string()))),
-                right: Term::new(Value::Integer(1)),
-            },
-            // If unify failed, then backtracking will throw away this Bind.
-            Goal::Bind {
-                variable: Symbol("success".to_string()),
-                value: one.clone(),
-            },
-        ]);
+        vm.bind(&z, &one);
+        vm.append_goals(vec![Goal::Unify {
+            left: Term::new(Value::Symbol(z.clone())),
+            right: one.clone(),
+        }]);
         let _ = vm.run();
-        assert_eq!(vm.value(&Symbol("success".to_string())), Some(&one));
+        assert_eq!(vm.value(&z), Some(&one));
 
         // Left variable bound to value
-        vm.append_goals(vec![
-            Goal::Bind {
-                variable: Symbol("z".to_string()),
-                value: one.clone(),
-            },
-            Goal::Unify {
-                left: Term::new(Value::Symbol(Symbol("z".to_string()))),
-                right: Term::new(Value::Integer(2)),
-            },
-            // If the unify fails, then backtracking will throw away this Bind.
-            Goal::Bind {
-                variable: Symbol("not_success".to_string()),
-                value: one.clone(),
-            },
-        ]);
+        vm.bind(&z, &one);
+        vm.append_goals(vec![Goal::Unify {
+            left: Term::new(Value::Symbol(z.clone())),
+            right: two.clone(),
+        }]);
         let _ = vm.run();
-        assert_ne!(vm.value(&Symbol("not_success".to_string())), Some(&one));
+        assert_eq!(vm.value(&z), Some(&one));
     }
 
     #[test]
@@ -600,6 +540,7 @@ mod tests {
         let term = Term::new(Value::List(vec![
             Term::new(Value::Integer(1)),
             Term::new(Value::Symbol(Symbol("x".to_string()))),
+            Term::new(Value::Symbol(Symbol("x".to_string()))),
             Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(
                 "y".to_string(),
             )))])),
@@ -607,16 +548,19 @@ mod tests {
         let renamed_term = vm.rename_vars(&term);
 
         let x_value = match renamed_term.clone().value {
-            Value::List(terms) => match &terms[1].value {
-                Value::Symbol(sym) => Some(sym.0.clone()),
-                _ => None,
-            },
+            Value::List(terms) => {
+                assert_eq!(terms[1].value, terms[2].value);
+                match &terms[1].value {
+                    Value::Symbol(sym) => Some(sym.0.clone()),
+                    _ => None,
+                }
+            }
             _ => None,
         };
         assert_eq!(x_value.unwrap(), "_x_0");
 
         let y_value = match renamed_term.value {
-            Value::List(terms) => match &terms[2].value {
+            Value::List(terms) => match &terms[3].value {
                 Value::List(terms) => match &terms[0].value {
                     Value::Symbol(sym) => Some(sym.0.clone()),
                     _ => None,
