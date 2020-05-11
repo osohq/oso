@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	rm -r build
+	rm -rf build
 	python setup.py build
 	python setup.py develop
 
