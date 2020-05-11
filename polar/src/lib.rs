@@ -9,10 +9,12 @@ mod vm;
 
 pub use self::polar::{Polar, Query};
 
+use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 use serde_json;
+use std::ptr::{null, null_mut};
 
 // @TODO: Have a way to return errors, don't do any of these panics, that's gonna
 // be real bad.
@@ -40,16 +42,41 @@ macro_rules! box_ptr {
     };
 }
 
+thread_local! {
+    static LAST_ERROR: RefCell<Option<Box<types::PolarError>>> = RefCell::new(None);
+}
+
+fn set_error(e: types::PolarError) {
+    LAST_ERROR.with(|prev| *prev.borrow_mut() = Some(Box::new(e)))
+}
+
+#[no_mangle]
+pub extern "C" fn polar_get_error() -> *const c_char {
+    let err = LAST_ERROR.with(|prev| prev.borrow_mut().take());
+    if let Some(e) = err {
+        CString::new(e.to_string())
+            .expect("Error message should not contain any 0 bytes")
+            .into_raw()
+    } else {
+        null()
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
     box_ptr!(Polar::new())
 }
 
 #[no_mangle]
-pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) {
+pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
     let polar = unsafe { ffi_ref!(polar_ptr) };
     let s = unsafe { ffi_string!(src) };
-    polar.load_str(&s);
+    if let Err(e) = polar.load_str(&s) {
+        set_error(e);
+        0
+    } else {
+        1
+    }
 }
 
 #[no_mangle]
@@ -59,16 +86,28 @@ pub extern "C" fn polar_new_query_from_predicate(
 ) -> *mut Query {
     let polar = unsafe { ffi_ref!(polar_ptr) };
     let s = unsafe { ffi_string!(query_pred) };
-    let predicate: types::Predicate = serde_json::from_str(&s).unwrap();
-
-    box_ptr!(polar.new_query_from_predicate(predicate))
+    let predicate = serde_json::from_str(&s);
+    match predicate {
+        Ok(predicate) => box_ptr!(polar.new_query_from_predicate(predicate)),
+        Err(e) => {
+            set_error(types::PolarError::Serialization(e.to_string()));
+            null_mut()
+        }
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_char) -> *mut Query {
     let polar = unsafe { ffi_ref!(polar_ptr) };
     let s = unsafe { ffi_string!(query_str) };
-    box_ptr!(polar.new_query(&s))
+    let q = polar.new_query(&s);
+    match q {
+        Ok(q) => box_ptr!(q),
+        Err(e) => {
+            set_error(e);
+            null_mut()
+        }
+    }
 }
 
 #[no_mangle]
@@ -76,11 +115,18 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
     let polar = unsafe { ffi_ref!(polar_ptr) };
     let query = unsafe { ffi_ref!(query_ptr) };
     let event = polar.query(query);
-    // eprintln!("event: {:?}", event);
-    let event_json = serde_json::to_string(&event).unwrap();
-    CString::new(event_json)
-        .expect("JSON should not contain any 0 bytes")
-        .into_raw()
+    match event {
+        Ok(event) => {
+            let event_json = serde_json::to_string(&event).unwrap();
+            CString::new(event_json)
+                .expect("JSON should not contain any 0 bytes")
+                .into_raw()
+        }
+        Err(e) => {
+            set_error(e);
+            null()
+        }
+    }
 }
 
 /// Required to free strings properly

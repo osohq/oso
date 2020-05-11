@@ -97,10 +97,10 @@ impl PolarVirtualMachine {
     /// pop them off and execute them one at at time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
-    pub fn run(&mut self) -> QueryEvent {
+    pub fn run(&mut self) -> PolarResult<QueryEvent> {
         if self.goals.is_empty() {
             if self.choices.is_empty() {
-                return QueryEvent::Done;
+                return Ok(QueryEvent::Done);
             } else {
                 self.backtrack();
             }
@@ -110,20 +110,20 @@ impl PolarVirtualMachine {
             eprintln!("{}", goal);
             match goal {
                 Goal::Cut => self.cut(),
-                Goal::Halt => return self.halt(),
+                Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { .. } => unimplemented!("isa"),
                 Goal::Lookup { .. } => unimplemented!("lookup"),
                 Goal::LookupExternal { .. } => unimplemented!("lookup external"),
                 Goal::Query { predicate } => self.query(predicate),
                 Goal::Result { name, value } => self.result(&name, value),
-                Goal::TestExternal { name } => return self.test_external(name), // POC
+                Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
                 Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
 
-        QueryEvent::Result {
+        Ok(QueryEvent::Result {
             bindings: self.bindings(),
-        }
+        })
     }
 
     /// Push a choice onto the choice stack.

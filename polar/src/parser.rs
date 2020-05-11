@@ -4,14 +4,18 @@ lalrpop_mod!(polar);
 
 use super::types::*;
 
-pub fn parse_query(src: &str) -> Predicate {
-    // @TODO: Errors
-    polar::PredicateParser::new().parse(src).unwrap()
+pub fn parse_query(src: &str) -> PolarResult<Predicate> {
+    // @TODO: Better Errors
+    polar::PredicateParser::new()
+        .parse(src)
+        .map_err(|e| PolarError::Parse(e.to_string()))
 }
 
-pub fn parse_file(src: &str) -> Vec<Rule> {
-    // @TODO: Errors
-    polar::RulesParser::new().parse(src).unwrap()
+pub fn parse_file(src: &str) -> PolarResult<Vec<Rule>> {
+    // @TODO: Better Errors
+    polar::RulesParser::new()
+        .parse(src)
+        .map_err(|e| PolarError::Parse(e.to_string()))
 }
 
 #[cfg(test)]
@@ -116,7 +120,7 @@ mod tests {
         let f = r#"
         a(1);b(2);c(3);
         "#;
-        let results = parse_file(f);
+        let results = parse_file(f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(1) := ();"#);
         assert_eq!(results[1].to_polar(), r#"b(2) := ();"#);
         assert_eq!(results[2].to_polar(), r#"c(3) := ();"#);

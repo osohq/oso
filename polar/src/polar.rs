@@ -61,14 +61,14 @@ pub struct Query {
 
 // Query as an iterator returns `None` after the first time `Done` is seen
 impl Iterator for Query {
-    type Item = QueryEvent;
+    type Item = PolarResult<QueryEvent>;
 
-    fn next(&mut self) -> Option<QueryEvent> {
+    fn next(&mut self) -> Option<PolarResult<QueryEvent>> {
         if self.done {
             return None;
         }
         let event = self.vm.run();
-        if let QueryEvent::Done = event {
+        if let Ok(QueryEvent::Done) = event {
             self.done = true;
         }
         Some(event)
@@ -86,9 +86,8 @@ impl Polar {
         }
     }
 
-    pub fn load_str(&mut self, src: &str) {
-        // @TODO: Return Errors
-        let rules = parse_file(src);
+    pub fn load_str(&mut self, src: &str) -> PolarResult<()> {
+        let rules = parse_file(src)?;
         for rule in rules {
             let generic_rule = self
                 .kb
@@ -100,11 +99,12 @@ impl Polar {
                 });
             generic_rule.rules.push(rule);
         }
+        Ok(())
     }
 
-    pub fn new_query(&self, query_string: &str) -> Query {
-        let pred = parse_query(query_string);
-        self.new_query_from_predicate(pred)
+    pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
+        let pred = parse_query(query_string)?;
+        Ok(self.new_query_from_predicate(pred))
     }
 
     pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
@@ -117,12 +117,12 @@ impl Polar {
 
     // @TODO: Direct load_rules endpoint.
 
-    pub fn query(&mut self, query: &mut Query) -> QueryEvent {
+    pub fn query(&mut self, query: &mut Query) -> PolarResult<QueryEvent> {
         query.vm.run()
     }
 
-    pub fn result(&mut self, _query: &mut Query, _call_id: i64, _value: Term) {
-        unimplemented!();
+    pub fn result(&mut self, _query: &mut Query, _call_id: i64, _value: Term) -> PolarResult<()> {
+        Err(PolarError::Unimplemented("result".to_string()))
     }
 
     #[cfg(test)]
@@ -153,10 +153,10 @@ mod tests {
     fn test_query() {
         let mut polar = Polar::new();
         polar.load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), g(x), h(x);");
-        let mut query = polar.new_query("k(a)");
+        let mut query = polar.new_query("k(a)").unwrap();
         let mut results = vec![];
         loop {
-            let event = polar.query(&mut query);
+            let event = polar.query(&mut query).unwrap();
             match event {
                 QueryEvent::Done => break,
                 QueryEvent::TestExternal { .. } => panic!("no external call"),
@@ -173,11 +173,11 @@ mod tests {
     fn test_results() {
         let mut polar = Polar::new();
         polar.load_str("foo(1); foo(2);");
-        let mut query = polar.new_query("foo(a)");
+        let mut query = polar.new_query("foo(a)").unwrap();
 
         let mut results = vec![];
         loop {
-            let event = polar.query(&mut query);
+            let event = polar.query(&mut query).unwrap();
             match event {
                 QueryEvent::Done => break,
                 QueryEvent::TestExternal { .. } => panic!("no external call"),
@@ -199,7 +199,7 @@ mod tests {
         let mut externals = vec![1, 2, 3];
         let mut results = vec![];
         loop {
-            let event = polar.query(&mut query);
+            let event = polar.query(&mut query).unwrap();
             match event {
                 QueryEvent::Done => break,
                 QueryEvent::TestExternal { name } => {
