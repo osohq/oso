@@ -1,0 +1,121 @@
+// @NOTE(steve): This was pretty easy to get running but the error messages you get when things don't parse aren't as
+// good as what we want to expose to polar users. Either we do a lot of mapping or we replace this with a hand rolled
+// parser later.
+
+use std::str::FromStr;
+use std::collections::HashMap;
+use crate::types::*;
+
+use lalrpop_util::ParseError;
+
+grammar;
+
+pub Integer: Term = <start:@L> <s:r"[0-9]+"> => {
+    Term{id: 0, offset: start, value: Value::Integer(i64::from_str(s).unwrap())}
+};
+// @TODO: Better string token.
+pub PolarString: Term = <start:@L> <s:r#""(\\.|[^"\\])*""#> => {
+    Term{id: 0, offset: start, value: Value::String(s[1..s.len()-1].to_string())}
+};
+True: Term = <start:@L> "true" => {
+    Term{id: 0, offset: start, value: Value::Boolean(true)}
+};
+False: Term = <start:@L> "false" => {
+    Term{id: 0, offset: start, value: Value::Boolean(true)}
+};
+pub Boolean: Term = {
+    <bool:True> => bool,
+    <bool:False> => bool
+};
+// @TODO: Better name token.
+Name: String = <s:r"[\w&&[^\d]]\w*"> => s.to_string();
+
+pub Symbol: Term  = <start:@L> <n:Name> => {
+    Term{id: 0, offset: start, value: Value::Symbol(Symbol(n))}
+};
+
+//Body: Vec<Term> = {
+    //<term:Exp> => vec![term],
+    //<head:Exp> "," <mut tail:Body> => {tail.insert(0, head); tail}
+//};
+
+Fields: HashMap<Symbol, Term> = {
+    <name:Name> ":" <value:Term> => {
+        let mut fields = HashMap::new();
+        fields.insert(Symbol(name), value);
+        fields
+    },
+    <name:Name> ":" <value:Term> "," <mut fields:Fields> => {
+        fields.insert(Symbol(name), value);
+        fields
+    }
+};
+
+pub Instance: Instance = <tag:Name> "{" <fields:Fields> "}" => Instance {
+    class: tag,
+    external_id: 0,
+    fields,
+};
+
+Terms: Vec<Term> = {
+    <exp:Exp> => vec![exp],
+    <head:Exp> "," <mut tail:Terms> => {tail.insert(0, head); tail}
+};
+
+pub Term: Term = {
+    <term:Integer> => term,
+    <term:PolarString> => term,
+    <term:Boolean> => term,
+    <term:Symbol> => term,
+    <start:@L> "(" ")" => Term{id: 0, offset: start, value: Value::List(vec![])},
+    <start:@L> "(" <terms:Terms> ")" => Term{id:0, offset: start, value: Value::List(terms)}
+};
+
+pub Predicate: Predicate = {
+    <name:Name> "(" ")" => {
+        let args = vec![];
+        Predicate{name, args}
+    },
+    <name:Name> "(" <args:Terms> ")" => {
+        Predicate{name, args}
+    },
+};
+
+pub Exp: Term = {
+    <start:@L> <call:Predicate> => {
+        Term{id: 0, offset: start, value: Value::Call(call)}
+    },
+    // @TODO: We probably just want a specific term case for these calls.
+    <start:@L> <head:Symbol> "." <call_loc:@L> <call:Predicate> => {
+        let mut args = call.args;
+        let call_name = Term{id: 0, offset: call_loc, value: Value::Symbol(Symbol(call.name))};
+        args.insert(0, call_name);
+        args.insert(0, head);
+        let name = ".".to_string();
+        let pred = Predicate{name, args};
+        Term{id: 0, offset: start, value: Value::Call(pred)}
+    },
+    <term:Term> => term
+};
+
+Body: Vec<Term> = {
+    <term:Exp> => vec![term],
+    <head:Exp> "," <mut tail:Body> => {tail.insert(0, head); tail}
+};
+
+pub Rule: Rule = {
+    <head:Predicate> ";" => {
+
+        let name = head.name;
+        let params = head.args;
+        let body = vec![];
+        Rule{name, params, body}
+    },
+    <head:Predicate> ":=" <body:Body> ";" => {
+        let name = head.name;
+        let params = head.args;
+        Rule{name, params, body}
+    }
+}
+
+pub Rules: Vec<Rule> = <Rule*>;

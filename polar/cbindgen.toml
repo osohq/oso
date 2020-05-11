@@ -1,0 +1,5 @@
+language = "C"
+no_includes = true
+
+[export]
+prefix = "polar_"
