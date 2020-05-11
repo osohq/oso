@@ -16,5 +16,6 @@ with open("../../polar/polar.h") as f:
     header = f.read()
     ffibuilder.cdef(header)
 
+
 if __name__ == "__main__":  # not when running with setuptools
     ffibuilder.compile(verbose=True)
