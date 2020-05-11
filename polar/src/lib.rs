@@ -85,7 +85,7 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
 
 /// Required to free strings properly
 #[no_mangle]
-pub extern "C" fn free_string(s: *mut c_char) {
+pub extern "C" fn string_free(s: *mut c_char) {
     if s.is_null() {
         return;
     }

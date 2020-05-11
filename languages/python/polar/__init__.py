@@ -36,7 +36,7 @@ class Polar:
         while True:
             event_s = lib.polar_query(self.polar, query)
             event = json.loads(ffi.string(event_s).decode())
-            lib.free_string(event_s)
+            lib.string_free(event_s)
             if event == "Done":
                 break
 
@@ -48,7 +48,6 @@ class Polar:
 
         lib.query_free(query)
 
-
     def import_builtin_module(self, name):
         """ Import a builtin polar module """
         raise PolarException("Unimplemented")
@@ -58,7 +57,7 @@ class Polar:
         policy_file = Path(policy_file)
 
         extension = policy_file.suffix
-        if extension != ".pol" and extension != ".polar":
+        if extension not in (".pol", ".polar"):
             raise PolarException(f"Policy names must have .pol or .polar extension")
 
         if not policy_file.exists():
