@@ -189,6 +189,10 @@ impl PolarVirtualMachine {
     fn bindings(&mut self) -> HashMap<Symbol, Term> {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings {
+            if self.is_temporary_var(&var) {
+                continue;
+            }
+
             bindings.insert(
                 var.clone(),
                 match &value.value {
@@ -220,6 +224,11 @@ impl PolarVirtualMachine {
         let counter = self.genvar_counter;
         self.genvar_counter += 1;
         Symbol(format!("_{}_{}", prefix, counter))
+    }
+
+    /// Return `true` if `var` is a temporary.
+    fn is_temporary_var(&self, name: &Symbol) -> bool {
+        name.0.starts_with("_")
     }
 
     /// Generate a fresh set of variables for a term

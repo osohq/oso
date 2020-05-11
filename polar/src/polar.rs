@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter::FromIterator;
 
 use super::types::*;
 use super::vm::*;
@@ -195,6 +196,61 @@ mod tests {
             qvar(&query_results(&mut polar, query), "a"),
             vec![value!(2)]
         );
+    }
+
+    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
+    #[test]
+    fn test_jealous() {
+        let mut polar = Polar::new();
+        polar.load_str("loves(\"vincent\", \"mia\");");
+        polar.load_str("loves(\"marcellus\", \"mia\");");
+        polar.load_str("jealous(a, b) := loves(a, c), loves(b, c);");
+
+        let query = polar.new_query("jealous(who, of)");
+        let results = query_results(&mut polar, query);
+        assert!(
+            results.contains(&HashMap::from_iter(
+                vec![
+                    (sym!("who"), value!("vincent")),
+                    (sym!("of"), value!("marcellus")),
+                ]
+                .into_iter()
+            )),
+            "results {:?}",
+            results
+        );
+
+        assert!(
+            results.contains(&HashMap::from_iter(
+                vec![
+                    (sym!("who"), value!("marcellus")),
+                    (sym!("of"), value!("vincent")),
+                ]
+                .into_iter()
+            )),
+            "results {:?}",
+            results
+        );
+
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_nested_rule() {
+        let mut polar = Polar::new();
+        polar.load_str("f(x) := g(x); g(x) := h(x); h(2); g(x) := j(x); j(4);");
+
+        let query = polar.new_query("f(2)");
+        assert_eq!(query_results(&mut polar, query), vec![HashMap::new()]);
+
+        let query = polar.new_query("f(3)");
+        assert!(query_results(&mut polar, query).is_empty());
+
+        let query = polar.new_query("f(4)");
+        assert_eq!(query_results(&mut polar, query), vec![HashMap::new()]);
+
+        let query = polar.new_query("j(4)");
+        assert_eq!(query_results(&mut polar, query), vec![HashMap::new()]);
     }
 
     #[test]
