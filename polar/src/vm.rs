@@ -142,16 +142,16 @@ impl PolarVirtualMachine {
         self.goals.append(&mut goals);
     }
 
-    /// Remove all bindings after the last choice point, and try the next
-    /// available alternative. If no choice is possible, halt.
+    /// Remove all bindings after the last choice point, and try the
+    /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) {
-        if let Some(Choice {
-            ref mut alternatives,
-            ref bsp,
-        }) = self.choices.pop()
-        {
-            if let Some(alternative) = alternatives.pop() {
-                self.append_goals(alternative);
+        match self.choices.pop() {
+            None => self.push_goal(Goal::Halt),
+            Some(Choice {
+                ref mut alternatives,
+                ref bsp,
+            }) => {
+                self.append_goals(alternatives.pop().expect("a choice"));
                 self.bindings.drain(bsp..);
                 if !alternatives.is_empty() {
                     self.push_choice(Choice {
@@ -159,11 +159,7 @@ impl PolarVirtualMachine {
                         bsp: *bsp,
                     });
                 }
-            } else {
-                panic!("no alternatives found")
             }
-        } else {
-            self.push_goal(Goal::Halt);
         }
     }
 
@@ -178,11 +174,9 @@ impl PolarVirtualMachine {
         for Binding(var, value) in &self.bindings {
             bindings.insert(
                 var.clone(),
-                if let Value::Symbol(sym) = &value.value {
-                    // Try to look up the value as a variable.
-                    self.value(&sym).unwrap_or(value).clone()
-                } else {
-                    value.clone()
+                match &value.value {
+                    Value::Symbol(sym) => self.value(&sym).unwrap_or(value).clone(),
+                    _ => value.clone(),
                 },
             );
         }
@@ -275,20 +269,25 @@ impl PolarVirtualMachine {
         // Sort applicable rules by specificity.
         // Create a choice over the applicable rules.
 
-        if let Some(generic_rule) = self.kb.rules.get(&predicate.name) {
-            let generic_rule = generic_rule.clone();
-            assert_eq!(generic_rule.name, predicate.name);
+        match self.kb.rules.get(&predicate.name) {
+            None => self.backtrack(), // no applicable rules
+            Some(generic_rule) => {
+                let generic_rule = generic_rule.clone();
+                assert_eq!(generic_rule.name, predicate.name);
 
-            let mut alternatives = vec![];
-            for rule in generic_rule.rules.iter().rev() {
-                // Rename the parameters and body at the same time.
-                // FIXME: This is terrible right now.
-                // TODO(?): Should maybe parse these as terms.
-                let renames = self.rename_vars(&Term::new(Value::List(vec![
-                    Term::new(Value::List(rule.params.clone())),
-                    Term::new(Value::List(rule.body.clone())),
-                ])));
-                if let Value::List(renames) = renames.value {
+                let mut alternatives = vec![];
+                for rule in generic_rule.rules.iter().rev() {
+                    // Rename the parameters and body at the same time.
+                    // FIXME: This is terrible right now.
+                    // TODO(?): Should maybe parse these as terms.
+                    let renames = self.rename_vars(&Term::new(Value::List(vec![
+                        Term::new(Value::List(rule.params.clone())),
+                        Term::new(Value::List(rule.body.clone())),
+                    ])));
+                    let renames = match renames.value {
+                        Value::List(renames) => renames,
+                        _ => panic!("expected a list of renamed parameters and body"),
+                    };
                     let params = &renames[0];
                     let body = &renames[1];
                     let mut goals = vec![];
@@ -300,36 +299,32 @@ impl PolarVirtualMachine {
                     });
 
                     // Query for the body clauses.
-                    if let Value::List(clauses) = &body.value {
-                        for clause in clauses.iter() {
-                            if let Value::Call(predicate) = &clause.value {
-                                goals.push(Goal::Query {
-                                    predicate: predicate.clone(),
-                                });
-                            } else {
-                                panic!("body clause is not a predicate");
+                    match &body.value {
+                        Value::List(clauses) => {
+                            for clause in clauses.iter() {
+                                match &clause.value {
+                                    Value::Call(predicate) => goals.push(Goal::Query {
+                                        predicate: predicate.clone(),
+                                    }),
+                                    _ => panic!("body clause is not a predicate"),
+                                }
                             }
                         }
+                        _ => panic!("body is not a list of clauses"),
                     }
+
                     alternatives.push(goals)
-                } else {
-                    panic!("expected a list of renamed parameters and body");
                 }
-            }
-            if let Some(choice) = alternatives.pop() {
-                self.append_goals(choice);
+
+                // Choose the first alternative, and push a choice for the rest.
+                self.append_goals(alternatives.pop().expect("a choice"));
                 if !alternatives.is_empty() {
                     self.push_choice(Choice {
                         alternatives,
                         bsp: self.bsp(),
                     });
                 }
-            } else {
-                panic!("no alternatives");
             }
-        } else {
-            // No applicable rules.
-            self.backtrack();
         }
     }
 
