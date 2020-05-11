@@ -40,14 +40,34 @@ class Polar:
 
     def load_str(self, src_str):
         c_str = ffi.new("char[]", src_str.encode())
-        lib.polar_load_str(self.polar, c_str)
+        loaded = lib.polar_load_str(self.polar, c_str)
+        if loaded == 0:
+            err = lib.polar_get_error()
+            msg = ffi.string(err).decode()
+            exception = PolarException(msg)
+            lib.string_free(err)
+            raise exception
 
     def query(self, query_str):
         c_str = ffi.new("char[]", query_str.encode())
         query = lib.polar_new_query(self.polar, c_str)
+        if query == ffi.NULL:
+            err = lib.polar_get_error()
+            msg = ffi.string(err).decode()
+            exception = PolarException(msg)
+            lib.string_free(err)
+            raise exception
 
         while True:
             event_s = lib.polar_query(self.polar, query)
+            if event_s == ffi.NULL:
+                err = lib.polar_get_error()
+                msg = ffi.string(err).decode()
+                exception = PolarException(msg)
+                lib.string_free(err)
+                lib.query_free(query)
+                raise exception
+
             event = json.loads(ffi.string(event_s).decode())
             lib.string_free(event_s)
             if event == "Done":

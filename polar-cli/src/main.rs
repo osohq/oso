@@ -70,9 +70,9 @@ fn main() -> rustyline::Result<()> {
         let mut f = File::open(argument).expect("open file");
         let mut policy = String::new();
         f.read_to_string(&mut policy).expect("read in policy");
-        polar.load_str(&policy);
+        polar.load_str(&policy).unwrap();
     }
-    polar.load_str("foo(1);foo(2);");
+    polar.load_str("foo(1);foo(2);").unwrap();
     loop {
         // get input
         let mut input = match rl.readline(">> ") {
