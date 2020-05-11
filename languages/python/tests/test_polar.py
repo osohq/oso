@@ -25,9 +25,7 @@ def load_file(polar):
     """ Load a source file """
     def _load_file(f):
         path = Path(__file__).parent / f
-        with open(path, 'r') as f:
-            data = f.read()
-        polar.load_str(data)
+        polar.load(path)
 
     return _load_file
 
