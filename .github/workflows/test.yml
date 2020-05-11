@@ -4,7 +4,6 @@ on: [push]
 jobs:
   test:
     runs-on: "ubuntu-latest"
-    python-version: "3.6"
     steps:
       - uses: actions/setup-python@v1
         with:
