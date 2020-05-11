@@ -1,0 +1,13 @@
+name: tests
+on: [push]
+
+jobs:
+  test:
+    runs-on: "ubuntu-latest"
+    python-version: "3.6"
+    steps:
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.6"
+      - uses: actions/checkout@v2
+      - run: make test
