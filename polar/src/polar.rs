@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::types::*;
 use super::vm::*;
 
@@ -143,17 +145,20 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use permute::permute;
 
-    fn result_values(mut results: Vec<Term>) -> Vec<Value> {
-        results.iter().map(|result| result.value.clone()).collect()
+    fn result_values(results: Vec<Term>) -> Vec<Value> {
+        results.into_iter().map(|t| t.value).collect()
     }
 
-    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
-    #[test]
-    fn test_query() {
-        let mut polar = Polar::new();
-        polar.load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), g(x), h(x);");
-        let mut query = polar.new_query("k(a)").unwrap();
+    fn qvar(results: &Vec<HashMap<Symbol, Value>>, var: &str) -> Vec<Value> {
+        results
+            .iter()
+            .map(|bindings| bindings.get(&Symbol(var.to_string())).unwrap().clone())
+            .collect()
+    }
+
+    fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Value>> {
         let mut results = vec![];
         loop {
             let event = polar.query(&mut query).unwrap();
@@ -161,33 +166,106 @@ mod tests {
                 QueryEvent::Done => break,
                 QueryEvent::TestExternal { .. } => panic!("no external call"),
                 QueryEvent::Result { bindings } => {
-                    results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
+                    results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
                 }
                 _ => (),
             }
         }
-        assert_eq!(result_values(results), vec![value!(2)]);
+
+        results
+    }
+
+    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
+    #[test]
+    fn test_functions() {
+        let mut polar = Polar::new();
+        polar.load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);");
+
+        let query = polar.new_query("k(1)");
+        assert_eq!(query_results(&mut polar, query).len(), 0);
+
+        let query = polar.new_query("k(2)");
+        assert_eq!(query_results(&mut polar, query).len(), 1);
+
+        let query = polar.new_query("k(3)");
+        assert_eq!(query_results(&mut polar, query).len(), 0);
+
+        let query = polar.new_query("k(a)");
+        assert_eq!(
+            qvar(&query_results(&mut polar, query), "a"),
+            vec![value!(2)]
+        );
+    }
+
+    #[test]
+    /// A functions permutation that is known to fail.
+    fn test_bad_functions() {
+        let mut polar = Polar::new();
+        polar.load_str("f(2); f(1); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);");
+        let query = polar.new_query("k(a)");
+        assert_eq!(
+            qvar(&query_results(&mut polar, query), "a"),
+            vec![value!(2)]
+        );
+    }
+
+    #[test]
+    fn test_functions_reorder() {
+        let parts = vec![
+            "f(1)",
+            "f(2)",
+            "g(1)",
+            "g(2)",
+            "h(2)",
+            "k(x) := f(x), h(x), g(x)",
+        ];
+
+        let mut i = 0;
+        for permutation in permute(parts) {
+            let mut polar = Polar::new();
+
+            let mut joined = permutation.join(";");
+            joined.push(';');
+            polar.load_str(&joined);
+
+            let query = polar.new_query("k(1)");
+            assert_eq!(
+                query_results(&mut polar, query).len(),
+                0,
+                "k(1) failed for permutation {:?}",
+                &permutation
+            );
+
+            let query = polar.new_query("k(2)");
+            assert_eq!(
+                query_results(&mut polar, query).len(),
+                1,
+                "k(2) failed for permutation {:?}",
+                &permutation
+            );
+
+            let query = polar.new_query("k(a)");
+            assert_eq!(
+                qvar(&query_results(&mut polar, query), "a"),
+                vec![value!(2)],
+                "k(a) failed for permutation {:?}",
+                &permutation
+            );
+
+            i += 1;
+            println!("permute: {}", i);
+        }
     }
 
     #[test]
     fn test_results() {
         let mut polar = Polar::new();
         polar.load_str("foo(1); foo(2);");
-        let mut query = polar.new_query("foo(a)").unwrap();
-
-        let mut results = vec![];
-        loop {
-            let event = polar.query(&mut query).unwrap();
-            match event {
-                QueryEvent::Done => break,
-                QueryEvent::TestExternal { .. } => panic!("no external call"),
-                QueryEvent::Result { bindings } => {
-                    results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
-                }
-                _ => (),
-            }
-        }
-        assert_eq!(result_values(results), vec![value!(1), value!(2)]);
+        let query = polar.new_query("foo(a)");
+        assert_eq!(
+            qvar(&query_results(&mut polar, query), "a"),
+            vec![value!(1), value!(2)]
+        );
     }
 
     #[test]

@@ -57,6 +57,8 @@ struct Binding(Symbol, Term);
 pub struct Choice {
     alternatives: Alternatives,
     bsp: usize, // binding stack pointer
+    /// The goal that led to these choices.  Goal to retry when exhausting alternatives.
+    retry: Goal
 }
 
 type Alternatives = Vec<Goals>;
@@ -107,7 +109,7 @@ impl PolarVirtualMachine {
         }
 
         while let Some(goal) = self.goals.pop() {
-            eprintln!("{}", goal);
+            // eprintln!("{}", goal);
             match goal {
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
@@ -145,19 +147,33 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) {
-        match self.choices.pop() {
-            None => self.push_goal(Goal::Halt),
-            Some(Choice {
-                ref mut alternatives,
-                ref bsp,
-            }) => {
-                self.append_goals(alternatives.pop().expect("a choice"));
-                self.bindings.drain(bsp..);
-                if !alternatives.is_empty() {
-                    self.push_choice(Choice {
-                        alternatives: alternatives.clone(),
-                        bsp: *bsp,
-                    });
+        // eprintln!("{}", "=> backtrack");
+        let mut retries = vec![];
+
+        while let mut choice = self.choices.pop() {
+            match choice {
+                None => return self.push_goal(Goal::Halt),
+                Some(Choice {
+                    ref mut alternatives,
+                    ref bsp,
+                    ref retry,
+                }) => {
+                    self.bindings.drain(*bsp..);
+
+                    if let Some(alternative) = alternatives.pop() {
+                        // TODO order
+                        self.append_goals(retries.iter().cloned().rev().collect());
+                        self.append_goals(alternative);
+
+                        return self.push_choice(Choice {
+                            alternatives: alternatives.clone(),
+                            bsp: *bsp,
+                            retry: retry.clone()
+                        });
+                    } else {
+                        retries.push(retry.clone())
+                    }
+
                 }
             }
         }
@@ -165,6 +181,7 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: &Term) {
+        // eprintln!("=> bind {:?} ← {:?}", var, value);
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -318,12 +335,11 @@ impl PolarVirtualMachine {
 
                 // Choose the first alternative, and push a choice for the rest.
                 self.append_goals(alternatives.pop().expect("a choice"));
-                if !alternatives.is_empty() {
-                    self.push_choice(Choice {
-                        alternatives,
-                        bsp: self.bsp(),
-                    });
-                }
+                self.push_choice(Choice {
+                    alternatives,
+                    retry: Goal::Query { predicate },
+                    bsp: self.bsp(),
+                });
             }
         }
     }
