@@ -4,6 +4,8 @@
 tmp/
 *~
 
+.python-version
+.eggs
 
 .mypy_cache
 .vscode

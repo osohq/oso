@@ -57,6 +57,8 @@ struct Binding(Symbol, Term);
 pub struct Choice {
     alternatives: Alternatives,
     bsp: usize, // binding stack pointer
+    /// The goal that led to these choices.  Goal to retry when exhausting alternatives.
+    retry: Goal,
 }
 
 type Alternatives = Vec<Goals>;
@@ -107,7 +109,7 @@ impl PolarVirtualMachine {
         }
 
         while let Some(goal) = self.goals.pop() {
-            eprintln!("{}", goal);
+            // eprintln!("{}", goal);
             match goal {
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
@@ -145,19 +147,34 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) {
-        match self.choices.pop() {
-            None => self.push_goal(Goal::Halt),
-            Some(Choice {
-                ref mut alternatives,
-                ref bsp,
-            }) => {
-                self.append_goals(alternatives.pop().expect("a choice"));
-                self.bindings.drain(bsp..);
-                if !alternatives.is_empty() {
-                    self.push_choice(Choice {
-                        alternatives: alternatives.clone(),
-                        bsp: *bsp,
-                    });
+        // eprintln!("{}", "=> backtrack");
+        let mut retries = vec![];
+        loop {
+            match self.choices.pop() {
+                None => return self.push_goal(Goal::Halt),
+                Some(Choice {
+                    ref mut alternatives,
+                    ref bsp,
+                    ref retry,
+                }) => {
+                    // Unwind bindings.
+                    self.bindings.drain(*bsp..);
+
+                    // Find an alternate path.
+                    if let Some(alternative) = alternatives.pop() {
+                        // TODO order
+                        self.append_goals(retries.iter().cloned().rev().collect());
+                        self.append_goals(alternative);
+
+                        // Leave a choice for any remaining alternatives.
+                        return self.push_choice(Choice {
+                            alternatives: alternatives.clone(),
+                            bsp: *bsp,
+                            retry: retry.clone(),
+                        });
+                    } else {
+                        retries.push(retry.clone())
+                    }
                 }
             }
         }
@@ -165,6 +182,7 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: &Term) {
+        // eprintln!("=> bind {:?} ← {:?}", var, value);
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -172,6 +190,10 @@ impl PolarVirtualMachine {
     fn bindings(&mut self) -> HashMap<Symbol, Term> {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings {
+            if self.is_temporary_var(&var) {
+                continue;
+            }
+
             bindings.insert(
                 var.clone(),
                 match &value.value {
@@ -203,6 +225,11 @@ impl PolarVirtualMachine {
         let counter = self.genvar_counter;
         self.genvar_counter += 1;
         Symbol(format!("_{}_{}", prefix, counter))
+    }
+
+    /// Return `true` if `var` is a temporary.
+    fn is_temporary_var(&self, name: &Symbol) -> bool {
+        name.0.starts_with("_")
     }
 
     /// Generate a fresh set of variables for a term
@@ -318,12 +345,11 @@ impl PolarVirtualMachine {
 
                 // Choose the first alternative, and push a choice for the rest.
                 self.append_goals(alternatives.pop().expect("a choice"));
-                if !alternatives.is_empty() {
-                    self.push_choice(Choice {
-                        alternatives,
-                        bsp: self.bsp(),
-                    });
-                }
+                self.push_choice(Choice {
+                    alternatives,
+                    retry: Goal::Query { predicate },
+                    bsp: self.bsp(),
+                });
             }
         }
     }

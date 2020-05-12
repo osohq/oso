@@ -142,18 +142,17 @@ impl Polar {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
+    use std::iter::FromIterator;
 
-    fn result_values(mut results: Vec<Term>) -> Vec<Value> {
-        results.iter().map(|result| result.value.clone()).collect()
+    use super::*;
+    use permute::permute;
+
+    fn result_values(results: Vec<Term>) -> Vec<Value> {
+        results.into_iter().map(|t| t.value).collect()
     }
 
-    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
-    #[test]
-    fn test_query() {
-        let mut polar = Polar::new();
-        polar.load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), g(x), h(x);");
-        let mut query = polar.new_query("k(a)").unwrap();
+    fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Value>> {
         let mut results = vec![];
         loop {
             let event = polar.query(&mut query).unwrap();
@@ -161,33 +160,163 @@ mod tests {
                 QueryEvent::Done => break,
                 QueryEvent::TestExternal { .. } => panic!("no external call"),
                 QueryEvent::Result { bindings } => {
-                    results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
+                    results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
                 }
-                _ => (),
+                _ => panic!("unexpected event"),
             }
         }
-        assert_eq!(result_values(results), vec![value!(2)]);
+
+        results
+    }
+
+    fn qeval(polar: &mut Polar, query_str: &str) -> bool {
+        let query = polar.new_query(query_str).unwrap();
+        query_results(polar, query).len() == 1
+    }
+
+    fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
+        let query = polar.new_query(query_str).unwrap();
+        query_results(polar, query)
+            .iter()
+            .map(|bindings| bindings.get(&Symbol(var.to_string())).unwrap().clone())
+            .collect()
+    }
+
+    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
+    #[test]
+    fn test_functions() {
+        let mut polar = Polar::new();
+        polar
+            .load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);")
+            .unwrap();
+
+        assert!(!qeval(&mut polar, "k(1)"));
+        assert!(qeval(&mut polar, "k(2)"));
+        assert!(!qeval(&mut polar, "k(3)"));
+        assert_eq!(qvar(&mut polar, "k(a)", "a"), vec![value!(2)]);
+    }
+
+    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
+    #[test]
+    fn test_jealous() {
+        let mut polar = Polar::new();
+        polar
+            .load_str(
+                r#"loves("vincent", "mia");
+               loves("marcellus", "mia");
+               jealous(a, b) := loves(a, c), loves(b, c);"#,
+            )
+            .unwrap();
+
+        let query = polar.new_query("jealous(who, of)").unwrap();
+        let results = query_results(&mut polar, query);
+        let jealous = |who: &str, of: &str| {
+            assert!(
+                &results.contains(&HashMap::from_iter(vec![
+                    (sym!("who"), value!(who)),
+                    (sym!("of"), value!(of))
+                ])),
+                "{} is not jealous of {} (but should be)",
+                who,
+                of
+            );
+        };
+        assert_eq!(results.len(), 4);
+        jealous("vincent", "vincent");
+        jealous("vincent", "marcellus");
+        jealous("marcellus", "vincent");
+        jealous("marcellus", "marcellus");
+    }
+
+    #[test]
+    fn test_nested_rule() {
+        let mut polar = Polar::new();
+        polar
+            .load_str("f(x) := g(x); g(x) := h(x); h(2); g(x) := j(x); j(4);")
+            .unwrap();
+
+        assert!(qeval(&mut polar, "f(2)"));
+        assert!(!qeval(&mut polar, "f(3)"));
+        assert!(qeval(&mut polar, "f(4)"));
+        assert!(qeval(&mut polar, "j(4)"));
+    }
+
+    #[test]
+    /// A functions permutation that is known to fail.
+    fn test_bad_functions() {
+        let mut polar = Polar::new();
+        polar
+            .load_str("f(2); f(1); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);")
+            .unwrap();
+        assert_eq!(qvar(&mut polar, "k(a)", "a"), vec![value!(2)]);
+    }
+
+    #[test]
+    fn test_functions_reorder() {
+        // TODO (dhatch): Reorder f(x), h(x), g(x)
+        let parts = vec![
+            "f(1)",
+            "f(2)",
+            "g(1)",
+            "g(2)",
+            "h(2)",
+            "k(x) := f(x), h(x), g(x)",
+        ];
+
+        let mut i = 0;
+        for permutation in permute(parts) {
+            let mut polar = Polar::new();
+
+            let mut joined = permutation.join(";");
+            joined.push(';');
+            polar.load_str(&joined).unwrap();
+
+            assert!(
+                !qeval(&mut polar, "k(1)"),
+                "k(1) was true for permutation {:?}",
+                &permutation
+            );
+            assert!(
+                qeval(&mut polar, "k(2)"),
+                "k(2) failed for permutation {:?}",
+                &permutation
+            );
+
+            assert_eq!(
+                qvar(&mut polar, "k(a)", "a"),
+                vec![value!(2)],
+                "k(a) failed for permutation {:?}",
+                &permutation
+            );
+
+            i += 1;
+            println!("permute: {}", i);
+        }
     }
 
     #[test]
     fn test_results() {
         let mut polar = Polar::new();
-        polar.load_str("foo(1); foo(2);");
-        let mut query = polar.new_query("foo(a)").unwrap();
+        polar.load_str("foo(1); foo(2);").unwrap();
+        assert_eq!(qvar(&mut polar, "foo(a)", "a"), vec![value!(1), value!(2)]);
+    }
 
-        let mut results = vec![];
-        loop {
-            let event = polar.query(&mut query).unwrap();
-            match event {
-                QueryEvent::Done => break,
-                QueryEvent::TestExternal { .. } => panic!("no external call"),
-                QueryEvent::Result { bindings } => {
-                    results.push(bindings.get(&Symbol("a".to_string())).unwrap().clone());
-                }
-                _ => (),
-            }
-        }
-        assert_eq!(result_values(results), vec![value!(1), value!(2)]);
+    #[test]
+    /// From Aït-Kaci's WAM tutorial (1999), page 34.
+    fn test_ait_kaci_34() {
+        let mut polar = Polar::new();
+        polar
+            .load_str(
+                r#"a() := b(x), c(x);
+               b(x) := e(x);
+               c(1);
+               e(x) := f(x);
+               e(x) := g(x);
+               f(2);
+               g(1);"#,
+            )
+            .unwrap();
+        assert!(qeval(&mut polar, "a()"));
     }
 
     #[test]
