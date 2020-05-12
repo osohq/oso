@@ -27,25 +27,37 @@ pub trait ToPolarString {
     fn to_polar(&self) -> String;
 }
 
-// AST type for polar expressions / rules / etc.
-// Internal knowledge base types.
-// FFI types for passing polar values back and forth.
-// FFI event types.
-// Debugger events.
-//
-
-// @TODO flesh out.
-// Internal only instance
-// interal rep of external class (has fields, was constructed in polar)
-// external only instance (id only)
+/// PARSER TYPES (NOT FFI TYPE BECAUSE THIS can't cross boundary)
+/// Not necessarily true due to instance contruction.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct Instance {
-    pub class: String,
-    pub external_id: u64,
+pub struct InstanceLiteral {
+    pub tag: String,
     pub fields: HashMap<Symbol, Term>,
 }
 
-impl ToPolarString for Instance {
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct Dictionary {
+    pub fields: HashMap<Symbol, Term>,
+}
+
+impl ToPolarString for Dictionary {
+    fn to_polar(&self) -> String {
+        unimplemented!();
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct ExternalInstance {
+    pub external_id: u64,
+}
+
+impl ToPolarString for ExternalInstance {
+    fn to_polar(&self) -> String {
+        unimplemented!();
+    }
+}
+
+impl ToPolarString for InstanceLiteral {
     fn to_polar(&self) -> String {
         let fields = self
             .fields
@@ -53,13 +65,14 @@ impl ToPolarString for Instance {
             .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
             .collect::<Vec<String>>()
             .join(", ");
-        format!("{}{{{}}}", self.class, fields)
+        format!("{}{{{}}}", self.tag, fields)
     }
 }
 
 // Context stored somewhere by id.
 
 // parser outputs
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Context {
     pub file: String,
@@ -273,8 +286,10 @@ pub enum Value {
     Integer(i64),
     String(String),
     Boolean(bool),
-    Instance(Instance),
-    Call(Predicate),
+    ExternalInstance(ExternalInstance),
+    InstanceLiteral(InstanceLiteral),
+    Dictionary(Dictionary),
+    Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
     Symbol(Symbol),
     Expression(Operation),
@@ -289,11 +304,13 @@ impl Value {
             Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => f(&self),
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
-            Value::Instance(_) => unimplemented!(),
             Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
             }),
+            Value::InstanceLiteral(_) => unimplemented!(),
+            Value::ExternalInstance(_) => unimplemented!(),
+            Value::Dictionary(_) => unimplemented!(),
         }
     }
 }
@@ -310,7 +327,9 @@ impl ToPolarString for Value {
                     "false"
                 }
             }),
-            Value::Instance(i) => i.to_polar(),
+            Value::InstanceLiteral(i) => i.to_polar(),
+            Value::Dictionary(i) => i.to_polar(),
+            Value::ExternalInstance(i) => i.to_polar(),
             Value::Call(c) => c.to_polar(),
             Value::List(l) => format!(
                 "[{}]",
@@ -434,7 +453,6 @@ pub struct GenericRule {
 
 #[derive(Clone)]
 pub struct Class {
-    pub id: i64,
     pub name: String,
 }
 
@@ -465,14 +483,21 @@ type Bindings = HashMap<Symbol, Term>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     Done,
+
+    /// Returns: new instance id
     ExternalConstructor {
-        instance: Instance,
+        instance: InstanceLiteral,
     },
+
+    /// Returns: Term
     ExternalCall {
-        call_id: i64,
-        instance_id: i64,
-        class: String,
+        /// Persistent id across all requests for results from the same external call.
+        call_id: u64,
+        /// Id of the external instance to make this call on.
+        instance_id: u64,
+        /// Field name to lookup or function name to call.
         attribute: String,
+        /// List of arguments to use if this is a method call.
         args: Vec<Term>,
     },
     TestExternal {

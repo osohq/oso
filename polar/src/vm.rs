@@ -17,20 +17,16 @@ pub enum Goal {
         right: Term,
     },
     Lookup {
-        instance: Instance,
+        instance: InstanceLiteral,
         field: Term,
     },
     LookupExternal {
-        instance: Instance,
+        instance: ExternalInstance,
         field: Term,
     },
     Noop,
     Query {
         term: Term,
-    },
-    Result {
-        name: Symbol,
-        value: Option<i64>,
     },
     Unify {
         left: Term,
@@ -276,6 +272,7 @@ impl PolarVirtualMachine {
     fn test_external(&mut self, name: Symbol) -> QueryEvent {
         self.append_goals(vec![Goal::Halt, Goal::TestExternal { name: name.clone() }]);
         QueryEvent::TestExternal { name }
+        // TERM CANNOT BE VARIABLE IF SOMETHING PASSES THROUGH FFI
     }
 
     /// Halt the VM by clearing all goals and choices.
@@ -373,20 +370,29 @@ impl PolarVirtualMachine {
     /// If the value is `None` then the external has no (more)
     /// results, so we make sure to clear the trailing `TestExternal`
     /// goal that would otherwise follow.
-    pub fn result(&mut self, name: &Symbol, value: Option<i64>) {
-        // Externals are always followed by a halt.
-        assert!(matches!(self.goals.pop(), Some(Goal::Halt)));
+    pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) {
+        // TODO: Open question if we need to pass errors back down to rust.
+        // For example what happens if the call asked for a field that doesn't exist?
 
-        if let Some(value) = value {
-            // We have a value and should bind our variable to it.
-            self.bind(name, &Term::new(Value::Integer(value)))
-        } else {
-            // No more values, so no further queries to resolve.
-            assert!(matches!(
-                self.goals.pop(),
-                Some(Goal::TestExternal { name }) if name == name
-            ));
-        }
+        // // Externals are always followed by a halt.
+        // assert!(matches!(self.goals.pop(), Some(Goal::Halt)));
+
+        // if let Some(value) = value {
+        //     // We have a value and should bind our variable to it.
+        //     self.bind(name, &Term::new(Value::Integer(value)))
+        // } else {
+        //     // No more values, so no further queries to resolve.
+        //     assert!(matches!(
+        //         self.goals.pop(),
+        //         Some(Goal::TestExternal { name }) if name == name
+        //     ));
+        // }
+    }
+
+    /// Called with the result of an external construct. The instance id
+    /// gives a handle to the external instance.
+    pub fn external_construct_result(&mut self, instance_id: u64) {
+        unimplemented!()
     }
 
     /// Unify `left` and `right` terms.

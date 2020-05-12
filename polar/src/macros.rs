@@ -36,11 +36,10 @@ macro_rules! term {
     };
 }
 
-impl<S: AsRef<str>> From<S> for FromHelper<Instance> {
+impl<S: AsRef<str>> From<S> for FromHelper<InstanceLiteral> {
     fn from(other: S) -> Self {
-        Self(Instance {
-            class: other.as_ref().to_string(),
-            external_id: NEXT_ID.fetch_add(1, ORD),
+        Self(InstanceLiteral {
+            tag: other.as_ref().to_string(),
             fields: HashMap::default(),
         })
     }
@@ -96,9 +95,9 @@ impl From<bool> for FromHelper<Value> {
     }
 }
 
-impl From<Instance> for FromHelper<Value> {
-    fn from(other: Instance) -> Self {
-        Self(Value::Instance(other))
+impl From<InstanceLiteral> for FromHelper<Value> {
+    fn from(other: InstanceLiteral) -> Self {
+        Self(Value::InstanceLiteral(other))
     }
 }
 impl From<Predicate> for FromHelper<Value> {

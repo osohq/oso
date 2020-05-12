@@ -122,16 +122,12 @@ impl Polar {
         query.vm.run()
     }
 
-    pub fn result(&mut self, _query: &mut Query, _call_id: i64, _value: Term) -> PolarResult<()> {
-        Err(PolarError::Unimplemented("result".to_string()))
+    pub fn external_call_result(&mut self, query: &mut Query, call_id: u64, value: Option<Term>) {
+        unimplemented!();
     }
 
-    #[cfg(test)]
-    pub fn test_result(&mut self, query: &mut Query, name: &Symbol, value: Option<i64>) {
-        query.vm.push_goal(Goal::Result {
-            name: name.clone(),
-            value,
-        });
+    pub fn external_construct_result(&mut self, query: &mut Query, instance_id: u64) {
+        unimplemented!();
     }
 
     #[cfg(test)]
