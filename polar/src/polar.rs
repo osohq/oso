@@ -202,38 +202,30 @@ mod tests {
     #[test]
     fn test_jealous() {
         let mut polar = Polar::new();
-        polar.load_str("loves(\"vincent\", \"mia\");");
-        polar.load_str("loves(\"marcellus\", \"mia\");");
-        polar.load_str("jealous(a, b) := loves(a, c), loves(b, c);");
+        polar.load_str(
+            r#"loves("vincent", "mia");
+               loves("marcellus", "mia");
+               jealous(a, b) := loves(a, c), loves(b, c);"#,
+        );
 
         let query = polar.new_query("jealous(who, of)");
         let results = query_results(&mut polar, query);
-        assert!(
-            results.contains(&HashMap::from_iter(
-                vec![
-                    (sym!("who"), value!("vincent")),
-                    (sym!("of"), value!("marcellus")),
-                ]
-                .into_iter()
-            )),
-            "results {:?}",
-            results
-        );
-
-        assert!(
-            results.contains(&HashMap::from_iter(
-                vec![
-                    (sym!("who"), value!("marcellus")),
-                    (sym!("of"), value!("vincent")),
-                ]
-                .into_iter()
-            )),
-            "results {:?}",
-            results
-        );
-
-
-        assert_eq!(results.len(), 4, "results is {:?}", results);
+        let jealous = |who: &str, of: &str| {
+            assert!(
+                &results.contains(&HashMap::from_iter(vec![
+                    (sym!("who"), value!(who)),
+                    (sym!("of"), value!(of))
+                ])),
+                "{} is not jealous of {} (but should be)",
+                who,
+                of
+            );
+        };
+        assert_eq!(results.len(), 4);
+        jealous("vincent", "vincent");
+        jealous("vincent", "marcellus");
+        jealous("marcellus", "vincent");
+        jealous("marcellus", "marcellus");
     }
 
     #[test]
@@ -268,6 +260,7 @@ mod tests {
 
     #[test]
     fn test_functions_reorder() {
+        // TODO (dhatch): Reorder f(x), h(x), g(x)
         let parts = vec![
             "f(1)",
             "f(2)",
