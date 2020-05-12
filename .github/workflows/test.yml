@@ -9,5 +9,8 @@ jobs:
         with:
           python-version: "3.6"
       - uses: actions/checkout@v2
-      - run: make test
+      - run: pip install black
+      - run: black --check .
+      - run: rustup component add rustfmt
       - run: cargo fmt -- --check
+      - run: make test
