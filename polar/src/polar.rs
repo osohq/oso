@@ -169,7 +169,7 @@ mod tests {
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
                 }
-                _ => (),
+                _ => panic!("unexpected event"),
             }
         }
 
@@ -232,7 +232,8 @@ mod tests {
             results
         );
 
-        assert_eq!(results.len(), 2);
+
+        assert_eq!(results.len(), 4, "results is {:?}", results);
     }
 
     #[test]
