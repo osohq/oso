@@ -46,9 +46,8 @@ Fields: HashMap<Symbol, Term> = {
     }
 };
 
-pub Instance: Instance = <tag:Name> "{" <fields:Fields> "}" => Instance {
-    class: tag,
-    external_id: 0,
+pub Instance: InstanceLiteral = <tag:Name> "{" <fields:Fields> "}" => InstanceLiteral {
+    tag,
     fields,
 };
 
