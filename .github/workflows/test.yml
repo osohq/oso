@@ -10,3 +10,4 @@ jobs:
           python-version: "3.6"
       - uses: actions/checkout@v2
       - run: make test
+      - run: cargo fmt -- --check
