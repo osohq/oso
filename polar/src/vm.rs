@@ -58,7 +58,7 @@ pub struct Choice {
     alternatives: Alternatives,
     bsp: usize, // binding stack pointer
     /// The goal that led to these choices.  Goal to retry when exhausting alternatives.
-    retry: Goal
+    retry: Goal,
 }
 
 type Alternatives = Vec<Goals>;
@@ -149,31 +149,32 @@ impl PolarVirtualMachine {
     fn backtrack(&mut self) {
         // eprintln!("{}", "=> backtrack");
         let mut retries = vec![];
-
-        while let mut choice = self.choices.pop() {
-            match choice {
+        loop {
+            match self.choices.pop() {
                 None => return self.push_goal(Goal::Halt),
                 Some(Choice {
                     ref mut alternatives,
                     ref bsp,
                     ref retry,
                 }) => {
+                    // Unwind bindings.
                     self.bindings.drain(*bsp..);
 
+                    // Find an alternate path.
                     if let Some(alternative) = alternatives.pop() {
                         // TODO order
                         self.append_goals(retries.iter().cloned().rev().collect());
                         self.append_goals(alternative);
 
+                        // Leave a choice for any remaining alternatives.
                         return self.push_choice(Choice {
                             alternatives: alternatives.clone(),
                             bsp: *bsp,
-                            retry: retry.clone()
+                            retry: retry.clone(),
                         });
                     } else {
                         retries.push(retry.clone())
                     }
-
                 }
             }
         }

@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::iter::FromIterator;
-
 use super::types::*;
 use super::vm::*;
 
@@ -145,6 +142,9 @@ impl Polar {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+    use std::iter::FromIterator;
+
     use super::*;
     use permute::permute;
 
