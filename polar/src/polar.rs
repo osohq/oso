@@ -319,6 +319,25 @@ mod tests {
     }
 
     #[test]
+    /// From Aït-Kaci's WAM tutorial (1999), page 34.
+    fn test_ait_kaci_34() {
+        let mut polar = Polar::new();
+        polar.load_str(
+            r#"a() := b(x), c(x);
+               b(x) := e(x);
+               c(1);
+               e(x) := f(x);
+               e(x) := g(x);
+               f(2);
+               g(1);"#,
+        );
+
+        let query = polar.new_query("a()");
+        let results = query_results(&mut polar, query);
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
     fn test_external() {
         let a = Symbol("a".to_string());
         let mut polar = Polar::new();
