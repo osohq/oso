@@ -1,6 +1,28 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+// @TODO: Do some work to make these errors nice, really rough right now.
+#[derive(Debug)]
+pub enum PolarError {
+    Parse(String),
+    Serialization(String),
+    Unimplemented(String),
+    Unknown, // Type we return if we panic, the trace gets printed to stderr by default.
+}
+
+pub type PolarResult<T> = std::result::Result<T, PolarError>;
+
+impl ToString for PolarError {
+    fn to_string(&self) -> String {
+        match self {
+            PolarError::Parse(s) => s.to_string(),
+            PolarError::Serialization(s) => s.to_string(),
+            PolarError::Unimplemented(s) => s.to_string(),
+            PolarError::Unknown => "panic!".to_string(),
+        }
+    }
+}
+
 pub trait ToPolarString {
     fn to_polar(&self) -> String;
 }

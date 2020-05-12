@@ -2,19 +2,32 @@ from _polar_lib import ffi, lib
 import json
 from pathlib import Path
 
+
 def to_python(v):
-    """ Convert Terms to python values"""
+    """ Convert polar terms to python values """
     # i = v['id']
     # offset = v['offset']
-    value = v['value']
+    value = v["value"]
     tag = [*value][0]
-    if tag == 'Integer':
+    if tag in ["Integer", "String", "Boolean"]:
         return value[tag]
+    if tag == "List":
+        return [to_python(e) for e in value[tag]]
     # TODO
     return None
 
+
+def to_polar(v):
+    """ Convert python values to polar terms """
+    if isinstance(v, int):
+        return {"Integer": v}
+    # TODO
+    return None
+
+
 class PolarException(Exception):
     pass
+
 
 class Polar:
     def __init__(self):
@@ -25,16 +38,31 @@ class Polar:
         # Not usually needed but useful for tests since we make a lot of these.
         lib.polar_free(self.polar)
 
+    def _raise_error(self):
+        err = lib.polar_get_error()
+        msg = ffi.string(err).decode()
+        exception = PolarException(msg)
+        lib.string_free(err)
+        raise exception
+
     def load_str(self, src_str):
         c_str = ffi.new("char[]", src_str.encode())
-        lib.polar_load_str(self.polar, c_str)
+        loaded = lib.polar_load_str(self.polar, c_str)
+        if loaded == 0:
+            self._raise_error()
 
     def query(self, query_str):
         c_str = ffi.new("char[]", query_str.encode())
         query = lib.polar_new_query(self.polar, c_str)
+        if query == ffi.NULL:
+            self._raise_error()
 
         while True:
             event_s = lib.polar_query(self.polar, query)
+            if event_s == ffi.NULL:
+                lib.query_free(query)
+                self._raise_error()
+
             event = json.loads(ffi.string(event_s).decode())
             lib.string_free(event_s)
             if event == "Done":
@@ -44,7 +72,7 @@ class Polar:
             data = event[kind]
 
             if kind == "Result":
-                yield {k: to_python(v) for k,v in data['bindings'].items()}
+                yield {k: to_python(v) for k, v in data["bindings"].items()}
 
         lib.query_free(query)
 
@@ -64,7 +92,17 @@ class Polar:
             raise PolarException(f"Could not find file: {policy_file}")
 
         if policy_file not in self.loaded_files:
-            with open(policy_file, 'r') as f:
+            with open(policy_file, "r") as f:
                 contents = f.read()
             self.loaded_files[policy_file] = contents
             self.load_str(contents)
+
+    def clear(self):
+        """ Clear all facts and internal Polar classes from the knowledge base. """
+        lib.polar_free(self.polar)
+        self.polar = lib.polar_new()
+        # TODO: Clear out class mapping info.
+
+
+def register_python_class():
+    pass

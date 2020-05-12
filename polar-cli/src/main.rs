@@ -70,9 +70,9 @@ fn main() -> rustyline::Result<()> {
         let mut f = File::open(argument).expect("open file");
         let mut policy = String::new();
         f.read_to_string(&mut policy).expect("read in policy");
-        polar.load_str(&policy);
+        polar.load_str(&policy).unwrap();
     }
-    polar.load_str("foo(1);foo(2);");
+    polar.load_str("foo(1);foo(2);").unwrap();
     loop {
         // get input
         let mut input = match rl.readline(">> ") {
@@ -86,17 +86,18 @@ fn main() -> rustyline::Result<()> {
         rl.add_history_entry(input.as_str());
         input.pop(); // remove the trailing ';'
 
-        let mut query = polar.new_query(&input);
+        let mut query = polar.new_query(&input).unwrap();
         loop {
             match query.next() {
-                Some(QueryEvent::Done) => println!("False"),
-                Some(QueryEvent::Result { bindings }) => {
+                Some(Ok(QueryEvent::Done)) => println!("False"),
+                Some(Ok(QueryEvent::Result { bindings })) => {
                     println!("True");
                     for (k, v) in bindings {
                         println!("\t{:?} = {:?}", k, v);
                     }
                 }
-                Some(e) => println!("Event: {:?}", e),
+                Some(Ok(e)) => println!("Event: {:?}", e),
+                Some(Err(e)) => println!("Error: {:?}", e),
                 None => break,
             }
         }
