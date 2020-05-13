@@ -6,7 +6,6 @@ use std::env;
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
-
     lalrpop::process_root().unwrap();
 
     cbindgen::Builder::new()
