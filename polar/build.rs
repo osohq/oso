@@ -19,6 +19,8 @@ fn main() {
             // Continue on syntax errors
             if let cbindgen::Error::ParseSyntaxError { .. } = err {
                 Ok(None)
+            } else if let cbindgen::Error::CargoMetadata { .. } = err {
+                Ok(None)
             } else {
                 Err(err)
             }
