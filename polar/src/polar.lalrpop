@@ -84,9 +84,8 @@ Exp9: Term = {
 // .
 Exp8: Term = {
     <start:@L> <head:Symbol> "." <call_loc:@L> <mut call:Predicate> => {
-        let call_name = Term{id: 0, offset: call_loc, value: Value::Symbol(Symbol(call.name))};
-        let mut args = vec![head, call_name];
-        args.append(&mut call.args);
+        let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
+        let args = vec![head, call_term];
         let name = ".".to_string();
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}

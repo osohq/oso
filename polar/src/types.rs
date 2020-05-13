@@ -178,18 +178,7 @@ fn to_polar_parens(op: &Operator, t: &Term) -> String {
 impl ToPolarString for Operation {
     fn to_polar(&self) -> String {
         match self.operator {
-            Operator::Dot => format!(
-                "{}{}{}({})",
-                self.args[0].to_polar(),
-                ".",
-                self.args[1].to_polar(),
-                self.args
-                    .iter()
-                    .skip(2)
-                    .map(|t| { t.to_polar() })
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
+            Operator::Dot => format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar(),),
             Operator::Not => format!("{}{}", "!", self.args[0].to_polar()),
             Operator::Mul => format!(
                 "{}*{}",
