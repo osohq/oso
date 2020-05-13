@@ -10,6 +10,7 @@ pub enum Goal {
     TestExternal {
         name: Symbol, // POC
     },
+    Fail,
     Halt,
     Isa {
         left: Term,
@@ -61,6 +62,7 @@ pub struct Or {
     retry: Goal,
 }
 
+#[derive(Debug)]
 pub enum Choice {
     Not,
     Or(Or),
@@ -117,6 +119,7 @@ impl PolarVirtualMachine {
             // eprintln!("{}", goal);
             match goal {
                 Goal::Cut => self.cut(),
+                Goal::Fail => self.fail(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { .. } => unimplemented!("isa"),
                 Goal::Lookup { .. } => unimplemented!("lookup"),
@@ -151,13 +154,19 @@ impl PolarVirtualMachine {
 
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
+    /// Also handle backtracking to a negation point, in which case
+    /// we throw away the `Fail` goal that always follows a negated
+    /// query, and don't backtrack any further.
     fn backtrack(&mut self) {
         // eprintln!("{}", "=> backtrack");
         let mut retries = vec![];
         loop {
             match self.choices.pop() {
                 None => return self.push_goal(Goal::Halt),
-                Some(Choice::Not) => return,
+                Some(Choice::Not) => {
+                    assert!(matches!(self.goals.pop(), Some(Goal::Fail)));
+                    return;
+                }
                 Some(Choice::Or(Or {
                     ref mut alternatives,
                     ref bsp,
@@ -280,6 +289,19 @@ impl PolarVirtualMachine {
         QueryEvent::TestExternal { name }
     }
 
+    /// A negated query was successful.
+    /// Pop choices to a negation point, then backtrack.
+    fn fail(&mut self) {
+        // eprintln!("=> fail");
+        loop {
+            match self.choices.pop() {
+                None => panic!("no choice"),
+                Some(Choice::Not) => return self.backtrack(),
+                Some(_) => (),
+            }
+        }
+    }
+
     /// Halt the VM by clearing all goals and choices.
     pub fn halt(&mut self) -> QueryEvent {
         self.goals.clear();
@@ -364,9 +386,12 @@ impl PolarVirtualMachine {
                 }
             }
             Value::Negation(Negation { predicate }) => {
-                self.push_goal(Goal::Query {
-                    term: Term::new(Value::Call(predicate)),
-                });
+                self.append_goals(vec![
+                    Goal::Query {
+                        term: Term::new(Value::Call(predicate)),
+                    },
+                    Goal::Fail,
+                ]);
                 self.push_choice(Choice::Not);
             }
             _ => todo!("other query types"),

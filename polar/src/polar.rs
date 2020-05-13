@@ -172,6 +172,11 @@ mod tests {
         query_results(polar, query).len() == 1
     }
 
+    fn qnull(polar: &mut Polar, query_str: &str) -> bool {
+        let query = polar.new_query(query_str).unwrap();
+        query_results(polar, query).len() == 0
+    }
+
     fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
         let query = polar.new_query(query_str).unwrap();
         query_results(polar, query)
@@ -188,9 +193,9 @@ mod tests {
             .load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);")
             .unwrap();
 
-        assert!(!qeval(&mut polar, "k(1)"));
+        assert!(qnull(&mut polar, "k(1)"));
         assert!(qeval(&mut polar, "k(2)"));
-        assert!(!qeval(&mut polar, "k(3)"));
+        assert!(qnull(&mut polar, "k(3)"));
         assert_eq!(qvar(&mut polar, "k(a)", "a"), vec![value!(2)]);
     }
 
@@ -234,7 +239,7 @@ mod tests {
             .unwrap();
 
         assert!(qeval(&mut polar, "f(2)"));
-        assert!(!qeval(&mut polar, "f(3)"));
+        assert!(qnull(&mut polar, "f(3)"));
         assert!(qeval(&mut polar, "f(4)"));
         assert!(qeval(&mut polar, "j(4)"));
     }
@@ -270,7 +275,7 @@ mod tests {
             polar.load_str(&joined).unwrap();
 
             assert!(
-                !qeval(&mut polar, "k(1)"),
+                qnull(&mut polar, "k(1)"),
                 "k(1) was true for permutation {:?}",
                 &permutation
             );
@@ -322,9 +327,14 @@ mod tests {
         let mut polar = Polar::new();
         polar.load_str("odd(1); even(2);").unwrap();
         assert!(qeval(&mut polar, "odd(1)"));
+        assert!(qnull(&mut polar, "!odd(1)"));
+        assert!(qnull(&mut polar, "even(1)"));
         assert!(qeval(&mut polar, "!even(1)"));
+        assert!(qnull(&mut polar, "odd(2)"));
         assert!(qeval(&mut polar, "!odd(2)"));
         assert!(qeval(&mut polar, "even(2)"));
+        assert!(qnull(&mut polar, "!even(2)"));
+        assert!(qnull(&mut polar, "even(3)"));
         assert!(qeval(&mut polar, "!even(3)"));
     }
 
