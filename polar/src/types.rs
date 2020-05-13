@@ -135,6 +135,9 @@ pub struct Operation {
     pub args: TermList,
 }
 
+// @NOTE: This is wrong. Will not spit out what it would reparse as. Doesn't handle the
+// parsed precedence and parens when it creates the string. We probably shouldn't use this for
+// anything that matters anyway and use the macros for tests.
 impl ToPolarString for Operation {
     fn to_polar(&self) -> String {
         match self.operator {
@@ -223,7 +226,7 @@ impl ToPolarString for Operation {
                 .iter()
                 .map(|t| t.to_polar())
                 .collect::<Vec<String>>()
-                .join("!"),
+                .join("|"),
             Operator::And => self
                 .args
                 .iter()

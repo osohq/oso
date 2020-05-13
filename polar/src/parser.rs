@@ -55,8 +55,14 @@ mod tests {
         // This won't work. There's no ordering to fields. Need to use sam macros.
         // println!("{}", instance.to_polar());
         // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
-        let exp3 = polar::ExpParser::new().parse(r#"!foo"#).unwrap();
-        assert_eq!(exp3.to_polar(), r#"!foo"#);
+        let exp = polar::ExpParser::new().parse(r#"!foo"#).unwrap();
+        assert_eq!(exp.to_polar(), r#"!foo"#);
+        let exp = polar::ExpParser::new().parse(r#"!foo"#).unwrap();
+        assert_eq!(exp.to_polar(), r#"!foo"#);
+        let exp = polar::ExpParser::new()
+            .parse(r#"!a,b|c=d==e+f/g.h(i)"#)
+            .unwrap();
+        assert_eq!(exp.to_polar(), r#"!a,b|c=d==e+f/g.h(i)"#);
     }
 
     #[test]
