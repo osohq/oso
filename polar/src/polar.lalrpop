@@ -34,11 +34,6 @@ pub Symbol: Term  = <start:@L> <n:Name> => {
     Term{id: 0, offset: start, value: Value::Symbol(Symbol(n))}
 };
 
-//Body: Vec<Term> = {
-    //<term:Exp> => vec![term],
-    //<head:Exp> "," <mut tail:Body> => {tail.insert(0, head); tail}
-//};
-
 Fields: HashMap<Symbol, Term> = {
     <name:Name> ":" <value:Term> => {
         let mut fields = HashMap::new();
@@ -57,18 +52,17 @@ pub Instance: Instance = <tag:Name> "{" <fields:Fields> "}" => Instance {
     fields,
 };
 
-Terms: Vec<Term> = {
-    <exp:Exp> => vec![exp],
-    <head:Exp> "," <mut tail:Terms> => {tail.insert(0, head); tail}
-};
-
 pub Term: Term = {
     <term:Integer> => term,
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,
-    <start:@L> "(" ")" => Term{id: 0, offset: start, value: Value::List(vec![])},
-    <start:@L> "(" <terms:Terms> ")" => Term{id:0, offset: start, value: Value::List(terms)}
+    <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
+    <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
+    <start:@L> "[" <exp:Exp> "]" => {
+        let terms = unwrap_and(exp);
+        Term{id:0, offset: start, value: Value::List(terms)}
+    }
 };
 
 pub Predicate: Predicate = {
@@ -76,45 +70,169 @@ pub Predicate: Predicate = {
         let args = vec![];
         Predicate{name, args}
     },
-    <name:Name> "(" <args:Terms> ")" => {
+    <name:Name> "(" <args:Exp> ")" => {
+        let args = unwrap_and(args);
         Predicate{name, args}
     },
 };
 
-pub Exp: Term = {
-    <start:@L> <call:Predicate> => {
-        Term{id: 0, offset: start, value: Value::Call(call)}
-    },
-    // @TODO: We probably just want a specific term case for these calls.
-    <start:@L> <head:Symbol> "." <call_loc:@L> <call:Predicate> => {
-        let mut args = call.args;
+Exp9: Term = {
+    <term:Term> => term,
+    "(" <exp:Exp> ")" => exp // seems sorta impossible to support parrens for expressions and list literals.
+}
+
+// .
+Exp8: Term = {
+    <start:@L> <head:Symbol> "." <call_loc:@L> <mut call:Predicate> => {
         let call_name = Term{id: 0, offset: call_loc, value: Value::Symbol(Symbol(call.name))};
-        args.insert(0, call_name);
-        args.insert(0, head);
+        let mut args = vec![head, call_name];
+        args.append(&mut call.args);
         let name = ".".to_string();
-        let pred = Predicate{name, args};
-        Term{id: 0, offset: start, value: Value::Call(pred)}
+        let op = Operation{operator: Operator::Dot, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <term:Term> => term
+    <exp9:Exp9> => exp9
 };
 
-Body: Vec<Term> = {
-    <term:Exp> => vec![term],
-    <head:Exp> "," <mut tail:Body> => {tail.insert(0, head); tail}
-};
+// !
+Exp7: Term = {
+    <start:@L> "!" <exp8:Exp8> => {
+        let args = vec![exp8];
+        let op = Operation{operator: Operator::Not, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp8:Exp8> => exp8
+}
+
+// * /
+Exp6: Term = {
+    <start:@L> <exp6:Exp6> "*" <exp7:Exp7> => {
+        let args = vec![exp6, exp7];
+        let op = Operation{operator: Operator::Mul, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <exp6:Exp6> "/" <exp7:Exp7> => {
+        let args = vec![exp6, exp7];
+        let op = Operation{operator: Operator::Div, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp7:Exp7> => exp7
+}
+
+// + -
+Exp5: Term = {
+    <start:@L> <exp5:Exp5> "+" <exp6:Exp6> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator: Operator::Add, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <exp5:Exp5> "-" <exp6:Exp6> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator: Operator::Sub, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp6:Exp6> => exp6
+}
+
+// == != <= < >= >
+Exp4: Term = {
+    <start:@L> <exp4:Exp4> "==" <exp5:Exp5> => {
+        let args = vec![exp4, exp5];
+        let op = Operation{operator: Operator::Eq, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <exp4:Exp4> "!=" <exp5:Exp5> => {
+        let args = vec![exp4, exp5];
+        let op = Operation{operator: Operator::Neq, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <exp4:Exp4> "<=" <exp5:Exp5> => {
+        let args = vec![exp4, exp5];
+        let op = Operation{operator: Operator::Leq, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <exp4:Exp4> ">=" <exp5:Exp5> => {
+        let args = vec![exp4, exp5];
+        let op = Operation{operator: Operator::Geq, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <exp4:Exp4> "<" <exp5:Exp5> => {
+        let args = vec![exp4, exp5];
+        let op = Operation{operator: Operator::Lt, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <exp4:Exp4> ">" <exp5:Exp5> => {
+        let args = vec![exp4, exp5];
+        let op = Operation{operator: Operator::Gt, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp5:Exp5> => exp5
+}
+
+// =
+Exp3: Term = {
+    <start:@L> <exp3:Exp3> "=" <exp4:Exp4> => {
+        let args = vec![exp3, exp4];
+        let op = Operation{operator: Operator::Unify, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+     <exp4:Exp4> => exp4
+ }
+
+// |
+Exp2: Term = {
+    <start:@L> <head:Exp3> "|" <mut tail:Exp2> => {
+        let args = match &mut tail {
+            Term{id, offset, value: Value::Expression(Operation{operator: Operator::Or, args: tail_args})} => {
+                let mut args = vec![head];
+                args.append(tail_args);
+                args
+            }
+            _ => {
+                vec![head, tail]
+            }
+        };
+        let op = Operation{operator: Operator::Or, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp3:Exp3> => exp3
+}
+
+// ,
+Exp1: Term = {
+    <start:@L> <head:Exp2> "," <mut tail:Exp1> => {
+        let args = match &mut tail {
+            Term{id, offset, value: Value::Expression(Operation{operator: Operator::And, args: tail_args})} => {
+                let mut args = vec![head];
+                args.append(tail_args);
+                args
+            }
+            _ => {
+                vec![head, tail]
+            }
+        };
+        let op = Operation{operator: Operator::And, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp2:Exp2> => exp2
+}
+
+pub Exp: Term = {
+    <exp1:Exp1> => exp1
+}
 
 pub Rule: Rule = {
     <head:Predicate> ";" => {
-
         let name = head.name;
         let params = head.args;
         let body = vec![];
         Rule{name, params, body}
     },
-    <head:Predicate> ":=" <body:Body> ";" => {
+    <head:Predicate> ":=" <body:Exp> ";" => {
         let name = head.name;
         let params = head.args;
-        Rule{name, params, body}
+        let body = unwrap_and(body);
+        Rule{name, params, body} 
     }
 }
 

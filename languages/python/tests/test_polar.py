@@ -23,7 +23,7 @@ def test_helpers(polar, load_file, query, qeval, qvar):
 
 
 def test_data_conversions(polar, qvar):
-    polar.load_str('a(1);b("two");c(true);d((1,"two",true));')
+    polar.load_str('a(1);b("two");c(true);d([1,"two",true]);')
     assert qvar("a(x)", "x", one=True) == 1
     assert qvar("b(x)", "x", one=True) == "two"
     assert qvar("c(x)", "x", one=True)

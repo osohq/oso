@@ -35,26 +35,28 @@ mod tests {
         assert_eq!(t.to_polar(), r#"true"#);
         let sym = polar::SymbolParser::new().parse(r#"foo_qwe"#).unwrap();
         assert_eq!(sym.to_polar(), r#"foo_qwe"#);
-        let l = polar::ExpParser::new().parse(r#"(foo, bar, baz)"#).unwrap();
-        assert_eq!(l.to_polar(), r#"(foo,bar,baz)"#);
+        let l = polar::ExpParser::new().parse(r#"[foo, bar, baz]"#).unwrap();
+        assert_eq!(l.to_polar(), r#"[foo,bar,baz]"#);
         let exp = polar::ExpParser::new()
             .parse(r#"foo(a, b(c), "d")"#)
             .unwrap();
         assert_eq!(exp.to_polar(), r#"foo(a,b(c),"d")"#);
         let exp2 = polar::ExpParser::new()
-            .parse(r#"foo.bar(a, b(c.d(e,(f,g))))"#)
+            .parse(r#"foo.bar(a, b(c.d(e,[f,g])))"#)
             .unwrap();
-        assert_eq!(exp2.to_polar(), r#".(foo,bar,a,b(.(c,d,e,(f,g))))"#);
+        assert_eq!(exp2.to_polar(), r#"foo.bar(a,b(c.d(e,[f,g])))"#);
         let rule = polar::RuleParser::new().parse(r#"f(x) := g(x);"#).unwrap();
-        assert_eq!(rule.to_polar(), r#"f(x) := (g(x));"#);
+        assert_eq!(rule.to_polar(), r#"f(x) := g(x);"#);
         let rule = polar::RuleParser::new().parse(r#"f(x);"#).unwrap();
-        assert_eq!(rule.to_polar(), r#"f(x) := ();"#);
+        assert_eq!(rule.to_polar(), r#"f(x);"#);
         let instance = polar::InstanceParser::new()
             .parse(r#"Foo{bar: 1, baz: y, biz: "hi"}"#)
             .unwrap();
         // This won't work. There's no ordering to fields. Need to use sam macros.
         // println!("{}", instance.to_polar());
         // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
+        let exp3 = polar::ExpParser::new().parse(r#"!foo"#).unwrap();
+        assert_eq!(exp3.to_polar(), r#"!foo"#);
     }
 
     #[test]
@@ -74,7 +76,7 @@ mod tests {
         assert_eq!(sym, term!(value!(@sym "foo_qwe")));
 
         let l = polar::TermParser::new()
-            .parse(r#"(foo, bar, baz)"#)
+            .parse(r#"[foo, bar, baz]"#)
             .unwrap();
         assert_eq!(l, term!(value!(@tl sym!("foo"), sym!("bar"), sym!("baz"))));
 
@@ -86,8 +88,8 @@ mod tests {
             term!(value!(pred!("foo", sym!("a"), pred!("b", sym!("c")), "d")))
         );
 
-        let exp2 = polar::ExpParser::new()
-            .parse(r#"foo.bar(a, b(c.d(e,(f,g))))"#)
+        /* let exp2 = polar::ExpParser::new()
+            .parse(r#"foo.bar(a, b(c.d(e,[f,g])))"#)
             .unwrap();
         assert_eq!(
             exp2,
@@ -107,7 +109,7 @@ mod tests {
                     )
                 )
             )))
-        );
+        ); */
 
         let rule = polar::RuleParser::new().parse(r#"f(x) := g(x);"#).unwrap();
         assert_eq!(rule, rule!("f", sym!("x") => pred!("g", sym!("x"))));
@@ -121,8 +123,8 @@ mod tests {
         a(1);b(2);c(3);
         "#;
         let results = parse_file(f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(1) := ();"#);
-        assert_eq!(results[1].to_polar(), r#"b(2) := ();"#);
-        assert_eq!(results[2].to_polar(), r#"c(3) := ();"#);
+        assert_eq!(results[0].to_polar(), r#"a(1);"#);
+        assert_eq!(results[1].to_polar(), r#"b(2);"#);
+        assert_eq!(results[2].to_polar(), r#"c(3);"#);
     }
 }

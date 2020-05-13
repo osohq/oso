@@ -70,18 +70,6 @@ pub struct Context {
 
 pub type TermList = Vec<Term>;
 
-impl ToPolarString for TermList {
-    fn to_polar(&self) -> String {
-        format!(
-            "({})",
-            self.iter()
-                .map(|t| t.to_polar())
-                .collect::<Vec<String>>()
-                .join(",")
-        )
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Symbol(pub String);
 
@@ -111,7 +99,138 @@ impl Predicate {
 
 impl ToPolarString for Predicate {
     fn to_polar(&self) -> String {
-        format!("{}{}", self.name, self.args.to_polar())
+        format!(
+            "{}({})",
+            self.name,
+            self.args
+                .iter()
+                .map(|t| t.to_polar())
+                .collect::<Vec<String>>()
+                .join(",")
+        )
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum Operator {
+    Dot,
+    Not,
+    Mul,
+    Div,
+    Add,
+    Sub,
+    Eq,
+    Geq,
+    Leq,
+    Neq,
+    Gt,
+    Lt,
+    Unify,
+    Or,
+    And,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct Operation {
+    pub operator: Operator,
+    pub args: TermList,
+}
+
+impl ToPolarString for Operation {
+    fn to_polar(&self) -> String {
+        match self.operator {
+            Operator::Dot => format!(
+                "{}{}{}({})",
+                self.args[0].to_polar(),
+                ".",
+                self.args[1].to_polar(),
+                self.args
+                    .iter()
+                    .skip(2)
+                    .map(|t| t.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
+            Operator::Not => format!("{}{}", "!", self.args[0].to_polar()),
+            Operator::Mul => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "*",
+                self.args[1].to_polar()
+            ),
+            Operator::Div => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "/",
+                self.args[1].to_polar()
+            ),
+            Operator::Add => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "+",
+                self.args[1].to_polar()
+            ),
+            Operator::Sub => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "-",
+                self.args[1].to_polar()
+            ),
+            Operator::Eq => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "==",
+                self.args[1].to_polar()
+            ),
+            Operator::Geq => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "<=",
+                self.args[1].to_polar()
+            ),
+            Operator::Leq => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "<=",
+                self.args[1].to_polar()
+            ),
+            Operator::Neq => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "!=",
+                self.args[1].to_polar()
+            ),
+            Operator::Gt => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                ">",
+                self.args[1].to_polar()
+            ),
+            Operator::Lt => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "<",
+                self.args[1].to_polar()
+            ),
+            Operator::Unify => format!(
+                "{}{}{}",
+                self.args[0].to_polar(),
+                "=",
+                self.args[1].to_polar()
+            ),
+            // @TODO: all args for or and and.
+            Operator::Or => self
+                .args
+                .iter()
+                .map(|t| t.to_polar())
+                .collect::<Vec<String>>()
+                .join("!"),
+            Operator::And => self
+                .args
+                .iter()
+                .map(|t| t.to_polar())
+                .collect::<Vec<String>>()
+                .join(","),
+        }
     }
 }
 
@@ -121,9 +240,10 @@ pub enum Value {
     String(String),
     Boolean(bool),
     Instance(Instance),
-    Call(Predicate), // @TODO: Do we just want a type for this instead?
+    Call(Predicate),
     List(TermList),
     Symbol(Symbol),
+    Expression(Operation),
 }
 
 impl Value {
@@ -136,6 +256,7 @@ impl Value {
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
             Value::Instance(_) => unimplemented!(),
+            Value::Expression(_) => unimplemented!(),
         }
     }
 }
@@ -154,8 +275,15 @@ impl ToPolarString for Value {
             }),
             Value::Instance(i) => i.to_polar(),
             Value::Call(c) => c.to_polar(),
-            Value::List(l) => l.to_polar(),
+            Value::List(l) => format!(
+                "[{}]",
+                l.iter()
+                    .map(|t| t.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
             Value::Symbol(s) => s.to_polar(),
+            Value::Expression(e) => e.to_polar(),
         }
     }
 }
@@ -195,23 +323,21 @@ impl Term {
     }
 }
 
+pub fn unwrap_and(term: Term) -> TermList {
+    match term.value {
+        Value::Expression(Operation {
+            operator: Operator::And,
+            args,
+        }) => args,
+        _ => vec![term],
+    }
+}
+
 impl ToPolarString for Term {
     fn to_polar(&self) -> String {
         self.value.to_polar()
     }
 }
-
-// steve here's how u parse stuff
-// ( + 1 2 (* 3 4))
-// => is(+(1, 1, *(3, 4))
-// foo.bar
-// => .(foo, bar, result)
-// foo.bar(1,2 3)
-// => .(foo, bar(1,2,3), result)
-// foo(a) := baz(a);
-// :=(foo(a), baz(a))
-// foo(a: Foo{a: b}) := baz(a);
-// :=(foo(), baz(a))
 
 // Knowledge base internal types.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -223,12 +349,32 @@ pub struct Rule {
 
 impl ToPolarString for Rule {
     fn to_polar(&self) -> String {
-        format!(
-            "{}{} := {};",
-            self.name,
-            self.params.to_polar(),
-            self.body.to_polar()
-        )
+        if self.body.len() == 0 {
+            format!(
+                "{}({});",
+                self.name,
+                self.params
+                    .iter()
+                    .map(|t| t.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            )
+        } else {
+            format!(
+                "{}({}) := {};",
+                self.name,
+                self.params
+                    .iter()
+                    .map(|t| t.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(","),
+                self.body
+                    .iter()
+                    .map(|t| t.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            )
+        }
     }
 }
 
