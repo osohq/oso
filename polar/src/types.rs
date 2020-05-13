@@ -129,15 +129,52 @@ pub enum Operator {
     And,
 }
 
+pub fn op_precedence(op: &Operator) -> i32 {
+    match op {
+        Operator::Dot => 8,
+        Operator::Not => 7,
+        Operator::Mul => 6,
+        Operator::Div => 6,
+        Operator::Add => 5,
+        Operator::Sub => 5,
+        Operator::Eq => 4,
+        Operator::Geq => 4,
+        Operator::Leq => 4,
+        Operator::Neq => 4,
+        Operator::Gt => 4,
+        Operator::Lt => 4,
+        Operator::Unify => 3,
+        Operator::Or => 2,
+        Operator::And => 1,
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Operation {
     pub operator: Operator,
     pub args: TermList,
 }
 
-// @NOTE: This is wrong. Will not spit out what it would reparse as. Doesn't handle the
-// parsed precedence and parens when it creates the string. We probably shouldn't use this for
-// anything that matters anyway and use the macros for tests.
+fn has_lower_pred(op: &Operator, t: &Term) -> bool {
+    match t.value {
+        Value::Expression(Operation {
+            operator: ref other,
+            ..
+        }) => op_precedence(op) > op_precedence(other),
+        _ => false,
+    }
+}
+
+fn to_polar_parens(op: &Operator, t: &Term) -> String {
+    if has_lower_pred(op, t) {
+        format!("({})", t.to_polar())
+    } else {
+        t.to_polar()
+    }
+}
+
+// Adds parenthesis when sub expressions have lower precidence (which is what you would have had to have during inital parse)
+// Lets us spit out strings that would reparse to the same ast.
 impl ToPolarString for Operation {
     fn to_polar(&self) -> String {
         match self.operator {
@@ -149,88 +186,76 @@ impl ToPolarString for Operation {
                 self.args
                     .iter()
                     .skip(2)
-                    .map(|t| t.to_polar())
+                    .map(|t| { t.to_polar() })
                     .collect::<Vec<String>>()
                     .join(",")
             ),
             Operator::Not => format!("{}{}", "!", self.args[0].to_polar()),
             Operator::Mul => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "*",
-                self.args[1].to_polar()
+                "{}*{}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Div => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "/",
-                self.args[1].to_polar()
+                "{}/{}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Add => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "+",
-                self.args[1].to_polar()
+                "{}+{}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Sub => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "-",
-                self.args[1].to_polar()
+                "{}-{}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Eq => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "==",
-                self.args[1].to_polar()
+                "{}=={}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Geq => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "<=",
-                self.args[1].to_polar()
+                "{}>={}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Leq => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "<=",
-                self.args[1].to_polar()
+                "{}<={}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Neq => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "!=",
-                self.args[1].to_polar()
+                "{}!={}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1])
             ),
             Operator::Gt => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                ">",
-                self.args[1].to_polar()
+                "{}>{}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1]),
             ),
             Operator::Lt => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "<",
-                self.args[1].to_polar()
+                "{}<{}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1]),
             ),
             Operator::Unify => format!(
-                "{}{}{}",
-                self.args[0].to_polar(),
-                "=",
-                self.args[1].to_polar()
+                "{}={}",
+                to_polar_parens(&self.operator, &self.args[0]),
+                to_polar_parens(&self.operator, &self.args[1]),
             ),
-            // @TODO: all args for or and and.
             Operator::Or => self
                 .args
                 .iter()
-                .map(|t| t.to_polar())
+                .map(|t| to_polar_parens(&self.operator, t))
                 .collect::<Vec<String>>()
                 .join("|"),
             Operator::And => self
                 .args
                 .iter()
-                .map(|t| t.to_polar())
+                .map(|t| to_polar_parens(&self.operator, t))
                 .collect::<Vec<String>>()
                 .join(","),
         }

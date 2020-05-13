@@ -60,9 +60,9 @@ mod tests {
         let exp = polar::ExpParser::new().parse(r#"!foo"#).unwrap();
         assert_eq!(exp.to_polar(), r#"!foo"#);
         let exp = polar::ExpParser::new()
-            .parse(r#"!a,b|c=d==e+f/g.h(i)"#)
+            .parse(r#"!a,b|c=d==(e+f)/g.h(i)"#)
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!a,b|c=d==e+f/g.h(i)"#);
+        assert_eq!(exp.to_polar(), r#"!a,b|c=d==(e+f)/g.h(i)"#);
     }
 
     #[test]
