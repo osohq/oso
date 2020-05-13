@@ -110,7 +110,7 @@ impl ToPolarString for Predicate {
         )
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Operator {
     Dot,
     Not,
@@ -284,7 +284,10 @@ impl Value {
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
             Value::Instance(_) => unimplemented!(),
-            Value::Expression(_) => unimplemented!(),
+            Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
+                operator: *operator,
+                args: args.iter().map(|term| term.map(f)).collect(),
+            }),
         }
     }
 }
@@ -372,36 +375,47 @@ impl ToPolarString for Term {
 pub struct Rule {
     pub name: String,
     pub params: TermList,
-    pub body: TermList,
+    pub body: Term,
 }
 
 impl ToPolarString for Rule {
     fn to_polar(&self) -> String {
-        if self.body.len() == 0 {
-            format!(
-                "{}({});",
-                self.name,
-                self.params
-                    .iter()
-                    .map(|t| t.to_polar())
-                    .collect::<Vec<String>>()
-                    .join(","),
-            )
-        } else {
-            format!(
-                "{}({}) := {};",
-                self.name,
-                self.params
-                    .iter()
-                    .map(|t| t.to_polar())
-                    .collect::<Vec<String>>()
-                    .join(","),
-                self.body
-                    .iter()
-                    .map(|t| t.to_polar())
-                    .collect::<Vec<String>>()
-                    .join(","),
-            )
+        match &self.body {
+            Term {
+                value:
+                    Value::Expression(Operation {
+                        operator: Operator::And,
+                        args,
+                    }),
+                ..
+            } => {
+                if args.len() == 0 {
+                    format!(
+                        "{}({});",
+                        self.name,
+                        self.params
+                            .iter()
+                            .map(|t| t.to_polar())
+                            .collect::<Vec<String>>()
+                            .join(","),
+                    )
+                } else {
+                    format!(
+                        "{}({}) := {};",
+                        self.name,
+                        self.params
+                            .iter()
+                            .map(|t| t.to_polar())
+                            .collect::<Vec<String>>()
+                            .join(","),
+                        args.iter()
+                            .map(|t| t.to_polar())
+                            .collect::<Vec<String>>()
+                            .join(","),
+                    )
+                }
+            }
+            _ => panic!("Not any sorta rule I parsed"),
         }
     }
 }

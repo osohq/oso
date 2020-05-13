@@ -1,3 +1,4 @@
+use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
 
@@ -97,7 +98,7 @@ impl Polar {
                     name: rule.name.clone(),
                     rules: vec![],
                 });
-            generic_rule.rules.push(rule);
+            generic_rule.rules.push(rewrite_rule(rule));
         }
         Ok(())
     }
@@ -108,7 +109,9 @@ impl Polar {
     }
 
     pub fn new_query_from_term(&self, term: Term) -> Query {
-        let query = Goal::Query { term: term.clone() };
+        let query = Goal::Query {
+            term: rewrite_term(term.clone()),
+        };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
     }

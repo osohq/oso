@@ -315,7 +315,7 @@ impl PolarVirtualMachine {
                             // TODO(?): Should maybe parse these as terms.
                             let renames = self.rename_vars(&Term::new(Value::List(vec![
                                 Term::new(Value::List(rule.params.clone())),
-                                Term::new(Value::List(rule.body.clone())),
+                                rule.body.clone(),
                             ])));
                             let renames = match renames.value {
                                 Value::List(renames) => renames,
@@ -333,14 +333,19 @@ impl PolarVirtualMachine {
 
                             // Query for the body clauses.
                             match &body.value {
-                                Value::List(clauses) => {
-                                    for clause in clauses.iter() {
+                                Value::Expression(Operation {
+                                    operator: Operator::And,
+                                    args,
+                                }) => {
+                                    for clause in args.iter() {
                                         goals.push(Goal::Query {
                                             term: clause.clone(),
                                         });
                                     }
                                 }
-                                _ => panic!("body is not a list of clauses"),
+                                _ => panic!(
+                                    "body is not a conjunction, where did you get this rule???"
+                                ),
                             }
 
                             alternatives.push(goals)

@@ -222,17 +222,27 @@ pub Exp: Term = {
 }
 
 pub Rule: Rule = {
-    <head:Predicate> ";" => {
+    <head:Predicate> <start:@L> ";" => {
         let name = head.name;
         let params = head.args;
-        let body = vec![];
+        let op = Operation{operator: Operator::And, args: vec![]};
+        let body = Term{id: 0, offset: start, value: Value::Expression(op)};
         Rule{name, params, body}
     },
     <head:Predicate> ":=" <body:Exp> ";" => {
         let name = head.name;
         let params = head.args;
-        let body = unwrap_and(body);
-        Rule{name, params, body} 
+        let body = match body {
+            Term{value: Value::Expression(Operation{operator: Operator::And, ..}), ..} => {
+                body
+            },
+            _ => {
+                let offset = body.offset.clone();
+                let op = Operation{operator: Operator::And, args: vec![body]};
+                Term{id: 0, offset, value: Value::Expression(op)}
+            }
+        };
+        Rule{name, params, body}
     }
 }
 
