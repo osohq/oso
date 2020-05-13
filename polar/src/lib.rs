@@ -107,16 +107,16 @@ pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) -> i
 }
 
 #[no_mangle]
-pub extern "C" fn polar_new_query_from_predicate(
+pub extern "C" fn polar_new_query_from_term(
     polar_ptr: *mut Polar,
-    query_pred: *const c_char,
+    query_term: *const c_char,
 ) -> *mut Query {
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };
-        let s = unsafe { ffi_string!(query_pred) };
-        let predicate = serde_json::from_str(&s);
-        match predicate {
-            Ok(predicate) => box_ptr!(polar.new_query_from_predicate(predicate)),
+        let s = unsafe { ffi_string!(query_term) };
+        let term = serde_json::from_str(&s);
+        match term {
+            Ok(term) => box_ptr!(polar.new_query_from_term(term)),
             Err(e) => {
                 set_error(types::PolarError::Serialization(e.to_string()));
                 null_mut()

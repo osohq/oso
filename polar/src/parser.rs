@@ -4,9 +4,9 @@ lalrpop_mod!(polar);
 
 use super::types::*;
 
-pub fn parse_query(src: &str) -> PolarResult<Predicate> {
+pub fn parse_query(src: &str) -> PolarResult<Term> {
     // @TODO: Better Errors
-    polar::PredicateParser::new()
+    polar::ExpParser::new()
         .parse(src)
         .map_err(|e| PolarError::Parse(e.to_string()))
 }
