@@ -24,7 +24,7 @@ pub enum Goal {
         field: Term,
     },
     Query {
-        predicate: Predicate,
+        term: Term,
     },
     Result {
         name: Symbol,
@@ -54,11 +54,16 @@ impl fmt::Display for Goal {
 struct Binding(Symbol, Term);
 
 #[derive(Debug)]
-pub struct Choice {
+pub struct Or {
     alternatives: Alternatives,
     bsp: usize, // binding stack pointer
     /// The goal that led to these choices.  Goal to retry when exhausting alternatives.
     retry: Goal,
+}
+
+pub enum Choice {
+    Not,
+    Or(Or),
 }
 
 type Alternatives = Vec<Goals>;
@@ -116,7 +121,7 @@ impl PolarVirtualMachine {
                 Goal::Isa { .. } => unimplemented!("isa"),
                 Goal::Lookup { .. } => unimplemented!("lookup"),
                 Goal::LookupExternal { .. } => unimplemented!("lookup external"),
-                Goal::Query { predicate } => self.query(predicate),
+                Goal::Query { term } => self.query(term),
                 Goal::Result { name, value } => self.result(&name, value),
                 Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
                 Goal::Unify { left, right } => self.unify(&left, &right),
@@ -152,11 +157,12 @@ impl PolarVirtualMachine {
         loop {
             match self.choices.pop() {
                 None => return self.push_goal(Goal::Halt),
-                Some(Choice {
+                Some(Choice::Not) => return,
+                Some(Choice::Or(Or {
                     ref mut alternatives,
                     ref bsp,
                     ref retry,
-                }) => {
+                })) => {
                     // Unwind bindings.
                     self.bindings.drain(*bsp..);
 
@@ -167,11 +173,11 @@ impl PolarVirtualMachine {
                         self.append_goals(alternative);
 
                         // Leave a choice for any remaining alternatives.
-                        return self.push_choice(Choice {
+                        return self.push_choice(Choice::Or(Or {
                             alternatives: alternatives.clone(),
                             bsp: *bsp,
                             retry: retry.clone(),
-                        });
+                        }));
                     } else {
                         retries.push(retry.clone())
                     }
@@ -291,66 +297,79 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, predicate: Predicate) {
+    fn query(&mut self, term: Term) {
         // Select applicable rules for predicate.
         // Sort applicable rules by specificity.
         // Create a choice over the applicable rules.
 
-        match self.kb.rules.get(&predicate.name) {
-            None => self.backtrack(), // no applicable rules
-            Some(generic_rule) => {
-                let generic_rule = generic_rule.clone();
-                assert_eq!(generic_rule.name, predicate.name);
+        match term.value {
+            Value::Call(predicate) => {
+                match self.kb.rules.get(&predicate.name) {
+                    None => self.backtrack(), // no applicable rules
+                    Some(generic_rule) => {
+                        let generic_rule = generic_rule.clone();
+                        assert_eq!(generic_rule.name, predicate.name);
 
-                let mut alternatives = vec![];
-                for rule in generic_rule.rules.iter().rev() {
-                    // Rename the parameters and body at the same time.
-                    // FIXME: This is terrible right now.
-                    // TODO(?): Should maybe parse these as terms.
-                    let renames = self.rename_vars(&Term::new(Value::List(vec![
-                        Term::new(Value::List(rule.params.clone())),
-                        Term::new(Value::List(rule.body.clone())),
-                    ])));
-                    let renames = match renames.value {
-                        Value::List(renames) => renames,
-                        _ => panic!("expected a list of renamed parameters and body"),
-                    };
-                    let params = &renames[0];
-                    let body = &renames[1];
-                    let mut goals = vec![];
+                        let mut alternatives = vec![];
+                        for rule in generic_rule.rules.iter().rev() {
+                            // Rename the parameters and body at the same time.
+                            // FIXME: This is terrible right now.
+                            // TODO(?): Should maybe parse these as terms.
+                            let renames = self.rename_vars(&Term::new(Value::List(vec![
+                                Term::new(Value::List(rule.params.clone())),
+                                Term::new(Value::List(rule.body.clone())),
+                            ])));
+                            let renames = match renames.value {
+                                Value::List(renames) => renames,
+                                _ => panic!("expected a list of renamed parameters and body"),
+                            };
+                            let params = &renames[0];
+                            let body = &renames[1];
+                            let mut goals = vec![];
 
-                    // Unify the arguments with the formal parameters.
-                    goals.push(Goal::Unify {
-                        left: Term::new(Value::List(predicate.args.clone())),
-                        right: params.clone(),
-                    });
+                            // Unify the arguments with the formal parameters.
+                            goals.push(Goal::Unify {
+                                left: Term::new(Value::List(predicate.args.clone())),
+                                right: params.clone(),
+                            });
 
-                    // Query for the body clauses.
-                    match &body.value {
-                        Value::List(clauses) => {
-                            for clause in clauses.iter() {
-                                match &clause.value {
-                                    Value::Call(predicate) => goals.push(Goal::Query {
-                                        predicate: predicate.clone(),
-                                    }),
-                                    _ => panic!("body clause is not a predicate"),
+                            // Query for the body clauses.
+                            match &body.value {
+                                Value::List(clauses) => {
+                                    for clause in clauses.iter() {
+                                        match &clause.value {
+                                            Value::Call(predicate) => goals.push(Goal::Query {
+                                                term: Term::new(Value::Call(predicate.clone())),
+                                            }),
+                                            _ => panic!("body clause is not a predicate"),
+                                        }
+                                    }
                                 }
+                                _ => panic!("body is not a list of clauses"),
                             }
+
+                            alternatives.push(goals)
                         }
-                        _ => panic!("body is not a list of clauses"),
+
+                        // Choose the first alternative, and push a choice for the rest.
+                        self.append_goals(alternatives.pop().expect("a choice"));
+                        self.push_choice(Choice::Or(Or {
+                            alternatives,
+                            retry: Goal::Query {
+                                term: Term::new(Value::Call(predicate)),
+                            },
+                            bsp: self.bsp(),
+                        }));
                     }
-
-                    alternatives.push(goals)
                 }
-
-                // Choose the first alternative, and push a choice for the rest.
-                self.append_goals(alternatives.pop().expect("a choice"));
-                self.push_choice(Choice {
-                    alternatives,
-                    retry: Goal::Query { predicate },
-                    bsp: self.bsp(),
-                });
             }
+            Value::Negation(Negation { predicate }) => {
+                self.push_goal(Goal::Query {
+                    term: Term::new(Value::Call(predicate)),
+                });
+                self.push_choice(Choice::Not);
+            }
+            _ => todo!("other query types"),
         }
     }
 

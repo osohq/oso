@@ -103,14 +103,12 @@ impl Polar {
     }
 
     pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
-        let pred = parse_query(query_string)?;
-        Ok(self.new_query_from_predicate(pred))
+        let term = parse_query(query_string)?;
+        Ok(self.new_query_from_term(term))
     }
 
-    pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
-        let query = Goal::Query {
-            predicate: predicate.clone(),
-        };
+    pub fn new_query_from_term(&self, term: Term) -> Query {
+        let query = Goal::Query { term: term.clone() };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
     }
@@ -317,6 +315,17 @@ mod tests {
             )
             .unwrap();
         assert!(qeval(&mut polar, "a()"));
+    }
+
+    #[test]
+    fn test_negation() {
+        let mut polar = Polar::new();
+        polar.load_str("odd(1); even(2);").unwrap();
+        assert!(qeval(&mut polar, "odd(1)"));
+        assert!(qeval(&mut polar, "!even(1)"));
+        assert!(qeval(&mut polar, "!odd(2)"));
+        assert!(qeval(&mut polar, "even(2)"));
+        assert!(qeval(&mut polar, "!even(3)"));
     }
 
     #[test]

@@ -91,6 +91,24 @@ impl ToPolarString for Symbol {
     }
 }
 
+/// FIXME: Negation should be over a Term, but that results in
+/// an infinite size for the Term type.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct Negation {
+    pub predicate: Predicate,
+}
+
+impl Negation {
+    fn map<F>(&self, f: &mut F) -> Negation
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        Negation {
+            predicate: self.predicate.map(f),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Predicate {
     pub name: String,
@@ -123,6 +141,7 @@ pub enum Value {
     Instance(Instance),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
+    Negation(Negation),
     Symbol(Symbol),
 }
 
@@ -132,10 +151,11 @@ impl Value {
         F: FnMut(&Value) -> Value,
     {
         match self {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => f(&self),
-            Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
             Value::Instance(_) => unimplemented!(),
+            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => f(&self),
+            Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
+            Value::Negation(predicate) => Value::Negation(predicate.map(f)),
         }
     }
 }
@@ -143,8 +163,6 @@ impl Value {
 impl ToPolarString for Value {
     fn to_polar(&self) -> String {
         match self {
-            Value::Integer(i) => format!("{}", i),
-            Value::String(s) => format!("\"{}\"", s),
             Value::Boolean(b) => format!("{}", {
                 if *b {
                     "true"
@@ -153,8 +171,11 @@ impl ToPolarString for Value {
                 }
             }),
             Value::Instance(i) => i.to_polar(),
+            Value::Integer(i) => format!("{}", i),
             Value::Call(c) => c.to_polar(),
             Value::List(l) => l.to_polar(),
+            Value::Negation(n) => format!("!{}", n.predicate.to_polar()),
+            Value::String(s) => format!("\"{}\"", s),
             Value::Symbol(s) => s.to_polar(),
         }
     }

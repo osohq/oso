@@ -81,9 +81,18 @@ pub Predicate: Predicate = {
     },
 };
 
+pub Negation: Negation = {
+    "!" <predicate:Predicate> => {
+        Negation{predicate}
+    },
+}
+
 pub Exp: Term = {
-    <start:@L> <call:Predicate> => {
-        Term{id: 0, offset: start, value: Value::Call(call)}
+    <start:@L> <neg:Negation> => {
+        Term{id: 0, offset: start, value: Value::Negation(neg)}
+    },
+    <start:@L> <pred:Predicate> => {
+        Term{id: 0, offset: start, value: Value::Call(pred)}
     },
     // @TODO: We probably just want a specific term case for these calls.
     <start:@L> <head:Symbol> "." <call_loc:@L> <call:Predicate> => {

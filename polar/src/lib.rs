@@ -8,6 +8,7 @@ pub mod types;
 mod vm;
 
 pub use self::polar::{Polar, Query};
+use self::types::{Term, Value};
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
@@ -116,7 +117,7 @@ pub extern "C" fn polar_new_query_from_predicate(
         let s = unsafe { ffi_string!(query_pred) };
         let predicate = serde_json::from_str(&s);
         match predicate {
-            Ok(predicate) => box_ptr!(polar.new_query_from_predicate(predicate)),
+            Ok(predicate) => box_ptr!(polar.new_query_from_term(Term::new(Value::Call(predicate)))),
             Err(e) => {
                 set_error(types::PolarError::Serialization(e.to_string()));
                 null_mut()
