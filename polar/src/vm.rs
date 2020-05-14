@@ -37,12 +37,10 @@ pub enum Goal {
 impl fmt::Display for Goal {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Goal::Unify { left, right } => write!(
-                fmt,
-                "Unify {{ left: {}, right: {} }}",
-                left.to_polar(),
-                right.to_polar()
-            ),
+            Goal::Unify { left, right } => {
+                write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
+            }
+            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
             g => write!(fmt, "{:?}", g),
         }
     }
