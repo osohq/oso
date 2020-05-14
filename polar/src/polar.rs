@@ -348,6 +348,13 @@ mod tests {
         assert!(qnull(&mut polar, "f(1), f(2), f(3)"));
     }
 
+    #[test]
+    fn test_equality() {
+        let mut polar = Polar::new();
+        assert!(qeval(&mut polar, "1 = 1"));
+        assert!(qnull(&mut polar, "1 = 2"));
+    }
+
     //     #[test]
     //     fn test_external() {
     //         let a = Symbol("a".to_string());

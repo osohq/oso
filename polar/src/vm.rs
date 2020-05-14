@@ -291,13 +291,6 @@ impl PolarVirtualMachine {
     /// querying for each body clause.
     fn query(&mut self, term: Term) {
         match &term.value {
-            Value::Expression(Operation{operator: Operator::And, args }) => {
-                for arg in args.iter() {
-                    self.push_goal(Goal::Query {
-                        term: arg.clone(),
-                    });
-                }
-            },
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
             // Sort applicable rules by specificity.
@@ -350,7 +343,22 @@ impl PolarVirtualMachine {
                     }
                 }
             }
-            _ => todo!("can't query for that kind of value"),
+            Value::Expression(Operation{operator: Operator::And, args }) => {
+                for arg in args.iter() {
+                    self.push_goal(Goal::Query {
+                        term: arg.clone(),
+                    });
+                }
+            },
+            Value::Expression(Operation{operator: Operator::Unify, args }) => {
+                assert_eq!(args.len(), 2);
+                self.push_goal(Goal::Unify{
+                    left: args[0].clone(),
+                    right: args[1].clone()
+
+                });
+            },
+            _ => todo!("can't query for: {}", term.value.to_polar()),
         }
     }
 
