@@ -264,7 +264,7 @@ mod tests {
             "g(1)",
             "g(2)",
             "h(2)",
-            "k(x) := f(x), h(x), g(x)",
+            "k(x) := f(x), g(x), h(x)",
         ];
 
         let mut i = 0;

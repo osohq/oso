@@ -125,14 +125,18 @@ impl PolarVirtualMachine {
         })
     }
 
-    /// Push a choice onto the choice stack.
-    fn push_choice(&mut self, choice: Choice) {
-        self.choices.push(choice);
+    pub fn is_halted(&self) -> bool {
+        self.goals.is_empty() && self.choices.is_empty()
     }
 
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) {
         self.goals.push(goal);
+    }
+
+    /// Push a choice onto the choice stack.
+    fn push_choice(&mut self, choice: Choice) {
+        self.choices.push(choice);
     }
 
     /// Push multiple goals onto the stack in reverse order.
@@ -327,7 +331,7 @@ impl PolarVirtualMachine {
 
                             // Query for the body clauses.
                             goals.push(Goal::Query {
-                                term: Term::new(body.value.clone())
+                                term: Term::new(body.value.clone()),
                             });
 
                             alternatives.push(goals)
@@ -343,21 +347,24 @@ impl PolarVirtualMachine {
                     }
                 }
             }
-            Value::Expression(Operation{operator: Operator::And, args }) => {
+            Value::Expression(Operation {
+                operator: Operator::And,
+                args,
+            }) => {
                 for arg in args.iter() {
-                    self.push_goal(Goal::Query {
-                        term: arg.clone(),
-                    });
+                    self.push_goal(Goal::Query { term: arg.clone() });
                 }
-            },
-            Value::Expression(Operation{operator: Operator::Unify, args }) => {
+            }
+            Value::Expression(Operation {
+                operator: Operator::Unify,
+                args,
+            }) => {
                 assert_eq!(args.len(), 2);
-                self.push_goal(Goal::Unify{
+                self.push_goal(Goal::Unify {
                     left: args[0].clone(),
-                    right: args[1].clone()
-
+                    right: args[1].clone(),
                 });
-            },
+            }
             _ => todo!("can't query for: {}", term.value.to_polar()),
         }
     }
@@ -489,6 +496,104 @@ impl PolarVirtualMachine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use permute::permute;
+
+    #[test]
+    fn and() {
+        let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
+        let three = Term::new(Value::Integer(3));
+        let f1 = Rule {
+            name: "f".to_string(),
+            params: vec![one.clone()],
+            body: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![],
+            })),
+        };
+        let f2 = Rule {
+            name: "f".to_string(),
+            params: vec![two.clone()],
+            body: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![],
+            })),
+        };
+        let rule = GenericRule {
+            name: "f".to_string(),
+            rules: vec![f1, f2],
+        };
+
+        let mut kb = KnowledgeBase::new();
+        kb.rules.insert(rule.name.clone(), rule);
+        let goal = Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![],
+            })),
+        };
+        let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(vm.is_halted());
+
+        let f1 = Term::new(Value::Call(Predicate {
+            name: "f".to_string(),
+            args: vec![one.clone()],
+        }));
+        let f2 = Term::new(Value::Call(Predicate {
+            name: "f".to_string(),
+            args: vec![two.clone()],
+        }));
+        let f3 = Term::new(Value::Call(Predicate {
+            name: "f".to_string(),
+            args: vec![three.clone()],
+        }));
+
+        // Querying for f(1)
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![f1.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Querying for f(1), f(2)
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![f1.clone(), f2.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Querying for f(3)
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![f3.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Querying for f(1), f(2), f(3)
+        let parts = vec![f1, f2, f3];
+        for permutation in permute(parts) {
+            vm.push_goal(Goal::Query {
+                term: Term::new(Value::Expression(Operation {
+                    operator: Operator::And,
+                    args: permutation
+                })),
+            });
+            assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+            assert!(vm.is_halted());
+        }
+    }
 
     #[test]
     fn bind() {
