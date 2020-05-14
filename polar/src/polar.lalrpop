@@ -56,11 +56,23 @@ pub Term: Term = {
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,
+    <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
     <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
     <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
     <start:@L> "[" <exp:Exp> "]" => {
         let terms = unwrap_and(exp);
         Term{id:0, offset: start, value: Value::List(terms)}
+    }
+};
+
+RewritableOperator: Operator = {
+    "." => Operator::Dot
+};
+
+pub RewrittenOperation: Operation = {
+    <op:RewritableOperator> "(" <args:Exp> ")" => {
+        let args = unwrap_and(args);
+        Operation{operator: op, args: args}
     }
 };
 
@@ -72,7 +84,7 @@ pub Predicate: Predicate = {
     <name:Name> "(" <args:Exp> ")" => {
         let args = unwrap_and(args);
         Predicate{name, args}
-    },
+    }
 };
 
 Exp9: Term = {
