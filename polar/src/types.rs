@@ -99,15 +99,19 @@ impl Predicate {
 
 impl ToPolarString for Predicate {
     fn to_polar(&self) -> String {
-        format!(
-            "{}({})",
-            self.name,
-            self.args
-                .iter()
-                .map(|t| t.to_polar())
-                .collect::<Vec<String>>()
-                .join(",")
-        )
+        if self.args.is_empty() {
+            format!("{}", self.name)
+        } else {
+            format!(
+                "{}({})",
+                self.name,
+                self.args
+                    .iter()
+                    .map(|t| t.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(",")
+            )
+        }
     }
 }
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -178,7 +182,20 @@ fn to_polar_parens(op: &Operator, t: &Term) -> String {
 impl ToPolarString for Operation {
     fn to_polar(&self) -> String {
         match self.operator {
-            Operator::Dot => format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar(),),
+            Operator::Dot => {
+                if self.args.len() == 2 {
+                    format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar())
+                } else {
+                    format!(
+                        ".({})",
+                        self.args
+                            .iter()
+                            .map(|t| to_polar_parens(&self.operator, t))
+                            .collect::<Vec<String>>()
+                            .join(","),
+                    )
+                }
+            }
             Operator::Not => format!("{}{}", "!", self.args[0].to_polar()),
             Operator::Mul => format!(
                 "{}*{}",

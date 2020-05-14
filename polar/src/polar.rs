@@ -2,7 +2,7 @@ use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
 
-use super::parser::{parse_file, parse_query};
+use super::parser::{parse_query, parse_rules};
 
 // @TODO: This should probably go in the readme, it's meant to be the things you'd have to know to add
 // new language bindings.
@@ -88,7 +88,7 @@ impl Polar {
     }
 
     pub fn load_str(&mut self, src: &str) -> PolarResult<()> {
-        let rules = parse_file(src)?;
+        let rules = parse_rules(src)?;
         for rule in rules {
             let generic_rule = self
                 .kb
