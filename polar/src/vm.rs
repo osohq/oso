@@ -283,7 +283,7 @@ impl PolarVirtualMachine {
     // pub fn lookup(&mut self) {}
     // pub fn lookup_external(&mut self) {}
 
-    /// Query for the provided predicate.
+    /// Query for the provided term.
     ///
     /// Uses the knowledge base to get an ordered list of rules.
     /// Creates a choice point over each rule, where each alternative
@@ -291,6 +291,13 @@ impl PolarVirtualMachine {
     /// querying for each body clause.
     fn query(&mut self, term: Term) {
         match &term.value {
+            Value::Expression(Operation{operator: Operator::And, args }) => {
+                for arg in args.iter() {
+                    self.push_goal(Goal::Query {
+                        term: arg.clone(),
+                    });
+                }
+            },
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
             // Sort applicable rules by specificity.
@@ -326,21 +333,9 @@ impl PolarVirtualMachine {
                             });
 
                             // Query for the body clauses.
-                            match &body.value {
-                                Value::Expression(Operation {
-                                    operator: Operator::And,
-                                    args,
-                                }) => {
-                                    for clause in args.iter() {
-                                        goals.push(Goal::Query {
-                                            term: clause.clone(),
-                                        });
-                                    }
-                                }
-                                _ => panic!(
-                                    "body is not a conjunction, where did you get this rule???"
-                                ),
-                            }
+                            goals.push(Goal::Query {
+                                term: Term::new(body.value.clone())
+                            });
 
                             alternatives.push(goals)
                         }

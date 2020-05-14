@@ -339,6 +339,15 @@ mod tests {
         assert!(qeval(&mut polar, "!even(3)"));
     }
 
+
+    #[test]
+    fn test_and() {
+        let mut polar = Polar::new();
+        polar.load_str("f(1); f(2);").unwrap();
+        assert!(qeval(&mut polar, "f(1), f(2)"));
+        assert!(qnull(&mut polar, "f(1), f(2), f(3)"));
+    }
+
     //     #[test]
     //     fn test_external() {
     //         let a = Symbol("a".to_string());
