@@ -78,12 +78,14 @@ impl Iterator for Query {
 
 pub struct Polar {
     pub kb: KnowledgeBase,
+    pub gen: VarGenerator,
 }
 
 impl Polar {
     pub fn new() -> Self {
         Self {
             kb: KnowledgeBase::new(),
+            gen: VarGenerator::new(),
         }
     }
 
@@ -98,19 +100,19 @@ impl Polar {
                     name: rule.name.clone(),
                     rules: vec![],
                 });
-            generic_rule.rules.push(rewrite_rule(rule));
+            generic_rule.rules.push(rewrite_rule(rule, &mut self.gen));
         }
         Ok(())
     }
 
-    pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
+    pub fn new_query(&mut self, query_string: &str) -> PolarResult<Query> {
         let term = parse_query(query_string)?;
         Ok(self.new_query_from_term(term))
     }
 
-    pub fn new_query_from_term(&self, term: Term) -> Query {
+    pub fn new_query_from_term(&mut self, term: Term) -> Query {
         let query = Goal::Query {
-            term: rewrite_term(term.clone()),
+            term: rewrite_term(term.clone(), &mut self.gen),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }

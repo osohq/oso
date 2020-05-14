@@ -1,6 +1,25 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub struct VarGenerator {
+    pub i: usize,
+}
+
+impl VarGenerator {
+    pub fn new() -> Self {
+        VarGenerator { i: 0 }
+    }
+    pub fn gen_var(&mut self) -> Term {
+        let t = Term {
+            id: 0,
+            offset: 0,
+            value: Value::Symbol(Symbol(format!("_value_{}", self.i))),
+        };
+        self.i += 1;
+        t
+    }
+}
+
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
 pub enum PolarError {
