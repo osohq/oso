@@ -117,7 +117,6 @@ impl PolarVirtualMachine {
                 Goal::LookupExternal { .. } => unimplemented!("lookup external"),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
-                Goal::Result { name, value } => self.result(&name, value),
                 Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
                 Goal::Unify { left, right } => self.unify(&left, &right),
             }
