@@ -24,6 +24,7 @@ use super::types::*;
 //}
 
 pub fn rewrite_term(term: Term) -> Term {
+    return term;
     // walk the term
     // if you hit a . expression
     //     generate a new symbol
@@ -44,18 +45,19 @@ pub fn rewrite_term(term: Term) -> Term {
     let mut enclosing_term: Option<&mut Operation> = None;
     let enclosing_arg: usize = 0;
 
-    let rewrite_term_helper = move |value: &Value| -> Value {
+    let mut rewrite_term_helper = move |value: &Value| -> Value {
         match value {
             Value::Expression(Operation {
                 operator: Operator::Dot,
-                mut args,
+                args: lookup_args,
             }) => {
+                let mut lookup_args = lookup_args.clone();
                 let symbol = gen_var(&mut i);
-                args.push(symbol.clone());
+                lookup_args.push(symbol.clone());
                 let lookup = Term {
                     value: Value::Expression(Operation {
                         operator: Operator::Dot,
-                        args,
+                        args: lookup_args,
                     }),
                     id: 0,
                     offset: 0,
@@ -79,16 +81,82 @@ pub fn rewrite_term(term: Term) -> Term {
                     })
                 }
             }
+            // keep walking and keep track of enclosing term.
             _ => value.clone(),
         }
     };
 
+    // gotta walk the tree to know which arg to be.
+
     term.map(&mut rewrite_term_helper)
 }
 
-pub fn rewrite_rule(rule: Rule) -> Rule {
-    let Rule { name, params, body } = rule;
-    let body = rewrite_term(body);
-    // rewrite params
-    Rule { name, params, body }
+pub fn rewrite_rule(mut rule: Rule) -> Rule {
+    // @TODO: make all these id seeds the same one so we don't duplicate vars.
+    let mut i = 0;
+    fn gen_var(i: &mut i32) -> Term {
+        let t = Term {
+            id: 0,
+            offset: 0,
+            value: Value::Symbol(Symbol(format!("_value_{}", i))),
+        };
+        *i += 1;
+        t
+    }
+
+    let mut new_terms = vec![];
+    for param in &mut rule.params {
+        // Generate a symbol.
+        // Rewrite to 3 arg . with symbol.
+        // Replace param with symbol.
+        // Push 3 arg . as first thing in the body.
+        if let Value::Expression(Operation {
+            operator: Operator::Dot,
+            args: lookup_args,
+        }) = &param.value
+        {
+            let mut lookup_args = lookup_args.clone();
+            let symbol = gen_var(&mut i);
+            lookup_args.push(symbol.clone());
+            let lookup = Term {
+                value: Value::Expression(Operation {
+                    operator: Operator::Dot,
+                    args: lookup_args,
+                }),
+                id: 0,
+                offset: 0,
+            };
+            new_terms.push(lookup);
+            *param = symbol;
+        }
+    }
+    if let Value::Expression(Operation {
+        operator: Operator::And,
+        ref mut args,
+    }) = &mut rule.body.value
+    {
+        new_terms.append(args);
+        args.append(&mut new_terms);
+    } else {
+        panic!("wtf is this?")
+    }
+    rule
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::*;
+    #[test]
+    fn rewrites_test() {
+        let rules = parse_rules("f(a.b);").unwrap();
+        let rule = rules[0].clone();
+        assert_eq!(rule.to_polar(), "f(a.b);");
+        let rewritten = rewrite_rule(rule);
+        assert_eq!(rewritten.to_polar(), "f(_value_0) := .(a,b,_value_0);");
+    }
+}
+
+// @TODO: be able to parse the 3 arg . in predicate format as a 3 arg dot.
+// parse all 3 arg predicate operators as expressions.
+// x + 1 => +(x, 1, ?value)
