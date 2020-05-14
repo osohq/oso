@@ -3,7 +3,7 @@
 test: rust-test python-test
 
 rust-test:
-	cargo test
+	cargo test --release
 
 rust-build:
 	cargo build --release

@@ -6,6 +6,7 @@ use super::types::*;
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
 pub enum Goal {
+    Backtrack,
     Cut,
     TestExternal {
         name: Symbol, // POC
@@ -23,8 +24,9 @@ pub enum Goal {
         instance: Instance,
         field: Term,
     },
+    Noop,
     Query {
-        predicate: Predicate,
+        term: Term,
     },
     Result {
         name: Symbol,
@@ -109,14 +111,16 @@ impl PolarVirtualMachine {
         }
 
         while let Some(goal) = self.goals.pop() {
-            // eprintln!("{}", goal);
+            eprintln!("{}", goal);
             match goal {
+                Goal::Backtrack => self.backtrack(),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { .. } => unimplemented!("isa"),
                 Goal::Lookup { .. } => unimplemented!("lookup"),
                 Goal::LookupExternal { .. } => unimplemented!("lookup external"),
-                Goal::Query { predicate } => self.query(predicate),
+                Goal::Noop => (),
+                Goal::Query { term } => self.query(term),
                 Goal::Result { name, value } => self.result(&name, value),
                 Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
                 Goal::Unify { left, right } => self.unify(&left, &right),
@@ -144,45 +148,9 @@ impl PolarVirtualMachine {
         self.goals.append(&mut goals);
     }
 
-    /// Remove all bindings after the last choice point, and try the
-    /// next available alternative. If no choice is possible, halt.
-    fn backtrack(&mut self) {
-        // eprintln!("{}", "=> backtrack");
-        let mut retries = vec![];
-        loop {
-            match self.choices.pop() {
-                None => return self.push_goal(Goal::Halt),
-                Some(Choice {
-                    ref mut alternatives,
-                    ref bsp,
-                    ref retry,
-                }) => {
-                    // Unwind bindings.
-                    self.bindings.drain(*bsp..);
-
-                    // Find an alternate path.
-                    if let Some(alternative) = alternatives.pop() {
-                        // TODO order
-                        self.append_goals(retries.iter().cloned().rev().collect());
-                        self.append_goals(alternative);
-
-                        // Leave a choice for any remaining alternatives.
-                        return self.push_choice(Choice {
-                            alternatives: alternatives.clone(),
-                            bsp: *bsp,
-                            retry: retry.clone(),
-                        });
-                    } else {
-                        retries.push(retry.clone())
-                    }
-                }
-            }
-        }
-    }
-
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: &Term) {
-        // eprintln!("=> bind {:?} ← {:?}", var, value);
+        eprintln!("=> bind {:?} ← {:?}", var, value);
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -253,6 +221,42 @@ impl PolarVirtualMachine {
 
 /// Implementations of instructions.
 impl PolarVirtualMachine {
+    /// Remove all bindings after the last choice point, and try the
+    /// next available alternative. If no choice is possible, halt.
+    fn backtrack(&mut self) {
+        eprintln!("{}", "=> backtrack");
+        let mut retries = vec![];
+        loop {
+            match self.choices.pop() {
+                None => return self.push_goal(Goal::Halt),
+                Some(Choice {
+                    ref mut alternatives,
+                    ref bsp,
+                    ref retry,
+                }) => {
+                    // Unwind bindings.
+                    self.bindings.drain(*bsp..);
+
+                    // Find an alternate path.
+                    if let Some(alternative) = alternatives.pop() {
+                        // TODO order
+                        self.append_goals(retries.iter().cloned().rev().collect());
+                        self.append_goals(alternative);
+
+                        // Leave a choice for any remaining alternatives.
+                        return self.push_choice(Choice {
+                            alternatives: alternatives.clone(),
+                            bsp: *bsp,
+                            retry: retry.clone(),
+                        });
+                    } else {
+                        retries.push(retry.clone())
+                    }
+                }
+            }
+        }
+    }
+
     /// A cut operation indicates that no other choices should
     /// be considered.
     ///
@@ -291,66 +295,73 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, predicate: Predicate) {
-        // Select applicable rules for predicate.
-        // Sort applicable rules by specificity.
-        // Create a choice over the applicable rules.
+    fn query(&mut self, term: Term) {
+        match &term.value {
+            Value::Call(predicate) =>
+            // Select applicable rules for predicate.
+            // Sort applicable rules by specificity.
+            // Create a choice over the applicable rules.
+            {
+                match self.kb.rules.get(&predicate.name) {
+                    None => self.push_goal(Goal::Backtrack),
+                    Some(generic_rule) => {
+                        let generic_rule = generic_rule.clone();
+                        assert_eq!(generic_rule.name, predicate.name);
 
-        match self.kb.rules.get(&predicate.name) {
-            None => self.backtrack(), // no applicable rules
-            Some(generic_rule) => {
-                let generic_rule = generic_rule.clone();
-                assert_eq!(generic_rule.name, predicate.name);
+                        let mut alternatives = vec![];
+                        for rule in generic_rule.rules.iter().rev() {
+                            // Rename the parameters and body at the same time.
+                            // FIXME: This is terrible right now.
+                            // TODO(?): Should maybe parse these as terms.
+                            let renames = self.rename_vars(&Term::new(Value::List(vec![
+                                Term::new(Value::List(rule.params.clone())),
+                                rule.body.clone(),
+                            ])));
+                            let renames = match renames.value {
+                                Value::List(renames) => renames,
+                                _ => panic!("expected a list of renamed parameters and body"),
+                            };
+                            let params = &renames[0];
+                            let body = &renames[1];
+                            let mut goals = vec![];
 
-                let mut alternatives = vec![];
-                for rule in generic_rule.rules.iter().rev() {
-                    // Rename the parameters and body at the same time.
-                    // FIXME: This is terrible right now.
-                    // TODO(?): Should maybe parse these as terms.
-                    let renames = self.rename_vars(&Term::new(Value::List(vec![
-                        Term::new(Value::List(rule.params.clone())),
-                        Term::new(Value::List(rule.body.clone())),
-                    ])));
-                    let renames = match renames.value {
-                        Value::List(renames) => renames,
-                        _ => panic!("expected a list of renamed parameters and body"),
-                    };
-                    let params = &renames[0];
-                    let body = &renames[1];
-                    let mut goals = vec![];
+                            // Unify the arguments with the formal parameters.
+                            goals.push(Goal::Unify {
+                                left: Term::new(Value::List(predicate.args.clone())),
+                                right: params.clone(),
+                            });
 
-                    // Unify the arguments with the formal parameters.
-                    goals.push(Goal::Unify {
-                        left: Term::new(Value::List(predicate.args.clone())),
-                        right: params.clone(),
-                    });
-
-                    // Query for the body clauses.
-                    match &body.value {
-                        Value::List(clauses) => {
-                            for clause in clauses.iter() {
-                                match &clause.value {
-                                    Value::Call(predicate) => goals.push(Goal::Query {
-                                        predicate: predicate.clone(),
-                                    }),
-                                    _ => panic!("body clause is not a predicate"),
+                            // Query for the body clauses.
+                            match &body.value {
+                                Value::Expression(Operation {
+                                    operator: Operator::And,
+                                    args,
+                                }) => {
+                                    for clause in args.iter() {
+                                        goals.push(Goal::Query {
+                                            term: clause.clone(),
+                                        });
+                                    }
                                 }
+                                _ => panic!(
+                                    "body is not a conjunction, where did you get this rule???"
+                                ),
                             }
+
+                            alternatives.push(goals)
                         }
-                        _ => panic!("body is not a list of clauses"),
+
+                        // Choose the first alternative, and push a choice for the rest.
+                        self.append_goals(alternatives.pop().expect("a choice"));
+                        self.push_choice(Choice {
+                            alternatives,
+                            retry: Goal::Query { term },
+                            bsp: self.bsp(),
+                        });
                     }
-
-                    alternatives.push(goals)
                 }
-
-                // Choose the first alternative, and push a choice for the rest.
-                self.append_goals(alternatives.pop().expect("a choice"));
-                self.push_choice(Choice {
-                    alternatives,
-                    retry: Goal::Query { predicate },
-                    bsp: self.bsp(),
-                });
             }
+            _ => todo!("can't query for that kind of value"),
         }
     }
 
@@ -438,28 +449,28 @@ impl PolarVirtualMachine {
                             .collect(),
                     )
                 } else {
-                    self.backtrack();
+                    self.push_goal(Goal::Backtrack);
                 }
             }
 
             // Unify integers by value.
             (Value::Integer(left), Value::Integer(right)) => {
                 if left != right {
-                    self.backtrack();
+                    self.push_goal(Goal::Backtrack);
                 }
             }
 
             // Unify strings by value.
             (Value::String(left), Value::String(right)) => {
                 if left != right {
-                    self.backtrack();
+                    self.push_goal(Goal::Backtrack);
                 }
             }
 
             // Unify bools by value.
             (Value::Boolean(left), Value::Boolean(right)) => {
                 if left != right {
-                    self.backtrack();
+                    self.push_goal(Goal::Backtrack);
                 }
             }
 

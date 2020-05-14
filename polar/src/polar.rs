@@ -1,3 +1,4 @@
+use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
 
@@ -97,19 +98,19 @@ impl Polar {
                     name: rule.name.clone(),
                     rules: vec![],
                 });
-            generic_rule.rules.push(rule);
+            generic_rule.rules.push(rewrite_rule(rule));
         }
         Ok(())
     }
 
     pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
-        let pred = parse_query(query_string)?;
-        Ok(self.new_query_from_predicate(pred))
+        let term = parse_query(query_string)?;
+        Ok(self.new_query_from_term(term))
     }
 
-    pub fn new_query_from_predicate(&self, predicate: Predicate) -> Query {
+    pub fn new_query_from_term(&self, term: Term) -> Query {
         let query = Goal::Query {
-            predicate: predicate.clone(),
+            term: rewrite_term(term.clone()),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -174,6 +175,11 @@ mod tests {
         query_results(polar, query).len() == 1
     }
 
+    fn qnull(polar: &mut Polar, query_str: &str) -> bool {
+        let query = polar.new_query(query_str).unwrap();
+        query_results(polar, query).len() == 0
+    }
+
     fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
         let query = polar.new_query(query_str).unwrap();
         query_results(polar, query)
@@ -190,9 +196,9 @@ mod tests {
             .load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);")
             .unwrap();
 
-        assert!(!qeval(&mut polar, "k(1)"));
+        assert!(qnull(&mut polar, "k(1)"));
         assert!(qeval(&mut polar, "k(2)"));
-        assert!(!qeval(&mut polar, "k(3)"));
+        assert!(qnull(&mut polar, "k(3)"));
         assert_eq!(qvar(&mut polar, "k(a)", "a"), vec![value!(2)]);
     }
 
@@ -236,7 +242,7 @@ mod tests {
             .unwrap();
 
         assert!(qeval(&mut polar, "f(2)"));
-        assert!(!qeval(&mut polar, "f(3)"));
+        assert!(qnull(&mut polar, "f(3)"));
         assert!(qeval(&mut polar, "f(4)"));
         assert!(qeval(&mut polar, "j(4)"));
     }
@@ -272,7 +278,7 @@ mod tests {
             polar.load_str(&joined).unwrap();
 
             assert!(
-                !qeval(&mut polar, "k(1)"),
+                qnull(&mut polar, "k(1)"),
                 "k(1) was true for permutation {:?}",
                 &permutation
             );
@@ -317,6 +323,22 @@ mod tests {
             )
             .unwrap();
         assert!(qeval(&mut polar, "a()"));
+    }
+
+    //#[test]
+    fn test_not() {
+        let mut polar = Polar::new();
+        polar.load_str("odd(1); even(2);").unwrap();
+        assert!(qeval(&mut polar, "odd(1)"));
+        assert!(qnull(&mut polar, "!odd(1)"));
+        assert!(qnull(&mut polar, "even(1)"));
+        assert!(qeval(&mut polar, "!even(1)"));
+        assert!(qnull(&mut polar, "odd(2)"));
+        assert!(qeval(&mut polar, "!odd(2)"));
+        assert!(qeval(&mut polar, "even(2)"));
+        assert!(qnull(&mut polar, "!even(2)"));
+        assert!(qnull(&mut polar, "even(3)"));
+        assert!(qeval(&mut polar, "!even(3)"));
     }
 
     #[test]
