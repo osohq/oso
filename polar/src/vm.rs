@@ -280,6 +280,7 @@ impl PolarVirtualMachine {
     pub fn halt(&mut self) -> QueryEvent {
         self.goals.clear();
         self.choices.clear();
+        assert!(self.is_halted());
         QueryEvent::Done
     }
 
@@ -499,7 +500,7 @@ mod tests {
     use permute::permute;
 
     #[test]
-    fn and() {
+    fn and_expression() {
         let one = Term::new(Value::Integer(1));
         let two = Term::new(Value::Integer(2));
         let three = Term::new(Value::Integer(3));
@@ -587,12 +588,37 @@ mod tests {
             vm.push_goal(Goal::Query {
                 term: Term::new(Value::Expression(Operation {
                     operator: Operator::And,
-                    args: permutation
+                    args: permutation,
                 })),
             });
             assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
             assert!(vm.is_halted());
         }
+    }
+
+    #[test]
+    fn unify_expression() {
+        let mut kb = KnowledgeBase::new();
+        let mut vm = PolarVirtualMachine::new(kb, vec![]);
+        let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::Unify,
+                args: vec![one.clone(), one.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(vm.is_halted());
+
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::Unify,
+                args: vec![one.clone(), two.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
     }
 
     #[test]
