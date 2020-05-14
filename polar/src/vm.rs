@@ -17,8 +17,9 @@ pub enum Goal {
         right: Term,
     },
     Lookup {
-        instance: InstanceLiteral,
-        field: Term,
+        dict: Dictionary,
+        field: Symbol,
+        value: Term,
     },
     LookupExternal {
         instance: ExternalInstance,
@@ -37,10 +38,17 @@ pub enum Goal {
 impl fmt::Display for Goal {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Goal::Lookup { dict, field, value } => write!(
+                fmt,
+                "Lookup({}, {}, {})",
+                dict.to_polar(),
+                field.to_polar(),
+                value.to_polar()
+            ),
+            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
             Goal::Unify { left, right } => {
                 write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
             }
-            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
             g => write!(fmt, "{:?}", g),
         }
     }
@@ -110,9 +118,9 @@ impl PolarVirtualMachine {
                 Goal::Backtrack => self.backtrack(),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
-                Goal::Isa { .. } => unimplemented!("isa"),
-                Goal::Lookup { .. } => unimplemented!("lookup"),
-                Goal::LookupExternal { .. } => unimplemented!("lookup external"),
+                Goal::Isa { .. } => todo!("isa"),
+                Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
+                Goal::LookupExternal { .. } => todo!("lookup external"),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
@@ -147,7 +155,7 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: &Term) {
-        eprintln!("=> bind {:?} ← {:?}", var, value);
+        eprintln!("=> bind {} ← {}", var.to_polar(), value.to_polar());
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -285,7 +293,18 @@ impl PolarVirtualMachine {
     }
 
     // pub fn isa(&mut self) {}
-    // pub fn lookup(&mut self) {}
+
+    pub fn lookup(&mut self, dict: Dictionary, field: Symbol, value: Term) {
+        if let Some(retrieved) = dict.fields.get(&field) {
+            self.push_goal(Goal::Unify {
+                left: retrieved.clone(),
+                right: value,
+            });
+        } else {
+            self.push_goal(Goal::Backtrack);
+        }
+    }
+
     // pub fn lookup_external(&mut self) {}
 
     /// Query for the provided term.
@@ -365,6 +384,24 @@ impl PolarVirtualMachine {
                     left: args[0].clone(),
                     right: args[1].clone(),
                 });
+            }
+            Value::Expression(Operation {
+                operator: Operator::Dot,
+                args,
+            }) => {
+                assert_eq!(args.len(), 3);
+                let dict = args[0].clone();
+                let field = args[1].clone();
+                let value = args[2].clone();
+                if let Value::Symbol(field) = field.value {
+                    if let Value::Dictionary(dict) = dict.value {
+                        self.push_goal(Goal::Lookup { dict, field, value });
+                    } else {
+                        panic!("can only perform lookups on dicts")
+                    }
+                } else {
+                    panic!("keys must be symbols")
+                }
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
         }
@@ -598,8 +635,7 @@ mod tests {
 
     #[test]
     fn unify_expression() {
-        let mut kb = KnowledgeBase::new();
-        let mut vm = PolarVirtualMachine::new(kb, vec![]);
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
         let one = Term::new(Value::Integer(1));
         let two = Term::new(Value::Integer(2));
         vm.push_goal(Goal::Query {
@@ -618,6 +654,46 @@ mod tests {
             })),
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+    }
+
+    #[test]
+    fn lookup() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let x = Symbol("x".to_string());
+
+        // Lookup with correct value
+        let one = Value::Integer(1);
+        let mut dict = Dictionary::new();
+        dict.fields.insert(x.clone(), Term::new(one.clone()));
+        vm.push_goal(Goal::Lookup {
+            dict: dict.clone(),
+            field: x.clone(),
+            value: Term::new(one.clone()),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(vm.is_halted());
+
+        // Lookup with incorrect value
+        let two = Value::Integer(2);
+        vm.push_goal(Goal::Lookup {
+            dict: dict.clone(),
+            field: x.clone(),
+            value: Term::new(two.clone()),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Lookup with unbound value
+        let y = Symbol("y".to_string());
+        vm.push_goal(Goal::Lookup {
+            dict,
+            field: x.clone(),
+            value: Term::new(Value::Symbol(y.clone())),
+        });
+        assert!(
+            matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.get(&y).unwrap().value == one)
+        );
         assert!(vm.is_halted());
     }
 
