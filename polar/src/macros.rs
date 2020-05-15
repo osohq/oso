@@ -1,6 +1,5 @@
 /// Helper macros to create AST types
 ///
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::types::*;
