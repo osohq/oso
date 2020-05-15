@@ -355,6 +355,12 @@ mod tests {
         assert!(qnull(&mut polar, "1 = 2"));
     }
 
+    #[test]
+    fn test_lookup() {
+        let mut polar = Polar::new();
+        assert!(qeval(&mut polar, "{x: 1}.x = 1"));
+    }
+
     //     #[test]
     //     fn test_external() {
     //         let a = Symbol("a".to_string());

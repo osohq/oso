@@ -393,14 +393,14 @@ impl PolarVirtualMachine {
                 let dict = args[0].clone();
                 let field = args[1].clone();
                 let value = args[2].clone();
-                if let Value::Symbol(field) = field.value {
+                if let Value::Call(Predicate{ name: field, ..}) = field.value {
                     if let Value::Dictionary(dict) = dict.value {
                         self.push_goal(Goal::Lookup { dict, field, value });
                     } else {
                         panic!("can only perform lookups on dicts")
                     }
                 } else {
-                    panic!("keys must be symbols")
+                    panic!("keys must be symbols; received: {:?}", field.value)
                 }
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
