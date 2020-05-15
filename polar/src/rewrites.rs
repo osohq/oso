@@ -164,7 +164,6 @@ pub fn rewrite_term(mut term: Term, gen: &mut VarGenerator) -> Term {
 }
 
 pub fn rewrite_rule(mut rule: Rule, gen: &mut VarGenerator) -> Rule {
-    // @TODO: make all these id seeds the same one so we don't duplicate vars.
     rule.body = rewrite_term(rule.body, gen);
 
     let mut new_terms = vec![];
