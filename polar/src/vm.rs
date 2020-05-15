@@ -390,14 +390,22 @@ impl PolarVirtualMachine {
                 args,
             }) => {
                 assert_eq!(args.len(), 3);
-                let dict = args[0].clone();
+                let object = args[0].clone();
                 let field = args[1].clone();
                 let value = args[2].clone();
-                if let Value::Call(Predicate{ name: field, ..}) = field.value {
-                    if let Value::Dictionary(dict) = dict.value {
-                        self.push_goal(Goal::Lookup { dict, field, value });
-                    } else {
-                        panic!("can only perform lookups on dicts")
+                if let Value::Call(Predicate { name: field, .. }) = field.value {
+                    match object.value {
+                        Value::Dictionary(dict) => {
+                            self.push_goal(Goal::Lookup { dict, field, value })
+                        }
+                        Value::InstanceLiteral(InstanceLiteral { fields, tag: _ }) => {
+                            self.push_goal(Goal::Lookup {
+                                dict: fields,
+                                field,
+                                value,
+                            })
+                        }
+                        _ => panic!("can only perform lookups on dicts and instances")
                     }
                 } else {
                     panic!("keys must be symbols; received: {:?}", field.value)
