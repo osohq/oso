@@ -40,7 +40,7 @@ impl<S: AsRef<str>> From<S> for FromHelper<InstanceLiteral> {
     fn from(other: S) -> Self {
         Self(InstanceLiteral {
             tag: other.as_ref().to_string(),
-            fields: HashMap::default(),
+            fields: Dictionary::new(),
         })
     }
 }

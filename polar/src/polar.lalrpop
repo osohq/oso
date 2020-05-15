@@ -56,7 +56,7 @@ pub Dictionary: Term = <start:@L> <fields:Object> => {
 };
 
 pub InstanceLiteral: Term = <start:@L> <tag:Name> <fields:Object> => {
-    let instance = InstanceLiteral{tag, fields};
+    let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
     Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
 };
 

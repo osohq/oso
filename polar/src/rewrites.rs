@@ -36,7 +36,7 @@ pub fn walk_indexed<F>(
         Value::Boolean(b) => (),
         Value::ExternalInstance(external_instance) => (),
         Value::InstanceLiteral(instance) => {
-            for (i, (k, t)) in &mut instance.fields.iter_mut().enumerate() {
+            for (i, (k, t)) in &mut instance.fields.fields.iter_mut().enumerate() {
                 index.push(Index::K(k.clone()));
                 walk_indexed(t, index, insert_point, f);
                 index.pop();

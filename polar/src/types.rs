@@ -51,6 +51,14 @@ pub struct Dictionary {
     pub fields: HashMap<Symbol, Term>,
 }
 
+impl Dictionary {
+    pub fn new() -> Self {
+        Self {
+            fields: HashMap::new()
+        }
+    }
+}
+
 impl ToPolarString for Dictionary {
     fn to_polar(&self) -> String {
         let fields = self
@@ -66,18 +74,12 @@ impl ToPolarString for Dictionary {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct InstanceLiteral {
     pub tag: String,
-    pub fields: HashMap<Symbol, Term>,
+    pub fields: Dictionary,
 }
 
 impl ToPolarString for InstanceLiteral {
     fn to_polar(&self) -> String {
-        let fields = self
-            .fields
-            .iter()
-            .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
-            .collect::<Vec<String>>()
-            .join(", ");
-        format!("{}{{{}}}", self.tag, fields)
+        format!("{}{}", self.tag, self.fields.to_polar())
     }
 }
 
