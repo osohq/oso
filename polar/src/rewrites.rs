@@ -100,11 +100,11 @@ pub fn rewrite_term(mut term: Term, gen: &mut VarGenerator) -> Term {
     // Walk the tree, replace rewrite terms with symbols and cache up rewrites to be made next pass.
     let mut find_rewrites =
         |term: &mut Term, index: &Vec<usize>, insert_point: &Option<Vec<usize>>| {
-            if let Some((symbol, exp)) = rewrite(term, gen) {
+            if let Some((lookup, symbol)) = rewrite(term, gen) {
                 if let Some(insert_point) = insert_point {
-                    rewrites.push((exp, insert_point.clone()));
+                    rewrites.push((lookup, insert_point.clone()));
                 } else {
-                    rewrites.push((exp, index.clone()))
+                    rewrites.push((lookup, vec![]))
                 }
                 *term = symbol;
             }
@@ -116,9 +116,9 @@ pub fn rewrite_term(mut term: Term, gen: &mut VarGenerator) -> Term {
 
     let mut do_rewrites =
         |term: &mut Term, index: &Vec<usize>, insert_point: &Option<Vec<usize>>| {
-            for (t, i) in &rewrites {
+            for (lookup, i) in &rewrites {
                 if index == i {
-                    let new_t = and_wrap(term.clone(), t.clone());
+                    let new_t = and_wrap(lookup.clone(), term.clone());
                     *term = new_t;
                     break;
                 }
@@ -178,9 +178,12 @@ mod tests {
         let rewritten = rewrite_term(term, &mut gen);
         assert_eq!(rewritten.to_polar(), "x,.(a,b,_value_1),_value_1");
 
+        let term = parse_query("a.b = 1").unwrap();
+        let rewritten = rewrite_term(term, &mut gen);
+        assert_eq!(rewritten.to_polar(), ".(a,b,_value_2),_value_2=1");
         let term = parse_query("{x: 1}.x = 1").unwrap();
         assert_eq!(term.to_polar(), "{x: 1}.x=1");
         let rewritten = rewrite_term(term, &mut gen);
-        assert_eq!(rewritten.to_polar(), "(.({x: 1},x,_value_2),_value_2)=1");
+        assert_eq!(rewritten.to_polar(), ".({x: 1},x,_value_3),_value_3=1");
     }
 }
