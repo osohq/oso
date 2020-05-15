@@ -232,7 +232,7 @@ impl ToPolarString for Operation {
                     )
                 }
             }
-            Operator::Not => format!("{}{}", "!", self.args[0].to_polar()),
+            Operator::Not => format!("{}{}", "!", to_polar_parens(&self.operator, &self.args[0])),
             Operator::Mul => format!(
                 "{}*{}",
                 to_polar_parens(&self.operator, &self.args[0]),

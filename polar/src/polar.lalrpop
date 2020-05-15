@@ -35,12 +35,12 @@ pub Symbol: Term  = <start:@L> <n:Name> => {
 };
 
 Fields: HashMap<Symbol, Term> = {
-    <name:Name> ":" <value:Term> => {
+    <name:Name> ":" <value:Exp5> => {
         let mut fields = HashMap::new();
         fields.insert(Symbol(name), value);
         fields
     },
-    <name:Name> ":" <value:Term> "," <mut fields:Fields> => {
+    <name:Name> ":" <value:Exp5> "," <mut fields:Fields> => {
         fields.insert(Symbol(name), value);
         fields
     }
@@ -156,7 +156,7 @@ Exp6: Term = {
 }
 
 // + -
-Exp5: Term = {
+pub Exp5: Term = {
     <start:@L> <exp5:Exp5> "+" <exp6:Exp6> => {
         let args = vec![exp5, exp6];
         let op = Operation{operator: Operator::Add, args};

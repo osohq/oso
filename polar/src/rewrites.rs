@@ -3,14 +3,21 @@ use super::types::*;
 /// An index into a term (which is a tree.)
 /// The index represents the position of a term in the tree.
 /// For every level accross, we increment the current index. And for every level down we add a new index to the list.
-/// eg if the root is `foo(1, bar(2,3))`
+/// For keys (in dictionaries and instance literals) we use the key instead of the arg index for the index value.
+/// eg if the root is `foo(1, bar({x: 1},3))`
 /// the nodes indexes of the nodes are
-/// [] foo(1, bar(2,3))
+/// [] foo(1, bar({x: 1},3))
 /// [0] 1
-/// [1] bar(2,3)
-/// [1, 0] 2
+/// [1] bar({x: 1},3)
+/// [1, 0] {x: 1}
+/// [1, 0, x] 1
 /// [1, 1] 3
-pub type TreeIndex = Vec<usize>;
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Index {
+    I(usize),
+    K(Symbol),
+}
+pub type TreeIndex = Vec<Index>;
 
 /// Walks the term, keeping track of the tree index and the insertion_point which is the
 /// argument of the closest enclosing (and, or, not) expression.
@@ -28,18 +35,30 @@ pub fn walk_indexed<F>(
         Value::String(s) => (),
         Value::Boolean(b) => (),
         Value::ExternalInstance(external_instance) => (),
-        Value::InstanceLiteral(instance) => (),
-        Value::Dictionary(dict) => (),
+        Value::InstanceLiteral(instance) => {
+            for (i, (k, t)) in &mut instance.fields.iter_mut().enumerate() {
+                index.push(Index::K(k.clone()));
+                walk_indexed(t, index, insert_point, f);
+                index.pop();
+            }
+        }
+        Value::Dictionary(dict) => {
+            for (i, (k, t)) in &mut dict.fields.iter_mut().enumerate() {
+                index.push(Index::K(k.clone()));
+                walk_indexed(t, index, insert_point, f);
+                index.pop();
+            }
+        }
         Value::Call(pred) => {
             for (i, t) in &mut pred.args.iter_mut().enumerate() {
-                index.push(i);
+                index.push(Index::I(i));
                 walk_indexed(t, index, insert_point, f);
                 index.pop();
             }
         }
         Value::List(list) => {
             for (i, t) in &mut list.iter_mut().enumerate() {
-                index.push(i);
+                index.push(Index::I(i));
                 walk_indexed(t, index, insert_point, f);
                 index.pop();
             }
@@ -54,7 +73,7 @@ pub fn walk_indexed<F>(
                 _ => (),
             };
             for (i, t) in &mut op.args.iter_mut().enumerate() {
-                index.push(i);
+                index.push(Index::I(i));
                 if is_insert_op {
                     // If this is an (and, or, not) expression. Then the insertion point for rewritten
                     // expressions will be whichever arg we are traversing.
@@ -198,5 +217,10 @@ mod tests {
         assert_eq!(term.to_polar(), "{x: 1}.x=1");
         let rewritten = rewrite_term(term, &mut gen);
         assert_eq!(rewritten.to_polar(), ".({x: 1},x,_value_3),_value_3=1");
+
+        let term = parse_query("!{x: a.b}").unwrap();
+        assert_eq!(term.to_polar(), "!{x: a.b}");
+        let rewritten = rewrite_term(term, &mut gen);
+        assert_eq!(rewritten.to_polar(), "!(.(a,b,_value_4),{x: _value_4})");
     }
 }
