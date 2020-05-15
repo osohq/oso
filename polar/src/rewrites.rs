@@ -177,5 +177,10 @@ mod tests {
         assert_eq!(term.to_polar(), "x,a.b");
         let rewritten = rewrite_term(term, &mut gen);
         assert_eq!(rewritten.to_polar(), "x,.(a,b,_value_1),_value_1");
+
+        let term = parse_query("{x: 1}.x = 1").unwrap();
+        assert_eq!(term.to_polar(), "{x: 1}.x=1");
+        let rewritten = rewrite_term(term, &mut gen);
+        assert_eq!(rewritten.to_polar(), "(.({x: 1},x,_value_2),_value_2)=1");
     }
 }

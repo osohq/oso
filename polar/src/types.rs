@@ -61,7 +61,13 @@ pub struct Dictionary {
 
 impl ToPolarString for Dictionary {
     fn to_polar(&self) -> String {
-        unimplemented!();
+        let fields = self
+            .fields
+            .iter()
+            .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
+            .collect::<Vec<String>>()
+            .join(", ");
+        format!("{{{}}}", fields)
     }
 }
 
