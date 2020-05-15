@@ -31,4 +31,5 @@ def test_data_conversions(polar, qvar):
 
 
 def test_external(polar, qvar):
-    assert qvar("Foo{something: 100}.bar = x", "x") == [1, 2, 3, 4, 5]
+    # assert qvar("Foo{something: 100}.bar = x", "x") == [0, 1, 2, 3, 4]
+    assert qvar("Foo{something: 100}.bar = x", "x") == [4]

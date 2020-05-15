@@ -22,7 +22,9 @@ def to_python(v):
 def to_polar(v):
     """ Convert python values to polar terms """
     if isinstance(v, int):
-        return {"Integer": v}
+        val = {"Integer": v}
+        term = {"id": 0, "offset": 0, "value": val}
+        return term
     # TODO
     return None
 
@@ -102,7 +104,9 @@ class Polar:
 
                 try:
                     val = next(self.calls[call_id])
-                    c_str = ffi.new("char[]", to_polar(val).encode())
+                    term = to_polar(val)
+                    msg = json.dumps(term)
+                    c_str = ffi.new("char[]", msg.encode())
                     result = lib.polar_external_call_result(
                         self.polar, query, call_id, c_str
                     )

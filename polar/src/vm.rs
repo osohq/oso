@@ -406,9 +406,11 @@ impl PolarVirtualMachine {
                 operator: Operator::And,
                 args,
             }) => {
-                for arg in args.iter() {
-                    self.push_goal(Goal::Query { term: arg.clone() });
-                }
+                self.append_goals(
+                    args.iter()
+                        .map(|a| Goal::Query { term: a.clone() })
+                        .collect(),
+                );
             }
             Value::Expression(Operation {
                 operator: Operator::Unify,
@@ -441,7 +443,7 @@ impl PolarVirtualMachine {
                         // For the external case, pass the instance to the External constructor
 
                         if 1 == 1 {
-                            let call_id = self.new_call_id(field_name(&field));
+                            let call_id = self.new_call_id(&value);
                             self.push_goal(Goal::LookupExternal {
                                 instance,
                                 field,
@@ -463,10 +465,18 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn new_call_id(&mut self, name: Symbol) -> u64 {
-        let call_id = 1;
-        self.call_ids.insert(call_id, name);
-        call_id
+    fn new_call_id(&mut self, term: &Term) -> u64 {
+        if let Term {
+            value: Value::Symbol(symbol),
+            ..
+        } = term
+        {
+            let call_id = 1;
+            self.call_ids.insert(call_id, symbol.clone());
+            call_id
+        } else {
+            panic!("we sure messed this one up");
+        }
     }
 
     /// Handle an external result provided by the application.

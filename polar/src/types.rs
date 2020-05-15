@@ -578,6 +578,12 @@ mod tests {
                 },
             ],
         };
-        eprintln!("{}", serde_json::to_string(&event).unwrap())
+        eprintln!("{}", serde_json::to_string(&event).unwrap());
+        let term = Term {
+            id: 0,
+            offset: 0,
+            value: Value::Integer(1),
+        };
+        eprintln!("{}", serde_json::to_string(&term).unwrap())
     }
 }
