@@ -103,9 +103,17 @@ class Polar:
                 try:
                     val = next(self.calls[call_id])
                     c_str = ffi.new("char[]", to_polar(val).encode())
-                    lib.polar_external_call_result(self.polar, query, call_id, c_str)
+                    result = lib.polar_external_call_result(
+                        self.polar, query, call_id, c_str
+                    )
+                    if result == 0:
+                        self._raise_error()
                 except StopIteration:
-                    lib.polar_external_call_result(self.polar, query, call_id, ffi.NULL)
+                    result = lib.polar_external_call_result(
+                        self.polar, query, call_id, ffi.NULL
+                    )
+                    if result == 0:
+                        self._raise_error()
 
             if kind == "Result":
                 yield {k: to_python(v) for k, v in data["bindings"].items()}
