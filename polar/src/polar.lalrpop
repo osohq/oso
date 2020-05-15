@@ -28,20 +28,20 @@ pub Boolean: Term = {
     <bool:False> => bool
 };
 // @TODO: Better name token.
-Name: String = <s:r"[\w&&[^\d]]\w*"> => s.to_string();
+Name: Symbol = <s:r"[\w&&[^\d]]\w*"> => Symbol(s.to_string());
 
 pub Symbol: Term  = <start:@L> <n:Name> => {
-    Term{id: 0, offset: start, value: Value::Symbol(Symbol(n))}
+    Term{id: 0, offset: start, value: Value::Symbol(n)}
 };
 
 Fields: HashMap<Symbol, Term> = {
     <name:Name> ":" <value:Exp5> => {
         let mut fields = HashMap::new();
-        fields.insert(Symbol(name), value);
+        fields.insert(name, value);
         fields
     },
     <name:Name> ":" <value:Exp5> "," <mut fields:Fields> => {
-        fields.insert(Symbol(name), value);
+        fields.insert(name, value);
         fields
     }
 };
@@ -115,7 +115,6 @@ Exp8: Term = {
     <start:@L> <head:Callable> "." <call_loc:@L> <mut call:Predicate> => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
-        let name = ".".to_string();
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
@@ -123,7 +122,6 @@ Exp8: Term = {
         let call = Predicate{name, args: vec![]};
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
-        let name = ".".to_string();
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },

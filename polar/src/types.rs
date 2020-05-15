@@ -54,7 +54,7 @@ pub struct Dictionary {
 impl Dictionary {
     pub fn new() -> Self {
         Self {
-            fields: HashMap::new()
+            fields: HashMap::new(),
         }
     }
 }
@@ -73,13 +73,13 @@ impl ToPolarString for Dictionary {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct InstanceLiteral {
-    pub tag: String,
+    pub tag: Symbol,
     pub fields: Dictionary,
 }
 
 impl ToPolarString for InstanceLiteral {
     fn to_polar(&self) -> String {
-        format!("{}{}", self.tag, self.fields.to_polar())
+        format!("{}{}", self.tag.to_polar(), self.fields.to_polar())
     }
 }
 
@@ -119,7 +119,7 @@ impl ToPolarString for Symbol {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Predicate {
-    pub name: String,
+    pub name: Symbol,
     pub args: TermList,
 }
 
@@ -138,11 +138,11 @@ impl Predicate {
 impl ToPolarString for Predicate {
     fn to_polar(&self) -> String {
         if self.args.is_empty() {
-            format!("{}", self.name)
+            format!("{}", self.name.to_polar())
         } else {
             format!(
                 "{}({})",
-                self.name,
+                self.name.to_polar(),
                 self.args
                     .iter()
                     .map(|t| t.to_polar())
@@ -423,7 +423,7 @@ impl ToPolarString for Term {
 // Knowledge base internal types.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Rule {
-    pub name: String,
+    pub name: Symbol,
     pub params: TermList,
     pub body: Term,
 }
@@ -442,7 +442,7 @@ impl ToPolarString for Rule {
                 if args.len() == 0 {
                     format!(
                         "{}({});",
-                        self.name,
+                        self.name.to_polar(),
                         self.params
                             .iter()
                             .map(|t| t.to_polar())
@@ -452,7 +452,7 @@ impl ToPolarString for Rule {
                 } else {
                     format!(
                         "{}({}) := {};",
-                        self.name,
+                        self.name.to_polar(),
                         self.params
                             .iter()
                             .map(|t| t.to_polar())
@@ -472,13 +472,13 @@ impl ToPolarString for Rule {
 
 #[derive(Clone)]
 pub struct GenericRule {
-    pub name: String,
+    pub name: Symbol,
     pub rules: Vec<Rule>,
 }
 
 #[derive(Clone)]
 pub struct Class {
-    pub name: String,
+    pub name: Symbol,
 }
 
 #[derive(Clone)]
@@ -489,8 +489,8 @@ pub enum Type {
 
 #[derive(Default, Clone)]
 pub struct KnowledgeBase {
-    pub types: HashMap<String, Type>,
-    pub rules: HashMap<String, GenericRule>,
+    pub types: HashMap<Symbol, Type>,
+    pub rules: HashMap<Symbol, GenericRule>,
 }
 
 impl KnowledgeBase {
@@ -521,7 +521,7 @@ pub enum QueryEvent {
         /// Id of the external instance to make this call on.
         instance_id: u64,
         /// Field name to lookup or function name to call.
-        attribute: String,
+        attribute: Symbol,
         /// List of arguments to use if this is a method call.
         args: Vec<Term>,
     },
@@ -539,7 +539,7 @@ mod tests {
     #[test]
     fn serialize_test() {
         let pred = Predicate {
-            name: "foo".to_owned(),
+            name: Symbol("foo".to_owned()),
             args: vec![Term {
                 id: 2,
                 offset: 0,
