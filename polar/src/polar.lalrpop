@@ -46,12 +46,16 @@ Fields: HashMap<Symbol, Term> = {
     }
 };
 
-pub Dictionary: Term = <start:@L> "{" <fields:Fields> "}" => {
+pub Object: HashMap<Symbol, Term> = "{" <fields:Fields> "}" => {
+    fields
+};
+
+pub Dictionary: Term = <start:@L> <fields:Object> => {
     let dict = Dictionary{fields};
     Term{id: 0, offset: start, value: Value::Dictionary(dict)}
 };
 
-pub Instance: Term = <start:@L> <tag:Name> "{" <fields:Fields> "}" => {
+pub InstanceLiteral: Term = <start:@L> <tag:Name> <fields:Object> => {
     let instance = InstanceLiteral{tag, fields};
     Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
 };
@@ -62,7 +66,7 @@ pub Term: Term = {
     <term:Boolean> => term,
     <term:Symbol> => term,
     <term:Dictionary> => term,
-    <term:Instance> => term,
+    <term:InstanceLiteral> => term,
     <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
     <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
     <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
@@ -101,7 +105,7 @@ Exp9: Term = {
 
 // @TODO: Think about this.
 Callable: Term = {
-    <Instance> => <>,
+    <InstanceLiteral> => <>,
     <Dictionary> => <>,
     <Symbol> => <>,
 };

@@ -46,14 +46,6 @@ pub trait ToPolarString {
     fn to_polar(&self) -> String;
 }
 
-/// PARSER TYPES (NOT FFI TYPE BECAUSE THIS can't cross boundary)
-/// Not necessarily true due to instance contruction.
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct InstanceLiteral {
-    pub tag: String,
-    pub fields: HashMap<Symbol, Term>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Dictionary {
     pub fields: HashMap<Symbol, Term>,
@@ -72,14 +64,9 @@ impl ToPolarString for Dictionary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct ExternalInstance {
-    pub external_id: u64,
-}
-
-impl ToPolarString for ExternalInstance {
-    fn to_polar(&self) -> String {
-        unimplemented!();
-    }
+pub struct InstanceLiteral {
+    pub tag: String,
+    pub fields: HashMap<Symbol, Term>,
 }
 
 impl ToPolarString for InstanceLiteral {
@@ -91,6 +78,17 @@ impl ToPolarString for InstanceLiteral {
             .collect::<Vec<String>>()
             .join(", ");
         format!("{}{{{}}}", self.tag, fields)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct ExternalInstance {
+    pub external_id: u64,
+}
+
+impl ToPolarString for ExternalInstance {
+    fn to_polar(&self) -> String {
+        unimplemented!();
     }
 }
 

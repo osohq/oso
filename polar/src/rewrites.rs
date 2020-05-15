@@ -1,15 +1,27 @@
 use super::types::*;
 
-// Walks the term, keeping track of the tree index and the insertion_point which is the
-// closest (and, or, not) expression parent's argument that we're traversing.
-// This is the place child terms that need to be rewritten would be inserted.
+/// An index into a term (which is a tree.)
+/// The index represents the position of a term in the tree.
+/// For every level accross, we increment the current index. And for every level down we add a new index to the list.
+/// eg if the root is `foo(1, bar(2,3))`
+/// the nodes indexes of the nodes are
+/// [] foo(1, bar(2,3))
+/// [0] 1
+/// [1] bar(2,3)
+/// [1, 0] 2
+/// [1, 1] 3
+pub type TreeIndex = Vec<usize>;
+
+/// Walks the term, keeping track of the tree index and the insertion_point which is the
+/// argument of the closest enclosing (and, or, not) expression.
+/// This is the place child terms that need to be rewritten would be inserted.
 pub fn walk_indexed<F>(
     term: &mut Term,
-    index: &mut Vec<usize>,
-    insert_point: &Option<Vec<usize>>,
+    index: &mut TreeIndex,
+    insert_point: &Option<TreeIndex>,
     f: &mut F,
 ) where
-    F: FnMut(&mut Term, &Vec<usize>, &Option<Vec<usize>>),
+    F: FnMut(&mut Term, &TreeIndex, &Option<TreeIndex>),
 {
     match &mut term.value {
         Value::Integer(i) => (),
@@ -19,7 +31,6 @@ pub fn walk_indexed<F>(
         Value::InstanceLiteral(instance) => (),
         Value::Dictionary(dict) => (),
         Value::Call(pred) => {
-            //let mut index = index.clone();
             for (i, t) in &mut pred.args.iter_mut().enumerate() {
                 index.push(i);
                 walk_indexed(t, index, insert_point, f);
@@ -27,7 +38,6 @@ pub fn walk_indexed<F>(
             }
         }
         Value::List(list) => {
-            //let mut index = index.clone();
             for (i, t) in &mut list.iter_mut().enumerate() {
                 index.push(i);
                 walk_indexed(t, index, insert_point, f);
@@ -43,10 +53,11 @@ pub fn walk_indexed<F>(
                 }
                 _ => (),
             };
-            //let mut index = index.clone();
             for (i, t) in &mut op.args.iter_mut().enumerate() {
                 index.push(i);
                 if is_insert_op {
+                    // If this is an (and, or, not) expression. Then the insertion point for rewritten
+                    // expressions will be whichever arg we are traversing.
                     let new_insert_point = Some(index.clone());
                     walk_indexed(t, index, &new_insert_point, f);
                 } else {
@@ -59,6 +70,7 @@ pub fn walk_indexed<F>(
     f(term, index, insert_point)
 }
 
+/// Takes two terms and wraps them in an AND.
 fn and_wrap(a: Term, b: Term) -> Term {
     Term {
         value: Value::Expression(Operation {
@@ -70,7 +82,9 @@ fn and_wrap(a: Term, b: Term) -> Term {
     }
 }
 
-pub fn rewrite(term: &mut Term, gen: &mut VarGenerator) -> Option<(Term, Term)> {
+/// Checks if the expression needs to be rewritten.
+/// If so, returns a tuple of the rewritten expression and the generated symbol to replace it with.
+fn rewrite(term: &mut Term, gen: &mut VarGenerator) -> Option<(Term, Term)> {
     if let Value::Expression(Operation {
         operator: Operator::Dot,
         args: lookup_args,
@@ -99,7 +113,7 @@ pub fn rewrite_term(mut term: Term, gen: &mut VarGenerator) -> Term {
 
     // Walk the tree, replace rewrite terms with symbols and cache up rewrites to be made next pass.
     let mut find_rewrites =
-        |term: &mut Term, index: &Vec<usize>, insert_point: &Option<Vec<usize>>| {
+        |term: &mut Term, _index: &TreeIndex, insert_point: &Option<TreeIndex>| {
             if let Some((lookup, symbol)) = rewrite(term, gen) {
                 if let Some(insert_point) = insert_point {
                     rewrites.push((lookup, insert_point.clone()));
@@ -108,14 +122,13 @@ pub fn rewrite_term(mut term: Term, gen: &mut VarGenerator) -> Term {
                 }
                 *term = symbol;
             }
-            //eprintln!("{:?} {}", index, term.to_polar());
         };
     let mut index = vec![];
     let insert_point = None;
     walk_indexed(&mut term, &mut index, &insert_point, &mut find_rewrites);
 
     let mut do_rewrites =
-        |term: &mut Term, index: &Vec<usize>, insert_point: &Option<Vec<usize>>| {
+        |term: &mut Term, index: &TreeIndex, _insert_point: &Option<TreeIndex>| {
             for (lookup, i) in &rewrites {
                 if index == i {
                     let new_t = and_wrap(lookup.clone(), term.clone());
