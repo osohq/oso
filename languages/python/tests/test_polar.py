@@ -17,7 +17,7 @@ def test_anything_works():
 
 
 def test_helpers(polar, load_file, query, qeval, qvar):
-    load_file("../tests/test_file.polar")  # f(1);
+    load_file(Path(__file__).parent / "test_file.polar")  # f(1);
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
