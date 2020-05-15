@@ -125,7 +125,7 @@ impl Polar {
     }
 
     pub fn external_call_result(&mut self, query: &mut Query, call_id: u64, value: Option<Term>) {
-        unimplemented!();
+        query.vm.external_call_result(call_id, value)
     }
 
     pub fn external_construct_result(&mut self, query: &mut Query, instance_id: Option<u64>) {
@@ -162,6 +162,11 @@ mod tests {
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
                 }
+                QueryEvent::ExternalCall { call_id, .. } => polar.external_call_result(
+                    &mut query,
+                    call_id,
+                    Some(Term::new(Value::Integer(1))),
+                ),
                 _ => panic!("unexpected event"),
             }
         }

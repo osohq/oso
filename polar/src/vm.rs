@@ -25,6 +25,7 @@ pub enum Goal {
         instance: InstanceLiteral,
         field: Term,
         value: Term,
+        call_id: u64,
     },
     Noop,
     Query {
@@ -47,15 +48,17 @@ impl fmt::Display for Goal {
                 value.to_polar()
             ),
             Goal::LookupExternal {
+                call_id,
                 instance,
                 field,
                 value,
             } => write!(
                 fmt,
-                "LookupExternal({}, {}, {})",
+                "LookupExternal({}, {}, {}, {})",
                 instance.to_polar(),
                 field.to_polar(),
-                value.to_polar()
+                value.to_polar(),
+                call_id
             ),
             Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
             Goal::Unify { left, right } => {
@@ -94,6 +97,9 @@ pub struct PolarVirtualMachine {
 
     /// For temporary variable names.
     genvar_counter: usize,
+
+    /// Call ID -> Symbol lookup table.
+    call_ids: HashMap<u64, Symbol>,
 }
 
 // Methods which aren't goals/instructions.
@@ -108,6 +114,7 @@ impl PolarVirtualMachine {
             choices: vec![],
             kb,
             genvar_counter: 0,
+            call_ids: HashMap::new(),
         }
     }
 
@@ -136,7 +143,8 @@ impl PolarVirtualMachine {
                     instance,
                     field,
                     value,
-                } => return Ok(self.lookup_external(instance, field, value)),
+                    call_id,
+                } => return Ok(self.lookup_external(instance, field, value, call_id)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
@@ -326,8 +334,24 @@ impl PolarVirtualMachine {
         instance: InstanceLiteral,
         field: Term,
         value: Term,
+        call_id: u64,
     ) -> QueryEvent {
-        QueryEvent::Done
+        let field_name = field_name(&field);
+        self.append_goals(vec![
+            Goal::Halt,
+            Goal::LookupExternal {
+                call_id,
+                instance,
+                field,
+                value,
+            },
+        ]);
+        QueryEvent::ExternalCall {
+            call_id,
+            instance_id: 1,
+            attribute: field_name,
+            args: vec![],
+        }
     }
 
     /// Query for the provided term.
@@ -417,18 +441,10 @@ impl PolarVirtualMachine {
                 let field = args[1].clone();
                 let value = args[2].clone();
 
-                fn field_name(field: Term) -> Symbol {
-                    if let Value::Call(Predicate { name, .. }) = field.value {
-                        name
-                    } else {
-                        panic!("keys must be symbols; received: {:?}", field.value)
-                    }
-                }
-
                 match object.value {
                     Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
                         dict,
-                        field: field_name(field),
+                        field: field_name(&field),
                         value,
                     }),
                     Value::InstanceLiteral(instance) => {
@@ -437,15 +453,17 @@ impl PolarVirtualMachine {
                         // For the external case, pass the instance to the External constructor
 
                         if 1 == 1 {
+                            let call_id = self.new_call_id(field_name(&field));
                             self.push_goal(Goal::LookupExternal {
                                 instance,
                                 field,
                                 value,
+                                call_id,
                             })
                         } else {
                             self.push_goal(Goal::Lookup {
                                 dict: instance.fields,
-                                field: field_name(field),
+                                field: field_name(&field),
                                 value,
                             })
                         }
@@ -455,6 +473,12 @@ impl PolarVirtualMachine {
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
         }
+    }
+
+    fn new_call_id(&mut self, name: Symbol) -> u64 {
+        let call_id = 1;
+        self.call_ids.insert(call_id, name);
+        call_id
     }
 
     /// Handle an external result provided by the application.
@@ -469,19 +493,23 @@ impl PolarVirtualMachine {
         // TODO: Open question if we need to pass errors back down to rust.
         // For example what happens if the call asked for a field that doesn't exist?
 
-        // // Externals are always followed by a halt.
-        // assert!(matches!(self.goals.pop(), Some(Goal::Halt)));
+        // Externals are always followed by a halt.
+        assert!(matches!(self.goals.pop(), Some(Goal::Halt)));
 
-        // if let Some(value) = value {
-        //     // We have a value and should bind our variable to it.
-        //     self.bind(name, &Term::new(Value::Integer(value)))
-        // } else {
-        //     // No more values, so no further queries to resolve.
-        //     assert!(matches!(
-        //         self.goals.pop(),
-        //         Some(Goal::TestExternal { name }) if name == name
-        //     ));
-        // }
+        if let Some(value) = term {
+            let field = self.call_ids.get(&call_id).cloned();
+            if let Some(field) = field {
+                self.bind(&field, &value);
+            } else {
+                panic!("unregistered call_id");
+            }
+        } else {
+            // No more values, so no further queries to resolve.
+            assert!(matches!(
+                self.goals.pop(),
+                Some(Goal::LookupExternal { call_id: id, .. }) if id == call_id
+            ));
+        }
     }
 
     /// Called with the result of an external construct. The instance id

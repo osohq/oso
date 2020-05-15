@@ -71,6 +71,14 @@ impl ToPolarString for Dictionary {
     }
 }
 
+pub fn field_name(field: &Term) -> Symbol {
+    if let Value::Call(Predicate { name, .. }) = &field.value {
+        name.clone()
+    } else {
+        panic!("keys must be symbols; received: {:?}", field.value)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
