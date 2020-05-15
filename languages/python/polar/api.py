@@ -31,10 +31,18 @@ class PolarException(Exception):
     pass
 
 
+def this_is_what_you_get():
+    for i in range(0, 5):
+        yield i
+
+
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
         self.loaded_files = {}
+        self.next_instance_id = 1
+        self.instances = {}
+        self.calls = {}
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -75,6 +83,29 @@ class Polar:
 
             kind = [*event][0]
             data = event[kind]
+
+            if kind == "ExternalConstructor":
+                # instance = data["instance"]
+                lib.polar_external_construct_result(
+                    self.polar, query, self.next_instance_id
+                )
+                self.next_instance_id += 1
+
+            if kind == "ExternalCall":
+                call_id = data["call_id"]
+                # instance_id = data["instance_id"]
+                # attribute = data["attribute"]
+                # args = [to_python(arg) for arg in data["args"]]
+
+                if call_id not in self.calls:
+                    self.calls[call_id] = this_is_what_you_get()
+
+                try:
+                    val = next(self.calls[call_id])
+                    c_str = ffi.new("char[]", to_polar(val).encode())
+                    lib.polar_external_call_result(self.polar, query, call_id, c_str)
+                except StopIteration:
+                    lib.polar_external_call_result(self.polar, query, call_id, ffi.NULL)
 
             if kind == "Result":
                 yield {k: to_python(v) for k, v in data["bindings"].items()}

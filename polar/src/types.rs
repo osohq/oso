@@ -556,5 +556,23 @@ mod tests {
             serde_json::to_string(&pred).unwrap(),
             r#"{"name":"foo","args":[{"id":2,"offset":0,"value":{"Integer":0}}]}"#
         );
+        let event = QueryEvent::ExternalCall {
+            call_id: 2,
+            instance_id: 3,
+            attribute: Symbol::new("foo"),
+            args: vec![
+                Term {
+                    id: 2,
+                    offset: 0,
+                    value: Value::Integer(0),
+                },
+                Term {
+                    id: 3,
+                    offset: 0,
+                    value: Value::String("hello".to_string()),
+                },
+            ],
+        };
+        eprintln!("{}", serde_json::to_string(&event).unwrap())
     }
 }
