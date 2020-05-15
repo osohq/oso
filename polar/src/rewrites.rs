@@ -5,11 +5,11 @@ use super::types::*;
 // This is the place child terms that need to be rewritten would be inserted.
 pub fn walk_indexed<F>(
     term: &mut Term,
-    index: Vec<usize>,
-    insert_point: Option<Vec<usize>>,
+    index: &mut Vec<usize>,
+    insert_point: &Option<Vec<usize>>,
     f: &mut F,
 ) where
-    F: FnMut(&mut Term, Vec<usize>, Option<Vec<usize>>),
+    F: FnMut(&mut Term, &Vec<usize>, &Option<Vec<usize>>),
 {
     match &mut term.value {
         Value::Integer(i) => (),
@@ -19,18 +19,18 @@ pub fn walk_indexed<F>(
         Value::InstanceLiteral(instance) => (),
         Value::Dictionary(dict) => (),
         Value::Call(pred) => {
-            let mut index = index.clone();
+            //let mut index = index.clone();
             for (i, t) in &mut pred.args.iter_mut().enumerate() {
                 index.push(i);
-                walk_indexed(t, index.clone(), insert_point.clone(), f);
+                walk_indexed(t, index, insert_point, f);
                 index.pop();
             }
         }
         Value::List(list) => {
-            let mut index = index.clone();
+            //let mut index = index.clone();
             for (i, t) in &mut list.iter_mut().enumerate() {
                 index.push(i);
-                walk_indexed(t, index.clone(), insert_point.clone(), f);
+                walk_indexed(t, index, insert_point, f);
                 index.pop();
             }
         }
@@ -43,13 +43,14 @@ pub fn walk_indexed<F>(
                 }
                 _ => (),
             };
-            let mut index = index.clone();
+            //let mut index = index.clone();
             for (i, t) in &mut op.args.iter_mut().enumerate() {
                 index.push(i);
                 if is_insert_op {
-                    walk_indexed(t, index.clone(), Some(index.clone()), f);
+                    let new_insert_point = Some(index.clone());
+                    walk_indexed(t, index, &new_insert_point, f);
                 } else {
-                    walk_indexed(t, index.clone(), insert_point.clone(), f);
+                    walk_indexed(t, index, insert_point, f);
                 }
                 index.pop();
             }
@@ -98,29 +99,34 @@ pub fn rewrite_term(mut term: Term, gen: &mut VarGenerator) -> Term {
 
     // Walk the tree, replace rewrite terms with symbols and cache up rewrites to be made next pass.
     let mut find_rewrites =
-        |term: &mut Term, index: Vec<usize>, insert_point: Option<Vec<usize>>| {
+        |term: &mut Term, index: &Vec<usize>, insert_point: &Option<Vec<usize>>| {
             if let Some((symbol, exp)) = rewrite(term, gen) {
                 if let Some(insert_point) = insert_point {
-                    rewrites.push((exp, insert_point));
+                    rewrites.push((exp, insert_point.clone()));
                 } else {
-                    rewrites.push((exp, index))
+                    rewrites.push((exp, index.clone()))
                 }
                 *term = symbol;
             }
             //eprintln!("{:?} {}", index, term.to_polar());
         };
-    walk_indexed(&mut term, vec![], None, &mut find_rewrites);
+    let mut index = vec![];
+    let insert_point = None;
+    walk_indexed(&mut term, &mut index, &insert_point, &mut find_rewrites);
 
-    let mut do_rewrites = |term: &mut Term, index: Vec<usize>, insert_point: Option<Vec<usize>>| {
-        for (t, i) in &rewrites {
-            if index == *i {
-                let new_t = and_wrap(term.clone(), t.clone());
-                *term = new_t;
-                break;
+    let mut do_rewrites =
+        |term: &mut Term, index: &Vec<usize>, insert_point: &Option<Vec<usize>>| {
+            for (t, i) in &rewrites {
+                if index == i {
+                    let new_t = and_wrap(term.clone(), t.clone());
+                    *term = new_t;
+                    break;
+                }
             }
-        }
-    };
-    walk_indexed(&mut term, vec![], None, &mut do_rewrites);
+        };
+    let mut index = vec![];
+    let insert_point = None;
+    walk_indexed(&mut term, &mut index, &insert_point, &mut do_rewrites);
 
     term
 }
