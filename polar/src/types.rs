@@ -539,9 +539,6 @@ pub enum QueryEvent {
         /// List of arguments to use if this is a method call.
         args: Vec<Term>,
     },
-    TestExternal {
-        name: Symbol, // POC
-    },
     Result {
         bindings: Bindings,
     },

@@ -8,9 +8,6 @@ use super::types::*;
 pub enum Goal {
     Backtrack,
     Cut,
-    TestExternal {
-        name: Symbol, // POC
-    },
     Halt,
     Isa {
         left: Term,
@@ -147,7 +144,6 @@ impl PolarVirtualMachine {
                 } => return Ok(self.lookup_external(instance, field, value, call_id)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
-                Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
                 Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
@@ -295,19 +291,6 @@ impl PolarVirtualMachine {
         unimplemented!("cut!");
     }
 
-    /// Test goal: wait for external input.
-    ///
-    /// Pushes a `Halt` goal onto the stack so the
-    /// program terminates if we don't get a response.
-    ///
-    /// Also pushes another `TestExternal` goal for the same symbol
-    /// so that we continue to poll for more results.
-    fn test_external(&mut self, name: Symbol) -> QueryEvent {
-        self.append_goals(vec![Goal::Halt, Goal::TestExternal { name: name.clone() }]);
-        QueryEvent::TestExternal { name }
-        // TERM CANNOT BE VARIABLE IF SOMETHING PASSES THROUGH FFI
-    }
-
     /// Halt the VM by clearing all goals and choices.
     pub fn halt(&mut self) -> QueryEvent {
         self.goals.clear();
@@ -329,6 +312,11 @@ impl PolarVirtualMachine {
         }
     }
 
+    /// Look up a field's value in an external instance.
+    ///
+    /// Pushes a `Halt` goal onto the stack so the program terminates if we don't get a response.
+    ///
+    /// Also pushes another `Goal::LookupExternal` so that we continue to poll for more results.
     pub fn lookup_external(
         &mut self,
         instance: InstanceLiteral,
@@ -487,8 +475,8 @@ impl PolarVirtualMachine {
     /// and bind the symbol to the result value.
     ///
     /// If the value is `None` then the external has no (more)
-    /// results, so we make sure to clear the trailing `TestExternal`
-    /// goal that would otherwise follow.
+    /// results, so we make sure to clear the trailing `Goal::LookupExternal`
+    /// that would otherwise follow.
     pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) {
         // TODO: Open question if we need to pass errors back down to rust.
         // For example what happens if the call asked for a field that doesn't exist?
