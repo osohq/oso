@@ -40,8 +40,7 @@ def load_file(polar):
     """ Load a source file """
 
     def _load_file(f):
-        path = Path(__file__).parent / f
-        polar.load(path)
+        polar.load(f)
 
     return _load_file
 
