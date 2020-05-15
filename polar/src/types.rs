@@ -111,6 +111,12 @@ pub type TermList = Vec<Term>;
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Symbol(pub String);
 
+impl Symbol {
+    pub fn new(name: &str) -> Self {
+        Self(name.to_string())
+    }
+}
+
 impl ToPolarString for Symbol {
     fn to_polar(&self) -> String {
         format!("{}", self.0)

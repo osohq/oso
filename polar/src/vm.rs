@@ -542,7 +542,7 @@ mod tests {
         let two = Term::new(Value::Integer(2));
         let three = Term::new(Value::Integer(3));
         let f1 = Rule {
-            name: "f".to_string(),
+            name: Symbol::new("f"),
             params: vec![one.clone()],
             body: Term::new(Value::Expression(Operation {
                 operator: Operator::And,
@@ -550,7 +550,7 @@ mod tests {
             })),
         };
         let f2 = Rule {
-            name: "f".to_string(),
+            name: Symbol::new("f"),
             params: vec![two.clone()],
             body: Term::new(Value::Expression(Operation {
                 operator: Operator::And,
@@ -558,7 +558,7 @@ mod tests {
             })),
         };
         let rule = GenericRule {
-            name: "f".to_string(),
+            name: Symbol::new("f"),
             rules: vec![f1, f2],
         };
 
@@ -575,15 +575,15 @@ mod tests {
         assert!(vm.is_halted());
 
         let f1 = Term::new(Value::Call(Predicate {
-            name: "f".to_string(),
+            name: Symbol::new("f"),
             args: vec![one.clone()],
         }));
         let f2 = Term::new(Value::Call(Predicate {
-            name: "f".to_string(),
+            name: Symbol::new("f"),
             args: vec![two.clone()],
         }));
         let f3 = Term::new(Value::Call(Predicate {
-            name: "f".to_string(),
+            name: Symbol::new("f"),
             args: vec![three.clone()],
         }));
 
