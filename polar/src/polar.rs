@@ -128,7 +128,8 @@ impl Polar {
         unimplemented!();
     }
 
-    pub fn external_construct_result(&mut self, query: &mut Query, instance_id: u64) {
+    pub fn external_construct_result(&mut self, query: &mut Query, instance_id: Option<u64>) {
+        // if instance_id is None, it means that there was an error on the python side. So just shutdown I guess.
         unimplemented!();
     }
 
@@ -338,7 +339,6 @@ mod tests {
         assert!(qnull(&mut polar, "even(3)"));
         assert!(qeval(&mut polar, "!even(3)"));
     }
-
 
     #[test]
     fn test_and() {

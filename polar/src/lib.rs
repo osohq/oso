@@ -184,6 +184,66 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
     }
 }
 
+#[no_mangle]
+pub extern "C" fn polar_external_call_result(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    call_id: u64,
+    value: *const c_char,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let mut term = None;
+        if !value.is_null() {
+            let s = unsafe { ffi_string!(value) };
+            let t = serde_json::from_str(&s);
+            match t {
+                Ok(t) => term = Some(t),
+                Err(e) => {
+                    set_error(types::PolarError::Serialization(e.to_string()));
+                    return 0;
+                }
+            }
+        }
+        polar.external_call_result(query, call_id, term);
+        1
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::PolarError::Unknown);
+            0
+        }
+    }
+}
+
+// An instance_id of 0 means error.
+#[no_mangle]
+pub extern "C" fn polar_external_construct_result(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    instance_id: u64,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let mut id = None;
+        if instance_id != 0 {
+            id = Some(instance_id);
+        }
+        polar.external_construct_result(query, id);
+        1
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::PolarError::Unknown);
+            0
+        }
+    }
+}
+
 /// Required to free strings properly
 #[no_mangle]
 pub extern "C" fn string_free(s: *mut c_char) {
