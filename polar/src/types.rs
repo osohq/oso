@@ -1,6 +1,25 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub struct VarGenerator {
+    pub i: usize,
+}
+
+impl VarGenerator {
+    pub fn new() -> Self {
+        VarGenerator { i: 0 }
+    }
+    pub fn gen_var(&mut self) -> Term {
+        let t = Term {
+            id: 0,
+            offset: 0,
+            value: Value::Symbol(Symbol(format!("_value_{}", self.i))),
+        };
+        self.i += 1;
+        t
+    }
+}
+
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
 pub enum PolarError {
@@ -27,25 +46,20 @@ pub trait ToPolarString {
     fn to_polar(&self) -> String;
 }
 
-// AST type for polar expressions / rules / etc.
-// Internal knowledge base types.
-// FFI types for passing polar values back and forth.
-// FFI event types.
-// Debugger events.
-//
-
-// @TODO flesh out.
-// Internal only instance
-// interal rep of external class (has fields, was constructed in polar)
-// external only instance (id only)
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct Instance {
-    pub class: String,
-    pub external_id: u64,
+pub struct Dictionary {
     pub fields: HashMap<Symbol, Term>,
 }
 
-impl ToPolarString for Instance {
+impl Dictionary {
+    pub fn new() -> Self {
+        Self {
+            fields: HashMap::new(),
+        }
+    }
+}
+
+impl ToPolarString for Dictionary {
     fn to_polar(&self) -> String {
         let fields = self
             .fields
@@ -53,13 +67,37 @@ impl ToPolarString for Instance {
             .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
             .collect::<Vec<String>>()
             .join(", ");
-        format!("{}{{{}}}", self.class, fields)
+        format!("{{{}}}", fields)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct InstanceLiteral {
+    pub tag: Symbol,
+    pub fields: Dictionary,
+}
+
+impl ToPolarString for InstanceLiteral {
+    fn to_polar(&self) -> String {
+        format!("{}{}", self.tag.to_polar(), self.fields.to_polar())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct ExternalInstance {
+    pub external_id: u64,
+}
+
+impl ToPolarString for ExternalInstance {
+    fn to_polar(&self) -> String {
+        unimplemented!();
     }
 }
 
 // Context stored somewhere by id.
 
 // parser outputs
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Context {
     pub file: String,
@@ -81,7 +119,7 @@ impl ToPolarString for Symbol {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Predicate {
-    pub name: String,
+    pub name: Symbol,
     pub args: TermList,
 }
 
@@ -99,15 +137,19 @@ impl Predicate {
 
 impl ToPolarString for Predicate {
     fn to_polar(&self) -> String {
-        format!(
-            "{}({})",
-            self.name,
-            self.args
-                .iter()
-                .map(|t| t.to_polar())
-                .collect::<Vec<String>>()
-                .join(",")
-        )
+        if self.args.is_empty() {
+            format!("{}", self.name.to_polar())
+        } else {
+            format!(
+                "{}({})",
+                self.name.to_polar(),
+                self.args
+                    .iter()
+                    .map(|t| t.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(",")
+            )
+        }
     }
 }
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -178,8 +220,21 @@ fn to_polar_parens(op: &Operator, t: &Term) -> String {
 impl ToPolarString for Operation {
     fn to_polar(&self) -> String {
         match self.operator {
-            Operator::Dot => format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar(),),
-            Operator::Not => format!("{}{}", "!", self.args[0].to_polar()),
+            Operator::Dot => {
+                if self.args.len() == 2 {
+                    format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar())
+                } else {
+                    format!(
+                        ".({})",
+                        self.args
+                            .iter()
+                            .map(|t| to_polar_parens(&self.operator, t))
+                            .collect::<Vec<String>>()
+                            .join(","),
+                    )
+                }
+            }
+            Operator::Not => format!("{}{}", "!", to_polar_parens(&self.operator, &self.args[0])),
             Operator::Mul => format!(
                 "{}*{}",
                 to_polar_parens(&self.operator, &self.args[0]),
@@ -256,8 +311,10 @@ pub enum Value {
     Integer(i64),
     String(String),
     Boolean(bool),
-    Instance(Instance),
-    Call(Predicate),
+    ExternalInstance(ExternalInstance),
+    InstanceLiteral(InstanceLiteral),
+    Dictionary(Dictionary),
+    Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
     Symbol(Symbol),
     Expression(Operation),
@@ -272,11 +329,13 @@ impl Value {
             Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => f(&self),
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
-            Value::Instance(_) => unimplemented!(),
             Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
             }),
+            Value::InstanceLiteral(_) => unimplemented!(),
+            Value::ExternalInstance(_) => unimplemented!(),
+            Value::Dictionary(_) => unimplemented!(),
         }
     }
 }
@@ -293,7 +352,9 @@ impl ToPolarString for Value {
                     "false"
                 }
             }),
-            Value::Instance(i) => i.to_polar(),
+            Value::InstanceLiteral(i) => i.to_polar(),
+            Value::Dictionary(i) => i.to_polar(),
+            Value::ExternalInstance(i) => i.to_polar(),
             Value::Call(c) => c.to_polar(),
             Value::List(l) => format!(
                 "[{}]",
@@ -362,7 +423,7 @@ impl ToPolarString for Term {
 // Knowledge base internal types.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Rule {
-    pub name: String,
+    pub name: Symbol,
     pub params: TermList,
     pub body: Term,
 }
@@ -381,7 +442,7 @@ impl ToPolarString for Rule {
                 if args.len() == 0 {
                     format!(
                         "{}({});",
-                        self.name,
+                        self.name.to_polar(),
                         self.params
                             .iter()
                             .map(|t| t.to_polar())
@@ -391,7 +452,7 @@ impl ToPolarString for Rule {
                 } else {
                     format!(
                         "{}({}) := {};",
-                        self.name,
+                        self.name.to_polar(),
                         self.params
                             .iter()
                             .map(|t| t.to_polar())
@@ -411,14 +472,13 @@ impl ToPolarString for Rule {
 
 #[derive(Clone)]
 pub struct GenericRule {
-    pub name: String,
+    pub name: Symbol,
     pub rules: Vec<Rule>,
 }
 
 #[derive(Clone)]
 pub struct Class {
-    pub id: i64,
-    pub name: String,
+    pub name: Symbol,
 }
 
 #[derive(Clone)]
@@ -429,8 +489,8 @@ pub enum Type {
 
 #[derive(Default, Clone)]
 pub struct KnowledgeBase {
-    pub types: HashMap<String, Type>,
-    pub rules: HashMap<String, GenericRule>,
+    pub types: HashMap<Symbol, Type>,
+    pub rules: HashMap<Symbol, GenericRule>,
 }
 
 impl KnowledgeBase {
@@ -448,14 +508,21 @@ type Bindings = HashMap<Symbol, Term>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     Done,
+
+    /// Returns: new instance id
     ExternalConstructor {
-        instance: Instance,
+        instance: InstanceLiteral,
     },
+
+    /// Returns: Term
     ExternalCall {
-        call_id: i64,
-        instance_id: i64,
-        class: String,
-        attribute: String,
+        /// Persistent id across all requests for results from the same external call.
+        call_id: u64,
+        /// Id of the external instance to make this call on.
+        instance_id: u64,
+        /// Field name to lookup or function name to call.
+        attribute: Symbol,
+        /// List of arguments to use if this is a method call.
         args: Vec<Term>,
     },
     TestExternal {
@@ -472,7 +539,7 @@ mod tests {
     #[test]
     fn serialize_test() {
         let pred = Predicate {
-            name: "foo".to_owned(),
+            name: Symbol("foo".to_owned()),
             args: vec![Term {
                 id: 2,
                 offset: 0,

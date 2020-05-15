@@ -1,6 +1,5 @@
 /// Helper macros to create AST types
 ///
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::types::*;
@@ -36,12 +35,11 @@ macro_rules! term {
     };
 }
 
-impl<S: AsRef<str>> From<S> for FromHelper<Instance> {
+impl<S: AsRef<str>> From<S> for FromHelper<InstanceLiteral> {
     fn from(other: S) -> Self {
-        Self(Instance {
-            class: other.as_ref().to_string(),
-            external_id: NEXT_ID.fetch_add(1, ORD),
-            fields: HashMap::default(),
+        Self(InstanceLiteral {
+            tag: Symbol(other.as_ref().to_string()),
+            fields: Dictionary::new(),
         })
     }
 }
@@ -96,9 +94,9 @@ impl From<bool> for FromHelper<Value> {
     }
 }
 
-impl From<Instance> for FromHelper<Value> {
-    fn from(other: Instance) -> Self {
-        Self(Value::Instance(other))
+impl From<InstanceLiteral> for FromHelper<Value> {
+    fn from(other: InstanceLiteral) -> Self {
+        Self(Value::InstanceLiteral(other))
     }
 }
 impl From<Predicate> for FromHelper<Value> {

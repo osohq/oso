@@ -11,7 +11,7 @@ pub fn parse_query(src: &str) -> PolarResult<Term> {
         .map_err(|e| PolarError::Parse(e.to_string()))
 }
 
-pub fn parse_file(src: &str) -> PolarResult<Vec<Rule>> {
+pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
     // @TODO: Better Errors
     polar::RulesParser::new()
         .parse(src)
@@ -49,7 +49,7 @@ mod tests {
         assert_eq!(rule.to_polar(), r#"f(x) := g(x);"#);
         let rule = polar::RuleParser::new().parse(r#"f(x);"#).unwrap();
         assert_eq!(rule.to_polar(), r#"f(x);"#);
-        let instance = polar::InstanceParser::new()
+        let instance = polar::InstanceLiteralParser::new()
             .parse(r#"Foo{bar: 1, baz: y, biz: "hi"}"#)
             .unwrap();
         // This won't work. There's no ordering to fields. Need to use sam macros.
@@ -127,7 +127,7 @@ mod tests {
         let f = r#"
         a(1);b(2);c(3);
         "#;
-        let results = parse_file(f).unwrap();
+        let results = parse_rules(f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(1);"#);
         assert_eq!(results[1].to_polar(), r#"b(2);"#);
         assert_eq!(results[2].to_polar(), r#"c(3);"#);
