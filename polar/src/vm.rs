@@ -22,8 +22,9 @@ pub enum Goal {
         value: Term,
     },
     LookupExternal {
-        instance: ExternalInstance,
+        instance: InstanceLiteral,
         field: Term,
+        value: Term,
     },
     Noop,
     Query {
@@ -42,6 +43,17 @@ impl fmt::Display for Goal {
                 fmt,
                 "Lookup({}, {}, {})",
                 dict.to_polar(),
+                field.to_polar(),
+                value.to_polar()
+            ),
+            Goal::LookupExternal {
+                instance,
+                field,
+                value,
+            } => write!(
+                fmt,
+                "LookupExternal({}, {}, {})",
+                instance.to_polar(),
                 field.to_polar(),
                 value.to_polar()
             ),
@@ -120,7 +132,11 @@ impl PolarVirtualMachine {
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { .. } => todo!("isa"),
                 Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
-                Goal::LookupExternal { .. } => todo!("lookup external"),
+                Goal::LookupExternal {
+                    instance,
+                    field,
+                    value,
+                } => return Ok(self.lookup_external(instance, field, value)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
@@ -305,7 +321,14 @@ impl PolarVirtualMachine {
         }
     }
 
-    // pub fn lookup_external(&mut self) {}
+    pub fn lookup_external(
+        &mut self,
+        instance: InstanceLiteral,
+        field: Term,
+        value: Term,
+    ) -> QueryEvent {
+        QueryEvent::Done
+    }
 
     /// Query for the provided term.
     ///
@@ -393,22 +416,41 @@ impl PolarVirtualMachine {
                 let object = args[0].clone();
                 let field = args[1].clone();
                 let value = args[2].clone();
-                if let Value::Call(Predicate { name: field, .. }) = field.value {
-                    match object.value {
-                        Value::Dictionary(dict) => {
-                            self.push_goal(Goal::Lookup { dict, field, value })
-                        }
-                        Value::InstanceLiteral(InstanceLiteral { fields, tag: _ }) => {
-                            self.push_goal(Goal::Lookup {
-                                dict: fields,
+
+                fn field_name(field: Term) -> Symbol {
+                    if let Value::Call(Predicate { name, .. }) = field.value {
+                        name
+                    } else {
+                        panic!("keys must be symbols; received: {:?}", field.value)
+                    }
+                }
+
+                match object.value {
+                    Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
+                        dict,
+                        field: field_name(field),
+                        value,
+                    }),
+                    Value::InstanceLiteral(instance) => {
+                        // Arrive here with an InstanceLiteral
+                        // Look up the tag in kb.types and retrieve an Internal or External class
+                        // For the external case, pass the instance to the External constructor
+
+                        if 1 == 1 {
+                            self.push_goal(Goal::LookupExternal {
+                                instance,
                                 field,
                                 value,
                             })
+                        } else {
+                            self.push_goal(Goal::Lookup {
+                                dict: instance.fields,
+                                field: field_name(field),
+                                value,
+                            })
                         }
-                        _ => panic!("can only perform lookups on dicts and instances")
                     }
-                } else {
-                    panic!("keys must be symbols; received: {:?}", field.value)
+                    _ => panic!("can only perform lookups on dicts and instances"),
                 }
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
