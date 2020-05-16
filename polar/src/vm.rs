@@ -3,6 +3,9 @@ use std::fmt;
 
 use super::types::*;
 
+pub const MAX_CHOICES: usize = 10_000;
+pub const MAX_GOALS: usize = 10_000;
+
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
 pub enum Goal {
@@ -160,11 +163,13 @@ impl PolarVirtualMachine {
 
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) {
+        assert!(self.goals.len() < MAX_GOALS, "too many goals");
         self.goals.push(goal);
     }
 
     /// Push a choice onto the choice stack.
     fn push_choice(&mut self, choice: Choice) {
+        assert!(self.choices.len() < MAX_CHOICES, "too many choices");
         self.choices.push(choice);
     }
 
