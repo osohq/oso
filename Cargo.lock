@@ -529,6 +529,7 @@ dependencies = [
  "cbindgen",
  "lalrpop",
  "lalrpop-util",
+ "lazy_static",
  "permute",
  "proptest",
  "regex",
