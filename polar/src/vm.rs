@@ -148,6 +148,7 @@ impl PolarVirtualMachine {
             }
         }
 
+        eprintln!("⇒ result");
         Ok(QueryEvent::Result {
             bindings: self.bindings(),
         })
@@ -175,7 +176,7 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: &Term) {
-        eprintln!("=> bind {} ← {}", var.to_polar(), value.to_polar());
+        eprintln!("⇒ bind: {} ← {}", var.to_polar(), value.to_polar());
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -249,7 +250,7 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) {
-        eprintln!("{}", "=> backtrack");
+        eprintln!("⇒ backtrack");
         let mut retries = vec![];
         loop {
             match self.choices.pop() {
