@@ -147,7 +147,7 @@ mod tests {
     }
 
     fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Value>> {
-        let mut external_results = vec![Some(Term::new(Value::Integer(1)))];
+        let mut external_results = vec![Term::new(Value::Integer(1))];
         let mut results = vec![];
         loop {
             let event = polar.query(&mut query).unwrap();
@@ -157,16 +157,11 @@ mod tests {
                     results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
                 }
                 QueryEvent::ExternalCall { call_id, .. } => {
-                    if let Some(result) = external_results.pop() {
-                        polar.external_call_result(&mut query, call_id, result)
-                    } else {
-                        polar.external_call_result(&mut query, call_id, None)
-                    }
+                    polar.external_call_result(&mut query, call_id, external_results.pop());
                 }
                 _ => panic!("unexpected event"),
             }
         }
-
         results
     }
 
@@ -365,6 +360,6 @@ mod tests {
     #[test]
     fn test_instance_lookup() {
         let mut polar = Polar::new();
-        assert!(qeval(&mut polar, "x{y: 1}.y = 1"));
+        assert!(qeval(&mut polar, "a{x: 1}.x = 1"));
     }
 }

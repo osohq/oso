@@ -22,10 +22,9 @@ pub enum Goal {
         value: Term,
     },
     LookupExternal {
-        instance: InstanceLiteral,
+        instance_id: u64,
         field: Term,
-        value: Term,
-        call_id: u64,
+        value: Symbol,
     },
     Noop,
     Query {
@@ -48,17 +47,15 @@ impl fmt::Display for Goal {
                 value.to_polar()
             ),
             Goal::LookupExternal {
-                call_id,
-                instance,
+                instance_id,
                 field,
                 value,
             } => write!(
                 fmt,
-                "LookupExternal({}, {}, {}, {})",
-                instance.to_polar(),
+                "LookupExternal({}, {}, {})",
+                instance_id,
                 field.to_polar(),
                 value.to_polar(),
-                call_id
             ),
             Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
             Goal::Unify { left, right } => {
@@ -95,11 +92,14 @@ pub struct PolarVirtualMachine {
     /// Rules and types.
     kb: KnowledgeBase,
 
-    /// For temporary variable names.
-    genvar_counter: usize,
+    /// For temporary variable names, call IDs, etc.
+    counter: usize,
 
-    /// Call ID -> Symbol lookup table.
-    call_ids: HashMap<u64, Symbol>,
+    /// (Instance ID, field name) -> Call ID table.
+    external_lookup_call_ids: HashMap<(u64, Symbol), u64>,
+
+    /// Call ID -> result variable name table.
+    call_id_symbols: HashMap<u64, Symbol>,
 }
 
 // Methods which aren't goals/instructions.
@@ -113,8 +113,9 @@ impl PolarVirtualMachine {
             bindings: vec![],
             choices: vec![],
             kb,
-            genvar_counter: 0,
-            call_ids: HashMap::new(),
+            counter: 0,
+            external_lookup_call_ids: HashMap::new(),
+            call_id_symbols: HashMap::new(),
         }
     }
 
@@ -140,11 +141,10 @@ impl PolarVirtualMachine {
                 Goal::Isa { .. } => todo!("isa"),
                 Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
                 Goal::LookupExternal {
-                    instance,
+                    instance_id,
                     field,
                     value,
-                    call_id,
-                } => return Ok(self.lookup_external(instance, field, value, call_id)),
+                } => return Ok(self.lookup_external(instance_id, field, value)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::Unify { left, right } => self.unify(&left, &right),
@@ -219,11 +219,16 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
+    /// Return a monotonically increasing integer ID.
+    fn id(&mut self) -> u64 {
+        let id = self.counter;
+        self.counter += 1;
+        return id as u64;
+    }
+
     /// Generate a new variable name.
     fn genvar(&mut self, prefix: &str) -> Symbol {
-        let counter = self.genvar_counter;
-        self.genvar_counter += 1;
-        Symbol(format!("_{}_{}", prefix, counter))
+        Symbol(format!("_{}_{}", prefix, self.id()))
     }
 
     /// Return `true` if `var` is a temporary.
@@ -288,13 +293,14 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// A cut operation indicates that no other choices should
-    /// be considered.
-    ///
-    /// This goal implements this by iterating through all
-    /// goals and clearing all other choice branches.
+    /// Remove all alternatives from the last non-trivial choice point.
     fn cut(&mut self) {
-        unimplemented!("cut!");
+        for choice in self.choices.iter_mut().rev() {
+            if !choice.alternatives.is_empty() {
+                choice.alternatives.drain(..);
+                break;
+            }
+        }
     }
 
     /// Halt the VM by clearing all goals and choices.
@@ -318,31 +324,25 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Look up a field's value in an external instance.
-    ///
-    /// Pushes a `Halt` goal onto the stack so the program terminates if we don't get a response.
-    ///
-    /// Also pushes another `Goal::LookupExternal` so that we continue to poll for more results.
-    pub fn lookup_external(
-        &mut self,
-        instance: InstanceLiteral,
-        field: Term,
-        value: Term,
-        call_id: u64,
-    ) -> QueryEvent {
+    /// Return an external call event to look up a field's value
+    /// in an external instance. Push a `Goal::LookupExternal` as
+    /// an alternative on the last choice point to poll for results.
+    pub fn lookup_external(&mut self, instance_id: u64, field: Term, value: Symbol) -> QueryEvent {
         let field_name = field_name(&field);
-        self.append_goals(vec![
-            Goal::Halt,
-            Goal::LookupExternal {
-                call_id,
-                instance,
+        let call_id = self.external_lookup_call_id(instance_id, &field_name, &value);
+        if let Some(choice) = self.choices.last_mut() {
+            choice.alternatives.push(vec![Goal::LookupExternal {
+                instance_id,
                 field,
                 value,
-            },
-        ]);
+            }]);
+        } else {
+            panic!("expected a choice point");
+        }
+
         QueryEvent::ExternalCall {
             call_id,
-            instance_id: 1,
+            instance_id,
             attribute: field_name,
             args: vec![],
         }
@@ -402,117 +402,122 @@ impl PolarVirtualMachine {
                         self.append_goals(alternatives.pop().expect("a choice"));
                         self.push_choice(Choice {
                             alternatives,
-                            retry: Goal::Query { term },
                             bsp: self.bsp(),
+                            retry: Goal::Query { term },
                         });
                     }
                 }
             }
-            Value::Expression(Operation {
-                operator: Operator::And,
-                args,
-            }) => {
-                self.append_goals(
-                    args.iter()
-                        .map(|a| Goal::Query { term: a.clone() })
-                        .collect(),
-                );
-            }
-            Value::Expression(Operation {
-                operator: Operator::Unify,
-                args,
-            }) => {
-                assert_eq!(args.len(), 2);
-                self.push_goal(Goal::Unify {
-                    left: args[0].clone(),
-                    right: args[1].clone(),
-                });
-            }
-            Value::Expression(Operation {
-                operator: Operator::Dot,
-                args,
-            }) => {
-                assert_eq!(args.len(), 3);
-                let object = args[0].clone();
-                let field = args[1].clone();
-                let value = args[2].clone();
+            Value::Expression(Operation { operator, args }) => {
+                match operator {
+                    Operator::And => self.append_goals(
+                        args.iter()
+                            .map(|a| Goal::Query { term: a.clone() })
+                            .collect(),
+                    ),
+                    Operator::Unify => {
+                        assert_eq!(args.len(), 2);
+                        self.push_goal(Goal::Unify {
+                            left: args[0].clone(),
+                            right: args[1].clone(),
+                        });
+                    }
+                    Operator::Dot => {
+                        assert_eq!(args.len(), 3);
+                        let object = args[0].clone();
+                        let field = args[1].clone();
+                        let value = args[2].clone();
 
-                match object.value {
-                    Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
-                        dict,
-                        field: field_name(&field),
-                        value,
-                    }),
-                    Value::InstanceLiteral(instance) => {
-                        // Arrive here with an InstanceLiteral
-                        // Look up the tag in kb.types and retrieve an Internal or External class
-                        // For the external case, pass the instance to the External constructor
-
-                        if 1 == 1 {
-                            let call_id = self.new_call_id(&value);
-                            self.push_goal(Goal::LookupExternal {
-                                instance,
-                                field,
-                                value,
-                                call_id,
-                            })
-                        } else {
-                            self.push_goal(Goal::Lookup {
-                                dict: instance.fields,
+                        match object.value {
+                            Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
+                                dict,
                                 field: field_name(&field),
                                 value,
-                            })
+                            }),
+                            Value::InstanceLiteral(instance) => {
+                                // Arrive here with an InstanceLiteral
+                                // Look up the tag in kb.types and retrieve an Internal or External class
+                                // For the external case, pass the instance to the External constructor
+
+                                if 1 == 1 {
+                                    let instance_id = 1;
+                                    let value = match value {
+                                        Term {
+                                            value: Value::Symbol(value),
+                                            ..
+                                        } => value,
+                                        _ => panic!("bad lookup value: {}", value.to_polar()),
+                                    };
+                                    self.push_goal(Goal::LookupExternal {
+                                        instance_id,
+                                        field,
+                                        value,
+                                    });
+                                } else {
+                                    self.push_goal(Goal::Lookup {
+                                        dict: instance.fields,
+                                        field: field_name(&field),
+                                        value,
+                                    });
+                                }
+                            }
+                            _ => panic!("can only perform lookups on dicts and instances"),
                         }
                     }
-                    _ => panic!("can only perform lookups on dicts and instances"),
+                    _ => todo!("can't't query for expression: {:?}", operator),
                 }
+
+                // Push a choice point so the query is retried on backtracking.
+                self.push_choice(Choice {
+                    alternatives: vec![],
+                    bsp: self.bsp(),
+                    retry: Goal::Query { term },
+                });
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
         }
     }
 
-    fn new_call_id(&mut self, term: &Term) -> u64 {
-        if let Term {
-            value: Value::Symbol(symbol),
-            ..
-        } = term
+    fn external_lookup_call_id(&mut self, instance_id: u64, field: &Symbol, value: &Symbol) -> u64 {
+        if let Some(call_id) = self
+            .external_lookup_call_ids
+            .get(&(instance_id, field.clone()))
         {
-            let call_id = 1;
-            self.call_ids.insert(call_id, symbol.clone());
-            call_id
+            *call_id
         } else {
-            panic!("we sure messed this one up");
+            let call_id = self.id();
+            self.external_lookup_call_ids
+                .insert((instance_id, field.clone()), call_id);
+            self.call_id_symbols.insert(call_id, value.clone());
+            call_id
         }
     }
 
     /// Handle an external result provided by the application.
     ///
-    /// If the value is `Some(_)` then we have a result,
-    /// and bind the symbol to the result value.
-    ///
-    /// If the value is `None` then the external has no (more)
-    /// results, so we make sure to clear the trailing `Goal::LookupExternal`
-    /// that would otherwise follow.
+    /// If the value is `Some(_)` then we have a result, and bind the
+    /// symbol associated with the call ID to the result value. If the
+    /// value is `None` then the external has no (more) results, so we
+    /// backtrack to the choice point left by `Goal::LookupExternal`.
     pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) {
         // TODO: Open question if we need to pass errors back down to rust.
         // For example what happens if the call asked for a field that doesn't exist?
 
-        // Externals are always followed by a halt.
-        assert!(matches!(self.goals.pop(), Some(Goal::Halt)));
-
         if let Some(value) = term {
-            let field = self.call_ids.get(&call_id).cloned();
-            if let Some(field) = field {
-                self.bind(&field, &value);
-            } else {
-                panic!("unregistered call_id");
-            }
+            self.bind(
+                &self
+                    .call_id_symbols
+                    .get(&call_id)
+                    .expect("unregistered external call ID")
+                    .clone(),
+                &value,
+            );
         } else {
-            // No more values, so no further queries to resolve.
-            assert!(matches!(
-                self.goals.pop(),
-                Some(Goal::LookupExternal { call_id: id, .. }) if id == call_id
-            ));
+            // No more results. Clean up, cut out the retry alternative,
+            // and backtrack. TODO: Remove external_lookup_call_ids entry.
+            self.call_id_symbols.remove(&call_id).expect("bad call ID");
+            self.push_goal(Goal::Backtrack);
+            self.push_goal(Goal::Cut);
         }
     }
 
@@ -654,6 +659,7 @@ mod tests {
         };
         let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
         let f1 = Term::new(Value::Call(Predicate {
@@ -727,6 +733,7 @@ mod tests {
             })),
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
         vm.push_goal(Goal::Query {
