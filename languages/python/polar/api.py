@@ -42,11 +42,6 @@ class Foo:
             yield i
 
 
-def this_is_what_you_get():
-    for i in range(0, 5):
-        yield i
-
-
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
