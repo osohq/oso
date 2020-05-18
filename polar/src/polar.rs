@@ -124,10 +124,7 @@ impl Polar {
         query.vm.external_call_result(call_id, value)
     }
 
-    pub fn external_construct_result(&mut self, query: &mut Query, instance_id: Option<u64>) {
-        // if instance_id is None, it means that there was an error on the python side. So just shutdown I guess.
-        unimplemented!();
-    }
+    // @TODO: Get external_id call for returning external instances from python.
 }
 
 #[cfg(test)]
@@ -358,5 +355,4 @@ mod tests {
     //     let mut polar = Polar::new();
     //     assert!(qeval(&mut polar, "a{x: 1}.x = 1"));
     // }
-
 }
