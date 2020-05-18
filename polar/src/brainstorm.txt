@@ -1,0 +1,66 @@
+f(1);
+f(2);
+g(1);
+g(2);
+h(1);
+
+Goal: QUERY AND [f(x), g(x), h(x)]
+
+Retry:
+
+Choices:
+
+Goals:
+
+QUERY f(x)
+RETRY QUERY g(x)
+QUERY g(x)
+RETRY QUERY h(x)
+QUERY h(x)
+
+Eval: QUERY f(x)
+
+Choice: A f(2)
+Goals: UNIFY f(x), f(1)
+       RETRY QUERY g(x)
+       QUERY g(x)
+       RETRY QUERY h(x)
+       QUERY h(x)
+
+Eval: RETRY QUERY g(x)
+Retry: g(x)
+
+Goal: QUERY g(x)
+      ...
+
+Eval: QUERY g(x)
+
+Choice: [g(2)]; [f(2)]
+Goal: UNIFY g(x), g(1)
+
+Eval: RETRY QUERY h(x)
+
+Retry: h(x); g(x)
+
+[g(1), CLEAR RETRY, g(2)]
+
+Choice: []; [g(2)]; [f(2)] (CLEAR RETRY) [k(3)]
+
+Eval: UNIFY h(x), h(1)
+
+Goal stack empty;
+Return result;
+
+Backtrack
+
+Nixed
+
+
+
+Goal: QUERY AND [f(x), g(x), h(x)]
+
+Goal:
+      QUERY f(x)
+      QUERY g(x)
+      QUERY h(x)
+      END_CHOICE

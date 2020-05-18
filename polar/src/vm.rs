@@ -30,6 +30,8 @@ pub enum Goal {
     Noop,
     Query {
         term: Term,
+        retry: bool,
+        clear: bool,
     },
     Unify {
         left: Term,
@@ -59,7 +61,7 @@ impl fmt::Display for Goal {
                 field.to_polar(),
                 value.to_polar(),
             ),
-            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+            Goal::Query { term, retry, clear } => write!(fmt, "Query({}, retry = {}, clear = {})", term.to_polar(), retry, clear),
             Goal::Unify { left, right } => {
                 write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
             }
@@ -76,7 +78,8 @@ pub struct Choice {
     alternatives: Alternatives,
     bsp: usize, // binding stack pointer
     /// The goal that led to these choices.  Goal to retry when exhausting alternatives.
-    retry: Goal,
+    retry: Option<Goal>,
+    clear: bool
 }
 
 type Alternatives = Vec<Goals>;
@@ -145,7 +148,7 @@ impl PolarVirtualMachine {
                     value,
                 } => return Ok(self.lookup_external(call_id, instance_id, field, value)),
                 Goal::Noop => (),
-                Goal::Query { term } => self.query(term),
+                Goal::Query { term, retry, clear} => self.query(term, retry, clear),
                 Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
@@ -268,6 +271,7 @@ impl PolarVirtualMachine {
                     ref mut alternatives,
                     ref bsp,
                     ref retry,
+                    ref clear
                 }) => {
                     // Unwind bindings.
                     self.bindings.drain(*bsp..);
@@ -283,9 +287,17 @@ impl PolarVirtualMachine {
                             alternatives: alternatives.clone(),
                             bsp: *bsp,
                             retry: retry.clone(),
+                            clear: *clear
                         });
                     } else {
-                        retries.push(retry.clone())
+                        if let Some(retry) = retry {
+                            retries.push(retry.clone());
+                            assert!(!clear);
+                        }
+
+                        if *clear {
+                            retries.clear();
+                        }
                     }
                 }
             }
@@ -359,7 +371,7 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: Term) {
+    fn query(&mut self, term: Term, retry: bool, clear: bool) {
         match &term.value {
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
@@ -398,6 +410,8 @@ impl PolarVirtualMachine {
                             // Query for the body clauses.
                             goals.push(Goal::Query {
                                 term: Term::new(body.value.clone()),
+                                retry: false,
+                                clear: false
                             });
 
                             alternatives.push(goals)
@@ -408,7 +422,12 @@ impl PolarVirtualMachine {
                         self.push_choice(Choice {
                             alternatives,
                             bsp: self.bsp(),
-                            retry: Goal::Query { term },
+                            retry: if retry {
+                                Some(Goal::Query { term, retry: false, clear: false })
+                            } else {
+                                None
+                            },
+                            clear
                         });
                     }
                 }
@@ -417,7 +436,8 @@ impl PolarVirtualMachine {
                 match operator {
                     Operator::And => self.append_goals(
                         args.iter()
-                            .map(|a| Goal::Query { term: a.clone() })
+                            .enumerate()
+                            .map(|(i, a)| Goal::Query { term: a.clone(), retry: i > 0, clear: i == 0 })
                             .collect(),
                     ),
                     Operator::Unify => {
@@ -481,7 +501,8 @@ impl PolarVirtualMachine {
                 self.push_choice(Choice {
                     alternatives: vec![],
                     bsp: self.bsp(),
-                    retry: Goal::Query { term },
+                    retry: Some(Goal::Query { term, retry: false, clear: false}),
+                    clear: false
                 });
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
@@ -651,6 +672,8 @@ mod tests {
                 operator: Operator::And,
                 args: vec![],
             })),
+            retry: false,
+            clear: false
         };
         let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
@@ -676,6 +699,8 @@ mod tests {
                 operator: Operator::And,
                 args: vec![f1.clone()],
             })),
+            retry: false,
+            clear: false
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
@@ -687,6 +712,8 @@ mod tests {
                 operator: Operator::And,
                 args: vec![f1.clone(), f2.clone()],
             })),
+            retry: false,
+            clear: false
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
@@ -698,6 +725,8 @@ mod tests {
                 operator: Operator::And,
                 args: vec![f3.clone()],
             })),
+            retry: false,
+            clear: false
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
@@ -710,6 +739,8 @@ mod tests {
                     operator: Operator::And,
                     args: permutation,
                 })),
+                retry: false,
+                clear: false
             });
             assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
             assert!(vm.is_halted());
@@ -726,6 +757,8 @@ mod tests {
                 operator: Operator::Unify,
                 args: vec![one.clone(), one.clone()],
             })),
+            retry: false,
+            clear: false
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
@@ -736,6 +769,8 @@ mod tests {
                 operator: Operator::Unify,
                 args: vec![one.clone(), two.clone()],
             })),
+            retry: false,
+            clear: false
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());

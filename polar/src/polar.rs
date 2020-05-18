@@ -113,6 +113,8 @@ impl Polar {
     pub fn new_query_from_term(&mut self, term: Term) -> Query {
         let query = Goal::Query {
             term: rewrite_term(term.clone(), &mut self.gen),
+            retry: false,
+            clear: false
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -362,4 +364,55 @@ mod tests {
         let mut polar = Polar::new();
         assert!(qeval(&mut polar, "a{x: 1}.x = 1"));
     }
+
+    /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
+    #[test]
+    fn test_retries() {
+        let mut polar = Polar::new();
+        polar
+            .load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x); k(3);")
+            .unwrap();
+
+        assert!(qnull(&mut polar, "k(1)"));
+        assert!(qeval(&mut polar, "k(2)"));
+        assert_eq!(qvar(&mut polar, "k(a)", "a"), vec![value!(2), value!(3)]);
+        assert!(qeval(&mut polar, "k(3)"));
+    }
+
+    #[test]
+    fn test_two_rule_bodies_not_nested() {
+        let mut polar = Polar::new();
+
+        polar
+            .load_str("f(x) := a(x); f(1);")
+            .unwrap();
+
+        assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+    }
+
+    #[test]
+    fn test_two_rule_bodies_nested() {
+        let mut polar = Polar::new();
+
+        polar
+            .load_str("f(x) := a(x); f(1); a(x) := g(x);")
+            .unwrap();
+
+        assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+    }
+
+    #[test]
+    fn test_unify_and() {
+        let mut polar = Polar::new();
+
+        polar
+            .load_str("f(x, y) := a(x), y = 2; a(1); a(3);")
+            .unwrap();
+
+        assert_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
+        assert_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
+    }
+
+    // TODO (dhatch): Clean up goal stack tests for lists.
+    // TODO (dhatch): We can maybe trigger the same behavior for and queries.
 }
