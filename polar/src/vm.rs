@@ -23,6 +23,7 @@ pub enum Goal {
     },
     LookupExternal {
         instance_id: u64,
+        call_id: u64,
         field: Term,
         value: Symbol,
     },
@@ -50,6 +51,7 @@ impl fmt::Display for Goal {
                 instance_id,
                 field,
                 value,
+                ..
             } => write!(
                 fmt,
                 "LookupExternal({}, {}, {})",
@@ -95,9 +97,6 @@ pub struct PolarVirtualMachine {
     /// For temporary variable names, call IDs, etc.
     counter: usize,
 
-    /// (Instance ID, field name) -> Call ID table.
-    external_lookup_call_ids: HashMap<(u64, Symbol), u64>,
-
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
 }
@@ -114,7 +113,6 @@ impl PolarVirtualMachine {
             choices: vec![],
             kb,
             counter: 0,
-            external_lookup_call_ids: HashMap::new(),
             call_id_symbols: HashMap::new(),
         }
     }
@@ -141,10 +139,11 @@ impl PolarVirtualMachine {
                 Goal::Isa { .. } => todo!("isa"),
                 Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
                 Goal::LookupExternal {
+                    call_id,
                     instance_id,
                     field,
                     value,
-                } => return Ok(self.lookup_external(instance_id, field, value)),
+                } => return Ok(self.lookup_external(call_id, instance_id, field, value)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::Unify { left, right } => self.unify(&left, &right),
@@ -327,11 +326,17 @@ impl PolarVirtualMachine {
     /// Return an external call event to look up a field's value
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
-    pub fn lookup_external(&mut self, instance_id: u64, field: Term, value: Symbol) -> QueryEvent {
+    pub fn lookup_external(
+        &mut self,
+        call_id: u64,
+        instance_id: u64,
+        field: Term,
+        value: Symbol,
+    ) -> QueryEvent {
         let field_name = field_name(&field);
-        let call_id = self.external_lookup_call_id(instance_id, &field_name, &value);
         if let Some(choice) = self.choices.last_mut() {
             choice.alternatives.push(vec![Goal::LookupExternal {
+                call_id,
                 instance_id,
                 field,
                 value,
@@ -440,7 +445,9 @@ impl PolarVirtualMachine {
                                 // For the external case, pass the instance to the External constructor
 
                                 if 1 == 1 {
-                                    let instance_id = 1;
+                                    // external case
+                                    let instance_id = 1; // @TODO
+                                    let call_id = self.id();
                                     let value = match value {
                                         Term {
                                             value: Value::Symbol(value),
@@ -448,12 +455,15 @@ impl PolarVirtualMachine {
                                         } => value,
                                         _ => panic!("bad lookup value: {}", value.to_polar()),
                                     };
+                                    self.call_id_symbols.insert(call_id, value.clone());
                                     self.push_goal(Goal::LookupExternal {
+                                        call_id,
                                         instance_id,
                                         field,
                                         value,
                                     });
                                 } else {
+                                    // internal
                                     self.push_goal(Goal::Lookup {
                                         dict: instance.fields,
                                         field: field_name(&field),
@@ -464,7 +474,7 @@ impl PolarVirtualMachine {
                             _ => panic!("can only perform lookups on dicts and instances"),
                         }
                     }
-                    _ => todo!("can't't query for expression: {:?}", operator),
+                    _ => todo!("can't query for expression: {:?}", operator),
                 }
 
                 // Push a choice point so the query is retried on backtracking.
@@ -475,21 +485,6 @@ impl PolarVirtualMachine {
                 });
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
-        }
-    }
-
-    fn external_lookup_call_id(&mut self, instance_id: u64, field: &Symbol, value: &Symbol) -> u64 {
-        if let Some(call_id) = self
-            .external_lookup_call_ids
-            .get(&(instance_id, field.clone()))
-        {
-            *call_id
-        } else {
-            let call_id = self.id();
-            self.external_lookup_call_ids
-                .insert((instance_id, field.clone()), call_id);
-            self.call_id_symbols.insert(call_id, value.clone());
-            call_id
         }
     }
 
@@ -514,7 +509,7 @@ impl PolarVirtualMachine {
             );
         } else {
             // No more results. Clean up, cut out the retry alternative,
-            // and backtrack. TODO: Remove external_lookup_call_ids entry.
+            // and backtrack.
             self.call_id_symbols.remove(&call_id).expect("bad call ID");
             self.push_goal(Goal::Backtrack);
             self.push_goal(Goal::Cut);
