@@ -218,6 +218,22 @@ pub extern "C" fn polar_external_call_result(
     }
 }
 
+#[no_mangle]
+pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar, query_ptr: *mut Query) -> u64 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        polar.get_external_id(query)
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::PolarError::Unknown);
+            0
+        }
+    }
+}
+
 /// Required to free strings properly
 #[no_mangle]
 pub extern "C" fn string_free(s: *mut c_char) {
