@@ -3,26 +3,29 @@ use std::fmt;
 
 use super::types::*;
 
+pub const MAX_CHOICES: usize = 10_000;
+pub const MAX_GOALS: usize = 10_000;
+
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
 pub enum Goal {
     Backtrack,
     Cut,
-    TestExternal {
-        name: Symbol, // POC
-    },
     Halt,
     Isa {
         left: Term,
         right: Term,
     },
     Lookup {
-        instance: InstanceLiteral,
-        field: Term,
+        dict: Dictionary,
+        field: Symbol,
+        value: Term,
     },
     LookupExternal {
-        instance: ExternalInstance,
+        instance_id: u64,
+        call_id: u64,
         field: Term,
+        value: Symbol,
     },
     Noop,
     Query {
@@ -37,12 +40,29 @@ pub enum Goal {
 impl fmt::Display for Goal {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Goal::Unify { left, right } => write!(
+            Goal::Lookup { dict, field, value } => write!(
                 fmt,
-                "Unify {{ left: {}, right: {} }}",
-                left.to_polar(),
-                right.to_polar()
+                "Lookup({}, {}, {})",
+                dict.to_polar(),
+                field.to_polar(),
+                value.to_polar()
             ),
+            Goal::LookupExternal {
+                instance_id,
+                field,
+                value,
+                ..
+            } => write!(
+                fmt,
+                "LookupExternal({}, {}, {})",
+                instance_id,
+                field.to_polar(),
+                value.to_polar(),
+            ),
+            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+            Goal::Unify { left, right } => {
+                write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
+            }
             g => write!(fmt, "{:?}", g),
         }
     }
@@ -74,8 +94,11 @@ pub struct PolarVirtualMachine {
     /// Rules and types.
     kb: KnowledgeBase,
 
-    /// For temporary variable names.
-    genvar_counter: usize,
+    /// For temporary variable names, call IDs, etc.
+    counter: usize,
+
+    /// Call ID -> result variable name table.
+    call_id_symbols: HashMap<u64, Symbol>,
 }
 
 // Methods which aren't goals/instructions.
@@ -89,7 +112,8 @@ impl PolarVirtualMachine {
             bindings: vec![],
             choices: vec![],
             kb,
-            genvar_counter: 0,
+            counter: 0,
+            call_id_symbols: HashMap::new(),
         }
     }
 
@@ -112,29 +136,40 @@ impl PolarVirtualMachine {
                 Goal::Backtrack => self.backtrack(),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
-                Goal::Isa { .. } => unimplemented!("isa"),
-                Goal::Lookup { .. } => unimplemented!("lookup"),
-                Goal::LookupExternal { .. } => unimplemented!("lookup external"),
+                Goal::Isa { .. } => todo!("isa"),
+                Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
+                Goal::LookupExternal {
+                    call_id,
+                    instance_id,
+                    field,
+                    value,
+                } => return Ok(self.lookup_external(call_id, instance_id, field, value)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
-                Goal::TestExternal { name } => return Ok(self.test_external(name)), // POC
                 Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
 
+        eprintln!("⇒ result");
         Ok(QueryEvent::Result {
             bindings: self.bindings(),
         })
     }
 
-    /// Push a choice onto the choice stack.
-    fn push_choice(&mut self, choice: Choice) {
-        self.choices.push(choice);
+    pub fn is_halted(&self) -> bool {
+        self.goals.is_empty() && self.choices.is_empty()
     }
 
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) {
+        assert!(self.goals.len() < MAX_GOALS, "too many goals");
         self.goals.push(goal);
+    }
+
+    /// Push a choice onto the choice stack.
+    fn push_choice(&mut self, choice: Choice) {
+        assert!(self.choices.len() < MAX_CHOICES, "too many choices");
+        self.choices.push(choice);
     }
 
     /// Push multiple goals onto the stack in reverse order.
@@ -145,7 +180,7 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: &Term) {
-        eprintln!("=> bind {:?} ← {:?}", var, value);
+        eprintln!("⇒ bind: {} ← {}", var.to_polar(), value.to_polar());
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -183,11 +218,16 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
+    /// Return a monotonically increasing integer ID.
+    fn id(&mut self) -> u64 {
+        let id = self.counter;
+        self.counter += 1;
+        return id as u64;
+    }
+
     /// Generate a new variable name.
     fn genvar(&mut self, prefix: &str) -> Symbol {
-        let counter = self.genvar_counter;
-        self.genvar_counter += 1;
-        Symbol(format!("_{}_{}", prefix, counter))
+        Symbol(format!("_{}_{}", prefix, self.id()))
     }
 
     /// Return `true` if `var` is a temporary.
@@ -219,7 +259,7 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) {
-        eprintln!("{}", "=> backtrack");
+        eprintln!("⇒ backtrack");
         let mut retries = vec![];
         loop {
             match self.choices.pop() {
@@ -252,40 +292,68 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// A cut operation indicates that no other choices should
-    /// be considered.
-    ///
-    /// This goal implements this by iterating through all
-    /// goals and clearing all other choice branches.
+    /// Remove all alternatives from the last non-trivial choice point.
     fn cut(&mut self) {
-        unimplemented!("cut!");
-    }
-
-    /// Test goal: wait for external input.
-    ///
-    /// Pushes a `Halt` goal onto the stack so the
-    /// program terminates if we don't get a response.
-    ///
-    /// Also pushes another `TestExternal` goal for the same symbol
-    /// so that we continue to poll for more results.
-    fn test_external(&mut self, name: Symbol) -> QueryEvent {
-        self.append_goals(vec![Goal::Halt, Goal::TestExternal { name: name.clone() }]);
-        QueryEvent::TestExternal { name }
-        // TERM CANNOT BE VARIABLE IF SOMETHING PASSES THROUGH FFI
+        for choice in self.choices.iter_mut().rev() {
+            if !choice.alternatives.is_empty() {
+                choice.alternatives.drain(..);
+                break;
+            }
+        }
     }
 
     /// Halt the VM by clearing all goals and choices.
     pub fn halt(&mut self) -> QueryEvent {
         self.goals.clear();
         self.choices.clear();
+        assert!(self.is_halted());
         QueryEvent::Done
     }
 
     // pub fn isa(&mut self) {}
-    // pub fn lookup(&mut self) {}
-    // pub fn lookup_external(&mut self) {}
 
-    /// Query for the provided predicate.
+    pub fn lookup(&mut self, dict: Dictionary, field: Symbol, value: Term) {
+        if let Some(retrieved) = dict.fields.get(&field) {
+            self.push_goal(Goal::Unify {
+                left: retrieved.clone(),
+                right: value,
+            });
+        } else {
+            self.push_goal(Goal::Backtrack);
+        }
+    }
+
+    /// Return an external call event to look up a field's value
+    /// in an external instance. Push a `Goal::LookupExternal` as
+    /// an alternative on the last choice point to poll for results.
+    pub fn lookup_external(
+        &mut self,
+        call_id: u64,
+        instance_id: u64,
+        field: Term,
+        value: Symbol,
+    ) -> QueryEvent {
+        let field_name = field_name(&field);
+        if let Some(choice) = self.choices.last_mut() {
+            choice.alternatives.push(vec![Goal::LookupExternal {
+                call_id,
+                instance_id,
+                field,
+                value,
+            }]);
+        } else {
+            panic!("expected a choice point");
+        }
+
+        QueryEvent::ExternalCall {
+            call_id,
+            instance_id,
+            attribute: field_name,
+            args: vec![],
+        }
+    }
+
+    /// Query for the provided term.
     ///
     /// Uses the knowledge base to get an ordered list of rules.
     /// Creates a choice point over each rule, where each alternative
@@ -328,21 +396,9 @@ impl PolarVirtualMachine {
                             });
 
                             // Query for the body clauses.
-                            match &body.value {
-                                Value::Expression(Operation {
-                                    operator: Operator::And,
-                                    args,
-                                }) => {
-                                    for clause in args.iter() {
-                                        goals.push(Goal::Query {
-                                            term: clause.clone(),
-                                        });
-                                    }
-                                }
-                                _ => panic!(
-                                    "body is not a conjunction, where did you get this rule???"
-                                ),
-                            }
+                            goals.push(Goal::Query {
+                                term: Term::new(body.value.clone()),
+                            });
 
                             alternatives.push(goals)
                         }
@@ -351,41 +407,113 @@ impl PolarVirtualMachine {
                         self.append_goals(alternatives.pop().expect("a choice"));
                         self.push_choice(Choice {
                             alternatives,
-                            retry: Goal::Query { term },
                             bsp: self.bsp(),
+                            retry: Goal::Query { term },
                         });
                     }
                 }
             }
-            _ => todo!("can't query for that kind of value"),
+            Value::Expression(Operation { operator, args }) => {
+                match operator {
+                    Operator::And => self.append_goals(
+                        args.iter()
+                            .map(|a| Goal::Query { term: a.clone() })
+                            .collect(),
+                    ),
+                    Operator::Unify => {
+                        assert_eq!(args.len(), 2);
+                        self.push_goal(Goal::Unify {
+                            left: args[0].clone(),
+                            right: args[1].clone(),
+                        });
+                    }
+                    Operator::Dot => {
+                        assert_eq!(args.len(), 3);
+                        let object = args[0].clone();
+                        let field = args[1].clone();
+                        let value = args[2].clone();
+
+                        match object.value {
+                            Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
+                                dict,
+                                field: field_name(&field),
+                                value,
+                            }),
+                            Value::InstanceLiteral(instance) => {
+                                // Arrive here with an InstanceLiteral
+                                // Look up the tag in kb.types and retrieve an Internal or External class
+                                // For the external case, pass the instance to the External constructor
+
+                                if 1 == 1 {
+                                    // external case
+                                    let instance_id = 1; // @TODO
+                                    let call_id = self.id();
+                                    let value = match value {
+                                        Term {
+                                            value: Value::Symbol(value),
+                                            ..
+                                        } => value,
+                                        _ => panic!("bad lookup value: {}", value.to_polar()),
+                                    };
+                                    self.call_id_symbols.insert(call_id, value.clone());
+                                    self.push_goal(Goal::LookupExternal {
+                                        call_id,
+                                        instance_id,
+                                        field,
+                                        value,
+                                    });
+                                } else {
+                                    // internal
+                                    self.push_goal(Goal::Lookup {
+                                        dict: instance.fields,
+                                        field: field_name(&field),
+                                        value,
+                                    });
+                                }
+                            }
+                            _ => panic!("can only perform lookups on dicts and instances"),
+                        }
+                    }
+                    _ => todo!("can't query for expression: {:?}", operator),
+                }
+
+                // Push a choice point so the query is retried on backtracking.
+                self.push_choice(Choice {
+                    alternatives: vec![],
+                    bsp: self.bsp(),
+                    retry: Goal::Query { term },
+                });
+            }
+            _ => todo!("can't query for: {}", term.value.to_polar()),
         }
     }
 
     /// Handle an external result provided by the application.
     ///
-    /// If the value is `Some(_)` then we have a result,
-    /// and bind the symbol to the result value.
-    ///
-    /// If the value is `None` then the external has no (more)
-    /// results, so we make sure to clear the trailing `TestExternal`
-    /// goal that would otherwise follow.
+    /// If the value is `Some(_)` then we have a result, and bind the
+    /// symbol associated with the call ID to the result value. If the
+    /// value is `None` then the external has no (more) results, so we
+    /// backtrack to the choice point left by `Goal::LookupExternal`.
     pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) {
         // TODO: Open question if we need to pass errors back down to rust.
         // For example what happens if the call asked for a field that doesn't exist?
 
-        // // Externals are always followed by a halt.
-        // assert!(matches!(self.goals.pop(), Some(Goal::Halt)));
-
-        // if let Some(value) = value {
-        //     // We have a value and should bind our variable to it.
-        //     self.bind(name, &Term::new(Value::Integer(value)))
-        // } else {
-        //     // No more values, so no further queries to resolve.
-        //     assert!(matches!(
-        //         self.goals.pop(),
-        //         Some(Goal::TestExternal { name }) if name == name
-        //     ));
-        // }
+        if let Some(value) = term {
+            self.bind(
+                &self
+                    .call_id_symbols
+                    .get(&call_id)
+                    .expect("unregistered external call ID")
+                    .clone(),
+                &value,
+            );
+        } else {
+            // No more results. Clean up, cut out the retry alternative,
+            // and backtrack.
+            self.call_id_symbols.remove(&call_id).expect("bad call ID");
+            self.push_goal(Goal::Backtrack);
+            self.push_goal(Goal::Cut);
+        }
     }
 
     /// Called with the result of an external construct. The instance id
@@ -488,6 +616,170 @@ impl PolarVirtualMachine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use permute::permute;
+
+    #[test]
+    fn and_expression() {
+        let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
+        let three = Term::new(Value::Integer(3));
+        let f1 = Rule {
+            name: Symbol::new("f"),
+            params: vec![one.clone()],
+            body: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![],
+            })),
+        };
+        let f2 = Rule {
+            name: Symbol::new("f"),
+            params: vec![two.clone()],
+            body: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![],
+            })),
+        };
+        let rule = GenericRule {
+            name: Symbol::new("f"),
+            rules: vec![f1, f2],
+        };
+
+        let mut kb = KnowledgeBase::new();
+        kb.rules.insert(rule.name.clone(), rule);
+        let goal = Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![],
+            })),
+        };
+        let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        let f1 = Term::new(Value::Call(Predicate {
+            name: Symbol::new("f"),
+            args: vec![one.clone()],
+        }));
+        let f2 = Term::new(Value::Call(Predicate {
+            name: Symbol::new("f"),
+            args: vec![two.clone()],
+        }));
+        let f3 = Term::new(Value::Call(Predicate {
+            name: Symbol::new("f"),
+            args: vec![three.clone()],
+        }));
+
+        // Querying for f(1)
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![f1.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Querying for f(1), f(2)
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![f1.clone(), f2.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Querying for f(3)
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![f3.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Querying for f(1), f(2), f(3)
+        let parts = vec![f1, f2, f3];
+        for permutation in permute(parts) {
+            vm.push_goal(Goal::Query {
+                term: Term::new(Value::Expression(Operation {
+                    operator: Operator::And,
+                    args: permutation,
+                })),
+            });
+            assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+            assert!(vm.is_halted());
+        }
+    }
+
+    #[test]
+    fn unify_expression() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::Unify,
+                args: vec![one.clone(), one.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        vm.push_goal(Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::Unify,
+                args: vec![one.clone(), two.clone()],
+            })),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+    }
+
+    #[test]
+    fn lookup() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let x = Symbol("x".to_string());
+
+        // Lookup with correct value
+        let one = Value::Integer(1);
+        let mut dict = Dictionary::new();
+        dict.fields.insert(x.clone(), Term::new(one.clone()));
+        vm.push_goal(Goal::Lookup {
+            dict: dict.clone(),
+            field: x.clone(),
+            value: Term::new(one.clone()),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(vm.is_halted());
+
+        // Lookup with incorrect value
+        let two = Value::Integer(2);
+        vm.push_goal(Goal::Lookup {
+            dict: dict.clone(),
+            field: x.clone(),
+            value: Term::new(two.clone()),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // Lookup with unbound value
+        let y = Symbol("y".to_string());
+        vm.push_goal(Goal::Lookup {
+            dict,
+            field: x.clone(),
+            value: Term::new(Value::Symbol(y.clone())),
+        });
+        assert!(
+            matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.get(&y).unwrap().value == one)
+        );
+        assert!(vm.is_halted());
+    }
 
     #[test]
     fn bind() {

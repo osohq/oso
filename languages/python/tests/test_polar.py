@@ -28,3 +28,7 @@ def test_data_conversions(polar, qvar):
     assert qvar("b(x)", "x", one=True) == "two"
     assert qvar("c(x)", "x", one=True)
     assert qvar("d(x)", "x", one=True) == [1, "two", True]
+
+
+def test_external(polar, qvar):
+    assert qvar("Foo{something: 100}.bar = x", "x") == [0, 1, 2, 3, 4]

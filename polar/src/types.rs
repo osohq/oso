@@ -71,6 +71,14 @@ impl ToPolarString for Dictionary {
     }
 }
 
+pub fn field_name(field: &Term) -> Symbol {
+    if let Value::Call(Predicate { name, .. }) = &field.value {
+        name.clone()
+    } else {
+        panic!("keys must be symbols; received: {:?}", field.value)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
@@ -110,6 +118,12 @@ pub type TermList = Vec<Term>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct Symbol(pub String);
+
+impl Symbol {
+    pub fn new(name: &str) -> Self {
+        Self(name.to_string())
+    }
+}
 
 impl ToPolarString for Symbol {
     fn to_polar(&self) -> String {
@@ -525,9 +539,6 @@ pub enum QueryEvent {
         /// List of arguments to use if this is a method call.
         args: Vec<Term>,
     },
-    TestExternal {
-        name: Symbol, // POC
-    },
     Result {
         bindings: Bindings,
     },
@@ -550,5 +561,29 @@ mod tests {
             serde_json::to_string(&pred).unwrap(),
             r#"{"name":"foo","args":[{"id":2,"offset":0,"value":{"Integer":0}}]}"#
         );
+        let event = QueryEvent::ExternalCall {
+            call_id: 2,
+            instance_id: 3,
+            attribute: Symbol::new("foo"),
+            args: vec![
+                Term {
+                    id: 2,
+                    offset: 0,
+                    value: Value::Integer(0),
+                },
+                Term {
+                    id: 3,
+                    offset: 0,
+                    value: Value::String("hello".to_string()),
+                },
+            ],
+        };
+        eprintln!("{}", serde_json::to_string(&event).unwrap());
+        let term = Term {
+            id: 0,
+            offset: 0,
+            value: Value::Integer(1),
+        };
+        eprintln!("{}", serde_json::to_string(&term).unwrap())
     }
 }

@@ -125,17 +125,12 @@ impl Polar {
     }
 
     pub fn external_call_result(&mut self, query: &mut Query, call_id: u64, value: Option<Term>) {
-        unimplemented!();
+        query.vm.external_call_result(call_id, value)
     }
 
-    pub fn external_construct_result(&mut self, query: &mut Query, instance_id: u64) {
+    pub fn external_construct_result(&mut self, query: &mut Query, instance_id: Option<u64>) {
+        // if instance_id is None, it means that there was an error on the python side. So just shutdown I guess.
         unimplemented!();
-    }
-
-    #[cfg(test)]
-    pub fn new_query_from_external(&self, name: Symbol) -> Query {
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Goal::TestExternal { name }]);
-        Query { vm, done: false }
     }
 }
 
@@ -152,19 +147,21 @@ mod tests {
     }
 
     fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Value>> {
+        let mut external_results = vec![Term::new(Value::Integer(1))];
         let mut results = vec![];
         loop {
             let event = polar.query(&mut query).unwrap();
             match event {
                 QueryEvent::Done => break,
-                QueryEvent::TestExternal { .. } => panic!("no external call"),
                 QueryEvent::Result { bindings } => {
                     results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
+                }
+                QueryEvent::ExternalCall { call_id, .. } => {
+                    polar.external_call_result(&mut query, call_id, external_results.pop());
                 }
                 _ => panic!("unexpected event"),
             }
         }
-
         results
     }
 
@@ -264,7 +261,7 @@ mod tests {
             "g(1)",
             "g(2)",
             "h(2)",
-            "k(x) := f(x), h(x), g(x)",
+            "k(x) := f(x), g(x), h(x)",
         ];
 
         let mut i = 0;
@@ -339,24 +336,30 @@ mod tests {
         assert!(qeval(&mut polar, "!even(3)"));
     }
 
-    //     #[test]
-    //     fn test_external() {
-    //         let a = Symbol("a".to_string());
-    //         let mut polar = Polar::new();
-    //         let mut query = polar.new_query_from_external(a.clone());
+    #[test]
+    fn test_and() {
+        let mut polar = Polar::new();
+        polar.load_str("f(1); f(2);").unwrap();
+        assert!(qeval(&mut polar, "f(1), f(2)"));
+        assert!(qnull(&mut polar, "f(1), f(2), f(3)"));
+    }
 
-    //         let mut externals = vec![1, 2, 3];
-    //         let mut results = vec![];
-    //         loop {
-    //             let event = polar.query(&mut query).unwrap();
-    //             match event {
-    //                 QueryEvent::Done => break,
-    //                 QueryEvent::Result { bindings } => {
-    //                     results.push(bindings.get(&a).unwrap().clone());
-    //                 }
-    //                 _ => (),
-    //             }
-    //         }
-    //         assert_eq!(result_values(results), vec![value!(1)]);
-    //     }
+    #[test]
+    fn test_equality() {
+        let mut polar = Polar::new();
+        assert!(qeval(&mut polar, "1 = 1"));
+        assert!(qnull(&mut polar, "1 = 2"));
+    }
+
+    #[test]
+    fn test_lookup() {
+        let mut polar = Polar::new();
+        assert!(qeval(&mut polar, "{x: 1}.x = 1"));
+    }
+
+    #[test]
+    fn test_instance_lookup() {
+        let mut polar = Polar::new();
+        assert!(qeval(&mut polar, "a{x: 1}.x = 1"));
+    }
 }

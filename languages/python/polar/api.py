@@ -22,7 +22,9 @@ def to_python(v):
 def to_polar(v):
     """ Convert python values to polar terms """
     if isinstance(v, int):
-        return {"Integer": v}
+        val = {"Integer": v}
+        term = {"id": 0, "offset": 0, "value": val}
+        return term
     # TODO
     return None
 
@@ -31,10 +33,18 @@ class PolarException(Exception):
     pass
 
 
+def this_is_what_you_get():
+    for i in range(0, 5):
+        yield i
+
+
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
         self.loaded_files = {}
+        self.next_instance_id = 1
+        self.instances = {}
+        self.calls = {}
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -75,6 +85,39 @@ class Polar:
 
             kind = [*event][0]
             data = event[kind]
+
+            if kind == "ExternalConstructor":
+                # instance = data["instance"]
+                lib.polar_external_construct_result(
+                    self.polar, query, self.next_instance_id
+                )
+                self.next_instance_id += 1
+
+            if kind == "ExternalCall":
+                call_id = data["call_id"]
+                # instance_id = data["instance_id"]
+                # attribute = data["attribute"]
+                # args = [to_python(arg) for arg in data["args"]]
+
+                if call_id not in self.calls:
+                    self.calls[call_id] = this_is_what_you_get()
+
+                try:
+                    val = next(self.calls[call_id])
+                    term = to_polar(val)
+                    msg = json.dumps(term)
+                    c_str = ffi.new("char[]", msg.encode())
+                    result = lib.polar_external_call_result(
+                        self.polar, query, call_id, c_str
+                    )
+                    if result == 0:
+                        self._raise_error()
+                except StopIteration:
+                    result = lib.polar_external_call_result(
+                        self.polar, query, call_id, ffi.NULL
+                    )
+                    if result == 0:
+                        self._raise_error()
 
             if kind == "Result":
                 yield {k: to_python(v) for k, v in data["bindings"].items()}
