@@ -76,6 +76,7 @@ impl Iterator for Query {
     }
 }
 
+#[derive(Default)]
 pub struct Polar {
     pub kb: KnowledgeBase,
     pub gen: VarGenerator,
@@ -112,7 +113,7 @@ impl Polar {
 
     pub fn new_query_from_term(&mut self, term: Term) -> Query {
         let query = Goal::Query {
-            term: rewrite_term(term.clone(), &mut self.gen),
+            term: rewrite_term(term, &mut self.gen),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -128,7 +129,7 @@ impl Polar {
         query.vm.external_call_result(call_id, value)
     }
 
-    pub fn external_construct_result(&mut self, query: &mut Query, instance_id: Option<u64>) {
+    pub fn external_construct_result(&mut self, _query: &mut Query, _instance_id: Option<u64>) {
         // if instance_id is None, it means that there was an error on the python side. So just shutdown I guess.
         unimplemented!();
     }
@@ -141,10 +142,6 @@ mod tests {
 
     use super::*;
     use permute::permute;
-
-    fn result_values(results: Vec<Term>) -> Vec<Value> {
-        results.into_iter().map(|t| t.value).collect()
-    }
 
     fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Value>> {
         let mut external_results = vec![Term::new(Value::Integer(1))];
@@ -172,7 +169,7 @@ mod tests {
 
     fn qnull(polar: &mut Polar, query_str: &str) -> bool {
         let query = polar.new_query(query_str).unwrap();
-        query_results(polar, query).len() == 0
+        query_results(polar, query).is_empty()
     }
 
     fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
@@ -264,8 +261,7 @@ mod tests {
             "k(x) := f(x), g(x), h(x)",
         ];
 
-        let mut i = 0;
-        for permutation in permute(parts) {
+        for (i, permutation) in permute(parts).into_iter().enumerate() {
             let mut polar = Polar::new();
 
             let mut joined = permutation.join(";");
@@ -290,7 +286,6 @@ mod tests {
                 &permutation
             );
 
-            i += 1;
             println!("permute: {}", i);
         }
     }
@@ -321,7 +316,7 @@ mod tests {
     }
 
     //#[test]
-    fn test_not() {
+    fn _test_not() {
         let mut polar = Polar::new();
         polar.load_str("odd(1); even(2);").unwrap();
         assert!(qeval(&mut polar, "odd(1)"));

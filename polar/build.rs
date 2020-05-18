@@ -14,7 +14,7 @@ fn main() {
         .with_no_includes()
         .with_item_prefix("polar_")
         .generate()
-        .map(|res| Some(res))
+        .map(Some)
         .or_else(|err| {
             // Continue on syntax errors
             if let cbindgen::Error::ParseSyntaxError { .. } = err {
@@ -26,5 +26,5 @@ fn main() {
             }
         })
         .expect("Unable to generate bindings")
-        .and_then(|res| Some(res.write_to_file("polar.h")));
+        .map(|res| res.write_to_file("polar.h"));
 }
