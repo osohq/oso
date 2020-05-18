@@ -99,7 +99,7 @@ pub struct ExternalInstance {
 
 impl ToPolarString for ExternalInstance {
     fn to_polar(&self) -> String {
-        unimplemented!();
+        format!("^{{id: {}}}", self.external_id)
     }
 }
 
@@ -169,6 +169,7 @@ impl ToPolarString for Predicate {
 }
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Operator {
+    Make,
     Dot,
     Not,
     Mul,
@@ -188,6 +189,7 @@ pub enum Operator {
 
 pub fn op_precedence(op: Operator) -> i32 {
     match op {
+        Operator::Make => 9,
         Operator::Dot => 8,
         Operator::Not => 7,
         Operator::Mul => 6,
@@ -234,6 +236,14 @@ fn to_polar_parens(op: Operator, t: &Term) -> String {
 impl ToPolarString for Operation {
     fn to_polar(&self) -> String {
         match self.operator {
+            Operator::Make => format!(
+                "make({})",
+                self.args
+                    .iter()
+                    .map(|t| to_polar_parens(&self.operator, t))
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
             Operator::Dot => {
                 if self.args.len() == 2 {
                     format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar())
@@ -326,7 +336,8 @@ pub enum Value {
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
-    InstanceLiteral(InstanceLiteral),
+    InstanceLiteral(InstanceLiteral), // Parsed, don't know what kind it is yet.
+    ExternalInstanceLiteral(InstanceLiteral), // Used in rewrite for constructors.
     Dictionary(Dictionary),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
@@ -349,6 +360,7 @@ impl Value {
             }),
             Value::InstanceLiteral(_) => unimplemented!(),
             Value::ExternalInstance(_) => unimplemented!(),
+            Value::ExternalInstanceLiteral(_) => unimplemented!(),
             Value::Dictionary(_) => unimplemented!(),
         }
     }
@@ -367,6 +379,7 @@ impl ToPolarString for Value {
                 }
             }
             Value::InstanceLiteral(i) => i.to_polar(),
+            Value::ExternalInstanceLiteral(i) => format!("^{}", i.to_polar()),
             Value::Dictionary(i) => i.to_polar(),
             Value::ExternalInstance(i) => i.to_polar(),
             Value::Call(c) => c.to_polar(),
@@ -524,7 +537,9 @@ pub enum QueryEvent {
     Done,
 
     /// Returns: new instance id
+    // @TODO: rename this to MakeExternal
     ExternalConstructor {
+        instance_id: u64,
         instance: InstanceLiteral,
     },
 

@@ -85,6 +85,7 @@ pub fn walk_indexed<F>(
                 index.pop();
             }
         }
+        _ => todo!(),
     };
     f(term, index, insert_point)
 }
@@ -104,12 +105,11 @@ fn and_wrap(a: Term, b: Term) -> Term {
 /// Checks if the expression needs to be rewritten.
 /// If so, returns a tuple of the rewritten expression and the generated symbol to replace it with.
 fn rewrite(term: &mut Term, gen: &mut VarGenerator) -> Option<(Term, Term)> {
-    if let Value::Expression(Operation {
-        operator: Operator::Dot,
-        args: lookup_args,
-    }) = &term.value
-    {
-        if lookup_args.len() == 2 {
+    match &term.value {
+        Value::Expression(Operation {
+            operator: Operator::Dot,
+            args: lookup_args,
+        }) if lookup_args.len() == 2 => {
             let mut lookup_args = lookup_args.clone();
             let symbol = gen.gen_var();
             lookup_args.push(symbol.clone());
@@ -121,10 +121,33 @@ fn rewrite(term: &mut Term, gen: &mut VarGenerator) -> Option<(Term, Term)> {
                 id: 0,
                 offset: 0,
             };
-            return Some((lookup, symbol));
+            Some((lookup, symbol))
         }
+        Value::InstanceLiteral(literal) => {
+            let external_id = 0; // do this
+            let external_instance = Term {
+                value: Value::ExternalInstance(ExternalInstance { external_id }),
+                id: 0,
+                offset: 0,
+            };
+            let external_instance_literal = Term {
+                value: Value::ExternalInstanceLiteral(literal.clone()),
+                id: 0,
+                offset: 0,
+            };
+            let make_args = vec![external_instance_literal, external_instance.clone()];
+            let make = Term {
+                value: Value::Expression(Operation {
+                    operator: Operator::Make,
+                    args: make_args,
+                }),
+                id: 0,
+                offset: 0,
+            };
+            Some((make, external_instance))
+        }
+        _ => None,
     }
-    None
 }
 
 pub fn rewrite_term(mut term: Term, gen: &mut VarGenerator) -> Term {
@@ -221,5 +244,11 @@ mod tests {
         assert_eq!(term.to_polar(), "!{x: a.b}");
         let rewritten = rewrite_term(term, &mut gen);
         assert_eq!(rewritten.to_polar(), "!(.(a,b,_value_4),{x: _value_4})");
+
+        let term = parse_query("Foo{x: 1}").unwrap();
+        assert_eq!(term.to_polar(), "Foo{x: 1}");
+        let rewritten = rewrite_term(term, &mut gen);
+        assert_eq!(rewritten.to_polar(), "make(^Foo{x: 1},^{id: 0}),^{id: 0}");
+        // @TODO: Make this reparseable.
     }
 }
