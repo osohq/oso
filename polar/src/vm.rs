@@ -423,7 +423,7 @@ impl PolarVirtualMachine {
                             alternatives,
                             bsp: self.bsp(),
                             retry: if retry {
-                                Some(Goal::Query { term, retry: false, clear: false })
+                                Some(Goal::Query { term, retry, clear })
                             } else {
                                 None
                             },
@@ -501,8 +501,8 @@ impl PolarVirtualMachine {
                 self.push_choice(Choice {
                     alternatives: vec![],
                     bsp: self.bsp(),
-                    retry: Some(Goal::Query { term, retry: false, clear: false}),
-                    clear: false
+                    retry: if retry { Some(Goal::Query { term, retry, clear }) } else { None },
+                    clear
                 });
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
