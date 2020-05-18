@@ -126,6 +126,9 @@ impl Polar {
     }
 
     // @TODO: Get external_id call for returning external instances from python.
+    pub fn get_external_id(&mut self, query: &mut Query) -> u64 {
+        query.vm.id()
+    }
 }
 
 #[cfg(test)]

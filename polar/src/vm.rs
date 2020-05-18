@@ -119,6 +119,10 @@ impl PolarVirtualMachine {
         }
     }
 
+    pub fn id(&mut self) -> u64 {
+        self.kb.id()
+    }
+
     /// Run the virtual machine. While there are goals on the stack,
     /// pop them off and execute them one at at time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
@@ -433,7 +437,7 @@ impl PolarVirtualMachine {
                                 value,
                             }),
                             Value::ExternalInstance(ExternalInstance { instance_id }) => {
-                                let call_id = self.kb.id();
+                                let call_id = self.id();
                                 let value = match value {
                                     Term {
                                         value: Value::Symbol(value),
