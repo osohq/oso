@@ -4,8 +4,6 @@ from _polar_lib import ffi, lib
 
 from pathlib import Path
 
-from dataclasses import dataclass
-
 
 def to_python(v):
     """ Convert polar terms to python values """
@@ -35,12 +33,12 @@ class PolarException(Exception):
     pass
 
 
-@dataclass
 class Foo:
-    start_at: int = 0
+    def __init__(self, start=0):
+        self.start = start
 
-    def call_me(self):
-        for i in range(self.start_at, self.start_at + 5):
+    def call_me(self, end):
+        for i in range(self.start, end):
             yield i
 
 
@@ -127,7 +125,6 @@ class Polar:
 
                 if call_id not in calls:
                     instance = instances[instance_id]
-                    assert len(args) == 0
                     call = getattr(instance, attribute)(*args)
                     calls[call_id] = call
 
