@@ -1,26 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Default)]
-pub struct VarGenerator {
-    pub i: usize,
-}
-
-impl VarGenerator {
-    pub fn new() -> Self {
-        VarGenerator { i: 0 }
-    }
-    pub fn gen_var(&mut self) -> Term {
-        let t = Term {
-            id: 0,
-            offset: 0,
-            value: Value::Symbol(Symbol(format!("_value_{}", self.i))),
-        };
-        self.i += 1;
-        t
-    }
-}
-
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
 pub enum PolarError {
@@ -94,12 +74,12 @@ impl ToPolarString for InstanceLiteral {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ExternalInstance {
-    pub external_id: u64,
+    pub instance_id: u64,
 }
 
 impl ToPolarString for ExternalInstance {
     fn to_polar(&self) -> String {
-        format!("^{{id: {}}}", self.external_id)
+        format!("^{{id: {}}}", self.instance_id)
     }
 }
 
@@ -518,6 +498,9 @@ pub enum Type {
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
+
+    // For temporary variable names, call IDs, instance IDs, symbols, etc.
+    counter: usize,
 }
 
 impl KnowledgeBase {
@@ -525,6 +508,23 @@ impl KnowledgeBase {
         Self {
             types: HashMap::new(),
             rules: HashMap::new(),
+            counter: 1,
+        }
+    }
+
+    /// Return a monotonically increasing integer ID.
+    pub fn id(&mut self) -> u64 {
+        let id = self.counter;
+        self.counter += 1;
+        return id as u64;
+    }
+
+    /// Generate a new symbol.
+    pub fn gensym(&mut self, prefix: &str) -> Symbol {
+        if prefix.chars().nth(0) == Some('_') {
+            Symbol(format!("{}_{}", prefix, self.id()))
+        } else {
+            Symbol(format!("_{}_{}", prefix, self.id()))
         }
     }
 }
@@ -538,7 +538,7 @@ pub enum QueryEvent {
 
     /// Returns: new instance id
     // @TODO: rename this to MakeExternal
-    ExternalConstructor {
+    MakeExternal {
         instance_id: u64,
         instance: InstanceLiteral,
     },
@@ -599,6 +599,21 @@ mod tests {
             offset: 0,
             value: Value::Integer(1),
         };
-        eprintln!("{}", serde_json::to_string(&term).unwrap())
+        eprintln!("{}", serde_json::to_string(&term).unwrap());
+        let mut fields = HashMap::new();
+        fields.insert(Symbol::new("hello"), Term::new(Value::Integer(1234)));
+        fields.insert(
+            Symbol::new("world"),
+            Term::new(Value::String("something".to_owned())),
+        );
+        let literal = InstanceLiteral {
+            tag: Symbol::new("Foo"),
+            fields: Dictionary { fields },
+        };
+        let event = QueryEvent::MakeExternal {
+            instance_id: 12345,
+            instance: literal,
+        };
+        eprintln!("{}", serde_json::to_string(&event).unwrap())
     }
 }
