@@ -27,6 +27,10 @@ pub enum Goal {
         field: Term,
         value: Symbol,
     },
+    MakeExternal {
+        literal: InstanceLiteral,
+        external_id: u64,
+    },
     Noop,
     Query {
         term: Term,
@@ -144,6 +148,10 @@ impl PolarVirtualMachine {
                     field,
                     value,
                 } => return Ok(self.lookup_external(call_id, instance_id, field, value)),
+                Goal::MakeExternal {
+                    literal,
+                    external_id,
+                } => return Ok(self.make_external(literal, external_id)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::Unify { left, right } => self.unify(&left, &right),
@@ -353,6 +361,13 @@ impl PolarVirtualMachine {
         }
     }
 
+    pub fn make_external(&mut self, literal: InstanceLiteral, external_id: u64) -> QueryEvent {
+        QueryEvent::ExternalConstructor {
+            instance_id: external_id,
+            instance: literal,
+        }
+    }
+
     /// Query for the provided term.
     ///
     /// Uses the knowledge base to get an ordered list of rules.
@@ -473,6 +488,31 @@ impl PolarVirtualMachine {
                             }
                             _ => panic!("can only perform lookups on dicts and instances"),
                         }
+                    }
+                    Operator::Make => {
+                        assert_eq!(args.len(), 3);
+                        let literal = args[0].clone();
+                        let external = args[1].clone();
+
+                        let literal = match literal.value {
+                            Value::ExternalInstanceLiteral(instance_literal) => instance_literal,
+                            _ => panic!("Wasn't rewritten or something?"),
+                        };
+
+                        let external_id = match external.value {
+                            Value::ExternalInstance(ExternalInstance { external_id }) => {
+                                external_id
+                            }
+                            _ => panic!("Can only make external instances."),
+                        };
+
+                        // @todo, see if we have one.
+                        //      just bind it
+                        // else
+                        self.push_goal(Goal::MakeExternal {
+                            literal,
+                            external_id,
+                        });
                     }
                     _ => todo!("can't query for expression: {:?}", operator),
                 }
