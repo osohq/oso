@@ -148,6 +148,7 @@ impl PolarVirtualMachine {
                     literal,
                     instance_id,
                 } => return Ok(self.make_external(literal, instance_id)),
+
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::Unify { left, right } => self.unify(&left, &right),
@@ -329,7 +330,6 @@ impl PolarVirtualMachine {
             Value::Call(Predicate { name, args }) => (name, args),
             _ => panic!("call must be a predicate"),
         };
-
         if let Some(choice) = self.choices.last_mut() {
             choice.alternatives.push(vec![Goal::LookupExternal {
                 call_id,
@@ -353,6 +353,7 @@ impl PolarVirtualMachine {
         QueryEvent::MakeExternal {
             instance_id,
             instance: literal,
+
         }
     }
 
@@ -458,6 +459,7 @@ impl PolarVirtualMachine {
                                     field,
                                     value,
                                 });
+
                             }
                             _ => panic!("can only perform lookups on dicts and instances"),
                         }

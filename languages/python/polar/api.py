@@ -46,6 +46,9 @@ class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
         self.loaded_files = {}
+        self.next_instance_id = 1
+        self.instances = {}
+        self.calls = {}
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.

@@ -358,4 +358,5 @@ mod tests {
     //     let mut polar = Polar::new();
     //     assert!(qeval(&mut polar, "a{x: 1}.x = 1"));
     // }
+
 }
