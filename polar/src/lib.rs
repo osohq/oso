@@ -227,7 +227,11 @@ pub extern "C" fn polar_external_construct_result(
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
-        let id = if instance_id != 0 { Some(instance_id) } else { None };
+        let id = if instance_id != 0 {
+            Some(instance_id)
+        } else {
+            None
+        };
         polar.external_construct_result(query, id);
         1
     });

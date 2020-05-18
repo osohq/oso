@@ -215,8 +215,7 @@ pub struct Operation {
 fn has_lower_pred(op: Operator, t: &Term) -> bool {
     match t.value {
         Value::Expression(Operation {
-            operator: other,
-            ..
+            operator: other, ..
         }) => op_precedence(op) > op_precedence(other),
         _ => false,
     }
