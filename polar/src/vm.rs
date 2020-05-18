@@ -8,10 +8,13 @@ pub const MAX_GOALS: usize = 10_000;
 
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
+#[allow(clippy::large_enum_variant)]
+#[allow(dead_code)]
 pub enum Goal {
     Backtrack,
     Cut,
     Halt,
+    #[allow(dead_code)]
     Isa {
         left: Term,
         right: Term,
@@ -229,7 +232,7 @@ impl PolarVirtualMachine {
 
     /// Return `true` if `var` is a temporary.
     fn is_temporary_var(&self, name: &Symbol) -> bool {
-        name.0.starts_with("_")
+        name.0.starts_with('_')
     }
 
     /// Generate a fresh set of variables for a term
@@ -628,6 +631,7 @@ mod tests {
     use permute::permute;
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn and_expression() {
         let one = Term::new(Value::Integer(1));
         let two = Term::new(Value::Integer(2));
@@ -668,15 +672,15 @@ mod tests {
 
         let f1 = Term::new(Value::Call(Predicate {
             name: Symbol::new("f"),
-            args: vec![one.clone()],
+            args: vec![one],
         }));
         let f2 = Term::new(Value::Call(Predicate {
             name: Symbol::new("f"),
-            args: vec![two.clone()],
+            args: vec![two],
         }));
         let f3 = Term::new(Value::Call(Predicate {
             name: Symbol::new("f"),
-            args: vec![three.clone()],
+            args: vec![three],
         }));
 
         // Querying for f(1)
@@ -743,7 +747,7 @@ mod tests {
         vm.push_goal(Goal::Query {
             term: Term::new(Value::Expression(Operation {
                 operator: Operator::Unify,
-                args: vec![one.clone(), two.clone()],
+                args: vec![one, two],
             })),
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
@@ -772,7 +776,7 @@ mod tests {
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
             field: x.clone(),
-            value: Term::new(two.clone()),
+            value: Term::new(two),
         });
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
@@ -781,7 +785,7 @@ mod tests {
         let y = Symbol("y".to_string());
         vm.push_goal(Goal::Lookup {
             dict,
-            field: x.clone(),
+            field: x,
             value: Term::new(Value::Symbol(y.clone())),
         });
         assert!(
@@ -824,8 +828,8 @@ mod tests {
         let mut vm = PolarVirtualMachine::new(
             KnowledgeBase::new(),
             vec![Goal::Unify {
-                left: vars.clone(),
-                right: vals.clone(),
+                left: vars,
+                right: vals,
             }],
         );
         let _ = vm.run();
@@ -846,8 +850,8 @@ mod tests {
         // Left variable bound to bound right variable.
         vm.bind(&y, &one);
         vm.append_goals(vec![Goal::Unify {
-            left: Term::new(Value::Symbol(x.clone())),
-            right: Term::new(Value::Symbol(y.clone())),
+            left: Term::new(Value::Symbol(x)),
+            right: Term::new(Value::Symbol(y)),
         }]);
         let _ = vm.run();
         assert_eq!(vm.value(&Symbol("x".to_string())), Some(&one));
@@ -866,7 +870,7 @@ mod tests {
         vm.bind(&z, &one);
         vm.append_goals(vec![Goal::Unify {
             left: Term::new(Value::Symbol(z.clone())),
-            right: two.clone(),
+            right: two,
         }]);
         let _ = vm.run();
         assert_eq!(vm.value(&z), Some(&one));

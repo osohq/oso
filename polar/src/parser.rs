@@ -1,6 +1,9 @@
 use lalrpop_util::lalrpop_mod;
 
-lalrpop_mod!(polar);
+lalrpop_mod!(
+    #[allow(clippy::all, dead_code, unused_imports, unused_mut)]
+    polar
+);
 
 use super::types::*;
 
@@ -54,7 +57,7 @@ mod tests {
         assert_eq!(rule.to_polar(), r#"f(x) := g(x);"#);
         let rule = polar::RuleParser::new().parse(r#"f(x);"#).unwrap();
         assert_eq!(rule.to_polar(), r#"f(x);"#);
-        let instance = polar::InstanceLiteralParser::new()
+        let _instance = polar::InstanceLiteralParser::new()
             .parse(r#"Foo{bar: 1, baz: y, biz: "hi"}"#)
             .unwrap();
         // This won't work. There's no ordering to fields. Need to use sam macros.

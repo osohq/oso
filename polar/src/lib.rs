@@ -15,7 +15,6 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic::catch_unwind;
 
-use serde_json;
 use std::ptr::{null, null_mut};
 
 // @TODO: Have a way to return errors, don't do any of these panics, that's gonna
@@ -244,7 +243,7 @@ pub extern "C" fn string_free(s: *mut c_char) {
         unsafe { CString::from_raw(s) };
     });
     match result {
-        Ok(r) => (),
+        Ok(_) => (),
         Err(_) => {
             set_error(types::PolarError::Unknown);
         }
@@ -259,7 +258,7 @@ pub extern "C" fn polar_free(polar: *mut Polar) {
         let _polar = unsafe { Box::from_raw(polar) };
     });
     match result {
-        Ok(r) => (),
+        Ok(_) => (),
         Err(_) => {
             set_error(types::PolarError::Unknown);
         }
@@ -274,7 +273,7 @@ pub extern "C" fn query_free(query: *mut Query) {
         let _query = unsafe { Box::from_raw(query) };
     });
     match result {
-        Ok(r) => (),
+        Ok(_) => (),
         Err(_) => {
             set_error(types::PolarError::Unknown);
         }
