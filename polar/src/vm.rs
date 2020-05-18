@@ -469,9 +469,7 @@ impl PolarVirtualMachine {
                             _ => panic!("Can only make external instances."),
                         };
 
-                        // @todo, see if we have one.
-                        //      just bind it
-                        // else
+                        // @TODO: Cache external instance ids so we don't call constructor twice.
                         self.push_goal(Goal::MakeExternal {
                             literal,
                             instance_id,
@@ -510,15 +508,6 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::Backtrack);
             self.push_goal(Goal::Cut);
         }
-    }
-
-    // @TODO: Remove this entirely if we don't actually need it.
-    /// Called with the result of an external construct. The instance id
-    /// gives a handle to the external instance.
-    #[allow(dead_code)]
-    pub fn external_construct_result(&mut self, _instance_id: u64) {
-        // @TODO: Do we have to do anything?
-        ()
     }
 
     /// Unify `left` and `right` terms.
