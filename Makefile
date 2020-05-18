@@ -3,10 +3,10 @@
 test: rust-test python-test
 
 rust-test:
-	cargo test --release
+	cargo test
 
 rust-build:
-	cargo build --release
+	cargo build
 
 python-build: rust-build
 	$(MAKE) -C languages/python build

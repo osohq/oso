@@ -4,16 +4,21 @@ lalrpop_mod!(polar);
 
 use super::types::*;
 
+lazy_static::lazy_static! {
+    static ref RULES_PARSER: polar::RulesParser = polar::RulesParser::new();
+    static ref QUERY_PARSER: polar::ExpParser = polar::ExpParser::new();
+}
+
 pub fn parse_query(src: &str) -> PolarResult<Term> {
     // @TODO: Better Errors
-    polar::ExpParser::new()
+    QUERY_PARSER
         .parse(src)
         .map_err(|e| PolarError::Parse(e.to_string()))
 }
 
 pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
     // @TODO: Better Errors
-    polar::RulesParser::new()
+    RULES_PARSER
         .parse(src)
         .map_err(|e| PolarError::Parse(e.to_string()))
 }
