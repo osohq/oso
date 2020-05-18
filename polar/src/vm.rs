@@ -314,7 +314,11 @@ impl PolarVirtualMachine {
         field: Term,
         value: Symbol,
     ) -> QueryEvent {
-        let field_name = field_name(&field);
+        let (field_name, args) = match field.value.clone() {
+            Value::Call(Predicate { name, args }) => (name, args),
+            _ => panic!("call must be a predicate"),
+        };
+
         self.push_choice(Choice {
             alternatives: vec![vec![Goal::LookupExternal {
                 call_id,
@@ -330,7 +334,7 @@ impl PolarVirtualMachine {
             call_id,
             instance_id,
             attribute: field_name,
-            args: vec![],
+            args,
         }
     }
 
