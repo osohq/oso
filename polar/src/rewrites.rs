@@ -35,6 +35,13 @@ pub fn walk_indexed<F>(
         Value::String(_) => (),
         Value::Boolean(_) => (),
         Value::ExternalInstance(_) => (),
+        Value::ExternalInstanceLiteral(instance) => {
+            for (k, t) in &mut instance.fields.fields.iter_mut() {
+                index.push(Index::K(k.clone()));
+                walk_indexed(t, index, insert_point, f);
+                index.pop();
+            }
+        }
         Value::InstanceLiteral(instance) => {
             for (k, t) in &mut instance.fields.fields.iter_mut() {
                 index.push(Index::K(k.clone()));
@@ -261,5 +268,9 @@ mod tests {
             rewritten.to_polar(),
             "make(^Foo{x: 1},^{id: 7}),.(^{id: 7},x,_value_8),_value_8"
         );
+        let again = parse_query(&rewritten.to_polar()).unwrap();
+        assert_eq!(again.to_polar(), rewritten.to_polar(),);
+        let rewritten_again = rewrite_term(again, &mut kb);
+        assert_eq!(rewritten_again.to_polar(), rewritten.to_polar(),);
     }
 }

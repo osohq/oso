@@ -60,6 +60,21 @@ pub InstanceLiteral: Term = <start:@L> <tag:Name> <fields:Object> => {
     Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
 };
 
+pub ExternalInstanceLiteral: Term = <start:@L> "^" <tag:Name> <fields:Object> => {
+    let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
+    Term{id: 0, offset: start, value: Value::ExternalInstanceLiteral(instance)}
+};
+
+pub ExternalInstance: Term = <start:@L> "^" <fields:Object> => {
+    let id = fields.get(&Symbol::new("id")).unwrap();
+    if let Value::Integer(id) = id.value {
+        let external_instance = ExternalInstance{instance_id: id as u64};
+        Term{id: 0, offset: start, value: Value::ExternalInstance(external_instance)}
+    } else {
+        panic!("id must be an integer");
+    }
+};
+
 pub Term: Term = {
     <term:Integer> => term,
     <term:PolarString> => term,
@@ -67,6 +82,8 @@ pub Term: Term = {
     <term:Symbol> => term,
     <term:Dictionary> => term,
     <term:InstanceLiteral> => term,
+    <term:ExternalInstanceLiteral> => term,
+    <term:ExternalInstance> => term,
     <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
     <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
     <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
@@ -77,7 +94,8 @@ pub Term: Term = {
 };
 
 RewritableOperator: Operator = {
-    "." => Operator::Dot
+    "." => Operator::Dot,
+    "make" => Operator::Make
 };
 
 pub RewrittenOperation: Operation = {
@@ -105,6 +123,7 @@ Exp9: Term = {
 
 // @TODO: Think about this.
 Callable: Term = {
+    <ExternalInstance> => <>,
     <InstanceLiteral> => <>,
     <Dictionary> => <>,
     <Symbol> => <>,
