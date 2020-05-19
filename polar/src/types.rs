@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct VarGenerator {
     pub i: usize,
 }
@@ -46,7 +47,7 @@ pub trait ToPolarString {
     fn to_polar(&self) -> String;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Dictionary {
     pub fields: HashMap<Symbol, Term>,
 }
@@ -127,7 +128,7 @@ impl Symbol {
 
 impl ToPolarString for Symbol {
     fn to_polar(&self) -> String {
-        format!("{}", self.0)
+        self.0.to_string()
     }
 }
 
@@ -152,7 +153,7 @@ impl Predicate {
 impl ToPolarString for Predicate {
     fn to_polar(&self) -> String {
         if self.args.is_empty() {
-            format!("{}", self.name.to_polar())
+            self.name.to_polar()
         } else {
             format!(
                 "{}({})",
@@ -185,7 +186,7 @@ pub enum Operator {
     And,
 }
 
-pub fn op_precedence(op: &Operator) -> i32 {
+pub fn op_precedence(op: Operator) -> i32 {
     match op {
         Operator::Dot => 8,
         Operator::Not => 7,
@@ -211,17 +212,16 @@ pub struct Operation {
     pub args: TermList,
 }
 
-fn has_lower_pred(op: &Operator, t: &Term) -> bool {
+fn has_lower_pred(op: Operator, t: &Term) -> bool {
     match t.value {
         Value::Expression(Operation {
-            operator: ref other,
-            ..
+            operator: other, ..
         }) => op_precedence(op) > op_precedence(other),
         _ => false,
     }
 }
 
-fn to_polar_parens(op: &Operator, t: &Term) -> String {
+fn to_polar_parens(op: Operator, t: &Term) -> String {
     if has_lower_pred(op, t) {
         format!("({})", t.to_polar())
     } else {
@@ -242,78 +242,78 @@ impl ToPolarString for Operation {
                         ".({})",
                         self.args
                             .iter()
-                            .map(|t| to_polar_parens(&self.operator, t))
+                            .map(|t| to_polar_parens(self.operator, t))
                             .collect::<Vec<String>>()
                             .join(","),
                     )
                 }
             }
-            Operator::Not => format!("{}{}", "!", to_polar_parens(&self.operator, &self.args[0])),
+            Operator::Not => format!("{}{}", "!", to_polar_parens(self.operator, &self.args[0])),
             Operator::Mul => format!(
                 "{}*{}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Div => format!(
                 "{}/{}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Add => format!(
                 "{}+{}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Sub => format!(
                 "{}-{}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Eq => format!(
                 "{}=={}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Geq => format!(
                 "{}>={}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Leq => format!(
                 "{}<={}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Neq => format!(
                 "{}!={}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1])
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1])
             ),
             Operator::Gt => format!(
                 "{}>{}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1]),
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1]),
             ),
             Operator::Lt => format!(
                 "{}<{}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1]),
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1]),
             ),
             Operator::Unify => format!(
                 "{}={}",
-                to_polar_parens(&self.operator, &self.args[0]),
-                to_polar_parens(&self.operator, &self.args[1]),
+                to_polar_parens(self.operator, &self.args[0]),
+                to_polar_parens(self.operator, &self.args[1]),
             ),
             Operator::Or => self
                 .args
                 .iter()
-                .map(|t| to_polar_parens(&self.operator, t))
+                .map(|t| to_polar_parens(self.operator, t))
                 .collect::<Vec<String>>()
                 .join("|"),
             Operator::And => self
                 .args
                 .iter()
-                .map(|t| to_polar_parens(&self.operator, t))
+                .map(|t| to_polar_parens(self.operator, t))
                 .collect::<Vec<String>>()
                 .join(","),
         }
@@ -359,13 +359,13 @@ impl ToPolarString for Value {
         match self {
             Value::Integer(i) => format!("{}", i),
             Value::String(s) => format!("\"{}\"", s),
-            Value::Boolean(b) => format!("{}", {
+            Value::Boolean(b) => {
                 if *b {
-                    "true"
+                    "true".to_string()
                 } else {
-                    "false"
+                    "false".to_string()
                 }
-            }),
+            }
             Value::InstanceLiteral(i) => i.to_polar(),
             Value::Dictionary(i) => i.to_polar(),
             Value::ExternalInstance(i) => i.to_polar(),
@@ -453,7 +453,7 @@ impl ToPolarString for Rule {
                     }),
                 ..
             } => {
-                if args.len() == 0 {
+                if args.is_empty() {
                     format!(
                         "{}({});",
                         self.name.to_polar(),

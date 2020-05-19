@@ -31,19 +31,19 @@ pub fn walk_indexed<F>(
     F: FnMut(&mut Term, &TreeIndex, &Option<TreeIndex>),
 {
     match &mut term.value {
-        Value::Integer(i) => (),
-        Value::String(s) => (),
-        Value::Boolean(b) => (),
-        Value::ExternalInstance(external_instance) => (),
+        Value::Integer(_) => (),
+        Value::String(_) => (),
+        Value::Boolean(_) => (),
+        Value::ExternalInstance(_) => (),
         Value::InstanceLiteral(instance) => {
-            for (i, (k, t)) in &mut instance.fields.fields.iter_mut().enumerate() {
+            for (k, t) in &mut instance.fields.fields.iter_mut() {
                 index.push(Index::K(k.clone()));
                 walk_indexed(t, index, insert_point, f);
                 index.pop();
             }
         }
         Value::Dictionary(dict) => {
-            for (i, (k, t)) in &mut dict.fields.iter_mut().enumerate() {
+            for (k, t) in &mut dict.fields.iter_mut() {
                 index.push(Index::K(k.clone()));
                 walk_indexed(t, index, insert_point, f);
                 index.pop();
@@ -63,7 +63,7 @@ pub fn walk_indexed<F>(
                 index.pop();
             }
         }
-        Value::Symbol(sym) => (),
+        Value::Symbol(_) => (),
         Value::Expression(op) => {
             let mut is_insert_op = false;
             match op.operator {

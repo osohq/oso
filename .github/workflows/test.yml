@@ -1,16 +1,38 @@
-name: tests
+name: Development
 on: [push]
 
 jobs:
   test:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/setup-python@v1
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Python 3.6
+        uses: actions/setup-python@v1
         with:
           python-version: "3.6"
-      - uses: actions/checkout@v2
-      - run: pip install black
-      - run: black --check .
-      - run: rustup component add rustfmt
-      - run: cargo fmt -- --check
+      - name: Install Python formatter
+        run: pip install black
+      - name: Check Python formatting
+        run: black --check .
+
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Check Rust formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Check clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features --all-targets -- -D warnings
+
       - run: make test
