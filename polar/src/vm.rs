@@ -264,7 +264,7 @@ impl PolarVirtualMachine {
     fn backtrack(&mut self) {
         eprintln!("⇒ backtrack");
         match self.choices.pop() {
-            None => return self.push_goal(Goal::Halt),
+            None => self.push_goal(Goal::Halt),
             Some(Choice {
                 mut alternatives,
                 bsp,
