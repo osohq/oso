@@ -92,7 +92,6 @@ pub fn walk_indexed<F>(
                 index.pop();
             }
         }
-        _ => todo!(),
     };
     f(term, index, insert_point)
 }
