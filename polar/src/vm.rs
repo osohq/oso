@@ -286,7 +286,7 @@ impl PolarVirtualMachine {
                     self.choices.push(Choice {
                         alternatives,
                         bsp,
-                        goals
+                        goals,
                     });
                 }
             }
@@ -335,12 +335,11 @@ impl PolarVirtualMachine {
         };
 
         self.push_choice(vec![vec![Goal::LookupExternal {
-                call_id,
-                instance_id,
-                field,
-                value,
-            }]]
-        );
+            call_id,
+            instance_id,
+            field,
+            value,
+        }]]);
 
         QueryEvent::ExternalCall {
             call_id,
@@ -484,9 +483,7 @@ impl PolarVirtualMachine {
                     Operator::Or => {
                         let mut alternatives = vec![];
                         for term in args {
-                            alternatives.push(vec![Goal::Query {
-                                term,
-                            }]);
+                            alternatives.push(vec![Goal::Query { term }]);
                         }
                         self.choose(alternatives);
                     }
