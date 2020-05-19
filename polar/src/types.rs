@@ -513,7 +513,7 @@ impl KnowledgeBase {
     }
 
     /// Return a monotonically increasing integer ID.
-    pub fn id(&mut self) -> u64 {
+    pub fn new_id(&mut self) -> u64 {
         let id = self.counter;
         self.counter += 1;
         id as u64
@@ -522,9 +522,9 @@ impl KnowledgeBase {
     /// Generate a new symbol.
     pub fn gensym(&mut self, prefix: &str) -> Symbol {
         if prefix.starts_with('_') {
-            Symbol(format!("{}_{}", prefix, self.id()))
+            Symbol(format!("{}_{}", prefix, self.new_id()))
         } else {
-            Symbol(format!("_{}_{}", prefix, self.id()))
+            Symbol(format!("_{}_{}", prefix, self.new_id()))
         }
     }
 }
@@ -537,7 +537,6 @@ pub enum QueryEvent {
     Done,
 
     /// Returns: new instance id
-    // @TODO: rename this to MakeExternal
     MakeExternal {
         instance_id: u64,
         instance: InstanceLiteral,

@@ -131,7 +131,7 @@ fn rewrite(term: &mut Term, kb: &mut KnowledgeBase) -> Option<(Term, Term)> {
             Some((lookup, var))
         }
         Value::InstanceLiteral(literal) => {
-            let external_id = kb.id();
+            let external_id = kb.new_id();
             let external_instance = Term {
                 value: Value::ExternalInstance(ExternalInstance {
                     instance_id: external_id,

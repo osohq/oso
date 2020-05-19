@@ -120,7 +120,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn id(&mut self) -> u64 {
-        self.kb.id()
+        self.kb.new_id()
     }
 
     /// Run the virtual machine. While there are goals on the stack,
