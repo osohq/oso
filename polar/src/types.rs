@@ -220,7 +220,7 @@ impl ToPolarString for Operation {
                 "make({})",
                 self.args
                     .iter()
-                    .map(|t| to_polar_parens(&self.operator, t))
+                    .map(|t| to_polar_parens(self.operator, t))
                     .collect::<Vec<String>>()
                     .join(",")
             ),
@@ -516,7 +516,7 @@ impl KnowledgeBase {
     pub fn id(&mut self) -> u64 {
         let id = self.counter;
         self.counter += 1;
-        return id as u64;
+        id as u64
     }
 
     /// Generate a new symbol.
