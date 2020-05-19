@@ -298,8 +298,11 @@ mod tests {
     #[test]
     fn test_results() {
         let mut polar = Polar::new();
-        polar.load_str("foo(1); foo(2);").unwrap();
-        assert_eq!(qvar(&mut polar, "foo(a)", "a"), vec![value!(1), value!(2)]);
+        polar.load_str("foo(1); foo(2); foo(3);").unwrap();
+        assert_eq!(
+            qvar(&mut polar, "foo(a)", "a"),
+            vec![value!(1), value!(2), value!(3)]
+        );
     }
 
     #[test]
