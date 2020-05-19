@@ -1,7 +1,7 @@
 #[macro_use]
 pub mod macros;
 
-//mod parser;
+mod formatting;
 mod parser;
 mod polar;
 mod rewrites;
@@ -9,6 +9,7 @@ pub mod types;
 mod vm;
 
 pub use self::polar::{Polar, Query};
+pub use formatting::ToPolarString;
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
