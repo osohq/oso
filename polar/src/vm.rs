@@ -25,9 +25,13 @@ pub enum Goal {
         value: Term,
     },
     LookupExternal {
+        /// Consistent ID of the external instance the lookup is on
         instance_id: u64,
+        /// ID to track which call the result is for
         call_id: u64,
+        /// Field to be looked up (e.g. a symbol for a field name)
         field: Term,
+        /// The value the result will be unified with
         value: Symbol,
     },
     MakeExternal {
@@ -237,6 +241,34 @@ impl PolarVirtualMachine {
             }
             _ => value.clone(),
         })
+    }
+
+    /// Handle an external result provided by the application.
+    ///
+    /// If the value is `Some(_)` then we have a result, and bind the
+    /// symbol associated with the call ID to the result value. If the
+    /// value is `None` then the external has no (more) results, so we
+    /// backtrack to the choice point left by `Goal::LookupExternal`.
+    pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) {
+        // TODO: Open question if we need to pass errors back down to rust.
+        // For example what happens if the call asked for a field that doesn't exist?
+
+        if let Some(value) = term {
+            self.bind(
+                &self
+                    .call_id_symbols
+                    .get(&call_id)
+                    .expect("unregistered external call ID")
+                    .clone(),
+                &value,
+            );
+        } else {
+            // No more results. Clean up, cut out the retry alternative,
+            // and backtrack.
+            self.call_id_symbols.remove(&call_id).expect("bad call ID");
+            self.push_goal(Goal::Backtrack);
+            self.push_goal(Goal::Cut);
+        }
     }
 }
 
@@ -459,34 +491,6 @@ impl PolarVirtualMachine {
                 }
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
-        }
-    }
-
-    /// Handle an external result provided by the application.
-    ///
-    /// If the value is `Some(_)` then we have a result, and bind the
-    /// symbol associated with the call ID to the result value. If the
-    /// value is `None` then the external has no (more) results, so we
-    /// backtrack to the choice point left by `Goal::LookupExternal`.
-    pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) {
-        // TODO: Open question if we need to pass errors back down to rust.
-        // For example what happens if the call asked for a field that doesn't exist?
-
-        if let Some(value) = term {
-            self.bind(
-                &self
-                    .call_id_symbols
-                    .get(&call_id)
-                    .expect("unregistered external call ID")
-                    .clone(),
-                &value,
-            );
-        } else {
-            // No more results. Clean up, cut out the retry alternative,
-            // and backtrack.
-            self.call_id_symbols.remove(&call_id).expect("bad call ID");
-            self.push_goal(Goal::Backtrack);
-            self.push_goal(Goal::Cut);
         }
     }
 
@@ -1091,5 +1095,47 @@ mod docs {
         vm.push_alternatives(vec![ok_branch.clone(), cut_ok_branch, fail_branch.clone()]);
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result { .. }));
         assert_eq!(vm.run().unwrap(), QueryEvent::Done);
+    }
+
+    /// # is a ...
+    ///
+    /// TODO
+    #[test]
+    fn docs4_isa() {
+        // todo
+    }
+
+    /// # LookupExternal
+    ///
+    /// A `LookupExternal` goal is created when an attribute/method lookup is
+    /// required on an external instance.
+    ///
+    /// In this case, the VM's strategy is to return control back to the caller,
+    /// and push another choice point with a single "LookupExternal" goal.
+    #[test]
+    #[ignore]
+    fn docs4_lookup_external() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![]);
+
+        vm.push_goal(Goal::LookupExternal {
+            instance_id: 0,
+            call_id: 0,
+            // the "field" is a method call foo()
+            field: term!(value!(pred!("foo", value!(Vec::new())))),
+            value: sym!("x"),
+        });
+        // run the VM -> get back an external call event
+        let res = vm.run().unwrap();
+        assert!(matches!(res, QueryEvent::ExternalCall { .. }));
+
+        // goal stack is empty, and we have a single choice point
+        // for making another external call
+        assert!(vm.goals.is_empty());
+        assert_eq!(vm.choices.len(), 1);
+
+        if let QueryEvent::ExternalCall { call_id, .. } = res {
+            // return the result `instance.foo = 1`
+            vm.external_call_result(call_id, Some(term!(value!(1))));
+        }
     }
 }
