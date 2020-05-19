@@ -119,7 +119,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn id(&mut self) -> u64 {
+    pub fn new_id(&mut self) -> u64 {
         self.kb.new_id()
     }
 
@@ -437,7 +437,7 @@ impl PolarVirtualMachine {
                                 value,
                             }),
                             Value::ExternalInstance(ExternalInstance { instance_id }) => {
-                                let call_id = self.id();
+                                let call_id = self.new_id();
                                 let value = match value {
                                     Term {
                                         value: Value::Symbol(value),
