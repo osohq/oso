@@ -11,6 +11,8 @@ pub const MAX_GOALS: usize = 10_000;
 #[allow(clippy::large_enum_variant)]
 pub enum Goal {
     Backtrack,
+    /// An explicit breakpoint, causes the VM to return a `QueryEvent::Breakpoint`
+    Break,
     Cut,
     Halt,
     Isa {
@@ -62,14 +64,14 @@ pub enum Goal {
     },
 }
 
-#[derive(Debug)]
-struct Binding(Symbol, Term);
+#[derive(Clone, Debug)]
+pub struct Binding(pub Symbol, pub Term);
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Choice {
-    alternatives: Alternatives,
-    bsp: usize,   // binding stack pointer
-    goals: Goals, // goal stack snapshot
+    pub alternatives: Alternatives,
+    bsp: usize,       // binding stack pointer
+    pub goals: Goals, // goal stack snapshot
 }
 
 type Alternatives = Vec<Goals>;
@@ -84,6 +86,10 @@ pub struct PolarVirtualMachine {
     bindings: Bindings,
     choices: Choices,
 
+    /// If VM is set to `debug=True`, the VM will return a `QueryEvent::Breakpoint`
+    /// after every goal
+    pub debug: bool,
+
     /// Rules and types.
     kb: KnowledgeBase,
 
@@ -91,6 +97,15 @@ pub struct PolarVirtualMachine {
     instances: HashMap<InstanceLiteral, ExternalInstance>,
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
+}
+
+/// Debugging information exposed by the VM
+#[derive(Clone, Debug, Default)]
+pub struct DebugInfo {
+    // we dont use the type bindings so the types can stay private
+    pub goals: Vec<Goal>,
+    pub bindings: Vec<Binding>,
+    pub choices: Vec<Choice>,
 }
 
 // Methods which aren't goals/instructions.
@@ -103,6 +118,7 @@ impl PolarVirtualMachine {
             goals,
             bindings: vec![],
             choices: vec![],
+            debug: false,
             kb,
             instances: HashMap::new(),
             call_id_symbols: HashMap::new(),
@@ -117,6 +133,14 @@ impl PolarVirtualMachine {
         let call_id = self.new_id();
         self.call_id_symbols.insert(call_id, symbol.clone());
         call_id
+    }
+
+    pub fn debug_info(&self) -> DebugInfo {
+        DebugInfo {
+            bindings: self.bindings.clone(),
+            choices: self.choices.clone(),
+            goals: self.goals.clone(),
+        }
     }
 
     /// Run the virtual machine. While there are goals on the stack,
@@ -136,6 +160,7 @@ impl PolarVirtualMachine {
             eprintln!("{}", goal);
             match goal {
                 Goal::Backtrack => self.backtrack(),
+                Goal::Break => return Ok(QueryEvent::BreakPoint),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { left, right } => self.isa(&left, &right),
@@ -175,6 +200,11 @@ impl PolarVirtualMachine {
                     args,
                 } => self.sort_rules(rules, args, outer, inner),
                 Goal::Unify { left, right } => self.unify(&left, &right),
+            }
+            // don't break when the goal stack is empty or a result wont
+            // be returned (this logic seems flaky)
+            if self.debug && !self.goals.is_empty() {
+                return Ok(QueryEvent::BreakPoint);
             }
         }
 

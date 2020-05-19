@@ -60,6 +60,16 @@ pub struct Query {
     done: bool,
 }
 
+impl Query {
+    pub fn debug(&mut self, set: bool) {
+        self.vm.debug = set;
+    }
+
+    pub fn debug_info(&self) -> crate::DebugInfo {
+        self.vm.debug_info()
+    }
+}
+
 // Query as an iterator returns `None` after the first time `Done` is seen
 impl Iterator for Query {
     type Item = PolarResult<QueryEvent>;
@@ -132,5 +142,12 @@ impl Polar {
     // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&mut self, query: &mut Query) -> u64 {
         query.vm.new_id()
+    }
+
+    /// Turn this Polar instance into a new TUI instance and run it
+    #[cfg(feature = "tui_")]
+    pub fn into_tui(self) {
+        let app = crate::cli::tui::App::new(self);
+        crate::cli::tui::run(app).expect("error in CLI")
     }
 }
