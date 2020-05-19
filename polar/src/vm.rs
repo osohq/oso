@@ -904,13 +904,16 @@ mod docs {
         assert_eq!(vm.goals[0], Goal::Halt);
 
         // Push some alternatives
-        let alternatives = vec![vec![Goal::Noop]];
+        // First is a Noop, second is a break
+        let alternatives = vec![vec![Goal::Break], vec![Goal::Noop]];
         vm.push_alternatives(alternatives);
 
-        // Now the Vm has one backtrack goal, and a choice point
-        assert_eq!(vm.goals, vec![Goal::Backtrack]);
+        // Now the Vm has new goals for the first alternative
+        assert_eq!(vm.goals, vec![Goal::Halt, Goal::Noop]);
+        // and a single choice point with the "Break" goal
         assert_eq!(vm.choices.len(), 1);
         assert_eq!(vm.choices[0].goals, vec![Goal::Halt]);
+        assert_eq!(vm.choices[0].alternatives[0], vec![Goal::Break]);
     }
 
     /// # Goals stack
@@ -923,12 +926,13 @@ mod docs {
     /// from the loop.
     #[test]
     fn docs3_goal_stack() {
-        let goals = vec![Goal::Cut, Goal::Break, Goal::Noop, Goal::Noop];
+        let goals = vec![Goal::Noop, Goal::Noop, Goal::Break, Goal::Cut];
 
-        // VM starts with an empty KB and a single Halt goal
+        // VM starts with an empty KB and the above goals (in reverse order)
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), goals);
-        // Runs until the
+        // Runs until the `Break` goal is hit
         let _ = vm.run();
+        // At which point the goals contains the rest of the stack: the `Cut` goal
         assert_eq!(vm.goals, vec![Goal::Cut]);
     }
 
