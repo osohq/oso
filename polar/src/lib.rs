@@ -2,7 +2,7 @@
 pub mod macros;
 
 //mod parser;
-mod parser;
+pub mod parser;
 mod polar;
 mod rewrites;
 pub mod types;

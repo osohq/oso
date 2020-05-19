@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
+
 use std::collections::HashMap;
+use std::fmt;
 
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
@@ -12,13 +14,15 @@ pub enum PolarError {
 
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
-impl ToString for PolarError {
-    fn to_string(&self) -> String {
+impl std::error::Error for PolarError {}
+
+impl fmt::Display for PolarError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PolarError::Parse(s) => s.to_string(),
-            PolarError::Serialization(s) => s.to_string(),
-            PolarError::Unimplemented(s) => s.to_string(),
-            PolarError::Unknown => "panic!".to_string(),
+            PolarError::Parse(s) | PolarError::Serialization(s) | PolarError::Unimplemented(s) => {
+                write!(f, "{}", s)
+            }
+            PolarError::Unknown => write!(f, "panic!"),
         }
     }
 }
@@ -558,6 +562,7 @@ pub enum QueryEvent {
     Result {
         bindings: Bindings,
     },
+    BreakPoint,
 }
 
 #[cfg(test)]

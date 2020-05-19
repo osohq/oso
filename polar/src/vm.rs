@@ -49,6 +49,7 @@ pub const MAX_GOALS: usize = 10_000;
 #[must_use = "ignored goals are never accomplished"]
 pub enum Goal {
     Backtrack,
+    Break,
     Cut,
     Halt,
     Isa {
@@ -85,7 +86,7 @@ impl fmt::Display for Goal {
         match self {
             Goal::Lookup { dict, field, value } => write!(
                 fmt,
-                "Lookup({}, {}, {})",
+                "Lookup: {}, {}, {}",
                 dict.to_polar(),
                 field.to_polar(),
                 value.to_polar()
@@ -97,14 +98,14 @@ impl fmt::Display for Goal {
                 ..
             } => write!(
                 fmt,
-                "LookupExternal({}, {}, {})",
+                "LookupExternal: {}, {}, {}",
                 instance_id,
                 field.to_polar(),
                 value.to_polar(),
             ),
-            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+            Goal::Query { term } => write!(fmt, "Query: {}", term.to_polar()),
             Goal::Unify { left, right } => {
-                write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
+                write!(fmt, "Unify: {}, {}", left.to_polar(), right.to_polar())
             }
             g => write!(fmt, "{:?}", g),
         }
@@ -112,7 +113,13 @@ impl fmt::Display for Goal {
 }
 
 #[derive(Debug)]
-struct Binding(Symbol, Term);
+pub struct Binding(Symbol, Term);
+
+impl fmt::Display for Binding {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{} = {}", self.0.to_polar(), self.1.to_polar())
+    }
+}
 
 #[derive(Debug)]
 pub struct Choice {
@@ -121,17 +128,45 @@ pub struct Choice {
     goals: Goals,
 }
 
+impl fmt::Display for Choice {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            fmt,
+            "[{}] ++ [{}]",
+            self.goals
+                .iter()
+                .map(|g| g.to_string())
+                .collect::<Vec<String>>()
+                .join(", "),
+            self.alternatives
+                .iter()
+                .map(|alt| format!(
+                    "[{}]",
+                    alt.iter()
+                        .map(|g| g.to_string())
+                        .collect::<Vec<String>>()
+                        .join(",")
+                ))
+                .map(|alt| alt.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
+    }
+}
+
 type Alternatives = Vec<Goals>;
-type Bindings = Vec<Binding>;
-type Choices = Vec<Choice>;
-type Goals = Vec<Goal>;
+pub type Bindings = Vec<Binding>;
+pub type Choices = Vec<Choice>;
+pub type Goals = Vec<Goal>;
 
 #[derive(Default)]
 pub struct PolarVirtualMachine {
     /// Stacks.
-    goals: Goals,
-    bindings: Bindings,
-    choices: Choices,
+    pub goals: Goals,
+    pub bindings: Bindings,
+    pub choices: Choices,
+
+    pub debug: bool,
 
     /// Rules and types.
     kb: KnowledgeBase,
@@ -150,6 +185,7 @@ impl PolarVirtualMachine {
             goals,
             bindings: vec![],
             choices: vec![],
+            debug: false,
             kb,
             call_id_symbols: HashMap::new(),
         }
@@ -173,9 +209,18 @@ impl PolarVirtualMachine {
         }
 
         while let Some(goal) = self.goals.pop() {
-            eprintln!("{}", goal);
+            // eprintln!("{}", goal);
+            if std::option_env!("RUST_LOG").is_some() {
+                eprintln!("{}", goal);
+            }
             match goal {
                 Goal::Backtrack => self.backtrack(),
+                Goal::Break => {
+                    if self.debug {
+                        return Ok(QueryEvent::BreakPoint);
+                    }
+                    // Goal::Break => {}
+                }
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { .. } => todo!("isa"),
@@ -194,6 +239,9 @@ impl PolarVirtualMachine {
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::Unify { left, right } => self.unify(&left, &right),
+            }
+            if self.debug && !self.goals.is_empty() {
+                return Ok(QueryEvent::BreakPoint);
             }
         }
 
@@ -437,7 +485,6 @@ impl PolarVirtualMachine {
                             };
                             let params = &renames[0];
                             let body = &renames[1];
-
                             let mut goals = Vec::new();
 
                             goals.push(Goal::Query {

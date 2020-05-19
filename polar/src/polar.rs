@@ -60,6 +60,16 @@ pub struct Query {
     done: bool,
 }
 
+impl Query {
+    pub fn debug(&mut self, set: bool) {
+        self.vm.debug = set;
+    }
+
+    pub fn vm(&self) -> &PolarVirtualMachine {
+        &self.vm
+    }
+}
+
 // Query as an iterator returns `None` after the first time `Done` is seen
 impl Iterator for Query {
     type Item = PolarResult<QueryEvent>;
@@ -110,7 +120,10 @@ impl Polar {
         let query = Goal::Query {
             term: rewrite_term(term.clone(), &mut self.kb),
         };
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
+        let mut vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
+        if std::option_env!("RUST_LOG").is_some() {
+            vm.debug = true;
+        }
         Query { vm, done: false }
     }
 
@@ -155,6 +168,7 @@ mod tests {
                 QueryEvent::ExternalCall { call_id, .. } => {
                     polar.external_call_result(&mut query, call_id, external_results.pop());
                 }
+                QueryEvent::BreakPoint => {}
                 _ => panic!("unexpected event"),
             }
         }

@@ -5,8 +5,16 @@ lalrpop_mod!(polar);
 use super::types::*;
 
 lazy_static::lazy_static! {
-    static ref RULES_PARSER: polar::RulesParser = polar::RulesParser::new();
     static ref QUERY_PARSER: polar::ExpParser = polar::ExpParser::new();
+    static ref RULES_PARSER: polar::RulesParser = polar::RulesParser::new();
+    static ref TERM_PARSER: polar::TermParser = polar::TermParser::new();
+}
+
+pub fn parse_term(src: &str) -> PolarResult<Term> {
+    // @TODO: Better Errors
+    TERM_PARSER
+        .parse(src)
+        .map_err(|e| PolarError::Parse(e.to_string()))
 }
 
 pub fn parse_query(src: &str) -> PolarResult<Term> {
