@@ -217,23 +217,12 @@ pub extern "C" fn polar_external_call_result(
     }
 }
 
-// An instance_id of 0 means error.
 #[no_mangle]
-pub extern "C" fn polar_external_construct_result(
-    polar_ptr: *mut Polar,
-    query_ptr: *mut Query,
-    instance_id: u64,
-) -> i32 {
+pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar, query_ptr: *mut Query) -> u64 {
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
-        let id = if instance_id != 0 {
-            Some(instance_id)
-        } else {
-            None
-        };
-        polar.external_construct_result(query, id);
-        1
+        polar.get_external_id(query)
     });
     match result {
         Ok(r) => r,

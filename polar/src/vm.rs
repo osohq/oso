@@ -29,6 +29,10 @@ pub enum Goal {
         field: Term,
         value: Symbol,
     },
+    MakeExternal {
+        literal: InstanceLiteral,
+        instance_id: u64,
+    },
     #[allow(dead_code)]
     Noop,
     Query {
@@ -96,9 +100,6 @@ pub struct PolarVirtualMachine {
     /// Rules and types.
     kb: KnowledgeBase,
 
-    /// For temporary variable names, call IDs, etc.
-    counter: usize,
-
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
 }
@@ -114,9 +115,12 @@ impl PolarVirtualMachine {
             bindings: vec![],
             choices: vec![],
             kb,
-            counter: 0,
             call_id_symbols: HashMap::new(),
         }
+    }
+
+    pub fn new_id(&mut self) -> u64 {
+        self.kb.new_id()
     }
 
     /// Run the virtual machine. While there are goals on the stack,
@@ -146,6 +150,10 @@ impl PolarVirtualMachine {
                     field,
                     value,
                 } => return Ok(self.lookup_external(call_id, instance_id, field, value)),
+                Goal::MakeExternal {
+                    literal,
+                    instance_id,
+                } => return Ok(self.make_external(literal, instance_id)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
                 Goal::Unify { left, right } => self.unify(&left, &right),
@@ -225,18 +233,6 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
-    /// Return a monotonically increasing integer ID.
-    fn id(&mut self) -> u64 {
-        let id = self.counter;
-        self.counter += 1;
-        id as u64
-    }
-
-    /// Generate a new variable name.
-    fn genvar(&mut self, prefix: &str) -> Symbol {
-        Symbol(format!("_{}_{}", prefix, self.id()))
-    }
-
     /// Return `true` if `var` is a temporary.
     fn is_temporary_var(&self, name: &Symbol) -> bool {
         name.0.starts_with('_')
@@ -251,7 +247,7 @@ impl PolarVirtualMachine {
                 if let Some(new) = renames.get(sym) {
                     Value::Symbol(new.clone())
                 } else {
-                    let new = self.genvar(&sym.0);
+                    let new = self.kb.gensym(&sym.0);
                     renames.insert(sym.clone(), new.clone());
                     Value::Symbol(new)
                 }
@@ -268,7 +264,7 @@ impl PolarVirtualMachine {
     fn backtrack(&mut self) {
         eprintln!("⇒ backtrack");
         match self.choices.pop() {
-            None => return self.push_goal(Goal::Halt),
+            None => self.push_goal(Goal::Halt),
             Some(Choice {
                 mut alternatives,
                 bsp,
@@ -322,7 +318,11 @@ impl PolarVirtualMachine {
         field: Term,
         value: Symbol,
     ) -> QueryEvent {
-        let field_name = field_name(&field);
+        let (field_name, args) = match field.value.clone() {
+            Value::Call(Predicate { name, args }) => (name, args),
+            _ => panic!("call must be a predicate"),
+        };
+
         self.push_choice(Choice {
             alternatives: vec![vec![Goal::LookupExternal {
                 call_id,
@@ -338,7 +338,14 @@ impl PolarVirtualMachine {
             call_id,
             instance_id,
             attribute: field_name,
-            args: vec![],
+            args,
+        }
+    }
+
+    pub fn make_external(&mut self, literal: InstanceLiteral, instance_id: u64) -> QueryEvent {
+        QueryEvent::MakeExternal {
+            instance_id,
+            instance: literal,
         }
     }
 
@@ -429,40 +436,48 @@ impl PolarVirtualMachine {
                                 field: field_name(&field),
                                 value,
                             }),
-                            Value::InstanceLiteral(instance) => {
-                                // Arrive here with an InstanceLiteral
-                                // Look up the tag in kb.types and retrieve an Internal or External class
-                                // For the external case, pass the instance to the External constructor
-
-                                if true {
-                                    // external case
-                                    let instance_id = 1; // @TODO
-                                    let call_id = self.id();
-                                    let value = match value {
-                                        Term {
-                                            value: Value::Symbol(value),
-                                            ..
-                                        } => value,
-                                        _ => panic!("bad lookup value: {}", value.to_polar()),
-                                    };
-                                    self.call_id_symbols.insert(call_id, value.clone());
-                                    self.push_goal(Goal::LookupExternal {
-                                        call_id,
-                                        instance_id,
-                                        field,
-                                        value,
-                                    });
-                                } else {
-                                    // internal
-                                    self.push_goal(Goal::Lookup {
-                                        dict: instance.fields,
-                                        field: field_name(&field),
-                                        value,
-                                    });
-                                }
+                            Value::ExternalInstance(ExternalInstance { instance_id }) => {
+                                let call_id = self.new_id();
+                                let value = match value {
+                                    Term {
+                                        value: Value::Symbol(value),
+                                        ..
+                                    } => value,
+                                    _ => panic!("bad lookup value: {}", value.to_polar()),
+                                };
+                                self.call_id_symbols.insert(call_id, value.clone());
+                                self.push_goal(Goal::LookupExternal {
+                                    call_id,
+                                    instance_id,
+                                    field,
+                                    value,
+                                });
                             }
                             _ => panic!("can only perform lookups on dicts and instances"),
                         }
+                    }
+                    Operator::Make => {
+                        assert_eq!(args.len(), 2);
+                        let literal = args[0].clone();
+                        let external = args[1].clone();
+
+                        let literal = match literal.value {
+                            Value::ExternalInstanceLiteral(instance_literal) => instance_literal,
+                            _ => panic!("Wasn't rewritten or something?"),
+                        };
+
+                        let instance_id = match external.value {
+                            Value::ExternalInstance(ExternalInstance { instance_id }) => {
+                                instance_id
+                            }
+                            _ => panic!("Can only make external instances."),
+                        };
+
+                        // @TODO: Cache external instance ids so we don't call constructor twice.
+                        self.push_goal(Goal::MakeExternal {
+                            literal,
+                            instance_id,
+                        });
                     }
                     _ => todo!("can't query for expression: {:?}", operator),
                 }
@@ -497,13 +512,6 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::Backtrack);
             self.push_goal(Goal::Cut);
         }
-    }
-
-    /// Called with the result of an external construct. The instance id
-    /// gives a handle to the external instance.
-    #[allow(dead_code)]
-    pub fn external_construct_result(&mut self, _instance_id: u64) {
-        unimplemented!()
     }
 
     /// Unify `left` and `right` terms.

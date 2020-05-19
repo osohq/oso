@@ -79,29 +79,25 @@ impl Iterator for Query {
 #[derive(Default)]
 pub struct Polar {
     pub kb: KnowledgeBase,
-    pub gen: VarGenerator,
 }
 
 impl Polar {
     pub fn new() -> Self {
         Self {
             kb: KnowledgeBase::new(),
-            gen: VarGenerator::new(),
         }
     }
 
     pub fn load_str(&mut self, src: &str) -> PolarResult<()> {
         let rules = parse_rules(src)?;
         for rule in rules {
-            let generic_rule = self
-                .kb
-                .rules
-                .entry(rule.name.clone())
-                .or_insert(GenericRule {
-                    name: rule.name.clone(),
-                    rules: vec![],
-                });
-            generic_rule.rules.push(rewrite_rule(rule, &mut self.gen));
+            let name = rule.name.clone();
+            let rewritten_rule = rewrite_rule(rule, &mut self.kb);
+            let generic_rule = self.kb.rules.entry(name.clone()).or_insert(GenericRule {
+                name,
+                rules: vec![],
+            });
+            generic_rule.rules.push(rewritten_rule);
         }
         Ok(())
     }
@@ -113,7 +109,7 @@ impl Polar {
 
     pub fn new_query_from_term(&mut self, term: Term) -> Query {
         let query = Goal::Query {
-            term: rewrite_term(term, &mut self.gen),
+            term: rewrite_term(term, &mut self.kb),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -129,9 +125,9 @@ impl Polar {
         query.vm.external_call_result(call_id, value)
     }
 
-    pub fn external_construct_result(&mut self, _query: &mut Query, _instance_id: Option<u64>) {
-        // if instance_id is None, it means that there was an error on the python side. So just shutdown I guess.
-        unimplemented!();
+    // @TODO: Get external_id call for returning external instances from python.
+    pub fn get_external_id(&mut self, query: &mut Query) -> u64 {
+        query.vm.new_id()
     }
 }
 
@@ -357,6 +353,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "not implemented yet"]
     fn test_instance_lookup() {
         let mut polar = Polar::new();
         assert!(qeval(&mut polar, "a{x: 1}.x = 1"));

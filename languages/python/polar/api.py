@@ -33,18 +33,19 @@ class PolarException(Exception):
     pass
 
 
-def this_is_what_you_get():
-    for i in range(0, 5):
-        yield i
+class Foo:
+    def __init__(self, start=0):
+        self.start = start
+
+    def call_me(self, end):
+        for i in range(self.start, end):
+            yield i
 
 
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
         self.loaded_files = {}
-        self.next_instance_id = 1
-        self.instances = {}
-        self.calls = {}
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -67,6 +68,9 @@ class Polar:
 
     # NEW METHOD
     def query_str(self, query_str):
+        instances = {}
+        calls = {}
+
         c_str = ffi.new("char[]", query_str.encode())
         query = lib.polar_new_query(self.polar, c_str)
         if query == ffi.NULL:
@@ -86,24 +90,41 @@ class Polar:
             kind = [*event][0]
             data = event[kind]
 
-            if kind == "ExternalConstructor":
-                # instance = data["instance"]
-                lib.polar_external_construct_result(
-                    self.polar, query, self.next_instance_id
-                )
-                self.next_instance_id += 1
+            if kind == "MakeExternal":
+                instance_id = data["instance_id"]
+                instance = data["instance"]
+
+                # assert instance_id not in instances
+                cls = instance["tag"]
+
+                term_fields = instance["fields"]["fields"]
+
+                fields = {}
+                for k, v in term_fields.items():
+                    fields[k] = to_python(v)
+
+                # construct an instance
+                # @TODO: use class constructor
+                assert cls == "Foo"
+                instance = Foo(**fields)
+
+                instances[instance_id] = instance
+
+                # @Q: Do we say anything on an error or just handle here?
 
             if kind == "ExternalCall":
                 call_id = data["call_id"]
-                # instance_id = data["instance_id"]
-                # attribute = data["attribute"]
-                # args = [to_python(arg) for arg in data["args"]]
+                instance_id = data["instance_id"]
+                attribute = data["attribute"]
+                args = [to_python(arg) for arg in data["args"]]
 
-                if call_id not in self.calls:
-                    self.calls[call_id] = this_is_what_you_get()
+                if call_id not in calls:
+                    instance = instances[instance_id]
+                    call = getattr(instance, attribute)(*args)
+                    calls[call_id] = call
 
                 try:
-                    val = next(self.calls[call_id])
+                    val = next(calls[call_id])
                     term = to_polar(val)
                     msg = json.dumps(term)
                     c_str = ffi.new("char[]", msg.encode())
