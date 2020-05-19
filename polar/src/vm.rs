@@ -877,6 +877,10 @@ mod tests {
 
 #[cfg(test)]
 mod docs {
+    // some of the examples are more consistent with
+    // redundant cloning
+    #![allow(clippy::redundant_clone)]
+
     use super::*;
 
     /// Set up the polar VM with the knowledge base:
