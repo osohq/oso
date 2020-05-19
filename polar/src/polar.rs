@@ -311,8 +311,9 @@ mod tests {
         assert!(qeval(&mut polar, "a()"));
     }
 
-    //#[test]
-    fn _test_not() {
+    #[test]
+    #[ignore = "not yet implemented"]
+    fn test_not() {
         let mut polar = Polar::new();
         polar.load_str("odd(1); even(2);").unwrap();
         assert!(qeval(&mut polar, "odd(1)"));
