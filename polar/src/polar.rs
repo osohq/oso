@@ -353,6 +353,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "not implemented yet"]
     fn test_instance_lookup() {
         let mut polar = Polar::new();
         assert!(qeval(&mut polar, "a{x: 1}.x = 1"));
