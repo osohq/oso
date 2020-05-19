@@ -293,7 +293,7 @@ impl KnowledgeBase {
 type Bindings = HashMap<Symbol, Term>;
 
 #[must_use]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum QueryEvent {
     Breakpoint,
     Done,

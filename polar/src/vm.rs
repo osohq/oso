@@ -875,6 +875,24 @@ mod tests {
 mod docs {
     use super::*;
 
+    /// Set up the polar VM with the knowledge base:
+    /// ```no_run
+    /// f(1); f(2);
+    /// g(1); g(2);
+    /// h(2);
+    /// k(x) := f(x), g(x), h(x);
+    /// ```
+    /// for the query `k(x)`.
+    #[allow(dead_code)]
+    fn docs_setup() -> PolarVirtualMachine {
+        let mut polar = crate::Polar::new();
+        polar
+            .load_str("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);")
+            .unwrap();
+        let query = polar.new_query("k(x)").unwrap();
+        query.vm
+    }
+
     /// # The Polar VM
     ///
     /// <Insert nice description of the VM>
@@ -896,7 +914,7 @@ mod docs {
     /// we need to do 3 things:
     /// 1. "Save" the current goal stack in the choice point
     /// 2. Create a list of goals for each choice
-    /// 3. Add a backtrack goal to the VM so that
+    /// 3. Pushing the first set of goals onto the goal stack
     #[test]
     fn docs2_choices() {
         // VM starts with an empty KB and a single Halt goal
@@ -924,21 +942,154 @@ mod docs {
     /// Pausing is accomplished by exiting from the main `run` loop.
     /// For example, the debugging `Break` goal will always return
     /// from the loop.
+    ///
+    /// Resuming is accomplished by entering the `run` loop again.
     #[test]
     fn docs3_goal_stack() {
-        let goals = vec![Goal::Noop, Goal::Noop, Goal::Break, Goal::Cut];
+        let goals = vec![Goal::Noop, Goal::Noop, Goal::Break, Goal::Halt];
 
         // VM starts with an empty KB and the above goals (in reverse order)
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), goals);
         // Runs until the `Break` goal is hit
         let _ = vm.run();
-        // At which point the goals contains the rest of the stack: the `Cut` goal
-        assert_eq!(vm.goals, vec![Goal::Cut]);
+        // At which point the goals contains the rest of the stack: the `Halt` goal
+        assert_eq!(vm.goals, vec![Goal::Halt]);
+
+        // Resuming will now run the VM to completion
+        assert_eq!(vm.run().unwrap(), QueryEvent::Done);
     }
 
     /// # Backtracking
     ///
-    /// The backtracking goal works by
+    /// Backtracking is the process of (a) going back to the last choice point
+    /// and (b) resuming the stack from that point.
+    ///
+    /// Backtracking drains each choice point before moving onto the next one.
     #[test]
-    pub fn docs3_backtracking() {}
+    pub fn docs4_backtracking() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), Vec::new());
+
+        // Set up some useful terms
+        let q1 = Goal::Query {
+            term: term!(value!(1)),
+        };
+        let q2 = Goal::Query {
+            term: term!(value!(2)),
+        };
+        let qa = Goal::Query {
+            term: term!(value!("a")),
+        };
+        let qb = Goal::Query {
+            term: term!(value!("b")),
+        };
+
+        // Choice point 1: query for 1 or 2
+        let alternatives = vec![vec![q2.clone()], vec![q1.clone()]];
+        vm.push_alternatives(alternatives);
+
+        // Choice point 2: query for "a" or "b"
+        let alternatives = vec![vec![qb.clone()], vec![qa.clone()]];
+        vm.push_alternatives(alternatives);
+
+        // Two goals queued up in the VM
+        assert_eq!(vm.goals, &[q1.clone(), qa.clone()]);
+        // Plus two choice points
+        assert_eq!(vm.choices.len(), 2);
+
+        // Backtracking => we try the next option
+        vm.backtrack();
+        assert_eq!(vm.goals, &[q1.clone(), qb.clone()]);
+        // only one choice point left
+        assert_eq!(vm.choices.len(), 1);
+
+        // Backtracking => run out of the qa/qb options, so on to q2
+        vm.backtrack();
+        assert_eq!(vm.goals, &[q2.clone()]);
+        vm.backtrack();
+        // No more choices left, so a halt goal gets pushed
+        assert_eq!(vm.goals, &[q2.clone(), Goal::Halt]);
+    }
+
+    /// # Breakpoints
+    ///
+    /// Pushing a `Break` goal onto the stack will cause the VM
+    /// to return from the main `run` loop at any arbitrary point
+    #[test]
+    fn docs4_breakpoints() {
+        let goals = vec![
+            Goal::Noop,
+            Goal::Noop,
+            Goal::Noop,
+            Goal::Break, // break here; everything above the line will have executed already
+            Goal::Noop,
+            Goal::Noop,
+        ];
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), goals);
+
+        assert_eq!(vm.run().unwrap(), QueryEvent::Breakpoint);
+        assert_eq!(vm.goals.len(), 2);
+    }
+
+    /// # Cut
+    ///
+    /// A `cut` goal indicates that, upon hitting, all other alternatives for the current choice
+    /// should be thrown away.
+    /// In other words, the VM is committing to the current branch.
+    #[test]
+    fn docs4_cut() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![]);
+
+        // this branch fails
+        let fail_branch = vec![Goal::Unify {
+            left: term!(value!(1)),
+            right: term!(value!(2)),
+        }];
+
+        // this branch succeeds
+        let ok_branch = vec![Goal::Unify {
+            left: term!(value!(@sym "x")),
+            right: term!(value!(1)),
+        }];
+
+        // First, we try the two branches normally
+        //
+        // Unify(1, 2)
+        // Backtrack
+        // ⇒ backtrack
+        // Unify(x, 1)
+        // ⇒ bind: x ← 1
+        // ⇒ result
+        vm.push_alternatives(vec![ok_branch.clone(), fail_branch.clone()]);
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result { .. }));
+
+        // If we cut on the first branch, we never get to the second:
+        //
+        // Cut
+        // Unify(1, 2)
+        // Backtrack
+        // ⇒ backtrack
+        // Halt
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![]);
+        let mut cut_fail_branch = fail_branch.clone();
+        cut_fail_branch.insert(0, Goal::Cut);
+        vm.push_alternatives(vec![ok_branch.clone(), cut_fail_branch]);
+        assert_eq!(vm.run().unwrap(), QueryEvent::Done);
+
+        // But if we cut on the second branch, the cut happens on the successful branch,
+        // so we still get the first return value (but would not get any more)
+        //
+        // Unify(1, 2)
+        // Backtrack
+        // ⇒ backtrack
+        // Cut
+        // Unify(x, 1)
+        // ⇒ bind: x ← 1
+        // ⇒ result
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![]);
+        let mut cut_ok_branch = ok_branch.clone();
+        cut_ok_branch.insert(0, Goal::Cut);
+        vm.push_alternatives(vec![ok_branch.clone(), cut_ok_branch, fail_branch.clone()]);
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result { .. }));
+        assert_eq!(vm.run().unwrap(), QueryEvent::Done);
+    }
 }

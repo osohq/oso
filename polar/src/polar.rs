@@ -56,7 +56,7 @@ use super::parser::{parse_query, parse_rules};
 // @TODO: Once the external constructor stuff and instance ids are worked out explain them.
 
 pub struct Query {
-    vm: PolarVirtualMachine,
+    pub(crate) vm: PolarVirtualMachine,
     done: bool,
 }
 
