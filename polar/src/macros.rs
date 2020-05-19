@@ -5,10 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::types::*;
 
 pub const ORD: Ordering = Ordering::SeqCst;
-
-lazy_static::lazy_static! {
-    static ref NEXT_ID: AtomicU64 = AtomicU64::new(0);
-}
+pub static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 /// Special struct which is way more eager at implementing `From`
 /// for a bunch of things, so that in the macros we can use `FromHelper<Term>::from`
