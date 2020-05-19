@@ -1,3 +1,42 @@
+/// # The Polar VM
+///
+/// <Insert nice description of the VM>
+///
+/// ## Choices stack
+///
+/// Every time there are multiple ways to solve a target, the VM
+/// inserts a new choice point, by adding a `Choice` to the `choices` stack.
+///
+/// Choices points are (currently) only added when resolving a `Query` goal,
+/// but this might be:
+///  - Choices over which predicate to match
+///  - Results from an external lookup (dot operator)
+///  - Disjunctions (OR operator)
+///
+/// Any time we want to add a new choice point to the virtual machine,
+/// we need to do 3 things:
+/// 1. "Save" the current goal stack in the choice point
+/// 2. Create a list of goals for each choice
+/// 3. Add a backtrack goal to the VM so that
+///
+/// TODO: I would really like to make this an actual doctest without having to make everything public
+/// Maybe it's better as a regular test anyway?
+#[test]
+pub fn doctest1() {
+    // VM starts with an empty KB and a single Halt goal
+    let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![Goal::Halt]);
+    assert_eq!(vm.goals[0], Goal::Halt);
+
+    // Push some alternatives
+    let alternatives = vec![vec![Goal::Noop]];
+    vm.push_alternatives(alternatives);
+
+    // Now the Vm has one backtrack goal, and a choice point
+    assert_eq!(vm.goals, vec![Goal::Backtrack]);
+    assert_eq!(vm.choices.len(), 1);
+    assert_eq!(vm.choices[0].goals, vec![Goal::Halt]);
+}
+
 use std::collections::HashMap;
 use std::fmt;
 
@@ -6,7 +45,7 @@ use super::types::*;
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[must_use = "ignored goals are never accomplished"]
 pub enum Goal {
     Backtrack,
@@ -79,8 +118,7 @@ struct Binding(Symbol, Term);
 pub struct Choice {
     alternatives: Alternatives,
     bsp: usize, // binding stack pointer
-    /// The goal that led to these choices.  Goal to retry when exhausting alternatives.
-    retry: Goal,
+    goals: Goals,
 }
 
 type Alternatives = Vec<Goals>;
@@ -178,7 +216,9 @@ impl PolarVirtualMachine {
     /// Push a choice onto the choice stack.
     fn push_choice(&mut self, choice: Choice) {
         assert!(self.choices.len() < MAX_CHOICES, "too many choices");
-        self.choices.push(choice);
+        if !choice.alternatives.is_empty() {
+            self.choices.push(choice);
+        }
     }
 
     /// Push multiple goals onto the stack in reverse order.
@@ -249,6 +289,17 @@ impl PolarVirtualMachine {
             _ => value.clone(),
         })
     }
+
+    fn push_alternatives(&mut self, alternatives: Vec<Vec<Goal>>) {
+        let goals = std::mem::take(&mut self.goals);
+        self.push_choice(Choice {
+            bsp: self.bsp(),
+            alternatives,
+            goals,
+        });
+        // Causes the VM to immediately try the next choice
+        self.push_goal(Goal::Backtrack);
+    }
 }
 
 /// Implementations of instructions.
@@ -257,35 +308,27 @@ impl PolarVirtualMachine {
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) {
         eprintln!("⇒ backtrack");
-        let mut retries = vec![];
         loop {
-            match self.choices.pop() {
+            match self.choices.last_mut() {
                 None => return self.push_goal(Goal::Halt),
                 Some(Choice {
-                    ref mut alternatives,
-                    ref bsp,
-                    ref retry,
+                    alternatives,
+                    bsp,
+                    goals,
                 }) => {
                     // Unwind bindings.
                     self.bindings.drain(*bsp..);
 
                     // Find an alternate path.
-                    if let Some(alternative) = alternatives.pop() {
-                        // TODO order
-                        self.append_goals(retries.iter().cloned().rev().collect());
-                        self.append_goals(alternative);
-
-                        // Leave a choice for any remaining alternatives.
-                        return self.push_choice(Choice {
-                            alternatives: alternatives.clone(),
-                            bsp: *bsp,
-                            retry: retry.clone(),
-                        });
-                    } else {
-                        retries.push(retry.clone())
+                    if let Some(mut alternative) = alternatives.pop() {
+                        self.goals = goals.clone();
+                        self.goals.append(&mut alternative);
+                        return;
                     }
                 }
             }
+            // falling through means no alternatives found
+            let _ = self.choices.pop();
         }
     }
 
@@ -394,7 +437,12 @@ impl PolarVirtualMachine {
                             };
                             let params = &renames[0];
                             let body = &renames[1];
-                            let mut goals = vec![];
+
+                            let mut goals = Vec::new();
+
+                            goals.push(Goal::Query {
+                                term: Term::new(body.value.clone()),
+                            });
 
                             // Unify the arguments with the formal parameters.
                             goals.push(Goal::Unify {
@@ -402,21 +450,10 @@ impl PolarVirtualMachine {
                                 right: params.clone(),
                             });
 
-                            // Query for the body clauses.
-                            goals.push(Goal::Query {
-                                term: Term::new(body.value.clone()),
-                            });
-
                             alternatives.push(goals)
                         }
 
-                        // Choose the first alternative, and push a choice for the rest.
-                        self.append_goals(alternatives.pop().expect("a choice"));
-                        self.push_choice(Choice {
-                            alternatives,
-                            bsp: self.bsp(),
-                            retry: Goal::Query { term },
-                        });
+                        self.push_alternatives(alternatives);
                     }
                 }
             }
@@ -427,6 +464,14 @@ impl PolarVirtualMachine {
                             .map(|a| Goal::Query { term: a.clone() })
                             .collect(),
                     ),
+                    Operator::Or => {
+                        let mut alternatives = vec![];
+                        for arg in args {
+                            let goals = vec![Goal::Query { term: arg.clone() }];
+                            alternatives.push(goals);
+                        }
+                        self.push_alternatives(alternatives);
+                    }
                     Operator::Unify => {
                         assert_eq!(args.len(), 2);
                         self.push_goal(Goal::Unify {
@@ -456,12 +501,14 @@ impl PolarVirtualMachine {
                                     _ => panic!("bad lookup value: {}", value.to_polar()),
                                 };
                                 self.call_id_symbols.insert(call_id, value.clone());
-                                self.push_goal(Goal::LookupExternal {
+                                let goals = vec![Goal::LookupExternal {
                                     call_id,
                                     instance_id,
                                     field,
                                     value,
-                                });
+                                }];
+                                // Push a choice point so the query is retried on backtracking.
+                                self.push_alternatives(vec![vec![Goal::Noop], goals]);
                             }
                             _ => panic!("can only perform lookups on dicts and instances"),
                         }
@@ -491,13 +538,6 @@ impl PolarVirtualMachine {
                     }
                     _ => todo!("can't query for expression: {:?}", operator),
                 }
-
-                // Push a choice point so the query is retried on backtracking.
-                self.push_choice(Choice {
-                    alternatives: vec![],
-                    bsp: self.bsp(),
-                    retry: Goal::Query { term },
-                });
             }
             _ => todo!("can't query for: {}", term.value.to_polar()),
         }

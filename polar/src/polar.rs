@@ -193,6 +193,14 @@ mod tests {
         assert_eq!(qvar(&mut polar, "k(a)", "a"), vec![value!(2)]);
     }
 
+    #[test]
+    fn test_branching_predicate() {
+        let mut polar = Polar::new();
+        polar.load_str("f(x) := a(x); f(1);").unwrap();
+
+        assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+    }
+
     /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
     #[test]
     fn test_jealous() {
