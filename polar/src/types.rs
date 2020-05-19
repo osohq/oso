@@ -521,7 +521,7 @@ impl KnowledgeBase {
 
     /// Generate a new symbol.
     pub fn gensym(&mut self, prefix: &str) -> Symbol {
-        if prefix.chars().nth(0) == Some('_') {
+        if prefix.starts_with('_') {
             Symbol(format!("{}_{}", prefix, self.id()))
         } else {
             Symbol(format!("_{}_{}", prefix, self.id()))
