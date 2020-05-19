@@ -486,6 +486,21 @@ impl PolarVirtualMachine {
                             .map(|term| vec![Goal::Query { term }])
                             .collect(),
                     ),
+                    Operator::Not => {
+                        assert_eq!(args.len(), 1);
+                        let alternatives = vec![
+                            vec![
+                                Goal::Query {
+                                    term: args[0].clone(),
+                                },
+                                Goal::Cut,
+                                Goal::Backtrack,
+                            ],
+                            vec![Goal::Noop],
+                        ];
+
+                        self.choose(alternatives);
+                    }
                     _ => todo!("can't query for expression: {:?}", operator),
                 }
             }
