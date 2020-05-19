@@ -157,6 +157,19 @@ impl PolarVirtualMachine {
         }
     }
 
+    fn push_alternatives(&mut self, mut alternatives: Alternatives) {
+        if alternatives.is_empty() {
+            return;
+        }
+        let first = alternatives.pop().unwrap();
+        self.push_choice(Choice {
+            alternatives,
+            bsp: self.bsp(),
+            goals: self.goals.clone(),
+        });
+        self.append_goals(first);
+    }
+
     /// Push multiple goals onto the stack in reverse order.
     fn append_goals(&mut self, mut goals: Goals) {
         goals.reverse();
@@ -335,7 +348,6 @@ impl PolarVirtualMachine {
                 match self.kb.rules.get(&predicate.name) {
                     None => self.push_goal(Goal::Backtrack),
                     Some(generic_rule) => {
-                        let goals = self.goals.clone();
                         let generic_rule = generic_rule.clone();
                         assert_eq!(generic_rule.name, predicate.name);
 
@@ -370,13 +382,7 @@ impl PolarVirtualMachine {
                             alternatives.push(goals)
                         }
 
-                        // Choose the first alternative, and push a choice for the rest.
-                        self.append_goals(alternatives.pop().expect("a choice"));
-                        self.push_choice(Choice {
-                            alternatives,
-                            bsp: self.bsp(),
-                            goals,
-                        });
+                        self.push_alternatives(alternatives);
                     }
                 }
             }
@@ -863,4 +869,72 @@ mod tests {
         };
         assert_eq!(y_value.unwrap(), "_y_1");
     }
+}
+
+#[cfg(test)]
+mod docs {
+    use super::*;
+
+    /// # The Polar VM
+    ///
+    /// <Insert nice description of the VM>
+    #[test]
+    fn docs1_vm() {}
+
+    /// ## Choices stack
+    ///
+    /// Every time there are multiple ways to solve a target, the VM
+    /// inserts a new choice point, by adding a `Choice` to the `choices` stack.
+    ///
+    /// Choices points are (currently) only added when resolving a `Query` goal,
+    /// but this might be:
+    ///  - Choices over which predicate to match
+    ///  - Results from an external lookup (dot operator)
+    ///  - Disjunctions (OR operator)
+    ///
+    /// Any time we want to add a new choice point to the virtual machine,
+    /// we need to do 3 things:
+    /// 1. "Save" the current goal stack in the choice point
+    /// 2. Create a list of goals for each choice
+    /// 3. Add a backtrack goal to the VM so that
+    #[test]
+    fn docs2_choices() {
+        // VM starts with an empty KB and a single Halt goal
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![Goal::Halt]);
+        assert_eq!(vm.goals[0], Goal::Halt);
+
+        // Push some alternatives
+        let alternatives = vec![vec![Goal::Noop]];
+        vm.push_alternatives(alternatives);
+
+        // Now the Vm has one backtrack goal, and a choice point
+        assert_eq!(vm.goals, vec![Goal::Backtrack]);
+        assert_eq!(vm.choices.len(), 1);
+        assert_eq!(vm.choices[0].goals, vec![Goal::Halt]);
+    }
+
+    /// # Goals stack
+    ///
+    /// The VM maintains a stack of goals. The main purpose of this is
+    /// to enable pausing, resuming, and forking execution.
+    ///
+    /// Pausing is accomplished by exiting from the main `run` loop.
+    /// For example, the debugging `Break` goal will always return
+    /// from the loop.
+    #[test]
+    fn docs3_goal_stack() {
+        let goals = vec![Goal::Cut, Goal::Break, Goal::Noop, Goal::Noop];
+
+        // VM starts with an empty KB and a single Halt goal
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), goals);
+        // Runs until the
+        let _ = vm.run();
+        assert_eq!(vm.goals, vec![Goal::Cut]);
+    }
+
+    /// # Backtracking
+    ///
+    /// The backtracking goal works by
+    #[test]
+    pub fn docs3_backtracking() {}
 }
