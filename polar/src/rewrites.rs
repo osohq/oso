@@ -223,6 +223,7 @@ pub fn rewrite_rule(mut rule: Rule, kb: &mut KnowledgeBase) -> Rule {
 mod tests {
     use super::*;
     use crate::parser::*;
+    use crate::ToPolarString;
     #[test]
     fn rewrites_test() {
         let mut kb = KnowledgeBase::new();

@@ -1,19 +1,20 @@
 use std::collections::HashMap;
-use std::fmt;
 
-use super::types::*;
+use crate::types::*;
+use crate::ToPolarString;
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[must_use = "ignored goals are never accomplished"]
 #[allow(clippy::large_enum_variant)]
+#[allow(dead_code)]
 pub enum Goal {
     Backtrack,
+    Break,
     Cut,
     Halt,
-    #[allow(dead_code)]
     Isa {
         left: Term,
         right: Term,
@@ -33,7 +34,6 @@ pub enum Goal {
         literal: InstanceLiteral,
         instance_id: u64,
     },
-    #[allow(dead_code)]
     Noop,
     Query {
         term: Term,
@@ -42,37 +42,6 @@ pub enum Goal {
         left: Term,
         right: Term,
     },
-}
-
-impl fmt::Display for Goal {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Goal::Lookup { dict, field, value } => write!(
-                fmt,
-                "Lookup({}, {}, {})",
-                dict.to_polar(),
-                field.to_polar(),
-                value.to_polar()
-            ),
-            Goal::LookupExternal {
-                instance_id,
-                field,
-                value,
-                ..
-            } => write!(
-                fmt,
-                "LookupExternal({}, {}, {})",
-                instance_id,
-                field.to_polar(),
-                value.to_polar(),
-            ),
-            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
-            Goal::Unify { left, right } => {
-                write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
-            }
-            g => write!(fmt, "{:?}", g),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -140,6 +109,7 @@ impl PolarVirtualMachine {
             eprintln!("{}", goal);
             match goal {
                 Goal::Backtrack => self.backtrack(),
+                Goal::Break => return Ok(QueryEvent::Breakpoint),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { .. } => todo!("isa"),
