@@ -145,14 +145,44 @@ impl PolarVirtualMachine {
         self.goals.push(goal);
     }
 
-    /// Push a choice onto the choice stack. Do nothing if there are no
-    /// alternatives; this saves every caller a conditional, and maintains
-    /// the invariant that only choice points with alternatives are on the
-    /// choice stack.
-    fn push_choice(&mut self, choice: Choice) {
+    /// Push a choice onto the choice stack.
+    ///
+    /// Do not modify the goals stack.  This function defers execution of the
+    /// choice until a backtrack occurs.  To immediately execute the choice on
+    /// top of the current stack, use `choose`.
+    ///
+    /// Do nothing if there are no alternatives; this saves every caller a
+    /// conditional, and maintains the invariant that only choice points with
+    /// alternatives are on the choice stack.
+    fn push_choice(&mut self, mut alternatives: Alternatives) {
+        // Make sure that alternatives are executed in order of first to last.
+        alternatives.reverse();
+
+        let choice = Choice {
+            alternatives,
+            bsp: self.bsp(),
+            goals: self.goals.clone(),
+        };
+
         assert!(self.choices.len() < MAX_CHOICES, "too many choices");
         if !choice.alternatives.is_empty() {
             self.choices.push(choice);
+        }
+    }
+
+    /// Push a choice onto the choice stack, and execute immediately by
+    /// pushing the first alternative onto the goals stack
+    fn choose(&mut self, mut alternatives: Alternatives) {
+        let first_alternative = if !alternatives.is_empty() {
+            Some(alternatives.remove(0))
+        } else {
+            None
+        };
+
+        self.push_choice(alternatives);
+
+        if let Some(first_alternative) = first_alternative {
+            self.append_goals(first_alternative);
         }
     }
 
@@ -250,12 +280,15 @@ impl PolarVirtualMachine {
             }) => {
                 self.bindings.drain(bsp..);
                 self.goals = goals.clone();
-                self.append_goals(alternatives.pop().expect("expected an alternative"));
-                self.push_choice(Choice {
-                    alternatives,
-                    bsp,
-                    goals,
-                });
+                self.append_goals(alternatives.pop().expect("must have alternative"));
+
+                if !alternatives.is_empty() {
+                    self.choices.push(Choice {
+                        alternatives,
+                        bsp,
+                        goals
+                    });
+                }
             }
         }
     }
@@ -301,16 +334,13 @@ impl PolarVirtualMachine {
             _ => panic!("call must be a predicate"),
         };
 
-        self.push_choice(Choice {
-            alternatives: vec![vec![Goal::LookupExternal {
+        self.push_choice(vec![vec![Goal::LookupExternal {
                 call_id,
                 instance_id,
                 field,
                 value,
-            }]],
-            bsp: self.bsp(),
-            goals: self.goals.clone(),
-        });
+            }]]
+        );
 
         QueryEvent::ExternalCall {
             call_id,
@@ -343,12 +373,11 @@ impl PolarVirtualMachine {
                 match self.kb.rules.get(&predicate.name) {
                     None => self.push_goal(Goal::Backtrack),
                     Some(generic_rule) => {
-                        let goal_snapshot = self.goals.clone();
                         let generic_rule = generic_rule.clone();
                         assert_eq!(generic_rule.name, predicate.name);
 
                         let mut alternatives = vec![];
-                        for rule in generic_rule.rules.iter().rev() {
+                        for rule in generic_rule.rules.iter() {
                             // Rename the parameters and body at the same time.
                             // FIXME: This is terrible right now.
                             // TODO(?): Should maybe parse these as terms.
@@ -379,12 +408,7 @@ impl PolarVirtualMachine {
                         }
 
                         // Choose the first alternative, and push a choice for the rest.
-                        self.append_goals(alternatives.pop().expect("a choice"));
-                        self.push_choice(Choice {
-                            alternatives,
-                            bsp: self.bsp(),
-                            goals: goal_snapshot,
-                        });
+                        self.choose(alternatives);
                     }
                 }
             }
@@ -459,20 +483,12 @@ impl PolarVirtualMachine {
                     }
                     Operator::Or => {
                         let mut alternatives = vec![];
-                        let goals = self.goals.clone();
                         for term in args {
                             alternatives.push(vec![Goal::Query {
                                 term,
                             }]);
                         }
-                        // Reverse alternatives list because we always pop them
-                        alternatives.reverse();
-                        self.append_goals(alternatives.pop().expect("a choice"));
-                        self.push_choice(Choice {
-                            alternatives,
-                            bsp: self.bsp(),
-                            goals
-                        });
+                        self.choose(alternatives);
                     }
                     _ => todo!("can't query for expression: {:?}", operator),
                 }
