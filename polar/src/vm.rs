@@ -334,7 +334,7 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: Term) {
-        match &term.value {
+        match term.value {
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
             // Sort applicable rules by specificity.
@@ -343,7 +343,7 @@ impl PolarVirtualMachine {
                 match self.kb.rules.get(&predicate.name) {
                     None => self.push_goal(Goal::Backtrack),
                     Some(generic_rule) => {
-                        let goals = self.goals.clone();
+                        let goal_snapshot = self.goals.clone();
                         let generic_rule = generic_rule.clone();
                         assert_eq!(generic_rule.name, predicate.name);
 
@@ -383,7 +383,7 @@ impl PolarVirtualMachine {
                         self.push_choice(Choice {
                             alternatives,
                             bsp: self.bsp(),
-                            goals,
+                            goals: goal_snapshot,
                         });
                     }
                 }
@@ -455,6 +455,23 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::MakeExternal {
                             literal,
                             instance_id,
+                        });
+                    }
+                    Operator::Or => {
+                        let mut alternatives = vec![];
+                        let goals = self.goals.clone();
+                        for term in args {
+                            alternatives.push(vec![Goal::Query {
+                                term,
+                            }]);
+                        }
+                        // Reverse alternatives list because we always pop them
+                        alternatives.reverse();
+                        self.append_goals(alternatives.pop().expect("a choice"));
+                        self.push_choice(Choice {
+                            alternatives,
+                            bsp: self.bsp(),
+                            goals
                         });
                     }
                     _ => todo!("can't query for expression: {:?}", operator),
