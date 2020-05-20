@@ -53,7 +53,7 @@ pub mod to_polar {
     use crate::types::*;
 
     /// Helper method: uses the operator precedence to determine if `t`
-    /// has a lower precendence that `op`.
+    /// has a lower precedence than `op`.
     fn has_lower_pred(op: Operator, t: &Term) -> bool {
         match t.value {
             Value::Expression(Operation {
@@ -129,7 +129,7 @@ pub mod to_polar {
     impl ToPolarString for Operation {
         fn to_polar(&self) -> String {
             use Operator::*;
-            // Adds parentheses when sub expressions have lower precidence (which is what you would have had to have during inital parse)
+            // Adds parentheses when sub expressions have lower precedence (which is what you would have had to have during initial parse)
             // Lets us spit out strings that would reparse to the same ast.
             match self.operator {
                 // `Make` formats as a predicate
