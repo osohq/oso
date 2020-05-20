@@ -147,6 +147,11 @@ impl PolarVirtualMachine {
 
     /// Push a choice onto the choice stack.
     ///
+    /// Params:
+    ///
+    /// - `alternatives`: an ordered list of alternatives to try in the choice.
+    ///   The first element is the first alternative to try.
+    ///
     /// Do not modify the goals stack.  This function defers execution of the
     /// choice until a backtrack occurs.  To immediately execute the choice on
     /// top of the current stack, use `choose`.
@@ -172,6 +177,11 @@ impl PolarVirtualMachine {
 
     /// Push a choice onto the choice stack, and execute immediately by
     /// pushing the first alternative onto the goals stack
+    ///
+    /// Params:
+    ///
+    /// - `alternatives`: an ordered list of alternatives to try in the choice.
+    ///   The first element is the first alternative to try.
     fn choose(&mut self, mut alternatives: Alternatives) {
         let first_alternative = if !alternatives.is_empty() {
             Some(alternatives.remove(0))
