@@ -65,7 +65,7 @@ pub mod to_polar {
     /// Formats a vector of parameters
     fn format_params(args: &[Parameter], sep: &str) -> String {
         args.iter()
-            .map(|parameter| format!("{}", parameter.to_polar()))
+            .map(|parameter| parameter.to_polar())
             .collect::<Vec<String>>()
             .join(sep)
     }
@@ -185,8 +185,8 @@ pub mod to_polar {
                 (Some(name), Some(specializer)) => {
                     format!("{}: {}", name.to_polar(), specializer.to_polar())
                 }
-                (None, Some(specializer)) => format!("{}", specializer.to_polar()),
-                (Some(name), None) => format!("{}", name.to_polar()),
+                (None, Some(specializer)) => specializer.to_polar(),
+                (Some(name), None) => name.to_polar(),
                 (None, None) => panic!("Invalid specializer"),
             }
         }
