@@ -94,7 +94,7 @@ mod tests {
         let l = polar::TermParser::new()
             .parse(r#"[foo, bar, baz]"#)
             .unwrap();
-        assert_eq!(l, term!(value!(@tl sym!("foo"), sym!("bar"), sym!("baz"))));
+        assert_eq!(l, term!(value!([sym!("foo"), sym!("bar"), sym!("baz")])));
 
         let exp = polar::ExpParser::new()
             .parse(r#"foo(a, b(c), "d")"#)
@@ -128,7 +128,7 @@ mod tests {
                         pred!(
                             ".",
                             sym!("c"),
-                            pred!("d", sym!("e"), value!(@tl sym!("f"), sym!("g")))
+                            pred!("d", sym!("e"), value!([sym!("f"), sym!("g")]))
                         )
                     )
                 )

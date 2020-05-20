@@ -130,6 +130,11 @@ impl From<Symbol> for TestHelper<Value> {
 
 #[macro_export]
 macro_rules! value {
+    ([$($args:expr),+]) => {
+        $crate::types::Value::List(vec![
+            $(term!(value!($args))),*
+        ])
+    };
     ($arg:expr) => {
         $crate::macros::TestHelper::<Value>::from($arg).0
     };
@@ -150,11 +155,6 @@ macro_rules! value {
     };
     (@pred $arg:expr) => {
         $crate::types::Value::Predicate($arg)
-    };
-    (@tl $($args:expr),+) => {
-        $crate::types::Value::List(vec![
-            $(term!(value!($args))),*
-        ])
     };
     (@sym $arg:expr) => {
         $crate::types::Value::Symbol(sym!($arg))
