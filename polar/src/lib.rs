@@ -1,6 +1,10 @@
 #[macro_use]
 pub mod macros;
 
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
+
 mod formatting;
 mod parser;
 mod polar;

@@ -624,6 +624,36 @@ mod tests {
     use super::*;
     use permute::permute;
 
+    /// Shorthand for constructing Goal::Query.
+    ///
+    /// A one argument invocation assumes the 1st argument is the same
+    /// parameters that can be passed to the term! macro.  In this invocation,
+    /// typically the form `query!(op!(And, term!(TERM)))` will be used. The
+    /// one argument form allows for queries with a top level operator other
+    /// than AND.
+    ///
+    /// Multiple arguments `query!(f1, f2, f3)` result in a query with a root
+    /// AND operator term.
+    macro_rules! query {
+        ($term:expr) => {
+            Goal::Query {
+                term: term!($term)
+            }
+        };
+        ($($term:expr),+) => {
+            Goal::Query {
+                term: term!(op!(And, $($term),+))
+            }
+        };
+    }
+
+    macro_rules! assert_query_events {
+        ($vm:ident, [$(($($match_:tt)*)),+]) => {
+            $(assert!(matches!($vm.run().unwrap(), $($match_)*)));+
+        };
+        // TODO (dhatch) Be able to use hashmap! to match on specific bindings.
+    }
+
     #[test]
     fn deref() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
@@ -656,96 +686,51 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn and_expression() {
-        let one = Term::new(Value::Integer(1));
-        let two = Term::new(Value::Integer(2));
-        let three = Term::new(Value::Integer(3));
-        let f1 = Rule {
-            name: Symbol::new("f"),
-            params: vec![Parameter {
-                name: None,
-                specializer: Some(one.clone()),
-            }],
-            body: Term::new(Value::Expression(Operation {
-                operator: Operator::And,
-                args: vec![],
-            })),
-        };
-        let f2 = Rule {
-            name: Symbol::new("f"),
-            params: vec![Parameter {
-                name: None,
-                specializer: Some(two.clone()),
-            }],
-            body: Term::new(Value::Expression(Operation {
-                operator: Operator::And,
-                args: vec![],
-            })),
-        };
+        let f1 = rule!("f", 1);
+        let f2 = rule!("f", 2);
+
         let rule = GenericRule {
-            name: Symbol::new("f"),
-            rules: vec![f1, f2],
+            name: sym!("f"),
+            rules: vec![f1.clone(), f2.clone()],
         };
 
         let mut kb = KnowledgeBase::new();
         kb.rules.insert(rule.name.clone(), rule);
-        let goal = Goal::Query {
-            term: Term::new(Value::Expression(Operation {
-                operator: Operator::And,
-                args: vec![],
-            })),
-        };
+
+        let goal = query!(op!(And));
+
         let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert_query_events!(vm, [
+            (QueryEvent::Result{bindings} if bindings.is_empty()),
+            (QueryEvent::Done)
+        ]);
+
         assert!(vm.is_halted());
 
-        let f1 = Term::new(Value::Call(Predicate {
-            name: Symbol::new("f"),
-            args: vec![one],
-        }));
-        let f2 = Term::new(Value::Call(Predicate {
-            name: Symbol::new("f"),
-            args: vec![two],
-        }));
-        let f3 = Term::new(Value::Call(Predicate {
-            name: Symbol::new("f"),
-            args: vec![three],
-        }));
+        let f1 = term!(pred!("f", 1));
+        let f2 = term!(pred!("f", 2));
+        let f3 = term!(pred!("f", 3));
 
         // Querying for f(1)
-        vm.push_goal(Goal::Query {
-            term: Term::new(Value::Expression(Operation {
-                operator: Operator::And,
-                args: vec![f1.clone()],
-            })),
-        });
+        vm.push_goal(query!(op!(And, f1.clone())));
+
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
         // Querying for f(1), f(2)
-        vm.push_goal(Goal::Query {
-            term: Term::new(Value::Expression(Operation {
-                operator: Operator::And,
-                args: vec![f1.clone(), f2.clone()],
-            })),
-        });
+        vm.push_goal(query!(f1.clone(), f2.clone()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
         // Querying for f(3)
-        vm.push_goal(Goal::Query {
-            term: Term::new(Value::Expression(Operation {
-                operator: Operator::And,
-                args: vec![f3.clone()],
-            })),
-        });
+        vm.push_goal(query!(op!(And, f3.clone())));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
         // Querying for f(1), f(2), f(3)
-        let parts = vec![f1, f2, f3];
+        let parts = vec![f1.clone(), f2.clone(), f3.clone()];
         for permutation in permute(parts) {
             vm.push_goal(Goal::Query {
                 term: Term::new(Value::Expression(Operation {
@@ -761,24 +746,14 @@ mod tests {
     #[test]
     fn unify_expression() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let one = Term::new(Value::Integer(1));
-        let two = Term::new(Value::Integer(2));
-        vm.push_goal(Goal::Query {
-            term: Term::new(Value::Expression(Operation {
-                operator: Operator::Unify,
-                args: vec![one.clone(), one.clone()],
-            })),
-        });
+        vm.push_goal(query!(op!(Unify, term!(1), term!(1))));
+
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
-        vm.push_goal(Goal::Query {
-            term: Term::new(Value::Expression(Operation {
-                operator: Operator::Unify,
-                args: vec![one, two],
-            })),
-        });
+        let q = op!(Unify, term!(1), term!(2));
+        vm.push_goal(query!(q));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
     }
@@ -818,7 +793,7 @@ mod tests {
             value: Term::new(Value::Symbol(y.clone())),
         });
         assert!(
-            matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.get(&y).unwrap().value == one)
+            matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == hashmap!{sym!("y") => Term::new(one)})
         );
         assert!(vm.is_halted());
     }

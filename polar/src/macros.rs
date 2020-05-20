@@ -30,12 +30,15 @@ impl From<Value> for TestHelper<Term> {
 
 #[macro_export]
 macro_rules! term {
-    ($arg:expr) => {
-        $crate::macros::TestHelper::<Term>::from($arg).0
+    ($($expr:tt)*) => {
+        $crate::macros::TestHelper::<Term>::from(value!($($expr)*)).0
     };
 }
 
 impl From<Value> for TestHelper<Parameter> {
+    /// Convert a Value to a parameter.  If the value is a symbol,
+    /// it is used as the parameter name. Otherwise it is assumed to be
+    /// a specializer.
     fn from(name: Value) -> Self {
         if let Value::Symbol(symbol) = name {
             Self(Parameter {
@@ -43,7 +46,10 @@ impl From<Value> for TestHelper<Parameter> {
                 specializer: None,
             })
         } else {
-            panic!("idk")
+            Self(Parameter {
+                name: None,
+                specializer: Some(Term::new(name))
+            })
         }
     }
 }
@@ -90,7 +96,7 @@ macro_rules! pred {
         Operation {
             operator: Operator::Dot,
             args: vec![
-                $(term!(value!($args))),*
+                $(term!($args)),*
             ]
         }
     };
@@ -98,10 +104,26 @@ macro_rules! pred {
         Predicate {
             name: sym!($name),
             args: vec![
-                $(term!(value!($args))),*
+                $(term!($args)),*
             ]
         }
     }
+}
+
+#[macro_export]
+macro_rules! op {
+    ($op_type:ident, $($args:expr),+) => {
+        Operation {
+            operator: Operator::$op_type,
+            args: vec![$($args),+]
+        }
+    };
+    ($op_type:ident) => {
+        Operation {
+            operator: Operator::$op_type,
+            args: vec![]
+        }
+    };
 }
 
 impl From<i64> for TestHelper<Value> {
@@ -170,15 +192,6 @@ macro_rules! value {
     ("false") => {
         $crate::types::Value::Boolean(false)
     };
-    (@instance $arg:expr) => {
-        $crate::types::Value::Instance($arg)
-    };
-    (@pred $arg:expr) => {
-        $crate::types::Value::Predicate($arg)
-    };
-    (@sym $arg:expr) => {
-        $crate::types::Value::Symbol(sym!($arg))
-    };
     (@and $($args:expr),*) => {
         $crate::types::Value::Expression($crate::types::Operation {
             operator: $crate::types::Operator::And,
@@ -193,15 +206,24 @@ macro_rules! value {
 
 #[macro_export]
 macro_rules! rule {
-    ($name:expr, $($args:expr),+ => $($body:expr),*) => {
+    ($name:expr, $($args:expr),+ => $($body:expr),+) => {
         Rule {
             name: sym!($name),
             params: vec![
                 $(param!(value!($args))),*
             ],
-            body: term!(value!(@and $($body),*)),
+            body: term!(op!(And, $(term!($body)),+)),
         }
-    }
+    };
+    ($name:expr, $($args:expr),+) => {
+        Rule {
+            name: sym!($name),
+            params: vec![
+                $(param!(value!($args))),*
+            ],
+            body: term!(op!(And)),
+        }
+    };
 }
 // #[macro_export]
 // macro_rules! list {
