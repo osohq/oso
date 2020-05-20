@@ -284,17 +284,51 @@ pub Exp: Term = {
     <exp1:Exp1> => exp1
 }
 
+SpecializerList: Vec<Term> = {
+    <term:Exp5> => vec![term],
+    <mut list:SpecializerList> "," <term:Exp5> => {
+        list.push(term);
+        list
+    },
+};
+
+Parameter: Parameter = {
+    <specializer:Exp5> => {
+        if let Term{value: Value::Symbol(name), ..} = specializer {
+            Parameter{name: Some(name), specializer: None}
+        } else {
+            Parameter{name: None, specializer: Some(specializer)}
+        }
+    },
+    <name:Name> ":" <specializer:Exp5> => Parameter{name: Some(name), specializer: Some(specializer)},
+};
+
+ParameterList: Vec<Parameter> = {
+    <param:Parameter> => vec![param],
+    <mut list:ParameterList> "," <param:Parameter> => {
+        list.push(param);
+        list
+    },
+};
+
+RuleHead: (Symbol, Vec<Parameter>) = {
+    <name:Name> "(" ")" => {
+        (name, vec![])
+    },
+    <name:Name> "(" <params:ParameterList> ")" => {
+        (name, params)
+    }
+};
+
 pub Rule: Rule = {
-    <head:Predicate> <start:@L> ";" => {
-        let name = head.name;
-        let params = head.args;
+    <head:RuleHead> <start:@L> ";" => {
+        let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
         let body = Term{id: 0, offset: start, value: Value::Expression(op)};
         Rule{name, params, body}
     },
-    <head:Predicate> ":=" <body:Exp> ";" => {
-        let name = head.name;
-        let params = head.args;
+    <head:RuleHead> ":=" <body:Exp> ";" => {
+        let (name, params) = head;
         let body = match body {
             Term{value: Value::Expression(Operation{operator: Operator::And, ..}), ..} => {
                 body

@@ -35,6 +35,26 @@ macro_rules! term {
     };
 }
 
+impl From<Value> for TestHelper<Parameter> {
+    fn from(name: Value) -> Self {
+        if let Value::Symbol(symbol) = name {
+            Self(Parameter {
+                name: Some(symbol),
+                specializer: None,
+            })
+        } else {
+            panic!("idk")
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! param {
+    ($name:expr) => {
+        $crate::macros::TestHelper::<Parameter>::from($name).0
+    };
+}
+
 impl<S: AsRef<str>> From<S> for TestHelper<InstanceLiteral> {
     fn from(other: S) -> Self {
         Self(InstanceLiteral {
@@ -177,7 +197,7 @@ macro_rules! rule {
         Rule {
             name: sym!($name),
             params: vec![
-                $(term!(value!($args))),*
+                $(param!(value!($args))),*
             ],
             body: term!(value!(@and $($body),*)),
         }

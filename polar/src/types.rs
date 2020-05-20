@@ -230,12 +230,52 @@ pub fn unwrap_and(term: Term) -> TermList {
     }
 }
 
-// Knowledge base internal types.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct Parameter {
+    pub name: Option<Symbol>,
+    pub specializer: Option<Term>,
+}
+
+impl Parameter {
+    pub fn map<F>(&self, f: &mut F) -> Parameter
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        let name = if let Some(name) = &self.name {
+            if let Value::Symbol(new_sym) = f(&Value::Symbol(name.clone())) {
+                Some(new_sym)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        Parameter {
+            name,
+            specializer: self.specializer.clone().map(|t| t.map(f)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Rule {
     pub name: Symbol,
-    pub params: TermList,
+    pub params: Vec<Parameter>,
     pub body: Term,
+}
+
+impl Rule {
+    pub fn map<F>(&self, f: &mut F) -> Rule
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        Rule {
+            name: self.name.clone(),
+            params: self.params.iter().map(|param| param.map(f)).collect(),
+            body: self.body.map(f),
+        }
+    }
 }
 
 #[derive(Clone)]
