@@ -183,16 +183,10 @@ impl PolarVirtualMachine {
     /// - `alternatives`: an ordered list of alternatives to try in the choice.
     ///   The first element is the first alternative to try.
     fn choose(&mut self, mut alternatives: Alternatives) {
-        let first_alternative = if !alternatives.is_empty() {
-            Some(alternatives.remove(0))
-        } else {
-            None
-        };
-
-        self.push_choice(alternatives);
-
-        if let Some(first_alternative) = first_alternative {
-            self.append_goals(first_alternative);
+        if !alternatives.is_empty() {
+            let alternative = alternatives.remove(0);
+            self.push_choice(alternatives);
+            self.append_goals(alternative);
         }
     }
 
