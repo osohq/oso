@@ -145,7 +145,7 @@ impl PolarVirtualMachine {
         self.goals.push(goal);
     }
 
-    /// Push a choice onto the choice stack.
+    /// Push a non-trivial choice onto the choice stack.
     ///
     /// Params:
     ///
@@ -160,18 +160,15 @@ impl PolarVirtualMachine {
     /// conditional, and maintains the invariant that only choice points with
     /// alternatives are on the choice stack.
     fn push_choice(&mut self, mut alternatives: Alternatives) {
-        // Make sure that alternatives are executed in order of first to last.
-        alternatives.reverse();
-
-        let choice = Choice {
-            alternatives,
-            bsp: self.bsp(),
-            goals: self.goals.clone(),
-        };
-
-        assert!(self.choices.len() < MAX_CHOICES, "too many choices");
-        if !choice.alternatives.is_empty() {
-            self.choices.push(choice);
+        if !alternatives.is_empty() {
+            // Make sure that alternatives are executed in order of first to last.
+            alternatives.reverse();
+            assert!(self.choices.len() < MAX_CHOICES, "too many choices");
+            self.choices.push(Choice {
+                alternatives,
+                bsp: self.bsp(),
+                goals: self.goals.clone(),
+            });
         }
     }
 
