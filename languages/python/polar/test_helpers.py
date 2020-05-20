@@ -80,3 +80,9 @@ def qvar(polar, query):
         return [env[v] for env in results]
 
     return _qvar
+
+# STUBS
+
+@pytest.fixture
+def oso_monkeypatch():
+    raise NotImplementedError()
