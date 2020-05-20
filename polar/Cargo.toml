@@ -21,3 +21,4 @@ lalrpop = {version = "0.18.1", features = ["lexer"]}
 
 [dev-dependencies]
 proptest = "0.9.6"
+pretty_assertions = "0.6.1"
