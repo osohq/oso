@@ -202,6 +202,15 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
+    /// Recursively dereference a variable.
+    #[allow(dead_code)]
+    fn deref(&self, term: &Term) -> Term {
+        match &term.value {
+            Value::Symbol(symbol) => self.value(&symbol).map_or(term.clone(), |t| self.deref(t)),
+            _ => term.clone(),
+        }
+    }
+
     /// Return `true` if `var` is a temporary.
     fn is_temporary_var(&self, name: &Symbol) -> bool {
         name.0.starts_with('_')
@@ -578,6 +587,35 @@ impl PolarVirtualMachine {
 mod tests {
     use super::*;
     use permute::permute;
+
+    #[test]
+    fn deref() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let value = Term::new(Value::Integer(1));
+        let x = Symbol::new("x");
+        let y = Symbol::new("y");
+        let term_x = Term::new(Value::Symbol(x.clone()));
+        let term_y = Term::new(Value::Symbol(y.clone()));
+
+        // unbound var
+        assert_eq!(vm.deref(&term_x), term_x);
+
+        // unbound var -> unbound var
+        vm.bind(&x, &term_y);
+        assert_eq!(vm.deref(&term_x), term_y);
+
+        // value
+        assert_eq!(vm.deref(&value), value.clone());
+
+        // unbound var -> value
+        vm.bind(&x, &value);
+        assert_eq!(vm.deref(&term_x), value.clone());
+
+        // unbound var -> unbound var -> value
+        vm.bind(&x, &term_y);
+        vm.bind(&y, &value);
+        assert_eq!(vm.deref(&term_x), value);
+    }
 
     #[test]
     #[allow(clippy::cognitive_complexity)]
