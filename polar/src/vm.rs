@@ -31,8 +31,8 @@ pub enum Goal {
         call_id: u64,
         /// Field to be looked up (e.g. a symbol for a field name)
         field: Term,
-        /// The value the result will be unified with
-        value: Symbol,
+        // /// The value the result will be unified with
+        // value: Symbol,
     },
     MakeExternal {
         literal: InstanceLiteral,
@@ -122,8 +122,8 @@ impl PolarVirtualMachine {
                     call_id,
                     instance_id,
                     field,
-                    value,
-                } => return Ok(self.lookup_external(call_id, instance_id, field, value)),
+                    // value,
+                } => return Ok(self.lookup_external(call_id, instance_id, field)),
                 Goal::MakeExternal {
                     literal,
                     instance_id,
@@ -331,7 +331,7 @@ impl PolarVirtualMachine {
         call_id: u64,
         instance_id: u64,
         field: Term,
-        value: Symbol,
+        // value: Symbol,
     ) -> QueryEvent {
         let (field_name, args) = match field.value.clone() {
             Value::Call(Predicate { name, args }) => (name, args),
@@ -343,7 +343,7 @@ impl PolarVirtualMachine {
                 call_id,
                 instance_id,
                 field,
-                value,
+                // value,
             }]],
             bsp: self.bsp(),
             goals: self.goals.clone(),
@@ -458,7 +458,7 @@ impl PolarVirtualMachine {
                                     call_id,
                                     instance_id,
                                     field,
-                                    value,
+                                    // value,
                                 });
                             }
                             _ => panic!("can only perform lookups on dicts and instances"),
@@ -1113,6 +1113,7 @@ mod docs {
     ///
     /// A `LookupExternal` goal is created when an attribute/method lookup is
     /// required on an external instance.
+    /// The lookup external goal must be paired with inserting a `call_id_symbol`
     ///
     /// In this case, the VM's strategy is to return control back to the caller,
     /// and push another choice point with a single "LookupExternal" goal.
@@ -1121,12 +1122,13 @@ mod docs {
     fn docs4_lookup_external() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![]);
 
+        vm.call_id_symbols.insert(0, sym!("x"));
         vm.push_goal(Goal::LookupExternal {
             instance_id: 0,
             call_id: 0,
             // the "field" is a method call foo()
             field: term!(value!(pred!("foo", value!(Vec::new())))),
-            value: sym!("x"),
+            // value: sym!("x"),
         });
         // run the VM -> get back an external call event
         let res = vm.run().unwrap();
