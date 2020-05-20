@@ -374,6 +374,15 @@ mod tests {
             instance_id: 12345,
             instance: literal,
         };
-        eprintln!("{}", serde_json::to_string(&event).unwrap())
+        eprintln!("{}", serde_json::to_string(&event).unwrap());
+        let external = Term::new(Value::ExternalInstance(ExternalInstance {
+            instance_id: 12345,
+        }));
+        let list_of = Term::new(Value::List(vec![external]));
+        eprintln!("{}", serde_json::to_string(&list_of).unwrap());
+        let mut fields = HashMap::new();
+        fields.insert(Symbol::new("foo"), list_of);
+        let dict = Term::new(Value::Dictionary(Dictionary { fields }));
+        eprintln!("{}", serde_json::to_string(&dict).unwrap())
     }
 }

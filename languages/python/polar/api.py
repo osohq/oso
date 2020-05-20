@@ -3,73 +3,102 @@ import json
 from _polar_lib import ffi, lib
 
 from pathlib import Path
+from types import GeneratorType
 
-
-def to_python(v):
-    """ Convert polar terms to python values """
-    # i = v['id']
-    # offset = v['offset']
-    value = v["value"]
-    tag = [*value][0]
-    if tag in ["Integer", "String", "Boolean"]:
-        return value[tag]
-    if tag == "List":
-        return [to_python(e) for e in value[tag]]
-    # TODO
-    return None
-
-
-def to_polar(v):
-    """ Convert python values to polar terms """
-    if isinstance(v, int):
-        val = {"Integer": v}
-        term = {"id": 0, "offset": 0, "value": val}
-        return term
-    # TODO
-    return None
-
-
-class PolarException(Exception):
-    pass
-
-
-class Foo:
-    def __init__(self, start=0):
-        self.start = start
-
-    def call_me(self, end):
-        for i in range(self.start, end):
-            yield i
+from .exceptions import *
 
 
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
         self.loaded_files = {}
+        self.classes = {}
+        self.class_constructors = {}
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
         lib.polar_free(self.polar)
 
-    # TODO: Use error types, not just PolarException
     def _raise_error(self):
         err = lib.polar_get_error()
         msg = ffi.string(err).decode()
+        # @TODO: More specific exception. Could be runtime or parse.
         exception = PolarException(msg)
         lib.string_free(err)
         raise exception
 
-    # NEW METHOD
+    # @BreakingChange
+    # These really need to be on the polar object, everything really needs to be on the polar object now.
+    # Also can we just call this register_class and get rid of the other one?
+    def register_python_class(self, cls, from_polar=None):
+        class_name = cls.__name__
+        self.classes[class_name] = cls
+        self.class_constructors[class_name] = from_polar
+
+    def register_class(self, spec, source_class: type):
+        raise NotImplementedError()
+
     def load_str(self, src_str):
         c_str = ffi.new("char[]", src_str.encode())
         loaded = lib.polar_load_str(self.polar, c_str)
         if loaded == 0:
             self._raise_error()
 
-    # NEW METHOD
     def query_str(self, query_str):
-        instances = {}
+        id_to_instance = {}
+        instance_to_id = {}
         calls = {}
+
+        def to_external_id(python_obj):
+            """ Create or look up a polar external_instance for an object """
+            if python_obj in instance_to_id:
+                instance_id = instance_to_id[python_obj]
+            else:
+                instance_id = lib.polar_get_external_id(self.polar, query)
+                if instance_id == 0:
+                    self._raise_error()
+                id_to_instance[instance_id] = python_obj
+                instance_to_id[python_obj] = instance_id
+            return instance_id
+
+        def from_external_id(external_id):
+            """ Lookup python object by external_id """
+            assert external_id in id_to_instance
+            return id_to_instance[external_id]
+
+        def to_python(v):
+            """ Convert polar terms to python values """
+            # i = v['id']
+            # offset = v['offset']
+            value = v["value"]
+            tag = [*value][0]
+            if tag in ["Integer", "String", "Boolean"]:
+                return value[tag]
+            if tag == "List":
+                return [to_python(e) for e in value[tag]]
+            if tag == "Dictionary":
+                return {k: to_python(v) for k, v in value[tag]["fields"].items()}
+            if tag == "ExternalInstance":
+                return from_external_id(value[tag]["instance_id"])
+            return None
+
+        def to_polar(v):
+            """ Convert python values to polar terms """
+            if isinstance(v, int):
+                val = {"Integer": v}
+            elif isinstance(v, str):
+                val = {"String": v}
+            elif isinstance(v, bool):
+                val = {"Boolean": v}
+            elif isinstance(v, list):
+                val = {"List": [to_polar(i) for i in v]}
+            elif isinstance(v, dict):
+                val = {"Dictionary": {"fields": {k: to_polar(v) for k, v in v.items()}}}
+            else:
+                instance_id = to_external_id(v)
+                val = {"ExternalInstance": {"instance_id": instance_id}}
+            term = {"id": 0, "offset": 0, "value": val}
+            return term
 
         c_str = ffi.new("char[]", query_str.encode())
         query = lib.polar_new_query(self.polar, c_str)
@@ -94,35 +123,71 @@ class Polar:
                 instance_id = data["instance_id"]
                 instance = data["instance"]
 
-                # assert instance_id not in instances
-                cls = instance["tag"]
+                assert instance_id not in id_to_instance
 
+                class_name = instance["tag"]
                 term_fields = instance["fields"]["fields"]
 
                 fields = {}
                 for k, v in term_fields.items():
                     fields[k] = to_python(v)
 
-                # construct an instance
-                # @TODO: use class constructor
-                assert cls == "Foo"
-                instance = Foo(**fields)
+                if class_name not in self.classes:
+                    raise PolarRuntimeException(
+                        f"Error creating instance of class {class_name}. Has not been registered."
+                    )
 
-                instances[instance_id] = instance
+                assert class_name in self.class_constructors
 
-                # @Q: Do we say anything on an error or just handle here?
+                cls = self.classes[class_name]
+                constructor = self.class_constructors[class_name]
+                try:
+                    if constructor:
+                        instance = constructor(**fields)
+                    else:
+                        instance = cls(**fields)
+                except Exception as e:
+                    raise PolarRuntimeException(
+                        f"Error creating instance of class {class_name}. {e}"
+                    )
+
+                id_to_instance[instance_id] = instance
+                instance_to_id[instance] = instance_id
 
             if kind == "ExternalCall":
                 call_id = data["call_id"]
-                instance_id = data["instance_id"]
-                attribute = data["attribute"]
-                args = [to_python(arg) for arg in data["args"]]
 
                 if call_id not in calls:
-                    instance = instances[instance_id]
-                    call = getattr(instance, attribute)(*args)
+                    # Create a new call if this is the first use of call_id.
+                    instance_id = data["instance_id"]
+                    attribute = data["attribute"]
+                    args = [to_python(arg) for arg in data["args"]]
+
+                    # Lookup the attribute on the instance.
+                    instance = id_to_instance[instance_id]
+                    try:
+                        attr = getattr(instance, attribute)
+                    except AttributeError:
+                        # @TODO: polar line numbers in errors once polar errors are better.
+                        raise PolarRuntimeException(f"Error calling {attribute}")
+
+                    if callable(attr):
+                        # If it's a function call it with the args.
+                        result = getattr(instance, attribute)(*args)
+                    else:
+                        # If it's just an attribute, it's the result.
+                        result = attr
+
+                    # We now have either a generator or a result.
+                    # Call must be a generator so we turn anything else into one.
+                    if isinstance(result, GeneratorType):
+                        call = result
+                    else:
+                        call = (i for i in [result])
+
                     calls[call_id] = call
 
+                # Return the next result of the call.
                 try:
                     val = next(calls[call_id])
                     term = to_polar(val)
@@ -188,11 +253,3 @@ class Query:
 class QueryResult:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError()
-
-
-def register_python_class(cls, from_polar=None):
-    raise NotImplementedError()
-
-
-def register_class(spec, source_class: type):
-    raise NotImplementedError()

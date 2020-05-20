@@ -46,8 +46,13 @@ Fields: HashMap<Symbol, Term> = {
     }
 };
 
-pub Object: HashMap<Symbol, Term> = "{" <fields:Fields> "}" => {
-    fields
+pub Object: HashMap<Symbol, Term> = {
+    "{" <fields:Fields> "}" => {
+        fields
+    },
+    "{" "}" => {
+        HashMap::new()
+    }
 };
 
 pub Dictionary: Term = <start:@L> <fields:Object> => {
@@ -127,10 +132,10 @@ Callable: Term = {
     <InstanceLiteral> => <>,
     <Dictionary> => <>,
     <Symbol> => <>,
+    <DotOp> => <>,
 };
 
-// .
-Exp8: Term = {
+DotOp: Term = {
     <start:@L> <head:Callable> "." <call_loc:@L> <mut call:Predicate> => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
@@ -144,6 +149,11 @@ Exp8: Term = {
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
+}
+
+// .
+Exp8: Term = {
+    <dot_op:DotOp> => dot_op,
     <exp9:Exp9> => exp9
 };
 
