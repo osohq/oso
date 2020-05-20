@@ -5,9 +5,7 @@ from _polar_lib import ffi, lib
 from pathlib import Path
 from types import GeneratorType
 
-# TODO: Better error types, not just PolarException
-class PolarException(Exception):
-    pass
+from .exceptions import *
 
 
 class Polar:
@@ -24,6 +22,7 @@ class Polar:
     def _raise_error(self):
         err = lib.polar_get_error()
         msg = ffi.string(err).decode()
+        # @TODO: More specific exception. Could be runtime or parse.
         exception = PolarException(msg)
         lib.string_free(err)
         raise exception
@@ -134,7 +133,7 @@ class Polar:
                     fields[k] = to_python(v)
 
                 if class_name not in self.classes:
-                    raise PolarException(
+                    raise PolarRuntimeException(
                         f"Error creating instance of class {class_name}. Has not been registered."
                     )
 
@@ -148,7 +147,7 @@ class Polar:
                     else:
                         instance = cls(**fields)
                 except Exception as e:
-                    raise PolarException(
+                    raise PolarRuntimeException(
                         f"Error creating instance of class {class_name}. {e}"
                     )
 
@@ -170,7 +169,7 @@ class Polar:
                         attr = getattr(instance, attribute)
                     except AttributeError:
                         # @TODO: polar line numbers in errors once polar errors are better.
-                        raise PolarException(f"Error calling {attribute}")
+                        raise PolarRuntimeException(f"Error calling {attribute}")
 
                     if callable(attr):
                         # If it's a function call it with the args.
