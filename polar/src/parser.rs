@@ -29,6 +29,7 @@ pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ToPolarString;
 
     #[test]
     fn try_it() {
