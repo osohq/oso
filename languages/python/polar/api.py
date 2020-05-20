@@ -46,26 +46,26 @@ class Polar:
             self._raise_error()
 
     def query_str(self, query_str):
-        instances_by_id = {}
-        ids_by_instance = {}
+        id_to_instance = {}
+        instance_to_id = {}
         calls = {}
 
         def to_external_id(python_obj):
             """ Create or look up a polar external_instance for an object """
-            if python_obj in ids_by_instance:
-                instance_id = ids_by_instance[python_obj]
+            if python_obj in instance_to_id:
+                instance_id = instance_to_id[python_obj]
             else:
                 instance_id = lib.polar_get_external_id(self.polar, query)
                 if instance_id == 0:
                     self._raise_error()
-                instances_by_id[instance_id] = python_obj
-                ids_by_instance[python_obj] = instance_id
+                id_to_instance[instance_id] = python_obj
+                instance_to_id[python_obj] = instance_id
             return instance_id
 
         def from_external_id(external_id):
             """ Lookup python object by external_id """
-            assert external_id in instances_by_id
-            return instances_by_id[external_id]
+            assert external_id in id_to_instance
+            return id_to_instance[external_id]
 
         def to_python(v):
             """ Convert polar terms to python values """
@@ -124,7 +124,7 @@ class Polar:
                 instance_id = data["instance_id"]
                 instance = data["instance"]
 
-                assert instance_id not in instances_by_id
+                assert instance_id not in id_to_instance
 
                 class_name = instance["tag"]
                 term_fields = instance["fields"]["fields"]
@@ -138,18 +138,22 @@ class Polar:
                         f"Error creating instance of class {class_name}. Has not been registered."
                     )
 
-                assert class_name in self.classes
                 assert class_name in self.class_constructors
 
                 cls = self.classes[class_name]
                 constructor = self.class_constructors[class_name]
-                if constructor:
-                    instance = constructor(**fields)
-                else:
-                    instance = cls(**fields)
+                try:
+                    if constructor:
+                        instance = constructor(**fields)
+                    else:
+                        instance = cls(**fields)
+                except Exception as e:
+                    raise PolarException(
+                        f"Error creating instance of class {class_name}. {e}"
+                    )
 
-                instances_by_id[instance_id] = instance
-                ids_by_instance[instance] = instance_id
+                id_to_instance[instance_id] = instance
+                instance_to_id[instance] = instance_id
 
             if kind == "ExternalCall":
                 call_id = data["call_id"]
@@ -161,8 +165,12 @@ class Polar:
                     args = [to_python(arg) for arg in data["args"]]
 
                     # Lookup the attribute on the instance.
-                    instance = instances_by_id[instance_id]
-                    attr = getattr(instance, attribute)
+                    instance = id_to_instance[instance_id]
+                    try:
+                        attr = getattr(instance, attribute)
+                    except AttributeError:
+                        # @TODO: polar line numbers in errors once polar errors are better.
+                        raise PolarException(f"Error calling {attribute}")
 
                     if callable(attr):
                         # If it's a function call it with the args.
