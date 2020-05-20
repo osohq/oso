@@ -1,20 +1,19 @@
 use std::collections::HashMap;
 
-use crate::types::*;
-use crate::ToPolarString;
+use super::types::*;
+use super::ToPolarString;
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
 #[allow(clippy::large_enum_variant)]
-#[allow(dead_code)]
 pub enum Goal {
     Backtrack,
-    Break,
     Cut,
     Halt,
+    #[allow(dead_code)]
     Isa {
         left: Term,
         right: Term,
@@ -34,6 +33,7 @@ pub enum Goal {
         literal: InstanceLiteral,
         instance_id: u64,
     },
+    #[allow(dead_code)]
     Noop,
     Query {
         term: Term,
@@ -109,7 +109,6 @@ impl PolarVirtualMachine {
             eprintln!("{}", goal);
             match goal {
                 Goal::Backtrack => self.backtrack(),
-                Goal::Break => return Ok(QueryEvent::Breakpoint),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { .. } => todo!("isa"),

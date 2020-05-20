@@ -121,7 +121,7 @@ pub enum Operator {
 }
 
 impl Operator {
-    pub fn precedence(&self) -> i32 {
+    pub fn precedence(self) -> i32 {
         match self {
             Operator::Make => 9,
             Operator::Dot => 8,
