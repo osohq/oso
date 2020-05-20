@@ -437,7 +437,7 @@ impl PolarVirtualMachine {
                                     } => value,
                                     _ => panic!("bad lookup value: {}", value.to_polar()),
                                 };
-                                self.call_id_symbols.insert(call_id, value.clone());
+                                self.call_id_symbols.insert(call_id, value);
                                 self.push_goal(Goal::LookupExternal {
                                     call_id,
                                     instance_id,
