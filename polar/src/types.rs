@@ -620,7 +620,7 @@ mod tests {
         let list_of = Term::new(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());
         let mut fields = HashMap::new();
-        fields.insert(Symbol::new("foo"), list_of.clone());
+        fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap())
     }
