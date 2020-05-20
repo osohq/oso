@@ -481,13 +481,11 @@ impl PolarVirtualMachine {
                             instance_id,
                         });
                     }
-                    Operator::Or => {
-                        let mut alternatives = vec![];
-                        for term in args {
-                            alternatives.push(vec![Goal::Query { term }]);
-                        }
-                        self.choose(alternatives);
-                    }
+                    Operator::Or => self.choose(
+                        args.into_iter()
+                            .map(|term| vec![Goal::Query { term }])
+                            .collect(),
+                    ),
                     _ => todo!("can't query for expression: {:?}", operator),
                 }
             }
