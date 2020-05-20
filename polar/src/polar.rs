@@ -409,4 +409,25 @@ mod tests {
             vec![value!(1)]
         );
     }
+
+    #[test]
+    fn test_or() {
+        let mut polar = Polar::new();
+        polar.load_str("f(x) := a(x) | b(x); a(1); b(3);").unwrap();
+
+        assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1), value!(3)]);
+        assert!(qeval(&mut polar, "f(1)"));
+        assert!(qnull(&mut polar, "f(2)"));
+        assert!(qeval(&mut polar, "f(3)"));
+
+        polar.load_str("g(x) := a(x) | b(x) | c(x); c(5);").unwrap();
+        assert_eq!(
+            qvar(&mut polar, "g(x)", "x"),
+            vec![value!(1), value!(3), value!(5)]
+        );
+        assert!(qeval(&mut polar, "g(1)"));
+        assert!(qnull(&mut polar, "g(2)"));
+        assert!(qeval(&mut polar, "g(3)"));
+        assert!(qeval(&mut polar, "g(5)"));
+    }
 }
