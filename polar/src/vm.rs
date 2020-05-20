@@ -453,7 +453,10 @@ impl PolarVirtualMachine {
                                     value,
                                 });
                             }
-                            _ => panic!("can only perform lookups on dicts and instances"),
+                            _ => panic!(
+                                "can only perform lookups on dicts and instances, this is {:?}",
+                                object.value
+                            ),
                         }
                     }
                     Operator::Make => {

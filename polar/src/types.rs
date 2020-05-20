@@ -613,6 +613,10 @@ mod tests {
             instance_id: 12345,
             instance: literal,
         };
-        eprintln!("{}", serde_json::to_string(&event).unwrap())
+        eprintln!("{}", serde_json::to_string(&event).unwrap());
+        let external = Term::new(Value::ExternalInstance(ExternalInstance {
+            instance_id: 12345,
+        }));
+        eprintln!("{}", serde_json::to_string(&external).unwrap())
     }
 }

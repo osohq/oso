@@ -31,4 +31,41 @@ def test_data_conversions(polar, qvar):
 
 
 def test_external(polar, qvar):
-    assert qvar("Foo{start: 100}.call_me(105) = x", "x") == [100, 101, 102, 103, 104]
+    class Bar:
+        def y():
+            return "y"
+
+    class Foo:
+        def __init__(self, a="a"):
+            self.a = a
+
+        def b(self):
+            yield "b"
+
+        def c(self):
+            return "c"
+
+        def d(self, x):
+            return x
+
+        def bar(self):
+            return Bar()
+
+        def bars(self):
+            for _ in range(0, 3):
+                yield Bar()
+
+    def capital_foo():
+        return Foo(a="A")
+
+    polar.register_python_class(Foo, from_polar=capital_foo)
+    assert qvar("Foo{}.a = x", "x", one=True) == "A"
+    assert qvar("Foo{}.a() = x", "x", one=True) == "A"
+    assert qvar("Foo{}.b = x", "x", one=True) == "b"
+    assert qvar("Foo{}.b() = x", "x", one=True) == "b"
+    assert qvar("Foo{}.c = x", "x", one=True) == "c"
+    assert qvar("Foo{}.c() = x", "x", one=True) == "c"
+
+    # These two should work once we fix a bug where dot operations don't work on symbols.
+    # assert qvar("Foo{} = f, f.a() = x", "x", one=True) == "A"
+    # assert qvar("Foo{}.bar().y() = x", "x", one=True) == "y"
