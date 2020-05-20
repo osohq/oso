@@ -295,7 +295,6 @@ type Bindings = HashMap<Symbol, Term>;
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
-    Breakpoint,
     Done,
 
     /// Returns: new instance id
