@@ -40,9 +40,6 @@ pub mod display {
                     // value.to_polar(),
                 ),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
-                Goal::Unify { left, right } => {
-                    write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
-                }
                 g => write!(fmt, "{:?}", g),
             }
         }

@@ -42,10 +42,6 @@ pub enum Goal {
     Query {
         term: Term,
     },
-    Unify {
-        left: Term,
-        right: Term,
-    },
 }
 
 #[derive(Debug)]
@@ -130,7 +126,6 @@ impl PolarVirtualMachine {
                 } => return Ok(self.make_external(literal, instance_id)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
-                Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
 
@@ -314,10 +309,9 @@ impl PolarVirtualMachine {
 
     pub fn lookup(&mut self, dict: Dictionary, field: Symbol, value: Term) {
         if let Some(retrieved) = dict.fields.get(&field) {
-            self.push_goal(Goal::Unify {
-                left: retrieved.clone(),
-                right: value,
-            });
+            if !self.unify(&retrieved, &value) {
+                self.push_goal(Goal::Backtrack);
+            }
         } else {
             self.push_goal(Goal::Backtrack);
         }
@@ -401,9 +395,14 @@ impl PolarVirtualMachine {
                             let mut goals = vec![];
 
                             // Unify the arguments with the formal parameters.
-                            goals.push(Goal::Unify {
-                                left: Term::new(Value::List(predicate.args.clone())),
-                                right: params.clone(),
+                            goals.push(Goal::Query {
+                                term: Term::new(Value::Expression(Operation {
+                                    operator: Operator::Unify,
+                                    args: vec![
+                                        Term::new(Value::List(predicate.args.clone())),
+                                        params.clone(),
+                                    ],
+                                })),
                             });
 
                             // Query for the body clauses.
@@ -427,10 +426,9 @@ impl PolarVirtualMachine {
                     ),
                     Operator::Unify => {
                         assert_eq!(args.len(), 2);
-                        self.push_goal(Goal::Unify {
-                            left: args[0].clone(),
-                            right: args[1].clone(),
-                        });
+                        if !self.unify(&args[0], &args[1]) {
+                            self.push_goal(Goal::Backtrack);
+                        }
                     }
                     Operator::Dot => {
                         assert_eq!(args.len(), 3);
@@ -500,7 +498,7 @@ impl PolarVirtualMachine {
     ///  - Successful unification => bind zero or more variables to values
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
-    fn unify(&mut self, left: &Term, right: &Term) {
+    fn unify(&mut self, left: &Term, right: &Term) -> bool {
         // Unify a symbol `left` with a term `right`.
         // This is sort of a "sub-goal" of `Unify`.
         let mut unify_var = |left: &Symbol, right: &Term| {
@@ -513,24 +511,23 @@ impl PolarVirtualMachine {
             match (left_value, right_value) {
                 (Some(left), Some(right)) => {
                     // Both are bound, unify their values.
-                    self.push_goal(Goal::Unify { left, right });
+                    self.unify(&left, &right)
                 }
                 (Some(left), _) => {
                     // Only left is bound, unify with whatever right is.
-                    self.push_goal(Goal::Unify {
-                        left,
-                        right: right.clone(),
-                    });
+                    self.unify(&left, right)
                 }
                 (None, Some(value)) => {
                     // Left is unbound, right is bound;
                     // bind left to the value of right.
                     self.bind(left, &value);
+                    true
                 }
                 (None, None) => {
                     // Neither is bound, so bind them together.
                     // TODO: should theoretically bind the earliest one here?
                     self.bind(left, right);
+                    true
                 }
             }
         };
@@ -544,40 +541,22 @@ impl PolarVirtualMachine {
             // Unify lists by recursively unifying the elements.
             (Value::List(left), Value::List(right)) => {
                 if left.len() == right.len() {
-                    self.append_goals(
-                        left.iter()
-                            .zip(right)
-                            .map(|(left, right)| Goal::Unify {
-                                left: left.clone(),
-                                right: right.clone(),
-                            })
-                            .collect(),
-                    )
+                    left.iter()
+                        .zip(right)
+                        .all(|(left, right)| self.unify(left, right))
                 } else {
-                    self.push_goal(Goal::Backtrack);
+                    false
                 }
             }
 
             // Unify integers by value.
-            (Value::Integer(left), Value::Integer(right)) => {
-                if left != right {
-                    self.push_goal(Goal::Backtrack);
-                }
-            }
+            (Value::Integer(left), Value::Integer(right)) => left == right,
 
             // Unify strings by value.
-            (Value::String(left), Value::String(right)) => {
-                if left != right {
-                    self.push_goal(Goal::Backtrack);
-                }
-            }
+            (Value::String(left), Value::String(right)) => left == right,
 
             // Unify bools by value.
-            (Value::Boolean(left), Value::Boolean(right)) => {
-                if left != right {
-                    self.push_goal(Goal::Backtrack);
-                }
-            }
+            (Value::Boolean(left), Value::Boolean(right)) => left == right,
 
             // Anything else is an error.
             (_, _) => unimplemented!("unhandled unification {:?} = {:?}", left, right),
@@ -785,14 +764,8 @@ mod tests {
         let zero = Term::new(Value::Integer(0));
         let one = Term::new(Value::Integer(1));
         let vals = Term::new(Value::List(vec![zero.clone(), one.clone()]));
-        let mut vm = PolarVirtualMachine::new(
-            KnowledgeBase::new(),
-            vec![Goal::Unify {
-                left: vars,
-                right: vals,
-            }],
-        );
-        let _ = vm.run();
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        assert!(vm.unify(&vars, &vals));
         assert_eq!(vm.value(&x), Some(&zero));
         assert_eq!(vm.value(&y), Some(&one));
     }
@@ -809,30 +782,18 @@ mod tests {
 
         // Left variable bound to bound right variable.
         vm.bind(&y, &one);
-        vm.append_goals(vec![Goal::Unify {
-            left: Term::new(Value::Symbol(x)),
-            right: Term::new(Value::Symbol(y)),
-        }]);
-        let _ = vm.run();
+        assert!(vm.unify(&Term::new(Value::Symbol(x)), &Term::new(Value::Symbol(y))));
         assert_eq!(vm.value(&Symbol("x".to_string())), Some(&one));
         vm.backtrack();
 
         // Left variable bound to value.
         vm.bind(&z, &one);
-        vm.append_goals(vec![Goal::Unify {
-            left: Term::new(Value::Symbol(z.clone())),
-            right: one.clone(),
-        }]);
-        let _ = vm.run();
+        assert!(vm.unify(&term!(value!(@sym "z")), &one));
         assert_eq!(vm.value(&z), Some(&one));
 
         // Left variable bound to value
         vm.bind(&z, &one);
-        vm.append_goals(vec![Goal::Unify {
-            left: Term::new(Value::Symbol(z.clone())),
-            right: two,
-        }]);
-        let _ = vm.run();
+        assert!(!vm.unify(&term!(value!(@sym "z")), &two));
         assert_eq!(vm.value(&z), Some(&one));
     }
 
@@ -1048,15 +1009,19 @@ mod docs {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::default(), vec![]);
 
         // this branch fails
-        let fail_branch = vec![Goal::Unify {
-            left: term!(value!(1)),
-            right: term!(value!(2)),
+        let fail_branch = vec![Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::Unify,
+                args: vec![term!(value!(1)), term!(value!(2))],
+            })),
         }];
 
         // this branch succeeds
-        let ok_branch = vec![Goal::Unify {
-            left: term!(value!(@sym "x")),
-            right: term!(value!(1)),
+        let ok_branch = vec![Goal::Query {
+            term: Term::new(Value::Expression(Operation {
+                operator: Operator::Unify,
+                args: vec![term!(value!(@sym "x")), term!(value!(1))],
+            })),
         }];
 
         // First, we try the two branches normally
