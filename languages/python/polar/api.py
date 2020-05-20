@@ -171,7 +171,7 @@ class Polar:
                         # If it's just an attribute, it's the result.
                         result = attr
 
-                    # We now have either a generator, a list or a single item as result.
+                    # We now have either a generator or a result.
                     # Call must be a generator so we turn anything else into one.
                     if isinstance(result, GeneratorType):
                         call = result
