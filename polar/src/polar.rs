@@ -396,4 +396,17 @@ mod tests {
         assert_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
         assert_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
     }
+
+    #[test]
+    fn test_symbol_lookup() {
+        let mut polar = Polar::new();
+        assert_eq!(
+            qvar(&mut polar, "{x: 1}.x = result", "result"),
+            vec![value!(1)]
+        );
+        assert_eq!(
+            qvar(&mut polar, "{x: 1} = dict, dict.x = result", "result"),
+            vec![value!(1)]
+        );
+    }
 }

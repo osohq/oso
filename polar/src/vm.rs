@@ -439,7 +439,7 @@ impl PolarVirtualMachine {
                         let field = args[1].clone();
                         let value = args[2].clone();
 
-                        match object.value {
+                        match self.deref(&object).value {
                             Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
                                 dict,
                                 field: field_name(&field),
