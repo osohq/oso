@@ -77,29 +77,27 @@ class Polar:
                 return value[tag]
             if tag == "List":
                 return [to_python(e) for e in value[tag]]
-            # TODO
+            if tag == "Dictionary":
+                return {k: to_python(v) for k, v in value[tag]["fields"].items()}
+            if tag == "ExternalInstance":
+                return from_external_id(value[tag]["instance_id"])
             return None
 
         def to_polar(v):
             """ Convert python values to polar terms """
             if isinstance(v, int):
                 val = {"Integer": v}
-                term = {"id": 0, "offset": 0, "value": val}
-                return term
-            if isinstance(v, str):
+            elif isinstance(v, str):
                 val = {"String": v}
-                term = {"id": 0, "offset": 0, "value": val}
-                return term
-            if isinstance(v, bool):
+            elif isinstance(v, bool):
                 val = {"Boolean": v}
-                term = {"id": 0, "offset": 0, "value": val}
-                return term
-            if isinstance(v, list):
-                
-
-            # @TODO: Everyting we didn't do above or it just comes back as external_instance.
-            instance_id = to_external_id(v)
-            val = {"ExternalInstance": {"instance_id": instance_id}}
+            elif isinstance(v, list):
+                val = {"List": [to_polar(i) for i in v]}
+            elif isinstance(v, dict):
+                val = {"Dictionary": {"fields": {k: to_polar(v) for k, v in v.items()}}}
+            else:
+                instance_id = to_external_id(v)
+                val = {"ExternalInstance": {"instance_id": instance_id}}
             term = {"id": 0, "offset": 0, "value": val}
             return term
 
@@ -177,9 +175,6 @@ class Polar:
                     # Call must be a generator so we turn anything else into one.
                     if isinstance(result, GeneratorType):
                         call = result
-                    # @Q: Should we return lists as lists or as generators? Doing generators for now.
-                    elif isinstance(result, list):
-                        call = (i for i in result)
                     else:
                         call = (i for i in [result])
 

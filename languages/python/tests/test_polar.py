@@ -32,7 +32,7 @@ def test_data_conversions(polar, qvar):
 
 def test_external(polar, qvar):
     class Bar:
-        def y():
+        def y(self):
             return "y"
 
     class Foo:
@@ -51,9 +51,16 @@ def test_external(polar, qvar):
         def bar(self):
             return Bar()
 
-        def bars(self):
-            for _ in range(0, 3):
-                yield Bar()
+        def e(self):
+            return [1, 2, 3]
+
+        def f(self):
+            yield [1, 2, 3]
+            yield [4, 5, 6]
+            yield 7
+
+        def g(self):
+            return {"hello": "world"}
 
     def capital_foo():
         return Foo(a="A")
@@ -65,7 +72,8 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.b() = x", "x", one=True) == "b"
     assert qvar("Foo{}.c = x", "x", one=True) == "c"
     assert qvar("Foo{}.c() = x", "x", one=True) == "c"
-
-    # These two should work once we fix a bug where dot operations don't work on symbols.
-    # assert qvar("Foo{} = f, f.a() = x", "x", one=True) == "A"
-    # assert qvar("Foo{}.bar().y() = x", "x", one=True) == "y"
+    assert qvar("Foo{} = f, f.a() = x", "x", one=True) == "A"
+    assert qvar("Foo{}.bar().y() = x", "x", one=True) == "y"
+    assert qvar("Foo{}.e = x", "x", one=True) == [1, 2, 3]
+    assert qvar("Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
+    assert qvar("Foo{}.g.hello = x", "x", one=True) == "world"
