@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::fmt;
 
 use super::types::*;
+use super::ToPolarString;
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
@@ -42,37 +42,6 @@ pub enum Goal {
         left: Term,
         right: Term,
     },
-}
-
-impl fmt::Display for Goal {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Goal::Lookup { dict, field, value } => write!(
-                fmt,
-                "Lookup({}, {}, {})",
-                dict.to_polar(),
-                field.to_polar(),
-                value.to_polar()
-            ),
-            Goal::LookupExternal {
-                instance_id,
-                field,
-                value,
-                ..
-            } => write!(
-                fmt,
-                "LookupExternal({}, {}, {})",
-                instance_id,
-                field.to_polar(),
-                value.to_polar(),
-            ),
-            Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
-            Goal::Unify { left, right } => {
-                write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
-            }
-            g => write!(fmt, "{:?}", g),
-        }
-    }
 }
 
 #[derive(Debug)]
