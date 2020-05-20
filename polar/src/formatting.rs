@@ -52,6 +52,16 @@ pub mod display {
 pub mod to_polar {
     use crate::types::*;
 
+    /// Formats a vector of terms as a string-separated list
+    /// When providing an operator, parentheses are applied suitably
+    /// (see: to_polar_parens)
+    fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
+        args.iter()
+            .map(|t| to_polar_parens(op, t))
+            .collect::<Vec<String>>()
+            .join(sep)
+    }
+
     /// Helper method: uses the operator precedence to determine if `t`
     /// has a lower precedence than `op`.
     fn has_lower_pred(op: Operator, t: &Term) -> bool {
@@ -133,27 +143,13 @@ pub mod to_polar {
             // Lets us spit out strings that would reparse to the same ast.
             match self.operator {
                 // `Make` formats as a predicate
-                Make => format!(
-                    "make({})",
-                    self.args
-                        .iter()
-                        .map(|t| to_polar_parens(self.operator, t))
-                        .collect::<Vec<String>>()
-                        .join(",")
-                ),
+                Make => format!("make({})", format_args(self.operator, &self.args, ",")),
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {
                         format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar())
                     } else {
-                        format!(
-                            ".({})",
-                            self.args
-                                .iter()
-                                .map(|t| to_polar_parens(self.operator, t))
-                                .collect::<Vec<String>>()
-                                .join(","),
-                        )
+                        format!(".({})", format_args(self.operator, &self.args, ","))
                     }
                 }
                 // Unary operators
@@ -170,12 +166,7 @@ pub mod to_polar {
                     to_polar_parens(self.operator, &self.args[1])
                 ),
                 // n-ary operators
-                Or | And => self
-                    .args
-                    .iter()
-                    .map(|t| to_polar_parens(self.operator, t))
-                    .collect::<Vec<String>>()
-                    .join(&self.operator.to_polar()),
+                Or | And => format_args(self.operator, &self.args, &self.operator.to_polar()),
             }
         }
     }
@@ -188,11 +179,7 @@ pub mod to_polar {
                 format!(
                     "{}({})",
                     self.name.to_polar(),
-                    self.args
-                        .iter()
-                        .map(|t| t.to_polar())
-                        .collect::<Vec<String>>()
-                        .join(",")
+                    format_args(Operator::And, &self.args, ",")
                 )
             }
         }
@@ -213,25 +200,14 @@ pub mod to_polar {
                         format!(
                             "{}({});",
                             self.name.to_polar(),
-                            self.params
-                                .iter()
-                                .map(|t| t.to_polar())
-                                .collect::<Vec<String>>()
-                                .join(","),
+                            format_args(Operator::And, &self.params, ","),
                         )
                     } else {
                         format!(
                             "{}({}) := {};",
                             self.name.to_polar(),
-                            self.params
-                                .iter()
-                                .map(|t| t.to_polar())
-                                .collect::<Vec<String>>()
-                                .join(","),
-                            args.iter()
-                                .map(|t| t.to_polar())
-                                .collect::<Vec<String>>()
-                                .join(","),
+                            format_args(Operator::And, &self.params, ","),
+                            format_args(Operator::And, &args, ","),
                         )
                     }
                 }
@@ -269,13 +245,7 @@ pub mod to_polar {
                 Value::Dictionary(i) => i.to_polar(),
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
-                Value::List(l) => format!(
-                    "[{}]",
-                    l.iter()
-                        .map(|t| t.to_polar())
-                        .collect::<Vec<String>>()
-                        .join(",")
-                ),
+                Value::List(l) => format!("[{}]", format_args(Operator::And, l, ","),),
                 Value::Symbol(s) => s.to_polar(),
                 Value::Expression(e) => e.to_polar(),
             }
