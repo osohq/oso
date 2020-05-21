@@ -719,7 +719,7 @@ mod tests {
 
         let rule = GenericRule {
             name: sym!("f"),
-            rules: vec![f1.clone(), f2.clone()],
+            rules: vec![f1, f2],
         };
 
         let mut kb = KnowledgeBase::new();
@@ -759,7 +759,7 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Querying for f(1), f(2), f(3)
-        let parts = vec![f1.clone(), f2.clone(), f3.clone()];
+        let parts = vec![f1, f2, f3];
         for permutation in permute(parts) {
             vm.push_goal(Goal::Query {
                 term: Term::new(Value::Expression(Operation {
@@ -820,7 +820,7 @@ mod tests {
         vm.push_goal(Goal::Lookup {
             dict,
             field: x,
-            value: Term::new(value!(y.clone())),
+            value: Term::new(value!(y)),
         });
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{sym!("y") => term!(one)}}
@@ -879,8 +879,8 @@ mod tests {
         // Left variable bound to bound right variable.
         vm.bind(&y, &one);
         vm.append_goals(vec![Goal::Unify {
-            left: term!(x.clone()),
-            right: term!(y.clone()),
+            left: term!(x),
+            right: term!(y),
         }]);
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&sym!("x")), Some(&one));
