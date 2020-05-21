@@ -744,9 +744,7 @@ mod tests {
 
         // Querying for f(3)
         vm.push_goal(query!(op!(And, f3.clone())));
-        assert_query_events!(vm, [
-            QueryEvent::Done
-        ]);
+        assert_query_events!(vm, [QueryEvent::Done]);
 
         // Querying for f(1), f(2), f(3)
         let parts = vec![f1.clone(), f2.clone(), f3.clone()];
@@ -757,9 +755,7 @@ mod tests {
                     args: permutation,
                 })),
             });
-            assert_query_events!(vm, [
-                QueryEvent::Done
-            ]);
+            assert_query_events!(vm, [QueryEvent::Done]);
         }
     }
 
@@ -805,9 +801,7 @@ mod tests {
             value: Term::new(two),
         });
 
-        assert_query_events!(vm, [
-            QueryEvent::Done
-        ]);
+        assert_query_events!(vm, [QueryEvent::Done]);
 
         // Lookup with unbound value
         let y = sym!("y");

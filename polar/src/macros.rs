@@ -48,7 +48,7 @@ impl From<Value> for TestHelper<Parameter> {
         } else {
             Self(Parameter {
                 name: None,
-                specializer: Some(Term::new(name))
+                specializer: Some(Term::new(name)),
             })
         }
     }
