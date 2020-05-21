@@ -651,9 +651,17 @@ mod tests {
         ($vm:ident, []) => {
             assert!($vm.is_halted());
         };
+        ($vm:ident, [QueryEvent::Result{$result:expr}]) => {
+            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == $result));
+            assert_query_events!($vm, []);
+        };
         ($vm:ident, [QueryEvent::Result{$result:expr}, $($tail:tt)*]) => {
             assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == $result));
             assert_query_events!($vm, [$($tail)*]);
+        };
+        ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?]) => {
+            assert!(matches!($vm.run().unwrap(), $($pattern)|+ $(if $guard)?));
+            assert_query_events!($vm, []);
         };
         ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?, $($tail:tt)*]) => {
             assert!(matches!($vm.run().unwrap(), $($pattern)|+ $(if $guard)?));
@@ -665,11 +673,11 @@ mod tests {
     #[test]
     fn deref() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let value = Term::new(Value::Integer(1));
-        let x = Symbol::new("x");
-        let y = Symbol::new("y");
-        let term_x = Term::new(Value::Symbol(x.clone()));
-        let term_y = Term::new(Value::Symbol(y.clone()));
+        let value = term!(1);
+        let x = sym!("x");
+        let y = sym!("y");
+        let term_x = term!(x.clone());
+        let term_y = term!(y.clone());
 
         // unbound var
         assert_eq!(vm.deref(&term_x), term_x);
@@ -710,7 +718,7 @@ mod tests {
         let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
-            QueryEvent::Done,
+            QueryEvent::Done
         ]);
 
         assert!(vm.is_halted());
@@ -722,20 +730,23 @@ mod tests {
         // Querying for f(1)
         vm.push_goal(query!(op!(And, f1.clone())));
 
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!{}},
+            QueryEvent::Done
+        ]);
 
         // Querying for f(1), f(2)
         vm.push_goal(query!(f1.clone(), f2.clone()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!{}},
+            QueryEvent::Done
+        ]);
 
         // Querying for f(3)
         vm.push_goal(query!(op!(And, f3.clone())));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [
+            QueryEvent::Done
+        ]);
 
         // Querying for f(1), f(2), f(3)
         let parts = vec![f1.clone(), f2.clone(), f3.clone()];
@@ -746,8 +757,9 @@ mod tests {
                     args: permutation,
                 })),
             });
-            assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-            assert!(vm.is_halted());
+            assert_query_events!(vm, [
+                QueryEvent::Done
+            ]);
         }
     }
 
@@ -782,7 +794,7 @@ mod tests {
         });
 
         assert_query_events!(vm, [
-            QueryEvent::Result{hashmap!{}},
+            QueryEvent::Result{hashmap!{}}
         ]);
 
         // Lookup with incorrect value
@@ -794,7 +806,7 @@ mod tests {
         });
 
         assert_query_events!(vm, [
-            QueryEvent::Done,
+            QueryEvent::Done
         ]);
 
         // Lookup with unbound value
@@ -805,18 +817,17 @@ mod tests {
             value: Term::new(value!(y.clone())),
         });
         assert_query_events!(vm, [
-            QueryEvent::Result{hashmap!{sym!("y") => term!(one)}},
+            QueryEvent::Result{hashmap!{sym!("y") => term!(one)}}
         ]);
     }
 
     #[test]
     fn bind() {
-        let x = Symbol("x".to_string());
-        let y = Symbol("y".to_string());
-        let zero = Term::new(Value::Integer(0));
+        let x = sym!("x");
+        let y = sym!("y");
+        let zero = term!(0);
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
         vm.bind(&x, &zero);
-        let _ = vm.run();
         assert_eq!(vm.value(&x), Some(&zero));
         assert_eq!(vm.value(&y), None);
     }
@@ -824,22 +835,19 @@ mod tests {
     #[test]
     fn halt() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![Goal::Halt]);
-        let _ = vm.run();
+        let _ = vm.run().unwrap();
         assert_eq!(vm.goals.len(), 0);
         assert_eq!(vm.bindings.len(), 0);
     }
 
     #[test]
     fn unify() {
-        let x = Symbol("x".to_string());
-        let y = Symbol("y".to_string());
-        let vars = Term::new(Value::List(vec![
-            Term::new(Value::Symbol(x.clone())),
-            Term::new(Value::Symbol(y.clone())),
-        ]));
-        let zero = Term::new(Value::Integer(0));
-        let one = Term::new(Value::Integer(1));
-        let vals = Term::new(Value::List(vec![zero.clone(), one.clone()]));
+        let x = sym!("x");
+        let y = sym!("y");
+        let vars = term!([x.clone(), y.clone()]);
+        let zero = value!(0);
+        let one = value!(1);
+        let vals = term!([zero.clone(), one.clone()]);
         let mut vm = PolarVirtualMachine::new(
             KnowledgeBase::new(),
             vec![Goal::Unify {
@@ -847,47 +855,47 @@ mod tests {
                 right: vals,
             }],
         );
-        let _ = vm.run();
-        assert_eq!(vm.value(&x), Some(&zero));
-        assert_eq!(vm.value(&y), Some(&one));
+        let _ = vm.run().unwrap();
+        assert_eq!(vm.value(&x), Some(&Term::new(zero)));
+        assert_eq!(vm.value(&y), Some(&Term::new(one)));
     }
 
     #[test]
     fn unify_var() {
-        let x = Symbol("x".to_string());
-        let y = Symbol("y".to_string());
-        let z = Symbol("z".to_string());
-        let one = Term::new(Value::Integer(1));
-        let two = Term::new(Value::Integer(2));
+        let x = sym!("x");
+        let y = sym!("y");
+        let z = sym!("z");
+        let one = term!(1);
+        let two = term!(2);
 
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
 
         // Left variable bound to bound right variable.
         vm.bind(&y, &one);
         vm.append_goals(vec![Goal::Unify {
-            left: Term::new(Value::Symbol(x)),
-            right: Term::new(Value::Symbol(y)),
+            left: term!(x.clone()),
+            right: term!(y.clone()),
         }]);
-        let _ = vm.run();
-        assert_eq!(vm.value(&Symbol("x".to_string())), Some(&one));
+        let _ = vm.run().unwrap();
+        assert_eq!(vm.value(&sym!("x")), Some(&one));
         vm.backtrack();
 
         // Left variable bound to value.
         vm.bind(&z, &one);
         vm.append_goals(vec![Goal::Unify {
-            left: Term::new(Value::Symbol(z.clone())),
+            left: term!(z.clone()),
             right: one.clone(),
         }]);
-        let _ = vm.run();
+        let _ = vm.run().unwrap();
         assert_eq!(vm.value(&z), Some(&one));
 
         // Left variable bound to value
         vm.bind(&z, &one);
         vm.append_goals(vec![Goal::Unify {
-            left: Term::new(Value::Symbol(z.clone())),
+            left: term!(z.clone()),
             right: two,
         }]);
-        let _ = vm.run();
+        let _ = vm.run().unwrap();
         assert_eq!(vm.value(&z), Some(&one));
     }
 
