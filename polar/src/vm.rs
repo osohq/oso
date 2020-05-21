@@ -647,6 +647,18 @@ mod tests {
         };
     }
 
+    /// Macro takes two arguments, the vm and a list-like structure of
+    /// QueryEvents to expect.  It will call run() for each event in the second
+    /// argument and pattern match to check that the event matches what is
+    /// expected.  Then `vm.is_halted()` is checked.
+    ///
+    /// The QueryEvent list elements can either be:
+    ///   - QueryEvent::Result{EXPR} where EXPR is a HashMap<Symbol, Term>.
+    ///     This is shorthand for QueryEvent::Result{bindings} if bindings == EXPR.
+    ///     Use hashmap! for EXPR from the maplit package to write inline hashmaps
+    ///     to assert on.
+    ///   - A pattern with optional guard accepted by matches!. (QueryEvent::Result
+    ///     cannot be matched on due to the above rule.)
     macro_rules! assert_query_events {
         ($vm:ident, []) => {
             assert!($vm.is_halted());
