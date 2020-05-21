@@ -917,39 +917,41 @@ mod tests {
 
     #[test]
     fn test_gen_var() {
-        // let mut vm = PolarVirtualMachine::default();
-        // let term = Term::new(Value::List(vec![
-        //     Term::new(Value::Integer(1)),
-        //     Term::new(Value::Symbol(Symbol("x".to_string()))),
-        //     Term::new(Value::Symbol(Symbol("x".to_string()))),
-        //     Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(
-        //         "y".to_string(),
-        //     )))])),
-        // ]));
-        // //let renamed_term = vm.rename_vars(&term);
+        let mut vm = PolarVirtualMachine::default();
 
-        // let x_value = match renamed_term.clone().value {
-        //     Value::List(terms) => {
-        //         assert_eq!(terms[1].value, terms[2].value);
-        //         match &terms[1].value {
-        //             Value::Symbol(sym) => Some(sym.0.clone()),
-        //             _ => None,
-        //         }
-        //     }
-        //     _ => None,
-        // };
-        // assert_eq!(x_value.unwrap(), "_x_0");
+        let rule = Rule {
+            name: Symbol::new("foo"),
+            params: vec![],
+            body: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![
+                    Term::new(Value::Integer(1)),
+                    Term::new(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(
+                        "y".to_string(),
+                    )))])),
+                ],
+            })),
+        };
 
-        // let y_value = match renamed_term.value {
-        //     Value::List(terms) => match &terms[3].value {
-        //         Value::List(terms) => match &terms[0].value {
-        //             Value::Symbol(sym) => Some(sym.0.clone()),
-        //             _ => None,
-        //         },
-        //         _ => None,
-        //     },
-        //     _ => None,
-        // };
-        // assert_eq!(y_value.unwrap(), "_y_1");
+        let renamed_rule = vm.rename_vars(&rule);
+
+        let renamed_terms = unwrap_and(renamed_rule.body);
+        assert_eq!(renamed_terms[1].value, renamed_terms[2].value);
+        let x_value = match &renamed_terms[1].value {
+            Value::Symbol(sym) => Some(sym.0.clone()),
+            _ => None,
+        };
+        assert_eq!(x_value.unwrap(), "_x_0");
+
+        let y_value = match &renamed_terms[3].value {
+            Value::List(terms) => match &terms[0].value {
+                Value::Symbol(sym) => Some(sym.0.clone()),
+                _ => None,
+            },
+            _ => None,
+        };
+        assert_eq!(y_value.unwrap(), "_y_1");
     }
 }
