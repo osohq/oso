@@ -776,14 +776,15 @@ mod tests {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
         vm.push_goal(query!(op!(Unify, term!(1), term!(1))));
 
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!{}},
+            QueryEvent::Done
+        ]);
 
         let q = op!(Unify, term!(1), term!(2));
         vm.push_goal(query!(q));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+
+        assert_query_events!(vm, [QueryEvent::Done]);
     }
 
     #[test]
