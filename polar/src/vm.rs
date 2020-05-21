@@ -648,8 +648,16 @@ mod tests {
     }
 
     macro_rules! assert_query_events {
-        ($vm:ident, [$(($($match_:tt)*)),+]) => {
-            $(assert!(matches!($vm.run().unwrap(), $($match_)*)));+
+        ($vm:ident, []) => {
+            assert!($vm.is_halted());
+        };
+        ($vm:ident, [QueryEvent::Result{$result:expr}, $($tail:tt)*]) => {
+            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == $result));
+            assert_query_events!($vm, [$($tail)*]);
+        };
+        ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?, $($tail:tt)*]) => {
+            assert!(matches!($vm.run().unwrap(), $($pattern)|+ $(if $guard)?));
+            assert_query_events!($vm, [$($tail)*]);
         };
         // TODO (dhatch) Be able to use hashmap! to match on specific bindings.
     }
@@ -701,8 +709,8 @@ mod tests {
 
         let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
         assert_query_events!(vm, [
-            (QueryEvent::Result{bindings} if bindings.is_empty()),
-            (QueryEvent::Done)
+            QueryEvent::Result{hashmap!()},
+            QueryEvent::Done,
         ]);
 
         assert!(vm.is_halted());
@@ -761,10 +769,10 @@ mod tests {
     #[test]
     fn lookup() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let x = Symbol("x".to_string());
+        let x = sym!("x");
 
         // Lookup with correct value
-        let one = Value::Integer(1);
+        let one = value!(1);
         let mut dict = Dictionary::new();
         dict.fields.insert(x.clone(), Term::new(one.clone()));
         vm.push_goal(Goal::Lookup {
@@ -772,30 +780,33 @@ mod tests {
             field: x.clone(),
             value: Term::new(one.clone()),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(vm.is_halted());
+
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!{}},
+        ]);
 
         // Lookup with incorrect value
-        let two = Value::Integer(2);
+        let two = value!(2);
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
             field: x.clone(),
             value: Term::new(two),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+
+        assert_query_events!(vm, [
+            QueryEvent::Done,
+        ]);
 
         // Lookup with unbound value
-        let y = Symbol("y".to_string());
+        let y = sym!("y");
         vm.push_goal(Goal::Lookup {
             dict,
             field: x,
-            value: Term::new(Value::Symbol(y.clone())),
+            value: Term::new(value!(y.clone())),
         });
-        assert!(
-            matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == hashmap!{sym!("y") => Term::new(one)})
-        );
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!{sym!("y") => term!(one)}},
+        ]);
     }
 
     #[test]
