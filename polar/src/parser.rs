@@ -107,7 +107,7 @@ mod tests {
         let exp2 = polar::ExpParser::new().parse(r#"foo.a(b)"#).unwrap();
         assert_eq!(
             exp2,
-            term!(pred!(".", sym!("foo"), pred!("a", sym!("b")))),
+            term!(op!(Dot, term!(sym!("foo")), term!(pred!("a", sym!("b"))))),
             "{}",
             exp2.to_polar()
         );
@@ -117,21 +117,21 @@ mod tests {
             .unwrap();
         assert_eq!(
             exp3,
-            term!(pred!(
-                ".",
-                sym!("foo"),
-                pred!(
+            term!(op!(
+                Dot,
+                term!(sym!("foo")),
+                term!(pred!(
                     "bar",
                     sym!("a"),
                     pred!(
                         "b",
-                        pred!(
-                            ".",
-                            sym!("c"),
-                            pred!("d", sym!("e"), value!([sym!("f"), sym!("g")]))
+                        op!(
+                            Dot,
+                            term!(sym!("c")),
+                            term!(pred!("d", sym!("e"), value!([sym!("f"), sym!("g")])))
                         )
                     )
-                )
+                ))
             )),
             "{}",
             exp3.to_polar()

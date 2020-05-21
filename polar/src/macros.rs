@@ -92,14 +92,6 @@ macro_rules! sym {
 
 #[macro_export]
 macro_rules! pred {
-    (".", $($args:expr),+) => {
-        Operation {
-            operator: Operator::Dot,
-            args: vec![
-                $(term!($args)),*
-            ]
-        }
-    };
     ($name:expr, $($args:expr),+) => {
         Predicate {
             name: sym!($name),
