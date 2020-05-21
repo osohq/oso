@@ -27,7 +27,6 @@ pub enum Goal {
         instance_id: u64,
         call_id: u64,
         field: Term,
-        value: Symbol,
     },
     MakeExternal {
         literal: InstanceLiteral,
@@ -117,8 +116,7 @@ impl PolarVirtualMachine {
                     call_id,
                     instance_id,
                     field,
-                    value,
-                } => return Ok(self.lookup_external(call_id, instance_id, field, value)),
+                } => return Ok(self.lookup_external(call_id, instance_id, field)),
                 Goal::MakeExternal {
                     literal,
                     instance_id,
@@ -323,13 +321,7 @@ impl PolarVirtualMachine {
     /// Return an external call event to look up a field's value
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
-    pub fn lookup_external(
-        &mut self,
-        call_id: u64,
-        instance_id: u64,
-        field: Term,
-        value: Symbol,
-    ) -> QueryEvent {
+    pub fn lookup_external(&mut self, call_id: u64, instance_id: u64, field: Term) -> QueryEvent {
         let (field_name, args) = match field.value.clone() {
             Value::Call(Predicate { name, args }) => (name, args),
             _ => panic!("call must be a predicate"),
@@ -339,7 +331,6 @@ impl PolarVirtualMachine {
             call_id,
             instance_id,
             field,
-            value,
         }]]);
 
         QueryEvent::ExternalCall {
@@ -446,12 +437,11 @@ impl PolarVirtualMachine {
                                     } => value,
                                     _ => panic!("bad lookup value: {}", value.to_polar()),
                                 };
-                                self.call_id_symbols.insert(call_id, value.clone());
+                                self.call_id_symbols.insert(call_id, value);
                                 self.push_goal(Goal::LookupExternal {
                                     call_id,
                                     instance_id,
                                     field,
-                                    value,
                                 });
                             }
                             _ => panic!(

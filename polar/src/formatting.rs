@@ -28,17 +28,8 @@ pub mod display {
                     value.to_polar()
                 ),
                 Goal::LookupExternal {
-                    instance_id,
-                    field,
-                    value,
-                    ..
-                } => write!(
-                    fmt,
-                    "LookupExternal({}.{} = {})",
-                    instance_id,
-                    field.to_polar(),
-                    value.to_polar(),
-                ),
+                    instance_id, field, ..
+                } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
                 Goal::Unify { left, right } => {
                     write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
