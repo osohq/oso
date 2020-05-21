@@ -1,4 +1,4 @@
-use ::polar::{polar::*, types::*, value, sym};
+use ::polar::{polar::*, sym, types::*, value};
 
 use std::collections::HashMap;
 use std::iter::FromIterator;
@@ -307,4 +307,3 @@ fn test_or() {
     assert!(qeval(&mut polar, "g(3)"));
     assert!(qeval(&mut polar, "g(5)"));
 }
-
