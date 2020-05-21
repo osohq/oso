@@ -199,10 +199,13 @@ pub fn rewrite_rule(mut rule: Rule, kb: &mut KnowledgeBase) -> Rule {
     rule.body = rewrite_term(rule.body, kb);
 
     let mut new_terms = vec![];
+
     for param in &mut rule.params {
-        if let Some((lookup, symbol)) = rewrite(param, kb) {
-            new_terms.push(lookup);
-            *param = symbol;
+        if let Some(specializer) = &mut param.specializer {
+            if let Some((lookup, symbol)) = rewrite(specializer, kb) {
+                new_terms.push(lookup);
+                *specializer = symbol;
+            }
         }
     }
 

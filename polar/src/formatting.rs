@@ -62,6 +62,14 @@ pub mod to_polar {
             .join(sep)
     }
 
+    /// Formats a vector of parameters
+    fn format_params(args: &[Parameter], sep: &str) -> String {
+        args.iter()
+            .map(|parameter| parameter.to_polar())
+            .collect::<Vec<String>>()
+            .join(sep)
+    }
+
     /// Helper method: uses the operator precedence to determine if `t`
     /// has a lower precedence than `op`.
     fn has_lower_pred(op: Operator, t: &Term) -> bool {
@@ -171,6 +179,19 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for Parameter {
+        fn to_polar(&self) -> String {
+            match (&self.name, &self.specializer) {
+                (Some(name), Some(specializer)) => {
+                    format!("{}: {}", name.to_polar(), specializer.to_polar())
+                }
+                (None, Some(specializer)) => specializer.to_polar(),
+                (Some(name), None) => name.to_polar(),
+                (None, None) => panic!("Invalid specializer"),
+            }
+        }
+    }
+
     impl ToPolarString for Predicate {
         fn to_polar(&self) -> String {
             if self.args.is_empty() {
@@ -200,13 +221,13 @@ pub mod to_polar {
                         format!(
                             "{}({});",
                             self.name.to_polar(),
-                            format_args(Operator::And, &self.params, ","),
+                            format_params(&self.params, ",")
                         )
                     } else {
                         format!(
                             "{}({}) := {};",
                             self.name.to_polar(),
-                            format_args(Operator::And, &self.params, ","),
+                            format_params(&self.params, ","),
                             format_args(Operator::And, &args, ","),
                         )
                     }

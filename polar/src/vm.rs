@@ -247,11 +247,11 @@ impl PolarVirtualMachine {
         name.0.starts_with('_')
     }
 
-    /// Generate a fresh set of variables for a term
+    /// Generate a fresh set of variables for a rule
     /// by renaming them to temporaries.
-    fn rename_vars(&mut self, term: &Term) -> Term {
+    fn rename_vars(&mut self, rule: &Rule) -> Rule {
         let mut renames = HashMap::<Symbol, Symbol>::new();
-        term.map(&mut |value| match value {
+        rule.map(&mut move |value| match value {
             Value::Symbol(sym) => {
                 if let Some(new) = renames.get(sym) {
                     Value::Symbol(new.clone())
@@ -378,26 +378,25 @@ impl PolarVirtualMachine {
 
                         let mut alternatives = vec![];
                         for rule in generic_rule.rules.iter() {
-                            // Rename the parameters and body at the same time.
-                            // FIXME: This is terrible right now.
-                            // TODO(?): Should maybe parse these as terms.
-                            let renames = self.rename_vars(&Term::new(Value::List(vec![
-                                Term::new(Value::List(rule.params.clone())),
-                                rule.body.clone(),
-                            ])));
-                            let renames = match renames.value {
-                                Value::List(renames) => renames,
-                                _ => panic!("expected a list of renamed parameters and body"),
-                            };
-                            let params = &renames[0];
-                            let body = &renames[1];
+                            let Rule { body, params, .. } = self.rename_vars(rule);
                             let mut goals = vec![];
 
                             // Unify the arguments with the formal parameters.
-                            goals.push(Goal::Unify {
-                                left: Term::new(Value::List(predicate.args.clone())),
-                                right: params.clone(),
-                            });
+                            for (arg, param) in predicate.args.iter().zip(params.iter()) {
+                                if let Some(name) = &param.name {
+                                    goals.push(Goal::Unify {
+                                        left: arg.clone(),
+                                        right: Term::new(Value::Symbol(name.clone())),
+                                    });
+                                }
+                                if let Some(specializer) = &param.specializer {
+                                    // @TODO: Push an isa instead
+                                    goals.push(Goal::Unify {
+                                        left: arg.clone(),
+                                        right: specializer.clone(),
+                                    });
+                                }
+                            }
 
                             // Query for the body clauses.
                             goals.push(Goal::Query {
@@ -672,7 +671,10 @@ mod tests {
         let three = Term::new(Value::Integer(3));
         let f1 = Rule {
             name: Symbol::new("f"),
-            params: vec![one.clone()],
+            params: vec![Parameter {
+                name: None,
+                specializer: Some(one.clone()),
+            }],
             body: Term::new(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![],
@@ -680,7 +682,10 @@ mod tests {
         };
         let f2 = Rule {
             name: Symbol::new("f"),
-            params: vec![two.clone()],
+            params: vec![Parameter {
+                name: None,
+                specializer: Some(two.clone()),
+            }],
             body: Term::new(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![],
@@ -913,34 +918,36 @@ mod tests {
     #[test]
     fn test_gen_var() {
         let mut vm = PolarVirtualMachine::default();
-        let term = Term::new(Value::List(vec![
-            Term::new(Value::Integer(1)),
-            Term::new(Value::Symbol(Symbol("x".to_string()))),
-            Term::new(Value::Symbol(Symbol("x".to_string()))),
-            Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(
-                "y".to_string(),
-            )))])),
-        ]));
-        let renamed_term = vm.rename_vars(&term);
 
-        let x_value = match renamed_term.clone().value {
-            Value::List(terms) => {
-                assert_eq!(terms[1].value, terms[2].value);
-                match &terms[1].value {
-                    Value::Symbol(sym) => Some(sym.0.clone()),
-                    _ => None,
-                }
-            }
+        let rule = Rule {
+            name: Symbol::new("foo"),
+            params: vec![],
+            body: Term::new(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![
+                    Term::new(Value::Integer(1)),
+                    Term::new(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(
+                        "y".to_string(),
+                    )))])),
+                ],
+            })),
+        };
+
+        let renamed_rule = vm.rename_vars(&rule);
+
+        let renamed_terms = unwrap_and(renamed_rule.body);
+        assert_eq!(renamed_terms[1].value, renamed_terms[2].value);
+        let x_value = match &renamed_terms[1].value {
+            Value::Symbol(sym) => Some(sym.0.clone()),
             _ => None,
         };
         assert_eq!(x_value.unwrap(), "_x_0");
 
-        let y_value = match renamed_term.value {
-            Value::List(terms) => match &terms[3].value {
-                Value::List(terms) => match &terms[0].value {
-                    Value::Symbol(sym) => Some(sym.0.clone()),
-                    _ => None,
-                },
+        let y_value = match &renamed_terms[3].value {
+            Value::List(terms) => match &terms[0].value {
+                Value::Symbol(sym) => Some(sym.0.clone()),
                 _ => None,
             },
             _ => None,
