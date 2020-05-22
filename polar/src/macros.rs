@@ -5,7 +5,7 @@
 
 /// Helper macros to create AST types
 ///
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::types::*;
@@ -176,8 +176,8 @@ impl From<Symbol> for TestHelper<Value> {
         Self(Value::Symbol(other))
     }
 }
-impl From<HashMap<Symbol, Term>> for TestHelper<Value> {
-    fn from(other: HashMap<Symbol, Term>) -> Self {
+impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
+    fn from(other: BTreeMap<Symbol, Term>) -> Self {
         Self(Value::Dictionary(Dictionary { fields: other }))
     }
 }

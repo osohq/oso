@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::types::*;
 use super::ToPolarString;
@@ -265,7 +265,6 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
-    /// Recursively dereference a variable.
     #[allow(dead_code)]
     fn find_or_make_instance(
         &mut self,
@@ -396,6 +395,20 @@ impl PolarVirtualMachine {
                         left,
                         right: v.clone(),
                     })
+                }
+            }
+
+            (Value::InstanceLiteral(left), Value::Dictionary(_)) => {
+                let (exists, external_instance) = self.find_or_make_instance(&left);
+                self.push_goal(Goal::Isa {
+                    left: Term::new(Value::ExternalInstance(external_instance.clone())),
+                    right: right.clone(),
+                });
+                if !exists {
+                    self.push_goal(Goal::MakeExternal {
+                        literal: left.clone(),
+                        instance_id: external_instance.instance_id,
+                    });
                 }
             }
 
@@ -578,7 +591,6 @@ impl PolarVirtualMachine {
                             }
                         }
                         Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                            let call_id = self.new_id();
                             let value = match value {
                                 Term {
                                     value: Value::Symbol(value),
@@ -936,7 +948,7 @@ mod tests {
     /// The QueryEvent list elements can either be:
     ///   - QueryEvent::Result{EXPR} where EXPR is a HashMap<Symbol, Term>.
     ///     This is shorthand for QueryEvent::Result{bindings} if bindings == EXPR.
-    ///     Use hashmap! for EXPR from the maplit package to write inline hashmaps
+    ///     Use btreemap! for EXPR from the maplit package to write inline hashmaps
     ///     to assert on.
     ///   - A pattern with optional guard accepted by matches!. (QueryEvent::Result
     ///     cannot be matched on due to the above rule.)
@@ -960,7 +972,7 @@ mod tests {
             assert!(matches!($vm.run().unwrap(), $($pattern)|+ $(if $guard)?));
             assert_query_events!($vm, [$($tail)*]);
         };
-        // TODO (dhatch) Be able to use hashmap! to match on specific bindings.
+        // TODO (dhatch) Be able to use btreemap! to match on specific bindings.
     }
 
     #[test]
@@ -1158,11 +1170,11 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_dicts() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let left = term!(hashmap! {
+        let left = term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
-        let right = term!(hashmap! {
+        let right = term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
@@ -1173,7 +1185,7 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT isa.
-        let right = term!(hashmap! {
+        let right = term!(btreemap! {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         });
@@ -1185,21 +1197,21 @@ mod tests {
 
         // {} isa {}.
         vm.push_goal(Goal::Isa {
-            left: term!(hashmap! {}),
-            right: term!(hashmap! {}),
+            left: term!(btreemap! {}),
+            right: term!(btreemap! {}),
         });
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Non-empty dicts should isa against an empty dict.
         vm.push_goal(Goal::Isa {
             left: left.clone(),
-            right: term!(hashmap! {}),
+            right: term!(btreemap! {}),
         });
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
-            left: term!(hashmap! {}),
+            left: term!(btreemap! {}),
             right: left.clone(),
         });
         assert_query_events!(vm, [QueryEvent::Done]);
@@ -1207,13 +1219,13 @@ mod tests {
         // Superset dict isa subset dict.
         vm.push_goal(Goal::Isa {
             left: left.clone(),
-            right: term!(hashmap! {sym!("x") => term!(1)}),
+            right: term!(btreemap! {sym!("x") => term!(1)}),
         });
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Subset dict isNOTa superset dict.
         vm.push_goal(Goal::Isa {
-            left: term!(hashmap! {sym!("x") => term!(1)}),
+            left: term!(btreemap! {sym!("x") => term!(1)}),
             right: left,
         });
         assert_query_events!(vm, [QueryEvent::Done]);
@@ -1223,11 +1235,11 @@ mod tests {
     fn unify_dicts() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
         // Dicts with identical keys and values unify.
-        let left = term!(hashmap! {
+        let left = term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
-        let right = term!(hashmap! {
+        let right = term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
@@ -1238,7 +1250,7 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT unify.
-        let right = term!(hashmap! {
+        let right = term!(btreemap! {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         });
@@ -1250,20 +1262,20 @@ mod tests {
 
         // Empty dicts unify.
         vm.push_goal(Goal::Unify {
-            left: term!(hashmap! {}),
-            right: term!(hashmap! {}),
+            left: term!(btreemap! {}),
+            right: term!(btreemap! {}),
         });
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Empty dict should not unify against a non-empty dict.
         vm.push_goal(Goal::Unify {
             left: left.clone(),
-            right: term!(hashmap! {}),
+            right: term!(btreemap! {}),
         });
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Subset match should fail.
-        let right = term!(hashmap! {
+        let right = term!(btreemap! {
             sym!("x") => term!(1),
         });
         vm.push_goal(Goal::Unify { left, right });
@@ -1274,13 +1286,13 @@ mod tests {
     fn unify_nested_dicts() {
         let mut vm = PolarVirtualMachine::default();
 
-        let left = term!(hashmap! {
-            sym!("x") => term!(hashmap!{
+        let left = term!(btreemap! {
+            sym!("x") => term!(btreemap!{
                 sym!("y") => term!(1)
             })
         });
-        let right = term!(hashmap! {
-            sym!("x") => term!(hashmap!{
+        let right = term!(btreemap! {
+            sym!("x") => term!(btreemap!{
                 sym!("y") => term!(sym!("result"))
             })
         });
@@ -1292,7 +1304,7 @@ mod tests {
     fn lookup() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
 
-        let fields = hashmap! {
+        let fields = btreemap! {
             sym!("x") => term!(1),
         };
         let dict = Dictionary { fields };
