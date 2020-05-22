@@ -22,11 +22,11 @@ class PolarRuntimeException(PolarException):
 
     pass
 
+
 class UnboundVariable(PolarRuntimeException):
     def __str__(self):
         return f"Variable {super().__str__()} is unbound."
 
+
 class PolarApiException(Exception):
     pass
-
-

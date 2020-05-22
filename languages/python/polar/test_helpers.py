@@ -81,7 +81,9 @@ def qvar(polar, query):
 
     return _qvar
 
+
 # STUBS
+
 
 @pytest.fixture
 def oso_monkeypatch():

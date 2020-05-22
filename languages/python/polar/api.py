@@ -251,11 +251,13 @@ class QueryResult:
         raise NotImplementedError()
 
 
-def to_external(polar_instance, env= None, **kwargs):
+def to_external(polar_instance, env=None, **kwargs):
     raise NotImplementedError()
+
 
 class Http:
     """A resource accessed via HTTP."""
+
     def __init__(self, path="", query={}, hostname=None):
         raise NotImplementedError()
 
