@@ -25,7 +25,7 @@ pub mod display {
                 }
                 Goal::IsMoreSpecific { left, right, args } => write!(
                     fmt,
-                    "IsMoreSpecific({}, {}, ({}))",
+                    "IsMoreSpecific({} {} ({}))",
                     left.to_polar(),
                     right.to_polar(),
                     args.iter()
@@ -56,6 +56,22 @@ pub mod display {
                     instance_id, field, ..
                 } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+                Goal::SortRules {
+                    rules,
+                    args: _,
+                    outer,
+                    inner,
+                } => write!(
+                    fmt,
+                    "SortRules([{}], outer={}, inner={})",
+                    rules
+                        .iter()
+                        .map(|rule| rule.to_polar())
+                        .collect::<Vec<String>>()
+                        .join(" "),
+                    outer,
+                    inner,
+                ),
                 Goal::Unify { left, right } => {
                     write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
                 }

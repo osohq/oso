@@ -179,6 +179,16 @@ fn test_functions_reorder() {
 
 #[test]
 fn test_results() {
+    let mut polar = Polar::new();
+    polar.load_str("foo(1); foo(2); foo(3);").unwrap();
+    assert_eq!(
+        qvar(&mut polar, "foo(a)", "a"),
+        vec![value!(1), value!(2), value!(3)]
+    );
+}
+
+#[test]
+fn test_result_permutations() {
     let parts = vec!["foo(1)", "foo(2)", "foo(3)", "foo(4)", "foo(5)"];
     for permutation in permute(parts).into_iter() {
         eprintln!("{:?}", permutation);
@@ -192,24 +202,12 @@ fn test_results() {
         );
     }
 }
-#[test]
-fn test_method_ordering() {
-    // let parts = vec!["foo(1)", "foo(2)", "foo(3)", "foo(4)", "foo(5)"];
-    // for permutation in permute(parts).into_iter() {
-    //     eprintln!("{:?}", permutation);
-    //     let mut polar = Polar::new();
-    //     polar
-    //         .load_str(&format!("{};", permutation.join(";")))
-    //         .unwrap();
-    //     assert_eq!(
-    //         qvar(&mut polar, "foo(a)", "a"),
-    //         vec![value!(1), value!(2), value!(3), value!(4), value!(5)]
-    //     );
-    // }
 
+#[test]
+fn test_multi_arg_method_ordering() {
     let mut polar = Polar::new();
     polar
-        .load_str("bar(2, 2); bar(2, 1); bar(1, 1); bar(1, 2);")
+        .load_str("bar(2, 1); bar(1, 1); bar(1, 2); bar(2, 2);")
         .unwrap();
     assert_eq!(
         qvars(&mut polar, "bar(a, b)", &["a", "b"]),
@@ -220,28 +218,6 @@ fn test_method_ordering() {
             vec![value!(2), value!(2)],
         ]
     );
-
-    // let parts: Vec<String> = permute(vec!["1", "2"])
-    //     .iter()
-    //     .map(|args| format!("bar({})", args.join(",")))
-    //     .collect();
-    // eprintln!("{:?}", parts);
-    // for permutation in permute(parts).into_iter() {
-    //     eprintln!("{:?}", permutation);
-    //     let mut polar = Polar::new();
-    //     polar
-    //         .load_str(&format!("{};", permutation.join(";")))
-    //         .unwrap();
-    //     assert_eq!(
-    //         qvars(&mut polar, "bar(a, b)", &["a", "b"]),
-    //         vec![
-    //             vec![value!(1), value!(1)],
-    //             vec![value!(1), value!(2)],
-    //             vec![value!(2), value!(1)],
-    //             vec![value!(2), value!(2)],
-    //         ]
-    //     );
-    // }
 }
 
 #[test]

@@ -769,8 +769,8 @@ impl PolarVirtualMachine {
         if outer < rules.len() {
             if inner > 0 {
                 let compare = Goal::IsMoreSpecific {
-                    left: rules[inner - 1].clone(),
-                    right: rules[inner].clone(),
+                    left: rules[inner].clone(),
+                    right: rules[inner - 1].clone(),
                     args: args.clone(),
                 };
 
@@ -823,48 +823,50 @@ impl PolarVirtualMachine {
         }
     }
 
+    /// Succeed if `left` is more specific than `right` with respect to `args`.
     fn is_more_specific(&mut self, left: Rule, right: Rule, args: TermList) {
-        left.params
+        let mut alternatives: Vec<Goals> = left
+            .params
             .iter()
             .zip(right.params.iter())
             .zip(args.iter())
             .filter_map(|((left_param, right_param), arg)| {
                 if let Some(left_specializer) = left_param.specializer.clone() {
                     if let Some(right_specializer) = right_param.specializer.clone() {
-                        Some((left_specializer, right_specializer, arg))
-                    } else {
-                        None
+                        if left_specializer != right_specializer {
+                            return Some((left_specializer, right_specializer, arg));
+                        }
                     }
-                } else {
-                    None
                 }
+                None
             })
-            .rev()
-            .for_each(|(left, right, arg)| {
+            .map(|(left, right, arg)| {
                 let answer = self.kb.gensym("is_subspecializer");
                 let call_id = self.new_call_id(&answer);
-                // TODO: GC call_id & answer.
-
-                let compare = Goal::IsSubspecializer {
-                    call_id,
-                    left,
-                    right,
-                    arg: arg.clone(),
-                };
-
-                let check = Goal::Unify {
-                    left: Term::new(Value::Symbol(answer)),
-                    right: Term::new(Value::Boolean(true)),
-                };
-
-                self.append_goals(vec![compare, check]);
-            });
+                // TODO: GC answer & call_id.
+                vec![
+                    Goal::Cut,
+                    Goal::IsSubspecializer {
+                        call_id,
+                        left,
+                        right,
+                        arg: arg.clone(),
+                    },
+                    Goal::Unify {
+                        left: Term::new(Value::Symbol(answer)),
+                        right: Term::new(Value::Boolean(true)),
+                    },
+                ]
+            })
+            .collect();
+        alternatives.push(vec![Goal::Backtrack]);
+        self.choose(alternatives);
     }
 
-    fn is_subspecializer(&mut self, call_id: u64, left: Term, right: Term, arg: Term) {
+    fn is_subspecializer(&mut self, call_id: u64, left: Term, right: Term, _arg: Term) {
         let answer = matches!(
             (&left.value, &right.value),
-            (Value::Integer(x), Value::Integer(y)) if x > y);
+            (Value::Integer(x), Value::Integer(y)) if x < y);
         self.bind(
             &self
                 .call_id_symbols
