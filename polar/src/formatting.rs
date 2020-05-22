@@ -253,7 +253,6 @@ pub mod to_polar {
                     }
                 }
                 Value::InstanceLiteral(i) => i.to_polar(),
-                Value::ExternalInstanceLiteral(i) => format!("^{}", i.to_polar()),
                 Value::Dictionary(i) => i.to_polar(),
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),

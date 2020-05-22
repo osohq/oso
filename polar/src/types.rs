@@ -57,6 +57,7 @@ pub struct InstanceLiteral {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ExternalInstance {
     pub instance_id: u64,
+    pub literal: Option<InstanceLiteral>,
 }
 
 // Context stored somewhere by id.
@@ -155,8 +156,7 @@ pub enum Value {
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
-    InstanceLiteral(InstanceLiteral), // Parsed, don't know what kind it is yet.
-    ExternalInstanceLiteral(InstanceLiteral), // Used in rewrite for constructors.
+    InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
@@ -179,7 +179,6 @@ impl Value {
             }),
             Value::InstanceLiteral(_) => unimplemented!(),
             Value::ExternalInstance(_) => unimplemented!(),
-            Value::ExternalInstanceLiteral(_) => unimplemented!(),
             Value::Dictionary(_) => unimplemented!(),
         }
     }
@@ -417,6 +416,7 @@ mod tests {
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let external = Term::new(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
+            literal: None,
         }));
         let list_of = Term::new(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());
