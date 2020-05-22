@@ -166,12 +166,18 @@ fn test_functions_reorder() {
 
 #[test]
 fn test_results() {
-    let mut polar = Polar::new();
-    polar.load_str("foo(1); foo(2); foo(3);").unwrap();
-    assert_eq!(
-        qvar(&mut polar, "foo(a)", "a"),
-        vec![value!(1), value!(2), value!(3)]
-    );
+    let parts = vec!["foo(1)", "foo(2)", "foo(3)", "foo(4)", "foo(5)"];
+    for permutation in permute(parts).into_iter() {
+        eprintln!("{:?}", permutation);
+        let mut polar = Polar::new();
+        polar
+            .load_str(&format!("{};", permutation.join(";")))
+            .unwrap();
+        assert_eq!(
+            qvar(&mut polar, "foo(a)", "a"),
+            vec![value!(1), value!(2), value!(3), value!(4), value!(5)]
+        );
+    }
 }
 
 #[test]
@@ -244,7 +250,10 @@ fn test_lookup() {
 #[test]
 fn test_instance_lookup() {
     let mut polar = Polar::new();
-    assert_eq!(qext(&mut polar, "a{x: 1}.x = 1", vec![value!(1)]).len(), 1);
+    assert_eq!(
+        qext(&mut polar, "a{x: 1}.x = 1", vec![Value::Integer(1)]).len(),
+        1
+    );
 }
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
@@ -333,15 +342,12 @@ fn test_dict_head() {
     assert!(qnull(&mut polar, "f({y: 1})"));
 
     // Test isa-ing instances against our dict head.
-    assert_eq!(
-        qext(&mut polar, "f(a{x: 1})", vec![Value::Integer(1)]).len(),
-        1
-    );
+    assert_eq!(qext(&mut polar, "f(a{x: 1})", vec![value!(1)]).len(), 1);
     assert!(qnull(&mut polar, "f(a{})"));
     assert!(qnull(&mut polar, "f(a{x: {}})"));
-    assert!(qext(&mut polar, "f(a{x: 2})", vec![Value::Integer(2)]).is_empty());
+    assert!(qext(&mut polar, "f(a{x: 2})", vec![value!(2)]).is_empty());
     assert_eq!(
-        qext(&mut polar, "f(a{y: 2, x: 1})", vec![Value::Integer(1)]).len(),
+        qext(&mut polar, "f(a{y: 2, x: 1})", vec![value!(1)]).len(),
         1
     );
 }
