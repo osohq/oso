@@ -41,6 +41,21 @@ impl Dictionary {
     }
 }
 
+impl Dictionary {
+    fn map<F>(&self, f: &mut F) -> Dictionary
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        Dictionary {
+            fields: self
+                .fields
+                .iter()
+                .map(|(k, v)| (k.clone(), v.map(f)))
+                .collect(),
+        }
+    }
+}
+
 pub fn field_name(field: &Term) -> Symbol {
     if let Value::Call(Predicate { name, .. }) = &field.value {
         name.clone()
@@ -178,7 +193,12 @@ impl Value {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
             }),
-            Value::InstanceLiteral(_) => unimplemented!(),
+            Value::InstanceLiteral(InstanceLiteral { tag, fields }) => {
+                Value::InstanceLiteral(InstanceLiteral {
+                    tag: tag.clone(),
+                    fields: fields.map(f),
+                })
+            }
             Value::ExternalInstance(_) => unimplemented!(),
             Value::ExternalInstanceLiteral(_) => unimplemented!(),
             Value::Dictionary(Dictionary { fields }) => Value::Dictionary(Dictionary {
