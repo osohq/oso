@@ -83,7 +83,7 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.h = x", "x", one=True) is True
 
 
-def test_specializers(polar, qvar, qeval):
+def test_specializers(polar, qvar, qeval, query):
     class A:
         def a(self):
             return "A"
@@ -115,7 +115,11 @@ def test_specializers(polar, qvar, qeval):
     polar.register_python_class(X)
 
     rules = """
-    try(A{});
+    test(A{});
+    test(B{});
+    try(v: B{}, res) := res = 2;
+    try(v: C{}, res) := res = 3;
+    try(v: A{}, res) := res = 1;
     """
     polar.load_str(rules)
 
@@ -130,5 +134,12 @@ def test_specializers(polar, qvar, qeval):
     assert qvar("C{}.x = x", "x", one=True) == "C"
     assert qvar("X{}.x = x", "x", one=True) == "X"
 
-    # assert qeval("try(A{})")
+    # @TODO: bug where all methods are being called not just isa ones.
 
+    # assert len(query("test(A{})")) == 1
+    # assert len(query("test(B{})")) == 2
+
+    # assert qvar("try(A{}, x)", "x") == [1]
+    # assert qvar("try(B{}, x)", "x") == [2, 1]
+    # assert qvar("try(C{}, x)", "x") == [3, 2, 1]
+    # assert qvar("try(X{}, x)", "x") == []

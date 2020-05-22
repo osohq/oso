@@ -203,6 +203,7 @@ class Polar:
                         self._raise_error()
 
             if kind == "ExternalIsa":
+                call_id = data["call_id"]
                 instance_id = data["instance_id"]
                 class_name = data["class_tag"]
                 instance = id_to_instance[instance_id]
@@ -211,30 +212,38 @@ class Polar:
 
                 isa = isinstance(instance, cls)
 
-                result = lib.polar_external_isa_result(
-                    self.polar, query, 1 if isa else 0
+                result = lib.polar_external_question_result(
+                    self.polar, query, call_id, 1 if isa else 0
                 )
                 if result == 0:
                     self._raise_error()
 
             if kind == "ExternalIsSubSpecializer":
+                call_id = data["call_id"]
                 instance_id = data["instance_id"]
                 class_name_a = data["class_tag_a"]
                 class_name_b = data["class_tag_b"]
                 instance = id_to_instance[instance_id]
                 instance_cls = instance.__class__
-                cls_a_mro_index = self.classes[class_name_a].__mro__.index(instance_cls)
-                cls_b_mro_index = self.classes[class_name_b].__mro__.index(instance_cls)
+                try:
+                    cls_a_mro_index = self.classes[class_name_a].__mro__.index(
+                        instance_cls
+                    )
+                    cls_b_mro_index = self.classes[class_name_b].__mro__.index(
+                        instance_cls
+                    )
+                    is_sub_specializer = cls_a_mro_index < cls_b_mro_index
+                except ValueError:
+                    is_sub_specializer = False
 
-                is_sub_specializer = cls_a_mro_index < cls_b_mro_index
-
-                result = lib.polar_external_is_sub_specializer_result(
-                    self.polar, query, 1 if is_sub_specializer else 0
+                result = lib.polar_external_question_result(
+                    self.polar, query, call_id, 1 if is_sub_specializer else 0
                 )
                 if result == 0:
                     self._raise_error()
 
             if kind == "ExternalUnify":
+                call_id = data["call_id"]
                 instance_id_a = data["instance_id_a"]
                 instance_id_b = data["instance_id_b"]
                 instance_a = id_to_instance[instance_id_a]
@@ -242,8 +251,8 @@ class Polar:
 
                 unify = instance_a == instance_b
 
-                result = lib.polar_external_unify_result(
-                    self.polar, query, 1 if unify else 0
+                result = lib.polar_external_question_result(
+                    self.polar, query, call_id, 1 if unify else 0
                 )
                 if result == 0:
                     self._raise_error()

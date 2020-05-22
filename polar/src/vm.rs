@@ -42,7 +42,10 @@ pub enum Goal {
         literal: InstanceLiteral,
         instance_id: u64,
     },
-    #[allow(dead_code)]
+    IsaExternal {
+        instance_id: u64,
+        literal: InstanceLiteral,
+    },
     Noop,
     Query {
         term: Term,
@@ -144,13 +147,21 @@ impl PolarVirtualMachine {
                     left,
                     right,
                     arg,
-                } => self.is_subspecializer(call_id, left, right, arg),
+                } => {
+                    if let Some(event) = self.is_subspecializer(call_id, left, right, arg) {
+                        return Ok(event);
+                    }
+                }
                 Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
                 Goal::LookupExternal {
                     call_id,
                     instance_id,
                     field,
                 } => return Ok(self.lookup_external(call_id, instance_id, field)),
+                Goal::IsaExternal {
+                    instance_id,
+                    literal,
+                } => return Ok(self.isa_external(instance_id, literal)),
                 Goal::MakeExternal {
                     literal,
                     instance_id,
@@ -278,7 +289,8 @@ impl PolarVirtualMachine {
                 instance_id: new_external_id,
                 literal: Some(instance_literal.clone()),
             };
-            // put into table so it's cached.
+            self.instances
+                .insert(instance_literal.clone(), new_external_instance.clone());
             (false, new_external_instance)
         }
     }
@@ -398,7 +410,7 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (Value::InstanceLiteral(left), Value::Dictionary(_)) => {
+            (Value::InstanceLiteral(left), _) => {
                 let (exists, external_instance) = self.find_or_make_instance(&left);
                 self.push_goal(Goal::Isa {
                     left: Term::new(Value::ExternalInstance(external_instance.clone())),
@@ -462,6 +474,13 @@ impl PolarVirtualMachine {
                 }
             }
 
+            (Value::ExternalInstance(left), Value::InstanceLiteral(right)) => {
+                self.push_goal(Goal::IsaExternal {
+                    instance_id: left.instance_id,
+                    literal: right.clone(),
+                });
+            }
+
             _ => self.push_goal(Goal::Unify {
                 left: left.clone(),
                 right: right.clone(),
@@ -500,6 +519,17 @@ impl PolarVirtualMachine {
             instance_id,
             attribute: field_name,
             args,
+        }
+    }
+
+    pub fn isa_external(&mut self, instance_id: u64, literal: InstanceLiteral) -> QueryEvent {
+        let result = self.kb.gensym("isa");
+        let call_id = self.new_call_id(&result);
+
+        QueryEvent::ExternalIsa {
+            call_id,
+            instance_id,
+            class_tag: literal.tag,
         }
     }
 
@@ -663,6 +693,17 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::Backtrack);
             self.push_goal(Goal::Cut);
         }
+    }
+
+    pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
+        self.bind(
+            &self
+                .call_id_symbols
+                .get(&call_id)
+                .expect("unregistered external call ID")
+                .clone(),
+            &Term::new(Value::Boolean(answer)),
+        );
     }
 
     /// Unify `left` and `right` terms.
@@ -897,18 +938,54 @@ impl PolarVirtualMachine {
         self.choose(alternatives);
     }
 
-    fn is_subspecializer(&mut self, call_id: u64, left: Term, right: Term, _arg: Term) {
-        let answer = matches!(
-            (&left.value, &right.value),
-            (Value::Integer(x), Value::Integer(y)) if x < y);
-        self.bind(
-            &self
-                .call_id_symbols
-                .get(&call_id)
-                .expect("unregistered call ID")
-                .clone(),
-            &Term::new(Value::Boolean(answer)),
-        );
+    fn is_subspecializer(
+        &mut self,
+        call_id: u64,
+        left: Term,
+        right: Term,
+        arg: Term,
+    ) -> Option<QueryEvent> {
+        if let Value::InstanceLiteral(literal) = arg.value {
+            let (exists, external_instance) = self.find_or_make_instance(&literal);
+            self.push_goal(Goal::IsSubspecializer {
+                call_id,
+                left: left.clone(),
+                right: right.clone(),
+                arg: Term::new(Value::ExternalInstance(external_instance.clone())),
+            });
+            if !exists {
+                self.push_goal(Goal::MakeExternal {
+                    literal: literal,
+                    instance_id: external_instance.instance_id,
+                });
+            }
+            return None;
+        }
+
+        match (arg.value, left.value, right.value) {
+            (_, Value::Integer(x), Value::Integer(y)) => {
+                self.bind(
+                    &self
+                        .call_id_symbols
+                        .get(&call_id)
+                        .expect("unregistered call ID")
+                        .clone(),
+                    &Term::new(Value::Boolean(x < y)),
+                );
+                None
+            }
+            (
+                Value::ExternalInstance(instance),
+                Value::InstanceLiteral(a),
+                Value::InstanceLiteral(b),
+            ) => Some(QueryEvent::ExternalIsSubSpecializer {
+                call_id,
+                instance_id: instance.instance_id,
+                class_tag_a: a.tag,
+                class_tag_b: b.tag,
+            }),
+            _ => None,
+        }
     }
 }
 
