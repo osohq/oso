@@ -3,7 +3,7 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
@@ -27,15 +27,15 @@ impl ToString for PolarError {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Dictionary {
-    pub fields: HashMap<Symbol, Term>,
+    pub fields: BTreeMap<Symbol, Term>,
 }
 
 impl Dictionary {
     pub fn new() -> Self {
         Self {
-            fields: HashMap::new(),
+            fields: BTreeMap::new(),
         }
     }
 }
@@ -48,13 +48,13 @@ pub fn field_name(field: &Term) -> Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ExternalInstance {
     pub instance_id: u64,
     pub literal: Option<InstanceLiteral>,
@@ -74,7 +74,7 @@ pub struct Context {
 
 pub type TermList = Vec<Term>;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Symbol(pub String);
 
 impl Symbol {
@@ -83,7 +83,7 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Predicate {
     pub name: Symbol,
     pub args: TermList,
@@ -101,7 +101,7 @@ impl Predicate {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
     Make,
     Dot,
@@ -144,13 +144,13 @@ impl Operator {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Operation {
     pub operator: Operator,
     pub args: TermList,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Value {
     Integer(i64),
     String(String),
@@ -187,7 +187,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Hash)]
 pub struct Term {
     pub id: u64,
     pub offset: usize,
@@ -404,7 +404,7 @@ mod tests {
             value: Value::Integer(1),
         };
         eprintln!("{}", serde_json::to_string(&term).unwrap());
-        let mut fields = HashMap::new();
+        let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("hello"), Term::new(Value::Integer(1234)));
         fields.insert(
             Symbol::new("world"),
@@ -425,7 +425,7 @@ mod tests {
         }));
         let list_of = Term::new(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());
-        let mut fields = HashMap::new();
+        let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap())
