@@ -81,3 +81,54 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
     assert qvar("Foo{}.g.hello = x", "x", one=True) == "world"
     assert qvar("Foo{}.h = x", "x", one=True) is True
+
+
+def test_specializers(polar, qvar, qeval):
+    class A:
+        def a(self):
+            return "A"
+
+        def x(self):
+            return "A"
+
+    class B(A):
+        def b(self):
+            return "B"
+
+        def x(self):
+            return "B"
+
+    class C(B):
+        def c(self):
+            return "C"
+
+        def x(self):
+            return "C"
+
+    class X:
+        def x(self):
+            return "X"
+
+    polar.register_python_class(A)
+    polar.register_python_class(B)
+    polar.register_python_class(C)
+    polar.register_python_class(X)
+
+    rules = """
+    try(A{});
+    """
+    polar.load_str(rules)
+
+    assert qvar("A{}.a = x", "x", one=True) == "A"
+    assert qvar("A{}.x = x", "x", one=True) == "A"
+    assert qvar("B{}.a = x", "x", one=True) == "A"
+    assert qvar("B{}.b = x", "x", one=True) == "B"
+    assert qvar("B{}.x = x", "x", one=True) == "B"
+    assert qvar("C{}.a = x", "x", one=True) == "A"
+    assert qvar("C{}.b = x", "x", one=True) == "B"
+    assert qvar("C{}.c = x", "x", one=True) == "C"
+    assert qvar("C{}.x = x", "x", one=True) == "C"
+    assert qvar("X{}.x = x", "x", one=True) == "X"
+
+    # assert qeval("try(A{})")
+
