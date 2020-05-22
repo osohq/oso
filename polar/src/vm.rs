@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::types::*;
 use super::ToPolarString;
@@ -270,7 +270,6 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
-    /// Recursively dereference a variable.
     #[allow(dead_code)]
     fn find_or_make_instance(
         &mut self,
@@ -404,6 +403,20 @@ impl PolarVirtualMachine {
                 }
             }
 
+            (Value::InstanceLiteral(left), Value::Dictionary(_)) => {
+                let (exists, external_instance) = self.find_or_make_instance(&left);
+                self.push_goal(Goal::Isa {
+                    left: Term::new(Value::ExternalInstance(external_instance.clone())),
+                    right: right.clone(),
+                });
+                if !exists {
+                    self.push_goal(Goal::MakeExternal {
+                        literal: left.clone(),
+                        instance_id: external_instance.instance_id,
+                    });
+                }
+            }
+
             (Value::ExternalInstance(left), Value::Dictionary(right)) => {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
@@ -533,76 +546,98 @@ impl PolarVirtualMachine {
                     }
                 }
             }
-            Value::Expression(Operation { operator, args }) => {
-                match operator {
-                    Operator::And => self.append_goals(
-                        args.iter()
-                            .map(|a| Goal::Query { term: a.clone() })
-                            .collect(),
-                    ),
-                    Operator::Unify => {
-                        assert_eq!(args.len(), 2);
-                        self.push_goal(Goal::Unify {
-                            left: args[0].clone(),
-                            right: args[1].clone(),
-                        });
-                    }
-                    Operator::Dot => {
-                        assert_eq!(args.len(), 3);
-                        let object = args[0].clone();
-                        let field = args[1].clone();
-                        let value = args[2].clone();
+            Value::Expression(Operation { operator, args }) => match operator {
+                Operator::And => self.append_goals(
+                    args.iter()
+                        .map(|a| Goal::Query { term: a.clone() })
+                        .collect(),
+                ),
+                Operator::Unify => {
+                    assert_eq!(args.len(), 2);
+                    self.push_goal(Goal::Unify {
+                        left: args[0].clone(),
+                        right: args[1].clone(),
+                    });
+                }
+                Operator::Dot => {
+                    assert_eq!(args.len(), 3);
+                    let object = args[0].clone();
+                    let field = args[1].clone();
+                    let value = args[2].clone();
 
-                        match self.deref(&object).value {
-                            Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
-                                dict,
-                                field: field_name(&field),
-                                value,
-                            }),
-                            Value::ExternalInstance(ExternalInstance { instance_id }) => {
-                                let value = match value {
-                                    Term {
-                                        value: Value::Symbol(value),
-                                        ..
-                                    } => value,
-                                    _ => panic!("bad lookup value: {}", value.to_polar()),
-                                };
-                                let call_id = self.new_call_id(&value);
-                                self.push_goal(Goal::LookupExternal {
-                                    call_id,
-                                    instance_id,
-                                    field,
+                    match self.deref(&object).value {
+                        Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
+                            dict,
+                            field: field_name(&field),
+                            value,
+                        }),
+                        Value::InstanceLiteral(literal) => {
+                            // Check if there's an external instance for this.
+                            // If there is, use it, if not push a make external then use it.
+                            let (exists, external_instance) = self.find_or_make_instance(&literal);
+
+                            self.push_goal(Goal::Query {
+                                term: Term::new(Value::Expression(Operation {
+                                    operator: Operator::Dot,
+                                    args: vec![
+                                        Term::new(Value::ExternalInstance(
+                                            external_instance.clone(),
+                                        )),
+                                        field,
+                                        value,
+                                    ],
+                                })),
+                            });
+                            if !exists {
+                                self.push_goal(Goal::MakeExternal {
+                                    literal,
+                                    instance_id: external_instance.instance_id,
                                 });
                             }
-                            _ => panic!(
-                                "can only perform lookups on dicts and instances, this is {:?}",
-                                object.value
-                            ),
                         }
+                        Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                            let value = match value {
+                                Term {
+                                    value: Value::Symbol(value),
+                                    ..
+                                } => value,
+                                _ => panic!("bad lookup value: {}", value.to_polar()),
+                            };
+                            let call_id = self.new_call_id(&value);
+                            self.push_goal(Goal::LookupExternal {
+                                call_id,
+                                instance_id,
+                                field,
+                            });
+                        }
+                        _ => panic!(
+                            "can only perform lookups on dicts and instances, this is {:?}",
+                            object.value
+                        ),
                     }
-                    Operator::Or => self.choose(
-                        args.into_iter()
-                            .map(|term| vec![Goal::Query { term }])
-                            .collect(),
-                    ),
-                    Operator::Not => {
-                        assert_eq!(args.len(), 1);
-                        let alternatives = vec![
-                            vec![
-                                Goal::Query {
-                                    term: args[0].clone(),
-                                },
-                                Goal::Cut,
-                                Goal::Backtrack,
-                            ],
-                            vec![Goal::Noop],
-                        ];
-
-                        self.choose(alternatives);
-                    }
-                    _ => todo!("can't query for expression: {:?}", operator),
                 }
-            }
+                Operator::Or => self.choose(
+                    args.into_iter()
+                        .map(|term| vec![Goal::Query { term }])
+                        .collect(),
+                ),
+                Operator::Not => {
+                    assert_eq!(args.len(), 1);
+                    let alternatives = vec![
+                        vec![
+                            Goal::Query {
+                                term: args[0].clone(),
+                            },
+                            Goal::Cut,
+                            Goal::Backtrack,
+                        ],
+                        vec![Goal::Noop],
+                    ];
+
+                    self.choose(alternatives);
+                }
+                _ => todo!("can't query for expression: {:?}", operator),
+            },
             _ => todo!("can't query for: {}", term.value.to_polar()),
         }
     }
@@ -1134,6 +1169,7 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_dicts() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+<<<<<<< HEAD
         let left = term!(hashmap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
@@ -1142,6 +1178,22 @@ mod tests {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
+=======
+        let mut fields = BTreeMap::new();
+        let x = Symbol::new("x");
+        let y = Symbol::new("y");
+        let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
+        let empty = Term::new(Value::Dictionary(Dictionary::new()));
+
+        // Dicts with identical keys and values isa.
+        fields.insert(x.clone(), one.clone());
+        fields.insert(y.clone(), two.clone());
+        let left = Term::new(Value::Dictionary(Dictionary {
+            fields: fields.clone(),
+        }));
+        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+>>>>>>> 63d2a3e... merged, not quite working
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
@@ -1149,10 +1201,17 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT isa.
+<<<<<<< HEAD
         let right = term!(hashmap! {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         });
+=======
+        let mut fields = BTreeMap::new();
+        fields.insert(x.clone(), two);
+        fields.insert(y, one.clone());
+        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+>>>>>>> 63d2a3e... merged, not quite working
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
@@ -1181,6 +1240,12 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Superset dict isa subset dict.
+<<<<<<< HEAD
+=======
+        let mut fields = BTreeMap::new();
+        fields.insert(x, one);
+        let subset = Term::new(Value::Dictionary(Dictionary { fields }));
+>>>>>>> 63d2a3e... merged, not quite working
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right: term!(hashmap! {sym!("x") => term!(1)}),
@@ -1198,6 +1263,16 @@ mod tests {
     #[test]
     fn unify_dicts() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+<<<<<<< HEAD
+=======
+        let mut fields = BTreeMap::new();
+        let x = Symbol::new("x");
+        let y = Symbol::new("y");
+        let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
+        let empty = Term::new(Value::Dictionary(Dictionary::new()));
+
+>>>>>>> 63d2a3e... merged, not quite working
         // Dicts with identical keys and values unify.
         let left = term!(hashmap! {
             sym!("x") => term!(1),
@@ -1214,10 +1289,17 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT unify.
+<<<<<<< HEAD
         let right = term!(hashmap! {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         });
+=======
+        let mut fields = BTreeMap::new();
+        fields.insert(x.clone(), two);
+        fields.insert(y, one.clone());
+        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+>>>>>>> 63d2a3e... merged, not quite working
         vm.push_goal(Goal::Unify {
             left: left.clone(),
             right,
@@ -1239,9 +1321,15 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Subset match should fail.
+<<<<<<< HEAD
         let right = term!(hashmap! {
             sym!("x") => term!(1),
         });
+=======
+        let mut fields = BTreeMap::new();
+        fields.insert(x, one);
+        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+>>>>>>> 63d2a3e... merged, not quite working
         vm.push_goal(Goal::Unify { left, right });
         assert_query_events!(vm, [QueryEvent::Done]);
     }
