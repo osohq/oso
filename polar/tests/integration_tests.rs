@@ -54,6 +54,19 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
         .collect()
 }
 
+fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
+    let query = polar.new_query(query_str).unwrap();
+
+    query_results(polar, query, vec![])
+        .iter()
+        .map(|bindings| {
+            vars.iter()
+                .map(|&var| bindings.get(&Symbol(var.to_string())).unwrap().clone())
+                .collect()
+        })
+        .collect()
+}
+
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_functions() {
@@ -178,6 +191,57 @@ fn test_results() {
             vec![value!(1), value!(2), value!(3), value!(4), value!(5)]
         );
     }
+}
+#[test]
+fn test_method_ordering() {
+    // let parts = vec!["foo(1)", "foo(2)", "foo(3)", "foo(4)", "foo(5)"];
+    // for permutation in permute(parts).into_iter() {
+    //     eprintln!("{:?}", permutation);
+    //     let mut polar = Polar::new();
+    //     polar
+    //         .load_str(&format!("{};", permutation.join(";")))
+    //         .unwrap();
+    //     assert_eq!(
+    //         qvar(&mut polar, "foo(a)", "a"),
+    //         vec![value!(1), value!(2), value!(3), value!(4), value!(5)]
+    //     );
+    // }
+
+    let mut polar = Polar::new();
+    polar
+        .load_str("bar(2, 2); bar(2, 1); bar(1, 1); bar(1, 2);")
+        .unwrap();
+    assert_eq!(
+        qvars(&mut polar, "bar(a, b)", &["a", "b"]),
+        vec![
+            vec![value!(1), value!(1)],
+            vec![value!(1), value!(2)],
+            vec![value!(2), value!(1)],
+            vec![value!(2), value!(2)],
+        ]
+    );
+
+    // let parts: Vec<String> = permute(vec!["1", "2"])
+    //     .iter()
+    //     .map(|args| format!("bar({})", args.join(",")))
+    //     .collect();
+    // eprintln!("{:?}", parts);
+    // for permutation in permute(parts).into_iter() {
+    //     eprintln!("{:?}", permutation);
+    //     let mut polar = Polar::new();
+    //     polar
+    //         .load_str(&format!("{};", permutation.join(";")))
+    //         .unwrap();
+    //     assert_eq!(
+    //         qvars(&mut polar, "bar(a, b)", &["a", "b"]),
+    //         vec![
+    //             vec![value!(1), value!(1)],
+    //             vec![value!(1), value!(2)],
+    //             vec![value!(2), value!(1)],
+    //             vec![value!(2), value!(2)],
+    //         ]
+    //     );
+    // }
 }
 
 #[test]
