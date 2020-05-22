@@ -271,26 +271,17 @@ impl PolarVirtualMachine {
         &mut self,
         instance_literal: &InstanceLiteral,
     ) -> (bool, ExternalInstance) {
-        // What I want to do, is keep a table of instance literals and external instances that were created for them.
-        // The problem is that InstanceLiteral's are not hashable. This sucks.
-        // @WOW HACK, for not call the constructor every time.
-        // if let Some(external_instance) = self.instances.get(instance_literal) {
-        //     (true, external_instance.clone())
-        // } else {
-        //     let new_external_id = self.new_id();
-        //     let new_external_instance = ExternalInstance {
-        //         instance_id: new_external_id,
-        //         literal: Some(instance_literal.clone()),
-        //     };
-        //     // put into table so it's cached.
-        //     (false, new_external_instance)
-        // }
-        let new_external_id = self.new_id();
-        let new_external_instance = ExternalInstance {
-            instance_id: new_external_id,
-            literal: Some(instance_literal.clone()),
-        };
-        (false, new_external_instance)
+        if let Some(external_instance) = self.instances.get(instance_literal) {
+            (true, external_instance.clone())
+        } else {
+            let new_external_id = self.new_id();
+            let new_external_instance = ExternalInstance {
+                instance_id: new_external_id,
+                literal: Some(instance_literal.clone()),
+            };
+            // put into table so it's cached.
+            (false, new_external_instance)
+        }
     }
 
     /// Recursively dereference a variable.
