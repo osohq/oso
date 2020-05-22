@@ -348,13 +348,11 @@ type Bindings = HashMap<Symbol, Term>;
 pub enum QueryEvent {
     Done,
 
-    /// Returns: new instance id
     MakeExternal {
         instance_id: u64,
         instance: InstanceLiteral,
     },
 
-    /// Returns: Term
     ExternalCall {
         /// Persistent id across all requests for results from the same external call.
         call_id: u64,
@@ -365,6 +363,25 @@ pub enum QueryEvent {
         /// List of arguments to use if this is a method call.
         args: Vec<Term>,
     },
+
+    /// Checks if the instance is an instance of (or subclass of) the class_tag.
+    ExternalIsa {
+        instance_id: u64,
+        class_tag: Symbol,
+    },
+
+    /// Checks if the instance is more specifically and instance/subclass of A than B.
+    ExternalIsSubSpecializer {
+        instance_id: u64,
+        class_tag_a: Symbol,
+        class_tag_b: Symbol,
+    },
+
+    ExternalUnify {
+        instance_id_a: u64,
+        instance_id_b: u64,
+    },
+
     Result {
         bindings: Bindings,
     },
