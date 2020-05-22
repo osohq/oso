@@ -206,6 +206,7 @@ class Polar:
                 instance_id = data["instance_id"]
                 class_name = data["class_tag"]
                 instance = id_to_instance[instance_id]
+                # @TODO: make sure we even know about this class.
                 cls = self.classes[class_name]
 
                 isa = isinstance(instance, cls)
