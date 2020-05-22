@@ -125,16 +125,8 @@ impl Polar {
         query.vm.external_call_result(call_id, value)
     }
 
-    pub fn external_isa_result(&mut self, query: &mut Query, result: bool) {
-        // query.vm.external_isa_result(result)
-    }
-
-    pub fn external_is_sub_specializer_result(&mut self, query: &mut Query, result: bool) {
-        // query.vm.external_is_sub_specializer_result(result)
-    }
-
-    pub fn external_unify_result(&mut self, query: &mut Query, result: bool) {
-        // query.vm.external_unify_result(result)
+    pub fn external_question_result(&mut self, query: &mut Query, call_id: u64, result: bool) {
+        query.vm.external_question_result(call_id, result)
     }
 
     // @TODO: Get external_id call for returning external instances from python.

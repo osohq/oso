@@ -385,18 +385,21 @@ pub enum QueryEvent {
 
     /// Checks if the instance is an instance of (or subclass of) the class_tag.
     ExternalIsa {
+        call_id: u64,
         instance_id: u64,
         class_tag: Symbol,
     },
 
     /// Checks if the instance is more specifically and instance/subclass of A than B.
     ExternalIsSubSpecializer {
+        call_id: u64,
         instance_id: u64,
         class_tag_a: Symbol,
         class_tag_b: Symbol,
     },
 
     ExternalUnify {
+        call_id: u64,
         instance_id_a: u64,
         instance_id_b: u64,
     },
