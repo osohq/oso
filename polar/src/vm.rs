@@ -470,7 +470,7 @@ impl PolarVirtualMachine {
                                 });
                                 if !exists {
                                     self.push_goal(Goal::MakeExternal {
-                                        literal: literal.clone(),
+                                        literal,
                                         instance_id: external_instance.instance_id,
                                     });
                                 }
