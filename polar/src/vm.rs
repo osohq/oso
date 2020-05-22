@@ -714,8 +714,8 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn and_expression() {
-        let f1 = rule!("f", 1);
-        let f2 = rule!("f", 2);
+        let f1 = rule!("f", [1]);
+        let f2 = rule!("f", [2]);
 
         let rule = GenericRule {
             name: sym!("f"),
@@ -735,9 +735,9 @@ mod tests {
 
         assert!(vm.is_halted());
 
-        let f1 = term!(pred!("f", 1));
-        let f2 = term!(pred!("f", 2));
-        let f3 = term!(pred!("f", 3));
+        let f1 = term!(pred!("f", [1]));
+        let f2 = term!(pred!("f", [2]));
+        let f3 = term!(pred!("f", [3]));
 
         // Querying for f(1)
         vm.push_goal(query!(op!(And, f1.clone())));

@@ -101,13 +101,13 @@ mod tests {
             .unwrap();
         assert_eq!(
             exp,
-            term!(pred!("foo", sym!("a"), pred!("b", sym!("c")), "d"))
+            term!(pred!("foo", [sym!("a"), pred!("b", [sym!("c")]), "d"]))
         );
 
         let exp2 = polar::ExpParser::new().parse(r#"foo.a(b)"#).unwrap();
         assert_eq!(
             exp2,
-            term!(op!(Dot, term!(sym!("foo")), term!(pred!("a", sym!("b"))))),
+            term!(op!(Dot, term!(sym!("foo")), term!(pred!("a", [sym!("b")])))),
             "{}",
             exp2.to_polar()
         );
@@ -122,24 +122,26 @@ mod tests {
                 term!(sym!("foo")),
                 term!(pred!(
                     "bar",
-                    sym!("a"),
-                    pred!(
-                        "b",
-                        op!(
-                            Dot,
-                            term!(sym!("c")),
-                            term!(pred!("d", sym!("e"), value!([sym!("f"), sym!("g")])))
+                    [
+                        sym!("a"),
+                        pred!(
+                            "b",
+                            [op!(
+                                Dot,
+                                term!(sym!("c")),
+                                term!(pred!("d", [sym!("e"), value!([sym!("f"), sym!("g")])]))
+                            )]
                         )
-                    )
+                    ]
                 ))
             )),
             "{}",
             exp3.to_polar()
         );
         let rule = polar::RuleParser::new().parse(r#"f(x) := g(x);"#).unwrap();
-        assert_eq!(rule, rule!("f", sym!("x") => pred!("g", sym!("x"))));
+        assert_eq!(rule, rule!("f", [sym!("x")] => pred!("g", [sym!("x")])));
         let rule = polar::RuleParser::new().parse(r#"f(x);"#).unwrap();
-        assert_eq!(rule, rule!("f", sym!("x")));
+        assert_eq!(rule, rule!("f", [sym!("x")]));
     }
 
     #[test]

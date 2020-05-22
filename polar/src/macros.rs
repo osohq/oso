@@ -92,7 +92,7 @@ macro_rules! sym {
 
 #[macro_export]
 macro_rules! pred {
-    ($name:expr, $($args:expr),+) => {
+    ($name:expr, [$($args:expr),+]) => {
         Predicate {
             name: sym!($name),
             args: vec![
@@ -198,7 +198,7 @@ macro_rules! value {
 
 #[macro_export]
 macro_rules! rule {
-    ($name:expr, $($args:expr),+ => $($body:expr),+) => {
+    ($name:expr, [$($args:expr),+] => $($body:expr),+) => {
         Rule {
             name: sym!($name),
             params: vec![
@@ -207,7 +207,7 @@ macro_rules! rule {
             body: term!(op!(And, $(term!($body)),+)),
         }
     };
-    ($name:expr, $($args:expr),+) => {
+    ($name:expr, [$($args:expr),+]) => {
         Rule {
             name: sym!($name),
             params: vec![
