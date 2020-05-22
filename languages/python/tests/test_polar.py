@@ -62,6 +62,9 @@ def test_external(polar, qvar):
         def g(self):
             return {"hello": "world"}
 
+        def h(self):
+            return True
+
     def capital_foo():
         return Foo(a="A")
 
@@ -77,3 +80,4 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.e = x", "x", one=True) == [1, 2, 3]
     assert qvar("Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
     assert qvar("Foo{}.g.hello = x", "x", one=True) == "world"
+    assert qvar("Foo{}.h = x", "x", one=True) is True

@@ -27,9 +27,6 @@ class Polar:
         lib.string_free(err)
         raise exception
 
-    # @BreakingChange
-    # These really need to be on the polar object, everything really needs to be on the polar object now.
-    # Also can we just call this register_class and get rid of the other one?
     def register_python_class(self, cls, from_polar=None):
         class_name = cls.__name__
         self.classes[class_name] = cls
@@ -84,12 +81,12 @@ class Polar:
 
         def to_polar(v):
             """ Convert python values to polar terms """
-            if isinstance(v, int):
+            if isinstance(v, bool):
+                val = {"Boolean": v}
+            elif isinstance(v, int):
                 val = {"Integer": v}
             elif isinstance(v, str):
                 val = {"String": v}
-            elif isinstance(v, bool):
-                val = {"Boolean": v}
             elif isinstance(v, list):
                 val = {"List": [to_polar(i) for i in v]}
             elif isinstance(v, dict):
@@ -204,6 +201,51 @@ class Polar:
                     )
                     if result == 0:
                         self._raise_error()
+
+            if kind == "ExternalIsa":
+                instance_id = data["instance_id"]
+                class_name = data["class_tag"]
+                instance = id_to_instance[instance_id]
+                cls = self.classes[class_name]
+
+                isa = isinstance(instance, cls)
+
+                result = lib.polar_external_isa_result(
+                    self.polar, query, 1 if isa else 0
+                )
+                if result == 0:
+                    self._raise_error()
+
+            if kind == "ExternalIsSubSpecializer":
+                instance_id = data["instance_id"]
+                class_name_a = data["class_tag_a"]
+                class_name_b = data["class_tag_b"]
+                instance = id_to_instance[instance_id]
+                instance_cls = instance.__class__
+                cls_a_mro_index = self.classes[class_name_a].__mro__.index(instance_cls)
+                cls_b_mro_index = self.classes[class_name_b].__mro__.index(instance_cls)
+
+                is_sub_specializer = cls_a_mro_index < cls_b_mro_index
+
+                result = lib.polar_external_is_sub_specializer_result(
+                    self.polar, query, 1 if is_sub_specializer else 0
+                )
+                if result == 0:
+                    self._raise_error()
+
+            if kind == "ExternalUnify":
+                instance_id_a = data["instance_id_a"]
+                instance_id_b = data["instance_id_b"]
+                instance_a = id_to_instance[instance_id_a]
+                instance_b = id_to_instance[instance_id_b]
+
+                unify = instance_a == instance_b
+
+                result = lib.polar_external_unify_result(
+                    self.polar, query, 1 if unify else 0
+                )
+                if result == 0:
+                    self._raise_error()
 
             if kind == "Result":
                 yield {k: to_python(v) for k, v in data["bindings"].items()}
