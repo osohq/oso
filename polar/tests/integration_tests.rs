@@ -1,4 +1,4 @@
-use ::polar::{polar::*, sym, types::*, value};
+use ::polar::{sym, types::*, value, Polar, Query};
 
 use std::collections::HashMap;
 use std::iter::FromIterator;

@@ -7,7 +7,7 @@ extern crate maplit;
 
 mod formatting;
 mod parser;
-pub mod polar;
+mod polar;
 mod rewrites;
 pub mod types;
 mod vm;
