@@ -480,7 +480,11 @@ impl PolarVirtualMachine {
                         let generic_rule = generic_rule.clone();
                         assert_eq!(generic_rule.name, predicate.name);
                         self.push_goal(Goal::SortRules {
-                            rules: generic_rule.rules.clone(),
+                            rules: generic_rule
+                                .rules
+                                .into_iter()
+                                .filter(|r| r.params.len() == predicate.args.len())
+                                .collect(),
                             args: predicate.args.clone(),
                             outer: 1,
                             inner: 1,
