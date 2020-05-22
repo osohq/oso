@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
 
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
@@ -27,7 +28,7 @@ impl ToString for PolarError {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
 pub struct Dictionary {
     pub fields: BTreeMap<Symbol, Term>,
 }
@@ -187,7 +188,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct Term {
     pub id: u64,
     pub offset: usize,
@@ -197,6 +198,12 @@ pub struct Term {
 impl PartialEq for Term {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
+    }
+}
+
+impl Hash for Term {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
     }
 }
 
