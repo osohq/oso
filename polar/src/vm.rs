@@ -732,6 +732,10 @@ impl PolarVirtualMachine {
     /// Sort a list of rules with respect to a list of arguments
     /// using an explicit-state insertion sort.
     fn sort_rules(&mut self, mut rules: Rules, args: TermList, outer: usize, inner: usize) {
+        if rules.is_empty() {
+            return self.push_goal(Goal::Backtrack);
+        }
+
         assert!(outer <= rules.len(), "bad outer index");
         assert!(inner <= rules.len(), "bad inner index");
         assert!(inner <= outer, "bad insertion sort state");

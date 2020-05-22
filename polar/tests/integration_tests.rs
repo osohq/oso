@@ -181,6 +181,12 @@ fn test_results() {
 }
 
 #[test]
+fn test_no_applicable_rules() {
+    let mut polar = Polar::new();
+    assert!(qnull(&mut polar, "f()"));
+}
+
+#[test]
 /// From Aït-Kaci's WAM tutorial (1999), page 34.
 fn test_ait_kaci_34() {
     let mut polar = Polar::new();
@@ -250,10 +256,7 @@ fn test_lookup() {
 #[test]
 fn test_instance_lookup() {
     let mut polar = Polar::new();
-    assert_eq!(
-        qext(&mut polar, "a{x: 1}.x = 1", vec![Value::Integer(1)]).len(),
-        1
-    );
+    assert_eq!(qext(&mut polar, "a{x: 1}.x = 1", vec![value!(1)]).len(), 1);
 }
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
