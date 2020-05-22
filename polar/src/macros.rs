@@ -172,27 +172,11 @@ macro_rules! value {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Value>::from($arg).0
     };
-    (@int $arg:expr) => {
-        $crate::types::Value::Integer(i64::from($arg))
-    };
-    (@str $arg:expr) => {
-        $crate::types::Value::String($arg.to_string())
-    };
     ("true") => {
         $crate::types::Value::Boolean(true)
     };
     ("false") => {
         $crate::types::Value::Boolean(false)
-    };
-    (@and $($args:expr),*) => {
-        $crate::types::Value::Expression($crate::types::Operation {
-            operator: $crate::types::Operator::And,
-            args: {
-                vec![
-                    $(term!(value!($args))),*
-                ]
-            }
-        })
     };
 }
 
