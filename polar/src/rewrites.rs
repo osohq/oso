@@ -35,13 +35,6 @@ pub fn walk_indexed<F>(
         Value::String(_) => (),
         Value::Boolean(_) => (),
         Value::ExternalInstance(_) => (),
-        Value::ExternalInstanceLiteral(instance) => {
-            for (k, t) in &mut instance.fields.fields.iter_mut() {
-                index.push(Index::K(k.clone()));
-                walk_indexed(t, index, insert_point, f);
-                index.pop();
-            }
-        }
         Value::InstanceLiteral(instance) => {
             for (k, t) in &mut instance.fields.fields.iter_mut() {
                 index.push(Index::K(k.clone()));
@@ -129,31 +122,6 @@ fn rewrite(term: &mut Term, kb: &mut KnowledgeBase) -> Option<(Term, Term)> {
                 offset: 0,
             };
             Some((lookup, var))
-        }
-        Value::InstanceLiteral(literal) => {
-            let external_id = kb.new_id();
-            let external_instance = Term {
-                value: Value::ExternalInstance(ExternalInstance {
-                    instance_id: external_id,
-                }),
-                id: 0,
-                offset: 0,
-            };
-            let external_instance_literal = Term {
-                value: Value::ExternalInstanceLiteral(literal.clone()),
-                id: 0,
-                offset: 0,
-            };
-            let make_args = vec![external_instance_literal, external_instance.clone()];
-            let make = Term {
-                value: Value::Expression(Operation {
-                    operator: Operator::Make,
-                    args: make_args,
-                }),
-                id: 0,
-                offset: 0,
-            };
-            Some((make, external_instance))
         }
         _ => None,
     }
@@ -257,23 +225,5 @@ mod tests {
         assert_eq!(term.to_polar(), "!{x: a.b}");
         let rewritten = rewrite_term(term, &mut kb);
         assert_eq!(rewritten.to_polar(), "!(.(a,b,_value_5),{x: _value_5})");
-
-        let term = parse_query("Foo{x: 1}").unwrap();
-        assert_eq!(term.to_polar(), "Foo{x: 1}");
-        let rewritten = rewrite_term(term, &mut kb);
-        assert_eq!(rewritten.to_polar(), "make(^Foo{x: 1},^{id: 6}),^{id: 6}");
-        // @TODO: Make this reparseable.
-
-        let term = parse_query("Foo{x: 1}.x").unwrap();
-        assert_eq!(term.to_polar(), "Foo{x: 1}.x");
-        let rewritten = rewrite_term(term, &mut kb);
-        assert_eq!(
-            rewritten.to_polar(),
-            "make(^Foo{x: 1},^{id: 7}),.(^{id: 7},x,_value_8),_value_8"
-        );
-        let again = parse_query(&rewritten.to_polar()).unwrap();
-        assert_eq!(again.to_polar(), rewritten.to_polar(),);
-        let rewritten_again = rewrite_term(again, &mut kb);
-        assert_eq!(rewritten_again.to_polar(), rewritten.to_polar(),);
     }
 }

@@ -84,6 +84,8 @@ pub struct PolarVirtualMachine {
     /// Rules and types.
     kb: KnowledgeBase,
 
+    /// Instance Literal -> External Instance table.
+    instances: HashMap<InstanceLiteral, ExternalInstance>,
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
 }
@@ -99,6 +101,7 @@ impl PolarVirtualMachine {
             bindings: vec![],
             choices: vec![],
             kb,
+            instances: HashMap::new(),
             call_id_symbols: HashMap::new(),
         }
     }
@@ -260,6 +263,34 @@ impl PolarVirtualMachine {
             .rev()
             .find(|binding| binding.0 == *variable)
             .map(|binding| &binding.1)
+    }
+
+    /// Recursively dereference a variable.
+    #[allow(dead_code)]
+    fn find_or_make_instance(
+        &mut self,
+        instance_literal: &InstanceLiteral,
+    ) -> (bool, ExternalInstance) {
+        // What I want to do, is keep a table of instance literals and external instances that were created for them.
+        // The problem is that InstanceLiteral's are not hashable. This sucks.
+        // @WOW HACK, for not call the constructor every time.
+        // if let Some(external_instance) = self.instances.get(instance_literal) {
+        //     (true, external_instance.clone())
+        // } else {
+        //     let new_external_id = self.new_id();
+        //     let new_external_instance = ExternalInstance {
+        //         instance_id: new_external_id,
+        //         literal: Some(instance_literal.clone()),
+        //     };
+        //     // put into table so it's cached.
+        //     (false, new_external_instance)
+        // }
+        let new_external_id = self.new_id();
+        let new_external_instance = ExternalInstance {
+            instance_id: new_external_id,
+            literal: Some(instance_literal.clone()),
+        };
+        (false, new_external_instance)
     }
 
     /// Recursively dereference a variable.
@@ -532,7 +563,33 @@ impl PolarVirtualMachine {
                                 field: field_name(&field),
                                 value,
                             }),
-                            Value::ExternalInstance(ExternalInstance { instance_id }) => {
+                            Value::InstanceLiteral(literal) => {
+                                // Check if there's an external instance for this.
+                                // If there is, use it, if not push a make external then use it.
+                                let (exists, external_instance) =
+                                    self.find_or_make_instance(&literal);
+
+                                self.push_goal(Goal::Query {
+                                    term: Term::new(Value::Expression(Operation {
+                                        operator: Operator::Dot,
+                                        args: vec![
+                                            Term::new(Value::ExternalInstance(
+                                                external_instance.clone(),
+                                            )),
+                                            field,
+                                            value,
+                                        ],
+                                    })),
+                                });
+                                if !exists {
+                                    self.push_goal(Goal::MakeExternal {
+                                        literal: literal.clone(),
+                                        instance_id: external_instance.instance_id,
+                                    });
+                                }
+                            }
+                            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                                let call_id = self.new_id();
                                 let value = match value {
                                     Term {
                                         value: Value::Symbol(value),
@@ -552,29 +609,6 @@ impl PolarVirtualMachine {
                                 object.value
                             ),
                         }
-                    }
-                    Operator::Make => {
-                        assert_eq!(args.len(), 2);
-                        let literal = args[0].clone();
-                        let external = args[1].clone();
-
-                        let literal = match literal.value {
-                            Value::ExternalInstanceLiteral(instance_literal) => instance_literal,
-                            _ => panic!("Wasn't rewritten or something?"),
-                        };
-
-                        let instance_id = match external.value {
-                            Value::ExternalInstance(ExternalInstance { instance_id }) => {
-                                instance_id
-                            }
-                            _ => panic!("Can only make external instances."),
-                        };
-
-                        // @TODO: Cache external instance ids so we don't call constructor twice.
-                        self.push_goal(Goal::MakeExternal {
-                            literal,
-                            instance_id,
-                        });
                     }
                     Operator::Or => self.choose(
                         args.into_iter()
