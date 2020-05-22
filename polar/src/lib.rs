@@ -223,6 +223,72 @@ pub extern "C" fn polar_external_call_result(
 }
 
 #[no_mangle]
+pub extern "C" fn polar_external_isa_result(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    result: i32,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let result = if let 0 = result { false } else { true };
+        polar.external_isa_result(query, result);
+        1
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::PolarError::Unknown);
+            0
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn polar_external_is_sub_specializer_result(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    result: i32,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let result = if let 0 = result { false } else { true };
+        polar.external_is_sub_specializer_result(query, result);
+        1
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::PolarError::Unknown);
+            0
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn polar_external_unify_result(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    result: i32,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let result = if let 0 = result { false } else { true };
+        polar.external_unify_result(query, result);
+        1
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::PolarError::Unknown);
+            0
+        }
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar, query_ptr: *mut Query) -> u64 {
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };
