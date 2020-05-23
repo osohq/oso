@@ -133,8 +133,8 @@ macro_rules! op {
     };
 }
 
-impl From<i64> for TestHelper<Value> {
-    fn from(other: i64) -> Self {
+impl From<u64> for TestHelper<Value> {
+    fn from(other: u64) -> Self {
         Self(Value::Integer(other))
     }
 }

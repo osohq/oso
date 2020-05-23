@@ -1,0 +1,11 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 2041b5e795cea9d848de067232e060ac9c5078462c780336a1f1aea02360a16e # shrinks to t = Term { id: 0, offset: 0, value: Symbol(Symbol("")) }
+cc def0be8dbe83bf86e2ebd2ba557a4f3370d17e97520d38344af31f3a9b126963 # shrinks to t = Term { id: 0, offset: 0, value: List([Term { id: 0, offset: 0, value: InstanceLiteral(InstanceLiteral { tag: Symbol("ㄱ"), fields: Dictionary { fields: {Symbol("ꧏ"): Term { id: 0, offset: 0, value: ExternalInstance(ExternalInstance { instance_id: 9223372036854775808 }) }} } }) }]) }
+cc e1c84101ebfc9cc8d9245f5db777be020e8c679718cf014c935fd2380e29c672 # shrinks to t = Term { id: 0, offset: 0, value: Expression(Operation { operator: Mul, args: [] }) }
+cc e4115842b94732f6436ccc2dc9531b27c14de7bebb2824afa4ffcc30b2dda114 # shrinks to t = Term { id: 0, offset: 0, value: Dictionary(Dictionary { fields: {Symbol("A"): Term { id: 0, offset: 0, value: Expression(Operation { operator: Eq, args: [Term { id: 0, offset: 0, value: Integer(0) }, Term { id: 0, offset: 0, value: Integer(0) }] }) }} }) }
+cc 8efdb3813599d438d0db93d5d71299601c9911230a586a395a2d9c01f5eebf3e # shrinks to t = Term { id: 0, offset: 0, value: Expression(Operation { operator: Dot, args: [Term { id: 0, offset: 0, value: List([]) }, Term { id: 0, offset: 0, value: Integer(0) }] }) }
