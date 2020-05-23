@@ -241,10 +241,6 @@ class Polar:
 # STUBS (importable but don't do anything)
 
 
-class PolarApiException(Exception):
-    pass
-
-
 class Query:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError()
@@ -252,4 +248,21 @@ class Query:
 
 class QueryResult:
     def __init__(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
+def to_external(polar_instance, env=None, **kwargs):
+    raise NotImplementedError()
+
+
+class Http:
+    """A resource accessed via HTTP."""
+
+    def __init__(self, path="", query={}, hostname=None):
+        raise NotImplementedError()
+
+    def __repr__(self):
+        raise NotImplementedError()
+
+    def __str__(self):
         raise NotImplementedError()
