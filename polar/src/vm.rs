@@ -998,163 +998,148 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_dicts() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let mut fields = HashMap::new();
-        let x = Symbol::new("x");
-        let y = Symbol::new("y");
-        let one = Term::new(Value::Integer(1));
-        let two = Term::new(Value::Integer(2));
-        let empty = Term::new(Value::Dictionary(Dictionary::new()));
-
-        // Dicts with identical keys and values isa.
-        fields.insert(x.clone(), one.clone());
-        fields.insert(y.clone(), two.clone());
-        let left = Term::new(Value::Dictionary(Dictionary {
-            fields: fields.clone(),
-        }));
-        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+        let left = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
+        let right = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT isa.
-        let mut fields = HashMap::new();
-        fields.insert(x.clone(), two);
-        fields.insert(y, one.clone());
-        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+        let right = term!(hashmap! {
+            sym!("x") => term!(2),
+            sym!("y") => term!(1),
+        });
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Done]);
 
         // {} isa {}.
         vm.push_goal(Goal::Isa {
-            left: empty.clone(),
-            right: empty.clone(),
+            left: term!(hashmap! {}),
+            right: term!(hashmap! {}),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Non-empty dicts should isa against an empty dict.
         vm.push_goal(Goal::Isa {
             left: left.clone(),
-            right: empty.clone(),
+            right: term!(hashmap! {}),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
-            left: empty,
+            left: term!(hashmap! {}),
             right: left.clone(),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Done]);
 
         // Superset dict isa subset dict.
-        let mut fields = HashMap::new();
-        fields.insert(x, one);
-        let subset = Term::new(Value::Dictionary(Dictionary { fields }));
         vm.push_goal(Goal::Isa {
             left: left.clone(),
-            right: subset.clone(),
+            right: term!(hashmap! {sym!("x") => term!(1)}),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Subset dict isNOTa superset dict.
         vm.push_goal(Goal::Isa {
-            left: subset,
+            left: term!(hashmap! {sym!("x") => term!(1)}),
             right: left,
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Done]);
     }
 
     #[test]
     fn unify_dicts() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let mut fields = HashMap::new();
-        let x = Symbol::new("x");
-        let y = Symbol::new("y");
-        let one = Term::new(Value::Integer(1));
-        let two = Term::new(Value::Integer(2));
-        let empty = Term::new(Value::Dictionary(Dictionary::new()));
-
         // Dicts with identical keys and values unify.
-        fields.insert(x.clone(), one.clone());
-        fields.insert(y.clone(), two.clone());
-        let left = Term::new(Value::Dictionary(Dictionary {
-            fields: fields.clone(),
-        }));
-        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+        let left = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
+        let right = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
         vm.push_goal(Goal::Unify {
             left: left.clone(),
             right,
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT unify.
-        let mut fields = HashMap::new();
-        fields.insert(x.clone(), two);
-        fields.insert(y, one.clone());
-        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+        let right = term!(hashmap! {
+            sym!("x") => term!(2),
+            sym!("y") => term!(1),
+        });
         vm.push_goal(Goal::Unify {
             left: left.clone(),
             right,
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Done]);
 
         // Empty dicts unify.
         vm.push_goal(Goal::Unify {
-            left: empty.clone(),
-            right: empty.clone(),
+            left: term!(hashmap! {}),
+            right: term!(hashmap! {}),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Empty dict should not unify against a non-empty dict.
         vm.push_goal(Goal::Unify {
             left: left.clone(),
-            right: empty,
+            right: term!(hashmap! {}),
         });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Done]);
 
         // Subset match should fail.
-        let mut fields = HashMap::new();
-        fields.insert(x, one);
-        let right = Term::new(Value::Dictionary(Dictionary { fields }));
+        let right = term!(hashmap! {
+            sym!("x") => term!(1),
+        });
         vm.push_goal(Goal::Unify { left, right });
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
-        assert!(vm.is_halted());
+        assert_query_events!(vm, [QueryEvent::Done]);
+    }
+
+    #[test]
+    fn unify_nested_dicts() {
+        let mut vm = PolarVirtualMachine::default();
+
+        let left = term!(hashmap! {
+            sym!("x") => term!(hashmap!{
+                sym!("y") => term!(1)
+            })
+        });
+        let right = term!(hashmap! {
+            sym!("x") => term!(hashmap!{
+                sym!("y") => term!(sym!("result"))
+            })
+        });
+        vm.push_goal(Goal::Unify { left, right });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!{sym!("result") => term!(1)} }, QueryEvent::Done]);
     }
 
     #[test]
     fn lookup() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let x = sym!("x");
 
-        // Lookup with correct value
-        let one = value!(1);
-        let mut dict = Dictionary::new();
-        dict.fields.insert(x.clone(), Term::new(one.clone()));
+        let fields = hashmap! {
+            sym!("x") => term!(1),
+        };
+        let dict = Dictionary { fields };
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: x.clone(),
-            value: Term::new(one.clone()),
+            field: sym!("x"),
+            value: term!(1),
         });
 
         assert_query_events!(vm, [
@@ -1162,24 +1147,22 @@ mod tests {
         ]);
 
         // Lookup with incorrect value
-        let two = value!(2);
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: x.clone(),
-            value: Term::new(two),
+            field: sym!("x"),
+            value: term!(2),
         });
 
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Lookup with unbound value
-        let y = sym!("y");
         vm.push_goal(Goal::Lookup {
             dict,
-            field: x,
-            value: Term::new(value!(y)),
+            field: sym!("x"),
+            value: term!(sym!("y")),
         });
         assert_query_events!(vm, [
-            QueryEvent::Result{hashmap!{sym!("y") => term!(one)}}
+            QueryEvent::Result{hashmap!{sym!("y") => term!(1)}}
         ]);
     }
 
