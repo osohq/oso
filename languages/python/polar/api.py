@@ -7,13 +7,19 @@ from types import GeneratorType
 
 from .exceptions import *
 
+# These need to be global for now...
+CLASSES = {}
+CLASS_CONSTRUCTORS = {}
+
 
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
         self.loaded_files = {}
-        self.classes = {}
-        self.class_constructors = {}
+        global CLASSES
+        self.classes = CLASSES
+        global CLASS_CONSTRUCTORS
+        self.class_constructors = CLASS_CONSTRUCTORS
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -291,6 +297,10 @@ class Polar:
 
 
 # STUBS (importable but don't do anything)
+
+
+def register_python_class(cls, from_polar=None):
+    Polar().register_python_class(cls, from_polar)
 
 
 class Query:
