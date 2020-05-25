@@ -224,6 +224,9 @@ fn test_multi_arg_method_ordering() {
 fn test_no_applicable_rules() {
     let mut polar = Polar::new();
     assert!(qnull(&mut polar, "f()"));
+
+    polar.load_str("f(x);").unwrap();
+    assert!(qnull(&mut polar, "f()"));
 }
 
 #[test]

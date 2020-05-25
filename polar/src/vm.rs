@@ -781,7 +781,7 @@ impl PolarVirtualMachine {
                     inner: inner - 1,
                     args,
                 };
-                return self.choose(vec![vec![compare, Goal::Cut, next_inner], vec![next_outer]]);
+                self.choose(vec![vec![compare, Goal::Cut, next_inner], vec![next_outer]]);
             } else {
                 assert_eq!(inner, 0);
                 self.push_goal(next_outer);
