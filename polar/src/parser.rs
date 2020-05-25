@@ -145,6 +145,20 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_specializers() {
+        let rule = polar::RuleParser::new().parse(r#"f(x: 1);"#).unwrap();
+        assert_eq!(rule, rule!("f", ["x"; 1]));
+
+        let rule = polar::RuleParser::new()
+            .parse(r#"f(x: 1, y: [x]) := y = 2;"#)
+            .unwrap();
+        assert_eq!(
+            rule,
+            rule!("f", ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
+        );
+    }
+
+    #[test]
     fn test_parse_file() {
         let f = r#"
         a(1);b(2);c(3);

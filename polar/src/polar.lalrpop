@@ -289,7 +289,7 @@ Parameter: Parameter = {
             let instance_literal = InstanceLiteral{tag: class_name, fields: Dictionary{fields}};
             Parameter{name: Some(name), specializer: Some(Term{id: 0, offset, value: Value::InstanceLiteral(instance_literal)})}
         } else {
-            Parameter{name: None, specializer: Some(specializer)}
+            Parameter{name: Some(name), specializer: Some(specializer)}
         }
     }
 };
