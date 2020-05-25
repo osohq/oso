@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use super::types::*;
 use super::ToPolarString;
@@ -955,7 +955,7 @@ impl PolarVirtualMachine {
             });
             if !exists {
                 self.push_goal(Goal::MakeExternal {
-                    literal: literal,
+                    literal,
                     instance_id: external_instance.instance_id,
                 });
             }
