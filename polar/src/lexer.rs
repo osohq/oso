@@ -123,6 +123,25 @@ impl<'input> Iterator for Lexer<'input> {
                                     last = i;
                                     break;
                                 }
+                                '\\' => {
+                                    self.c = self.chars.next();
+                                    if let Some((i, char)) = self.c {
+                                        let escaped_char = match char {
+                                            '0' => '\0',
+                                            '\'' => '\'',
+                                            '"' => '"',
+                                            '\\' => '\\',
+                                            'n' => '\n',
+                                            'r' => '\r',
+                                            't' => '\t',
+                                            _ => todo!("error, bad escape"),
+                                        };
+                                        self.buf.push(escaped_char);
+                                    } else {
+                                        todo!("error, escape and then end of file")
+                                    }
+                                    self.c = self.chars.next();
+                                }
                                 _ => {
                                     self.buf.push(char);
                                     self.c = self.chars.next();
@@ -292,6 +311,17 @@ mod tests {
         assert!(matches!(lexer.next(), None));
     }
 
+    #[test]
+    fn test_escapes() {
+        let s = r#"
+            "this is a \"sub\" string"
+        "#;
+        let mut lexer = Lexer::new(&s);
+        let tok = lexer.next();
+        assert!(
+            matches!(tok, Some(Ok((_, Token::String(s), _))) if &s == r#"this is a "sub" string"#)
+        );
+    }
     #[test]
     fn test_lexer() {
         let f = r#"hello "world" 12345 < + <= { ] =99 #comment
