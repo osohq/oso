@@ -5,30 +5,62 @@
 use std::str::FromStr;
 use std::collections::{HashMap, BTreeMap};
 use crate::types::*;
+use crate::lexer::{self, Token};
 
 use lalrpop_util::ParseError;
 
 grammar;
 
-pub Integer: Term = <start:@L> <s:r"[0-9]+"> => {
-    Term{id: 0, offset: start, value: Value::Integer(i64::from_str(s).unwrap())}
+extern {
+    type Location = usize;
+    type Error = String;
+
+    enum Token {
+        "Integer" => lexer::Token::Integer(<i64>),
+        "String" => lexer::Token::String(<String>),
+        "Boolean" => lexer::Token::Boolean(<bool>),
+        "Symbol" => lexer::Token::Symbol(<Symbol>),
+        ":" => lexer::Token::Colon,     // :
+        "," => lexer::Token::Comma,     // ,
+        "[" => lexer::Token::LB,        // [
+        "]" => lexer::Token::RB,        // ]
+        "(" => lexer::Token::LP,        // (
+        ")" => lexer::Token::RP,        // )
+        "{" => lexer::Token::LCB,       // {
+        "}" => lexer::Token::RCB,       // }
+        "." => lexer::Token::Dot,       // .
+        "make" => lexer::Token::Make,   // make
+        "!" => lexer::Token::Not,       // !
+        "*" => lexer::Token::Mul,       // *
+        "/" => lexer::Token::Div,       // /
+        "+" => lexer::Token::Add,       // +
+        "-" => lexer::Token::Sub,       // -
+        "==" => lexer::Token::Eq,        // ==
+        "!=" => lexer::Token::Neq,       // !=
+        "<=" => lexer::Token::Leq,       // <=
+        ">=" => lexer::Token::Geq,       // >=
+        "<" => lexer::Token::Lt,        // <
+        ">" => lexer::Token::Gt,        // >
+        "=" => lexer::Token::Unify,     // =
+        "|" => lexer::Token::Pipe,      // |
+        ";" => lexer::Token::SemiColon, // ;
+        ":=" => lexer::Token::Define,    // :=
+    }
+}
+
+pub Integer: Term = <start:@L> <i:"Integer"> => {
+    Term{id: 0, offset: start, value: Value::Integer(i)}
 };
-// @TODO: Better string token.
-pub PolarString: Term = <start:@L> <s:r#""(\\.|[^"\\])*""#> => {
-    Term{id: 0, offset: start, value: Value::String(s[1..s.len()-1].to_string())}
+
+pub PolarString: Term = <start:@L> <s:"String"> => {
+    Term{id: 0, offset: start, value: Value::String(s)}
 };
-True: Term = <start:@L> "true" => {
-    Term{id: 0, offset: start, value: Value::Boolean(true)}
+
+pub Boolean: Term = <start:@L> <b:"Boolean"> => {
+    Term{id: 0, offset: start, value: Value::Boolean(b)}
 };
-False: Term = <start:@L> "false" => {
-    Term{id: 0, offset: start, value: Value::Boolean(true)}
-};
-pub Boolean: Term = {
-    <bool:True> => bool,
-    <bool:False> => bool
-};
-// @TODO: Better name token.
-Name: Symbol = <s:r"[\w&&[^\d]]\w*"> => Symbol(s.to_string());
+
+Name: Symbol = <s:"Symbol"> => s;
 
 pub Symbol: Term  = <start:@L> <n:Name> => {
     Term{id: 0, offset: start, value: Value::Symbol(n)}

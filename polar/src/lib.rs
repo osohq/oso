@@ -6,6 +6,7 @@ pub mod macros;
 extern crate maplit;
 
 mod formatting;
+mod lexer;
 mod parser;
 mod polar;
 mod rewrites;
