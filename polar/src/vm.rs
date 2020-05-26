@@ -825,6 +825,12 @@ impl PolarVirtualMachine {
 
     /// Sort a list of rules with respect to a list of arguments
     /// using an explicit-state insertion sort.
+    ///
+    /// We maintain two indices for the sort, `outer` and `inner`. The `outer` index tracks our
+    /// sorting progress. Every rule at or below `outer` is sorted; every rule above it is
+    /// unsorted. The `inner` index tracks our search through the sorted sublist for the correct
+    /// position of the candidate rule (the rule at the head of the unsorted portion of the
+    /// list).
     fn sort_rules(&mut self, mut rules: Rules, args: TermList, outer: usize, inner: usize) {
         if rules.is_empty() {
             return self.push_goal(Goal::Backtrack);
@@ -840,7 +846,7 @@ impl PolarVirtualMachine {
             outer: outer + 1,
             inner: outer + 1,
         };
-        // Because `outer` starts as `1`, if there is only one rule in the Vec<Rule>, this check
+        // Because `outer` starts as `1`, if there is only one rule in the `Rules`, this check
         // fails and we jump down to the evaluation of that lone rule.
         if outer < rules.len() {
             if inner > 0 {
@@ -857,6 +863,8 @@ impl PolarVirtualMachine {
                     inner: inner - 1,
                     args,
                 };
+                // If the comparison fails, break out of the inner loop.
+                // If the comparison succeeds, continue the inner loop with the swapped rules.
                 self.choose(vec![vec![compare, Goal::Cut, next_inner], vec![next_outer]]);
             } else {
                 assert_eq!(inner, 0);
@@ -903,6 +911,9 @@ impl PolarVirtualMachine {
     fn is_more_specific(&mut self, left: Rule, right: Rule, args: TermList) {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
+            // TODO: Handle the case where one of the params has a specializer and the other does
+            // not. The original logic in the python code was that a param with a specializer is
+            // always more specific than a param without.
             if let (Some(left_spec), Some(right_spec)) =
                 (&left_param.specializer, &right_param.specializer)
             {
