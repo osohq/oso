@@ -1,7 +1,8 @@
 # External class definitions for use in `test_polar.py` tests
 
+
 class Foo:
-    def __init__(self, name = ""):
+    def __init__(self, name=""):
         self.name = name
 
     def foo(self):
@@ -18,12 +19,14 @@ class Qux:
 
 
 class MyClass:
-    def __init__(self, x = "", y = ""):
+    def __init__(self, x="", y=""):
         self.x = x
         self.y = y
 
+
 class YourClass:
     pass
+
 
 class OurClass(MyClass, YourClass):
     pass

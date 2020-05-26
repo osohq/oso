@@ -1,4 +1,4 @@
-.PHONY: build test test-requirements
+.PHONY: build test test-requirements fmt
 build:
 	rm -rf build
 	python setup.py build
@@ -13,3 +13,6 @@ test-requirements: .make.test-requirements-install
 
 test: test-requirements
 	pytest
+
+fmt:
+	black .
