@@ -8,8 +8,6 @@ lalrpop_mod!(
 use super::lexer::Lexer;
 use super::types::*;
 
-use std::str::{CharIndices, FromStr};
-
 lazy_static::lazy_static! {
     static ref RULES_PARSER: polar::RulesParser = polar::RulesParser::new();
     static ref QUERY_PARSER: polar::ExpParser = polar::ExpParser::new();

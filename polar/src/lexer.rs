@@ -78,46 +78,45 @@ impl<'input> Iterator for Lexer<'input> {
 
         // Parse tokens.
         match self.c {
-            None => return None,
+            None => None,
             Some((i, char)) => match char {
-                // @TODO: Support all utf8 stuff like the last parser did.
-                'a'..='z' | 'A'..='Z' | '_' => {
+                x if x.is_alphabetic() || x == '_' => {
                     let start = i;
                     let mut last = i;
                     self.buf.clear();
                     self.buf.push(char);
                     self.c = self.chars.next();
-                    loop {
-                        if let Some((i, char)) = self.c {
-                            match char {
-                                'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
-                                    self.buf.push(char);
-                                    last = i;
-                                    self.c = self.chars.next();
-                                }
-                                _ => break,
+
+                    while let Some((i, char)) = self.c {
+                        match char {
+                            x if x.is_alphanumeric() || x == '_' => {
+                                self.buf.push(char);
+                                last = i;
+                                self.c = self.chars.next();
                             }
-                        } else {
-                            break;
+                            _ => break,
                         }
                     }
                     if &self.buf == "true" {
-                        return Some(Ok((start, Token::Boolean(true), last + 1)));
+                        Some(Ok((start, Token::Boolean(true), last + 1)))
                     } else if &self.buf == "false" {
-                        return Some(Ok((start, Token::Boolean(false), last + 1)));
+                        Some(Ok((start, Token::Boolean(false), last + 1)))
+                    } else if &self.buf == "make" {
+                        Some(Ok((start, Token::Make, last + 1)))
                     } else {
-                        return Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)));
+                        Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
                     }
                 }
                 '"' => {
                     let start = i;
-                    let mut last = i;
+                    let last;
                     self.buf.clear();
                     self.c = self.chars.next();
                     loop {
                         if let Some((i, char)) = self.c {
                             match char {
                                 // @TODO: Escaped things.
+                                '\n' => todo!("Error: hit new line while parsing string"),
                                 '"' => {
                                     self.c = self.chars.next();
                                     last = i;
@@ -125,7 +124,7 @@ impl<'input> Iterator for Lexer<'input> {
                                 }
                                 '\\' => {
                                     self.c = self.chars.next();
-                                    if let Some((i, char)) = self.c {
+                                    if let Some((_, char)) = self.c {
                                         let escaped_char = match char {
                                             '0' => '\0',
                                             '\'' => '\'',
@@ -151,32 +150,28 @@ impl<'input> Iterator for Lexer<'input> {
                             todo!("Error, hit end of file before closing quote")
                         }
                     }
-                    return Some(Ok((start, Token::String(self.buf.clone()), last + 1)));
+                    Some(Ok((start, Token::String(self.buf.clone()), last + 1)))
                 }
-                '0'..='9' => {
+                '1'..='9' => {
                     let start = i;
                     let mut last = i;
                     self.buf.clear();
                     self.buf.push(char);
                     self.c = self.chars.next();
-                    loop {
-                        if let Some((i, char)) = self.c {
-                            match char {
-                                '0'..='9' => {
-                                    self.buf.push(char);
-                                    self.c = self.chars.next();
-                                    last = i;
-                                }
-                                _ => break,
+                    while let Some((i, char)) = self.c {
+                        match char {
+                            '0'..='9' => {
+                                self.buf.push(char);
+                                self.c = self.chars.next();
+                                last = i;
                             }
-                        } else {
-                            break;
+                            _ => break,
                         }
                     }
                     if let Ok(int) = i64::from_str(&self.buf) {
-                        return Some(Ok((start, Token::Integer(int), last + 1)));
+                        Some(Ok((start, Token::Integer(int), last + 1)))
                     } else {
-                        todo!("Error")
+                        todo!("Error invalid integer")
                     }
                 }
                 ':' => {
@@ -184,9 +179,9 @@ impl<'input> Iterator for Lexer<'input> {
                     self.c = self.chars.next();
                     if let Some((_, '=')) = self.c {
                         self.c = self.chars.next();
-                        return Some(Ok((start, Token::Define, start + 2)));
+                        Some(Ok((start, Token::Define, start + 2)))
                     } else {
-                        return Some(Ok((start, Token::Colon, start + 1)));
+                        Some(Ok((start, Token::Colon, start + 1)))
                     }
                 }
                 '=' => {
@@ -194,9 +189,9 @@ impl<'input> Iterator for Lexer<'input> {
                     self.c = self.chars.next();
                     if let Some((_, '=')) = self.c {
                         self.c = self.chars.next();
-                        return Some(Ok((start, Token::Eq, start + 2)));
+                        Some(Ok((start, Token::Eq, start + 2)))
                     } else {
-                        return Some(Ok((start, Token::Unify, start + 1)));
+                        Some(Ok((start, Token::Unify, start + 1)))
                     }
                 }
                 '<' => {
@@ -204,9 +199,9 @@ impl<'input> Iterator for Lexer<'input> {
                     self.c = self.chars.next();
                     if let Some((_, '=')) = self.c {
                         self.c = self.chars.next();
-                        return Some(Ok((start, Token::Leq, start + 2)));
+                        Some(Ok((start, Token::Leq, start + 2)))
                     } else {
-                        return Some(Ok((start, Token::Lt, start + 1)));
+                        Some(Ok((start, Token::Lt, start + 1)))
                     }
                 }
                 '>' => {
@@ -214,9 +209,9 @@ impl<'input> Iterator for Lexer<'input> {
                     self.c = self.chars.next();
                     if let Some((_, '=')) = self.c {
                         self.c = self.chars.next();
-                        return Some(Ok((start, Token::Geq, start + 2)));
+                        Some(Ok((start, Token::Geq, start + 2)))
                     } else {
-                        return Some(Ok((start, Token::Gt, start + 1)));
+                        Some(Ok((start, Token::Gt, start + 1)))
                     }
                 }
                 '!' => {
@@ -224,75 +219,73 @@ impl<'input> Iterator for Lexer<'input> {
                     self.c = self.chars.next();
                     if let Some((_, '=')) = self.c {
                         self.c = self.chars.next();
-                        return Some(Ok((start, Token::Neq, start + 2)));
+                        Some(Ok((start, Token::Neq, start + 2)))
                     } else {
-                        return Some(Ok((start, Token::Not, start + 1)));
+                        Some(Ok((start, Token::Not, start + 1)))
                     }
                 }
                 '|' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::Pipe, i + 1)));
+                    Some(Ok((i, Token::Pipe, i + 1)))
                 }
                 ',' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::Comma, i + 1)));
+                    Some(Ok((i, Token::Comma, i + 1)))
                 }
                 '[' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::LB, i + 1)));
+                    Some(Ok((i, Token::LB, i + 1)))
                 }
                 ']' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::RB, i + 1)));
+                    Some(Ok((i, Token::RB, i + 1)))
                 }
                 '{' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::LCB, i + 1)));
+                    Some(Ok((i, Token::LCB, i + 1)))
                 }
                 '}' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::RCB, i + 1)));
+                    Some(Ok((i, Token::RCB, i + 1)))
                 }
                 '(' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::LP, i + 1)));
+                    Some(Ok((i, Token::LP, i + 1)))
                 }
                 ')' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::RP, i + 1)));
+                    Some(Ok((i, Token::RP, i + 1)))
                 }
                 '.' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::Dot, i + 1)));
+                    Some(Ok((i, Token::Dot, i + 1)))
                 }
                 '+' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::Add, i + 1)));
+                    Some(Ok((i, Token::Add, i + 1)))
                 }
                 '-' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::Sub, i + 1)));
+                    Some(Ok((i, Token::Sub, i + 1)))
                 }
                 '*' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::Mul, i + 1)));
+                    Some(Ok((i, Token::Mul, i + 1)))
                 }
                 '/' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::Div, i + 1)));
+                    Some(Ok((i, Token::Div, i + 1)))
                 }
                 ';' => {
                     self.c = self.chars.next();
-                    return Some(Ok((i, Token::SemiColon, i + 1)));
+                    Some(Ok((i, Token::SemiColon, i + 1)))
                 }
-                _ => {
-                    return Some(Err(format!(
-                        "Lexer error: Invalid token character: '{}'",
-                        char
-                    )))
-                }
+                _ => Some(Err(format!(
+                    "Lexer error: Invalid token character: '{}'",
+                    char
+                ))),
             },
-        };
+        }
     }
 }
 
@@ -301,7 +294,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lex_infinate_looper() {
+    fn lex_infinite_loop_bug() {
         let f = " 123";
         let mut lexer = Lexer::new(f);
         assert!(matches!(
@@ -323,6 +316,7 @@ mod tests {
         );
     }
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn test_lexer() {
         let f = r#"hello "world" 12345 < + <= { ] =99 #comment
             more;"#;
