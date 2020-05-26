@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::types::*;
 use super::ToPolarString;
@@ -13,7 +13,6 @@ pub enum Goal {
     Backtrack,
     Cut,
     Halt,
-    #[allow(dead_code)]
     Isa {
         left: Term,
         right: Term,
@@ -91,6 +90,12 @@ impl PolarVirtualMachine {
         self.kb.new_id()
     }
 
+    fn new_call_id(&mut self, symbol: &Symbol) -> u64 {
+        let call_id = self.new_id();
+        self.call_id_symbols.insert(call_id, symbol.clone());
+        call_id
+    }
+
     /// Run the virtual machine. While there are goals on the stack,
     /// pop them off and execute them one at at time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
@@ -110,7 +115,7 @@ impl PolarVirtualMachine {
                 Goal::Backtrack => self.backtrack(),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
-                Goal::Isa { .. } => todo!("isa"),
+                Goal::Isa { left, right } => self.isa(&left, &right),
                 Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
                 Goal::LookupExternal {
                     call_id,
@@ -305,7 +310,103 @@ impl PolarVirtualMachine {
         QueryEvent::Done
     }
 
-    // pub fn isa(&mut self) {}
+    pub fn isa(&mut self, left: &Term, right: &Term) {
+        match (&left.value, &right.value) {
+            (Value::List(left), Value::List(right)) => {
+                if left.len() == right.len() {
+                    self.append_goals(
+                        left.iter()
+                            .zip(right)
+                            .map(|(left, right)| Goal::Isa {
+                                left: left.clone(),
+                                right: right.clone(),
+                            })
+                            .collect(),
+                    )
+                } else {
+                    self.push_goal(Goal::Backtrack);
+                }
+            }
+
+            (Value::Dictionary(left), Value::Dictionary(right)) => {
+                // Check that the left is more specific than the right.
+                let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
+                let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
+                if !right_fields.is_subset(&left_fields) {
+                    return self.push_goal(Goal::Backtrack);
+                }
+
+                // For each field on the right, isa its value against the corresponding value on
+                // the left.
+                for (k, v) in right.fields.iter() {
+                    let left = left
+                        .fields
+                        .get(&k)
+                        .expect("left fields should be a subset of right fields")
+                        .clone();
+                    self.push_goal(Goal::Isa {
+                        left,
+                        right: v.clone(),
+                    })
+                }
+            }
+
+            (Value::ExternalInstance(left), Value::Dictionary(right)) => {
+                // For each field in the dict, look up the corresponding field on the instance and
+                // then isa them.
+                for (field, right_value) in right.fields.iter() {
+                    let left_value = self.kb.gensym("isa_value");
+                    let call_id = self.new_call_id(&left_value);
+                    let lookup = Goal::LookupExternal {
+                        instance_id: left.instance_id,
+                        call_id,
+                        field: Term::new(Value::Call(Predicate {
+                            name: field.clone(),
+                            args: vec![],
+                        })),
+                    };
+                    let isa = Goal::Isa {
+                        left: Term::new(Value::Symbol(left_value)),
+                        right: right_value.clone(),
+                    };
+                    self.append_goals(vec![lookup, isa]);
+                }
+            }
+
+            (Value::Symbol(symbol), _) => {
+                if let Some(value) = self.value(&symbol).cloned() {
+                    self.push_goal(Goal::Isa {
+                        left: value,
+                        right: right.clone(),
+                    });
+                } else {
+                    self.push_goal(Goal::Unify {
+                        left: left.clone(),
+                        right: right.clone(),
+                    });
+                }
+            }
+
+            (_, Value::Symbol(symbol)) => {
+                if let Some(value) = self.value(&symbol).cloned() {
+                    self.push_goal(Goal::Isa {
+                        left: left.clone(),
+                        right: value,
+                    });
+                } else {
+                    self.push_goal(Goal::Unify {
+                        left: left.clone(),
+                        right: right.clone(),
+                    });
+                }
+            }
+
+            _ => self.push_goal(Goal::Unify {
+                left: left.clone(),
+                right: right.clone(),
+            }),
+        }
+    }
 
     pub fn lookup(&mut self, dict: Dictionary, field: Symbol, value: Term) {
         if let Some(retrieved) = dict.fields.get(&field) {
@@ -381,8 +482,7 @@ impl PolarVirtualMachine {
                                     });
                                 }
                                 if let Some(specializer) = &param.specializer {
-                                    // @TODO: Push an isa instead
-                                    goals.push(Goal::Unify {
+                                    goals.push(Goal::Isa {
                                         left: arg.clone(),
                                         right: specializer.clone(),
                                     });
@@ -429,7 +529,6 @@ impl PolarVirtualMachine {
                                 value,
                             }),
                             Value::ExternalInstance(ExternalInstance { instance_id }) => {
-                                let call_id = self.new_id();
                                 let value = match value {
                                     Term {
                                         value: Value::Symbol(value),
@@ -437,7 +536,7 @@ impl PolarVirtualMachine {
                                     } => value,
                                     _ => panic!("bad lookup value: {}", value.to_polar()),
                                 };
-                                self.call_id_symbols.insert(call_id, value);
+                                let call_id = self.new_call_id(&value);
                                 self.push_goal(Goal::LookupExternal {
                                     call_id,
                                     instance_id,
@@ -592,6 +691,28 @@ impl PolarVirtualMachine {
                 }
             }
 
+            (Value::Dictionary(left), Value::Dictionary(right)) => {
+                // Check that the set of keys are the same.
+                let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
+                let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
+                if left_fields != right_fields {
+                    return self.push_goal(Goal::Backtrack);
+                }
+
+                // For each value, push a unify goal.
+                for (k, v) in left.fields.iter() {
+                    let right = right
+                        .fields
+                        .get(&k)
+                        .expect("fields should be equal")
+                        .clone();
+                    self.push_goal(Goal::Unify {
+                        left: v.clone(),
+                        right,
+                    })
+                }
+            }
+
             // Unify integers by value.
             (Value::Integer(left), Value::Integer(right)) => {
                 if left != right {
@@ -613,8 +734,8 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // Anything else is an error.
-            (_, _) => unimplemented!("unhandled unification {:?} = {:?}", left, right),
+            // Anything else fails.
+            (_, _) => self.push_goal(Goal::Backtrack),
         }
     }
 }
@@ -788,18 +909,237 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
+    fn isa_on_lists() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let one = Term::new(Value::Integer(1));
+        let two = Term::new(Value::Integer(2));
+        let one_list = Term::new(Value::List(vec![one.clone()]));
+        let one_two_list = Term::new(Value::List(vec![one.clone(), two.clone()]));
+        let two_one_list = Term::new(Value::List(vec![two, one.clone()]));
+        let empty_list = Term::new(Value::List(vec![]));
+
+        // [] isa []
+        vm.push_goal(Goal::Isa {
+            left: empty_list.clone(),
+            right: empty_list.clone(),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // [1,2] isa [1,2]
+        vm.push_goal(Goal::Isa {
+            left: one_two_list.clone(),
+            right: one_two_list.clone(),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // [1,2] isNOTa [2,1]
+        vm.push_goal(Goal::Isa {
+            left: one_two_list.clone(),
+            right: two_one_list,
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // [1] isNOTa [1,2]
+        vm.push_goal(Goal::Isa {
+            left: one_list.clone(),
+            right: one_two_list.clone(),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // [1,2] isNOTa [1]
+        vm.push_goal(Goal::Isa {
+            left: one_two_list,
+            right: one_list.clone(),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // [1] isNOTa []
+        vm.push_goal(Goal::Isa {
+            left: one_list.clone(),
+            right: empty_list.clone(),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // [] isNOTa [1]
+        vm.push_goal(Goal::Isa {
+            left: empty_list,
+            right: one_list.clone(),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // [1] isNOTa 1
+        vm.push_goal(Goal::Isa {
+            left: one_list.clone(),
+            right: one.clone(),
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+
+        // 1 isNOTa [1]
+        vm.push_goal(Goal::Isa {
+            left: one,
+            right: one_list,
+        });
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(vm.is_halted());
+    }
+
+    #[test]
+    #[allow(clippy::cognitive_complexity)]
+    fn isa_on_dicts() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let left = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
+        let right = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
+        vm.push_goal(Goal::Isa {
+            left: left.clone(),
+            right,
+        });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+
+        // Dicts with identical keys and different values DO NOT isa.
+        let right = term!(hashmap! {
+            sym!("x") => term!(2),
+            sym!("y") => term!(1),
+        });
+        vm.push_goal(Goal::Isa {
+            left: left.clone(),
+            right,
+        });
+        assert_query_events!(vm, [QueryEvent::Done]);
+
+        // {} isa {}.
+        vm.push_goal(Goal::Isa {
+            left: term!(hashmap! {}),
+            right: term!(hashmap! {}),
+        });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+
+        // Non-empty dicts should isa against an empty dict.
+        vm.push_goal(Goal::Isa {
+            left: left.clone(),
+            right: term!(hashmap! {}),
+        });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+
+        // Empty dicts should NOT isa against a non-empty dict.
+        vm.push_goal(Goal::Isa {
+            left: term!(hashmap! {}),
+            right: left.clone(),
+        });
+        assert_query_events!(vm, [QueryEvent::Done]);
+
+        // Superset dict isa subset dict.
+        vm.push_goal(Goal::Isa {
+            left: left.clone(),
+            right: term!(hashmap! {sym!("x") => term!(1)}),
+        });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+
+        // Subset dict isNOTa superset dict.
+        vm.push_goal(Goal::Isa {
+            left: term!(hashmap! {sym!("x") => term!(1)}),
+            right: left,
+        });
+        assert_query_events!(vm, [QueryEvent::Done]);
+    }
+
+    #[test]
+    fn unify_dicts() {
+        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        // Dicts with identical keys and values unify.
+        let left = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
+        let right = term!(hashmap! {
+            sym!("x") => term!(1),
+            sym!("y") => term!(2),
+        });
+        vm.push_goal(Goal::Unify {
+            left: left.clone(),
+            right,
+        });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+
+        // Dicts with identical keys and different values DO NOT unify.
+        let right = term!(hashmap! {
+            sym!("x") => term!(2),
+            sym!("y") => term!(1),
+        });
+        vm.push_goal(Goal::Unify {
+            left: left.clone(),
+            right,
+        });
+        assert_query_events!(vm, [QueryEvent::Done]);
+
+        // Empty dicts unify.
+        vm.push_goal(Goal::Unify {
+            left: term!(hashmap! {}),
+            right: term!(hashmap! {}),
+        });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+
+        // Empty dict should not unify against a non-empty dict.
+        vm.push_goal(Goal::Unify {
+            left: left.clone(),
+            right: term!(hashmap! {}),
+        });
+        assert_query_events!(vm, [QueryEvent::Done]);
+
+        // Subset match should fail.
+        let right = term!(hashmap! {
+            sym!("x") => term!(1),
+        });
+        vm.push_goal(Goal::Unify { left, right });
+        assert_query_events!(vm, [QueryEvent::Done]);
+    }
+
+    #[test]
+    fn unify_nested_dicts() {
+        let mut vm = PolarVirtualMachine::default();
+
+        let left = term!(hashmap! {
+            sym!("x") => term!(hashmap!{
+                sym!("y") => term!(1)
+            })
+        });
+        let right = term!(hashmap! {
+            sym!("x") => term!(hashmap!{
+                sym!("y") => term!(sym!("result"))
+            })
+        });
+        vm.push_goal(Goal::Unify { left, right });
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!{sym!("result") => term!(1)} }, QueryEvent::Done]);
+    }
+
+    #[test]
     fn lookup() {
         let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
-        let x = sym!("x");
 
-        // Lookup with correct value
-        let one = value!(1);
-        let mut dict = Dictionary::new();
-        dict.fields.insert(x.clone(), Term::new(one.clone()));
+        let fields = hashmap! {
+            sym!("x") => term!(1),
+        };
+        let dict = Dictionary { fields };
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: x.clone(),
-            value: Term::new(one.clone()),
+            field: sym!("x"),
+            value: term!(1),
         });
 
         assert_query_events!(vm, [
@@ -807,24 +1147,22 @@ mod tests {
         ]);
 
         // Lookup with incorrect value
-        let two = value!(2);
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: x.clone(),
-            value: Term::new(two),
+            field: sym!("x"),
+            value: term!(2),
         });
 
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Lookup with unbound value
-        let y = sym!("y");
         vm.push_goal(Goal::Lookup {
             dict,
-            field: x,
-            value: Term::new(value!(y)),
+            field: sym!("x"),
+            value: term!(sym!("y")),
         });
         assert_query_events!(vm, [
-            QueryEvent::Result{hashmap!{sym!("y") => term!(one)}}
+            QueryEvent::Result{hashmap!{sym!("y") => term!(1)}}
         ]);
     }
 

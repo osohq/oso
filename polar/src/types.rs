@@ -180,7 +180,9 @@ impl Value {
             Value::InstanceLiteral(_) => unimplemented!(),
             Value::ExternalInstance(_) => unimplemented!(),
             Value::ExternalInstanceLiteral(_) => unimplemented!(),
-            Value::Dictionary(_) => unimplemented!(),
+            Value::Dictionary(Dictionary { fields }) => Value::Dictionary(Dictionary {
+                fields: fields.iter().map(|(k, v)| (k.clone(), v.map(f))).collect(),
+            }),
         }
     }
 }

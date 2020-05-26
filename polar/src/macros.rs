@@ -1,5 +1,6 @@
 /// Helper macros to create AST types
 ///
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::types::*;
@@ -159,6 +160,11 @@ impl From<TermList> for TestHelper<Value> {
 impl From<Symbol> for TestHelper<Value> {
     fn from(other: Symbol) -> Self {
         Self(Value::Symbol(other))
+    }
+}
+impl From<HashMap<Symbol, Term>> for TestHelper<Value> {
+    fn from(other: HashMap<Symbol, Term>) -> Self {
+        Self(Value::Dictionary(Dictionary { fields: other }))
     }
 }
 
