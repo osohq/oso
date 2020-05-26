@@ -528,102 +528,99 @@ impl PolarVirtualMachine {
                     }
                 }
             }
-            Value::Expression(Operation { operator, args }) => {
-                match operator {
-                    Operator::And => self.append_goals(
-                        args.iter()
-                            .map(|a| Goal::Query { term: a.clone() })
-                            .collect(),
-                    ),
-                    Operator::Unify => {
-                        assert_eq!(args.len(), 2);
-                        self.push_goal(Goal::Unify {
-                            left: args[0].clone(),
-                            right: args[1].clone(),
-                        });
-                    }
-                    Operator::Dot => {
-                        assert_eq!(args.len(), 3);
-                        let object = args[0].clone();
-                        let field = args[1].clone();
-                        let value = args[2].clone();
-
-                        match self.deref(&object).value {
-                            Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
-                                dict,
-                                field: field_name(&field),
-                                value,
-                            }),
-                            Value::InstanceLiteral(literal) => {
-                                // Check if there's an external instance for this.
-                                // If there is, use it, if not push a make external then use it.
-                                let (exists, external_instance) =
-                                    self.find_or_make_instance(&literal);
-
-                                self.push_goal(Goal::Query {
-                                    term: Term::new(Value::Expression(Operation {
-                                        operator: Operator::Dot,
-                                        args: vec![
-                                            Term::new(Value::ExternalInstance(
-                                                external_instance.clone(),
-                                            )),
-                                            field,
-                                            value,
-                                        ],
-                                    })),
-                                });
-                                if !exists {
-                                    self.push_goal(Goal::MakeExternal {
-                                        literal,
-                                        instance_id: external_instance.instance_id,
-                                    });
-                                }
-                            }
-                            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                                let call_id = self.new_id();
-                                let value = match value {
-                                    Term {
-                                        value: Value::Symbol(value),
-                                        ..
-                                    } => value,
-                                    _ => panic!("bad lookup value: {}", value.to_polar()),
-                                };
-                                let call_id = self.new_call_id(&value);
-                                self.push_goal(Goal::LookupExternal {
-                                    call_id,
-                                    instance_id,
-                                    field,
-                                });
-                            }
-                            _ => panic!(
-                                "can only perform lookups on dicts and instances, this is {:?}",
-                                object.value
-                            ),
-                        }
-                    }
-                    Operator::Or => self.choose(
-                        args.into_iter()
-                            .map(|term| vec![Goal::Query { term }])
-                            .collect(),
-                    ),
-                    Operator::Not => {
-                        assert_eq!(args.len(), 1);
-                        let alternatives = vec![
-                            vec![
-                                Goal::Query {
-                                    term: args[0].clone(),
-                                },
-                                Goal::Cut,
-                                Goal::Backtrack,
-                            ],
-                            vec![Goal::Noop],
-                        ];
-
-                        self.choose(alternatives);
-                    }
-                    _ => todo!("can't query for expression: {:?}", operator),
+            Value::Expression(Operation { operator, args }) => match operator {
+                Operator::And => self.append_goals(
+                    args.iter()
+                        .map(|a| Goal::Query { term: a.clone() })
+                        .collect(),
+                ),
+                Operator::Unify => {
+                    assert_eq!(args.len(), 2);
+                    self.push_goal(Goal::Unify {
+                        left: args[0].clone(),
+                        right: args[1].clone(),
+                    });
                 }
-            }
+                Operator::Dot => {
+                    assert_eq!(args.len(), 3);
+                    let object = args[0].clone();
+                    let field = args[1].clone();
+                    let value = args[2].clone();
+
+                    match self.deref(&object).value {
+                        Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
+                            dict,
+                            field: field_name(&field),
+                            value,
+                        }),
+                        Value::InstanceLiteral(literal) => {
+                            // Check if there's an external instance for this.
+                            // If there is, use it, if not push a make external then use it.
+                            let (exists, external_instance) = self.find_or_make_instance(&literal);
+
+                            self.push_goal(Goal::Query {
+                                term: Term::new(Value::Expression(Operation {
+                                    operator: Operator::Dot,
+                                    args: vec![
+                                        Term::new(Value::ExternalInstance(
+                                            external_instance.clone(),
+                                        )),
+                                        field,
+                                        value,
+                                    ],
+                                })),
+                            });
+                            if !exists {
+                                self.push_goal(Goal::MakeExternal {
+                                    literal,
+                                    instance_id: external_instance.instance_id,
+                                });
+                            }
+                        }
+                        Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                            let call_id = self.new_id();
+                            let value = match value {
+                                Term {
+                                    value: Value::Symbol(value),
+                                    ..
+                                } => value,
+                                _ => panic!("bad lookup value: {}", value.to_polar()),
+                            };
+                            let call_id = self.new_call_id(&value);
+                            self.push_goal(Goal::LookupExternal {
+                                call_id,
+                                instance_id,
+                                field,
+                            });
+                        }
+                        _ => panic!(
+                            "can only perform lookups on dicts and instances, this is {:?}",
+                            object.value
+                        ),
+                    }
+                }
+                Operator::Or => self.choose(
+                    args.into_iter()
+                        .map(|term| vec![Goal::Query { term }])
+                        .collect(),
+                ),
+                Operator::Not => {
+                    assert_eq!(args.len(), 1);
+                    let alternatives = vec![
+                        vec![
+                            Goal::Query {
+                                term: args[0].clone(),
+                            },
+                            Goal::Cut,
+                            Goal::Backtrack,
+                        ],
+                        vec![Goal::Noop],
+                    ];
+
+                    self.choose(alternatives);
+                }
+                _ => todo!("can't query for expression: {:?}", operator),
+            },
             _ => todo!("can't query for: {}", term.value.to_polar()),
         }
     }
