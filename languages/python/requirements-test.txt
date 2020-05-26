@@ -1,3 +1,2 @@
-cffi==1.14.0
 pytest==5.3.5
 dataclasses ; python_version < '3.7'
