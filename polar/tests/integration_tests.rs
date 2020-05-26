@@ -413,3 +413,12 @@ fn test_non_instance_specializers() {
     assert!(qeval(&mut polar, "h({y: 1}, 1)"));
     assert!(qnull(&mut polar, "h({y: 1}, 2)"));
 }
+
+#[test]
+fn test_bindings() {
+    let mut polar = Polar::new();
+    polar
+        .load_str("f(x) := x = y, g(y); g(y) := y = 1;")
+        .unwrap();
+    assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+}
