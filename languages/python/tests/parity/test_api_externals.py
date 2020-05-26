@@ -9,9 +9,12 @@ actors = {
 }
 
 frobbed = []
+
+
 def get_frobbed():
     global frobbed
     return frobbed
+
 
 def set_frobbed(f):
     global frobbed
@@ -27,7 +30,7 @@ class Widget:
     # Class variables.
     actions = ("get", "create")
 
-    def __init__(self, id = "", name = ""):
+    def __init__(self, id="", name=""):
         self.id = id
         self.name = name
 
@@ -48,15 +51,15 @@ class DooDad(Widget):
         return DooDad(id, name)
 
 
-@dataclass # NOTE: These are now optional, but here for compat
+@dataclass  # NOTE: These are now optional, but here for compat
 class Actor:
-    name: str=""
-    id: int=0
-    widget: Widget=None
+    name: str = ""
+    id: int = 0
+    widget: Widget = None
 
     def company(self):
-        yield Company(id="0") # fake, will fail
-        yield Company(id=actors[self.name]) # real, will pass
+        yield Company(id="0")  # fake, will fail
+        yield Company(id=actors[self.name])  # real, will pass
 
     def group(self):
         return ["social", "dev", "product"]

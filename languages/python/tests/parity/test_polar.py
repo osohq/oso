@@ -26,6 +26,7 @@ from polar.test_helpers import load_file, tell, query, qeval, qvar
 
 import pytest
 
+
 @pytest.fixture
 def externals(polar):
     polar.register_python_class(Qux)
@@ -34,6 +35,7 @@ def externals(polar):
     polar.register_python_class(MyClass)
     polar.register_python_class(YourClass)
     polar.register_python_class(OurClass)
+
 
 def test_load_file(load_file, tell, qeval, qvar):
     load_file(Path(__file__).parent / "policies/test.pol")
@@ -56,11 +58,13 @@ def test_define_rule(tell, qeval):
     tell('c("apple")')
     assert qeval('a("apple")')
 
+
 def test_missing_rule(tell, qeval):
     tell("a(x) := b(x), c(x);")
     tell('b("apple")')
     tell('c("apple")')
     assert not qeval('d("apple")')
+
 
 def test_negation(tell, qeval):
     tell('b("apple")')
@@ -133,6 +137,7 @@ def test_parens(tell, qeval):
     assert not qeval("paren5(1, 1, 0)")
     assert not qeval("paren5(1, 0, 1)")
 
+
 @pytest.mark.xfail(reason='thing(with("nested"), "stuff") fails')
 def test_defining_things(tell, qeval):
     facts = [
@@ -140,7 +145,7 @@ def test_defining_things(tell, qeval):
         'thing("with", "two")',
         'thing("with", "a", "lot", "of", "arguments", 1, 2, 3, 4, 5)',
         'thing(with("nested"), "stuff")',
-        'dream(within(a(dream(within(a(dream(within(a(_dream)))))))))',
+        "dream(within(a(dream(within(a(dream(within(a(_dream)))))))))",
         'embedded("strings")',
     ]
     for f in facts:
@@ -149,7 +154,7 @@ def test_defining_things(tell, qeval):
         assert qeval(f)
 
 
-@pytest.mark.xfail(reason='Does not parse.')
+@pytest.mark.xfail(reason="Does not parse.")
 def test_dictionaries(tell, qeval, qvar):
     tell('{hello: "world", foo: "bar"}')
     tell('{hello: {this: {is: "nested"}}}')
@@ -158,9 +163,11 @@ def test_dictionaries(tell, qeval, qvar):
     assert qvar('attr({hello: "steve"}, "hello", value)', "value", one=True) == "steve"
     assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
 
-    assert qeval('attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})')
+    assert qeval(
+        'attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})'
+    )
 
-    tell('deepget(d, d.hello.this.is)')
+    tell("deepget(d, d.hello.this.is)")
     assert qeval('deepget({hello: {this: {is: "nested"}}}, "nested")')
 
     tell("myget(d, d.get.in)")
@@ -170,29 +177,35 @@ def test_dictionaries(tell, qeval, qvar):
     tell('user({name: "alex", job: "programmer", state: "CO"})')
     tell('user({name: "graham", job: "business", state: "NY"})')
     assert qeval('user(d), d.name = "steve"')
-    assert qvar('user({job: "programmer", name: name, state: state})', "name") == ["steve", "alex"]
+    assert qvar('user({job: "programmer", name: name, state: state})', "name") == [
+        "steve",
+        "alex",
+    ]
 
-    tell('x({a: {b:{c:123}}})')
-    tell('x({a: {y:{c:456}}})')
-    assert qvar('x(d), d.a.(k).c = value', "value") == [123, 456]
+    tell("x({a: {b:{c:123}}})")
+    tell("x({a: {y:{c:456}}})")
+    assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
+
 
 @pytest.mark.xfail(reason="isa(Bar{}, Foo{}) fails")
 def test_external_classes(tell, qeval, qvar, externals):
-    assert qeval('isa(Bar{}, Foo{})')
-    assert not qeval('isa(Qux{}, Foo{})')
+    assert qeval("isa(Bar{}, Foo{})")
+    assert not qeval("isa(Qux{}, Foo{})")
     assert qeval('Foo{}.foo = "Foo!"')
     assert qeval('Bar{}.foo = "Bar!"')
 
+
 @pytest.mark.xfail(reason="Foo not registered.")
 def test_unify_class_fields(tell, qeval, qvar):
-    tell('check(name, Foo{name: name})')
+    tell("check(name, Foo{name: name})")
 
     assert qeval('check("sam", Foo{name: "sam"})')
     assert not qeval('check("alex", Foo{name: "sam"})')
 
+
 @pytest.mark.xfail(reason="Error calling name.")
 def test_argument_patterns(tell, qeval, qvar, externals):
-    tell('isaFoo(name, foo: Foo) := name = foo.name')
+    tell("isaFoo(name, foo: Foo) := name = foo.name")
 
     assert qeval('isaFoo(sam, Foo{name: "sam"})')
     assert qeval('isaFoo(sam, Bar{name: "sam"})')
@@ -200,64 +213,70 @@ def test_argument_patterns(tell, qeval, qvar, externals):
     assert not qeval('isaFoo("alex", Bar{name: "sam"})')
     assert not qeval('isaFoo("alex", Qux{})')
 
+
 @pytest.mark.skip(reason="No longer support external instance unification")
 # TODO: update to use internal classes (depends on instantiation bug fix)
 def test_keys_are_confusing(tell, qeval, qvar, externals):
-    assert qeval('MyClass{x: 1, y: 2} = MyClass{y: 2, x: 1}')
-    assert qeval('MyClass{x: 1, y: 2} = MyClass{x: 1, y: 2}')
-    assert not qeval('MyClass{x: 1, y: 2} = MyClass{x: 2, y: 1}')
-    assert not qeval('MyClass{x: 1, y: 2} = MyClass{y: 1, x: 2}')
-    assert not qeval('MyClass{x: 1} = MyClass{x: 1, y: 2}')
-    assert not qeval('MyClass{x: 1, y: 2} = MyClass{y: 2}')
+    assert qeval("MyClass{x: 1, y: 2} = MyClass{y: 2, x: 1}")
+    assert qeval("MyClass{x: 1, y: 2} = MyClass{x: 1, y: 2}")
+    assert not qeval("MyClass{x: 1, y: 2} = MyClass{x: 2, y: 1}")
+    assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 1, x: 2}")
+    assert not qeval("MyClass{x: 1} = MyClass{x: 1, y: 2}")
+    assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 2}")
+
 
 @pytest.mark.xfail(reason="isa({}, {}) fails on first line")
 def test_isa(qeval, qvar, externals):
-    assert qeval('isa({}, {})')
-    assert qeval('isa({x: 1}, {})')
-    assert qeval('isa({x: 1}, {x: 1})')
-    assert qeval('isa({x: 1, y: 2}, {x: 1})')
-    assert qeval('isa({x: 1, y: 2}, {x: 1, y: 2})')
-    assert qeval('isa({a: {x: 1, y: 2}}, {a: {y: 2}})')
-    assert not qeval('isa({a: {x: 1, y: 2}}, {b: {y: 2}})')
-    assert not qeval('isa({x: 1}, {x: 1, y: 2})')
-    assert not qeval('isa({y: 2}, {x: 1, y: 2})')
-    assert not qeval('isa({}, {x: 1, y: 2})')
-    assert not qeval('isa({}, {x: 1})')
+    assert qeval("isa({}, {})")
+    assert qeval("isa({x: 1}, {})")
+    assert qeval("isa({x: 1}, {x: 1})")
+    assert qeval("isa({x: 1, y: 2}, {x: 1})")
+    assert qeval("isa({x: 1, y: 2}, {x: 1, y: 2})")
+    assert qeval("isa({a: {x: 1, y: 2}}, {a: {y: 2}})")
+    assert not qeval("isa({a: {x: 1, y: 2}}, {b: {y: 2}})")
+    assert not qeval("isa({x: 1}, {x: 1, y: 2})")
+    assert not qeval("isa({y: 2}, {x: 1, y: 2})")
+    assert not qeval("isa({}, {x: 1, y: 2})")
+    assert not qeval("isa({}, {x: 1})")
 
-    assert qeval('isa(MyClass{x: 1, y: 2}, {})')
-    assert qeval('isa(MyClass{x: 1, y: 2}, {x: 1, y: 2})')
-    assert not qeval('isa({x: 1, y: 2}, MyClass{x: 1, y: 2})')
+    assert qeval("isa(MyClass{x: 1, y: 2}, {})")
+    assert qeval("isa(MyClass{x: 1, y: 2}, {x: 1, y: 2})")
+    assert not qeval("isa({x: 1, y: 2}, MyClass{x: 1, y: 2})")
 
-    assert qeval('isa(MyClass{x: 1, y: 2}, MyClass{x: 1})')
-    assert qeval('isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})')
-    assert not qeval('isa(MyClass{x: MyClass{x: 1}, y: 2}, MyClass{x: MyClass{y: 2}})')
-    assert not qeval('isa(MyClass{y: 2}, MyClass{x: 1, y: 2})')
+    assert qeval("isa(MyClass{x: 1, y: 2}, MyClass{x: 1})")
+    assert qeval(
+        "isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})"
+    )
+    assert not qeval("isa(MyClass{x: MyClass{x: 1}, y: 2}, MyClass{x: MyClass{y: 2}})")
+    assert not qeval("isa(MyClass{y: 2}, MyClass{x: 1, y: 2})")
 
-    assert qeval('isa(OurClass{x: 1, y: 2}, YourClass{})')
-    assert qeval('isa(OurClass{x: 1, y: 2}, MyClass{x: 1})')
-    assert qeval('isa(OurClass{x: 1, y: 2}, MyClass{x: 1, y: 2})')
-    assert not qeval('isa(MyClass{x: 1, y: 2}, OurClass{x: 1})')
-    assert not qeval('isa(MyClass{x: 1, y: 2}, YourClass{})')
+    assert qeval("isa(OurClass{x: 1, y: 2}, YourClass{})")
+    assert qeval("isa(OurClass{x: 1, y: 2}, MyClass{x: 1})")
+    assert qeval("isa(OurClass{x: 1, y: 2}, MyClass{x: 1, y: 2})")
+    assert not qeval("isa(MyClass{x: 1, y: 2}, OurClass{x: 1})")
+    assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
+
 
 @pytest.mark.xfail(reason="Field unification on instances fails without an exception")
 def test_field_unification(qeval, externals):
     # test dictionary field unification
-    assert qeval('{} = {}')
-    assert qeval('{x: 1} = {x: 1}')
-    assert not qeval('{x: 1} = {x: 2}')
-    assert not qeval('{x: 1} = {y: 1}')
-    assert not qeval('{x: 1, y: 2} = {y: 1, x: 2}')
-    assert qeval('{x: 1, y: 2} = {y: 2, x: 1}')
+    assert qeval("{} = {}")
+    assert qeval("{x: 1} = {x: 1}")
+    assert not qeval("{x: 1} = {x: 2}")
+    assert not qeval("{x: 1} = {y: 1}")
+    assert not qeval("{x: 1, y: 2} = {y: 1, x: 2}")
+    assert qeval("{x: 1, y: 2} = {y: 2, x: 1}")
 
     # test instance field unification (not allowed for external instances)
     with pytest.raises(PolarRuntimeException):
-        assert qeval('MyClass{x: 1, y: 2} = MyClass{y: 2, x: 1}')
+        assert qeval("MyClass{x: 1, y: 2} = MyClass{y: 2, x: 1}")
     # with pytest.raises(PolarRuntimeException):
-    assert not qeval('MyClass{x: 1, y: 2} = {y: 2, x: 1}')
+    assert not qeval("MyClass{x: 1, y: 2} = {y: 2, x: 1}")
     with pytest.raises(PolarRuntimeException):
-        assert not qeval('MyClass{x: 1, y: 2} = OurClass{y: 2, x: 1}')
+        assert not qeval("MyClass{x: 1, y: 2} = OurClass{y: 2, x: 1}")
     with pytest.raises(PolarRuntimeException):
-        assert not qeval('MyClass{x: 1, y: 2} = YourClass{y: 2, x: 1}')
+        assert not qeval("MyClass{x: 1, y: 2} = YourClass{y: 2, x: 1}")
+
 
 @pytest.mark.xfail(reason="Not implemented yet.")
 def test_class_definitions(tell, qeval, load_file):
@@ -266,13 +285,14 @@ def test_class_definitions(tell, qeval, load_file):
 
     # Test instantiation errors.
     with pytest.raises(PolarRuntimeException):
-        qeval('NotADefinedClassName{foo: 1}')
+        qeval("NotADefinedClassName{foo: 1}")
     with pytest.raises(PolarRuntimeException):
-        qeval('Three{foo: One{}}')
+        qeval("Three{foo: One{}}")
     with pytest.raises(PolarRuntimeException):
-        qeval('Three{unit: Two{}}')
+        qeval("Three{unit: Two{}}")
     with pytest.raises(PolarRuntimeException):
-        qeval('Three{unit: One{}, pair: One{}}')
+        qeval("Three{unit: One{}, pair: One{}}")
+
 
 @pytest.mark.xfail(reason="Classes not implemented yet.")
 def test_field_specializers(load_file, qvar):
@@ -280,9 +300,12 @@ def test_field_specializers(load_file, qvar):
     load_file(Path(__file__).parent / "policies/people.pol")
 
     # Test method ordering w/field specializers.
-    assert qvar('froody(Manager{name: "Sam"}, x)', 'x') == [1]
-    assert qvar('froody(Manager{name: "Sam", id: 1}, x)', 'x') == [2, 1]
-    assert qvar('froody(Manager{name: "Sam", id: 1, manager: Person{name: "Sam"}}, x)', 'x') == [3, 2, 1]
+    assert qvar('froody(Manager{name: "Sam"}, x)', "x") == [1]
+    assert qvar('froody(Manager{name: "Sam", id: 1}, x)', "x") == [2, 1]
+    assert qvar(
+        'froody(Manager{name: "Sam", id: 1, manager: Person{name: "Sam"}}, x)', "x"
+    ) == [3, 2, 1]
+
 
 @pytest.mark.xfail(reason="Groups not implemented yet.")
 def test_groups(load_file, qeval, query):
@@ -291,12 +314,13 @@ def test_groups(load_file, qeval, query):
 
     # Check that we can't instantiate groups.
     with pytest.raises(PolarRuntimeException):
-        qeval('G{}')
+        qeval("G{}")
 
     # Test rule ordering with groups.
     results = query("check_order(A{}, action)")
-    expected = ['A', 'G', 'H']
-    assert expected == [result['action'] for result in results]
+    expected = ["A", "G", "H"]
+    assert expected == [result["action"] for result in results]
+
 
 # TODO: Fix with
 # https://www.notion.so/osohq/Internal-classes-cannot-be-instantiated-9554c7298feb4842b5448e7edf1d8b8b
@@ -304,13 +328,15 @@ def test_groups(load_file, qeval, query):
 def test_group_field_access(load_file, qvar):
     load_file(Path(__file__).parent / "policies/groups.pol")
 
-    assert qvar('get_bar(Baz{bar: "test"}, val)', "val", one=True) == 'test'
+    assert qvar('get_bar(Baz{bar: "test"}, val)', "val", one=True) == "test"
+
 
 @pytest.mark.xfail(reason="Booleans not implemented yet.")
 def test_booleans(qeval):
     assert qeval("true = true")
     assert qeval("false = false")
     assert not qeval("true = false")
+
 
 @pytest.mark.xfail(reason="panics.")
 def test_comparisons(tell, qeval, qvar, query):
@@ -323,6 +349,7 @@ def test_comparisons(tell, qeval, qvar, query):
     assert qeval("3 >= 2")
     assert qeval("3 > 2")
     assert qeval("x = 1, x == 1")
+
 
 @pytest.mark.xfail(reason="type error")
 def test_bool_from_external_call(polar, qeval, qvar, query):
