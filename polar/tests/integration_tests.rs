@@ -25,6 +25,7 @@ fn query_results(
                 polar.external_call_result(&mut query, call_id, external_results.pop());
             }
             QueryEvent::MakeExternal { .. } => (),
+            _ => todo!(),
         }
     }
     results

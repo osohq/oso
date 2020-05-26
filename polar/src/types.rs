@@ -3,7 +3,8 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
 
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
@@ -27,15 +28,30 @@ impl ToString for PolarError {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
 pub struct Dictionary {
-    pub fields: HashMap<Symbol, Term>,
+    pub fields: BTreeMap<Symbol, Term>,
 }
 
 impl Dictionary {
     pub fn new() -> Self {
         Self {
-            fields: HashMap::new(),
+            fields: BTreeMap::new(),
+        }
+    }
+}
+
+impl Dictionary {
+    fn map<F>(&self, f: &mut F) -> Dictionary
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        Dictionary {
+            fields: self
+                .fields
+                .iter()
+                .map(|(k, v)| (k.clone(), v.map(f)))
+                .collect(),
         }
     }
 }
@@ -48,15 +64,16 @@ pub fn field_name(field: &Term) -> Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ExternalInstance {
     pub instance_id: u64,
+    pub literal: Option<InstanceLiteral>,
 }
 
 // Context stored somewhere by id.
@@ -73,7 +90,7 @@ pub struct Context {
 
 pub type TermList = Vec<Term>;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Symbol(pub String);
 
 impl Symbol {
@@ -82,7 +99,7 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Predicate {
     pub name: Symbol,
     pub args: TermList,
@@ -100,7 +117,7 @@ impl Predicate {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
     Make,
     Dot,
@@ -143,20 +160,19 @@ impl Operator {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Operation {
     pub operator: Operator,
     pub args: TermList,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Value {
     Integer(i64),
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
-    InstanceLiteral(InstanceLiteral), // Parsed, don't know what kind it is yet.
-    ExternalInstanceLiteral(InstanceLiteral), // Used in rewrite for constructors.
+    InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
@@ -177,12 +193,14 @@ impl Value {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
             }),
-            Value::InstanceLiteral(_) => unimplemented!(),
+            Value::InstanceLiteral(InstanceLiteral { tag, fields }) => {
+                Value::InstanceLiteral(InstanceLiteral {
+                    tag: tag.clone(),
+                    fields: fields.map(f),
+                })
+            }
             Value::ExternalInstance(_) => unimplemented!(),
-            Value::ExternalInstanceLiteral(_) => unimplemented!(),
-            Value::Dictionary(Dictionary { fields }) => Value::Dictionary(Dictionary {
-                fields: fields.iter().map(|(k, v)| (k.clone(), v.map(f))).collect(),
-            }),
+            Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
         }
     }
 }
@@ -197,6 +215,12 @@ pub struct Term {
 impl PartialEq for Term {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
+    }
+}
+
+impl Hash for Term {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
     }
 }
 
@@ -341,13 +365,11 @@ type Bindings = HashMap<Symbol, Term>;
 pub enum QueryEvent {
     Done,
 
-    /// Returns: new instance id
     MakeExternal {
         instance_id: u64,
         instance: InstanceLiteral,
     },
 
-    /// Returns: Term
     ExternalCall {
         /// Persistent id across all requests for results from the same external call.
         call_id: u64,
@@ -358,6 +380,28 @@ pub enum QueryEvent {
         /// List of arguments to use if this is a method call.
         args: Vec<Term>,
     },
+
+    /// Checks if the instance is an instance of (or subclass of) the class_tag.
+    ExternalIsa {
+        call_id: u64,
+        instance_id: u64,
+        class_tag: Symbol,
+    },
+
+    /// Checks if the instance is more specifically and instance/subclass of A than B.
+    ExternalIsSubSpecializer {
+        call_id: u64,
+        instance_id: u64,
+        left_class_tag: Symbol,
+        right_class_tag: Symbol,
+    },
+
+    ExternalUnify {
+        call_id: u64,
+        left_instance_id: u64,
+        right_instance_id: u64,
+    },
+
     Result {
         bindings: Bindings,
     },
@@ -404,7 +448,7 @@ mod tests {
             value: Value::Integer(1),
         };
         eprintln!("{}", serde_json::to_string(&term).unwrap());
-        let mut fields = HashMap::new();
+        let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("hello"), Term::new(Value::Integer(1234)));
         fields.insert(
             Symbol::new("world"),
@@ -421,10 +465,11 @@ mod tests {
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let external = Term::new(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
+            literal: None,
         }));
         let list_of = Term::new(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());
-        let mut fields = HashMap::new();
+        let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap())

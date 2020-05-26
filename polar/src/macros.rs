@@ -1,6 +1,11 @@
+// Uncomment these to see macro traces
+// The build will fail on stable, but traces will still be printed
+// #![feature(trace_macros)]
+// trace_macros!(true);
+
 /// Helper macros to create AST types
 ///
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::types::*;
@@ -36,6 +41,15 @@ macro_rules! term {
     };
 }
 
+impl From<(Symbol, Term)> for TestHelper<Parameter> {
+    fn from(arg: (Symbol, Term)) -> Self {
+        Self(Parameter {
+            name: Some(arg.0),
+            specializer: Some(arg.1),
+        })
+    }
+}
+
 impl From<Value> for TestHelper<Parameter> {
     /// Convert a Value to a parameter.  If the value is a symbol,
     /// it is used as the parameter name. Otherwise it is assumed to be
@@ -57,8 +71,8 @@ impl From<Value> for TestHelper<Parameter> {
 
 #[macro_export]
 macro_rules! param {
-    ($name:expr) => {
-        $crate::macros::TestHelper::<Parameter>::from($name).0
+    ($($tt:tt)*) => {
+        $crate::macros::TestHelper::<Parameter>::from($($tt)*).0
     };
 }
 
@@ -162,8 +176,8 @@ impl From<Symbol> for TestHelper<Value> {
         Self(Value::Symbol(other))
     }
 }
-impl From<HashMap<Symbol, Term>> for TestHelper<Value> {
-    fn from(other: HashMap<Symbol, Term>) -> Self {
+impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
+    fn from(other: BTreeMap<Symbol, Term>) -> Self {
         Self(Value::Dictionary(Dictionary { fields: other }))
     }
 }
@@ -186,26 +200,48 @@ macro_rules! value {
     };
 }
 
+/// Builds a list of arguments in reverse order
+/// Arguments of the form `foo; bar` get built into foo specialized on bar
+/// Otherwise, the argument is built depending on the type (symbols become names,
+/// terms become specializers).
+#[macro_export]
+macro_rules! args {
+    () => {
+        vec![]
+    };
+    // this is gross: maybe match a <comma plus trailing tokens>
+    ($name:expr $(, $($tt:tt)*)?) => {{
+        let mut v = args!($($($tt)*)?);
+        v.push(param!(value!($name)));
+        v
+    }};
+    ($name:expr ; $spec:expr $(, $($tt:tt)*)?) => {{
+        let mut v = args!($($($tt)*)?);
+        v.push(param!((sym!($name), term!($spec))));
+        v
+    }};
+}
+
 #[macro_export]
 macro_rules! rule {
-    ($name:expr, [$($args:expr),+] => $($body:expr),+) => {
+    ($name:expr, [$($args:tt)*] => $($body:expr),+) => {{
+        let mut params = args!($($args)*);
+        params.reverse();
         Rule {
             name: sym!($name),
-            params: vec![
-                $(param!(value!($args))),*
-            ],
+            params,
             body: term!(op!(And, $(term!($body)),+)),
-        }
+        }}
     };
-    ($name:expr, [$($args:expr),+]) => {
+    ($name:expr, [$($args:tt)*]) => {{
+        let mut params = args!($($args)*);
+        params.reverse();
         Rule {
             name: sym!($name),
-            params: vec![
-                $(param!(value!($args))),*
-            ],
+            params,
             body: term!(op!(And)),
         }
-    };
+    }};
 }
 // #[macro_export]
 // macro_rules! list {

@@ -7,13 +7,19 @@ from types import GeneratorType
 
 from .exceptions import *
 
+# These need to be global for now...
+CLASSES = {}
+CLASS_CONSTRUCTORS = {}
+
 
 class Polar:
     def __init__(self):
         self.polar = lib.polar_new()
         self.loaded_files = {}
-        self.classes = {}
-        self.class_constructors = {}
+        global CLASSES
+        self.classes = CLASSES
+        global CLASS_CONSTRUCTORS
+        self.class_constructors = CLASS_CONSTRUCTORS
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -27,9 +33,6 @@ class Polar:
         lib.string_free(err)
         raise exception
 
-    # @BreakingChange
-    # These really need to be on the polar object, everything really needs to be on the polar object now.
-    # Also can we just call this register_class and get rid of the other one?
     def register_python_class(self, cls, from_polar=None):
         class_name = cls.__name__
         self.classes[class_name] = cls
@@ -84,12 +87,12 @@ class Polar:
 
         def to_polar(v):
             """ Convert python values to polar terms """
-            if isinstance(v, int):
+            if isinstance(v, bool):
+                val = {"Boolean": v}
+            elif isinstance(v, int):
                 val = {"Integer": v}
             elif isinstance(v, str):
                 val = {"String": v}
-            elif isinstance(v, bool):
-                val = {"Boolean": v}
             elif isinstance(v, list):
                 val = {"List": [to_polar(i) for i in v]}
             elif isinstance(v, dict):
@@ -205,6 +208,58 @@ class Polar:
                     if result == 0:
                         self._raise_error()
 
+            if kind == "ExternalIsa":
+                call_id = data["call_id"]
+                instance_id = data["instance_id"]
+                class_name = data["class_tag"]
+                instance = id_to_instance[instance_id]
+                # @TODO: make sure we even know about this class.
+                cls = self.classes[class_name]
+
+                isa = isinstance(instance, cls)
+
+                result = lib.polar_external_question_result(
+                    self.polar, query, call_id, 1 if isa else 0
+                )
+                if result == 0:
+                    self._raise_error()
+
+            if kind == "ExternalIsSubSpecializer":
+                call_id = data["call_id"]
+                instance_id = data["instance_id"]
+                left_class_tag = data["left_class_tag"]
+                right_class_tag = data["right_class_tag"]
+                instance = id_to_instance[instance_id]
+                instance_cls = instance.__class__
+                mro = instance_cls.__mro__
+                try:
+                    left_class = self.classes[left_class_tag]
+                    right_class = self.classes[right_class_tag]
+                    is_sub_specializer = mro.index(left_class) < mro.index(right_class)
+                except ValueError:
+                    is_sub_specializer = False
+
+                result = lib.polar_external_question_result(
+                    self.polar, query, call_id, 1 if is_sub_specializer else 0
+                )
+                if result == 0:
+                    self._raise_error()
+
+            if kind == "ExternalUnify":
+                call_id = data["call_id"]
+                left_instance_id = data["left_instance_id"]
+                right_instance_id = data["right_instance_id"]
+                left_instance = id_to_instance[left_instance_id]
+                right_instance = id_to_instance[right_instance_id]
+
+                unify = left_instance == right_instance
+
+                result = lib.polar_external_question_result(
+                    self.polar, query, call_id, 1 if unify else 0
+                )
+                if result == 0:
+                    self._raise_error()
+
             if kind == "Result":
                 yield {k: to_python(v) for k, v in data["bindings"].items()}
 
@@ -239,6 +294,10 @@ class Polar:
 
 
 # STUBS (importable but don't do anything)
+
+
+def register_python_class(cls, from_polar=None):
+    Polar().register_python_class(cls, from_polar)
 
 
 class Query:

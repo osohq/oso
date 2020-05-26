@@ -3,7 +3,7 @@
 // parser later.
 
 use std::str::FromStr;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use crate::types::*;
 
 use lalrpop_util::ParseError;
@@ -34,9 +34,9 @@ pub Symbol: Term  = <start:@L> <n:Name> => {
     Term{id: 0, offset: start, value: Value::Symbol(n)}
 };
 
-Fields: HashMap<Symbol, Term> = {
+Fields: BTreeMap<Symbol, Term> = {
     <name:Name> ":" <value:Exp5> => {
-        let mut fields = HashMap::new();
+        let mut fields = BTreeMap::new();
         fields.insert(name, value);
         fields
     },
@@ -46,12 +46,12 @@ Fields: HashMap<Symbol, Term> = {
     }
 };
 
-pub Object: HashMap<Symbol, Term> = {
+pub Object: BTreeMap<Symbol, Term> = {
     "{" <fields:Fields> "}" => {
         fields
     },
     "{" "}" => {
-        HashMap::new()
+        BTreeMap::new()
     }
 };
 
@@ -65,21 +65,6 @@ pub InstanceLiteral: Term = <start:@L> <tag:Name> <fields:Object> => {
     Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
 };
 
-pub ExternalInstanceLiteral: Term = <start:@L> "^" <tag:Name> <fields:Object> => {
-    let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
-    Term{id: 0, offset: start, value: Value::ExternalInstanceLiteral(instance)}
-};
-
-pub ExternalInstance: Term = <start:@L> "^" <fields:Object> => {
-    let id = fields.get(&Symbol::new("id")).unwrap();
-    if let Value::Integer(id) = id.value {
-        let external_instance = ExternalInstance{instance_id: id as u64};
-        Term{id: 0, offset: start, value: Value::ExternalInstance(external_instance)}
-    } else {
-        panic!("id must be an integer");
-    }
-};
-
 pub Term: Term = {
     <term:Integer> => term,
     <term:PolarString> => term,
@@ -87,8 +72,6 @@ pub Term: Term = {
     <term:Symbol> => term,
     <term:Dictionary> => term,
     <term:InstanceLiteral> => term,
-    <term:ExternalInstanceLiteral> => term,
-    <term:ExternalInstance> => term,
     <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
     <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
     <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
@@ -128,7 +111,6 @@ Exp9: Term = {
 
 // @TODO: Think about this.
 Callable: Term = {
-    <ExternalInstance> => <>,
     <InstanceLiteral> => <>,
     <Dictionary> => <>,
     <Symbol> => <>,
@@ -300,7 +282,16 @@ Parameter: Parameter = {
             Parameter{name: None, specializer: Some(specializer)}
         }
     },
-    <name:Name> ":" <specializer:Exp5> => Parameter{name: Some(name), specializer: Some(specializer)},
+    <name:Name> ":" <specializer:Exp5> => {
+        let offset = specializer.offset;
+        if let Term{value: Value::Symbol(class_name), ..} = specializer {
+            let fields = BTreeMap::new();
+            let instance_literal = InstanceLiteral{tag: class_name, fields: Dictionary{fields}};
+            Parameter{name: Some(name), specializer: Some(Term{id: 0, offset, value: Value::InstanceLiteral(instance_literal)})}
+        } else {
+            Parameter{name: Some(name), specializer: Some(specializer)}
+        }
+    }
 };
 
 ParameterList: Vec<Parameter> = {

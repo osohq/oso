@@ -223,6 +223,29 @@ pub extern "C" fn polar_external_call_result(
 }
 
 #[no_mangle]
+pub extern "C" fn polar_external_question_result(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    call_id: u64,
+    result: i32,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let result = if let 0 = result { false } else { true };
+        polar.external_question_result(query, call_id, result);
+        1
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::PolarError::Unknown);
+            0
+        }
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar, query_ptr: *mut Query) -> u64 {
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };
