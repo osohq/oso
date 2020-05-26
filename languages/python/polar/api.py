@@ -227,14 +227,14 @@ class Polar:
             if kind == "ExternalIsSubSpecializer":
                 call_id = data["call_id"]
                 instance_id = data["instance_id"]
-                left_class_name = data["class_tag_a"]
-                right_class_name = data["class_tag_b"]
+                left_class_tag = data["left_class_tag"]
+                right_class_tag = data["right_class_tag"]
                 instance = id_to_instance[instance_id]
                 instance_cls = instance.__class__
                 mro = instance_cls.__mro__
                 try:
-                    left_class = self.classes[left_class_name]
-                    right_class = self.classes[right_class_name]
+                    left_class = self.classes[left_class_tag]
+                    right_class = self.classes[right_class_tag]
                     is_sub_specializer = mro.index(left_class) < mro.index(right_class)
                 except ValueError:
                     is_sub_specializer = False
@@ -247,12 +247,12 @@ class Polar:
 
             if kind == "ExternalUnify":
                 call_id = data["call_id"]
-                instance_id_a = data["instance_id_a"]
-                instance_id_b = data["instance_id_b"]
-                instance_a = id_to_instance[instance_id_a]
-                instance_b = id_to_instance[instance_id_b]
+                left_instance_id = data["left_instance_id"]
+                right_instance_id = data["right_instance_id"]
+                left_instance = id_to_instance[left_instance_id]
+                right_instance = id_to_instance[right_instance_id]
 
-                unify = instance_a == instance_b
+                unify = left_instance == right_instance
 
                 result = lib.polar_external_question_result(
                     self.polar, query, call_id, 1 if unify else 0

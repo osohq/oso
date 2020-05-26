@@ -392,14 +392,14 @@ pub enum QueryEvent {
     ExternalIsSubSpecializer {
         call_id: u64,
         instance_id: u64,
-        class_tag_a: Symbol,
-        class_tag_b: Symbol,
+        left_class_tag: Symbol,
+        right_class_tag: Symbol,
     },
 
     ExternalUnify {
         call_id: u64,
-        instance_id_a: u64,
-        instance_id_b: u64,
+        left_instance_id: u64,
+        right_instance_id: u64,
     },
 
     Result {

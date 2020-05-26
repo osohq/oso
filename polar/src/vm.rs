@@ -981,13 +981,13 @@ impl PolarVirtualMachine {
             }
             (
                 Value::ExternalInstance(instance),
-                Value::InstanceLiteral(a),
-                Value::InstanceLiteral(b),
+                Value::InstanceLiteral(left),
+                Value::InstanceLiteral(right),
             ) => Some(QueryEvent::ExternalIsSubSpecializer {
                 call_id,
                 instance_id: instance.instance_id,
-                class_tag_a: a.tag,
-                class_tag_b: b.tag,
+                left_class_tag: left.tag,
+                right_class_tag: right.tag,
             }),
             _ => None,
         }
