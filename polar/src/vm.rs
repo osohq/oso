@@ -766,6 +766,8 @@ impl PolarVirtualMachine {
             outer: outer + 1,
             inner: outer + 1,
         };
+        // Because `outer` starts as `1`, if there is only one rule in the Vec<Rule>, this check
+        // fails and we jump down to the evaluation of that lone rule.
         if outer < rules.len() {
             if inner > 0 {
                 let compare = Goal::IsMoreSpecific {
@@ -831,25 +833,29 @@ impl PolarVirtualMachine {
             .zip(right.params.iter())
             .zip(args.iter())
             .filter_map(|((left_param, right_param), arg)| {
-                if let Some(left_specializer) = left_param.specializer.clone() {
-                    if let Some(right_specializer) = right_param.specializer.clone() {
-                        if left_specializer != right_specializer {
-                            return Some((left_specializer, right_specializer, arg));
-                        }
+                match (&left_param.specializer, &right_param.specializer, arg) {
+                    (Some(left_spec), Some(right_spec), arg) if left_spec != right_spec => {
+                        Some((left_spec, right_spec, arg))
                     }
+                    _ => None,
                 }
-                None
             })
             .map(|(left, right, arg)| {
                 let answer = self.kb.gensym("is_subspecializer");
                 let call_id = self.new_call_id(&answer);
                 // TODO: GC answer & call_id.
+
+                // If you find two specializers, that comparison determines the relative
+                // specificity of the two rules completely. You don't have to find another
+                // one. As soon as you have two specializers that aren't the same and you can
+                // compare them and ask which one is more specific to the relevant argument,
+                // you're done.
                 vec![
                     Goal::Cut,
                     Goal::IsSubspecializer {
                         call_id,
-                        left,
-                        right,
+                        left: left.clone(),
+                        right: right.clone(),
                         arg: arg.clone(),
                     },
                     Goal::Unify {
