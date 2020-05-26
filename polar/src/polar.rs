@@ -2,7 +2,7 @@ use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
 
-use super::parser::{parse_query, parse_rules};
+use super::parser;
 
 // @TODO: This should probably go in the readme, it's meant to be the things you'd have to know to add
 // new language bindings.
@@ -103,21 +103,28 @@ impl Polar {
     }
 
     pub fn load_str(&mut self, src: &str) -> PolarResult<()> {
-        let rules = parse_rules(src)?;
-        for rule in rules {
-            let name = rule.name.clone();
-            let rewritten_rule = rewrite_rule(rule, &mut self.kb);
-            let generic_rule = self.kb.rules.entry(name.clone()).or_insert(GenericRule {
-                name,
-                rules: vec![],
-            });
-            generic_rule.rules.push(rewritten_rule);
+        let lines = parser::parse_lines(src)?;
+        for line in lines {
+            match line {
+                parser::Line::Rule(rule) => {
+                    let name = rule.name.clone();
+                    let rewritten_rule = rewrite_rule(rule, &mut self.kb);
+                    let generic_rule = self.kb.rules.entry(name.clone()).or_insert(GenericRule {
+                        name,
+                        rules: vec![],
+                    });
+                    generic_rule.rules.push(rewritten_rule);
+                }
+                parser::Line::Query(_term) => {
+                    // currently not handled
+                }
+            }
         }
         Ok(())
     }
 
     pub fn new_query(&mut self, query_string: &str) -> PolarResult<Query> {
-        let term = parse_query(query_string)?;
+        let term = parser::parse_query(query_string)?;
         Ok(self.new_query_from_term(term))
     }
 

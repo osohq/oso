@@ -4,8 +4,10 @@
 
 use std::str::FromStr;
 use std::collections::{HashMap, BTreeMap};
-use crate::types::*;
+
 use crate::lexer::{self, Token};
+use crate::parser::Line;
+use crate::types::*;
 
 use lalrpop_util::ParseError;
 
@@ -367,3 +369,10 @@ pub Rule: Rule = {
 }
 
 pub Rules: Vec<Rule> = <Rule*>;
+
+Line: Line = {
+    <Rule> => Line::Rule(<>),
+    "?=" <Term> ";" => Line::Query(<>),
+}
+
+pub Lines: Vec<Line> = <Line*>;
