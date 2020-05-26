@@ -1,12 +1,18 @@
-use ::polar::{sym, types::*, value, Polar, Query};
+use permute::permute;
 
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use permute::permute;
+use polar::{sym, types::*, value, Polar, Query};
 
-fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Value>> {
-    let mut external_results = vec![Term::new(Value::Integer(1))];
+type QueryResults = Vec<HashMap<Symbol, Value>>;
+
+fn query_results(
+    polar: &mut Polar,
+    mut query: Query,
+    mut external_results: Vec<Term>,
+) -> QueryResults {
+    external_results.reverse();
     let mut results = vec![];
     loop {
         let event = polar.query(&mut query).unwrap();
@@ -18,7 +24,7 @@ fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Val
             QueryEvent::ExternalCall { call_id, .. } => {
                 polar.external_call_result(&mut query, call_id, external_results.pop());
             }
-            _ => panic!("unexpected event"),
+            QueryEvent::MakeExternal { .. } => (),
         }
     }
     results
@@ -26,17 +32,23 @@ fn query_results(polar: &mut Polar, mut query: Query) -> Vec<HashMap<Symbol, Val
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query).len() == 1
+    query_results(polar, query, vec![]).len() == 1
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query).is_empty()
+    query_results(polar, query, vec![]).is_empty()
+}
+
+fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
+    let external_results: Vec<Term> = external_results.into_iter().map(Term::new).collect();
+    let query = polar.new_query(query_str).unwrap();
+    query_results(polar, query, external_results)
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query)
+    query_results(polar, query, vec![])
         .iter()
         .map(|bindings| bindings.get(&Symbol(var.to_string())).unwrap().clone())
         .collect()
@@ -63,13 +75,13 @@ fn test_jealous() {
     polar
         .load_str(
             r#"loves("vincent", "mia");
-            loves("marcellus", "mia");
-            jealous(a, b) := loves(a, c), loves(b, c);"#,
+               loves("marcellus", "mia");
+               jealous(a, b) := loves(a, c), loves(b, c);"#,
         )
         .unwrap();
 
     let query = polar.new_query("jealous(who, of)").unwrap();
-    let results = query_results(&mut polar, query);
+    let results = query_results(&mut polar, query, vec![]);
     let jealous = |who: &str, of: &str| {
         assert!(
             &results.contains(&HashMap::from_iter(vec![
@@ -169,12 +181,12 @@ fn test_ait_kaci_34() {
     polar
         .load_str(
             r#"a() := b(x), c(x);
-            b(x) := e(x);
-            c(1);
-            e(x) := f(x);
-            e(x) := g(x);
-            f(2);
-            g(1);"#,
+               b(x) := e(x);
+               c(1);
+               e(x) := f(x);
+               e(x) := g(x);
+               f(2);
+               g(1);"#,
         )
         .unwrap();
     assert!(qeval(&mut polar, "a()"));
@@ -230,10 +242,9 @@ fn test_lookup() {
 }
 
 #[test]
-#[ignore = "not implemented yet"]
 fn test_instance_lookup() {
     let mut polar = Polar::new();
-    assert!(qeval(&mut polar, "a{x: 1}.x = 1"));
+    assert_eq!(qext(&mut polar, "a{x: 1}.x = 1", vec![value!(1)]).len(), 1);
 }
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
@@ -306,4 +317,47 @@ fn test_or() {
     assert!(qnull(&mut polar, "g(2)"));
     assert!(qeval(&mut polar, "g(3)"));
     assert!(qeval(&mut polar, "g(5)"));
+}
+
+#[test]
+fn test_dict_head() {
+    let mut polar = Polar::new();
+    polar.load_str("f({x: 1});").unwrap();
+
+    // Test isa-ing dicts against our dict head.
+    assert!(qeval(&mut polar, "f({x: 1})"));
+    assert!(qeval(&mut polar, "f({x: 1, y: 2})"));
+    assert!(qnull(&mut polar, "f(1)"));
+    assert!(qnull(&mut polar, "f({})"));
+    assert!(qnull(&mut polar, "f({x: 2})"));
+    assert!(qnull(&mut polar, "f({y: 1})"));
+
+    // Test isa-ing instances against our dict head.
+    assert_eq!(
+        qext(&mut polar, "f(a{x: 1})", vec![Value::Integer(1)]).len(),
+        1
+    );
+    assert!(qnull(&mut polar, "f(a{})"));
+    assert!(qnull(&mut polar, "f(a{x: {}})"));
+    assert!(qext(&mut polar, "f(a{x: 2})", vec![Value::Integer(2)]).is_empty());
+    assert_eq!(
+        qext(&mut polar, "f(a{y: 2, x: 1})", vec![Value::Integer(1)]).len(),
+        1
+    );
+}
+
+#[test]
+fn test_non_instance_specializers() {
+    let mut polar = Polar::new();
+    polar.load_str("f(x: 1) := x = 1;").unwrap();
+    assert!(qeval(&mut polar, "f(1)"));
+    assert!(qnull(&mut polar, "f(2)"));
+
+    polar.load_str("g(x: 1, y: [x]) := y = [1];").unwrap();
+    assert!(qeval(&mut polar, "g(1, [1])"));
+    assert!(qnull(&mut polar, "g(1, [2])"));
+
+    polar.load_str("h(x: {y: y}, x.y) := y = 1;").unwrap();
+    assert!(qeval(&mut polar, "h({y: 1}, 1)"));
+    assert!(qnull(&mut polar, "h({y: 1}, 2)"));
 }
