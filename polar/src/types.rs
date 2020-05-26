@@ -280,10 +280,12 @@ impl Rule {
     }
 }
 
+pub type Rules = Vec<Rule>;
+
 #[derive(Clone)]
 pub struct GenericRule {
     pub name: Symbol,
-    pub rules: Vec<Rule>,
+    pub rules: Rules,
 }
 
 #[derive(Clone)]

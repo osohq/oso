@@ -20,6 +20,31 @@ pub mod display {
     impl fmt::Display for Goal {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
+                Goal::Isa { left, right } => {
+                    write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
+                }
+                Goal::IsMoreSpecific { left, right, args } => write!(
+                    fmt,
+                    "IsMoreSpecific({} {} ({}))",
+                    left.to_polar(),
+                    right.to_polar(),
+                    args.iter()
+                        .map(|a| a.to_polar())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                ),
+                Goal::IsSubspecializer {
+                    call_id: _,
+                    left,
+                    right,
+                    arg,
+                } => write!(
+                    fmt,
+                    "IsSubspecializer({}, {}, {})",
+                    left.to_polar(),
+                    right.to_polar(),
+                    arg.to_polar()
+                ),
                 Goal::Lookup { dict, field, value } => write!(
                     fmt,
                     "Lookup({}.{} = {})",
@@ -31,6 +56,22 @@ pub mod display {
                     instance_id, field, ..
                 } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+                Goal::SortRules {
+                    rules,
+                    args: _,
+                    outer,
+                    inner,
+                } => write!(
+                    fmt,
+                    "SortRules([{}], outer={}, inner={})",
+                    rules
+                        .iter()
+                        .map(|rule| rule.to_polar())
+                        .collect::<Vec<String>>()
+                        .join(" "),
+                    outer,
+                    inner,
+                ),
                 Goal::Unify { left, right } => {
                     write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
                 }

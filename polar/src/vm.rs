@@ -17,6 +17,17 @@ pub enum Goal {
         left: Term,
         right: Term,
     },
+    IsMoreSpecific {
+        left: Rule,
+        right: Rule,
+        args: TermList,
+    },
+    IsSubspecializer {
+        call_id: u64,
+        left: Term,
+        right: Term,
+        arg: Term,
+    },
     Lookup {
         dict: Dictionary,
         field: Symbol,
@@ -35,6 +46,12 @@ pub enum Goal {
     Noop,
     Query {
         term: Term,
+    },
+    SortRules {
+        rules: Rules,
+        args: TermList,
+        outer: usize,
+        inner: usize,
     },
     Unify {
         left: Term,
@@ -116,6 +133,15 @@ impl PolarVirtualMachine {
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { left, right } => self.isa(&left, &right),
+                Goal::IsMoreSpecific { left, right, args } => {
+                    self.is_more_specific(left, right, args)
+                }
+                Goal::IsSubspecializer {
+                    call_id,
+                    left,
+                    right,
+                    arg,
+                } => self.is_subspecializer(call_id, left, right, arg),
                 Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
                 Goal::LookupExternal {
                     call_id,
@@ -128,6 +154,12 @@ impl PolarVirtualMachine {
                 } => return Ok(self.make_external(literal, instance_id)),
                 Goal::Noop => (),
                 Goal::Query { term } => self.query(term),
+                Goal::SortRules {
+                    rules,
+                    outer,
+                    inner,
+                    args,
+                } => self.sort_rules(rules, args, outer, inner),
                 Goal::Unify { left, right } => self.unify(&left, &right),
             }
         }
@@ -467,38 +499,16 @@ impl PolarVirtualMachine {
                     Some(generic_rule) => {
                         let generic_rule = generic_rule.clone();
                         assert_eq!(generic_rule.name, predicate.name);
-
-                        let mut alternatives = vec![];
-                        for rule in generic_rule.rules.iter() {
-                            let Rule { body, params, .. } = self.rename_vars(rule);
-                            let mut goals = vec![];
-
-                            // Unify the arguments with the formal parameters.
-                            for (arg, param) in predicate.args.iter().zip(params.iter()) {
-                                if let Some(name) = &param.name {
-                                    goals.push(Goal::Unify {
-                                        left: arg.clone(),
-                                        right: Term::new(Value::Symbol(name.clone())),
-                                    });
-                                }
-                                if let Some(specializer) = &param.specializer {
-                                    goals.push(Goal::Isa {
-                                        left: arg.clone(),
-                                        right: specializer.clone(),
-                                    });
-                                }
-                            }
-
-                            // Query for the body clauses.
-                            goals.push(Goal::Query {
-                                term: Term::new(body.value.clone()),
-                            });
-
-                            alternatives.push(goals)
-                        }
-
-                        // Choose the first alternative, and push a choice for the rest.
-                        self.choose(alternatives);
+                        self.push_goal(Goal::SortRules {
+                            rules: generic_rule
+                                .rules
+                                .into_iter()
+                                .filter(|r| r.params.len() == predicate.args.len())
+                                .collect(),
+                            args: predicate.args.clone(),
+                            outer: 1,
+                            inner: 1,
+                        });
                     }
                 }
             }
@@ -737,6 +747,140 @@ impl PolarVirtualMachine {
             // Anything else fails.
             (_, _) => self.push_goal(Goal::Backtrack),
         }
+    }
+
+    /// Sort a list of rules with respect to a list of arguments
+    /// using an explicit-state insertion sort.
+    fn sort_rules(&mut self, mut rules: Rules, args: TermList, outer: usize, inner: usize) {
+        if rules.is_empty() {
+            return self.push_goal(Goal::Backtrack);
+        }
+
+        assert!(outer <= rules.len(), "bad outer index");
+        assert!(inner <= rules.len(), "bad inner index");
+        assert!(inner <= outer, "bad insertion sort state");
+
+        let next_outer = Goal::SortRules {
+            rules: rules.clone(),
+            args: args.clone(),
+            outer: outer + 1,
+            inner: outer + 1,
+        };
+        // Because `outer` starts as `1`, if there is only one rule in the Vec<Rule>, this check
+        // fails and we jump down to the evaluation of that lone rule.
+        if outer < rules.len() {
+            if inner > 0 {
+                let compare = Goal::IsMoreSpecific {
+                    left: rules[inner].clone(),
+                    right: rules[inner - 1].clone(),
+                    args: args.clone(),
+                };
+
+                rules.swap(inner - 1, inner);
+                let next_inner = Goal::SortRules {
+                    rules,
+                    outer,
+                    inner: inner - 1,
+                    args,
+                };
+                self.choose(vec![vec![compare, Goal::Cut, next_inner], vec![next_outer]]);
+            } else {
+                assert_eq!(inner, 0);
+                self.push_goal(next_outer);
+            }
+        } else {
+            // We're done; the rules are sorted.
+            // Make alternatives for calling them.
+            let mut alternatives = vec![];
+            for rule in rules.iter() {
+                let Rule { body, params, .. } = self.rename_vars(rule);
+                let mut goals = vec![];
+
+                // Unify the arguments with the formal parameters.
+                for (arg, param) in args.iter().zip(params.iter()) {
+                    if let Some(name) = &param.name {
+                        goals.push(Goal::Unify {
+                            left: arg.clone(),
+                            right: Term::new(Value::Symbol(name.clone())),
+                        });
+                    }
+                    if let Some(specializer) = &param.specializer {
+                        goals.push(Goal::Isa {
+                            left: arg.clone(),
+                            right: specializer.clone(),
+                        });
+                    }
+                }
+
+                // Query for the body clauses.
+                goals.push(Goal::Query {
+                    term: Term::new(body.value.clone()),
+                });
+
+                alternatives.push(goals)
+            }
+
+            // Choose the first alternative, and push a choice for the rest.
+            self.choose(alternatives);
+        }
+    }
+
+    /// Succeed if `left` is more specific than `right` with respect to `args`.
+    fn is_more_specific(&mut self, left: Rule, right: Rule, args: TermList) {
+        let mut alternatives: Vec<Goals> = left
+            .params
+            .iter()
+            .zip(right.params.iter())
+            .zip(args.iter())
+            .filter_map(|((left_param, right_param), arg)| {
+                match (&left_param.specializer, &right_param.specializer, arg) {
+                    (Some(left_spec), Some(right_spec), arg) if left_spec != right_spec => {
+                        Some((left_spec, right_spec, arg))
+                    }
+                    _ => None,
+                }
+            })
+            .map(|(left, right, arg)| {
+                let answer = self.kb.gensym("is_subspecializer");
+                let call_id = self.new_call_id(&answer);
+                // TODO: GC answer & call_id.
+
+                // If you find two specializers, that comparison determines the relative
+                // specificity of the two rules completely. You don't have to find another
+                // one. As soon as you have two specializers that aren't the same and you can
+                // compare them and ask which one is more specific to the relevant argument,
+                // you're done.
+                vec![
+                    Goal::Cut,
+                    Goal::IsSubspecializer {
+                        call_id,
+                        left: left.clone(),
+                        right: right.clone(),
+                        arg: arg.clone(),
+                    },
+                    Goal::Unify {
+                        left: Term::new(Value::Symbol(answer)),
+                        right: Term::new(Value::Boolean(true)),
+                    },
+                ]
+            })
+            .collect();
+        alternatives.push(vec![Goal::Backtrack]);
+        self.choose(alternatives);
+    }
+
+    fn is_subspecializer(&mut self, call_id: u64, left: Term, right: Term, _arg: Term) {
+        let answer = matches!(
+            (&left.value, &right.value),
+            (Value::Integer(x), Value::Integer(y)) if x < y);
+        self.bind(
+            &self
+                .call_id_symbols
+                .get(&call_id)
+                .expect("unregistered call ID")
+                .clone(),
+            &Term::new(Value::Boolean(answer)),
+        );
     }
 }
 
