@@ -526,6 +526,11 @@ impl PolarVirtualMachine {
         let result = self.kb.gensym("isa");
         let call_id = self.new_call_id(&result);
 
+        self.push_goal(Goal::Unify {
+            left: Term::new(Value::Symbol(result)),
+            right: Term::new(Value::Boolean(true)),
+        });
+
         QueryEvent::ExternalIsa {
             call_id,
             instance_id,

@@ -227,18 +227,15 @@ class Polar:
             if kind == "ExternalIsSubSpecializer":
                 call_id = data["call_id"]
                 instance_id = data["instance_id"]
-                class_name_a = data["class_tag_a"]
-                class_name_b = data["class_tag_b"]
+                left_class_name = data["class_tag_a"]
+                right_class_name = data["class_tag_b"]
                 instance = id_to_instance[instance_id]
                 instance_cls = instance.__class__
+                mro = instance_cls.__mro__
                 try:
-                    cls_a_mro_index = self.classes[class_name_a].__mro__.index(
-                        instance_cls
-                    )
-                    cls_b_mro_index = self.classes[class_name_b].__mro__.index(
-                        instance_cls
-                    )
-                    is_sub_specializer = cls_a_mro_index < cls_b_mro_index
+                    left_class = self.classes[left_class_name]
+                    right_class = self.classes[right_class_name]
+                    is_sub_specializer = mro.index(left_class) < mro.index(right_class)
                 except ValueError:
                     is_sub_specializer = False
 

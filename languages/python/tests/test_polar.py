@@ -117,6 +117,7 @@ def test_specializers(polar, qvar, qeval, query):
     rules = """
     test(A{});
     test(B{});
+    
     try(v: B{}, res) := res = 2;
     try(v: C{}, res) := res = 3;
     try(v: A{}, res) := res = 1;
@@ -134,12 +135,10 @@ def test_specializers(polar, qvar, qeval, query):
     assert qvar("C{}.x = x", "x", one=True) == "C"
     assert qvar("X{}.x = x", "x", one=True) == "X"
 
-    # @TODO: bug where all methods are being called not just isa ones.
+    assert len(query("test(A{})")) == 1
+    assert len(query("test(B{})")) == 2
 
-    # assert len(query("test(A{})")) == 1
-    # assert len(query("test(B{})")) == 2
-
-    # assert qvar("try(A{}, x)", "x") == [1]
-    # assert qvar("try(B{}, x)", "x") == [2, 1]
-    # assert qvar("try(C{}, x)", "x") == [3, 2, 1]
-    # assert qvar("try(X{}, x)", "x") == []
+    assert qvar("try(A{}, x)", "x") == [1]
+    assert qvar("try(B{}, x)", "x") == [2, 1]
+    assert qvar("try(C{}, x)", "x") == [3, 2, 1]
+    assert qvar("try(X{}, x)", "x") == []
