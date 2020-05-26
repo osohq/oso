@@ -242,13 +242,7 @@ impl PolarVirtualMachine {
                 continue;
             }
 
-            bindings.insert(
-                var.clone(),
-                match &value.value {
-                    Value::Symbol(sym) => self.value(&sym).unwrap_or(value).clone(),
-                    _ => value.clone(),
-                },
-            );
+            bindings.insert(var.clone(), self.deref(value));
         }
         bindings
     }
