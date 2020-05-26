@@ -901,46 +901,38 @@ impl PolarVirtualMachine {
 
     /// Succeed if `left` is more specific than `right` with respect to `args`.
     fn is_more_specific(&mut self, left: Rule, right: Rule, args: TermList) {
-        let mut alternatives: Vec<Goals> = left
-            .params
-            .iter()
-            .zip(right.params.iter())
-            .zip(args.iter())
-            .filter_map(|((left_param, right_param), arg)| {
-                match (&left_param.specializer, &right_param.specializer, arg) {
-                    (Some(left_spec), Some(right_spec), arg) if left_spec != right_spec => {
-                        Some((left_spec, right_spec, arg))
-                    }
-                    _ => None,
-                }
-            })
-            .map(|(left, right, arg)| {
-                let answer = self.kb.gensym("is_subspecializer");
-                let call_id = self.new_call_id(&answer);
-                // TODO: GC answer & call_id.
+        let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
+        for ((left_param, right_param), arg) in zipped {
+            if let (Some(left_spec), Some(right_spec)) =
+                (&left_param.specializer, &right_param.specializer)
+            {
+                // If you find two non-equal specializers, that comparison determines the relative
+                // specificity of the two rules completely. As soon as you have two specializers
+                // that aren't the same and you can compare them and ask which one is more specific
+                // to the relevant argument, you're done.
+                if left_spec != right_spec {
+                    let answer = self.kb.gensym("is_subspecializer");
+                    let call_id = self.new_call_id(&answer);
+                    // TODO: GC answer & call_id.
 
-                // If you find two specializers, that comparison determines the relative
-                // specificity of the two rules completely. You don't have to find another
-                // one. As soon as you have two specializers that aren't the same and you can
-                // compare them and ask which one is more specific to the relevant argument,
-                // you're done.
-                vec![
-                    Goal::Cut,
-                    Goal::IsSubspecializer {
-                        call_id,
-                        left: left.clone(),
-                        right: right.clone(),
-                        arg: arg.clone(),
-                    },
-                    Goal::Unify {
-                        left: Term::new(Value::Symbol(answer)),
-                        right: Term::new(Value::Boolean(true)),
-                    },
-                ]
-            })
-            .collect();
-        alternatives.push(vec![Goal::Backtrack]);
-        self.choose(alternatives);
+                    self.append_goals(vec![
+                        Goal::IsSubspecializer {
+                            call_id,
+                            left: left_spec.clone(),
+                            right: right_spec.clone(),
+                            arg: arg.clone(),
+                        },
+                        Goal::Unify {
+                            left: Term::new(Value::Symbol(answer)),
+                            right: Term::new(Value::Boolean(true)),
+                        },
+                    ]);
+                    return;
+                }
+            }
+        }
+        // If neither rule is more specific, fail!
+        self.push_goal(Goal::Backtrack);
     }
 
     fn is_subspecializer(
