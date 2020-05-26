@@ -372,7 +372,7 @@ pub Rules: Vec<Rule> = <Rule*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
-    "?=" <Term> ";" => Line::Query(<>),
+    "?=" <Exp> ";" => Line::Query(<>),
 }
 
 pub Lines: Vec<Line> = <Line*>;
