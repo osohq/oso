@@ -94,14 +94,20 @@ pub fn main() -> anyhow::Result<()> {
             }
             Ok(q) => q,
         };
+        let mut has_result = false;
         for event in query {
             match event {
-                Ok(QueryEvent::Done) => println!("False"),
+                Ok(QueryEvent::Done) => {
+                    if !has_result {
+                        println!("False");
+                    }
+                }
                 Ok(QueryEvent::Result { bindings }) => {
                     println!("True");
                     for (k, v) in bindings {
                         println!("\t{:?} = {:?}", k, v);
                     }
+                    has_result = true;
                 }
                 Ok(QueryEvent::Breakpoint) => {}
                 Ok(e) => println!("Event: {:?}", e),

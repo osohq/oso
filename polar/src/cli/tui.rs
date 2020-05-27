@@ -116,7 +116,9 @@ impl App {
     ) -> anyhow::Result<()> {
         match res {
             Some(Ok(QueryEvent::Done)) => {
-                self.messages.push("False".to_string());
+                if !self.messages.contains(&"True".to_string()) {
+                    self.messages.push("False".to_string());
+                }
                 self.query = None;
             }
             Some(Ok(QueryEvent::Result { bindings })) => {

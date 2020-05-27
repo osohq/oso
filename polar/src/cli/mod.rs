@@ -15,7 +15,6 @@ pub fn load_files(
         f.read_to_string(&mut policy)?;
         polar.load_str(&policy)?;
     }
-    polar.load_str("foo(1);foo(2);")?;
     Ok(())
 }
 
