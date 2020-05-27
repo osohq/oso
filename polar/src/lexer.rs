@@ -115,7 +115,6 @@ impl<'input> Lexer<'input> {
         loop {
             if let Some((i, char)) = self.c {
                 match char {
-                    // @TODO: Escaped things.
                     '\n' => todo!("Error: hit new line while parsing string"),
                     '"' => {
                         self.c = self.chars.next();
