@@ -55,8 +55,10 @@ use super::parser;
 
 // @TODO: Once the external constructor stuff and instance ids are worked out explain them.
 
+use std::sync::Arc;
+
 pub struct Query {
-    vm: PolarVirtualMachine,
+    vm: Arc<PolarVirtualMachine>,
     done: bool,
 }
 
@@ -92,13 +94,13 @@ impl Iterator for Query {
 
 #[derive(Default)]
 pub struct Polar {
-    pub kb: KnowledgeBase,
+    pub kb: Arc<KnowledgeBase>,
 }
 
 impl Polar {
     pub fn new() -> Self {
         Self {
-            kb: KnowledgeBase::new(),
+            kb: Arc::new(KnowledgeBase::new()),
         }
     }
 

@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use super::types::*;
 use super::ToPolarString;
@@ -91,7 +92,7 @@ pub struct PolarVirtualMachine {
     debug: bool,
 
     /// Rules and types.
-    kb: KnowledgeBase,
+    kb: Arc<KnowledgeBase>,
 
     /// Instance Literal -> External Instance table.
     instances: HashMap<InstanceLiteral, ExternalInstance>,
@@ -112,7 +113,7 @@ pub struct DebugInfo {
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
     /// Reverse the goal list for the sanity of callers.
-    pub fn new(kb: KnowledgeBase, mut goals: Goals) -> Self {
+    pub fn new(kb: Arc<KnowledgeBase>, mut goals: Goals) -> Self {
         goals.reverse();
         Self {
             goals,
@@ -1121,7 +1122,7 @@ mod tests {
 
     #[test]
     fn deref() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
         let value = term!(1);
         let x = sym!("x");
         let y = sym!("y");
@@ -1164,7 +1165,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(kb, vec![goal]);
+        let mut vm = PolarVirtualMachine::new(Arc::new(kb), vec![goal]);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -1210,7 +1211,7 @@ mod tests {
 
     #[test]
     fn unify_expression() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
         vm.push_goal(query!(op!(Unify, term!(1), term!(1))));
 
         assert_query_events!(vm, [
@@ -1227,7 +1228,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_lists() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
         let one = Term::new(Value::Integer(1));
         let two = Term::new(Value::Integer(2));
         let one_list = Term::new(Value::List(vec![one.clone()]));
@@ -1313,7 +1314,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_dicts() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
         let left = term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
@@ -1377,7 +1378,7 @@ mod tests {
 
     #[test]
     fn unify_dicts() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
         // Dicts with identical keys and values unify.
         let left = term!(btreemap! {
             sym!("x") => term!(1),
@@ -1446,7 +1447,7 @@ mod tests {
 
     #[test]
     fn lookup() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
 
         let fields = btreemap! {
             sym!("x") => term!(1),
@@ -1487,7 +1488,7 @@ mod tests {
         let x = sym!("x");
         let y = sym!("y");
         let zero = term!(0);
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
         vm.bind(&x, &zero);
         assert_eq!(vm.value(&x), Some(&zero));
         assert_eq!(vm.value(&y), None);
@@ -1495,7 +1496,7 @@ mod tests {
 
     #[test]
     fn halt() {
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![Goal::Halt]);
+        let mut vm = PolarVirtualMachine::new(Arc::new(KnowledgeBase::new()), vec![Goal::Halt]);
         let _ = vm.run().unwrap();
         assert_eq!(vm.goals.len(), 0);
         assert_eq!(vm.bindings.len(), 0);
@@ -1529,7 +1530,7 @@ mod tests {
         let one = term!(1);
         let two = term!(2);
 
-        let mut vm = PolarVirtualMachine::new(KnowledgeBase::new(), vec![]);
+        let mut vm = PolarVirtualMachine::default();
 
         // Left variable bound to bound right variable.
         vm.bind(&y, &one);
