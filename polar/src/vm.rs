@@ -1046,10 +1046,7 @@ impl PolarVirtualMachine {
 
         match (arg.value, left.value, right.value) {
             (_, Value::Integer(x), Value::Integer(y)) => {
-                self.bind(
-                    &answer,
-                    &Term::new(Value::Boolean(x < y)),
-                );
+                self.bind(&answer, &Term::new(Value::Boolean(x < y)));
                 None
             }
             (
@@ -1064,7 +1061,7 @@ impl PolarVirtualMachine {
                     left_class_tag: left.tag,
                     right_class_tag: right.tag,
                 })
-            },
+            }
             _ => None,
         }
     }
