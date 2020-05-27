@@ -87,20 +87,25 @@ pub fn main() -> anyhow::Result<()> {
                 break;
             }
         };
-        let mut query = polar.new_query(&input).unwrap();
-        loop {
-            match query.next() {
-                Some(Ok(QueryEvent::Done)) => println!("False"),
-                Some(Ok(QueryEvent::Result { bindings })) => {
+        let query = match polar.new_query(&input) {
+            Err(e) => {
+                println!("Error: {}", e);
+                continue;
+            }
+            Ok(q) => q,
+        };
+        for event in query {
+            match event {
+                Ok(QueryEvent::Done) => println!("False"),
+                Ok(QueryEvent::Result { bindings }) => {
                     println!("True");
                     for (k, v) in bindings {
                         println!("\t{:?} = {:?}", k, v);
                     }
                 }
-                Some(Ok(QueryEvent::Breakpoint)) => {}
-                Some(Ok(e)) => println!("Event: {:?}", e),
-                Some(Err(e)) => println!("Error: {:?}", e),
-                None => break,
+                Ok(QueryEvent::Breakpoint) => {}
+                Ok(e) => println!("Event: {:?}", e),
+                Err(e) => println!("Error: {:?}", e),
             }
         }
     }
