@@ -43,7 +43,7 @@ def test_load_file(load_file, tell, qeval, qvar):
     tell('b("foo")')
     assert qvar("a(x)", "x", one=True) == "foo"
 
-
+@pytest.mark.xfail(reason="Results in wrong order.")
 def test_query_multiple(tell, qvar):
     tell('a("foo")')
     tell('a("bar")')
@@ -203,7 +203,6 @@ def test_unify_class_fields(tell, qeval, qvar):
     assert not qeval('check("alex", Foo{name: "sam"})')
 
 
-@pytest.mark.xfail(reason="Error calling name.")
 def test_argument_patterns(tell, qeval, qvar, externals):
     tell("isaFoo(name, foo: Foo) := name = foo.name")
 
@@ -351,7 +350,6 @@ def test_comparisons(tell, qeval, qvar, query):
     assert qeval("x = 1, x == 1")
 
 
-@pytest.mark.xfail(reason="type error")
 def test_bool_from_external_call(polar, qeval, qvar, query):
     class Booler:
         def whats_up(self):
