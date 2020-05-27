@@ -21,7 +21,7 @@ True: Term = <start:@L> "true" => {
     Term{id: 0, offset: start, value: Value::Boolean(true)}
 };
 False: Term = <start:@L> "false" => {
-    Term{id: 0, offset: start, value: Value::Boolean(true)}
+    Term{id: 0, offset: start, value: Value::Boolean(false)}
 };
 pub Boolean: Term = {
     <bool:True> => bool,
