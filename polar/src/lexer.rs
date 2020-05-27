@@ -63,12 +63,24 @@ impl<'input> Iterator for Lexer<'input> {
                 Some((_, '#')) => {
                     self.c = self.chars.next();
                     loop {
-                        // @TODO: Handle windows line endings too.
-                        if let Some((_, '\n')) = self.c {
-                            self.c = self.chars.next();
-                            break;
-                        } else {
-                            self.c = self.chars.next();
+                        match self.c {
+                            Some((_, '\r')) => {
+                                self.c = self.chars.next();
+                                if let Some((_, '\n')) = self.c {
+                                    self.c = self.chars.next();
+                                }
+                                break;
+                            }
+                            Some((_, '\n')) => {
+                                self.c = self.chars.next();
+                                break;
+                            }
+                            None => {
+                                break;
+                            }
+                            _ => {
+                                self.c = self.chars.next();
+                            }
                         }
                     }
                 }
@@ -294,7 +306,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lex_infinite_loop_bug() {
+    fn lex_infinite_loop_bugs() {
         let f = " 123";
         let mut lexer = Lexer::new(f);
         assert!(matches!(
@@ -302,6 +314,26 @@ mod tests {
             Some(Ok((_, Token::Integer(123), _)))
         ));
         assert!(matches!(lexer.next(), None));
+        let s = "123 #comment";
+        let mut lexer = Lexer::new(s);
+        assert!(matches!(
+            lexer.next(),
+            Some(Ok((_, Token::Integer(123), _)))
+        ));
+        assert!(matches!(lexer.next(), None));
+    }
+
+    #[test]
+    fn test_line_endings() {
+        let f = "foo\nbar\rbaz\r\n#comment\n#windowscomment\r\n123";
+        let mut lexer = Lexer::new(f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Symbol(_), _)))));
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Symbol(_), _)))));
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Symbol(_), _)))));
+        assert!(matches!(
+            lexer.next(),
+            Some(Ok((_, Token::Integer(123), _)))
+        ));
     }
 
     #[test]
