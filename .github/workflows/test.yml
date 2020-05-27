@@ -36,3 +36,14 @@ jobs:
           args: --all-features --all-targets -- -D warnings
 
       - run: make test
+  compat_test:
+    runs-on: "ubuntu-latest"
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install Python 3.6
+      uses: actions/setup-python@v1
+      with:
+        python-version: "3.6"
+    - name: Run compatibility test against python Polar implementation
+      run: make test_compat
