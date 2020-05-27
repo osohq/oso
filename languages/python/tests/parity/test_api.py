@@ -36,7 +36,7 @@ def load_policy(polar):
 
     # import the test policy
     if EXPECT_XFAIL_PASS:
-        return pytest.xfail(reason="Doesn't parse.")
+        pytest.xfail(reason="Doesn't parse.")
 
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
 
