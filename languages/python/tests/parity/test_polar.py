@@ -331,7 +331,6 @@ def test_group_field_access(load_file, qvar):
     assert qvar('get_bar(Baz{bar: "test"}, val)', "val", one=True) == "test"
 
 
-@pytest.mark.xfail(reason="Booleans not implemented yet.")
 def test_booleans(qeval):
     assert qeval("true = true")
     assert qeval("false = false")

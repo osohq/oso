@@ -145,6 +145,12 @@ mod tests {
     }
 
     #[test]
+    fn parse_booleans() {
+        assert_eq!(parse_query("true").unwrap(), term!(true));
+        assert_eq!(parse_query("false").unwrap(), term!(false));
+    }
+
+    #[test]
     fn test_parse_specializers() {
         let rule = polar::RuleParser::new().parse(r#"f(x: 1);"#).unwrap();
         assert_eq!(rule, rule!("f", ["x"; 1]));
