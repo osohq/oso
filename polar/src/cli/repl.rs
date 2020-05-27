@@ -28,7 +28,7 @@ impl Validator for InputValidator {
 }
 
 pub struct Repl {
-    rl: Editor<InputValidator>,
+    editor: Editor<InputValidator>,
     history: Option<std::path::PathBuf>,
 }
 
@@ -41,23 +41,23 @@ impl Default for Repl {
 impl Repl {
     pub fn new() -> Self {
         let h = InputValidator {};
-        let mut rl = Editor::new();
-        rl.set_helper(Some(h));
+        let mut editor = Editor::new();
+        editor.set_helper(Some(h));
 
         // lookup or create history file
         let history = super::try_create_history_file();
         if let Some(ref dir) = history {
-            if let Err(error) = rl.load_history(dir) {
+            if let Err(error) = editor.load_history(dir) {
                 eprintln!("loading history failed: {}", error);
             }
         }
 
-        Self { rl, history }
+        Self { editor, history }
     }
 
     pub fn input(&mut self, prompt: &str) -> anyhow::Result<String> {
-        let mut input = self.rl.readline(prompt)?;
-        self.rl.add_history_entry(input.as_str());
+        let mut input = self.editor.readline(prompt)?;
+        self.editor.add_history_entry(input.as_str());
         input.pop(); // remove the trailing ';'
         Ok(input)
     }
@@ -66,7 +66,7 @@ impl Repl {
 impl Drop for Repl {
     fn drop(&mut self) {
         if let Some(ref dir) = self.history {
-            let _ = self.rl.save_history(dir);
+            let _ = self.editor.save_history(dir);
         }
     }
 }
