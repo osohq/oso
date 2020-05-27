@@ -21,7 +21,7 @@ except ImportError:
 from polar.test_helpers import tell, qvar, query, oso_monkeypatch as polar_monkeypatch
 
 # Set if running tests against old code
-EXPECT_XFAIL_PASS = not bool(os.getenv('EXPECT_XFAIL_PASS', False))
+EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
 ## FIXTURES ##
 
@@ -195,7 +195,9 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy):
 
 
 ## Instance Caching tests (move these somewhere else eventually)
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Polar object has no attribute 'to_polar'.")
+@pytest.mark.xfail(
+    EXPECT_XFAIL_PASS, reason="Polar object has no attribute 'to_polar'."
+)
 def test_instance_round_trip(polar, query, qvar):
     # direct round trip
     user = Actor("sam")
@@ -223,7 +225,7 @@ def test_instance_from_external_call(polar, load_policy):
 
 @pytest.mark.xfail(
     EXPECT_XFAIL_PASS,
-    reason="Error types are not implemented and python files cannot be loaded."
+    reason="Error types are not implemented and python files cannot be loaded.",
 )
 def test_load_input_checking(polar):
     with pytest.raises(PolarApiException):

@@ -26,7 +26,8 @@ from polar.test_helpers import load_file, tell, query, qeval, qvar
 
 import pytest
 
-EXPECT_XFAIL_PASS = not bool(os.getenv('EXPECT_XFAIL_PASS', False))
+EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
+
 
 @pytest.fixture
 def externals(polar):
@@ -257,7 +258,10 @@ def test_isa(qeval, qvar, externals):
     assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Field unification on instances fails without an exception")
+@pytest.mark.xfail(
+    EXPECT_XFAIL_PASS,
+    reason="Field unification on instances fails without an exception",
+)
 def test_field_unification(qeval, externals):
     # test dictionary field unification
     assert qeval("{} = {}")
