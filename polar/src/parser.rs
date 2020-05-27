@@ -16,9 +16,8 @@ lazy_static::lazy_static! {
 
 pub fn parse_term(src: &str) -> PolarResult<Term> {
     // @TODO: Better Errors
-    TERM_PARSER
-        .parse(src)
-        .map_err(|e| PolarError::Parse(e.to_string()))
+    Ok(TERM_PARSER.parse(Lexer::new(src)).unwrap())
+    //.map_err(|e| PolarError::Parse(e.to_string()))
 }
 
 pub fn parse_query(src: &str) -> PolarResult<Term> {
