@@ -197,14 +197,18 @@ fn test_results() {
 
 #[test]
 fn test_result_permutations() {
-    let parts = vec![(1, "foo(1)"), (2, "foo(2)"), (3, "foo(3)"), (4, "foo(4)"), (5, "foo(5)")];
+    let parts = vec![
+        (1, "foo(1)"),
+        (2, "foo(2)"),
+        (3, "foo(3)"),
+        (4, "foo(4)"),
+        (5, "foo(5)"),
+    ];
     for permutation in permute(parts).into_iter() {
         eprintln!("{:?}", permutation);
         let mut polar = Polar::new();
         let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();
-        polar
-            .load_str(&format!("{};", rules.join(";")))
-            .unwrap();
+        polar.load_str(&format!("{};", rules.join(";"))).unwrap();
         assert_eq!(
             qvar(&mut polar, "foo(a)", "a"),
             results.into_iter().map(|v| value!(v)).collect::<Vec<_>>()

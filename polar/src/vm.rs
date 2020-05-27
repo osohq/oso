@@ -1059,11 +1059,7 @@ impl PolarVirtualMachine {
                 })
             }
             #[cfg(test)]
-            (
-                Value::Symbol(_sym),
-                Value::InstanceLiteral(left),
-                Value::InstanceLiteral(right),
-            ) => {
+            (Value::Symbol(_sym), Value::InstanceLiteral(left), Value::InstanceLiteral(right)) => {
                 // Used in testing, the argument will be a symbol.
                 let call_id = self.new_call_id(&answer);
                 Some(QueryEvent::ExternalIsSubSpecializer {
@@ -1627,18 +1623,21 @@ mod tests {
         // Test sort rule by mocking the return to external is subspecializer.
         // Test relies on an extra branch in is_subspecializer that allows specialization on
         // calls with symbol arguments.
-        let bar = GenericRule::new(sym!("bar"), vec![
-            rule!("bar", [instance!("2"), instance!("1")]),
-            rule!("bar", [instance!("1"), instance!("1")]),
-            rule!("bar", [instance!("1"), instance!("2")]),
-            rule!("bar", [instance!("2"), instance!("2")])]);
+        let bar = GenericRule::new(
+            sym!("bar"),
+            vec![
+                rule!("bar", [instance!("2"), instance!("1")]),
+                rule!("bar", [instance!("1"), instance!("1")]),
+                rule!("bar", [instance!("1"), instance!("2")]),
+                rule!("bar", [instance!("2"), instance!("2")]),
+            ],
+        );
 
         let mut kb = KnowledgeBase::new();
         kb.add_generic_rule(bar);
 
-        let mut vm = PolarVirtualMachine::new(kb, vec![
-            query!(pred!("bar", [sym!("a"), sym!("b")]))
-        ]);
+        let mut vm =
+            PolarVirtualMachine::new(kb, vec![query!(pred!("bar", [sym!("a"), sym!("b")]))]);
 
         let mut results = Vec::new();
         loop {
@@ -1653,30 +1652,32 @@ mod tests {
                 } => {
                     // For this test we sort classes lexically.
                     vm.external_question_result(call_id, left_class_tag < right_class_tag)
-                },
-                _ => panic!("Unexpected event")
+                }
+                _ => panic!("Unexpected event"),
             }
-        };
-
+        }
 
         assert_eq!(results.len(), 4);
-        assert_eq!(results, vec![
-            hashmap!{
-                sym!("a") => term!(instance!("1")),
-                sym!("b") => term!(instance!("1"))
-            },
-            hashmap!{
-                sym!("a") => term!(instance!("1")),
-                sym!("b") => term!(instance!("2"))
-            },
-            hashmap!{
-                sym!("a") => term!(instance!("2")),
-                sym!("b") => term!(instance!("1"))
-            },
-            hashmap!{
-                sym!("a") => term!(instance!("2")),
-                sym!("b") => term!(instance!("2"))
-            }
-        ]);
+        assert_eq!(
+            results,
+            vec![
+                hashmap! {
+                    sym!("a") => term!(instance!("1")),
+                    sym!("b") => term!(instance!("1"))
+                },
+                hashmap! {
+                    sym!("a") => term!(instance!("1")),
+                    sym!("b") => term!(instance!("2"))
+                },
+                hashmap! {
+                    sym!("a") => term!(instance!("2")),
+                    sym!("b") => term!(instance!("1"))
+                },
+                hashmap! {
+                    sym!("a") => term!(instance!("2")),
+                    sym!("b") => term!(instance!("2"))
+                }
+            ]
+        );
     }
 }
