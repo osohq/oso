@@ -65,7 +65,7 @@ pub mod display {
                         .join(", ")
                 ),
                 Goal::IsSubspecializer {
-                    call_id: _,
+                    answer: _,
                     left,
                     right,
                     arg,

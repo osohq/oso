@@ -26,7 +26,7 @@ pub enum Goal {
         args: TermList,
     },
     IsSubspecializer {
-        call_id: u64,
+        answer: Symbol,
         left: Term,
         right: Term,
         arg: Term,
@@ -177,12 +177,12 @@ impl PolarVirtualMachine {
                     self.is_more_specific(left, right, args)
                 }
                 Goal::IsSubspecializer {
-                    call_id,
+                    answer,
                     left,
                     right,
                     arg,
                 } => {
-                    if let Some(event) = self.is_subspecializer(call_id, left, right, arg) {
+                    if let Some(event) = self.is_subspecializer(answer, left, right, arg) {
                         return Ok(event);
                     }
                 }
@@ -742,6 +742,8 @@ impl PolarVirtualMachine {
         }
     }
 
+    /// Handle an external response to ExternalIsSubSpecializer,
+    /// ExternalIsa, and ExternalUnify.
     pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
         self.bind(
             &self
@@ -751,6 +753,7 @@ impl PolarVirtualMachine {
                 .clone(),
             &Term::new(Value::Boolean(answer)),
         );
+        self.call_id_symbols.remove(&call_id).expect("bad call id");
     }
 
     /// Unify `left` and `right` terms.
@@ -996,12 +999,10 @@ impl PolarVirtualMachine {
                     // Bind answer to false as a starting point in case is subspecializer doesn't
                     // bind any result.
                     self.bind(&answer, &Term::new(Value::Boolean(false)));
-                    let call_id = self.new_call_id(&answer);
-                    // TODO: GC answer & call_id.
 
                     self.append_goals(vec![
                         Goal::IsSubspecializer {
-                            call_id,
+                            answer: answer.clone(),
                             left: left_spec.clone(),
                             right: right_spec.clone(),
                             arg: arg.clone(),
@@ -1021,7 +1022,7 @@ impl PolarVirtualMachine {
 
     fn is_subspecializer(
         &mut self,
-        call_id: u64,
+        answer: Symbol,
         left: Term,
         right: Term,
         arg: Term,
@@ -1029,7 +1030,7 @@ impl PolarVirtualMachine {
         if let Value::InstanceLiteral(literal) = arg.value {
             let (exists, external_instance) = self.find_or_make_instance(&literal);
             self.push_goal(Goal::IsSubspecializer {
-                call_id,
+                answer,
                 left: left.clone(),
                 right: right.clone(),
                 arg: Term::new(Value::ExternalInstance(external_instance.clone())),
@@ -1046,11 +1047,7 @@ impl PolarVirtualMachine {
         match (arg.value, left.value, right.value) {
             (_, Value::Integer(x), Value::Integer(y)) => {
                 self.bind(
-                    &self
-                        .call_id_symbols
-                        .get(&call_id)
-                        .expect("unregistered call ID")
-                        .clone(),
+                    &answer,
                     &Term::new(Value::Boolean(x < y)),
                 );
                 None
@@ -1059,12 +1056,15 @@ impl PolarVirtualMachine {
                 Value::ExternalInstance(instance),
                 Value::InstanceLiteral(left),
                 Value::InstanceLiteral(right),
-            ) => Some(QueryEvent::ExternalIsSubSpecializer {
-                call_id,
-                instance_id: instance.instance_id,
-                left_class_tag: left.tag,
-                right_class_tag: right.tag,
-            }),
+            ) => {
+                let call_id = self.new_call_id(&answer);
+                Some(QueryEvent::ExternalIsSubSpecializer {
+                    call_id,
+                    instance_id: instance.instance_id,
+                    left_class_tag: left.tag,
+                    right_class_tag: right.tag,
+                })
+            },
             _ => None,
         }
     }
