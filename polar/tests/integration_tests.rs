@@ -31,8 +31,7 @@ where
             } => {
                 polar.external_call_result(&mut query, call_id, external_handler(attribute, args));
             }
-            QueryEvent::MakeExternal { .. } => (),
-            _ => todo!(),
+            _ => {}
         }
     }
     results
