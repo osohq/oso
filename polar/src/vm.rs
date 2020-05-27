@@ -503,8 +503,11 @@ impl PolarVirtualMachine {
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
     pub fn lookup_external(&mut self, call_id: u64, instance_id: u64, field: Term) -> QueryEvent {
-        let (field_name, args) = match field.value.clone() {
-            Value::Call(Predicate { name, args }) => (name, args),
+        let (field_name, args) = match &field.value {
+            Value::Call(Predicate { name, args }) => (
+                name.clone(),
+                args.iter().map(|arg| self.deref(arg)).collect(),
+            ),
             _ => panic!("call must be a predicate"),
         };
 

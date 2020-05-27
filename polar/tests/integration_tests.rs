@@ -3,16 +3,19 @@ use permute::permute;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar::{sym, types::*, value, Polar, Query};
+use polar::{sym, term, types::*, value, Polar, Query};
 
 type QueryResults = Vec<HashMap<Symbol, Value>>;
 
-fn query_results(
-    polar: &mut Polar,
-    mut query: Query,
-    mut external_results: Vec<Term>,
-) -> QueryResults {
-    external_results.reverse();
+fn no_results(_: Symbol, _: Vec<Term>) -> Option<Term> {
+    None
+}
+
+fn query_results<F>(polar: &mut Polar, mut query: Query, mut external_handler: F) -> QueryResults
+where
+    F: FnMut(Symbol, Vec<Term>) -> Option<Term>,
+{
+    // external_results.reverse();
     let mut results = vec![];
     loop {
         let event = polar.query(&mut query).unwrap();
@@ -21,8 +24,13 @@ fn query_results(
             QueryEvent::Result { bindings } => {
                 results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
             }
-            QueryEvent::ExternalCall { call_id, .. } => {
-                polar.external_call_result(&mut query, call_id, external_results.pop());
+            QueryEvent::ExternalCall {
+                call_id,
+                attribute,
+                args,
+                ..
+            } => {
+                polar.external_call_result(&mut query, call_id, external_handler(attribute, args));
             }
             QueryEvent::MakeExternal { .. } => (),
             _ => todo!(),
@@ -33,23 +41,24 @@ fn query_results(
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, vec![]).len() == 1
+    query_results(polar, query, no_results).len() == 1
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, vec![]).is_empty()
+    query_results(polar, query, no_results).is_empty()
 }
 
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
-    let external_results: Vec<Term> = external_results.into_iter().map(Term::new).collect();
+    let mut external_results: Vec<Term> =
+        external_results.into_iter().map(Term::new).rev().collect();
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, external_results)
+    query_results(polar, query, |_, _| external_results.pop())
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, vec![])
+    query_results(polar, query, no_results)
         .iter()
         .map(|bindings| bindings.get(&Symbol(var.to_string())).unwrap().clone())
         .collect()
@@ -58,7 +67,7 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
 fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
     let query = polar.new_query(query_str).unwrap();
 
-    query_results(polar, query, vec![])
+    query_results(polar, query, no_results)
         .iter()
         .map(|bindings| {
             vars.iter()
@@ -95,7 +104,7 @@ fn test_jealous() {
         .unwrap();
 
     let query = polar.new_query("jealous(who, of)").unwrap();
-    let results = query_results(&mut polar, query, vec![]);
+    let results = query_results(&mut polar, query, no_results);
     let jealous = |who: &str, of: &str| {
         assert!(
             &results.contains(&HashMap::from_iter(vec![
@@ -422,4 +431,30 @@ fn test_bindings() {
         .load_str("f(x) := x = y, g(y); g(y) := y = 1;")
         .unwrap();
     assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+}
+
+#[test]
+fn test_lookup_derefs() {
+    let mut polar = Polar::new();
+    polar
+        .load_str("f(x) := x = y, g(y); g(y) := Foo{}.get(y) = y;")
+        .unwrap();
+    let query = polar.new_query("f(1)").unwrap();
+    let mut foo_lookups = vec![term!(1)];
+    let mock_foo = |_, args: Vec<Term>| {
+        // check the argument is bound to an integer
+        assert!(matches!(args[0].value, Value::Integer(_)));
+        foo_lookups.pop()
+    };
+    let results = query_results(&mut polar, query, mock_foo);
+    assert_eq!(results.len(), 1);
+
+    let mut foo_lookups = vec![term!(1)];
+    let mock_foo = |_, args: Vec<Term>| {
+        assert!(matches!(args[0].value, Value::Integer(_)));
+        foo_lookups.pop()
+    };
+    let query = polar.new_query("f(2)").unwrap();
+    let results = query_results(&mut polar, query, mock_foo);
+    assert!(results.is_empty());
 }
