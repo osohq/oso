@@ -8,6 +8,7 @@ extern crate maplit;
 #[cfg(feature = "tui_")]
 pub mod cli;
 mod formatting;
+mod lexer;
 pub mod parser;
 mod polar;
 mod rewrites;
