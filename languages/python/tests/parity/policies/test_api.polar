@@ -28,7 +28,7 @@ allow_with_cut(actor, "get", resource: DooDad) := resource.frob("DooDad") = x, c
 
 allowRole("admin", "create", resource: Widget);
 
-allow(actor: Actor, "frob", resource: Widget) :=
+allowFrob(actor: Actor, "frob", resource: Widget) :=
     actor.company.id = resource.company.id,
     actor.company.default_role = resource.company.default_role,
     actor.company.roles = resource.company.roles;
@@ -58,5 +58,5 @@ allow(actor: Actor, "keep", resource: Widget) :=
     actor.widget.name = resource.name;
 
 # for testing iter
-allow(actor: Actor, "can_have", Widget {name: "stapler"}) :=
+testIterFields(actor: Actor, "can_have", Widget {name: "stapler"}) :=
     isa(actor.companies_iter, Company {id: "Initech"});

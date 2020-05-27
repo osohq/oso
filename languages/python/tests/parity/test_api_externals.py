@@ -74,9 +74,6 @@ class Company:
     id: str = ""
     default_role: str = ""
 
-    # Class variables.
-    roles = ("guest", "admin")
-
     def role(self, actor: Actor):
         if actor.name == "president":
             yield "admin"
@@ -85,3 +82,7 @@ class Company:
 
     def from_polar(id, default_role):
         return Company(id, default_role)
+
+    def roles(self):
+        yield "guest"
+        yield "admin"
