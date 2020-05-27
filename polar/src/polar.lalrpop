@@ -35,16 +35,16 @@ extern {
         "/" => lexer::Token::Div,       // /
         "+" => lexer::Token::Add,       // +
         "-" => lexer::Token::Sub,       // -
-        "==" => lexer::Token::Eq,        // ==
-        "!=" => lexer::Token::Neq,       // !=
-        "<=" => lexer::Token::Leq,       // <=
-        ">=" => lexer::Token::Geq,       // >=
+        "==" => lexer::Token::Eq,       // ==
+        "!=" => lexer::Token::Neq,      // !=
+        "<=" => lexer::Token::Leq,      // <=
+        ">=" => lexer::Token::Geq,      // >=
         "<" => lexer::Token::Lt,        // <
         ">" => lexer::Token::Gt,        // >
         "=" => lexer::Token::Unify,     // =
         "|" => lexer::Token::Pipe,      // |
         ";" => lexer::Token::SemiColon, // ;
-        ":=" => lexer::Token::Define,    // :=
+        ":=" => lexer::Token::Define,   // :=
     }
 }
 
