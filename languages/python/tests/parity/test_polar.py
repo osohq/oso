@@ -26,6 +26,7 @@ from polar.test_helpers import load_file, tell, query, qeval, qvar
 
 import pytest
 
+EXPECT_XFAIL_PASS = not bool(os.getenv('EXPECT_XFAIL_PASS', False))
 
 @pytest.fixture
 def externals(polar):
@@ -44,7 +45,7 @@ def test_load_file(load_file, tell, qeval, qvar):
     assert qvar("a(x)", "x", one=True) == "foo"
 
 
-@pytest.mark.xfail(reason="Results in wrong order.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Results in wrong order.")
 def test_query_multiple(tell, qvar):
     tell('a("foo")')
     tell('a("bar")')
@@ -154,7 +155,7 @@ def test_defining_things(tell, qeval):
         assert qeval(f)
 
 
-@pytest.mark.xfail(reason="Does not parse.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Does not parse.")
 def test_dictionaries(tell, qeval, qvar):
     tell('{hello: "world", foo: "bar"}')
     tell('{hello: {this: {is: "nested"}}}')
@@ -187,7 +188,7 @@ def test_dictionaries(tell, qeval, qvar):
     assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
 
 
-@pytest.mark.xfail(reason="isa(Bar{}, Foo{}) fails")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa(Bar{}, Foo{}) fails")
 def test_external_classes(tell, qeval, qvar, externals):
     assert qeval("isa(Bar{}, Foo{})")
     assert not qeval("isa(Qux{}, Foo{})")
@@ -195,7 +196,7 @@ def test_external_classes(tell, qeval, qvar, externals):
     assert qeval('Bar{}.foo = "Bar!"')
 
 
-@pytest.mark.xfail(reason="Foo not registered.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Foo not registered.")
 def test_unify_class_fields(tell, qeval, qvar):
     tell("check(name, Foo{name: name})")
 
@@ -224,7 +225,7 @@ def test_keys_are_confusing(tell, qeval, qvar, externals):
     assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 2}")
 
 
-@pytest.mark.xfail(reason="isa({}, {}) fails on first line")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa({}, {}) fails on first line")
 def test_isa(qeval, qvar, externals):
     assert qeval("isa({}, {})")
     assert qeval("isa({x: 1}, {})")
@@ -256,7 +257,7 @@ def test_isa(qeval, qvar, externals):
     assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
 
 
-@pytest.mark.xfail(reason="Field unification on instances fails without an exception")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Field unification on instances fails without an exception")
 def test_field_unification(qeval, externals):
     # test dictionary field unification
     assert qeval("{} = {}")
@@ -277,7 +278,7 @@ def test_field_unification(qeval, externals):
         assert not qeval("MyClass{x: 1, y: 2} = YourClass{y: 2, x: 1}")
 
 
-@pytest.mark.xfail(reason="Not implemented yet.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Not implemented yet.")
 def test_class_definitions(tell, qeval, load_file):
     # Contains test queries.
     load_file(Path(__file__).parent / "policies/classes.pol")
@@ -293,7 +294,7 @@ def test_class_definitions(tell, qeval, load_file):
         qeval("Three{unit: One{}, pair: One{}}")
 
 
-@pytest.mark.xfail(reason="Classes not implemented yet.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Classes not implemented yet.")
 def test_field_specializers(load_file, qvar):
     # Contains test queries.
     load_file(Path(__file__).parent / "policies/people.pol")
@@ -306,7 +307,7 @@ def test_field_specializers(load_file, qvar):
     ) == [3, 2, 1]
 
 
-@pytest.mark.xfail(reason="Groups not implemented yet.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Groups not implemented yet.")
 def test_groups(load_file, qeval, query):
     # Contains test queries.
     load_file(Path(__file__).parent / "policies/groups.pol")
@@ -336,7 +337,7 @@ def test_booleans(qeval):
     assert not qeval("true = false")
 
 
-@pytest.mark.xfail(reason="panics.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="panics.")
 def test_comparisons(tell, qeval, qvar, query):
     assert qeval("3 == 3")
     assert qeval("3 != 2")
