@@ -88,7 +88,7 @@ pub struct PolarVirtualMachine {
 
     /// If VM is set to `debug=True`, the VM will return a `QueryEvent::Breakpoint`
     /// after every goal
-    pub debug: bool,
+    debug: bool,
 
     /// Rules and types.
     kb: KnowledgeBase,
@@ -133,6 +133,14 @@ impl PolarVirtualMachine {
         let call_id = self.new_id();
         self.call_id_symbols.insert(call_id, symbol.clone());
         call_id
+    }
+
+    pub fn start_debug(&mut self) {
+        self.debug = true;
+    }
+
+    pub fn stop_debug(&mut self) {
+        self.debug = false;
     }
 
     pub fn debug_info(&self) -> DebugInfo {

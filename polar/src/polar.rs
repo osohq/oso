@@ -62,7 +62,11 @@ pub struct Query {
 
 impl Query {
     pub fn debug(&mut self, set: bool) {
-        self.vm.debug = set;
+        if set {
+            self.vm.start_debug();
+        } else {
+            self.vm.stop_debug();
+        }
     }
 
     pub fn debug_info(&self) -> crate::DebugInfo {
