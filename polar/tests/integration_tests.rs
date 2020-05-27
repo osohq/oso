@@ -456,12 +456,16 @@ fn test_lookup_derefs() {
     let query = polar.new_query("f(2)").unwrap();
     let results = query_results(&mut polar, query, mock_foo);
     assert!(results.is_empty());
+}
 
 #[test]
 fn unify_predicates() {
     let mut polar = Polar::new();
-    polar.load_str("f(g(x));").unwrap();
+    polar
+        .load_str("f(g(x)); k(x) := h(g(x), g(x)); h(g(1), g(1));")
+        .unwrap();
 
     assert!(qeval(&mut polar, "f(g(1))"));
     assert!(qnull(&mut polar, "f(1)"));
+    assert!(qeval(&mut polar, "k(1)"));
 }
