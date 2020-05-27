@@ -15,7 +15,6 @@ fn query_results<F>(polar: &mut Polar, mut query: Query, mut external_handler: F
 where
     F: FnMut(Symbol, Vec<Term>) -> Option<Term>,
 {
-    // external_results.reverse();
     let mut results = vec![];
     loop {
         let event = polar.query(&mut query).unwrap();
