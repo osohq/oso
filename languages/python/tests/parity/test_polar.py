@@ -139,7 +139,6 @@ def test_parens(tell, qeval):
     assert not qeval("paren5(1, 0, 1)")
 
 
-@pytest.mark.xfail(reason='thing(with("nested"), "stuff") fails')
 def test_defining_things(tell, qeval):
     facts = [
         'apple("orange")',
