@@ -386,6 +386,8 @@ class Polar:
                 left_instance = self.id_to_instance[left_instance_id]
                 right_instance = self.id_to_instance[right_instance_id]
 
+                # COMMENT (leina): does this get used? This isn't super useful behavior for instances because it only
+                # works predictably if they have `eq()` defined
                 unify = left_instance == right_instance
 
                 result = lib.polar_external_question_result(

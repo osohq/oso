@@ -79,9 +79,7 @@ impl Dictionary {
             fields: BTreeMap::new(),
         }
     }
-}
 
-impl Dictionary {
     fn map<F>(&self, f: &mut F) -> Dictionary
     where
         F: FnMut(&Value) -> Value,
@@ -93,6 +91,10 @@ impl Dictionary {
                 .map(|(k, v)| (k.clone(), v.map(f)))
                 .collect(),
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
     }
 }
 
