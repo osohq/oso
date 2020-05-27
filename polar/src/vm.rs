@@ -1623,7 +1623,7 @@ mod tests {
         // Test sort rule by mocking the return to external is subspecializer.
         // Test relies on an extra branch in is_subspecializer that allows specialization on
         // calls with symbol arguments.
-        let bar = GenericRule::new(
+        let bar_rule = GenericRule::new(
             sym!("bar"),
             vec![
                 rule!("bar", [instance!("2"), instance!("1")]),
@@ -1634,7 +1634,7 @@ mod tests {
         );
 
         let mut kb = KnowledgeBase::new();
-        kb.add_generic_rule(bar);
+        kb.add_generic_rule(bar_rule);
 
         let mut vm =
             PolarVirtualMachine::new(kb, vec![query!(pred!("bar", [sym!("a"), sym!("b")]))]);
