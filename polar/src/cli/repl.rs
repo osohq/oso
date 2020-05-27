@@ -97,7 +97,7 @@ pub fn main() -> anyhow::Result<()> {
                         println!("\t{:?} = {:?}", k, v);
                     }
                 }
-                Some(Ok(QueryEvent::BreakPoint)) => {}
+                Some(Ok(QueryEvent::Breakpoint)) => {}
                 Some(Ok(e)) => println!("Event: {:?}", e),
                 Some(Err(e)) => println!("Error: {:?}", e),
                 None => break,

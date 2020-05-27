@@ -160,7 +160,7 @@ impl PolarVirtualMachine {
             eprintln!("{}", goal);
             match goal {
                 Goal::Backtrack => self.backtrack(),
-                Goal::Break => return Ok(QueryEvent::BreakPoint),
+                Goal::Break => return Ok(QueryEvent::Breakpoint),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
                 Goal::Isa { left, right } => self.isa(&left, &right),
@@ -204,7 +204,7 @@ impl PolarVirtualMachine {
             // don't break when the goal stack is empty or a result wont
             // be returned (this logic seems flaky)
             if self.debug && !self.goals.is_empty() {
-                return Ok(QueryEvent::BreakPoint);
+                return Ok(QueryEvent::Breakpoint);
             }
         }
 

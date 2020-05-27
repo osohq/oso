@@ -126,7 +126,7 @@ impl App {
                         .push(format!("  {} = {}", k.to_polar(), v.to_polar()));
                 }
             }
-            Some(Ok(QueryEvent::BreakPoint)) => {}
+            Some(Ok(QueryEvent::Breakpoint)) => {}
             Some(Ok(QueryEvent::ExternalCall {
                 call_id, attribute, ..
             })) => {
