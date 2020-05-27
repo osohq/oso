@@ -1,7 +1,3 @@
-allow(actor, action, resource) :=
-    actorInRole(actor, role, resource),
-    allowRole(role, action, resource);
-
 actorInRole(actor, role, resource: Widget) :=
     role = resource.company.role(actor);
 
