@@ -212,7 +212,7 @@ impl<'input> Iterator for Lexer<'input> {
             Some((i, char)) => match char {
                 x if x.is_alphabetic() || x == '_' => self.scan_symbol(i, char),
                 '"' => self.scan_string(i),
-                '1'..='9' => self.scan_integer(i, char),
+                '0'..='9' => self.scan_integer(i, char),
                 ':' => self.scan_op_two(i, Token::Colon, '=', Token::Define),
                 '=' => self.scan_op_two(i, Token::Unify, '=', Token::Eq),
                 '<' => self.scan_op_two(i, Token::Lt, '=', Token::Leq),
