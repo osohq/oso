@@ -51,10 +51,9 @@ pub enum Token {
     Define,    // :=
 }
 
-impl<'input> Iterator for Lexer<'input> {
-    type Item = Spanned<Token, usize, String>; // @TODO: Error, not String
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl<'input> Lexer<'input> {
+    #[inline]
+    fn skip_whitespace(&mut self) {
         loop {
             match self.c {
                 Some((_, ' ')) | Some((_, '\n')) | Some((_, '\r')) | Some((_, '\t')) => {
@@ -76,208 +75,163 @@ impl<'input> Iterator for Lexer<'input> {
                 _ => break,
             };
         }
+    }
 
-        // Parse tokens.
+    #[inline]
+    fn scan_symbol(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, String>> {
+        let start = i;
+        let mut last = i;
+        self.buf.clear();
+        self.buf.push(chr);
+        self.c = self.chars.next();
+
+        while let Some((i, char)) = self.c {
+            match char {
+                x if x.is_alphanumeric() || x == '_' => {
+                    self.buf.push(char);
+                    last = i;
+                    self.c = self.chars.next();
+                }
+                _ => break,
+            }
+        }
+        if &self.buf == "true" {
+            Some(Ok((start, Token::Boolean(true), last + 1)))
+        } else if &self.buf == "false" {
+            Some(Ok((start, Token::Boolean(false), last + 1)))
+        } else if &self.buf == "make" {
+            Some(Ok((start, Token::Make, last + 1)))
+        } else {
+            Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
+        }
+    }
+
+    #[inline]
+    fn scan_string(&mut self, i: usize) -> Option<Spanned<Token, usize, String>> {
+        let start = i;
+        let last;
+        self.buf.clear();
+        self.c = self.chars.next();
+        loop {
+            if let Some((i, char)) = self.c {
+                match char {
+                    // @TODO: Escaped things.
+                    '\n' => todo!("Error: hit new line while parsing string"),
+                    '"' => {
+                        self.c = self.chars.next();
+                        last = i;
+                        break;
+                    }
+                    '\\' => {
+                        self.c = self.chars.next();
+                        if let Some((_, char)) = self.c {
+                            let escaped_char = match char {
+                                'n' => '\n',
+                                'r' => '\r',
+                                't' => '\t',
+                                '0' => '\0',
+                                c => c,
+                            };
+                            self.buf.push(escaped_char);
+                        } else {
+                            todo!("error, escape and then end of file")
+                        }
+                        self.c = self.chars.next();
+                    }
+                    _ => {
+                        self.buf.push(char);
+                        self.c = self.chars.next();
+                    }
+                }
+            } else {
+                todo!("Error, hit end of file before closing quote")
+            }
+        }
+        Some(Ok((start, Token::String(self.buf.clone()), last + 1)))
+    }
+
+    #[inline]
+    fn scan_integer(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, String>> {
+        let start = i;
+        let mut last = i;
+        self.buf.clear();
+        self.buf.push(chr);
+        self.c = self.chars.next();
+        while let Some((i, char)) = self.c {
+            match char {
+                '0'..='9' => {
+                    self.buf.push(char);
+                    self.c = self.chars.next();
+                    last = i;
+                }
+                _ => break,
+            }
+        }
+        if let Ok(int) = i64::from_str(&self.buf) {
+            Some(Ok((start, Token::Integer(int), last + 1)))
+        } else {
+            todo!("Error invalid integer")
+        }
+    }
+
+    /// Scan an operator to token.
+    #[inline]
+    fn scan_op(&mut self, i: usize, token: Token) -> Option<Spanned<Token, usize, String>> {
+        self.c = self.chars.next();
+        Some(Ok((i, token, i + 1)))
+    }
+
+    /// Scan an operator to token unless next_char is the next char in which case scan to next_token.
+    #[inline]
+    fn scan_op_two(
+        &mut self,
+        i: usize,
+        token: Token,
+        next_char: char,
+        next_token: Token,
+    ) -> Option<Spanned<Token, usize, String>> {
+        let start = i;
+        self.c = self.chars.next();
+        match self.c {
+            Some((_, chr)) if chr == next_char => {
+                self.c = self.chars.next();
+                Some(Ok((start, next_token, start + 2)))
+            }
+            _ => Some(Ok((start, token, start + 1))),
+        }
+    }
+}
+
+impl<'input> Iterator for Lexer<'input> {
+    type Item = Spanned<Token, usize, String>; // @TODO: Error, not String
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.skip_whitespace();
         match self.c {
             None => None,
             Some((i, char)) => match char {
-                x if x.is_alphabetic() || x == '_' => {
-                    let start = i;
-                    let mut last = i;
-                    self.buf.clear();
-                    self.buf.push(char);
-                    self.c = self.chars.next();
-
-                    while let Some((i, char)) = self.c {
-                        match char {
-                            x if x.is_alphanumeric() || x == '_' => {
-                                self.buf.push(char);
-                                last = i;
-                                self.c = self.chars.next();
-                            }
-                            _ => break,
-                        }
-                    }
-                    if &self.buf == "true" {
-                        Some(Ok((start, Token::Boolean(true), last + 1)))
-                    } else if &self.buf == "false" {
-                        Some(Ok((start, Token::Boolean(false), last + 1)))
-                    } else if &self.buf == "make" {
-                        Some(Ok((start, Token::Make, last + 1)))
-                    } else {
-                        Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
-                    }
-                }
-                '"' => {
-                    let start = i;
-                    let last;
-                    self.buf.clear();
-                    self.c = self.chars.next();
-                    loop {
-                        if let Some((i, char)) = self.c {
-                            match char {
-                                // @TODO: Escaped things.
-                                '\n' => todo!("Error: hit new line while parsing string"),
-                                '"' => {
-                                    self.c = self.chars.next();
-                                    last = i;
-                                    break;
-                                }
-                                '\\' => {
-                                    self.c = self.chars.next();
-                                    if let Some((_, char)) = self.c {
-                                        let escaped_char = match char {
-                                            'n' => '\n',
-                                            'r' => '\r',
-                                            't' => '\t',
-                                            '0' => '\0',
-                                            c => c,
-                                        };
-                                        self.buf.push(escaped_char);
-                                    } else {
-                                        todo!("error, escape and then end of file")
-                                    }
-                                    self.c = self.chars.next();
-                                }
-                                _ => {
-                                    self.buf.push(char);
-                                    self.c = self.chars.next();
-                                }
-                            }
-                        } else {
-                            todo!("Error, hit end of file before closing quote")
-                        }
-                    }
-                    Some(Ok((start, Token::String(self.buf.clone()), last + 1)))
-                }
-                '1'..='9' => {
-                    let start = i;
-                    let mut last = i;
-                    self.buf.clear();
-                    self.buf.push(char);
-                    self.c = self.chars.next();
-                    while let Some((i, char)) = self.c {
-                        match char {
-                            '0'..='9' => {
-                                self.buf.push(char);
-                                self.c = self.chars.next();
-                                last = i;
-                            }
-                            _ => break,
-                        }
-                    }
-                    if let Ok(int) = i64::from_str(&self.buf) {
-                        Some(Ok((start, Token::Integer(int), last + 1)))
-                    } else {
-                        todo!("Error invalid integer")
-                    }
-                }
-                ':' => {
-                    let start = i;
-                    self.c = self.chars.next();
-                    if let Some((_, '=')) = self.c {
-                        self.c = self.chars.next();
-                        Some(Ok((start, Token::Define, start + 2)))
-                    } else {
-                        Some(Ok((start, Token::Colon, start + 1)))
-                    }
-                }
-                '=' => {
-                    let start = i;
-                    self.c = self.chars.next();
-                    if let Some((_, '=')) = self.c {
-                        self.c = self.chars.next();
-                        Some(Ok((start, Token::Eq, start + 2)))
-                    } else {
-                        Some(Ok((start, Token::Unify, start + 1)))
-                    }
-                }
-                '<' => {
-                    let start = i;
-                    self.c = self.chars.next();
-                    if let Some((_, '=')) = self.c {
-                        self.c = self.chars.next();
-                        Some(Ok((start, Token::Leq, start + 2)))
-                    } else {
-                        Some(Ok((start, Token::Lt, start + 1)))
-                    }
-                }
-                '>' => {
-                    let start = i;
-                    self.c = self.chars.next();
-                    if let Some((_, '=')) = self.c {
-                        self.c = self.chars.next();
-                        Some(Ok((start, Token::Geq, start + 2)))
-                    } else {
-                        Some(Ok((start, Token::Gt, start + 1)))
-                    }
-                }
-                '!' => {
-                    let start = i;
-                    self.c = self.chars.next();
-                    if let Some((_, '=')) = self.c {
-                        self.c = self.chars.next();
-                        Some(Ok((start, Token::Neq, start + 2)))
-                    } else {
-                        Some(Ok((start, Token::Not, start + 1)))
-                    }
-                }
-                '|' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::Pipe, i + 1)))
-                }
-                ',' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::Comma, i + 1)))
-                }
-                '[' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::LB, i + 1)))
-                }
-                ']' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::RB, i + 1)))
-                }
-                '{' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::LCB, i + 1)))
-                }
-                '}' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::RCB, i + 1)))
-                }
-                '(' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::LP, i + 1)))
-                }
-                ')' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::RP, i + 1)))
-                }
-                '.' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::Dot, i + 1)))
-                }
-                '+' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::Add, i + 1)))
-                }
-                '-' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::Sub, i + 1)))
-                }
-                '*' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::Mul, i + 1)))
-                }
-                '/' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::Div, i + 1)))
-                }
-                ';' => {
-                    self.c = self.chars.next();
-                    Some(Ok((i, Token::SemiColon, i + 1)))
-                }
+                x if x.is_alphabetic() || x == '_' => self.scan_symbol(i, char),
+                '"' => self.scan_string(i),
+                '1'..='9' => self.scan_integer(i, char),
+                ':' => self.scan_op_two(i, Token::Colon, '=', Token::Define),
+                '=' => self.scan_op_two(i, Token::Unify, '=', Token::Eq),
+                '<' => self.scan_op_two(i, Token::Lt, '=', Token::Leq),
+                '>' => self.scan_op_two(i, Token::Gt, '=', Token::Geq),
+                '!' => self.scan_op_two(i, Token::Not, '=', Token::Neq),
+                '|' => self.scan_op(i, Token::Pipe),
+                ',' => self.scan_op(i, Token::Comma),
+                '[' => self.scan_op(i, Token::LB),
+                ']' => self.scan_op(i, Token::RB),
+                '{' => self.scan_op(i, Token::LCB),
+                '}' => self.scan_op(i, Token::RCB),
+                '(' => self.scan_op(i, Token::LP),
+                ')' => self.scan_op(i, Token::RP),
+                '.' => self.scan_op(i, Token::Dot),
+                '+' => self.scan_op(i, Token::Add),
+                '-' => self.scan_op(i, Token::Sub),
+                '*' => self.scan_op(i, Token::Mul),
+                '/' => self.scan_op(i, Token::Div),
+                ';' => self.scan_op(i, Token::SemiColon),
                 _ => Some(Err(format!(
                     "Lexer error: Invalid token character: '{}'",
                     char
