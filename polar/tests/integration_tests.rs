@@ -480,3 +480,17 @@ fn test_isa_predicate() {
     assert!(qeval(&mut polar, "isa({x: 1, y: 2}, {y: 2})"));
     assert!(qnull(&mut polar, "isa({x: 1, y: 2}, {x: 2})"));
 }
+
+/// Test that rules are executed in the correct order.
+#[test]
+fn test_rule_order() {
+    let mut polar = Polar::new();
+    polar.load_str("a(\"foo\");").unwrap();
+    polar.load_str("a(\"bar\");").unwrap();
+    polar.load_str("a(\"baz\");").unwrap();
+
+    assert_eq!(
+        qvar(&mut polar, "a(x)", "x"),
+        vec![value!("foo"), value!("bar"), value!("baz")]
+    );
+}

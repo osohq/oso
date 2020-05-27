@@ -993,6 +993,9 @@ impl PolarVirtualMachine {
                 // to the relevant argument, you're done.
                 if left_spec != right_spec {
                     let answer = self.kb.gensym("is_subspecializer");
+                    // Bind answer to false as a starting point in case is subspecializer doesn't
+                    // bind any result.
+                    self.bind(&answer, &Term::new(Value::Boolean(false)));
                     let call_id = self.new_call_id(&answer);
                     // TODO: GC answer & call_id.
 
