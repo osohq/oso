@@ -1,7 +1,7 @@
 use lalrpop_util::lalrpop_mod;
 
 lalrpop_mod!(
-    #[allow(clippy::all, dead_code, unused_imports, unused_mut, unused_variables)]
+    #[allow(clippy::all, dead_code, unused_imports, unused_mut)]
     polar
 );
 
