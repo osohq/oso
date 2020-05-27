@@ -64,18 +64,7 @@ impl<'input> Iterator for Lexer<'input> {
                     self.c = self.chars.next();
                     loop {
                         match self.c {
-                            Some((_, '\r')) => {
-                                self.c = self.chars.next();
-                                if let Some((_, '\n')) = self.c {
-                                    self.c = self.chars.next();
-                                }
-                                break;
-                            }
-                            Some((_, '\n')) => {
-                                self.c = self.chars.next();
-                                break;
-                            }
-                            None => {
+                            None | Some((_, '\r')) | Some((_, '\n')) => {
                                 break;
                             }
                             _ => {
