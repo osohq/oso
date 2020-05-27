@@ -1,0 +1,38 @@
+# Check rule ordering with group and class specializers.
+# A class or group should be more specific than a group
+# that contains it.
+class A;
+class B;
+class C;
+class D(C);
+
+group G(A, B);
+group H(G, C);
+
+# These rules must not specialize on the action.
+allow(_: A, action) := cut(), action = "A";
+allow(_: G, action) := cut(), action = "G";
+allow(_: H, action) := cut(), action = "H";
+allow(_: D, action) := cut(), action = "D";
+
+?= !(allow(1, _));
+?= allow(A{}, "A");
+?= allow(B{}, "G");
+?= allow(C{}, "H");
+?= allow(D{}, "D");
+
+check_order(_: A, action) := action = "A";
+check_order(_: H, action) := action = "H";
+check_order(_: G, action) := action = "G";
+
+class Foo() {
+    bar: str
+};
+
+class Baz() {
+    bar: str
+};
+
+group HasBar(Baz, Foo);
+
+get_bar(grp: HasBar, val) := val = grp.bar;
