@@ -859,6 +859,24 @@ impl PolarVirtualMachine {
                 }
             }
 
+            // Unify predicates like unifying heads
+            (Value::Call(left), Value::Call(right)) => {
+                if left.name == right.name && left.args.len() == right.args.len() {
+                    self.append_goals(
+                        left.args
+                            .iter()
+                            .zip(right.args.iter())
+                            .map(|(left, right)| Goal::Unify {
+                                left: left.clone(),
+                                right: right.clone(),
+                            })
+                            .collect(),
+                    )
+                } else {
+                    self.push_goal(Goal::Backtrack)
+                }
+            }
+
             // Anything else fails.
             (_, _) => self.push_goal(Goal::Backtrack),
         }
