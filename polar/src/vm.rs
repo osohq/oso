@@ -1045,10 +1045,6 @@ impl PolarVirtualMachine {
         }
 
         match (arg.value, left.value, right.value) {
-            (_, Value::Integer(x), Value::Integer(y)) => {
-                self.bind(&answer, &Term::new(Value::Boolean(x < y)));
-                None
-            }
             (
                 Value::ExternalInstance(instance),
                 Value::InstanceLiteral(left),
@@ -1058,6 +1054,21 @@ impl PolarVirtualMachine {
                 Some(QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     instance_id: instance.instance_id,
+                    left_class_tag: left.tag,
+                    right_class_tag: right.tag,
+                })
+            }
+            #[cfg(test)]
+            (
+                Value::Symbol(_sym),
+                Value::InstanceLiteral(left),
+                Value::InstanceLiteral(right),
+            ) => {
+                // Used in testing, the argument will be a symbol.
+                let call_id = self.new_call_id(&answer);
+                Some(QueryEvent::ExternalIsSubSpecializer {
+                    call_id,
+                    instance_id: 1234,
                     left_class_tag: left.tag,
                     right_class_tag: right.tag,
                 })
@@ -1609,5 +1620,63 @@ mod tests {
             _ => None,
         };
         assert_eq!(y_value.unwrap(), "_y_1");
+    }
+
+    #[test]
+    fn test_sort_rules() {
+        // Test sort rule by mocking the return to external is subspecializer.
+        // Test relies on an extra branch in is_subspecializer that allows specialization on
+        // calls with symbol arguments.
+        let bar = GenericRule::new(sym!("bar"), vec![
+            rule!("bar", [instance!("2"), instance!("1")]),
+            rule!("bar", [instance!("1"), instance!("1")]),
+            rule!("bar", [instance!("1"), instance!("2")]),
+            rule!("bar", [instance!("2"), instance!("2")])]);
+
+        let mut kb = KnowledgeBase::new();
+        kb.add_generic_rule(bar);
+
+        let mut vm = PolarVirtualMachine::new(kb, vec![
+            query!(pred!("bar", [sym!("a"), sym!("b")]))
+        ]);
+
+        let mut results = Vec::new();
+        loop {
+            match vm.run().unwrap() {
+                QueryEvent::Done => break,
+                QueryEvent::Result { bindings } => results.push(bindings),
+                QueryEvent::ExternalIsSubSpecializer {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                    ..
+                } => {
+                    // For this test we sort classes lexically.
+                    vm.external_question_result(call_id, left_class_tag < right_class_tag)
+                },
+                _ => panic!("Unexpected event")
+            }
+        };
+
+
+        assert_eq!(results.len(), 4);
+        assert_eq!(results, vec![
+            hashmap!{
+                sym!("a") => term!(instance!("1")),
+                sym!("b") => term!(instance!("1"))
+            },
+            hashmap!{
+                sym!("a") => term!(instance!("1")),
+                sym!("b") => term!(instance!("2"))
+            },
+            hashmap!{
+                sym!("a") => term!(instance!("2")),
+                sym!("b") => term!(instance!("1"))
+            },
+            hashmap!{
+                sym!("a") => term!(instance!("2")),
+                sym!("b") => term!(instance!("2"))
+            }
+        ]);
     }
 }

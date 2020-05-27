@@ -352,6 +352,12 @@ pub struct GenericRule {
     pub rules: Rules,
 }
 
+impl GenericRule {
+    pub fn new(name: Symbol, rules: Rules) -> Self {
+        GenericRule { name, rules }
+    }
+}
+
 #[derive(Clone)]
 pub struct Class {
     pub name: Symbol,
@@ -393,6 +399,11 @@ impl KnowledgeBase {
         } else {
             Symbol(format!("_{}_{}", prefix, self.new_id()))
         }
+    }
+
+    /// Add a generic rule to the knowledge base.
+    pub fn add_generic_rule(&mut self, rule: GenericRule) {
+        self.rules.insert(rule.name.clone(), rule);
     }
 }
 

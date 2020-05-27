@@ -197,16 +197,17 @@ fn test_results() {
 
 #[test]
 fn test_result_permutations() {
-    let parts = vec!["foo(1)", "foo(2)", "foo(3)", "foo(4)", "foo(5)"];
+    let parts = vec![(1, "foo(1)"), (2, "foo(2)"), (3, "foo(3)"), (4, "foo(4)"), (5, "foo(5)")];
     for permutation in permute(parts).into_iter() {
         eprintln!("{:?}", permutation);
         let mut polar = Polar::new();
+        let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();
         polar
-            .load_str(&format!("{};", permutation.join(";")))
+            .load_str(&format!("{};", rules.join(";")))
             .unwrap();
         assert_eq!(
             qvar(&mut polar, "foo(a)", "a"),
-            vec![value!(1), value!(2), value!(3), value!(4), value!(5)]
+            results.into_iter().map(|v| value!(v)).collect::<Vec<_>>()
         );
     }
 }
@@ -220,9 +221,9 @@ fn test_multi_arg_method_ordering() {
     assert_eq!(
         qvars(&mut polar, "bar(a, b)", &["a", "b"]),
         vec![
+            vec![value!(2), value!(1)],
             vec![value!(1), value!(1)],
             vec![value!(1), value!(2)],
-            vec![value!(2), value!(1)],
             vec![value!(2), value!(2)],
         ]
     );
