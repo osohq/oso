@@ -127,14 +127,11 @@ impl<'input> Iterator for Lexer<'input> {
                                     self.c = self.chars.next();
                                     if let Some((_, char)) = self.c {
                                         let escaped_char = match char {
-                                            '0' => '\0',
-                                            '\'' => '\'',
-                                            '"' => '"',
-                                            '\\' => '\\',
                                             'n' => '\n',
                                             'r' => '\r',
                                             't' => '\t',
-                                            _ => todo!("error, bad escape"),
+                                            '0' => '\0',
+                                            c => c,
                                         };
                                         self.buf.push(escaped_char);
                                     } else {
