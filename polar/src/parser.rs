@@ -8,7 +8,14 @@ lalrpop_mod!(
 use super::lexer::Lexer;
 use super::types::*;
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Line {
+    Rule(Rule),
+    Query(Term),
+}
+
 lazy_static::lazy_static! {
+    static ref LINES_PARSER: polar::LinesParser = polar::LinesParser::new();
     static ref QUERY_PARSER: polar::ExpParser = polar::ExpParser::new();
     static ref RULES_PARSER: polar::RulesParser = polar::RulesParser::new();
     static ref TERM_PARSER: polar::TermParser = polar::TermParser::new();
@@ -20,12 +27,18 @@ pub fn parse_term(src: &str) -> PolarResult<Term> {
     //.map_err(|e| PolarError::Parse(e.to_string()))
 }
 
+pub fn parse_lines(src: &str) -> PolarResult<Vec<Line>> {
+    Ok(LINES_PARSER.parse(Lexer::new(src)).unwrap())
+    //.map_err(|e| PolarError::Parse(e.to_string()))
+}
+
 pub fn parse_query(src: &str) -> PolarResult<Term> {
     // @TODO: Better Errors
     Ok(QUERY_PARSER.parse(Lexer::new(src)).unwrap())
     //.map_err(|e| PolarError::Parse(e.to_string()))
 }
 
+#[cfg(test)]
 pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
     // @TODO: Better Errors
     Ok(RULES_PARSER.parse(Lexer::new(src)).unwrap())
@@ -207,5 +220,19 @@ mod tests {
         assert_eq!(results[0].to_polar(), r#"a(1);"#);
         assert_eq!(results[1].to_polar(), r#"b(2);"#);
         assert_eq!(results[2].to_polar(), r#"c(3);"#);
+    }
+
+    #[test]
+    fn test_parse_line() {
+        let kb = r#"f(x) := x = 1;"#;
+        let line = parse_lines(&kb).unwrap();
+        assert_eq!(
+            line[0],
+            Line::Rule(rule!("f", [sym!("x")] => op!(Unify, term!(sym!("x")), term!(1))))
+        );
+        let f = r#"?= f(1);"#;
+        let line = parse_lines(&f).unwrap();
+
+        assert_eq!(line[0], Line::Query(term!(pred!("f", [1]))));
     }
 }
