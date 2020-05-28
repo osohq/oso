@@ -26,7 +26,7 @@ pub enum Goal {
         args: TermList,
     },
     IsSubspecializer {
-        call_id: u64,
+        answer: Symbol,
         left: Term,
         right: Term,
         arg: Term,
@@ -177,12 +177,12 @@ impl PolarVirtualMachine {
                     self.is_more_specific(left, right, args)
                 }
                 Goal::IsSubspecializer {
-                    call_id,
+                    answer,
                     left,
                     right,
                     arg,
                 } => {
-                    if let Some(event) = self.is_subspecializer(call_id, left, right, arg) {
+                    if let Some(event) = self.is_subspecializer(answer, left, right, arg) {
                         return Ok(event);
                     }
                 }
@@ -742,6 +742,8 @@ impl PolarVirtualMachine {
         }
     }
 
+    /// Handle an external response to ExternalIsSubSpecializer,
+    /// ExternalIsa, and ExternalUnify.
     pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
         self.bind(
             &self
@@ -751,6 +753,7 @@ impl PolarVirtualMachine {
                 .clone(),
             &Term::new(Value::Boolean(answer)),
         );
+        self.call_id_symbols.remove(&call_id).expect("bad call id");
     }
 
     /// Unify `left` and `right` terms.
@@ -993,12 +996,16 @@ impl PolarVirtualMachine {
                 // to the relevant argument, you're done.
                 if left_spec != right_spec {
                     let answer = self.kb.gensym("is_subspecializer");
-                    let call_id = self.new_call_id(&answer);
-                    // TODO: GC answer & call_id.
+                    // Bind answer to false as a starting point in case is subspecializer doesn't
+                    // bind any result.
+                    // This is done here for safety to avoid a bug where `answer` is unbound by
+                    // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
+                    // of checking that is is equal to `true`.
+                    self.bind(&answer, &Term::new(Value::Boolean(false)));
 
                     self.append_goals(vec![
                         Goal::IsSubspecializer {
-                            call_id,
+                            answer: answer.clone(),
                             left: left_spec.clone(),
                             right: right_spec.clone(),
                             arg: arg.clone(),
@@ -1018,7 +1025,7 @@ impl PolarVirtualMachine {
 
     fn is_subspecializer(
         &mut self,
-        call_id: u64,
+        answer: Symbol,
         left: Term,
         right: Term,
         arg: Term,
@@ -1026,7 +1033,7 @@ impl PolarVirtualMachine {
         if let Value::InstanceLiteral(literal) = arg.value {
             let (exists, external_instance) = self.find_or_make_instance(&literal);
             self.push_goal(Goal::IsSubspecializer {
-                call_id,
+                answer,
                 left: left.clone(),
                 right: right.clone(),
                 arg: Term::new(Value::ExternalInstance(external_instance.clone())),
@@ -1041,27 +1048,19 @@ impl PolarVirtualMachine {
         }
 
         match (arg.value, left.value, right.value) {
-            (_, Value::Integer(x), Value::Integer(y)) => {
-                self.bind(
-                    &self
-                        .call_id_symbols
-                        .get(&call_id)
-                        .expect("unregistered call ID")
-                        .clone(),
-                    &Term::new(Value::Boolean(x < y)),
-                );
-                None
-            }
             (
                 Value::ExternalInstance(instance),
                 Value::InstanceLiteral(left),
                 Value::InstanceLiteral(right),
-            ) => Some(QueryEvent::ExternalIsSubSpecializer {
-                call_id,
-                instance_id: instance.instance_id,
-                left_class_tag: left.tag,
-                right_class_tag: right.tag,
-            }),
+            ) => {
+                let call_id = self.new_call_id(&answer);
+                Some(QueryEvent::ExternalIsSubSpecializer {
+                    call_id,
+                    instance_id: instance.instance_id,
+                    left_class_tag: left.tag,
+                    right_class_tag: right.tag,
+                })
+            }
             _ => None,
         }
     }
@@ -1609,5 +1608,64 @@ mod tests {
             _ => None,
         };
         assert_eq!(y_value.unwrap(), "_y_1");
+    }
+
+    #[test]
+    fn test_sort_rules() {
+        // Test sort rule by mocking ExternalIsSubSpecializer and ExternalIsa.
+        let bar_rule = GenericRule::new(
+            sym!("bar"),
+            vec![
+                rule!("bar", [instance!("b"), instance!("a"), value!(3)]),
+                rule!("bar", [instance!("a"), instance!("a"), value!(1)]),
+                rule!("bar", [instance!("a"), instance!("b"), value!(2)]),
+                rule!("bar", [instance!("b"), instance!("b"), value!(4)]),
+            ],
+        );
+
+        let mut kb = KnowledgeBase::new();
+        kb.add_generic_rule(bar_rule);
+
+        let mut vm = PolarVirtualMachine::new(
+            Arc::new(kb),
+            vec![query!(pred!(
+                "bar",
+                [instance!("doesn't"), instance!("matter"), sym!("z")]
+            ))],
+        );
+
+        let mut results = Vec::new();
+        loop {
+            match vm.run().unwrap() {
+                QueryEvent::Done => break,
+                QueryEvent::Result { bindings } => results.push(bindings),
+                QueryEvent::ExternalIsSubSpecializer {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                    ..
+                } => {
+                    // For this test we sort classes lexically.
+                    vm.external_question_result(call_id, left_class_tag < right_class_tag)
+                }
+                QueryEvent::MakeExternal { .. } => (),
+                QueryEvent::ExternalIsa { call_id, .. } => {
+                    // For this test, anything is anything.
+                    vm.external_question_result(call_id, true)
+                }
+                _ => panic!("Unexpected event"),
+            }
+        }
+
+        assert_eq!(results.len(), 4);
+        assert_eq!(
+            results,
+            vec![
+                hashmap! { sym!("z") => term!(1) },
+                hashmap! { sym!("z") => term!(2) },
+                hashmap! { sym!("z") => term!(3) },
+                hashmap! { sym!("z") => term!(4) },
+            ]
+        );
     }
 }
