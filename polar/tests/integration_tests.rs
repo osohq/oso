@@ -468,3 +468,15 @@ fn unify_predicates() {
     assert!(qnull(&mut polar, "f(1)"));
     assert!(qeval(&mut polar, "k(1)"));
 }
+
+#[test]
+fn test_isa_predicate() {
+    let mut polar = Polar::new();
+    polar
+        .load_str("isa(x, y, x: (y)); isa(x, y) := isa(x, y, x);")
+        .unwrap();
+    assert!(qeval(&mut polar, "isa(1, 1)"));
+    assert!(qnull(&mut polar, "isa(1, 2)"));
+    assert!(qeval(&mut polar, "isa({x: 1, y: 2}, {y: 2})"));
+    assert!(qnull(&mut polar, "isa({x: 1, y: 2}, {x: 2})"));
+}

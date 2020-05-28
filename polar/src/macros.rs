@@ -88,7 +88,7 @@ impl<S: AsRef<str>> From<S> for TestHelper<InstanceLiteral> {
 #[macro_export]
 macro_rules! instance {
     ($instance:expr) => {
-        $crate::macros::TestHelper::<Instance>::from($arg).0
+        $crate::macros::TestHelper::<InstanceLiteral>::from($instance).0
     };
 }
 
