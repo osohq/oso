@@ -50,7 +50,6 @@ pub enum Token {
     SemiColon, // ;
     Define,    // :=
     Query,     // ?=
-    Invalid,   // ?
 }
 
 impl<'input> Lexer<'input> {
@@ -175,16 +174,35 @@ impl<'input> Lexer<'input> {
         }
     }
 
-    /// Scan an operator to token.
+    /// Scan a one character operator to token.
     #[inline]
-    fn scan_op(&mut self, i: usize, token: Token) -> Option<Spanned<Token, usize, String>> {
+    fn scan_1c_op(&mut self, i: usize, token: Token) -> Option<Spanned<Token, usize, String>> {
         self.c = self.chars.next();
         Some(Ok((i, token, i + 1)))
     }
 
+    /// Scan a two character operator to token.
+    #[inline]
+    fn scan_2c_op(
+        &mut self,
+        i: usize,
+        next_char: char,
+        token: Token,
+    ) -> Option<Spanned<Token, usize, String>> {
+        let start = i;
+        self.c = self.chars.next();
+        match self.c {
+            Some((_, chr)) if chr == next_char => {
+                self.c = self.chars.next();
+                Some(Ok((start, token, start + 2)))
+            }
+            _ => todo!("Error invalid token"),
+        }
+    }
+
     /// Scan an operator to token unless next_char is the next char in which case scan to next_token.
     #[inline]
-    fn scan_op_two(
+    fn scan_1c_or_2c_op(
         &mut self,
         i: usize,
         token: Token,
@@ -214,26 +232,26 @@ impl<'input> Iterator for Lexer<'input> {
                 x if x.is_alphabetic() || x == '_' => self.scan_symbol(i, char),
                 '"' => self.scan_string(i),
                 '0'..='9' => self.scan_integer(i, char),
-                ':' => self.scan_op_two(i, Token::Colon, '=', Token::Define),
-                '=' => self.scan_op_two(i, Token::Unify, '=', Token::Eq),
-                '<' => self.scan_op_two(i, Token::Lt, '=', Token::Leq),
-                '>' => self.scan_op_two(i, Token::Gt, '=', Token::Geq),
-                '!' => self.scan_op_two(i, Token::Not, '=', Token::Neq),
-                '?' => self.scan_op_two(i, Token::Invalid, '=', Token::Query),
-                '|' => self.scan_op(i, Token::Pipe),
-                ',' => self.scan_op(i, Token::Comma),
-                '[' => self.scan_op(i, Token::LB),
-                ']' => self.scan_op(i, Token::RB),
-                '{' => self.scan_op(i, Token::LCB),
-                '}' => self.scan_op(i, Token::RCB),
-                '(' => self.scan_op(i, Token::LP),
-                ')' => self.scan_op(i, Token::RP),
-                '.' => self.scan_op(i, Token::Dot),
-                '+' => self.scan_op(i, Token::Add),
-                '-' => self.scan_op(i, Token::Sub),
-                '*' => self.scan_op(i, Token::Mul),
-                '/' => self.scan_op(i, Token::Div),
-                ';' => self.scan_op(i, Token::SemiColon),
+                ':' => self.scan_1c_or_2c_op(i, Token::Colon, '=', Token::Define),
+                '=' => self.scan_1c_or_2c_op(i, Token::Unify, '=', Token::Eq),
+                '<' => self.scan_1c_or_2c_op(i, Token::Lt, '=', Token::Leq),
+                '>' => self.scan_1c_or_2c_op(i, Token::Gt, '=', Token::Geq),
+                '!' => self.scan_1c_or_2c_op(i, Token::Not, '=', Token::Neq),
+                '?' => self.scan_2c_op(i, '=', Token::Query),
+                '|' => self.scan_1c_op(i, Token::Pipe),
+                ',' => self.scan_1c_op(i, Token::Comma),
+                '[' => self.scan_1c_op(i, Token::LB),
+                ']' => self.scan_1c_op(i, Token::RB),
+                '{' => self.scan_1c_op(i, Token::LCB),
+                '}' => self.scan_1c_op(i, Token::RCB),
+                '(' => self.scan_1c_op(i, Token::LP),
+                ')' => self.scan_1c_op(i, Token::RP),
+                '.' => self.scan_1c_op(i, Token::Dot),
+                '+' => self.scan_1c_op(i, Token::Add),
+                '-' => self.scan_1c_op(i, Token::Sub),
+                '*' => self.scan_1c_op(i, Token::Mul),
+                '/' => self.scan_1c_op(i, Token::Div),
+                ';' => self.scan_1c_op(i, Token::SemiColon),
                 _ => Some(Err(format!(
                     "Lexer error: Invalid token character: '{}'",
                     char
