@@ -499,3 +499,15 @@ fn test_rule_order() {
         vec![value!("foo"), value!("bar"), value!("baz")]
     );
 }
+
+#[test]
+fn test_load_with_query() {
+    let mut polar = Polar::new();
+    let mut load = polar
+        .new_load("f(1); f(2); ?= f(1); ?= !f(3);")
+        .expect("new_load failed");
+
+    while let Some(query) = polar.load(&mut load).expect("load failed") {
+        assert_eq!(query_results(&mut polar, query, no_results).len(), 1);
+    }
+}

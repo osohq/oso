@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from polar import Polar
+from polar import Polar, exceptions
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 
 import pytest
@@ -290,3 +290,11 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     assert qvar(f"what_is({wolf_dict}, res)", "res") == ["wolf_dict", "canine_dict"]
     assert qvar(f"what_is({dog_dict}, res)", "res") == ["dog_dict", "canine_dict"]
     assert qvar(f"what_is({canine_dict}, res)", "res") == ["canine_dict"]
+
+
+def test_load_and_query():
+    p = Polar()
+    p.load_str("f(1); f(2); ?= f(1); ?= !f(3);")
+
+    with pytest.raises(exceptions.PolarException):
+        p.load_str("g(1); ?= g(2);")

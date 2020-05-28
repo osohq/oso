@@ -93,6 +93,11 @@ impl Iterator for Query {
 }
 
 #[derive(Default)]
+pub struct Load {
+    lines: Vec<parser::Line>,
+}
+
+#[derive(Default)]
 pub struct Polar {
     pub kb: Arc<KnowledgeBase>,
 }
@@ -104,9 +109,14 @@ impl Polar {
         }
     }
 
-    pub fn load_str(&mut self, src: &str) -> PolarResult<()> {
-        let lines = parser::parse_lines(src)?;
-        for line in lines {
+    pub fn new_load(&mut self, src: &str) -> PolarResult<Load> {
+        let mut lines = parser::parse_lines(src)?;
+        lines.reverse();
+        Ok(Load { lines })
+    }
+
+    pub fn load(&mut self, load: &mut Load) -> PolarResult<Option<Query>> {
+        while let Some(line) = load.lines.pop() {
             match line {
                 parser::Line::Rule(rule) => {
                     let name = rule.name.clone();
@@ -121,11 +131,22 @@ impl Polar {
                         });
                     generic_rule.rules.push(rewritten_rule);
                 }
-                parser::Line::Query(_term) => {
-                    // currently not handled
+                parser::Line::Query(term) => {
+                    return Ok(Some(self.new_query_from_term(term)));
                 }
             }
         }
+
+        Ok(None)
+    }
+
+    pub fn load_str(&mut self, src: &str) -> PolarResult<()> {
+        let mut load = self.new_load(src)?;
+        while let Some(_query) = self.load(&mut load)? {
+            // Queries are ignored in `load_str`.
+            continue;
+        }
+
         Ok(())
     }
 

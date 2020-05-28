@@ -138,7 +138,7 @@ class Polar:
         raise exception
 
     def _read_in_file(self, path):
-        """Reads in a file and adds to the knowledge base"""
+        """Reads in a file and adds to the knowledge base."""
         with open(path) as file:
             # contents = ""
             # for line in file:
@@ -168,10 +168,34 @@ class Polar:
         raise NotImplementedError()
 
     def load_str(self, src_str):
+        """Load string into knowledge base.
+
+        If it contains inline queries, ensure they succeed."""
         c_str = ffi.new("char[]", src_str.encode())
-        loaded = lib.polar_load_str(self.polar, c_str)
-        if loaded == 0:
+        load = lib.polar_new_load(self.polar, c_str)
+        if load == ffi.NULL:
             self._raise_error()
+
+        try:
+            while True:
+                query = ffi.new("polar_Query **")
+                loaded = lib.polar_load(self.polar, load, query)
+                if loaded != 0:
+                    self._raise_error()
+
+                query = query[0]
+                if query == ffi.NULL:
+                    # Load is done
+                    break
+
+                results = self._do_query(query)
+                try:
+                    next(results)
+                except StopIteration:
+                    # TODO (dhatch): Better error message.
+                    raise PolarRuntimeException("Inline query in file failed.")
+        finally:
+            lib.load_free(load)
 
     def _to_external_id(self, python_obj):
         """ Create or look up a polar external_instance for an object """

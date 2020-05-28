@@ -15,7 +15,7 @@ mod rewrites;
 pub mod types;
 mod vm;
 
-pub use self::polar::{Polar, Query};
+pub use self::polar::{Load, Polar, Query};
 pub use self::vm::DebugInfo;
 pub use formatting::ToPolarString;
 
@@ -90,6 +90,73 @@ pub extern "C" fn polar_new() -> *mut Polar {
         Err(_) => {
             set_error(types::OperationalError::Unknown.into());
             null_mut()
+        }
+    }
+}
+
+/// Create a new Load struct from a load string.
+///
+/// Returns: A null ptr on error, otherwise a Load struct (must be freed by caller).
+#[no_mangle]
+pub extern "C" fn polar_new_load(polar_ptr: *mut Polar, src: *const c_char) -> *mut Load {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query_str = unsafe { ffi_string!(src) };
+        match polar.new_load(&query_str) {
+            Err(err) => {
+                set_error(err);
+                null_mut()
+            }
+            Ok(load) => box_ptr!(load),
+        }
+    });
+
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::OperationalError::Unknown.into());
+            null_mut()
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn polar_load(
+    polar_ptr: *mut Polar,
+    load: *mut Load,
+    query: *mut *mut Query,
+) -> i32 {
+    let mut query = if let Some(not_null) = std::ptr::NonNull::new(query) {
+        not_null
+    } else {
+        set_error(
+            types::ParameterError(String::from("Query out parameter cannot be null.")).into(),
+        );
+        return 1;
+    };
+
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let load = unsafe { ffi_ref!(load) };
+        match polar.load(load) {
+            Err(err) => {
+                set_error(err);
+                (null_mut(), 1)
+            }
+            Ok(Some(query)) => (box_ptr!(query), 0),
+            Ok(None) => (null_mut(), 0),
+        }
+    });
+
+    match result {
+        Ok((ret_query, ret_code)) => {
+            unsafe { *query.as_mut() = ret_query };
+            ret_code
+        }
+        Err(_) => {
+            set_error(types::OperationalError::Unknown.into());
+            unsafe { *query.as_mut() = null_mut() };
+            1
         }
     }
 }
@@ -285,14 +352,16 @@ pub extern "C" fn string_free(s: *mut c_char) {
 /// Recovers the original boxed version of `polar` so that
 /// it can be properly freed
 #[no_mangle]
-pub extern "C" fn polar_free(polar: *mut Polar) {
+pub extern "C" fn polar_free(polar: *mut Polar) -> i32 {
     let result = catch_unwind(|| {
-        let _polar = unsafe { Box::from_raw(polar) };
+        std::mem::drop(unsafe { Box::from_raw(polar) });
     });
+
     match result {
-        Ok(_) => (),
+        Ok(_) => 0,
         Err(_) => {
             set_error(types::OperationalError::Unknown.into());
+            1
         }
     }
 }
@@ -300,14 +369,32 @@ pub extern "C" fn polar_free(polar: *mut Polar) {
 /// Recovers the original boxed version of `query` so that
 /// it can be properly freed
 #[no_mangle]
-pub extern "C" fn query_free(query: *mut Query) {
+pub extern "C" fn query_free(query: *mut Query) -> i32 {
     let result = catch_unwind(|| {
-        let _query = unsafe { Box::from_raw(query) };
+        std::mem::drop(unsafe { Box::from_raw(query) });
     });
+
     match result {
-        Ok(_) => (),
+        Ok(_) => 0,
         Err(_) => {
             set_error(types::OperationalError::Unknown.into());
+            1
+        }
+    }
+}
+
+/// Free `load` created by `polar_new_load`.
+#[no_mangle]
+pub extern "C" fn load_free(load: *mut Load) -> i32 {
+    let result = catch_unwind(|| {
+        std::mem::drop(unsafe { Box::from_raw(load) });
+    });
+
+    match result {
+        Ok(_) => 0,
+        Err(_) => {
+            set_error(types::OperationalError::Unknown.into());
+            1
         }
     }
 }

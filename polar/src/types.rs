@@ -28,10 +28,15 @@ pub enum OperationalError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Parameter passed to function is invalid.
+pub struct ParameterError(pub String);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PolarError {
     Parse(ParseError),
     Runtime(RuntimeError),
     Operational(OperationalError),
+    Parameter(ParameterError),
 }
 
 impl From<ParseError> for PolarError {
@@ -49,6 +54,12 @@ impl From<RuntimeError> for PolarError {
 impl From<OperationalError> for PolarError {
     fn from(err: OperationalError) -> PolarError {
         PolarError::Operational(err)
+    }
+}
+
+impl From<ParameterError> for PolarError {
+    fn from(err: ParameterError) -> PolarError {
+        PolarError::Parameter(err)
     }
 }
 
