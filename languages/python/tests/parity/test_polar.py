@@ -155,7 +155,10 @@ def test_defining_things(tell, qeval):
         assert qeval(f)
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Fails due to variable syntax for fields attr(d, k, d.(k)).")
+@pytest.mark.xfail(
+    EXPECT_XFAIL_PASS,
+    reason="Fails due to variable syntax for fields attr(d, k, d.(k)).",
+)
 def test_dictionaries(tell, qeval, qvar):
     tell('dict({hello: "world", foo: "bar"})')
     tell('dict({hello: {this: {is: "nested"}}})')
@@ -268,6 +271,7 @@ def test_field_unification(qeval):
     assert not qeval("{x: 1} = {y: 1}")
     assert not qeval("{x: 1, y: 2} = {y: 1, x: 2}")
     assert qeval("{x: 1, y: 2} = {y: 2, x: 1}")
+
 
 @pytest.mark.xfail(
     EXPECT_XFAIL_PASS,
