@@ -998,6 +998,9 @@ impl PolarVirtualMachine {
                     let answer = self.kb.gensym("is_subspecializer");
                     // Bind answer to false as a starting point in case is subspecializer doesn't
                     // bind any result.
+                    // This is done here for safety to avoid a bug where `answer` is unbound by
+                    // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
+                    // of checking that is is equal to `true`.
                     self.bind(&answer, &Term::new(Value::Boolean(false)));
 
                     self.append_goals(vec![
