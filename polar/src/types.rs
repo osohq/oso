@@ -13,12 +13,6 @@ pub enum ParseError {
     InvalidTokenCharacter { c: char, loc: usize }, //@TODO: Line and column instead of loc.
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RuntimeErrorKind {
-    Serialization(String),
-    UnboundVariable(Symbol),
-}
-
 // @TODO: Information about the context of the error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
