@@ -46,7 +46,6 @@ def test_load_file(load_file, tell, qeval, qvar):
     assert qvar("a(x)", "x", one=True) == "foo"
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Results in wrong order.")
 def test_query_multiple(tell, qvar):
     tell('a("foo")')
     tell('a("bar")')
