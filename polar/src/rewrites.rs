@@ -197,33 +197,33 @@ mod tests {
     use crate::ToPolarString;
     #[test]
     fn rewrites_test() {
-        let mut kb = KnowledgeBase::new();
+        let kb = KnowledgeBase::new();
         let rules = parse_rules("f(a.b);").unwrap();
         let rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "f(a.b);");
-        let rewritten = rewrite_rule(rule, &mut kb);
+        let rewritten = rewrite_rule(rule, &kb);
         assert_eq!(rewritten.to_polar(), "f(_value_1) := .(a,b,_value_1);");
         let again = parse_rules(&rewritten.to_polar()).unwrap();
         let again_rule = again[0].clone();
         assert_eq!(again_rule.to_polar(), rewritten.to_polar());
-        let again_rewritten = rewrite_rule(again_rule.clone(), &mut kb);
+        let again_rewritten = rewrite_rule(again_rule.clone(), &kb);
         assert_eq!(again_rewritten.to_polar(), again_rule.to_polar());
         let term = parse_query("x,a.b").unwrap();
         assert_eq!(term.to_polar(), "x,a.b");
-        let rewritten = rewrite_term(term, &mut kb);
+        let rewritten = rewrite_term(term, &kb);
         assert_eq!(rewritten.to_polar(), "x,.(a,b,_value_2),_value_2");
 
         let term = parse_query("a.b = 1").unwrap();
-        let rewritten = rewrite_term(term, &mut kb);
+        let rewritten = rewrite_term(term, &kb);
         assert_eq!(rewritten.to_polar(), ".(a,b,_value_3),_value_3=1");
         let term = parse_query("{x: 1}.x = 1").unwrap();
         assert_eq!(term.to_polar(), "{x: 1}.x=1");
-        let rewritten = rewrite_term(term, &mut kb);
+        let rewritten = rewrite_term(term, &kb);
         assert_eq!(rewritten.to_polar(), ".({x: 1},x,_value_4),_value_4=1");
 
         let term = parse_query("!{x: a.b}").unwrap();
         assert_eq!(term.to_polar(), "!{x: a.b}");
-        let rewritten = rewrite_term(term, &mut kb);
+        let rewritten = rewrite_term(term, &kb);
         assert_eq!(rewritten.to_polar(), "!(.(a,b,_value_5),{x: _value_5})");
     }
 }

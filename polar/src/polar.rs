@@ -129,14 +129,14 @@ impl Polar {
         Ok(())
     }
 
-    pub fn new_query(&mut self, query_string: &str) -> PolarResult<Query> {
+    pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
         let term = parser::parse_query(query_string)?;
         Ok(self.new_query_from_term(term))
     }
 
-    pub fn new_query_from_term(&mut self, term: Term) -> Query {
+    pub fn new_query_from_term(&self, term: Term) -> Query {
         let query = Goal::Query {
-            term: rewrite_term(term, &mut self.kb),
+            term: rewrite_term(term, &self.kb),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -144,15 +144,15 @@ impl Polar {
 
     // @TODO: Direct load_rules endpoint.
 
-    pub fn query(&mut self, query: &mut Query) -> PolarResult<QueryEvent> {
+    pub fn query(&self, query: &mut Query) -> PolarResult<QueryEvent> {
         query.vm.run()
     }
 
-    pub fn external_call_result(&mut self, query: &mut Query, call_id: u64, value: Option<Term>) {
+    pub fn external_call_result(&self, query: &mut Query, call_id: u64, value: Option<Term>) {
         query.vm.external_call_result(call_id, value)
     }
 
-    pub fn external_question_result(&mut self, query: &mut Query, call_id: u64, result: bool) {
+    pub fn external_question_result(&self, query: &mut Query, call_id: u64, result: bool) {
         query.vm.external_question_result(call_id, result)
     }
 
