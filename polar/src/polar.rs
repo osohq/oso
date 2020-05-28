@@ -168,3 +168,15 @@ impl Polar {
         crate::cli::tui::run(app).expect("error in CLI")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    #[should_panic]
+    fn cannot_load_and_query() {
+        let mut polar = Polar::new();
+        let _query = polar.new_query("1 = 1");
+        let _ = polar.load_str("f(x);");
+    }
+}
