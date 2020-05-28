@@ -2,11 +2,9 @@
 import os
 import pytest
 
-# TODO (leina): remove pprints, they are not helpful
-import pprint
 from pathlib import Path
 
-from polar.api import Http, Polar, Query, to_external
+from polar.api import Http, Polar, Query
 from polar.exceptions import PolarRuntimeException, PolarApiException
 
 from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
@@ -71,16 +69,14 @@ def test_allow(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Query(name="allow", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    assert polar.query(Query(name="allow", args=[actor, action, resource])).success
     actor = Actor(name="president")
     assert polar.query(
         Query(name="actorInRole", args=[actor, "admin", resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
     assert polar.query(
         Query(name="allowRole", args=["admin", "create", resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
 
 
 def test_method_resolution_order(polar, load_policy):
@@ -88,15 +84,11 @@ def test_method_resolution_order(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Query(name="allow", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    assert polar.query(Query(name="allow", args=[actor, action, resource])).success
     assert get_frobbed() == ["Widget"]
     set_frobbed([])
     resource = DooDad(id="2")
-    assert polar.query(
-        Query(name="allow", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    assert polar.query(Query(name="allow", args=[actor, action, resource])).success
     assert get_frobbed() == ["DooDad", "Widget"]
 
 
@@ -107,13 +99,13 @@ def test_cut(polar, load_policy):
     action = "get"
     assert polar.query(
         Query(name="allow_with_cut", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
     assert get_frobbed() == ["Widget"]
     set_frobbed([])
     resource = DooDad(id="2")
     assert polar.query(
         Query(name="allow_with_cut", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
     assert get_frobbed() == ["DooDad"]
 
 
@@ -201,14 +193,14 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy):
 def test_instance_round_trip(polar, query, qvar):
     # direct round trip
     user = Actor("sam")
-    assert to_external(polar.to_polar(user)) is user
+    assert polar.to_python(polar.to_polar(user)) is user
 
     # test round trip through kb query
     env = query('Actor{name:"sam"} = returned_user')[0]
-    assert to_external(env["returned_user"]).__dict__ == user.__dict__
+    assert polar.to_python(env["returned_user"]).__dict__ == user.__dict__
 
     # test instance round trip through api query
-    returned_user = to_external(
+    returned_user = polar.to_python(
         qvar(Query(name="=", args=[user, "returned_user"]), "returned_user")[0]
     )
     assert returned_user.__dict__ is user.__dict__
@@ -223,10 +215,6 @@ def test_instance_from_external_call(polar, load_policy):
     assert not polar.query(Query(name="allow", args=[user, "frob", resource])).success
 
 
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS,
-    reason="Error types are not implemented and python files cannot be loaded.",
-)
 def test_load_input_checking(polar):
     with pytest.raises(PolarApiException):
         polar.load("unreal.py")
@@ -240,7 +228,7 @@ def test_load_input_checking(polar):
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Doesn't parse")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="There is no KB to check")
 def test_default_load_policy():
     polar = Polar()
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")

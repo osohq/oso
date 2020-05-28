@@ -158,8 +158,8 @@ def test_defining_things(tell, qeval):
 
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Does not parse.")
 def test_dictionaries(tell, qeval, qvar):
-    tell('{hello: "world", foo: "bar"}')
-    tell('{hello: {this: {is: "nested"}}}')
+    tell('dict({hello: "world", foo: "bar"})')
+    tell('dict({hello: {this: {is: "nested"}}})')
     tell("attr(d, k, d.(k))")
     assert qeval('attr({hello: "steve"}, "hello", "steve")')
     assert qvar('attr({hello: "steve"}, "hello", value)', "value", one=True) == "steve"
@@ -197,8 +197,8 @@ def test_external_classes(tell, qeval, qvar, externals):
     assert qeval('Bar{}.foo = "Bar!"')
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Foo not registered.")
-def test_unify_class_fields(tell, qeval, qvar):
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa doesn't check fields.")
+def test_unify_class_fields(tell, qeval, qvar, externals):
     tell("check(name, Foo{name: name})")
 
     assert qeval('check("sam", Foo{name: "sam"})')
@@ -226,7 +226,7 @@ def test_keys_are_confusing(tell, qeval, qvar, externals):
     assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 2}")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa({}, {}) fails on first line")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa not yet implemented")
 def test_isa(qeval, qvar, externals):
     assert qeval("isa({}, {})")
     assert qeval("isa({x: 1}, {})")
@@ -245,10 +245,6 @@ def test_isa(qeval, qvar, externals):
     assert not qeval("isa({x: 1, y: 2}, MyClass{x: 1, y: 2})")
 
     assert qeval("isa(MyClass{x: 1, y: 2}, MyClass{x: 1})")
-    assert qeval(
-        "isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})"
-    )
-    assert not qeval("isa(MyClass{x: MyClass{x: 1}, y: 2}, MyClass{x: MyClass{y: 2}})")
     assert not qeval("isa(MyClass{y: 2}, MyClass{x: 1, y: 2})")
 
     assert qeval("isa(OurClass{x: 1, y: 2}, YourClass{})")
@@ -256,6 +252,14 @@ def test_isa(qeval, qvar, externals):
     assert qeval("isa(OurClass{x: 1, y: 2}, MyClass{x: 1, y: 2})")
     assert not qeval("isa(MyClass{x: 1, y: 2}, OurClass{x: 1})")
     assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
+
+
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa({}, {}) fails on first line")
+def test_nested_isa(qeval, qvar, externals):
+    assert qeval(
+        "isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})"
+    )
+    assert not qeval("isa(MyClass{x: MyClass{x: 1}, y: 2}, MyClass{x: MyClass{y: 2}})")
 
 
 @pytest.mark.xfail(
