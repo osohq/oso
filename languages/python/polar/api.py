@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from types import GeneratorType
 from typing import Any, Sequence
+import weakref
 
 
 from .exceptions import (
@@ -401,6 +402,7 @@ class Polar:
     def query_str(self, query_str):
         # Make sure KB is loaded in
         self._kb_load()
+        self.clear_cache()
 
         c_str = ffi.new("char[]", query_str.encode())
         query = lib.polar_new_query(self.polar, c_str)
@@ -414,6 +416,7 @@ class Polar:
 
         # Make sure KB is loaded in
         self._kb_load()
+        self.clear_cache()
 
         query_term = json.dumps(
             {
@@ -451,6 +454,9 @@ class Polar:
         lib.polar_free(self.polar)
         self.polar = None
         self.polar = lib.polar_new()
+
+    def clear_cache(self):
+        self.id_to_instance = {}
 
 
 class Http:
