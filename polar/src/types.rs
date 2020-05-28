@@ -59,18 +59,19 @@ impl From<OperationalError> for PolarError {
 
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
-// impl std::error::Error for PolarError {}
+impl std::error::Error for PolarError {}
 
-// impl fmt::Display for PolarError {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         match self {
-//             PolarError::Parse(s) | PolarError::Serialization(s) | PolarError::Unimplemented(s) => {
-//                 write!(f, "{}", s)
-//             }
-//             PolarError::Unknown => write!(f, "panic!"),
-//         }
-//     }
-// }
+impl fmt::Display for PolarError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "todo")
+        //match self {
+        // PolarError::Parse(s) | PolarError::Serialization(s) | PolarError::Unimplemented(s) => {
+        //     write!(f, "{}", s)
+        // }
+        // PolarError::Unknown => write!(f, "panic!"),
+        //}
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
 pub struct Dictionary {
