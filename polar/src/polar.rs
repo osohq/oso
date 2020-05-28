@@ -55,6 +55,8 @@ use super::parser;
 
 // @TODO: Once the external constructor stuff and instance ids are worked out explain them.
 
+use std::sync::Arc;
+
 pub struct Query {
     vm: PolarVirtualMachine,
     done: bool,
@@ -92,13 +94,13 @@ impl Iterator for Query {
 
 #[derive(Default)]
 pub struct Polar {
-    pub kb: KnowledgeBase,
+    pub kb: Arc<KnowledgeBase>,
 }
 
 impl Polar {
     pub fn new() -> Self {
         Self {
-            kb: KnowledgeBase::new(),
+            kb: Arc::new(KnowledgeBase::new()),
         }
     }
 
@@ -108,11 +110,15 @@ impl Polar {
             match line {
                 parser::Line::Rule(rule) => {
                     let name = rule.name.clone();
-                    let rewritten_rule = rewrite_rule(rule, &mut self.kb);
-                    let generic_rule = self.kb.rules.entry(name.clone()).or_insert(GenericRule {
-                        name,
-                        rules: vec![],
-                    });
+                    let rewritten_rule = rewrite_rule(rule, &self.kb);
+                    let generic_rule = Arc::get_mut(&mut self.kb)
+                        .expect("cannot load policy while queries are in progress")
+                        .rules
+                        .entry(name.clone())
+                        .or_insert(GenericRule {
+                            name,
+                            rules: vec![],
+                        });
                     generic_rule.rules.push(rewritten_rule);
                 }
                 parser::Line::Query(_term) => {
@@ -123,14 +129,14 @@ impl Polar {
         Ok(())
     }
 
-    pub fn new_query(&mut self, query_string: &str) -> PolarResult<Query> {
+    pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
         let term = parser::parse_query(query_string)?;
         Ok(self.new_query_from_term(term))
     }
 
-    pub fn new_query_from_term(&mut self, term: Term) -> Query {
+    pub fn new_query_from_term(&self, term: Term) -> Query {
         let query = Goal::Query {
-            term: rewrite_term(term, &mut self.kb),
+            term: rewrite_term(term, &self.kb),
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
@@ -138,21 +144,21 @@ impl Polar {
 
     // @TODO: Direct load_rules endpoint.
 
-    pub fn query(&mut self, query: &mut Query) -> PolarResult<QueryEvent> {
+    pub fn query(&self, query: &mut Query) -> PolarResult<QueryEvent> {
         query.vm.run()
     }
 
-    pub fn external_call_result(&mut self, query: &mut Query, call_id: u64, value: Option<Term>) {
+    pub fn external_call_result(&self, query: &mut Query, call_id: u64, value: Option<Term>) {
         query.vm.external_call_result(call_id, value)
     }
 
-    pub fn external_question_result(&mut self, query: &mut Query, call_id: u64, result: bool) {
+    pub fn external_question_result(&self, query: &mut Query, call_id: u64, result: bool) {
         query.vm.external_question_result(call_id, result)
     }
 
     // @TODO: Get external_id call for returning external instances from python.
-    pub fn get_external_id(&mut self, query: &mut Query) -> u64 {
-        query.vm.new_id()
+    pub fn get_external_id(&self) -> u64 {
+        self.kb.new_id()
     }
 
     /// Turn this Polar instance into a new TUI instance and run it
@@ -160,5 +166,17 @@ impl Polar {
     pub fn into_tui(self) {
         let app = crate::cli::tui::App::new(self);
         crate::cli::tui::run(app).expect("error in CLI")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    #[should_panic]
+    fn cannot_load_and_query() {
+        let mut polar = Polar::new();
+        let _query = polar.new_query("1 = 1");
+        let _ = polar.load_str("f(x);");
     }
 }
