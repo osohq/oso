@@ -895,6 +895,17 @@ impl PolarVirtualMachine {
                 }
             }
 
+            (Value::InstanceLiteral(left), Value::InstanceLiteral(right)) => {
+                if left.tag == right.tag {
+                    self.push_goal(Goal::Unify {
+                        left: Term::new(Value::Dictionary(left.fields.clone())),
+                        right: Term::new(Value::Dictionary(right.fields.clone())),
+                    });
+                } else {
+                    self.push_goal(Goal::Backtrack)
+                }
+            }
+
             // external instances can unify if they are exactly the same type, i.e. have
             // the same instance ID
             // this is necessary for the case that an instance appears multiple times

@@ -188,7 +188,6 @@ def test_dictionaries(tell, qeval, qvar):
     assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa(Bar{}, Foo{}) fails")
 def test_external_classes(tell, qeval, qvar, externals):
     assert qeval("isa(Bar{}, Foo{})")
     assert not qeval("isa(Qux{}, Foo{})")
@@ -224,7 +223,6 @@ def test_keys_are_confusing(tell, qeval, qvar, externals):
     assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 2}")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa not yet implemented")
 def test_isa(qeval, qvar, externals):
     assert qeval("isa({}, {})")
     assert qeval("isa({x: 1}, {})")
