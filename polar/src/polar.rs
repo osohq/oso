@@ -58,7 +58,7 @@ use super::parser;
 use std::sync::Arc;
 
 pub struct Query {
-    vm: Arc<PolarVirtualMachine>,
+    vm: PolarVirtualMachine,
     done: bool,
 }
 
@@ -110,11 +110,15 @@ impl Polar {
             match line {
                 parser::Line::Rule(rule) => {
                     let name = rule.name.clone();
-                    let rewritten_rule = rewrite_rule(rule, &mut self.kb);
-                    let generic_rule = self.kb.rules.entry(name.clone()).or_insert(GenericRule {
-                        name,
-                        rules: vec![],
-                    });
+                    let rewritten_rule = rewrite_rule(rule, &self.kb);
+                    let generic_rule = Arc::get_mut(&mut self.kb)
+                        .expect("cannot load policy while queries are in progress")
+                        .rules
+                        .entry(name.clone())
+                        .or_insert(GenericRule {
+                            name,
+                            rules: vec![],
+                        });
                     generic_rule.rules.push(rewritten_rule);
                 }
                 parser::Line::Query(_term) => {
@@ -153,8 +157,8 @@ impl Polar {
     }
 
     // @TODO: Get external_id call for returning external instances from python.
-    pub fn get_external_id(&mut self, query: &mut Query) -> u64 {
-        query.vm.new_id()
+    pub fn get_external_id(&self) -> u64 {
+        self.kb.new_id()
     }
 
     /// Turn this Polar instance into a new TUI instance and run it

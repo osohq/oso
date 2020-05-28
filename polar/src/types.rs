@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 // @TODO: Do some work to make these errors nice, really rough right now.
 #[derive(Debug)]
@@ -327,13 +328,13 @@ pub enum Type {
     Group { members: Vec<Type> },
 }
 
-#[derive(Default, Clone)]
+#[derive(Default)]
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
 
     // For temporary variable names, call IDs, instance IDs, symbols, etc.
-    counter: usize,
+    counter: AtomicU64,
 }
 
 impl KnowledgeBase {
@@ -341,19 +342,17 @@ impl KnowledgeBase {
         Self {
             types: HashMap::new(),
             rules: HashMap::new(),
-            counter: 1,
+            counter: AtomicU64::new(1),
         }
     }
 
     /// Return a monotonically increasing integer ID.
-    pub fn new_id(&mut self) -> u64 {
-        let id = self.counter;
-        self.counter += 1;
-        id as u64
+    pub fn new_id(&self) -> u64 {
+        self.counter.fetch_add(1, Ordering::SeqCst)
     }
 
     /// Generate a new symbol.
-    pub fn gensym(&mut self, prefix: &str) -> Symbol {
+    pub fn gensym(&self, prefix: &str) -> Symbol {
         if prefix.starts_with('_') {
             Symbol(format!("{}_{}", prefix, self.new_id()))
         } else {

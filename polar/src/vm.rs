@@ -1511,7 +1511,7 @@ mod tests {
         let one = value!(1);
         let vals = term!([zero.clone(), one.clone()]);
         let mut vm = PolarVirtualMachine::new(
-            KnowledgeBase::new(),
+            Arc::new(KnowledgeBase::new()),
             vec![Goal::Unify {
                 left: vars,
                 right: vals,

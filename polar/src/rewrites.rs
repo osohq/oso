@@ -103,7 +103,7 @@ fn and_wrap(a: Term, b: Term) -> Term {
 
 /// Checks if the expression needs to be rewritten.
 /// If so, returns a tuple of the rewritten expression and the generated symbol to replace it with.
-fn rewrite(term: &mut Term, kb: &mut KnowledgeBase) -> Option<(Term, Term)> {
+fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<(Term, Term)> {
     match &term.value {
         Value::Expression(Operation {
             operator: Operator::Dot,
@@ -127,7 +127,7 @@ fn rewrite(term: &mut Term, kb: &mut KnowledgeBase) -> Option<(Term, Term)> {
     }
 }
 
-pub fn rewrite_term(mut term: Term, kb: &mut KnowledgeBase) -> Term {
+pub fn rewrite_term(mut term: Term, kb: &KnowledgeBase) -> Term {
     let mut rewrites = vec![];
 
     // Walk the tree, replace rewrite terms with symbols and cache up rewrites to be made next pass.
@@ -163,7 +163,7 @@ pub fn rewrite_term(mut term: Term, kb: &mut KnowledgeBase) -> Term {
     term
 }
 
-pub fn rewrite_rule(mut rule: Rule, kb: &mut KnowledgeBase) -> Rule {
+pub fn rewrite_rule(mut rule: Rule, kb: &KnowledgeBase) -> Rule {
     rule.body = rewrite_term(rule.body, kb);
 
     let mut new_terms = vec![];

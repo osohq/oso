@@ -57,7 +57,7 @@ class Polar:
             if python_obj in instance_to_id:
                 instance_id = instance_to_id[python_obj]
             else:
-                instance_id = lib.polar_get_external_id(self.polar, query)
+                instance_id = lib.polar_get_external_id(self.polar)
                 if instance_id == 0:
                     self._raise_error()
                 id_to_instance[instance_id] = python_obj

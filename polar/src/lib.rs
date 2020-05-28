@@ -250,11 +250,10 @@ pub extern "C" fn polar_external_question_result(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar, query_ptr: *mut Query) -> u64 {
+pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar) -> u64 {
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };
-        let query = unsafe { ffi_ref!(query_ptr) };
-        polar.get_external_id(query)
+        polar.get_external_id()
     });
     match result {
         Ok(r) => r,
