@@ -2,8 +2,6 @@
 import os
 import pytest
 
-# TODO (leina): remove pprints, they are not helpful
-import pprint
 from pathlib import Path
 
 from polar.api import Http, Polar, Query
@@ -71,16 +69,14 @@ def test_allow(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Query(name="allow", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    assert polar.query(Query(name="allow", args=[actor, action, resource])).success
     actor = Actor(name="president")
     assert polar.query(
         Query(name="actorInRole", args=[actor, "admin", resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
     assert polar.query(
         Query(name="allowRole", args=["admin", "create", resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
 
 
 def test_method_resolution_order(polar, load_policy):
@@ -88,15 +84,11 @@ def test_method_resolution_order(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Query(name="allow", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    assert polar.query(Query(name="allow", args=[actor, action, resource])).success
     assert get_frobbed() == ["Widget"]
     set_frobbed([])
     resource = DooDad(id="2")
-    assert polar.query(
-        Query(name="allow", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    assert polar.query(Query(name="allow", args=[actor, action, resource])).success
     assert get_frobbed() == ["DooDad", "Widget"]
 
 
@@ -107,13 +99,13 @@ def test_cut(polar, load_policy):
     action = "get"
     assert polar.query(
         Query(name="allow_with_cut", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
     assert get_frobbed() == ["Widget"]
     set_frobbed([])
     resource = DooDad(id="2")
     assert polar.query(
         Query(name="allow_with_cut", args=[actor, action, resource])
-    ).success, pprint.pformat(polar._kb.facts)
+    ).success
     assert get_frobbed() == ["DooDad"]
 
 
@@ -236,7 +228,7 @@ def test_load_input_checking(polar):
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Doesn't parse")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="There is no KB to check")
 def test_default_load_policy():
     polar = Polar()
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
