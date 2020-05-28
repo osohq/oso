@@ -966,12 +966,24 @@ impl PolarVirtualMachine {
                 let mut goals = vec![];
 
                 // Unify the arguments with the formal parameters.
+                let mut unify_pairs = HashSet::new();
                 for (arg, param) in args.iter().zip(params.iter()) {
                     if let Some(name) = &param.name {
-                        goals.push(Goal::Unify {
-                            left: arg.clone(),
-                            right: Term::new(Value::Symbol(name.clone())),
-                        });
+                        // We track whether we have already generated a unify instruction
+                        // for the same pair of arguments.  This is:
+                        // 1. to avoid redundant unifies
+                        // 2. because our unify does not guarantee that two terms that are
+                        // equal actually unify, so we don't want to try to unify two already
+                        // bound variables here (for example two external classes will not unify with
+                        // each other even if they are the same instance).
+                        let unify_pair = (arg.clone(), name.clone());
+                        if !unify_pairs.contains(&unify_pair) {
+                            goals.push(Goal::Unify {
+                                left: arg.clone(),
+                                right: Term::new(Value::Symbol(name.clone())),
+                            });
+                            unify_pairs.insert(unify_pair);
+                        }
                     }
                     if let Some(specializer) = &param.specializer {
                         goals.push(Goal::Isa {
