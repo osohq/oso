@@ -1627,7 +1627,7 @@ mod tests {
         kb.add_generic_rule(bar_rule);
 
         let mut vm = PolarVirtualMachine::new(
-            kb,
+            Arc::new(kb),
             vec![query!(pred!(
                 "bar",
                 [instance!("doesn't"), instance!("matter"), sym!("z")]
