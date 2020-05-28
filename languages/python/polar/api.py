@@ -194,6 +194,12 @@ class Polar:
                 except StopIteration:
                     # TODO (dhatch): Better error message.
                     raise PolarRuntimeException("Inline query in file failed.")
+
+                # This must be called so there are no open queries on when the next load cycle
+                # happens. This sucks, but we only do it when there is not a
+                # stop iteration because _do_query does the free otherwise.
+                # We need a better api for this.
+                lib.query_free(query)
         finally:
             lib.load_free(load)
 

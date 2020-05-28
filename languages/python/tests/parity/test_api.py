@@ -33,9 +33,6 @@ def load_policy(polar):
     polar.register_python_class(Company)
 
     # import the test policy
-    if EXPECT_XFAIL_PASS:
-        pytest.xfail(reason="Doesn't parse.")
-
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
 
 
@@ -92,6 +89,7 @@ def test_method_resolution_order(polar, load_policy):
     assert get_frobbed() == ["DooDad", "Widget"]
 
 
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Cut not implemented.")
 def test_cut(polar, load_policy):
     set_frobbed([])
     actor = Actor(name="guest")
@@ -109,6 +107,7 @@ def test_cut(polar, load_policy):
     assert get_frobbed() == ["DooDad"]
 
 
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Cut not implemented.")
 def test_querystring_resource_map(polar, load_policy):
     assert polar.query(
         Query(
@@ -170,7 +169,6 @@ def test_resource_mapping(polar, load_policy):
         assert resp.status_code == 204
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Monkey patch not implemented.")
 def test_patching(polar, widget_in_company, actor_in_role, load_policy):
     user = Actor("test")
     assert not polar.query(
@@ -250,6 +248,7 @@ def test_default_load_policy():
     assert len(polar._kb.facts) == kb_len
 
 
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Failing due to backwards incompat with returning lists")
 def test_return_list(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
@@ -263,12 +262,14 @@ def test_type_fields(polar, load_policy):
     assert polar.query(Query(name="allow", args=[actor, "keep", resource])).success
 
 
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Failing due to backwards incompat with returning iters")
 def test_iter_fields(polar, load_policy):
     resource = Widget(id=1, name="stapler")
     actor = Actor(name="milton", id=1)
     assert polar.query(Query(name="allow", args=[actor, "can_have", resource])).success
 
 
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Test relies on internal classes.")
 def test_clear(polar, load_policy):
     old = Path(__file__).parent / "policies" / "load.pol"
     fails = Path(__file__).parent / "policies" / "reload_fail.pol"
