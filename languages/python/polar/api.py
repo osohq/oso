@@ -16,6 +16,12 @@ from .exceptions import (
     ParserException,
     PolarApiException,
     PolarRuntimeException,
+    IntegerOverflow,
+    InvalidToken,
+    InvalidTokenCharacter,
+    UnrecognizedEOF,
+    UnrecognizedToken,
+    ExtraToken,
 )
 
 
@@ -101,8 +107,6 @@ class Polar:
 
     def _raise_error(self):
         # Raise polar errors as the correct python exception type.
-        # @TODO: Will fill this out when making all the errors better, this
-        # is just a sketch of how the translation works.
         err_s = lib.polar_get_error()
         err_json = ffi.string(err_s).decode()
         error = json.loads(err_json)
@@ -117,11 +121,30 @@ class Polar:
         if kind == "Parse":
             parse_err_kind = [*error][0]
             parse_err_data = error[kind]
-            if parse_err_kind == "InvalidTokenCharacter":
+
+            if parse_err_kind == "IntegerOverflow":
+                token = parse_err_data["token"]
+                pos = parse_err_data["pos"]
+                exception = IntegerOverflow(token, pos)
+            elif parse_err_kind == "InvalidTokenCharacter":
+                token = parse_err_data["token"]
                 c = parse_err_data["c"]
-                loc = parse_err_data["loc"]
-                exception = InvalidTokenCharacter(c, loc)
-            # @TODO: etc...
+                pos = parse_err_data["pos"]
+                exception = InvalidTokenCharacter(token, c, pos)
+            elif parse_err_kind == "InvalidToken":
+                pos = parse_err_data["pos"]
+                exception = InvalidToken(pos)
+            elif parse_err_kind == "UnrecognizedEOF":
+                pos = parse_err_data["pos"]
+                exception = UnrecognizedEOF(pos)
+            elif parse_err_kind == "UnrecognizedToken":
+                token = parse_err_data["token"]
+                pos = parse_err_data["pos"]
+                exception = UnrecognizedToken(token, pos)
+            elif parse_err_kind == "ExtraToken":
+                token = parse_err_data["token"]
+                pos = parse_err_data["pos"]
+                exception = ExtraToken(token, pos)
             else:
                 exception = ParserException(f"Parser Exception: {json.dumps(data)}")
 

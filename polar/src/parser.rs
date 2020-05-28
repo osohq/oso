@@ -1,12 +1,12 @@
-use lalrpop_util::lalrpop_mod;
+use lalrpop_util::{lalrpop_mod, ParseError};
 
 lalrpop_mod!(
     #[allow(clippy::all, dead_code, unused_imports, unused_mut)]
     polar
 );
 
-use super::lexer::Lexer;
-use super::types::*;
+use super::lexer::{self, loc_to_pos, Lexer};
+use super::types::{self, *};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
@@ -21,28 +21,54 @@ lazy_static::lazy_static! {
     static ref TERM_PARSER: polar::TermParser = polar::TermParser::new();
 }
 
+fn to_parse_error(
+    src: &str,
+    e: ParseError<usize, lexer::Token, types::ParseError>,
+) -> types::ParseError {
+    match e {
+        ParseError::InvalidToken { location } => types::ParseError::InvalidToken {
+            pos: loc_to_pos(src, location),
+        },
+        ParseError::UnrecognizedEOF { location, .. } => types::ParseError::UnrecognizedEOF {
+            pos: loc_to_pos(src, location),
+        },
+        ParseError::UnrecognizedToken {
+            token: (s, t, _), ..
+        } => types::ParseError::UnrecognizedToken {
+            token: t.to_string(),
+            pos: loc_to_pos(src, s),
+        },
+        ParseError::ExtraToken { token: (s, t, _) } => types::ParseError::ExtraToken {
+            token: t.to_string(),
+            pos: loc_to_pos(src, s),
+        },
+        ParseError::User { error } => error,
+    }
+}
+
 pub fn parse_term(src: &str) -> PolarResult<Term> {
-    // @TODO: Better Errors
-    Ok(TERM_PARSER.parse(Lexer::new(src)).unwrap())
-    //.map_err(|e| PolarError::Parse(e.to_string()))
+    TERM_PARSER
+        .parse(Lexer::new(src))
+        .map_err(|e| to_parse_error(src, e).into())
 }
 
 pub fn parse_lines(src: &str) -> PolarResult<Vec<Line>> {
-    Ok(LINES_PARSER.parse(Lexer::new(src)).unwrap())
-    //.map_err(|e| PolarError::Parse(e.to_string()))
+    LINES_PARSER
+        .parse(Lexer::new(src))
+        .map_err(|e| to_parse_error(src, e).into())
 }
 
 pub fn parse_query(src: &str) -> PolarResult<Term> {
-    // @TODO: Better Errors
-    Ok(QUERY_PARSER.parse(Lexer::new(src)).unwrap())
-    //.map_err(|e| PolarError::Parse(e.to_string()))
+    QUERY_PARSER
+        .parse(Lexer::new(src))
+        .map_err(|e| to_parse_error(src, e).into())
 }
 
 #[cfg(test)]
 pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
-    // @TODO: Better Errors
-    Ok(RULES_PARSER.parse(Lexer::new(src)).unwrap())
-    //.map_err(|e| PolarError::Parse(e.to_string()))
+    RULES_PARSER
+        .parse(Lexer::new(src))
+        .map_err(|e| to_parse_error(src, e).into())
 }
 
 #[cfg(test)]

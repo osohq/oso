@@ -9,9 +9,16 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+pub type SrcPos = (usize, usize);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
-    InvalidTokenCharacter { c: char, loc: usize }, //@TODO: Line and column instead of loc.
+    IntegerOverflow { token: String, pos: SrcPos },
+    InvalidTokenCharacter { token: String, c: char, pos: SrcPos }, //@TODO: Line and column instead of loc.
+    InvalidToken { pos: SrcPos },
+    UnrecognizedEOF { pos: SrcPos },
+    UnrecognizedToken { token: String, pos: SrcPos },
+    ExtraToken { token: String, pos: SrcPos },
 }
 
 // @TODO: Information about the context of the error.
@@ -536,7 +543,11 @@ mod tests {
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
-        let e = ParseError::InvalidTokenCharacter { c: 'x', loc: 99 };
+        let e = ParseError::InvalidTokenCharacter {
+            token: "Integer".to_owned(),
+            c: 'x',
+            pos: (99, 99),
+        };
         let er: PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&er).unwrap());
     }

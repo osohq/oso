@@ -3,6 +3,7 @@
 assert statements should be avoided unless the violation indicates a
 programming error on our part.
 """
+# @TODO: Should we just generate these from the rust code?
 
 
 class PolarException(Exception):
@@ -17,13 +18,39 @@ class ParserException(PolarException):
     pass
 
 
-class InvalidTokenCharacter(ParserException):
-    def __init__(self, c, loc):
-        self.c = c
-        self.loc = loc
+class IntegerOverflow(ParserException):
+    def __init__(self, token, pos):
+        self.token = token
+        self.pos = pos
 
-    def __str__(self):
-        return f"Invalid Token character '{self.c}' at location {self.loc}"
+
+class InvalidTokenCharacter(ParserException):
+    def __init__(self, token, c, pos):
+        self.token = token
+        self.c = c
+        self.pos = pos
+
+
+class InvalidToken(ParserException):
+    def __init__(self, pos):
+        self.pos = pos
+
+
+class UnrecognizedEOF(ParserException):
+    def __init__(self, pos):
+        self.pos = pos
+
+
+class UnrecognizedToken(ParserException):
+    def __init__(self, token, pos):
+        self.token = token
+        self.pos = pos
+
+
+class ExtraToken(ParserException):
+    def __init__(self, token, pos):
+        self.token = token
+        self.pos = pos
 
 
 class PolarRuntimeException(PolarException):
