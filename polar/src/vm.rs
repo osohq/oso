@@ -408,6 +408,7 @@ impl PolarVirtualMachine {
         QueryEvent::Done
     }
 
+    /// Comparison operator that essentially performs partial unification.
     pub fn isa(&mut self, left: &Term, right: &Term) {
         match (&left.value, &right.value) {
             (Value::List(left), Value::List(right)) => {
@@ -440,7 +441,7 @@ impl PolarVirtualMachine {
                     let left = left
                         .fields
                         .get(&k)
-                        .expect("left fields should be a subset of right fields")
+                        .expect("left fields should be a superset of right fields")
                         .clone();
                     self.push_goal(Goal::Isa {
                         left,
@@ -450,11 +451,18 @@ impl PolarVirtualMachine {
             }
 
             (Value::InstanceLiteral(left), _) => {
+                // COMMENT (leina): do we ALWAYS want to convert an instance literal to an external instance here?
+                // Any compelling use case for unifying an instance literal with another instance literal?
+                // I can't think of any...
+
+                // Convert instance literal to an external instance
                 let (exists, external_instance) = self.find_or_make_instance(&left);
                 self.push_goal(Goal::Isa {
                     left: Term::new(Value::ExternalInstance(external_instance.clone())),
                     right: right.clone(),
                 });
+
+                // If the external instance wasn't cached, create it by pushing a `MakeExternal` Goal
                 if !exists {
                     self.push_goal(Goal::MakeExternal {
                         literal: left.clone(),
@@ -514,6 +522,12 @@ impl PolarVirtualMachine {
             }
 
             (Value::ExternalInstance(left), Value::InstanceLiteral(right)) => {
+                // Check fields
+                self.push_goal(Goal::Isa {
+                    left: Term::new(Value::ExternalInstance(left.clone())),
+                    right: Term::new(Value::Dictionary(right.clone().fields)),
+                });
+                // Check class
                 self.push_goal(Goal::IsaExternal {
                     instance_id: left.instance_id,
                     literal: right.clone(),
@@ -1023,6 +1037,7 @@ impl PolarVirtualMachine {
         self.push_goal(Goal::Backtrack);
     }
 
+    /// Determine if `left` is a more specific specializer ("subspecializer") than `right`
     fn is_subspecializer(
         &mut self,
         answer: Symbol,
@@ -1030,6 +1045,7 @@ impl PolarVirtualMachine {
         right: Term,
         arg: Term,
     ) -> Option<QueryEvent> {
+        // If the arg is an instance literal, convert it to an external instance
         if let Value::InstanceLiteral(literal) = arg.value {
             let (exists, external_instance) = self.find_or_make_instance(&literal);
             self.push_goal(Goal::IsSubspecializer {
@@ -1054,6 +1070,17 @@ impl PolarVirtualMachine {
                 Value::InstanceLiteral(right),
             ) => {
                 let call_id = self.new_call_id(&answer);
+                if left.tag == right.tag
+                    && !(left.fields.fields.is_empty() && right.fields.fields.is_empty())
+                {
+                    self.push_goal(Goal::IsSubspecializer {
+                        answer,
+                        left: Term::new(Value::Dictionary(left.fields)),
+                        right: Term::new(Value::Dictionary(right.fields)),
+                        arg: Term::new(Value::ExternalInstance(instance.clone())),
+                    });
+                }
+                // check ordering based on the classes
                 Some(QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     instance_id: instance.instance_id,
@@ -1061,7 +1088,32 @@ impl PolarVirtualMachine {
                     right_class_tag: right.tag,
                 })
             }
-            _ => None,
+            (_, Value::Dictionary(left), Value::Dictionary(right)) => {
+                let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
+                let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
+
+                // The dictionary with more fields is taken as more specific.
+                // Assumption here that the rules have already been filtered for applicability,
+                // and all fields are applicable.
+                // This is a safe assumption because though rules are not currently pre-filtered,
+                // inapplicable rules simply don't execute, and therefore their ordering is
+                // irrelevant. Thus, the behavior is the same as if the rules were pre-filtered.
+                if left_fields.len() != right_fields.len() {
+                    self.bind(
+                        &answer,
+                        &Term::new(Value::Boolean(right_fields.len() < left.fields.len())),
+                    );
+                }
+                None
+            }
+            (_, Value::InstanceLiteral(_), Value::Dictionary(_)) => {
+                self.bind(&answer, &Term::new(Value::Boolean(true)));
+                None
+            }
+            _ => {
+                self.bind(&answer, &Term::new(Value::Boolean(false)));
+                None
+            }
         }
     }
 }
@@ -1667,5 +1719,37 @@ mod tests {
                 hashmap! { sym!("z") => term!(4) },
             ]
         );
+    }
+
+    #[test]
+    fn test_is_subspecializer() {
+        let mut vm = PolarVirtualMachine::default();
+
+        // Test `is_subspecializer` case where:
+        // - arg: `ExternalInstance`
+        // - left: `InstanceLiteral`
+        // - right: `Dictionary`
+        let arg = term!(Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            literal: None,
+        }));
+        let left = term!(value!(InstanceLiteral {
+            tag: sym!("Any"),
+            fields: Dictionary {
+                fields: btreemap! {}
+            }
+        }));
+        let right = term!(Value::Dictionary(Dictionary {
+            fields: btreemap! {sym!("a") => term!("a")},
+        }));
+
+        let answer = vm.kb.gensym("is_subspecializer");
+
+        let event = vm.is_subspecializer(answer.clone(), left, right, arg);
+        if event.is_some() {
+            panic!("Expected None, got {:?}", event);
+        }
+
+        assert_eq!(vm.deref(&term!(Value::Symbol(answer))), term!(value!(true)));
     }
 }

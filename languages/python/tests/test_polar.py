@@ -83,7 +83,7 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.h = x", "x", one=True) is True
 
 
-def test_specializers(polar, qvar, qeval, query):
+def test_class_specializers(polar, qvar, qeval, query):
     class A:
         def a(self):
             return "A"
@@ -117,7 +117,7 @@ def test_specializers(polar, qvar, qeval, query):
     rules = """
     test(A{});
     test(B{});
-    
+
     try(v: B{}, res) := res = 2;
     try(v: C{}, res) := res = 3;
     try(v: A{}, res) := res = 1;
@@ -142,3 +142,151 @@ def test_specializers(polar, qvar, qeval, query):
     assert qvar("try(B{}, x)", "x") == [2, 1]
     assert qvar("try(C{}, x)", "x") == [3, 2, 1]
     assert qvar("try(X{}, x)", "x") == []
+
+
+def test_dict_specializers(polar, qvar, qeval, query):
+    class Animal:
+        def __init__(self, species=None, genus=None, family=None):
+            self.genus = genus
+            self.species = species
+
+    polar.register_python_class(Animal)
+
+    rules = """
+    what_is(animal: {genus: "canis"}, res) := res = "canine";
+    what_is(animal: {species: "canis lupus", genus: "canis"}, res) := res = "wolf";
+    what_is(animal: {species: "canis familiaris", genus: "canis"}, res) := res = "dog";
+    """
+    polar.load_str(rules)
+
+    wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
+    dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
+    canine = 'Animal{genus: "canis", family: "canidae"}'
+
+    assert len(query(f"what_is({wolf}, res)")) == 2
+    assert len(query(f"what_is({dog}, res)")) == 2
+    assert len(query(f"what_is({canine}, res)")) == 1
+
+    assert qvar(f"what_is({wolf}, res)", "res") == ["wolf", "canine"]
+    assert qvar(f"what_is({dog}, res)", "res") == ["dog", "canine"]
+    assert qvar(f"what_is({canine}, res)", "res") == ["canine"]
+
+
+def test_class_field_specializers(polar, qvar, qeval, query):
+    class Animal:
+        def __init__(self, species=None, genus=None, family=None):
+            self.genus = genus
+            self.species = species
+            self.family = family
+
+    polar.register_python_class(Animal)
+
+    rules = """
+    what_is(animal: Animal{}, res) := res = "animal";
+    what_is(animal: Animal{genus: "canis"}, res) := res = "canine";
+    what_is(animal: Animal{family: "canidae"}, res) := res = "canid";
+    what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) := res = "wolf";
+    what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog";
+    what_is(animal: Animal{species: s, genus: "canis"}, res) := res = s;
+    """
+    polar.load_str(rules)
+
+    wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
+    dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
+    canine = 'Animal{genus: "canis", family: "canidae"}'
+    canid = 'Animal{family: "canidae"}'
+    animal = "Animal{}"
+
+    assert len(query(f"what_is({wolf}, res)")) == 5
+    assert len(query(f"what_is({dog}, res)")) == 5
+    assert len(query(f"what_is({canine}, res)")) == 4
+    assert len(query(f"what_is({canid}, res)")) == 2
+    assert len(query(f"what_is({animal}, res)")) == 1
+
+    assert qvar(f"what_is({wolf}, res)", "res") == [
+        "wolf",
+        "canis lupus",
+        "canine",
+        "canid",
+        "animal",
+    ]
+    assert qvar(f"what_is({dog}, res)", "res") == [
+        "dog",
+        "canis familiaris",
+        "canine",
+        "canid",
+        "animal",
+    ]
+    assert qvar(f"what_is({canine}, res)", "res") == [None, "canine", "canid", "animal"]
+    assert qvar(f"what_is({canid}, res)", "res") == ["canid", "animal"]
+    assert qvar(f"what_is({animal}, res)", "res") == ["animal"]
+
+
+def test_specializers_mixed(polar, qvar, qeval, query):
+    class Animal:
+        def __init__(self, species=None, genus=None, family=None):
+            self.genus = genus
+            self.species = species
+            self.family = family
+
+    polar.register_python_class(Animal)
+
+    # load rules
+    rules = """
+    what_is(animal: Animal{}, res) := res = "animal_class";
+    what_is(animal: Animal{genus: "canis"}, res) := res = "canine_class";
+    what_is(animal: {genus: "canis"}, res) := res = "canine_dict";
+    what_is(animal: Animal{family: "canidae"}, res) := res = "canid_class";
+    what_is(animal: {species: "canis lupus", genus: "canis"}, res) := res = "wolf_dict";
+    what_is(animal: {species: "canis familiaris", genus: "canis"}, res) := res = "dog_dict";
+    what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) := res = "wolf_class";
+    what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog_class";
+    """
+    polar.load_str(rules)
+
+    wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
+    dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
+    canine = 'Animal{genus: "canis", family: "canidae"}'
+    canid = 'Animal{family: "canidae"}'
+    animal = "Animal{}"
+
+    wolf_dict = '{species: "canis lupus", genus: "canis", family: "canidae"}'
+    dog_dict = '{species: "canis familiaris", genus: "canis", family: "canidae"}'
+    canine_dict = '{genus: "canis", family: "canidae"}'
+
+    # test number of results
+    assert len(query(f"what_is({wolf}, res)")) == 6
+    assert len(query(f"what_is({dog}, res)")) == 6
+    assert len(query(f"what_is({canine}, res)")) == 4
+    assert len(query(f"what_is({wolf_dict}, res)")) == 2
+    assert len(query(f"what_is({dog_dict}, res)")) == 2
+    assert len(query(f"what_is({canine_dict}, res)")) == 1
+
+    # test rule ordering for instances
+    assert qvar(f"what_is({wolf}, res)", "res") == [
+        "wolf_class",
+        "canine_class",
+        "canid_class",
+        "animal_class",
+        "wolf_dict",
+        "canine_dict",
+    ]
+    assert qvar(f"what_is({dog}, res)", "res") == [
+        "dog_class",
+        "canine_class",
+        "canid_class",
+        "animal_class",
+        "dog_dict",
+        "canine_dict",
+    ]
+    assert qvar(f"what_is({canine}, res)", "res") == [
+        "canine_class",
+        "canid_class",
+        "animal_class",
+        "canine_dict",
+    ]
+
+    # test rule ordering for dicts
+    assert qvar(f"what_is({wolf_dict}, res)", "res") == ["wolf_dict", "canine_dict"]
+    assert qvar(f"what_is({dog_dict}, res)", "res") == ["dog_dict", "canine_dict"]
+    assert qvar(f"what_is({canine_dict}, res)", "res") == ["canine_dict"]
