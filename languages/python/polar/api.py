@@ -5,7 +5,13 @@ from _polar_lib import ffi, lib
 from pathlib import Path
 from types import GeneratorType
 
-from .exceptions import *
+from .exceptions import (
+    InvalidTokenCharacter,
+    Serialization,
+    Unknown,
+    ParserException,
+    PolarRuntimeException,
+)
 
 # These need to be global for now...
 CLASSES = {}
@@ -26,11 +32,41 @@ class Polar:
         lib.polar_free(self.polar)
 
     def _raise_error(self):
-        err = lib.polar_get_error()
-        msg = ffi.string(err).decode()
-        # @TODO: More specific exception. Could be runtime or parse.
-        exception = PolarException(msg)
-        lib.string_free(err)
+        # Raise polar errors as the correct python exception type.
+        # @TODO: Will fill this out when making all the errors better, this
+        # is just a sketch of how the translation works.
+        err_s = lib.polar_get_error()
+        err_json = ffi.string(err_s).decode()
+        error = json.loads(err_json)
+
+        # All errors should be mapped to python exceptions.
+        # Raise Unknown if we haven't mapped the error.
+        exception = Unknown(f"Unknown Internal Error: {err_json}")
+
+        kind = [*error][0]
+        data = error[kind]
+
+        if kind == "Parse":
+            parse_err_kind = [*error][0]
+            parse_err_data = error[kind]
+            if parse_err_kind == "InvalidTokenCharacter":
+                c = parse_err_data["c"]
+                loc = parse_err_data["loc"]
+                exception = InvalidTokenCharacter(c, loc)
+            # @TODO: etc...
+            else:
+                exception = ParserException(f"Parser Exception: {json.dumps(data)}")
+
+        elif kind == "Runtime":
+            # @TODO: Runtime exception types.
+            exception = PolarRuntimeException(json.dumps(data))
+
+        elif kind == "Operational":
+            if data == "Unknown":
+                # This happens on panics from rust.
+                exception = Unknown("Unknown Internal Error: See console.")
+
+        lib.string_free(err_s)
         raise exception
 
     def register_python_class(self, cls, from_polar=None):

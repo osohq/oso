@@ -65,8 +65,9 @@ pub extern "C" fn polar_get_error() -> *const c_char {
     let result = catch_unwind(|| {
         let err = LAST_ERROR.with(|prev| prev.borrow_mut().take());
         if let Some(e) = err {
-            CString::new(e.to_string())
-                .expect("Error message should not contain any 0 bytes")
+            let error_json = serde_json::to_string(&e).unwrap();
+            CString::new(error_json)
+                .expect("JSON should not contain any 0 bytes")
                 .into_raw()
         } else {
             null()
@@ -75,7 +76,7 @@ pub extern "C" fn polar_get_error() -> *const c_char {
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             null()
         }
     }
@@ -87,7 +88,7 @@ pub extern "C" fn polar_new() -> *mut Polar {
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             null_mut()
         }
     }
@@ -109,7 +110,7 @@ pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) -> i
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             0
         }
     }
@@ -127,7 +128,7 @@ pub extern "C" fn polar_new_query_from_term(
         match term {
             Ok(term) => box_ptr!(polar.new_query_from_term(term)),
             Err(e) => {
-                set_error(types::PolarError::Serialization(e.to_string()));
+                set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
                 null_mut()
             }
         }
@@ -135,7 +136,7 @@ pub extern "C" fn polar_new_query_from_term(
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             null_mut()
         }
     }
@@ -158,7 +159,7 @@ pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_cha
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             null_mut()
         }
     }
@@ -186,7 +187,7 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             null()
         }
     }
@@ -209,7 +210,7 @@ pub extern "C" fn polar_external_call_result(
             match t {
                 Ok(t) => term = Some(t),
                 Err(e) => {
-                    set_error(types::PolarError::Serialization(e.to_string()));
+                    set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
                     return 0;
                 }
             }
@@ -220,7 +221,7 @@ pub extern "C" fn polar_external_call_result(
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             0
         }
     }
@@ -243,7 +244,7 @@ pub extern "C" fn polar_external_question_result(
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             0
         }
     }
@@ -258,7 +259,7 @@ pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar) -> u64 {
     match result {
         Ok(r) => r,
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
             0
         }
     }
@@ -276,7 +277,7 @@ pub extern "C" fn string_free(s: *mut c_char) {
     match result {
         Ok(_) => (),
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
         }
     }
 }
@@ -291,7 +292,7 @@ pub extern "C" fn polar_free(polar: *mut Polar) {
     match result {
         Ok(_) => (),
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
         }
     }
 }
@@ -306,7 +307,7 @@ pub extern "C" fn query_free(query: *mut Query) {
     match result {
         Ok(_) => (),
         Err(_) => {
-            set_error(types::PolarError::Unknown);
+            set_error(types::OperationalError::Unknown.into());
         }
     }
 }

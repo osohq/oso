@@ -9,13 +9,47 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-// @TODO: Do some work to make these errors nice, really rough right now.
-#[derive(Debug)]
-pub enum PolarError {
-    Parse(String),
-    Serialization(String),
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ParseError {
+    InvalidTokenCharacter { c: char, loc: usize }, //@TODO: Line and column instead of loc.
+}
+
+// @TODO: Information about the context of the error.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RuntimeError {
+    Serialization { msg: String },
+    UnboundVariable { sym: Symbol },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum OperationalError {
     Unimplemented(String),
-    Unknown, // Type we return if we panic, the trace gets printed to stderr by default.
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PolarError {
+    Parse(ParseError),
+    Runtime(RuntimeError),
+    Operational(OperationalError),
+}
+
+impl From<ParseError> for PolarError {
+    fn from(err: ParseError) -> PolarError {
+        PolarError::Parse(err)
+    }
+}
+
+impl From<RuntimeError> for PolarError {
+    fn from(err: RuntimeError) -> PolarError {
+        PolarError::Runtime(err)
+    }
+}
+
+impl From<OperationalError> for PolarError {
+    fn from(err: OperationalError) -> PolarError {
+        PolarError::Operational(err)
+    }
 }
 
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
@@ -24,12 +58,13 @@ impl std::error::Error for PolarError {}
 
 impl fmt::Display for PolarError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            PolarError::Parse(s) | PolarError::Serialization(s) | PolarError::Unimplemented(s) => {
-                write!(f, "{}", s)
-            }
-            PolarError::Unknown => write!(f, "panic!"),
-        }
+        write!(f, "todo")
+        //match self {
+        // PolarError::Parse(s) | PolarError::Serialization(s) | PolarError::Unimplemented(s) => {
+        //     write!(f, "{}", s)
+        // }
+        // PolarError::Unknown => write!(f, "panic!"),
+        //}
     }
 }
 
@@ -476,6 +511,9 @@ mod tests {
         let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new(Value::Dictionary(Dictionary { fields }));
-        eprintln!("{}", serde_json::to_string(&dict).unwrap())
+        eprintln!("{}", serde_json::to_string(&dict).unwrap());
+        let e = ParseError::InvalidTokenCharacter { c: 'x', loc: 99 };
+        let er: PolarError = e.into();
+        eprintln!("{}", serde_json::to_string(&er).unwrap());
     }
 }
