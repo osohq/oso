@@ -878,6 +878,16 @@ impl PolarVirtualMachine {
                 }
             }
 
+            // external instances can unify if they are exactly the same type, i.e. have
+            // the same instance ID
+            // this is necessary for the case that an instance appears multiple times
+            // in the same rule head, for example
+            (Value::ExternalInstance(left), Value::ExternalInstance(right)) => {
+                if left.instance_id != right.instance_id {
+                    self.push_goal(Goal::Backtrack)
+                }
+            }
+
             // Anything else fails.
             (_, _) => self.push_goal(Goal::Backtrack),
         }

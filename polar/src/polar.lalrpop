@@ -317,7 +317,16 @@ Parameter: Parameter = {
             Parameter{name: None, specializer: Some(specializer)}
         }
     },
-    <name:Name> ":" <specializer:Exp5> => {
+    // parenthesized specializers can be arbitrary expressions
+    <name:Name> ":" "(" <specializer:Exp> ")" => {
+        Parameter {
+            name: Some(name),
+            specializer: Some(specializer),
+        }
+    },
+    // unparenthesized specializers can only be terms
+    // and symbols are interpreted as class names
+    <name:Name> ":" <specializer:Term> => {
         let offset = specializer.offset;
         if let Term{value: Value::Symbol(class_name), ..} = specializer {
             let fields = BTreeMap::new();

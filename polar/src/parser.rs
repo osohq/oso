@@ -209,6 +209,18 @@ mod tests {
             rule,
             rule!("f", ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
         );
+
+        // parenthesized => parse as a symbol
+        let rule = polar::RuleParser::new()
+            .parse(Lexer::new(r#"f(x: (y));"#))
+            .unwrap();
+        assert_eq!(rule, rule!("f", ["x"; value!(sym!("y"))]));
+
+        // not parenthesized => parse as a type
+        let rule = polar::RuleParser::new()
+            .parse(Lexer::new(r#"f(x: y);"#))
+            .unwrap();
+        assert_eq!(rule, rule!("f", ["x"; value!(instance!("y"))]));
     }
 
     #[test]
