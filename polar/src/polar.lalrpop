@@ -47,6 +47,7 @@ extern {
         "|" => lexer::Token::Pipe,      // |
         ";" => lexer::Token::SemiColon, // ;
         ":=" => lexer::Token::Define,   // :=
+        "?=" => lexer::Token::Query,    // ?=
     }
 }
 

@@ -49,6 +49,8 @@ pub enum Token {
     Pipe,      // |
     SemiColon, // ;
     Define,    // :=
+    Query,     // ?=
+    Invalid,   // ?
 }
 
 impl<'input> Lexer<'input> {
@@ -217,6 +219,7 @@ impl<'input> Iterator for Lexer<'input> {
                 '<' => self.scan_op_two(i, Token::Lt, '=', Token::Leq),
                 '>' => self.scan_op_two(i, Token::Gt, '=', Token::Geq),
                 '!' => self.scan_op_two(i, Token::Not, '=', Token::Neq),
+                '?' => self.scan_op_two(i, Token::Invalid, '=', Token::Query),
                 '|' => self.scan_op(i, Token::Pipe),
                 ',' => self.scan_op(i, Token::Comma),
                 '[' => self.scan_op(i, Token::LB),

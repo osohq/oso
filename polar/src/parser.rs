@@ -28,9 +28,8 @@ pub fn parse_term(src: &str) -> PolarResult<Term> {
 }
 
 pub fn parse_lines(src: &str) -> PolarResult<Vec<Line>> {
-    LINES_PARSER
-        .parse(src)
-        .map_err(|e| PolarError::Parse(e.to_string()))
+    Ok(LINES_PARSER.parse(Lexer::new(src)).unwrap())
+    //.map_err(|e| PolarError::Parse(e.to_string()))
 }
 
 pub fn parse_query(src: &str) -> PolarResult<Term> {
