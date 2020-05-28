@@ -197,8 +197,8 @@ def test_external_classes(tell, qeval, qvar, externals):
     assert qeval('Bar{}.foo = "Bar!"')
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Foo not registered.")
-def test_unify_class_fields(tell, qeval, qvar):
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa doesn't check fields.")
+def test_unify_class_fields(tell, qeval, qvar, externals):
     tell("check(name, Foo{name: name})")
 
     assert qeval('check("sam", Foo{name: "sam"})')
