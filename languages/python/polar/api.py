@@ -1,6 +1,7 @@
 import json
 
 from _polar_lib import ffi, lib
+from .extras import Http, Jwt, PathMapper
 
 from collections.abc import Iterable
 from pathlib import Path
@@ -265,18 +266,6 @@ class Polar:
             return {k: self.to_python(v) for k, v in value[tag]["fields"].items()}
         elif tag == "ExternalInstance":
             return self._from_external_id(value[tag]["instance_id"])
-        elif tag == "InstanceLiteral":
-            # For instance literals, return the class type?
-            cls_name = value[tag]["tag"]
-            if cls_name in self.classes:
-                return self.classes[cls_name]
-            else:
-                instance_id = lib.polar_get_external_id(self.polar)
-                if instance_id == 0:
-                    self._raise_error()
-                id_to_instance[instance_id] = python_obj
-                instance_to_id[python_obj] = instance_id
-            return instance_id
         else:
             raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
@@ -526,14 +515,6 @@ class Polar:
         self.id_to_instance = {}
 
 
-class Http:
-    """A resource accessed via HTTP."""
-
-    def __init__(self, path="", query={}, hostname=None):
-        raise NotImplementedError()
-
-    def __repr__(self):
-        raise NotImplementedError()
-
-    def __str__(self):
-        raise NotImplementedError()
+register_python_class(Http)
+register_python_class(Jwt)
+register_python_class(PathMapper)

@@ -11,9 +11,9 @@ here = path.abspath(path.dirname(__file__))
 #     long_description = ""
 
 setup(
-    name="polar",  # Required
-    version="0.0.0",  # Required
-    description="polar python package",  # Optional
+    name="oso",  # Required
+    version="0.1.0rc0",  # Required
+    description="oso python package",  # Optional
     author="oso",  # Optional
     classifiers=[  # Optional
         "Development Status :: 3 - Alpha",
@@ -21,11 +21,11 @@ setup(
     ],
     packages=find_packages(),  # Required
     python_requires=">=3.6",
-    setup_requires=["cffi>=1.0.0"],
+    setup_requires=["cffi>=1.0.0", "wheel"],
     cffi_modules=["polar/build.py:ffibuilder"],
     install_requires=["cffi>=1.0.0"],
     extras_require={},  # Optional
-    package_data={"polar": ["policies/*.pol", "policies/*.polar"]},  # Optional
+    # package_data={"polar": ["policies/*.pol", "policies/*.polar"]},  # Optional
     entry_points={"console_scripts": [],},  # Optional
     project_urls={},  # Optional
 )
