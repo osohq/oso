@@ -126,13 +126,14 @@ pub extern "C" fn polar_load(
     load: *mut Load,
     query: *mut *mut Query,
 ) -> i32 {
-    // TODO (dhatch): Null check query.
-    if query.is_null() {
+    let mut query = if let Some(not_null) = std::ptr::NonNull::new(query) {
+        not_null
+    } else {
         set_error(
             types::ParameterError(String::from("Query out parameter cannot be null.")).into(),
         );
         return 1;
-    }
+    };
 
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };
@@ -149,12 +150,12 @@ pub extern "C" fn polar_load(
 
     match result {
         Ok((ret_query, ret_code)) => {
-            unsafe { *query = ret_query };
+            unsafe { *query.as_mut() = ret_query };
             ret_code
         }
         Err(_) => {
             set_error(types::OperationalError::Unknown.into());
-            unsafe { *query = null_mut() };
+            unsafe { *query.as_mut() = null_mut() };
             1
         }
     }
