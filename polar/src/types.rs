@@ -229,7 +229,7 @@ pub struct Operation {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Value {
-    Integer(u64),
+    Integer(i64),
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),

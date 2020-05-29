@@ -3,9 +3,12 @@ use polar::types::*;
 use proptest::prelude::*;
 
 prop_compose! {
-    fn arb_symbol()(name in r"[\w&&[^\d]]\w*") -> Symbol {
+    fn arb_symbol()(name in r"[a-zA-Z_]+") -> Symbol {
         Symbol(name)
     }
+    // fn arb_symbol()(name in r"[\w&&[^\d]]\w*") -> Symbol {
+    //     Symbol(name)
+    // }
 }
 
 fn arbitrary_term() -> impl Strategy<Value = Term> {
@@ -30,12 +33,12 @@ fn arbitrary_term() -> impl Strategy<Value = Term> {
     ];
 
     let leaf = prop_oneof![
-        any::<u64>().prop_map(Value::Integer),
-        r#"(\\.|[^"\\])*"#.prop_map(Value::String), // TODO: better string test
+        // any::<i64>().prop_map(Value::Integer),
+        r#"(\\.|[^"\\\n])*"#.prop_map(Value::String), // TODO: better string test
         arb_symbol().prop_map(Value::Symbol),
         any::<bool>().prop_map(Value::Boolean),
-        any::<u64>()
-            .prop_map(|instance_id| Value::ExternalInstance(ExternalInstance { instance_id })),
+        // any::<u64>()
+        //     .prop_map(|instance_id| Value::ExternalInstance(ExternalInstance { instance_id })),
     ]
     .prop_map(Term::new);
     let term = leaf.prop_recursive(
@@ -47,11 +50,11 @@ fn arbitrary_term() -> impl Strategy<Value = Term> {
                 prop::collection::vec(inner.clone(), 0..3).prop_map(Value::List),
                 (arb_symbol(), prop::collection::vec(inner.clone(), 0..3))
                     .prop_map(|(name, args)| { Value::Call(Predicate { name, args }) }),
-                prop::collection::hash_map(arb_symbol(), inner.clone(), 0..3)
+                prop::collection::btree_map(arb_symbol(), inner.clone(), 0..3)
                     .prop_map(|fields| Value::Dictionary(Dictionary { fields })),
                 (
                     arb_symbol(),
-                    prop::collection::hash_map(arb_symbol(), inner.clone(), 0..3)
+                    prop::collection::btree_map(arb_symbol(), inner.clone(), 0..3)
                 )
                     .prop_map(|(tag, fields)| {
                         Value::InstanceLiteral(InstanceLiteral {
@@ -59,6 +62,20 @@ fn arbitrary_term() -> impl Strategy<Value = Term> {
                             fields: Dictionary { fields },
                         })
                     }),
+                // (
+                //     any::<u64>(),
+                //     arb_symbol(),
+                //     prop::collection::btree_map(arb_symbol(), inner.clone(), 0..3)
+                // )
+                //     .prop_map(|(id, tag, fields)| Value::ExternalInstance(
+                //         ExternalInstance {
+                //             instance_id: id,
+                //             literal: Some(InstanceLiteral {
+                //                 tag,
+                //                 fields: Dictionary { fields },
+                //             }),
+                //         }
+                //     )),
             ]
             .prop_map(Term::new)
         },
@@ -75,6 +92,6 @@ proptest! {
     #[test]
     fn test_parse_term(t in arbitrary_term()) {
         let s = t.to_polar();
-        polar::parse_query(&s).expect(&format!("Failed to parse: {}", s));
+        polar::parser::parse_query(&s).expect(&format!("Failed to parse: {}", s));
     }
 }
