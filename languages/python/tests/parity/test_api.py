@@ -122,6 +122,7 @@ def test_querystring_resource_map(polar, load_policy):
         Query(name="allow", args=[Actor(name="sam"), "what", Http(path="/widget/12")])
     ).success
 
+
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Resource mapping not implemented.")
 def test_resource_mapping(polar, load_policy):
     try:
@@ -277,30 +278,6 @@ def test_clear(polar, load_policy):
     assert not polar.query(
         Query(name="allow", args=[actor, "delete", resource])
     ).success
-
-
-@pytest.mark.skip(
-    reason="Used to determine behavior, unnecessary for now because we aren't exposing `isa()`"
-)
-def test_isa_api(polar, tell):
-    polar.clear()
-    polar_tell("isa(x, y) := isa(x, y);")
-    polar_tell("isa_widget(w, id, name) := isa(w, Widget{id: id, name: name});")
-    polar_tell("widget_isa(w, id, name) := isa(Widget{id: id, name: name}, x);")
-
-    doodad = DooDad(id="1", name="bob")
-    widget = Widget(id="2", name="joe")
-    widget2 = Widget(id="3", name="james")
-
-    assert polar.query(Query(name="isa", args=[doodad, widget])).success
-    assert not polar.query(
-        Query(name="isa_widget", args=[widget, "3", "james"])
-    ).success
-    assert polar.query(Query(name="widget_isa", args=[widget])).success
-    assert polar.query(Query(name="isa_widget", args=[widget, "2", "joe"])).success
-
-    # this shouldn't succeed because they have different fields, but it does
-    assert polar.query(Query(name="isa", args=[widget, widget2])).success
 
 
 if __name__ == "__main__":
