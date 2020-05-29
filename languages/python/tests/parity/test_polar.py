@@ -155,7 +155,10 @@ def test_defining_things(tell, qeval):
         assert qeval(f)
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Does not parse.")
+@pytest.mark.xfail(
+    EXPECT_XFAIL_PASS,
+    reason="Fails due to variable syntax for fields attr(d, k, d.(k)).",
+)
 def test_dictionaries(tell, qeval, qvar):
     tell('dict({hello: "world", foo: "bar"})')
     tell('dict({hello: {this: {is: "nested"}}})')
@@ -224,7 +227,7 @@ def test_keys_are_confusing(tell, qeval, qvar, externals):
     assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 2}")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa not yet implemented")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa not yet working")
 def test_isa(qeval, qvar, externals):
     assert qeval("isa({}, {})")
     assert qeval("isa({x: 1}, {})")
@@ -252,7 +255,7 @@ def test_isa(qeval, qvar, externals):
     assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa({}, {}) fails on first line")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="this is crazy")
 def test_nested_isa(qeval, qvar, externals):
     assert qeval(
         "isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})"
@@ -260,11 +263,7 @@ def test_nested_isa(qeval, qvar, externals):
     assert not qeval("isa(MyClass{x: MyClass{x: 1}, y: 2}, MyClass{x: MyClass{y: 2}})")
 
 
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS,
-    reason="Field unification on instances fails without an exception",
-)
-def test_field_unification(qeval, externals):
+def test_field_unification(qeval):
     # test dictionary field unification
     assert qeval("{} = {}")
     assert qeval("{x: 1} = {x: 1}")
@@ -273,6 +272,12 @@ def test_field_unification(qeval, externals):
     assert not qeval("{x: 1, y: 2} = {y: 1, x: 2}")
     assert qeval("{x: 1, y: 2} = {y: 2, x: 1}")
 
+
+@pytest.mark.xfail(
+    EXPECT_XFAIL_PASS,
+    reason="Field unification attempt on external should fail with an error.",
+)
+def test_field_unification_external(qeval, externals):
     # test instance field unification (not allowed for external instances)
     with pytest.raises(PolarRuntimeException):
         assert qeval("MyClass{x: 1, y: 2} = MyClass{y: 2, x: 1}")
@@ -284,7 +289,7 @@ def test_field_unification(qeval, externals):
         assert not qeval("MyClass{x: 1, y: 2} = YourClass{y: 2, x: 1}")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Not implemented yet.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Internal classes not implemented yet.")
 def test_class_definitions(tell, qeval, load_file):
     # Contains test queries.
     load_file(Path(__file__).parent / "policies/classes.pol")
@@ -343,7 +348,7 @@ def test_booleans(qeval):
     assert not qeval("true = false")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="panics.")
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="panics, not implemented.")
 def test_comparisons(tell, qeval, qvar, query):
     assert qeval("3 == 3")
     assert qeval("3 != 2")
