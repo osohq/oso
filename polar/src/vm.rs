@@ -614,22 +614,28 @@ impl PolarVirtualMachine {
             // Sort applicable rules by specificity.
             // Create a choice over the applicable rules.
             {
-                match self.kb.rules.get(&predicate.name) {
-                    None => self.push_goal(Goal::Backtrack),
-                    Some(generic_rule) => {
-                        let generic_rule = generic_rule.clone();
-                        assert_eq!(generic_rule.name, predicate.name);
-                        self.push_goal(Goal::SortRules {
-                            rules: generic_rule
-                                .rules
-                                .into_iter()
-                                .filter(|r| r.params.len() == predicate.args.len())
-                                .collect(),
-                            args: predicate.args.clone(),
-                            outer: 1,
-                            inner: 1,
-                        });
-                    }
+                match &predicate.name.0[..] {
+                    // Built-in predicates.
+                    "cut" => todo!(),
+
+                    // User-defined predicates.
+                    _ => match self.kb.rules.get(&predicate.name) {
+                        None => self.push_goal(Goal::Backtrack),
+                        Some(generic_rule) => {
+                            let generic_rule = generic_rule.clone();
+                            assert_eq!(generic_rule.name, predicate.name);
+                            self.push_goal(Goal::SortRules {
+                                rules: generic_rule
+                                    .rules
+                                    .into_iter()
+                                    .filter(|r| r.params.len() == predicate.args.len())
+                                    .collect(),
+                                args: predicate.args.clone(),
+                                outer: 1,
+                                inner: 1,
+                            });
+                        }
+                    },
                 }
             }
             Value::Expression(Operation { operator, args }) => match operator {
