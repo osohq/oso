@@ -208,7 +208,13 @@ impl PolarVirtualMachine {
                     inner,
                     args,
                 } => self.sort_rules(rules, args, outer, inner),
-                Goal::Unify { left, right } => self.unify(&left, &right),
+                Goal::Unify { left, right } => match self.unify(&left, &right) {
+                    // Unify can return an error.
+                    Err(err) => {
+                        return Err(err)
+                    },
+                    Ok(()) => ()
+                },
             }
             // don't break when the goal stack is empty or a result wont
             // be returned (this logic seems flaky)
@@ -776,7 +782,7 @@ impl PolarVirtualMachine {
     ///  - Successful unification => bind zero or more variables to values
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
-    fn unify(&mut self, left: &Term, right: &Term) {
+    fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         // Unify a symbol `left` with a term `right`.
         // This is sort of a "sub-goal" of `Unify`.
         let mut unify_var = |left: &Symbol, right: &Term| {
@@ -839,7 +845,8 @@ impl PolarVirtualMachine {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if left_fields != right_fields {
-                    return self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack);
+                    return Ok(());
                 }
 
                 // For each value, push a unify goal.
@@ -899,15 +906,23 @@ impl PolarVirtualMachine {
             // the same instance ID
             // this is necessary for the case that an instance appears multiple times
             // in the same rule head, for example
-            (Value::ExternalInstance(left), Value::ExternalInstance(right)) => {
-                if left.instance_id != right.instance_id {
-                    self.push_goal(Goal::Backtrack)
-                }
+            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
+                return Err((RuntimeError::TypeError { msg: String::from("Cannot unify two external instances.") }).into());
+            }
+
+            (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {
+                return Err((RuntimeError::TypeError { msg: String::from("Cannot unify two instance literals.") }).into());
+            }
+
+            (Value::InstanceLiteral(_), Value::ExternalInstance(_)) | (Value::ExternalInstance(_), Value::InstanceLiteral(_)) => {
+                return Err((RuntimeError::TypeError { msg: String::from("Cannot unify instance literal with external instance.") }).into());
             }
 
             // Anything else fails.
             (_, _) => self.push_goal(Goal::Backtrack),
         }
+
+        Ok(())
     }
 
     /// Sort a list of rules with respect to a list of arguments

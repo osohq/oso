@@ -273,10 +273,6 @@ def test_field_unification(qeval):
     assert qeval("{x: 1, y: 2} = {y: 2, x: 1}")
 
 
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS,
-    reason="Field unification attempt on external should fail with an error.",
-)
 def test_field_unification_external(qeval, externals):
     # test instance field unification (not allowed for external instances)
     with pytest.raises(PolarRuntimeException):
