@@ -26,6 +26,7 @@ pub enum ParseError {
 pub enum RuntimeError {
     Serialization { msg: String },
     UnboundVariable { sym: Symbol },
+    TypeError { msg: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
