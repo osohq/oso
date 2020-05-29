@@ -33,10 +33,16 @@ def test_data_conversions(polar, qvar):
 
 def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
+    # Loading the same file twice doesn't mess stuff up.
+    polar.load(Path(__file__).parent / "test_file.polar")
     polar.load(Path(__file__).parent / "test_file.polar")
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
+    polar.clear()
+    polar.load(Path(__file__).parent / "test_file.polar")
+    assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
+    assert qvar("f(x)", "x") == [1, 2, 3]
 
 def test_external(polar, qvar):
     class Bar:
