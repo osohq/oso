@@ -208,11 +208,7 @@ impl PolarVirtualMachine {
                     inner,
                     args,
                 } => self.sort_rules(rules, args, outer, inner),
-                Goal::Unify { left, right } => match self.unify(&left, &right) {
-                    // Unify can return an error.
-                    Err(err) => return Err(err),
-                    Ok(()) => (),
-                },
+                Goal::Unify { left, right } => self.unify(&left, &right)?,
             }
             // don't break when the goal stack is empty or a result wont
             // be returned (this logic seems flaky)
