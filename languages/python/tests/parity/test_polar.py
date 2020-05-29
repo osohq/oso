@@ -166,10 +166,8 @@ def test_dictionaries(tell, qeval, qvar):
         'attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})'
     )
 
-    tell('lookup(dict, result) := result = dict.a.b.c;')
-    assert qeval(
-        'lookup({a: {b: {c: "nested"}}}, "nested")'
-    )
+    tell("lookup(dict, result) := result = dict.a.b.c;")
+    assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
 
     tell('user({name: "steve", job: "programmer", state: "NY"})')
     tell('user({name: "alex", job: "programmer", state: "CO"})')
@@ -182,8 +180,7 @@ def test_dictionaries(tell, qeval, qvar):
 
 
 @pytest.mark.xfail(
-    EXPECT_XFAIL_PASS,
-    reason="Nested lookups don't work.",
+    EXPECT_XFAIL_PASS, reason="Nested lookups don't work.",
 )
 def test_complex_nested_dictionaries(tell, qvar, qeval):
     tell('dict({hello: "world", foo: "bar"})')
