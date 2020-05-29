@@ -69,7 +69,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    needs: [docs, package]
+    needs: [docs, package_linux, package_osx]
     steps:
       - name: Set version output
         id: version
