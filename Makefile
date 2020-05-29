@@ -20,3 +20,4 @@ python-test: python-build
 test_compat:
 	pip install --force-reinstall $(PYTHON_POLAR_WHEEL)[dev]
 	EXPECT_XFAIL_PASS=1 pytest -rf languages/python/tests/parity
+
