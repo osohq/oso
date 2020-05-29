@@ -166,6 +166,12 @@ DotOp: Term = {
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
+    <start:@L> <head:Callable> "." <call_loc:@L> "(" <name:Name> ")" => {
+        let call_term = Term{id: 0, offset: call_loc, value: Value::Symbol(name)};
+        let args = vec![head, call_term];
+        let op = Operation{operator: Operator::Dot, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    }
 }
 
 // .
