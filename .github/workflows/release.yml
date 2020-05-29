@@ -33,7 +33,7 @@ jobs:
           name: wheel
           path: languages/python/dist
   package_osx:
-    runs-on: macos-10.15
+    runs-on: macos-latest
     #needs: version
     steps:
       - uses: actions/setup-python@v1
