@@ -123,8 +123,8 @@ def test_querystring_resource_map(polar, load_policy):
     ).success
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Resource mapping not implemented.")
 def test_resource_mapping(polar, load_policy):
+    # from flask import Flask, request, Response, g
     try:
         from flask import Flask, request, Response, g
     except ImportError:
