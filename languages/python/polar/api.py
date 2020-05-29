@@ -266,8 +266,14 @@ class Polar:
             return {k: self.to_python(v) for k, v in value[tag]["fields"].items()}
         elif tag == "ExternalInstance":
             return self._from_external_id(value[tag]["instance_id"])
-        else:
-            raise PolarRuntimeException(f"cannot convert: {value} to Python")
+        elif tag == "InstanceLiteral":
+            # we really don't want to do this
+            # For instance literals, return the class type?
+            cls_name = value[tag]["tag"]
+            if cls_name in self.classes:
+                # this is a cop out
+                return self.classes[cls_name]
+        raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
     def to_polar(self, v):
         """ Convert python values to polar terms """
@@ -353,8 +359,14 @@ class Polar:
                         try:
                             attr = getattr(instance, attribute)
                         except AttributeError:
+                            result = lib.polar_external_call_result(
+                                self.polar, query, call_id, ffi.NULL
+                            )
+                            if result == 0:
+                                self._raise_error()
+                            continue
                             # @TODO: polar line numbers in errors once polar errors are better.
-                            raise PolarRuntimeException(f"Error calling {attribute}")
+                            # raise PolarRuntimeException(f"Error calling {attribute}")
 
                         if callable(attr):
                             # If it's a function call it with the args.
