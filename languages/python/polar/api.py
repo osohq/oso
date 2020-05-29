@@ -301,6 +301,7 @@ class Polar:
         return term
 
     def _do_query(self, q):
+        import pdb; pdb.set_trace()
         """Method which performs the query loop over an already contructed query"""
         with CleanupQuery(q) as query:
             while True:

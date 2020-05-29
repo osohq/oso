@@ -184,23 +184,18 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy):
 
 
 ## Instance Caching tests (move these somewhere else eventually)
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS, reason="Polar object has no attribute 'to_polar'."
-)
 def test_instance_round_trip(polar, query, qvar):
     # direct round trip
     user = Actor("sam")
     assert polar.to_python(polar.to_polar(user)) is user
 
-    # test round trip through kb query
-    env = query('Actor{name:"sam"} = returned_user')[0]
-    assert polar.to_python(env["returned_user"]).__dict__ == user.__dict__
 
-    # test instance round trip through api query
-    returned_user = polar.to_python(
-        qvar(Query(name="=", args=[user, "returned_user"]), "returned_user")[0]
-    )
-    assert returned_user.__dict__ is user.__dict__
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Instance literals are not instantiated for unify right now.")
+def test_instance_initialization(polar, query, qvar):
+    # test round trip through kb query
+    user = Actor("sam")
+    env = query('Actor{name:"sam"} = returned_user')[0]
+    assert env["returned_user"] == user
 
 
 def test_instance_from_external_call(polar, load_policy):
