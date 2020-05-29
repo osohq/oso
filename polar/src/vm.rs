@@ -191,7 +191,7 @@ impl PolarVirtualMachine {
                     call_id,
                     instance_id,
                     field,
-                } => return Ok(self.lookup_external(call_id, instance_id, field)),
+                } => return self.lookup_external(call_id, instance_id, field),
                 Goal::IsaExternal {
                     instance_id,
                     literal,
@@ -570,34 +570,41 @@ impl PolarVirtualMachine {
     /// Return an external call event to look up a field's value
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
-    pub fn lookup_external(&mut self, call_id: u64, instance_id: u64, field: Term) -> QueryEvent {
-        assert!(
-            matches!(field.value, Value::Call(_)),
-            "call must be a predicate"
-        );
-        let mut goals = vec![]; // first goal will be the lookup external
-        let field = self.instantiate_externals(&field, &mut goals);
+    ///
+    /// ## Invariants
+    ///
+    /// The `field` term _must_ have been instantiated with
+    /// `instantiate_externals` before this method is called.
+    pub fn lookup_external(
+        &mut self,
+        call_id: u64,
+        instance_id: u64,
+        field: Term,
+    ) -> PolarResult<QueryEvent> {
         let (field_name, args) = match &field.value {
             Value::Call(Predicate { name, args }) => (
                 name.clone(),
                 args.iter().map(|arg| self.deref(arg)).collect(),
             ),
-            _ => panic!("call must be a predicate"),
+            _ => {
+                return Err((RuntimeError::TypeError {
+                    msg: "invalid field used for a lookup".to_string(),
+                })
+                .into())
+            }
         };
-        goals.push(Goal::LookupExternal {
+        self.push_choice(vec![vec![Goal::LookupExternal {
             call_id,
             instance_id,
             field,
-        });
+        }]]);
 
-        self.push_choice(vec![goals]);
-
-        QueryEvent::ExternalCall {
+        Ok(QueryEvent::ExternalCall {
             call_id,
             instance_id,
             attribute: field_name,
             args,
-        }
+        })
     }
 
     pub fn isa_external(&mut self, instance_id: u64, literal: InstanceLiteral) -> QueryEvent {
@@ -682,9 +689,9 @@ impl PolarVirtualMachine {
                             // Check if there's an external instance for this.
                             // If there is, use it, if not push a make external then use it.
                             let mut goals = vec![];
-                            let external_instance =
-                                self.instantiate_externals(&derefed_object, &mut goals);
-                            args[0] = external_instance;
+                            // instantiate the instance and the predicate lookup
+                            args[1] = self.instantiate_externals(&field, &mut goals);
+                            args[0] = self.instantiate_externals(&derefed_object, &mut goals);
                             goals.push(Goal::Query {
                                 term: Term::new(Value::Expression(Operation {
                                     operator: Operator::Dot,

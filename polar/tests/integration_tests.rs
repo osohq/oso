@@ -523,13 +523,17 @@ fn test_externals_instantiated() {
     let mock_foo = |_, args: Vec<Term>| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
-        assert!(matches!(&args[0].value,
+        assert!(
+            matches!(&args[0].value,
                 Value::ExternalInstance(ExternalInstance {
                     literal: Some(InstanceLiteral {
                         ref tag, ref fields
                     }),
                     ..
-                }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}));
+                }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
+            "expected external instance Bar {{ x: 1 }}, found: {:?}",
+            args[0].value
+        );
         foo_lookups.pop()
     };
     let query = polar.new_query("f(1, Foo{})").unwrap();
