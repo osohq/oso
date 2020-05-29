@@ -691,13 +691,10 @@ impl PolarVirtualMachine {
 
                     let derefed_object = self.deref(&object);
 
-<<<<<<< HEAD
-                    match derefed_object.value {
-=======
                     // check if field is a variable
-                    let field = match &field.value {
+                    let derefed_field = match field.value {
                         Value::Symbol(_) => {
-                            let field_name = self.deref(&field);
+                            let field_name = self.deref(field);
                             let symbol = match &field_name.value {
                                 Value::String(name) => Symbol(name.clone()),
                                 _ => todo!(
@@ -705,16 +702,17 @@ impl PolarVirtualMachine {
                                     &field_name.value
                                 ),
                             };
-                            Term::new(Value::Call(Predicate {
+                            Some(Term::new(Value::Call(Predicate {
                                 name: symbol,
                                 args: vec![],
-                            }))
+                            })))
                         }
-                        _ => field,
+                        _ => None,
                     };
 
+                    let field = &derefed_field.unwrap_or(field.clone());
+
                     match self.deref(&object).value {
->>>>>>> 4787f2e... dictionary lookups with variables
                         Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
                             dict,
                             field: field_name(&field),
@@ -739,6 +737,7 @@ impl PolarVirtualMachine {
                         }
                         Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
                             let value = value
+                                .clone()
                                 .value
                                 .symbol()
                                 .map_err(|e| panic!("bad lookup value: {}", e.to_polar()))
