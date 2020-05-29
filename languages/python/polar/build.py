@@ -27,7 +27,7 @@ ffibuilder.set_source(
     libraries=["polar"],
 )
 
-with open(include_dir+"/polar.h") as f:
+with open(include_dir + "/polar.h") as f:
     header = f.read()
     ffibuilder.cdef(header)
 
