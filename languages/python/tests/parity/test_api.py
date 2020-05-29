@@ -89,7 +89,6 @@ def test_method_resolution_order(polar, load_policy):
     assert get_frobbed() == ["DooDad", "Widget"]
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Cut not implemented.")
 def test_cut(polar, load_policy):
     set_frobbed([])
     actor = Actor(name="guest")

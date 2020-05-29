@@ -616,8 +616,7 @@ impl PolarVirtualMachine {
             {
                 match &predicate.name.0[..] {
                     // Built-in predicates.
-                    "cut" => todo!(),
-
+                    "cut" => self.push_goal(Goal::Cut),
                     // User-defined predicates.
                     _ => match self.kb.rules.get(&predicate.name) {
                         None => self.push_goal(Goal::Backtrack),
