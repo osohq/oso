@@ -253,7 +253,6 @@ def test_isa(qeval, qvar, externals):
     assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="this is crazy")
 def test_nested_isa(qeval, qvar, externals):
     assert qeval(
         "isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})"
