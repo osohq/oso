@@ -345,7 +345,7 @@ impl PolarVirtualMachine {
     /// - Derefing all symbols
     /// - Converting literals into externals, and pushing goals if needed
     fn instantiate_externals(&mut self, term: &Term, goals: &mut Vec<Goal>) -> Term {
-        let t = term.map(&mut |v| match v {
+        term.map(&mut |v| match v {
             Value::InstanceLiteral(instance_literal) => {
                 let (exists, external_instance) = self.find_or_make_instance(instance_literal);
                 if !exists {
@@ -361,8 +361,7 @@ impl PolarVirtualMachine {
                 self.instantiate_externals(&t, goals).value
             }
             _ => v.clone(),
-        });
-        t
+        })
     }
 
     /// Return `true` if `var` is a temporary.
