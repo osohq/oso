@@ -227,9 +227,6 @@ def test_load_input_checking(polar):
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
 
 
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS, reason="Failing due to backwards incompat with returning lists"
-)
 def test_return_list(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
@@ -243,9 +240,6 @@ def test_type_fields(polar, load_policy):
     assert polar.query(Query(name="allow", args=[actor, "keep", resource])).success
 
 
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS, reason="Failing due to backwards incompat with returning iters"
-)
 def test_iter_fields(polar, load_policy):
     resource = Widget(id=1, name="stapler")
     actor = Actor(name="milton", id=1)

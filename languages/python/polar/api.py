@@ -378,13 +378,13 @@ class Polar:
                         # We now have either a generator or a result.
                         # Call must be a generator so we turn anything else into one.
                         if type(result) in POLAR_TYPES or not isinstance(
-                            result, GeneratorType
+                            result, Iterable
                         ):
                             call = (i for i in [result])
                         elif result is None:
                             call = (_ for _ in [])
                         else:
-                            call = result
+                            call = iter(result)
 
                         self.calls[call_id] = call
 
