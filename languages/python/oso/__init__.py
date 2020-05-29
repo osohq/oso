@@ -67,7 +67,7 @@ class Oso(api.Polar):
         action = request.method.lower()
         resource = api.Http(path=request.path, hostname=hostname)
         query = Query(name="allow", args=(credentials, action, resource))
-        return list(f(r) for r in self.query(query).results if f(r))
+        return list(f(r) for r in self.query(query, single=True).results if f(r))
 
     def verify_flask_request(
         self,
@@ -87,7 +87,7 @@ class Oso(api.Polar):
         action = request.method.lower()
         resource = api.Http(path=request.path, hostname=hostname)
         query = Query(name="allow", args=(credentials, action, resource))
-        return self.query(query).success
+        return self.query(query, single=True).success
 
     # oso.actions(["create", "read", "update", "delete"])
 
