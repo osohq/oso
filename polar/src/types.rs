@@ -238,8 +238,11 @@ impl Value {
     where
         F: FnMut(&Value) -> Value,
     {
-        match self {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => f(&self),
+        // the match does the recursive calling of map
+        let mapped = match self {
+            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {
+                self.clone()
+            }
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
             Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
@@ -252,9 +255,12 @@ impl Value {
                     fields: fields.map(f),
                 })
             }
-            Value::ExternalInstance(_) => unimplemented!(),
+            Value::ExternalInstance(_) => self.clone(),
             Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
-        }
+        };
+        // actually does the mapping of nodes: applies to all nodes, both leaves and
+        // intermediate nodes
+        f(&mapped)
     }
 }
 

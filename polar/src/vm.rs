@@ -315,7 +315,6 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
-    #[allow(dead_code)]
     fn find_or_make_instance(
         &mut self,
         instance_literal: &InstanceLiteral,
@@ -335,12 +334,35 @@ impl PolarVirtualMachine {
     }
 
     /// Recursively dereference a variable.
-    #[allow(dead_code)]
     fn deref(&self, term: &Term) -> Term {
         match &term.value {
             Value::Symbol(symbol) => self.value(&symbol).map_or(term.clone(), |t| self.deref(t)),
             _ => term.clone(),
         }
+    }
+
+    /// Takes a term and makes sure it is instantiated by recursively:
+    /// - Derefing all symbols
+    /// - Converting literals into externals, and pushing goals if needed
+    fn instantiate_externals(&mut self, term: &Term, goals: &mut Vec<Goal>) -> Term {
+        let t = term.map(&mut |v| match v {
+            Value::InstanceLiteral(instance_literal) => {
+                let (exists, external_instance) = self.find_or_make_instance(instance_literal);
+                if !exists {
+                    goals.push(Goal::MakeExternal {
+                        literal: instance_literal.clone(),
+                        instance_id: external_instance.instance_id,
+                    });
+                }
+                Value::ExternalInstance(external_instance)
+            }
+            Value::Symbol(_) => {
+                let t = self.deref(&Term::new(v.clone()));
+                self.instantiate_externals(&t, goals).value
+            }
+            _ => v.clone(),
+        });
+        t
     }
 
     /// Return `true` if `var` is a temporary.
@@ -450,25 +472,19 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (Value::InstanceLiteral(left), _) => {
+            (Value::InstanceLiteral(_), _) => {
                 // COMMENT (leina): do we ALWAYS want to convert an instance literal to an external instance here?
                 // Any compelling use case for unifying an instance literal with another instance literal?
                 // I can't think of any...
 
+                let mut goals = Vec::new();
                 // Convert instance literal to an external instance
-                let (exists, external_instance) = self.find_or_make_instance(&left);
-                self.push_goal(Goal::Isa {
-                    left: Term::new(Value::ExternalInstance(external_instance.clone())),
+                let left = self.instantiate_externals(&left, &mut goals);
+                goals.push(Goal::Isa {
+                    left,
                     right: right.clone(),
                 });
-
-                // If the external instance wasn't cached, create it by pushing a `MakeExternal` Goal
-                if !exists {
-                    self.push_goal(Goal::MakeExternal {
-                        literal: left.clone(),
-                        instance_id: external_instance.instance_id,
-                    });
-                }
+                self.append_goals(goals);
             }
 
             (Value::ExternalInstance(left), Value::Dictionary(right)) => {
@@ -556,6 +572,12 @@ impl PolarVirtualMachine {
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
     pub fn lookup_external(&mut self, call_id: u64, instance_id: u64, field: Term) -> QueryEvent {
+        assert!(
+            matches!(field.value, Value::Call(_)),
+            "call must be a predicate"
+        );
+        let mut goals = vec![]; // first goal will be the lookup external
+        let field = self.instantiate_externals(&field, &mut goals);
         let (field_name, args) = match &field.value {
             Value::Call(Predicate { name, args }) => (
                 name.clone(),
@@ -563,12 +585,13 @@ impl PolarVirtualMachine {
             ),
             _ => panic!("call must be a predicate"),
         };
-
-        self.push_choice(vec![vec![Goal::LookupExternal {
+        goals.push(Goal::LookupExternal {
             call_id,
             instance_id,
             field,
-        }]]);
+        });
+
+        self.push_choice(vec![goals]);
 
         QueryEvent::ExternalCall {
             call_id,
@@ -632,54 +655,44 @@ impl PolarVirtualMachine {
                     }
                 }
             }
-            Value::Expression(Operation { operator, args }) => match operator {
-                Operator::And => self.append_goals(
-                    args.iter()
-                        .map(|a| Goal::Query { term: a.clone() })
-                        .collect(),
-                ),
+            Value::Expression(Operation { operator, mut args }) => match operator {
+                Operator::And => {
+                    self.append_goals(args.into_iter().map(|term| Goal::Query { term }).collect())
+                }
                 Operator::Unify => {
                     assert_eq!(args.len(), 2);
-                    self.push_goal(Goal::Unify {
-                        left: args[0].clone(),
-                        right: args[1].clone(),
-                    });
+                    let right = args.pop().unwrap();
+                    let left = args.pop().unwrap();
+                    self.push_goal(Goal::Unify { left, right });
                 }
                 Operator::Dot => {
                     assert_eq!(args.len(), 3);
-                    let object = args[0].clone();
-                    let field = args[1].clone();
-                    let value = args[2].clone();
+                    let object = &args[0];
+                    let field = &args[1];
+                    let value = &args[2];
 
-                    match self.deref(&object).value {
+                    let derefed_object = self.deref(&object);
+
+                    match derefed_object.value {
                         Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
                             dict,
                             field: field_name(&field),
-                            value,
+                            value: args.remove(2),
                         }),
-                        Value::InstanceLiteral(literal) => {
+                        Value::InstanceLiteral(_) => {
                             // Check if there's an external instance for this.
                             // If there is, use it, if not push a make external then use it.
-                            let (exists, external_instance) = self.find_or_make_instance(&literal);
-
-                            self.push_goal(Goal::Query {
+                            let mut goals = vec![];
+                            let external_instance =
+                                self.instantiate_externals(&derefed_object, &mut goals);
+                            args[0] = external_instance;
+                            goals.push(Goal::Query {
                                 term: Term::new(Value::Expression(Operation {
                                     operator: Operator::Dot,
-                                    args: vec![
-                                        Term::new(Value::ExternalInstance(
-                                            external_instance.clone(),
-                                        )),
-                                        field,
-                                        value,
-                                    ],
+                                    args,
                                 })),
                             });
-                            if !exists {
-                                self.push_goal(Goal::MakeExternal {
-                                    literal,
-                                    instance_id: external_instance.instance_id,
-                                });
-                            }
+                            self.append_goals(goals);
                         }
                         Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
                             let value = match value {
@@ -693,7 +706,7 @@ impl PolarVirtualMachine {
                             self.push_goal(Goal::LookupExternal {
                                 call_id,
                                 instance_id,
-                                field,
+                                field: args.remove(1),
                             });
                         }
                         _ => panic!(
@@ -709,14 +722,9 @@ impl PolarVirtualMachine {
                 ),
                 Operator::Not => {
                     assert_eq!(args.len(), 1);
+                    let term = args.pop().unwrap();
                     let alternatives = vec![
-                        vec![
-                            Goal::Query {
-                                term: args[0].clone(),
-                            },
-                            Goal::Cut,
-                            Goal::Backtrack,
-                        ],
+                        vec![Goal::Query { term }, Goal::Cut, Goal::Backtrack],
                         vec![Goal::Noop],
                     ];
 
@@ -1046,20 +1054,16 @@ impl PolarVirtualMachine {
         arg: Term,
     ) -> Option<QueryEvent> {
         // If the arg is an instance literal, convert it to an external instance
-        if let Value::InstanceLiteral(literal) = arg.value {
-            let (exists, external_instance) = self.find_or_make_instance(&literal);
-            self.push_goal(Goal::IsSubspecializer {
+        if let Value::InstanceLiteral(_) = arg.value {
+            let mut goals = Vec::new();
+            let arg = self.instantiate_externals(&arg, &mut goals);
+            goals.push(Goal::IsSubspecializer {
                 answer,
                 left: left.clone(),
                 right: right.clone(),
-                arg: Term::new(Value::ExternalInstance(external_instance.clone())),
+                arg,
             });
-            if !exists {
-                self.push_goal(Goal::MakeExternal {
-                    literal,
-                    instance_id: external_instance.instance_id,
-                });
-            }
+            self.append_goals(goals);
             return None;
         }
 
