@@ -201,7 +201,7 @@ impl PolarVirtualMachine {
                     instance_id,
                 } => return Ok(self.make_external(literal, instance_id)),
                 Goal::Noop => (),
-                Goal::Query { term } => self.query(term),
+                Goal::Query { term } => self.query(term)?,
                 Goal::SortRules {
                     rules,
                     outer,
@@ -643,7 +643,7 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: Term) {
+    fn query(&mut self, term: Term) -> PolarResult<()> {
         match term.value {
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
@@ -691,7 +691,33 @@ impl PolarVirtualMachine {
 
                     let derefed_object = self.deref(&object);
 
-                    match derefed_object.value {
+                    // check if field is a variable
+                    let derefed_field = match field.value {
+                        Value::Symbol(_) => {
+                            let field_name = self.deref(field);
+                            let symbol = match &field_name.value {
+                                Value::String(name) => Symbol(name.clone()),
+                                _ => {
+                                    return Err(RuntimeError::TypeError {
+                                        msg: format!(
+                                            "Variable lookup field must be a String, got {:?}",
+                                            &field_name.value
+                                        ),
+                                    }
+                                    .into())
+                                }
+                            };
+                            Some(Term::new(Value::Call(Predicate {
+                                name: symbol,
+                                args: vec![],
+                            })))
+                        }
+                        _ => None,
+                    };
+
+                    let field = &derefed_field.unwrap_or_else(|| field.clone());
+
+                    match self.deref(&object).value {
                         Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
                             dict,
                             field: field_name(&field),
@@ -715,13 +741,12 @@ impl PolarVirtualMachine {
                             self.append_goals(obj_goals);
                         }
                         Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                            let value = match value {
-                                Term {
-                                    value: Value::Symbol(value),
-                                    ..
-                                } => value,
-                                _ => panic!("bad lookup value: {}", value.to_polar()),
-                            };
+                            let value = value
+                                .clone()
+                                .value
+                                .symbol()
+                                .map_err(|e| panic!("bad lookup value: {}", e.to_polar()))
+                                .unwrap();
                             let call_id = self.new_call_id(&value);
                             self.push_goal(Goal::LookupExternal {
                                 call_id,
@@ -750,10 +775,21 @@ impl PolarVirtualMachine {
 
                     self.choose(alternatives);
                 }
-                _ => todo!("can't query for expression: {:?}", operator),
+                _ => {
+                    return Err(RuntimeError::TypeError {
+                        msg: format!("can't query for expression: {:?}", operator),
+                    }
+                    .into())
+                }
             },
-            _ => todo!("can't query for: {}", term.value.to_polar()),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: format!("can't query for: {}", term.value.to_polar()),
+                }
+                .into())
+            }
         }
+        Ok(())
     }
 
     /// Handle an external result provided by the application.
