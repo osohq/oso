@@ -53,6 +53,7 @@ def test_load_function(polar, query, qvar):
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
+
 def test_external(polar, qvar):
     class Bar:
         def y(self):
