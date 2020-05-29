@@ -344,24 +344,37 @@ impl PolarVirtualMachine {
     /// Takes a term and makes sure it is instantiated by recursively:
     /// - Derefing all symbols
     /// - Converting literals into externals, and pushing goals if needed
-    fn instantiate_externals(&mut self, term: &Term, goals: &mut Vec<Goal>) -> Term {
-        term.map(&mut |v| match v {
-            Value::InstanceLiteral(instance_literal) => {
-                let (exists, external_instance) = self.find_or_make_instance(instance_literal);
-                if !exists {
-                    goals.push(Goal::MakeExternal {
-                        literal: instance_literal.clone(),
-                        instance_id: external_instance.instance_id,
-                    });
+    ///
+    /// ## Returns
+    ///
+    /// The newly instantiated term (i.e. with external instances instead of literals)
+    /// and some goals which actually do the instance creation (if any are needed).
+    /// The goals must be met before the term is used.
+    fn instantiate_externals(&mut self, term: &Term) -> (Term, Goals) {
+        let mut goals = Vec::new();
+        // this is the recursive mapping function
+        fn instantiate_map(vm: &mut PolarVirtualMachine, term: &Term, goals: &mut Goals) -> Term {
+            term.map(&mut |v| match v {
+                Value::InstanceLiteral(instance_literal) => {
+                    let (exists, external_instance) = vm.find_or_make_instance(instance_literal);
+                    if !exists {
+                        goals.push(Goal::MakeExternal {
+                            literal: instance_literal.clone(),
+                            instance_id: external_instance.instance_id,
+                        });
+                    }
+                    Value::ExternalInstance(external_instance)
                 }
-                Value::ExternalInstance(external_instance)
-            }
-            Value::Symbol(_) => {
-                let t = self.deref(&Term::new(v.clone()));
-                self.instantiate_externals(&t, goals).value
-            }
-            _ => v.clone(),
-        })
+                Value::Symbol(_) => {
+                    let t = vm.deref(&Term::new(v.clone()));
+                    instantiate_map(vm, &t, goals).value
+                }
+                _ => v.clone(),
+            })
+        }
+
+        let new_term = instantiate_map(self, term, &mut goals);
+        (new_term, goals)
     }
 
     /// Return `true` if `var` is a temporary.
@@ -476,9 +489,8 @@ impl PolarVirtualMachine {
                 // Any compelling use case for unifying an instance literal with another instance literal?
                 // I can't think of any...
 
-                let mut goals = Vec::new();
                 // Convert instance literal to an external instance
-                let left = self.instantiate_externals(&left, &mut goals);
+                let (left, mut goals) = self.instantiate_externals(&left);
                 goals.push(Goal::Isa {
                     left,
                     right: right.clone(),
@@ -688,17 +700,19 @@ impl PolarVirtualMachine {
                         Value::InstanceLiteral(_) => {
                             // Check if there's an external instance for this.
                             // If there is, use it, if not push a make external then use it.
-                            let mut goals = vec![];
                             // instantiate the instance and the predicate lookup
-                            args[1] = self.instantiate_externals(&field, &mut goals);
-                            args[0] = self.instantiate_externals(&derefed_object, &mut goals);
-                            goals.push(Goal::Query {
+                            let (object, obj_goals) = self.instantiate_externals(&derefed_object);
+                            let (field, field_goals) = self.instantiate_externals(&field);
+                            args[0] = object;
+                            args[1] = field;
+                            self.push_goal(Goal::Query {
                                 term: Term::new(Value::Expression(Operation {
                                     operator: Operator::Dot,
                                     args,
                                 })),
                             });
-                            self.append_goals(goals);
+                            self.append_goals(field_goals);
+                            self.append_goals(obj_goals);
                         }
                         Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
                             let value = match value {
@@ -1080,8 +1094,7 @@ impl PolarVirtualMachine {
     ) -> Option<QueryEvent> {
         // If the arg is an instance literal, convert it to an external instance
         if let Value::InstanceLiteral(_) = arg.value {
-            let mut goals = Vec::new();
-            let arg = self.instantiate_externals(&arg, &mut goals);
+            let (arg, mut goals) = self.instantiate_externals(&arg);
             goals.push(Goal::IsSubspecializer {
                 answer,
                 left: left.clone(),
