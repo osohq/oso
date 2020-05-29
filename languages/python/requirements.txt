@@ -1,1 +1,5 @@
 cffi==1.14.0
+flask
+frozendict
+authlib
+

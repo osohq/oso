@@ -1,6 +1,7 @@
 import json
 
 from _polar_lib import ffi, lib
+from .extras import Http, Jwt, PathMapper
 
 from collections.abc import Iterable
 from pathlib import Path
@@ -266,19 +267,13 @@ class Polar:
         elif tag == "ExternalInstance":
             return self._from_external_id(value[tag]["instance_id"])
         elif tag == "InstanceLiteral":
+            # we really don't want to do this
             # For instance literals, return the class type?
             cls_name = value[tag]["tag"]
             if cls_name in self.classes:
+                # this is a cop out
                 return self.classes[cls_name]
-            else:
-                instance_id = lib.polar_get_external_id(self.polar)
-                if instance_id == 0:
-                    self._raise_error()
-                id_to_instance[instance_id] = python_obj
-                instance_to_id[python_obj] = instance_id
-            return instance_id
-        else:
-            raise PolarRuntimeException(f"cannot convert: {value} to Python")
+        raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
     def to_polar(self, v):
         """ Convert python values to polar terms """
@@ -364,8 +359,14 @@ class Polar:
                         try:
                             attr = getattr(instance, attribute)
                         except AttributeError:
+                            result = lib.polar_external_call_result(
+                                self.polar, query, call_id, ffi.NULL
+                            )
+                            if result == 0:
+                                self._raise_error()
+                            continue
                             # @TODO: polar line numbers in errors once polar errors are better.
-                            raise PolarRuntimeException(f"Error calling {attribute}")
+                            # raise PolarRuntimeException(f"Error calling {attribute}")
 
                         if callable(attr):
                             # If it's a function call it with the args.
@@ -526,14 +527,6 @@ class Polar:
         self.id_to_instance = {}
 
 
-class Http:
-    """A resource accessed via HTTP."""
-
-    def __init__(self, path="", query={}, hostname=None):
-        raise NotImplementedError()
-
-    def __repr__(self):
-        raise NotImplementedError()
-
-    def __str__(self):
-        raise NotImplementedError()
+register_python_class(Http)
+register_python_class(Jwt)
+register_python_class(PathMapper)

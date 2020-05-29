@@ -747,12 +747,15 @@ impl PolarVirtualMachine {
                                 .symbol()
                                 .map_err(|e| panic!("bad lookup value: {}", e.to_polar()))
                                 .unwrap();
+
+                            let (field, mut goals) = self.instantiate_externals(&field);
                             let call_id = self.new_call_id(&value);
-                            self.push_goal(Goal::LookupExternal {
+                            goals.push(Goal::LookupExternal {
                                 call_id,
                                 instance_id,
-                                field: args.remove(1),
+                                field,
                             });
+                            self.append_goals(goals);
                         }
                         _ => panic!(
                             "can only perform lookups on dicts and instances, this is {:?}",

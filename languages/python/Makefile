@@ -16,3 +16,6 @@ test: test-requirements
 
 fmt:
 	black .
+
+package:
+	python setup.py sdist bdist_wheel
