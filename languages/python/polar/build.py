@@ -7,7 +7,7 @@ ffibuilder.set_source(
     r"""
     #include "polar.h"
     """,
-    library_dirs=["../../target/debug"],
+    library_dirs=["../../target/release"],
     include_dirs=["../../polar"],
     libraries=["polar"],
 )

@@ -3,3 +3,6 @@
 members = [
     "polar",
 ]
+
+[profile.release]
+debug = true
