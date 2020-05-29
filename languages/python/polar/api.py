@@ -60,12 +60,26 @@ class QueryResult:
 
 # These need to be global for now...
 # So that register_python_class works from anywhere
+# @TODO: Fix all examples to call polar.register_python_class and depreciate this.
 CLASSES = {}
 CLASS_CONSTRUCTORS = {}
 
 
 def register_python_class(cls, from_polar=None):
     Polar().register_python_class(cls, from_polar)
+
+
+class CleanupQuery:
+    """ Context manager for the polar native query object. """
+
+    def __init__(self, query):
+        self.query = query
+
+    def __enter__(self):
+        return self.query
+
+    def __exit__(self, type, value, traceback):
+        lib.query_free(self.query)
 
 
 class Polar:
@@ -214,15 +228,13 @@ class Polar:
                 results = self._do_query(query)
                 try:
                     next(results)
+                    # Exhaust generator to make sure query object is cleaned up before next load.
+                    for _ in results:
+                        pass
+
                 except StopIteration:
                     # TODO (dhatch): Better error message.
                     raise PolarRuntimeException("Inline query in file failed.")
-
-                # This must be called so there are no open queries on when the next load cycle
-                # happens. This sucks, but we only do it when there is not a
-                # stop iteration because _do_query does the free otherwise.
-                # We need a better api for this.
-                lib.query_free(query)
         finally:
             lib.load_free(load)
 
@@ -288,171 +300,171 @@ class Polar:
         term = {"id": 0, "offset": 0, "value": val}
         return term
 
-    def _do_query(self, query):
+    def _do_query(self, q):
         """Method which performs the query loop over an already contructed query"""
-        while True:
-            event_s = lib.polar_query(self.polar, query)
-            if event_s == ffi.NULL:
-                lib.query_free(query)
-                self._raise_error()
+        with CleanupQuery(q) as query:
+            while True:
+                event_s = lib.polar_query(self.polar, query)
+                if event_s == ffi.NULL:
+                    self._raise_error()
 
-            event = json.loads(ffi.string(event_s).decode())
-            lib.string_free(event_s)
-            if event == "Done":
-                break
+                event = json.loads(ffi.string(event_s).decode())
+                lib.string_free(event_s)
+                if event == "Done":
+                    break
 
-            kind = [*event][0]
-            data = event[kind]
+                kind = [*event][0]
+                data = event[kind]
 
-            if kind == "MakeExternal":
-                instance_id = data["instance_id"]
-                instance = data["instance"]
-
-                assert instance_id not in self.id_to_instance
-
-                class_name = instance["tag"]
-                term_fields = instance["fields"]["fields"]
-
-                fields = {}
-                for k, v in term_fields.items():
-                    fields[k] = self.to_python(v)
-
-                if class_name not in self.classes:
-                    raise PolarRuntimeException(
-                        f"Error creating instance of class {class_name}. Has not been registered."
-                    )
-
-                assert class_name in self.class_constructors
-
-                cls = self.classes[class_name]
-                constructor = self.class_constructors[class_name]
-                try:
-                    if constructor:
-                        instance = constructor(**fields)
-                    else:
-                        instance = cls(**fields)
-                except Exception as e:
-                    raise PolarRuntimeException(
-                        f"Error creating instance of class {class_name}. {e}"
-                    )
-
-                self.id_to_instance[instance_id] = instance
-
-            if kind == "ExternalCall":
-                call_id = data["call_id"]
-
-                if call_id not in self.calls:
-                    # Create a new call if this is the first use of call_id.
+                if kind == "MakeExternal":
                     instance_id = data["instance_id"]
-                    attribute = data["attribute"]
-                    args = [self.to_python(arg) for arg in data["args"]]
+                    instance = data["instance"]
 
-                    # Lookup the attribute on the instance.
-                    instance = self.id_to_instance[instance_id]
-                    try:
-                        attr = getattr(instance, attribute)
-                    except AttributeError:
-                        # @TODO: polar line numbers in errors once polar errors are better.
-                        raise PolarRuntimeException(f"Error calling {attribute}")
+                    assert instance_id not in self.id_to_instance
 
-                    if callable(attr):
-                        # If it's a function call it with the args.
-                        result = attr(*args)
-                    else:
-                        # If it's just an attribute, it's the result.
-                        result = attr
+                    class_name = instance["tag"]
+                    term_fields = instance["fields"]["fields"]
 
-                    # We now have either a generator or a result.
-                    # Call must be a generator so we turn anything else into one.
-                    if type(result) in POLAR_TYPES or not isinstance(
-                        result, GeneratorType
-                    ):
-                        call = (i for i in [result])
-                    elif result is None:
-                        call = (_ for _ in [])
-                    else:
-                        call = result
+                    fields = {}
+                    for k, v in term_fields.items():
+                        fields[k] = self.to_python(v)
 
-                    self.calls[call_id] = call
+                    if class_name not in self.classes:
+                        raise PolarRuntimeException(
+                            f"Error creating instance of class {class_name}. Has not been registered."
+                        )
 
-                # Return the next result of the call.
-                try:
-                    val = next(self.calls[call_id])
-                    term = self.to_polar(val)
-                    msg = json.dumps(term)
-                    c_str = ffi.new("char[]", msg.encode())
-                    result = lib.polar_external_call_result(
-                        self.polar, query, call_id, c_str
-                    )
-                    if result == 0:
-                        self._raise_error()
-                except StopIteration:
-                    result = lib.polar_external_call_result(
-                        self.polar, query, call_id, ffi.NULL
-                    )
-                    if result == 0:
-                        self._raise_error()
+                    assert class_name in self.class_constructors
 
-            if kind == "ExternalIsa":
-                call_id = data["call_id"]
-                instance_id = data["instance_id"]
-                class_name = data["class_tag"]
-                instance = self.id_to_instance[instance_id]
-                # @TODO: make sure we even know about this class.
-                if class_name in self.classes:
                     cls = self.classes[class_name]
-                    isa = isinstance(instance, cls)
-                else:
-                    isa = False
+                    constructor = self.class_constructors[class_name]
+                    try:
+                        if constructor:
+                            instance = constructor(**fields)
+                        else:
+                            instance = cls(**fields)
+                    except Exception as e:
+                        raise PolarRuntimeException(
+                            f"Error creating instance of class {class_name}. {e}"
+                        )
 
-                result = lib.polar_external_question_result(
-                    self.polar, query, call_id, 1 if isa else 0
-                )
-                if result == 0:
-                    self._raise_error()
+                    self.id_to_instance[instance_id] = instance
 
-            if kind == "ExternalIsSubSpecializer":
-                call_id = data["call_id"]
-                instance_id = data["instance_id"]
-                left_class_tag = data["left_class_tag"]
-                right_class_tag = data["right_class_tag"]
-                instance = self.id_to_instance[instance_id]
-                instance_cls = instance.__class__
-                mro = instance_cls.__mro__
-                try:
-                    left_class = self.classes[left_class_tag]
-                    right_class = self.classes[right_class_tag]
-                    is_sub_specializer = mro.index(left_class) < mro.index(right_class)
-                except (KeyError, ValueError) as e:
-                    is_sub_specializer = False
+                if kind == "ExternalCall":
+                    call_id = data["call_id"]
 
-                result = lib.polar_external_question_result(
-                    self.polar, query, call_id, 1 if is_sub_specializer else 0
-                )
-                if result == 0:
-                    self._raise_error()
+                    if call_id not in self.calls:
+                        # Create a new call if this is the first use of call_id.
+                        instance_id = data["instance_id"]
+                        attribute = data["attribute"]
+                        args = [self.to_python(arg) for arg in data["args"]]
 
-            if kind == "ExternalUnify":
-                call_id = data["call_id"]
-                left_instance_id = data["left_instance_id"]
-                right_instance_id = data["right_instance_id"]
-                left_instance = self.id_to_instance[left_instance_id]
-                right_instance = self.id_to_instance[right_instance_id]
+                        # Lookup the attribute on the instance.
+                        instance = self.id_to_instance[instance_id]
+                        try:
+                            attr = getattr(instance, attribute)
+                        except AttributeError:
+                            # @TODO: polar line numbers in errors once polar errors are better.
+                            raise PolarRuntimeException(f"Error calling {attribute}")
 
-                # COMMENT (leina): does this get used? This isn't super useful behavior for instances because it only
-                # works predictably if they have `eq()` defined
-                unify = left_instance == right_instance
+                        if callable(attr):
+                            # If it's a function call it with the args.
+                            result = attr(*args)
+                        else:
+                            # If it's just an attribute, it's the result.
+                            result = attr
 
-                result = lib.polar_external_question_result(
-                    self.polar, query, call_id, 1 if unify else 0
-                )
-                if result == 0:
-                    self._raise_error()
+                        # We now have either a generator or a result.
+                        # Call must be a generator so we turn anything else into one.
+                        if type(result) in POLAR_TYPES or not isinstance(
+                            result, GeneratorType
+                        ):
+                            call = (i for i in [result])
+                        elif result is None:
+                            call = (_ for _ in [])
+                        else:
+                            call = result
 
-            if kind == "Result":
-                yield {k: self.to_python(v) for k, v in data["bindings"].items()}
+                        self.calls[call_id] = call
 
-        lib.query_free(query)
+                    # Return the next result of the call.
+                    try:
+                        val = next(self.calls[call_id])
+                        term = self.to_polar(val)
+                        msg = json.dumps(term)
+                        c_str = ffi.new("char[]", msg.encode())
+                        result = lib.polar_external_call_result(
+                            self.polar, query, call_id, c_str
+                        )
+                        if result == 0:
+                            self._raise_error()
+                    except StopIteration:
+                        result = lib.polar_external_call_result(
+                            self.polar, query, call_id, ffi.NULL
+                        )
+                        if result == 0:
+                            self._raise_error()
+
+                if kind == "ExternalIsa":
+                    call_id = data["call_id"]
+                    instance_id = data["instance_id"]
+                    class_name = data["class_tag"]
+                    instance = self.id_to_instance[instance_id]
+                    # @TODO: make sure we even know about this class.
+                    if class_name in self.classes:
+                        cls = self.classes[class_name]
+                        isa = isinstance(instance, cls)
+                    else:
+                        isa = False
+
+                    result = lib.polar_external_question_result(
+                        self.polar, query, call_id, 1 if isa else 0
+                    )
+                    if result == 0:
+                        self._raise_error()
+
+                if kind == "ExternalIsSubSpecializer":
+                    call_id = data["call_id"]
+                    instance_id = data["instance_id"]
+                    left_class_tag = data["left_class_tag"]
+                    right_class_tag = data["right_class_tag"]
+                    instance = self.id_to_instance[instance_id]
+                    instance_cls = instance.__class__
+                    mro = instance_cls.__mro__
+                    try:
+                        left_class = self.classes[left_class_tag]
+                        right_class = self.classes[right_class_tag]
+                        is_sub_specializer = mro.index(left_class) < mro.index(
+                            right_class
+                        )
+                    except (KeyError, ValueError) as e:
+                        is_sub_specializer = False
+
+                    result = lib.polar_external_question_result(
+                        self.polar, query, call_id, 1 if is_sub_specializer else 0
+                    )
+                    if result == 0:
+                        self._raise_error()
+
+                if kind == "ExternalUnify":
+                    call_id = data["call_id"]
+                    left_instance_id = data["left_instance_id"]
+                    right_instance_id = data["right_instance_id"]
+                    left_instance = self.id_to_instance[left_instance_id]
+                    right_instance = self.id_to_instance[right_instance_id]
+
+                    # COMMENT (leina): does this get used? This isn't super useful behavior for instances because it only
+                    # works predictably if they have `eq()` defined
+                    unify = left_instance == right_instance
+
+                    result = lib.polar_external_question_result(
+                        self.polar, query, call_id, 1 if unify else 0
+                    )
+                    if result == 0:
+                        self._raise_error()
+
+                if kind == "Result":
+                    yield {k: self.to_python(v) for k, v in data["bindings"].items()}
 
     def query_str(self, query_str):
         # Make sure KB is loaded in
