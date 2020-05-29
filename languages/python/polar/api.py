@@ -96,7 +96,7 @@ class Polar:
         # set up the builtin isa rule
         self.id_to_instance = {}
         self.calls = {}
-        self.load_str("isa(x, y, x: (y)); isa(x, y) := isa(x, y, x);")
+        self.load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.

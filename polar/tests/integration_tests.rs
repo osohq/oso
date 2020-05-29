@@ -1,3 +1,4 @@
+use maplit::btreemap;
 use permute::permute;
 
 use std::collections::HashMap;
@@ -510,4 +511,32 @@ fn test_load_with_query() {
     while let Some(query) = polar.load(&mut load).expect("load failed") {
         assert_eq!(query_results(&mut polar, query, no_results).len(), 1);
     }
+}
+#[test]
+fn test_externals_instantiated() {
+    let mut polar = Polar::new();
+    polar
+        .load_str("f(x, foo: Foo) := foo.bar(Bar{x: x}) = 1;")
+        .unwrap();
+
+    let mut foo_lookups = vec![term!(1)];
+    let mock_foo = |_, args: Vec<Term>| {
+        // make sure that what we get as input is an external instance
+        // with the fields set correctly
+        assert!(
+            matches!(&args[0].value,
+                Value::ExternalInstance(ExternalInstance {
+                    literal: Some(InstanceLiteral {
+                        ref tag, ref fields
+                    }),
+                    ..
+                }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
+            "expected external instance Bar {{ x: 1 }}, found: {:?}",
+            args[0].value
+        );
+        foo_lookups.pop()
+    };
+    let query = polar.new_query("f(1, Foo{})").unwrap();
+    let results = query_results(&mut polar, query, mock_foo);
+    assert_eq!(results.len(), 1);
 }

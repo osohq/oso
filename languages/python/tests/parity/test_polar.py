@@ -191,7 +191,6 @@ def test_dictionaries(tell, qeval, qvar):
     assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa(Bar{}, Foo{}) fails")
 def test_external_classes(tell, qeval, qvar, externals):
     assert qeval("isa(Bar{}, Foo{})")
     assert not qeval("isa(Qux{}, Foo{})")
@@ -227,7 +226,6 @@ def test_keys_are_confusing(tell, qeval, qvar, externals):
     assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 2}")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="isa not yet working")
 def test_isa(qeval, qvar, externals):
     assert qeval("isa({}, {})")
     assert qeval("isa({x: 1}, {})")
@@ -255,7 +253,6 @@ def test_isa(qeval, qvar, externals):
     assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="this is crazy")
 def test_nested_isa(qeval, qvar, externals):
     assert qeval(
         "isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})"
@@ -273,10 +270,6 @@ def test_field_unification(qeval):
     assert qeval("{x: 1, y: 2} = {y: 2, x: 1}")
 
 
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS,
-    reason="Field unification attempt on external should fail with an error.",
-)
 def test_field_unification_external(qeval, externals):
     # test instance field unification (not allowed for external instances)
     with pytest.raises(PolarRuntimeException):
