@@ -155,27 +155,21 @@ def test_defining_things(tell, qeval):
         assert qeval(f)
 
 
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS,
-    reason="Fails due to variable syntax for fields attr(d, k, d.(k)).",
-)
 def test_dictionaries(tell, qeval, qvar):
     tell('dict({hello: "world", foo: "bar"})')
     tell('dict({hello: {this: {is: "nested"}}})')
     tell("attr(d, k, d.(k))")
     assert qeval('attr({hello: "steve"}, "hello", "steve")')
     assert qvar('attr({hello: "steve"}, "hello", value)', "value", one=True) == "steve"
-    assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
 
     assert qeval(
         'attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})'
     )
 
-    tell("deepget(d, d.hello.this.is)")
-    assert qeval('deepget({hello: {this: {is: "nested"}}}, "nested")')
-
-    tell("myget(d, d.get.in)")
-    assert qeval('myget({get: {in: "nested"}}, "nested")')
+    tell('lookup(dict, result) := result = dict.a.b.c;')
+    assert qeval(
+        'lookup({a: {b: {c: "nested"}}}, "nested")'
+    )
 
     tell('user({name: "steve", job: "programmer", state: "NY"})')
     tell('user({name: "alex", job: "programmer", state: "CO"})')
@@ -185,6 +179,23 @@ def test_dictionaries(tell, qeval, qvar):
         "steve",
         "alex",
     ]
+
+
+@pytest.mark.xfail(
+    EXPECT_XFAIL_PASS,
+    reason="Nested lookups don't work.",
+)
+def test_complex_nested_dictionaries(tell, qvar, qeval):
+    tell('dict({hello: "world", foo: "bar"})')
+    tell('dict({hello: {this: {is: "nested"}}})')
+    tell("attr(d, k, d.(k))")
+
+    assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
+    tell("deepget(d, d.hello.this.is)")
+    assert qeval('deepget({hello: {this: {is: "nested"}}}, "nested")')
+
+    tell("myget(d, d.get.in)")
+    assert qeval('myget({get: {in: "nested"}}, "nested")')
 
     tell("x({a: {b:{c:123}}})")
     tell("x({a: {y:{c:456}}})")

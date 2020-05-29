@@ -270,6 +270,13 @@ impl Value {
         // intermediate nodes
         f(&mapped)
     }
+
+    pub fn symbol(self) -> Result<Symbol, Self> {
+        match self {
+            Value::Symbol(name) => Ok(name),
+            _ => Err(self),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]

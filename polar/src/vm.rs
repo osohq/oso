@@ -691,7 +691,30 @@ impl PolarVirtualMachine {
 
                     let derefed_object = self.deref(&object);
 
+<<<<<<< HEAD
                     match derefed_object.value {
+=======
+                    // check if field is a variable
+                    let field = match &field.value {
+                        Value::Symbol(_) => {
+                            let field_name = self.deref(&field);
+                            let symbol = match &field_name.value {
+                                Value::String(name) => Symbol(name.clone()),
+                                _ => todo!(
+                                    "Variable lookup field must be a String, got {:?}",
+                                    &field_name.value
+                                ),
+                            };
+                            Term::new(Value::Call(Predicate {
+                                name: symbol,
+                                args: vec![],
+                            }))
+                        }
+                        _ => field,
+                    };
+
+                    match self.deref(&object).value {
+>>>>>>> 4787f2e... dictionary lookups with variables
                         Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
                             dict,
                             field: field_name(&field),
@@ -715,13 +738,11 @@ impl PolarVirtualMachine {
                             self.append_goals(obj_goals);
                         }
                         Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                            let value = match value {
-                                Term {
-                                    value: Value::Symbol(value),
-                                    ..
-                                } => value,
-                                _ => panic!("bad lookup value: {}", value.to_polar()),
-                            };
+                            let value = value
+                                .value
+                                .symbol()
+                                .map_err(|e| panic!("bad lookup value: {}", e.to_polar()))
+                                .unwrap();
                             let call_id = self.new_call_id(&value);
                             self.push_goal(Goal::LookupExternal {
                                 call_id,
