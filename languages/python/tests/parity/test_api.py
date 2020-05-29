@@ -227,28 +227,6 @@ def test_load_input_checking(polar):
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="There is no KB to check")
-def test_default_load_policy():
-    polar = Polar()
-    polar.load(Path(__file__).parent / "policies" / "test_api.polar")
-    # Policy is lazily added; not facts yet added
-    assert len(polar._kb.facts) == 0
-
-    actor = Actor(name="guest")
-    resource = Widget(id="1")
-    action = "get"
-    assert polar.query(Query(name="allow", args=[actor, action, resource])).success
-
-    # Confirm that facts are now loaded
-    kb_len = len(polar._kb.facts)
-    assert kb_len > 0
-
-    # Confirm that duplicate policy files are not added
-    polar.load(Path(__file__).parent / "policies" / "test_api.polar")
-    polar.load(Path(__file__).parent / "policies" / "test_api.polar")
-    assert len(polar._kb.facts) == kb_len
-
-
 @pytest.mark.xfail(
     EXPECT_XFAIL_PASS, reason="Failing due to backwards incompat with returning lists"
 )
