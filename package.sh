@@ -30,4 +30,4 @@ docker pull quay.io/pypa/manylinux1_x86_64
 mkdir -p native
 cp ../../target/x86_64-unknown-linux-musl/release/libpolar.a native/
 cp ../../polar/polar.h native/
-docker run -it -v $(pwd):/io quay.io/pypa/manylinux1_x86_64 io/package.sh
+docker run -v $(pwd):/io quay.io/pypa/manylinux1_x86_64 io/package.sh
