@@ -27,7 +27,6 @@ pub enum RuntimeError {
     Serialization { msg: String },
     TypeError { msg: String },
     UnboundVariable { sym: Symbol },
-    TypeError { msg: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

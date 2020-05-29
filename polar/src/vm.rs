@@ -598,12 +598,7 @@ impl PolarVirtualMachine {
                 name.clone(),
                 args.iter().map(|arg| self.deref(arg)).collect(),
             ),
-            _ => {
-                return Err((RuntimeError::TypeError {
-                    msg: "invalid field used for a lookup".to_string(),
-                })
-                .into())
-            }
+            _ => unreachable!("call must be a predicate"),
         };
         self.push_choice(vec![vec![Goal::LookupExternal {
             call_id,
