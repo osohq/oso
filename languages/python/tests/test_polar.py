@@ -299,6 +299,8 @@ def test_load_and_query():
 
     with pytest.raises(exceptions.PolarException):
         p.load_str("g(1); ?= g(2);")
+
+
 def test_parser_errors(polar):
     # IntegerOverflow
     rules = """
