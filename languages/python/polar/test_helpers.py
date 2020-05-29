@@ -76,7 +76,7 @@ def qvar(polar, query):
             if len(results) == 1:
                 return results[0][v]
             else:
-                return None
+                raise Exception("Received more than one result, expected one.")
         return [env[v] for env in results]
 
     return _qvar

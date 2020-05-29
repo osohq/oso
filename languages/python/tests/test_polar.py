@@ -101,8 +101,7 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.c() = x", "x", one=True) == "c"
     assert qvar("Foo{} = f, f.a() = x", "x", one=True) == "A"
     assert qvar("Foo{}.bar().y() = x", "x", one=True) == "y"
-    import pdb; pdb.set_trace()
-    assert qvar("Foo{}.e = x", "x", one=True) == [1, 2, 3]
+    assert qvar("Foo{}.e = x", "x") == [1, 2, 3]
     assert qvar("Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
     assert qvar("Foo{}.g.hello = x", "x", one=True) == "world"
     assert qvar("Foo{}.h = x", "x", one=True) is True

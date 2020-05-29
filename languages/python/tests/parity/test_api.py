@@ -122,7 +122,7 @@ def test_querystring_resource_map(polar, load_policy):
         Query(name="allow", args=[Actor(name="sam"), "what", Http(path="/widget/12")])
     ).success
 
-
+@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Resource mapping not implemented.")
 def test_resource_mapping(polar, load_policy):
     try:
         from flask import Flask, request, Response, g
