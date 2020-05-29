@@ -1,18 +1,33 @@
+import os
 from cffi import FFI
 
 ffibuilder = FFI()
+
+lib_dirs = {
+    "DEVELOPMENT": "../../target/debug",
+    "RELEASE": "../../target/release",
+    "LINUX": "native",
+}
+include_dirs = {
+    "DEVELOPMENT": "../../polar",
+    "RELEASE": "../../polar",
+    "LINUX": "native",
+}
+env = os.environ.get("ENV", "DEVELOPMENT")
+lib_dir = lib_dirs[env]
+include_dir = include_dirs[env]
 
 ffibuilder.set_source(
     "_polar_lib",
     r"""
     #include "polar.h"
     """,
-    library_dirs=["../../target/release"],
-    include_dirs=["../../polar"],
+    library_dirs=[lib_dir],
+    include_dirs=[include_dir],
     libraries=["polar"],
 )
 
-with open("../../polar/polar.h") as f:
+with open(include_dir+"/polar.h") as f:
     header = f.read()
     ffibuilder.cdef(header)
 
