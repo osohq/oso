@@ -210,10 +210,8 @@ impl PolarVirtualMachine {
                 } => self.sort_rules(rules, args, outer, inner),
                 Goal::Unify { left, right } => match self.unify(&left, &right) {
                     // Unify can return an error.
-                    Err(err) => {
-                        return Err(err)
-                    },
-                    Ok(()) => ()
+                    Err(err) => return Err(err),
+                    Ok(()) => (),
                 },
             }
             // don't break when the goal stack is empty or a result wont
@@ -907,15 +905,25 @@ impl PolarVirtualMachine {
             // this is necessary for the case that an instance appears multiple times
             // in the same rule head, for example
             (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
-                return Err((RuntimeError::TypeError { msg: String::from("Cannot unify two external instances.") }).into());
+                return Err((RuntimeError::TypeError {
+                    msg: String::from("Cannot unify two external instances."),
+                })
+                .into());
             }
 
             (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {
-                return Err((RuntimeError::TypeError { msg: String::from("Cannot unify two instance literals.") }).into());
+                return Err((RuntimeError::TypeError {
+                    msg: String::from("Cannot unify two instance literals."),
+                })
+                .into());
             }
 
-            (Value::InstanceLiteral(_), Value::ExternalInstance(_)) | (Value::ExternalInstance(_), Value::InstanceLiteral(_)) => {
-                return Err((RuntimeError::TypeError { msg: String::from("Cannot unify instance literal with external instance.") }).into());
+            (Value::InstanceLiteral(_), Value::ExternalInstance(_))
+            | (Value::ExternalInstance(_), Value::InstanceLiteral(_)) => {
+                return Err((RuntimeError::TypeError {
+                    msg: String::from("Cannot unify instance literal with external instance."),
+                })
+                .into());
             }
 
             // Anything else fails.
