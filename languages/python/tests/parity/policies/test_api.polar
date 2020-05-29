@@ -27,8 +27,8 @@ allow(actor, "get", resource: DooDad) := resource.frob("DooDad") = x;
 # Frobbing a Widget writes an entry into a global frobbed list,
 # which can then be checked to ensure correct method ordering.
 # See test_allow, test_method_resolution_order, test_cut.
-allow_with_cut(actor, "get", resource: Widget) := resource.frob("Widget") = x, cut();
-allow_with_cut(actor, "get", resource: DooDad) := resource.frob("DooDad") = x, cut();
+allow_with_cut(actor, "get", resource: Widget) := cut(), resource.frob("Widget") = x;
+allow_with_cut(actor, "get", resource: DooDad) := cut(), resource.frob("DooDad") = x;
 
 allowRole("admin", "create", resource: Widget);
 
