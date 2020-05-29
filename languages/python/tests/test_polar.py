@@ -2,6 +2,7 @@ from pathlib import Path
 
 from polar import Polar, exceptions
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
+from polar.exceptions import ParserException
 
 import pytest
 
@@ -298,3 +299,62 @@ def test_load_and_query():
 
     with pytest.raises(exceptions.PolarException):
         p.load_str("g(1); ?= g(2);")
+
+
+def test_parser_errors(polar):
+    # IntegerOverflow
+    rules = """
+    f(a) := a = 18446744073709551616;
+    """
+    with pytest.raises(ParserException) as e:
+        polar.load_str(rules)
+    assert (
+        str(e.value)
+        == 'Parser Exception: {"IntegerOverflow": {"token": "18446744073709551616", "pos": [1, 16]}}'
+    )
+
+    # InvalidTokenCharacter
+    rules = """
+    f(a) := a = "this is not
+    allowed";
+    """
+    with pytest.raises(ParserException) as e:
+        polar.load_str(rules)
+    assert (
+        str(e.value)
+        == 'Parser Exception: {"InvalidTokenCharacter": {"token": "this is not", "c": "\\n", "pos": [1, 28]}}'
+    )
+
+    rules = """
+    f(a) := a = "this is not allowed\0
+    """
+
+    with pytest.raises(ParserException) as e:
+        polar.load_str(rules)
+    assert (
+        str(e.value)
+        == 'Parser Exception: {"InvalidTokenCharacter": {"token": "this is not allowed", "c": "\\u0000", "pos": [1, 16]}}'
+    )
+
+    # InvalidToken -- not sure what causes this
+
+    # UnrecognizedEOF
+    rules = """
+    f(a)
+    """
+    with pytest.raises(ParserException) as e:
+        polar.load_str(rules)
+    assert str(e.value) == 'Parser Exception: {"UnrecognizedEOF": {"pos": [1, 8]}}'
+
+    # UnrecognizedToken
+    rules = """
+    1;
+    """
+    with pytest.raises(ParserException) as e:
+        polar.load_str(rules)
+    assert (
+        str(e.value)
+        == 'Parser Exception: {"UnrecognizedToken": {"token": "1", "pos": [1, 4]}}'
+    )
+
+    # ExtraToken -- not sure what causes this
