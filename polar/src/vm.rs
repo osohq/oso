@@ -201,7 +201,7 @@ impl PolarVirtualMachine {
                     instance_id,
                 } => return Ok(self.make_external(literal, instance_id)),
                 Goal::Noop => (),
-                Goal::Query { term } => self.query(term),
+                Goal::Query { term } => self.query(term)?,
                 Goal::SortRules {
                     rules,
                     outer,
@@ -643,7 +643,7 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: Term) {
+    fn query(&mut self, term: Term) -> PolarResult<()> {
         match term.value {
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
@@ -697,10 +697,15 @@ impl PolarVirtualMachine {
                             let field_name = self.deref(field);
                             let symbol = match &field_name.value {
                                 Value::String(name) => Symbol(name.clone()),
-                                _ => todo!(
-                                    "Variable lookup field must be a String, got {:?}",
-                                    &field_name.value
-                                ),
+                                _ => {
+                                    return Err(RuntimeError::TypeError {
+                                        msg: format!(
+                                            "Variable lookup field must be a String, got {:?}",
+                                            &field_name.value
+                                        ),
+                                    }
+                                    .into())
+                                }
                             };
                             Some(Term::new(Value::Call(Predicate {
                                 name: symbol,
@@ -770,10 +775,21 @@ impl PolarVirtualMachine {
 
                     self.choose(alternatives);
                 }
-                _ => todo!("can't query for expression: {:?}", operator),
+                _ => {
+                    return Err(RuntimeError::TypeError {
+                        msg: format!("can't query for expression: {:?}", operator),
+                    }
+                    .into())
+                }
             },
-            _ => todo!("can't query for: {}", term.value.to_polar()),
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: format!("can't query for: {}", term.value.to_polar()),
+                }
+                .into())
+            }
         }
+        Ok(())
     }
 
     /// Handle an external result provided by the application.
