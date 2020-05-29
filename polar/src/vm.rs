@@ -715,7 +715,7 @@ impl PolarVirtualMachine {
                         _ => None,
                     };
 
-                    let field = &derefed_field.unwrap_or(field.clone());
+                    let field = &derefed_field.unwrap_or_else(|| field.clone());
 
                     match self.deref(&object).value {
                         Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
