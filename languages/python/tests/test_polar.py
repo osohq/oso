@@ -30,6 +30,12 @@ def test_data_conversions(polar, qvar):
     assert qvar("c(x)", "x", one=True)
     assert qvar("d(x)", "x", one=True) == [1, "two", True]
 
+def test_load_function(polar, query, qvar):
+    """Make sure the load function works."""
+    polar.load(Path(__file__).parent / "test_file.polar")
+    assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
+    assert qvar("f(x)", "x") == [1, 2, 3]
+
 
 def test_external(polar, qvar):
     class Bar:
