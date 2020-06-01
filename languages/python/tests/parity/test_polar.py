@@ -156,12 +156,23 @@ def test_defining_things(tell, qeval):
 
 
 def test_dictionaries(tell, qeval, qvar):
+    # basic dictionary lookup
     tell('dict({hello: "world", foo: "bar"})')
-    tell('dict({hello: {this: {is: "nested"}}})')
+    assert qeval('dict(d), d.hello = "world"')
+
+    ### dictionary lookups with variable fields ###
     tell("attr(d, k, d.(k))")
+
+    # k = "hello", {hello: "steve"}.(k) = "steve"
     assert qeval('attr({hello: "steve"}, "hello", "steve")')
+
+    # k = "hello", {hello: "steve"}.(k) = value, value = "steve"
     assert qvar('attr({hello: "steve"}, "hello", value)', "value", one=True) == "steve"
 
+    # k = key, {hello: "steve"}.(k) = "steve", key = "hello"
+    assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
+
+    ### basic nested lookup ###
     assert qeval(
         'attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})'
     )
@@ -183,11 +194,6 @@ def test_dictionaries(tell, qeval, qvar):
     EXPECT_XFAIL_PASS, reason="Nested lookups don't work.",
 )
 def test_complex_nested_dictionaries(tell, qvar, qeval):
-    tell('dict({hello: "world", foo: "bar"})')
-    tell('dict({hello: {this: {is: "nested"}}})')
-    tell("attr(d, k, d.(k))")
-
-    assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
     tell("deepget(d, d.hello.this.is)")
     assert qeval('deepget({hello: {this: {is: "nested"}}}, "nested")')
 

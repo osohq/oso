@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::formatting::to_polar::ToPolarString;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -271,10 +272,12 @@ impl Value {
         f(&mapped)
     }
 
-    pub fn symbol(self) -> Result<Symbol, Self> {
+    pub fn symbol(self) -> Result<Symbol, RuntimeError> {
         match self {
             Value::Symbol(name) => Ok(name),
-            _ => Err(self),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!("Expected symbol, got: {}", self.to_polar()),
+            }),
         }
     }
 }
