@@ -1126,9 +1126,7 @@ impl PolarVirtualMachine {
                 }
 
                 // Query for the body clauses.
-                goals.push(Goal::Query {
-                    term: Term::new(body.value.clone()),
-                });
+                goals.push(Goal::Query { term: body.clone() });
 
                 alternatives.push(goals)
             }
