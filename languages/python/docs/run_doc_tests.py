@@ -10,6 +10,7 @@ def path_to_module_name(filename):
     # TODO (dhatch) Make this include the relative directory and some random stuff to not conflict.
     return Path(filename).stem
 
+
 def load_python(filename, polar):
     """Load a python file into the knowledge base.
 
