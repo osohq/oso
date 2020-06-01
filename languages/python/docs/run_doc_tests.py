@@ -1,7 +1,14 @@
 import argparse
+from pathlib import Path
+import importlib
+import sys
 
 from polar.api import Polar
 
+
+def path_to_module_name(filename):
+    # TODO (dhatch) Make this include the relative directory and some random stuff to not conflict.
+    return Path(filename).stem
 
 def load_python(filename, polar):
     """Load a python file into the knowledge base.
@@ -16,7 +23,7 @@ def load_python(filename, polar):
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
 
-    module.load(kb)
+    module.load(polar)
 
 
 def load(filename, polar):
