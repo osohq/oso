@@ -16,6 +16,7 @@ DEPARTMENT_MEMBERS = {
     2: {"engineering": ["leina"], "executive": []},
 }
 
+
 @polar_class
 class Company:
     def __init__(self, id=None, default_role=""):
@@ -30,6 +31,8 @@ class Company:
 
     def department_members(self, department_name):
         yield from DEPARTMENT_MEMBERS[self.id][department_name]
+
+
 # company-end
 
 # startup-start
@@ -38,12 +41,15 @@ INVESTORS = {
     2: ["reid", "dave", "fred"],
 }
 
+
 @polar_class
 class StartUp(Company):
-
     def investors(self):
         yield from INVESTORS[self.id]
+
+
 # startup-end
+
 
 def load(kb):
     """Allow REPL to load resource definitions."""

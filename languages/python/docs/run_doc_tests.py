@@ -2,6 +2,7 @@ import argparse
 
 from polar.api import Polar
 
+
 def load_python(filename, polar):
     """Load a python file into the knowledge base.
 
@@ -17,8 +18,10 @@ def load_python(filename, polar):
 
     module.load(kb)
 
+
 def load(filename, polar):
     polar.load(filename)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -28,15 +31,16 @@ def main():
     polar = Polar()
 
     for filename in args.filename:
-        if filename.endswith('.py'):
+        if filename.endswith(".py"):
             load_python(filename, polar)
 
     for filename in args.filename:
-        if filename.endswith('.polar') or filename.endswith('.pol'):
+        if filename.endswith(".polar") or filename.endswith(".pol"):
             load(filename, polar)
 
     # Trigger load
     next(polar.query_str("1 = 1"))
+
 
 if __name__ == "__main__":
     main()

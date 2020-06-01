@@ -5,6 +5,7 @@ from company import Company, StartUp
 import pytest
 from pathlib import Path
 
+
 def test_policy():
     oso = Oso()
     fname = Path(__file__).parent / "company.polar"
@@ -31,6 +32,7 @@ def test_policy():
     assert oso.allow("reid", "read", StartUp(id=2))
     # test-startup-end
 
+
 def test_policy_with_cut():
     oso = Oso()
     oso.load(Path(__file__).parent / "company.polar")
@@ -53,4 +55,6 @@ def test_policy_with_cut():
 
     assert oso.allow("chris", "read", StartUp(id=1))
     assert oso.allow("reid", "read", StartUp(id=2))
+
+
 # test-cut-end

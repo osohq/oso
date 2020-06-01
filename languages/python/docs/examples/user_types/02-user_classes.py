@@ -1,14 +1,18 @@
 from oso import polar_class
 
+
 @polar_class
 class Customer:
     pass
+
 
 # internal-start
 @polar_class
 class InternalUser:
     def role(self):
         yield db.query("SELECT role FROM internal_roles WHERE id = ?", self.id)
+
+
 # internal-end
 
 # account-start
@@ -16,7 +20,10 @@ class InternalUser:
 class AccountManager(InternalUser):
     def customer_accounts(self):
         yield db.query("SELECT id FROM customer_accounts WHERE manager_id = ?", self.id)
+
+
 # account-end
+
 
 def user_from_id(id):
     user_type = db.query("SELECT type FROM users WHERE id = ?", request.id)
