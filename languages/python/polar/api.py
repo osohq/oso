@@ -267,12 +267,10 @@ class Polar:
         elif tag == "ExternalInstance":
             return self._from_external_id(value[tag]["instance_id"])
         elif tag == "InstanceLiteral":
-            # we really don't want to do this
-            # For instance literals, return the class type?
+            # convert instance literals to external instances
             cls_name = value[tag]["tag"]
-            if cls_name in self.classes:
-                # this is a cop out
-                return self.classes[cls_name]
+            fields = value[tag]["fields"]["fields"]
+            return self.make_external_instance(cls_name, fields)
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
     def to_polar(self, v):
@@ -294,6 +292,43 @@ class Polar:
             val = {"ExternalInstance": {"instance_id": instance_id}}
         term = {"id": 0, "offset": 0, "value": val}
         return term
+
+    def make_external_instance(self, class_name, term_fields, instance_id=None):
+        """ Method to make and cache a new instance of an external class from
+        `class_name`, `term_fields`, and optional `instance_id`"""
+        # Convert all fields to Python
+        fields = {}
+        for k, v in term_fields.items():
+            fields[k] = self.to_python(v)
+
+        # Confirm class has been registered and has a class constructor
+        if class_name not in self.classes:
+            raise PolarRuntimeException(
+                f"Error creating instance of class {class_name}. Has not been registered."
+            )
+        assert class_name in self.class_constructors
+
+        # make the instance
+        cls = self.classes[class_name]
+        constructor = self.class_constructors[class_name]
+        try:
+            if constructor:
+                instance = constructor(**fields)
+            else:
+                instance = cls(**fields)
+        except Exception as e:
+            raise PolarRuntimeException(
+                f"Error creating instance of class {class_name}. {e}"
+            )
+
+        # cache the instance
+        if instance_id is None:
+            instance_id = self._to_external_id(instance)
+
+        self.id_to_instance[instance_id] = instance
+
+        return instance
+
 
     def _do_query(self, q):
         """Method which performs the query loop over an already contructed query"""
@@ -320,30 +355,7 @@ class Polar:
                     class_name = instance["tag"]
                     term_fields = instance["fields"]["fields"]
 
-                    fields = {}
-                    for k, v in term_fields.items():
-                        fields[k] = self.to_python(v)
-
-                    if class_name not in self.classes:
-                        raise PolarRuntimeException(
-                            f"Error creating instance of class {class_name}. Has not been registered."
-                        )
-
-                    assert class_name in self.class_constructors
-
-                    cls = self.classes[class_name]
-                    constructor = self.class_constructors[class_name]
-                    try:
-                        if constructor:
-                            instance = constructor(**fields)
-                        else:
-                            instance = cls(**fields)
-                    except Exception as e:
-                        raise PolarRuntimeException(
-                            f"Error creating instance of class {class_name}. {e}"
-                        )
-
-                    self.id_to_instance[instance_id] = instance
+                    self.make_external_instance(class_name, term_fields, instance_id)
 
                 if kind == "ExternalCall":
                     call_id = data["call_id"]
