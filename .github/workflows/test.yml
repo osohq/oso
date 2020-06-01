@@ -36,6 +36,9 @@ jobs:
           args: --all-features --all-targets -- -D warnings
 
       - run: make test
+      - name: Doc test
+        continue-on-error: true
+        run: make -C languages/python/docs test
   compat_test:
     runs-on: "ubuntu-latest"
     steps:
