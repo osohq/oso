@@ -6,13 +6,14 @@ build:
 
 test-requirements: .make.test-requirements-install
 
-.make.test-requirements-install: requirements-test.txt
+.make.test-requirements-install: requirements-test.txt docs/requirements-docs.txt
 	pip install pytest
 	pip install -r requirements-test.txt
+	pip install -r docs/requirements-docs.txt
 	touch $@
 
 test: test-requirements
-	pytest
+	pytest tests
 
 fmt:
 	black .
