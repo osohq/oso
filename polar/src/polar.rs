@@ -58,7 +58,7 @@ use super::parser;
 use std::sync::Arc;
 
 pub struct Query {
-    vm: PolarVirtualMachine,
+    pub vm: PolarVirtualMachine,
     done: bool,
 }
 
@@ -177,8 +177,13 @@ impl Polar {
         Ok(())
     }
 
-    pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
-        let term = parser::parse_query(query_string)?;
+    pub fn new_query(&mut self, src: &str) -> PolarResult<Query> {
+        let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
+        let src_id = kb.add_source(Source::Query {
+            src: src.to_owned(),
+        });
+        let mut term = parser::parse_query(src)?;
+        kb.add_term_source(&mut term, src_id);
         Ok(self.new_query_from_term(term))
     }
 
@@ -197,7 +202,7 @@ impl Polar {
     }
 
     #[cfg(feature = "tui_")]
-    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
+    pub fn new_query_from_repl(&mut self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
         let s = repl.input("Enter query:");
         match s {

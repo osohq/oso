@@ -507,9 +507,10 @@ pub enum Type {
     Group { members: Vec<Type> },
 }
 
+#[derive(Clone, Debug)]
 pub enum Source {
     Query {
-        src: Option<String>,
+        src: String,
     },
     Load {
         filename: Option<String>,
@@ -538,6 +539,25 @@ impl KnowledgeBase {
             term_sources: HashMap::new(),
             counter: AtomicU64::new(1),
         }
+    }
+
+    pub fn add_source(&mut self, source: Source) -> u64 {
+        let id = self.new_id();
+        self.sources.insert(id, source);
+        id
+    }
+
+    pub fn add_term_source(&mut self, term: &mut Term, src_id: u64) {
+        term.id = self.new_id();
+        self.term_sources.insert(term.id, src_id);
+    }
+
+    pub fn get_source(&self, term: &Term) -> Source {
+        self.term_sources
+            .get(&term.id)
+            .and_then(|term_source| self.sources.get(&term_source))
+            .cloned()
+            .expect("Terms must have source information.")
     }
 
     /// Return a monotonically increasing integer ID.

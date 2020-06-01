@@ -14,7 +14,7 @@ pub mod parser;
 mod polar;
 mod rewrites;
 pub mod types;
-mod vm;
+pub mod vm;
 
 pub use self::polar::{Load, Polar, Query};
 pub use self::vm::DebugInfo;

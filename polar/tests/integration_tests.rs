@@ -4,7 +4,7 @@ use permute::permute;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar::{sym, term, types::*, value, Polar, Query};
+use polar::{sym, term, types::*, value, vm::PolarVirtualMachine, Polar, Query};
 
 type QueryResults = Vec<HashMap<Symbol, Value>>;
 
@@ -12,9 +12,17 @@ fn no_results(_: Symbol, _: Vec<Term>) -> Option<Term> {
     None
 }
 
-fn query_results<F>(polar: &mut Polar, mut query: Query, mut external_handler: F) -> QueryResults
+fn no_debug(_: &mut PolarVirtualMachine, _: &str) {}
+
+fn query_results<F, G>(
+    polar: &mut Polar,
+    mut query: Query,
+    mut external_handler: F,
+    mut debug_handler: G,
+) -> QueryResults
 where
     F: FnMut(Symbol, Vec<Term>) -> Option<Term>,
+    G: FnMut(&mut PolarVirtualMachine, &str),
 {
     let mut results = vec![];
     loop {
@@ -34,6 +42,7 @@ where
                     .external_call_result(&mut query, call_id, external_handler(attribute, args))
                     .unwrap();
             }
+            QueryEvent::Debug { message } => debug_handler(&mut query.vm, &message),
             _ => {}
         }
     }
@@ -42,24 +51,24 @@ where
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, no_results).len() == 1
+    query_results(polar, query, no_results, no_debug).len() == 1
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, no_results).is_empty()
+    query_results(polar, query, no_results, no_debug).is_empty()
 }
 
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
     let mut external_results: Vec<Term> =
         external_results.into_iter().map(Term::new).rev().collect();
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, |_, _| external_results.pop())
+    query_results(polar, query, |_, _| external_results.pop(), no_debug)
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, no_results)
+    query_results(polar, query, no_results, no_debug)
         .iter()
         .map(|bindings| bindings.get(&Symbol(var.to_string())).unwrap().clone())
         .collect()
@@ -68,7 +77,7 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
 fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
     let query = polar.new_query(query_str).unwrap();
 
-    query_results(polar, query, no_results)
+    query_results(polar, query, no_results, no_debug)
         .iter()
         .map(|bindings| {
             vars.iter()
@@ -105,7 +114,7 @@ fn test_jealous() {
         .unwrap();
 
     let query = polar.new_query("jealous(who, of)").unwrap();
-    let results = query_results(&mut polar, query, no_results);
+    let results = query_results(&mut polar, query, no_results, no_debug);
     let jealous = |who: &str, of: &str| {
         assert!(
             &results.contains(&HashMap::from_iter(vec![
@@ -452,7 +461,7 @@ fn test_lookup_derefs() {
         assert!(matches!(args[0].value, Value::Integer(_)));
         foo_lookups.pop()
     };
-    let results = query_results(&mut polar, query, mock_foo);
+    let results = query_results(&mut polar, query, mock_foo, no_debug);
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
@@ -461,7 +470,7 @@ fn test_lookup_derefs() {
         foo_lookups.pop()
     };
     let query = polar.new_query("f(2)").unwrap();
-    let results = query_results(&mut polar, query, mock_foo);
+    let results = query_results(&mut polar, query, mock_foo, no_debug);
     assert!(results.is_empty());
 }
 
@@ -511,9 +520,13 @@ fn test_load_with_query() {
         .expect("new_load failed");
 
     while let Some(query) = polar.load(&mut load).expect("load failed") {
-        assert_eq!(query_results(&mut polar, query, no_results).len(), 1);
+        assert_eq!(
+            query_results(&mut polar, query, no_results, no_debug).len(),
+            1
+        );
     }
 }
+
 #[test]
 fn test_externals_instantiated() {
     let mut polar = Polar::new();
@@ -539,7 +552,7 @@ fn test_externals_instantiated() {
         foo_lookups.pop()
     };
     let query = polar.new_query("f(1, Foo{})").unwrap();
-    let results = query_results(&mut polar, query, mock_foo);
+    let results = query_results(&mut polar, query, mock_foo, no_debug);
     assert_eq!(results.len(), 1);
 }
 
@@ -596,4 +609,36 @@ fn test_comparisons() {
     polar
         .query(&mut query)
         .expect_err("Comparison operators should not allow non-integer operands");
+}
+
+#[test]
+fn test_debug() {
+    let mut polar = Polar::new();
+    polar
+        .load_str("a() := debug(\"a\"), b(), c(), d();\nb();\nc() := debug(\"c\");\nd();\n")
+        .unwrap();
+
+    let over_query = polar.new_query("a()").unwrap();
+    let debug_handler = |vm: &mut PolarVirtualMachine, s: &str| match s {
+        "\"a\"" => vm.debug_command("over"),
+        "001: a() := debug(\"a\"), b(), c(), d();
+                        ^" => vm.debug_command("over"),
+        "001: a() := debug(\"a\"), b(), c(), d();
+                             ^" => vm.debug_command("over"),
+        "\"c\"" => vm.debug_command("over"),
+        "001: a() := debug(\"a\"), b(), c(), d();
+                                  ^" => vm.debug_command("over"),
+        message => panic!("Unexpected debug message: {}", message),
+    };
+    let _results = query_results(&mut polar, over_query, no_results, debug_handler);
+
+    let out_query = polar.new_query("a()").unwrap();
+    let debug_handler = |vm: &mut PolarVirtualMachine, s: &str| match s {
+        "\"a\"" => vm.debug_command("out"),
+        "\"c\"" => vm.debug_command("out"),
+        "001: a() := debug(\"a\"), b(), c(), d();
+                                  ^" => vm.debug_command("out"),
+        message => panic!("Unexpected debug message: {}", message),
+    };
+    let _results = query_results(&mut polar, out_query, no_results, debug_handler);
 }

@@ -26,7 +26,7 @@ pub mod display {
 
     impl fmt::Display for Term {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(fmt, "{}", self.value.to_polar())
+            write!(fmt, "{}", self.to_polar())
         }
     }
 

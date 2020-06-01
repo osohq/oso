@@ -123,7 +123,7 @@ pub struct PolarVirtualMachine {
     pub breakpoint: Breakpoint,
 
     /// Rules and types.
-    kb: Arc<KnowledgeBase>,
+    pub kb: Arc<KnowledgeBase>,
 
     /// Instance Literal -> External Instance table.
     instances: HashMap<InstanceLiteral, ExternalInstance>,
@@ -514,7 +514,6 @@ impl PolarVirtualMachine {
     /// Clean up the query stack after completing a query.
     fn pop_query(&mut self) {
         self.queries.pop();
-        self.maybe_break(Breakpoint::Over { queries: vec![] });
     }
 
     /// Interact with the debugger.
@@ -765,6 +764,9 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: Term) -> PolarResult<QueryEvent> {
+        self.queries.push(term.clone());
+        self.push_goal(Goal::PopQuery { term: term.clone() })?;
+
         match term.value.clone() {
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
@@ -774,20 +776,23 @@ impl PolarVirtualMachine {
                 match &predicate.name.0[..] {
                     // Built-in predicates.
                     "cut" => self.push_goal(Goal::Cut)?,
-                    "debug" => self.push_goal(Goal::Debug {
-                        // Should pull message from predicate.args.
-                        message: "Welcome to the debugger!".to_string(),
-                    })?,
+                    "debug" => {
+                        let mut message = predicate
+                            .args
+                            .iter()
+                            .map(|arg| self.deref(arg).to_polar())
+                            .collect::<Vec<String>>()
+                            .join(", ");
+                        if message.is_empty() {
+                            message = "Welcome to the debugger!".to_string();
+                        }
+                        self.push_goal(Goal::Debug { message })?
+                    }
 
                     // User-defined predicates.
-                    //
-                    // WOWHACK: probs shouldn't clone the entire KB
-                    _ => match self.kb.clone().rules.get(&predicate.name) {
+                    _ => match self.kb.rules.get(&predicate.name) {
                         None => self.push_goal(Goal::Backtrack)?,
                         Some(generic_rule) => {
-                            self.queries.push(term.clone());
-                            self.push_goal(Goal::PopQuery { term })?;
-
                             let generic_rule = generic_rule.clone();
                             assert_eq!(generic_rule.name, predicate.name);
                             self.push_goal(Goal::SortRules {
@@ -909,6 +914,7 @@ impl PolarVirtualMachine {
                 .into())
             }
         }
+        self.maybe_break(Breakpoint::Over { queries: vec![] });
         Ok(QueryEvent::None)
     }
 
