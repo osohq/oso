@@ -6,7 +6,7 @@ from .extras import Http, Jwt, PathMapper
 from collections.abc import Iterable
 from pathlib import Path
 from types import GeneratorType
-from typing import Any, Sequence
+from typing import Any, Sequence, List
 import weakref
 
 
@@ -55,6 +55,16 @@ class QueryResult:
     def __init__(self, results: list):
         self.results = results
         self.success = len(results) > 0
+
+
+class Predicate:
+    """Represent a predicate in Polar (`name(args, ...)`)."""
+    def __init__(self, name: str, args: List[str]):
+        self.name = name
+        self.args = args
+
+    def __str__(self):
+        return f'{self.name}({self.args.join(", ")})'
 
 
 #### Polar implementation
@@ -271,6 +281,9 @@ class Polar:
             cls_name = value[tag]["tag"]
             fields = value[tag]["fields"]["fields"]
             return self.make_external_instance(cls_name, fields)
+        elif tag == "Call":
+            return Predicate(value[tag]["name"], value[tag]["args"])
+
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
     def to_polar(self, v):
