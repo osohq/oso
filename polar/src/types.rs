@@ -318,6 +318,47 @@ impl Term {
             value: self.value.map(f),
         }
     }
+
+    // Generates ids for term and all sub terms. Returns vec of new term ids.
+    pub fn gen_ids(&mut self, kb: &mut KnowledgeBase, new_ids: &mut Vec<u64>) {
+        match &mut self.value {
+            Value::Integer(_) => (),
+            Value::String(_) => (),
+            Value::Boolean(_) => (),
+            Value::ExternalInstance(_) => (),
+            Value::InstanceLiteral(instance) => {
+                for (_, t) in &mut instance.fields.fields.iter_mut() {
+                    t.gen_ids(kb, new_ids);
+                }
+            }
+            Value::Dictionary(dict) => {
+                for (_, t) in &mut dict.fields.iter_mut() {
+                    t.gen_ids(kb, new_ids);
+                }
+            }
+            Value::Call(pred) => {
+                for t in &mut pred.args.iter_mut() {
+                    t.gen_ids(kb, new_ids);
+                }
+            }
+            Value::List(list) => {
+                for t in &mut list.iter_mut() {
+                    t.gen_ids(kb, new_ids);
+                }
+            }
+            Value::Symbol(_) => (),
+            Value::Expression(op) => {
+                for t in &mut op.args.iter_mut() {
+                    t.gen_ids(kb, new_ids);
+                }
+            }
+        };
+        if self.id == 0 {
+            let new_id = kb.new_id();
+            self.id = new_id;
+            new_ids.push(new_id);
+        }
+    }
 }
 
 pub fn unwrap_and(term: Term) -> TermList {
@@ -403,10 +444,23 @@ pub enum Type {
     Group { members: Vec<Type> },
 }
 
+pub enum Source {
+    Query {
+        src: Option<String>,
+    },
+    Load {
+        filename: Option<String>,
+        src: String,
+    },
+}
+
 #[derive(Default)]
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
+
+    pub sources: HashMap<u64, Source>,
+    pub term_sources: HashMap<u64, u64>,
 
     // For temporary variable names, call IDs, instance IDs, symbols, etc.
     counter: AtomicU64,
@@ -417,6 +471,8 @@ impl KnowledgeBase {
         Self {
             types: HashMap::new(),
             rules: HashMap::new(),
+            sources: HashMap::new(),
+            term_sources: HashMap::new(),
             counter: AtomicU64::new(1),
         }
     }
