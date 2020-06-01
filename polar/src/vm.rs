@@ -33,7 +33,7 @@ pub enum Goal {
     },
     Lookup {
         dict: Dictionary,
-        field: Symbol,
+        field: Term,
         value: Term,
     },
     LookupExternal {
@@ -576,15 +576,40 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn lookup(&mut self, dict: Dictionary, field: Symbol, value: Term) {
-        if let Some(retrieved) = dict.fields.get(&field) {
-            self.push_goal(Goal::Unify {
-                left: retrieved.clone(),
-                right: value,
-            });
-        } else {
-            self.push_goal(Goal::Backtrack);
-        }
+    pub fn lookup(&mut self, dict: Dictionary, field: Term, value: Term) {
+        // check if field is a variable
+        match &field.value {
+            Value::Symbol(_) => {
+                let mut alternatives: Vec<Vec<Goal>> = vec![];
+                for (k, v) in &dict.fields {
+                    let mut goals: Vec<Goal> = vec![];
+                    // attempt to unify dict key with field
+                    // if `field` is bound, unification will only succeed for the matching key
+                    // if `field` is unbound, unification will succeed for all keys
+                    goals.push(Goal::Unify {
+                        left: Term::new(Value::String(k.clone().0)),
+                        right: field.clone(),
+                    });
+                    // attempt to unify dict value with result
+                    goals.push(Goal::Unify {
+                        left: v.clone(),
+                        right: value.clone(),
+                    });
+                    alternatives.push(goals);
+                }
+                self.choose(alternatives);
+            }
+            _ => {
+                if let Some(retrieved) = dict.fields.get(&field_name(&field)) {
+                    self.push_goal(Goal::Unify {
+                        left: retrieved.clone(),
+                        right: value,
+                    });
+                } else {
+                    self.push_goal(Goal::Backtrack);
+                }
+            }
+        };
     }
 
     /// Return an external call event to look up a field's value
@@ -681,118 +706,92 @@ impl PolarVirtualMachine {
                     },
                 }
             }
-            Value::Expression(Operation { operator, mut args }) => match operator {
-                Operator::And => {
-                    self.append_goals(args.into_iter().map(|term| Goal::Query { term }).collect())
-                }
-                Operator::Unify => {
-                    assert_eq!(args.len(), 2);
-                    let right = args.pop().unwrap();
-                    let left = args.pop().unwrap();
-                    self.push_goal(Goal::Unify { left, right });
-                }
-                Operator::Dot => {
-                    assert_eq!(args.len(), 3);
-                    let object = &args[0];
-                    let field = &args[1];
-                    let value = &args[2];
+            Value::Expression(Operation { operator, mut args }) => {
+                match operator {
+                    Operator::And => self
+                        .append_goals(args.into_iter().map(|term| Goal::Query { term }).collect()),
+                    Operator::Unify => {
+                        assert_eq!(args.len(), 2);
+                        let right = args.pop().unwrap();
+                        let left = args.pop().unwrap();
+                        self.push_goal(Goal::Unify { left, right });
+                    }
+                    Operator::Dot => {
+                        assert_eq!(args.len(), 3);
+                        let object = self.deref(&args[0]);
+                        let field = &args[1];
+                        let value = &args[2];
 
-                    let derefed_object = self.deref(&object);
+                        match object.value {
+                            Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
+                                dict,
+                                field: field.clone(),
+                                value: args.remove(2),
+                            }),
+                            Value::InstanceLiteral(_) => {
+                                // Check if there's an external instance for this.
+                                // If there is, use it, if not push a make external then use it.
+                                // instantiate the instance and the predicate lookup
+                                let (object, obj_goals) = self.instantiate_externals(&object);
+                                let (field, field_goals) = self.instantiate_externals(field);
+                                args[0] = object;
+                                args[1] = field;
+                                self.push_goal(Goal::Query {
+                                    term: Term::new(Value::Expression(Operation {
+                                        operator: Operator::Dot,
+                                        args,
+                                    })),
+                                });
+                                self.append_goals(field_goals);
+                                self.append_goals(obj_goals);
+                            }
+                            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                                let value =
+                                    value.clone().value.symbol().expect("Bad lookup value.");
+                                let call_id = self.new_call_id(&value);
+                                let (field, mut goals) = self.instantiate_externals(field);
 
-                    // check if field is a variable
-                    let derefed_field = match field.value {
-                        Value::Symbol(_) => {
-                            let field_name = self.deref(field);
-                            let symbol = match &field_name.value {
-                                Value::String(name) => Symbol(name.clone()),
-                                _ => {
-                                    return Err(RuntimeError::TypeError {
-                                        msg: format!(
-                                            "Variable lookup field must be a String, got {:?}",
-                                            &field_name.value
-                                        ),
-                                    }
-                                    .into())
+                                goals.push(Goal::LookupExternal {
+                                    call_id,
+                                    instance_id,
+                                    field,
+                                });
+                                self.append_goals(goals);
+                            }
+                            _ => {
+                                return Err(RuntimeError::TypeError {
+                                    msg: format!(
+                                    "can only perform lookups on dicts and instances, this is {:?}",
+                                    object.value
+                                ),
                                 }
-                            };
-                            Some(Term::new(Value::Call(Predicate {
-                                name: symbol,
-                                args: vec![],
-                            })))
+                                .into())
+                            }
                         }
-                        _ => None,
-                    };
+                    }
+                    Operator::Or => self.choose(
+                        args.into_iter()
+                            .map(|term| vec![Goal::Query { term }])
+                            .collect(),
+                    ),
+                    Operator::Not => {
+                        assert_eq!(args.len(), 1);
+                        let term = args.pop().unwrap();
+                        let alternatives = vec![
+                            vec![Goal::Query { term }, Goal::Cut, Goal::Backtrack],
+                            vec![Goal::Noop],
+                        ];
 
-                    let field = &derefed_field.unwrap_or_else(|| field.clone());
-
-                    match self.deref(&object).value {
-                        Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
-                            dict,
-                            field: field_name(&field),
-                            value: args.remove(2),
-                        }),
-                        Value::InstanceLiteral(_) => {
-                            // Check if there's an external instance for this.
-                            // If there is, use it, if not push a make external then use it.
-                            // instantiate the instance and the predicate lookup
-                            let (object, obj_goals) = self.instantiate_externals(&derefed_object);
-                            let (field, field_goals) = self.instantiate_externals(&field);
-                            args[0] = object;
-                            args[1] = field;
-                            self.push_goal(Goal::Query {
-                                term: Term::new(Value::Expression(Operation {
-                                    operator: Operator::Dot,
-                                    args,
-                                })),
-                            });
-                            self.append_goals(field_goals);
-                            self.append_goals(obj_goals);
+                        self.choose(alternatives);
+                    }
+                    _ => {
+                        return Err(RuntimeError::TypeError {
+                            msg: format!("can't query for expression: {:?}", operator),
                         }
-                        Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                            let value = value
-                                .clone()
-                                .value
-                                .symbol()
-                                .map_err(|e| panic!("bad lookup value: {}", e.to_polar()))
-                                .unwrap();
-
-                            let (field, mut goals) = self.instantiate_externals(&field);
-                            let call_id = self.new_call_id(&value);
-                            goals.push(Goal::LookupExternal {
-                                call_id,
-                                instance_id,
-                                field,
-                            });
-                            self.append_goals(goals);
-                        }
-                        _ => panic!(
-                            "can only perform lookups on dicts and instances, this is {:?}",
-                            object.value
-                        ),
+                        .into())
                     }
                 }
-                Operator::Or => self.choose(
-                    args.into_iter()
-                        .map(|term| vec![Goal::Query { term }])
-                        .collect(),
-                ),
-                Operator::Not => {
-                    assert_eq!(args.len(), 1);
-                    let term = args.pop().unwrap();
-                    let alternatives = vec![
-                        vec![Goal::Query { term }, Goal::Cut, Goal::Backtrack],
-                        vec![Goal::Noop],
-                    ];
-
-                    self.choose(alternatives);
-                }
-                _ => {
-                    return Err(RuntimeError::TypeError {
-                        msg: format!("can't query for expression: {:?}", operator),
-                    }
-                    .into())
-                }
-            },
+            }
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: format!("can't query for: {}", term.value.to_polar()),
@@ -1605,7 +1604,7 @@ mod tests {
         let dict = Dictionary { fields };
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: sym!("x"),
+            field: term!(pred!("x", [])),
             value: term!(1),
         });
 
@@ -1616,7 +1615,7 @@ mod tests {
         // Lookup with incorrect value
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: sym!("x"),
+            field: term!(pred!("x", [])),
             value: term!(2),
         });
 
@@ -1625,7 +1624,7 @@ mod tests {
         // Lookup with unbound value
         vm.push_goal(Goal::Lookup {
             dict,
-            field: sym!("x"),
+            field: term!(pred!("x", [])),
             value: term!(sym!("y")),
         });
         assert_query_events!(vm, [
