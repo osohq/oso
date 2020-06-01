@@ -14,7 +14,6 @@ test-requirements: .make.test-requirements-install
 
 test: test-requirements
 	pytest tests
-	make -C docs test
 
 fmt:
 	black .
