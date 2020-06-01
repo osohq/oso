@@ -329,7 +329,6 @@ class Polar:
 
         return instance
 
-
     def _do_query(self, q):
         """Method which performs the query loop over an already contructed query"""
         with CleanupQuery(q) as query:
