@@ -2,4 +2,4 @@ cffi==1.14.0
 flask
 frozendict
 authlib
-
+dataclasses ; python_version < '3.7'
