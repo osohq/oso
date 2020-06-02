@@ -133,7 +133,7 @@ class Polar:
         if policy_file not in self.load_queue:
             self.load_queue.append(policy_file)
 
-    def _raise_error(self):
+    def _get_error(self):
         # Raise polar errors as the correct python exception type.
         err_s = lib.polar_get_error()
         err_json = ffi.string(err_s).decode()
@@ -186,16 +186,15 @@ class Polar:
                 exception = Unknown("Unknown Internal Error: See console.")
 
         lib.string_free(err_s)
-        raise exception
+        return exception
+
+    def _raise_error(self):
+        e = self._get_error()
+        raise e
 
     def _read_in_file(self, path):
         """Reads in a file and adds to the knowledge base."""
         with open(path) as file:
-            # contents = ""
-            # for line in file:
-            #     line = line.split("#")[0]
-            #     line = line.split("?=")[0]
-            #     contents += line + "\n"
             contents = file.read()
             self.loaded_files[path] = contents
             self.load_str(contents)
@@ -211,6 +210,10 @@ class Polar:
         raise NotImplementedError()
 
     def register_python_class(self, cls, from_polar=None):
+        """Registers `cls` as a class accessible by Polar.
+        `from_polar` can either be a method or a string. In the case of a
+        string, Polar will look for the method using `getattr(cls, from_polar)`"""
+
         class_name = cls.__name__
         self.classes[class_name] = cls
         self.class_constructors[class_name] = from_polar
@@ -227,30 +230,25 @@ class Polar:
         if load == ffi.NULL:
             self._raise_error()
 
-        try:
-            while True:
-                query = ffi.new("polar_Query **")
-                loaded = lib.polar_load(self.polar, load, query)
-                if loaded != 0:
-                    self._raise_error()
+        while True:
+            query = ffi.new("polar_Query **")
+            loaded = lib.polar_load(self.polar, load, query)
+            if loaded != 0:
+                self._raise_error()
 
-                query = query[0]
-                if query == ffi.NULL:
-                    # Load is done
-                    break
+            query = query[0]
+            if query == ffi.NULL:
+                # Load is done
+                break
 
-                results = self._do_query(query)
-                try:
-                    next(results)
-                    # Exhaust generator to make sure query object is cleaned up before next load.
-                    for _ in results:
-                        pass
+            results = self._do_query(query)
 
-                except StopIteration:
-                    # TODO (dhatch): Better error message.
-                    raise PolarRuntimeException("Inline query in file failed.")
-        finally:
-            lib.load_free(load)
+            success = False
+            # drain all results, and set success to True if at least one result is found
+            for _ in results:
+                success = True
+            if not success:
+                raise PolarRuntimeException("Inline query in file failed.")
 
     def _to_external_id(self, python_obj):
         """ Create or look up a polar external_instance for an object """
@@ -333,6 +331,10 @@ class Polar:
         cls = self.classes[class_name]
         constructor = self.class_constructors[class_name]
         try:
+            # if from_polar is a string, get it from the instance
+            if isinstance(constructor, str):
+                constructor = getattr(cls, constructor)
+
             if constructor:
                 instance = constructor(**fields)
             else:
@@ -557,6 +559,23 @@ class Polar:
 
     def clear_cache(self):
         self.id_to_instance = {}
+
+    def repl(self):
+        # Make sure KB is loaded in
+        self._kb_load()
+        self.clear_cache()
+        while True:
+            query = lib.polar_query_from_repl(self.polar)
+            had_result = False
+            if query == ffi.NULL:
+                e = self._get_error()
+                print("Query error: ", e)
+                break
+            for res in self._do_query(query):
+                had_result = True
+                print(f"Result: {res}")
+            if not had_result:
+                print("False")
 
 
 register_python_class(Http)

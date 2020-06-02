@@ -9,7 +9,7 @@ ffibuilder.set_source(
     """,
     library_dirs=["../../target/debug"],
     include_dirs=["../../polar"],
-    libraries=["polar"],
+    libraries=["polar", "rt"],
 )
 
 with open("../../polar/polar.h") as f:

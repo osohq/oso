@@ -62,7 +62,7 @@ setup(
         "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3.6",
     ],
-    packages=["oso", "polar"],
+    packages=find_packages(),
     python_requires=">=3.6",
     setup_requires=["cffi>=1.0.0", "wheel"],
     cffi_modules=["polar/build.py:ffibuilder"],

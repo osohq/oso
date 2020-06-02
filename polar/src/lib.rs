@@ -162,6 +162,27 @@ pub extern "C" fn polar_load(
 }
 
 #[no_mangle]
+pub extern "C" fn polar_query_from_repl(polar_ptr: *mut Polar) -> *mut Query {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        match polar.new_query_from_repl() {
+            Ok(query) => box_ptr!(query),
+            Err(e) => {
+                set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
+                null_mut()
+            }
+        }
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::OperationalError::Unknown.into());
+            null_mut()
+        }
+    }
+}
+
+#[no_mangle]
 /// Bools aren't portable, 0 means error 1 means success.
 pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
     let result = catch_unwind(|| {
