@@ -127,6 +127,24 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<(Term, Term)> {
     }
 }
 
+pub fn rewrite_specializer(spec: &mut Term, kb: &KnowledgeBase) -> Vec<Term> {
+    let mut rewrites = vec![];
+
+    // Walk the tree, replace rewrite terms with symbols and cache up rewrites to be made next pass.
+    let mut find_rewrites =
+        |term: &mut Term, _index: &TreeIndex, _insert_point: &Option<TreeIndex>| {
+            if let Some((lookup, symbol)) = rewrite(term, kb) {
+                rewrites.push(lookup);
+                *term = symbol;
+            }
+        };
+    let mut index = vec![];
+    let insert_point = None;
+    walk_indexed(spec, &mut index, &insert_point, &mut find_rewrites);
+
+    rewrites
+}
+
 pub fn rewrite_term(mut term: Term, kb: &KnowledgeBase) -> Term {
     let mut rewrites = vec![];
 
@@ -149,8 +167,8 @@ pub fn rewrite_term(mut term: Term, kb: &KnowledgeBase) -> Term {
     rewrites.reverse();
     let mut do_rewrites =
         |term: &mut Term, index: &TreeIndex, _insert_point: &Option<TreeIndex>| {
-            for (lookup, i) in &rewrites {
-                if index == i {
+            for (lookup, insert_point) in &rewrites {
+                if index == insert_point {
                     let new_t = and_wrap(lookup.clone(), term.clone());
                     *term = new_t;
                 }
@@ -170,10 +188,8 @@ pub fn rewrite_rule(mut rule: Rule, kb: &KnowledgeBase) -> Rule {
 
     for param in &mut rule.params {
         if let Some(specializer) = &mut param.specializer {
-            if let Some((lookup, symbol)) = rewrite(specializer, kb) {
-                new_terms.push(lookup);
-                *specializer = symbol;
-            }
+            let mut rewrites = rewrite_specializer(specializer, kb);
+            new_terms.append(&mut rewrites);
         }
     }
 
@@ -213,17 +229,34 @@ mod tests {
         let rewritten = rewrite_term(term, &kb);
         assert_eq!(rewritten.to_polar(), "x,.(a,b,_value_2),_value_2");
 
+        let query = parse_query("f(a.b.c)").unwrap();
+        assert_eq!(query.to_polar(), "f(a.b.c)");
+        let rewritten = rewrite_term(query, &kb);
+        assert_eq!(
+            rewritten.to_polar(),
+            ".(a,b,_value_3),.(_value_3,c,_value_4),f(_value_4)"
+        );
+
+        let rules = parse_rules("f(a.b.c);").unwrap();
+        let rule = rules[0].clone();
+        assert_eq!(rule.to_polar(), "f(a.b.c);");
+        let rewritten = rewrite_rule(rule, &kb);
+        assert_eq!(
+            rewritten.to_polar(),
+            "f(_value_6) := .(a,b,_value_5),.(_value_5,c,_value_6);"
+        );
+
         let term = parse_query("a.b = 1").unwrap();
         let rewritten = rewrite_term(term, &kb);
-        assert_eq!(rewritten.to_polar(), ".(a,b,_value_3),_value_3=1");
+        assert_eq!(rewritten.to_polar(), ".(a,b,_value_7),_value_7=1");
         let term = parse_query("{x: 1}.x = 1").unwrap();
         assert_eq!(term.to_polar(), "{x: 1}.x=1");
         let rewritten = rewrite_term(term, &kb);
-        assert_eq!(rewritten.to_polar(), ".({x: 1},x,_value_4),_value_4=1");
+        assert_eq!(rewritten.to_polar(), ".({x: 1},x,_value_8),_value_8=1");
 
         let term = parse_query("!{x: a.b}").unwrap();
         assert_eq!(term.to_polar(), "!{x: a.b}");
         let rewritten = rewrite_term(term, &kb);
-        assert_eq!(rewritten.to_polar(), "!(.(a,b,_value_5),{x: _value_5})");
+        assert_eq!(rewritten.to_polar(), "!(.(a,b,_value_9),{x: _value_9})");
     }
 }

@@ -590,24 +590,6 @@ impl PolarVirtualMachine {
                     alternatives.push(goals);
                 }
                 self.choose(alternatives);
-
-                // let field_name = self.deref(&field);
-                // let symbol = match &field_name.value {
-                //     Value::String(name) => Symbol(name.clone()),
-                //     _ => {
-                //         return Err(RuntimeError::TypeError {
-                //             msg: format!(
-                //                 "Variable lookup field must be a String, got {:?}",
-                //                 &field_name.value
-                //             ),
-                //         }
-                //         .into())
-                //     }
-                // };
-                // Some(Term::new(Value::Call(Predicate {
-                //     name: symbol,
-                //     args: vec![],
-                // })))
             }
             _ => {
                 if let Some(retrieved) = dict.fields.get(&field_name(&field)) {
@@ -620,19 +602,6 @@ impl PolarVirtualMachine {
                 }
             }
         };
-
-        // let field = derefed_field.unwrap_or_else(|| field.clone());
-
-        // if let Some(retrieved) = dict.fields.get(&field_name(&field)) {
-        //     self.push_goal(Goal::Unify {
-        //         left: retrieved.clone(),
-        //         right: value,
-        //     });
-        // } else {
-        //     self.push_goal(Goal::Backtrack);
-        // }
-
-        // Ok(())
     }
 
     /// Return an external call event to look up a field's value
