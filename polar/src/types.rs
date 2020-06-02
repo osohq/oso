@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::formatting::to_polar::ToPolarString;
+use crate::ToPolarString;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
