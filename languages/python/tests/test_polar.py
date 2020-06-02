@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from polar import Polar, exceptions
+from polar import Polar, exceptions, Predicate, Query
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
 
@@ -381,3 +381,13 @@ def test_parser_errors(polar):
     )
 
     # ExtraToken -- not sure what causes this
+
+
+def test_predicate(polar, qvar):
+    """Test that predicates can be converted to and from python."""
+    polar.load_str("f(x) := x = pred(1, 2);")
+    assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
+
+    assert polar.query(
+        Query(name="f", args=[Predicate("pred", [1, 2])]), single=True
+    ).results == [{}]

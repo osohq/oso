@@ -6,8 +6,10 @@ from .extras import Http, Jwt, PathMapper
 from collections.abc import Iterable
 from pathlib import Path
 from types import GeneratorType
-from typing import Any, Sequence
+from typing import Any, Sequence, List
 import weakref
+
+from dataclasses import dataclass
 
 
 from .exceptions import (
@@ -55,6 +57,17 @@ class QueryResult:
     def __init__(self, results: list):
         self.results = results
         self.success = len(results) > 0
+
+
+@dataclass(frozen=True)
+class Predicate:
+    """Represent a predicate in Polar (`name(args, ...)`)."""
+
+    name: str
+    args: List[str]
+
+    def __str__(self):
+        return f'{self.name}({self.args.join(", ")})'
 
 
 #### Polar implementation
@@ -271,6 +284,12 @@ class Polar:
             cls_name = value[tag]["tag"]
             fields = value[tag]["fields"]["fields"]
             return self.make_external_instance(cls_name, fields)
+        elif tag == "Call":
+            return Predicate(
+                name=value[tag]["name"],
+                args=[self.to_python(v) for v in value[tag]["args"]],
+            )
+
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
     def to_polar(self, v):
@@ -287,6 +306,8 @@ class Polar:
             val = {
                 "Dictionary": {"fields": {k: self.to_polar(v) for k, v in v.items()}}
             }
+        elif type(v) == Predicate:
+            val = {"Call": {"name": v.name, "args": [self.to_polar(v) for v in v.args]}}
         else:
             instance_id = self._to_external_id(v)
             val = {"ExternalInstance": {"instance_id": instance_id}}
