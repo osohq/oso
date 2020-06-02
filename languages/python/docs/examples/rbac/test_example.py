@@ -20,17 +20,13 @@ def load(oso):
 
 @pytest.mark.parametrize(
     "policy",
-    [
-        "01-simple.polar",
-        "02-simple.polar",
-        "05-external.polar",
-        "06-external.polar",
-    ],
+    ["01-simple.polar", "02-simple.polar", "05-external.polar", "06-external.polar",],
 )
 def test_parses(oso, policy, load):
     # Test that policy parses and inline tests pass.
     load(policy)
     oso._kb_load()
+
 
 def test_external_policy(oso, load):
     load("05-external.polar")
@@ -49,6 +45,7 @@ def test_external_policy(oso, load):
     assert not oso.allow(User(role="employee"), "approve", "expense")
     assert oso.allow(User(role="accountant"), "view", "expense")
     assert oso.allow(User(name="greta"), "approve", "expense")
+
 
 def test_external_policy(oso, load):
     load("06-external.polar")
