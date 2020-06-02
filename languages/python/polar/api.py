@@ -9,6 +9,8 @@ from types import GeneratorType
 from typing import Any, Sequence, List
 import weakref
 
+from dataclasses import dataclass
+
 
 from .exceptions import (
     InvalidTokenCharacter,
@@ -57,12 +59,12 @@ class QueryResult:
         self.success = len(results) > 0
 
 
+@dataclass(frozen=True)
 class Predicate:
     """Represent a predicate in Polar (`name(args, ...)`)."""
 
-    def __init__(self, name: str, args: List[str]):
-        self.name = name
-        self.args = args
+    name: str
+    args: List[str]
 
     def __str__(self):
         return f'{self.name}({self.args.join(", ")})'
@@ -283,7 +285,10 @@ class Polar:
             fields = value[tag]["fields"]["fields"]
             return self.make_external_instance(cls_name, fields)
         elif tag == "Call":
-            return Predicate(value[tag]["name"], value[tag]["args"])
+            return Predicate(
+                name=value[tag]["name"],
+                args=[self.to_python(v) for v in value[tag]["args"]],
+            )
 
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
@@ -301,6 +306,8 @@ class Polar:
             val = {
                 "Dictionary": {"fields": {k: self.to_polar(v) for k, v in v.items()}}
             }
+        elif type(v) == Predicate:
+            val = {"Call": {"name": v.name, "args": [self.to_polar(v) for v in v.args]}}
         else:
             instance_id = self._to_external_id(v)
             val = {"ExternalInstance": {"instance_id": instance_id}}
