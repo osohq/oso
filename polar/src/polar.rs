@@ -118,9 +118,9 @@ impl Polar {
     pub fn load(&mut self, load: &mut Load) -> PolarResult<Option<Query>> {
         while let Some(line) = load.lines.pop() {
             match line {
-                parser::Line::Rule(rule) => {
+                parser::Line::Rule(mut rule) => {
                     let name = rule.name.clone();
-                    let rewritten_rule = rewrite_rule(rule, &self.kb);
+                    rewrite_rule(&mut rule, &self.kb);
                     let generic_rule = Arc::get_mut(&mut self.kb)
                         .expect("cannot load policy while queries are in progress")
                         .rules
@@ -129,7 +129,7 @@ impl Polar {
                             name,
                             rules: vec![],
                         });
-                    generic_rule.rules.push(rewritten_rule);
+                    generic_rule.rules.push(rule);
                 }
                 parser::Line::Query(term) => {
                     return Ok(Some(self.new_query_from_term(term)));
@@ -155,10 +155,9 @@ impl Polar {
         Ok(self.new_query_from_term(term))
     }
 
-    pub fn new_query_from_term(&self, term: Term) -> Query {
-        let query = Goal::Query {
-            term: rewrite_term(term, &self.kb),
-        };
+    pub fn new_query_from_term(&self, mut term: Term) -> Query {
+        rewrite_term(&mut term, &self.kb);
+        let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
     }

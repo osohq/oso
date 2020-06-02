@@ -113,6 +113,14 @@ impl Dictionary {
         }
     }
 
+    /// Apply `f` to value and return a new term.
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Value),
+    {
+        self.fields.iter_mut().for_each(|(_, v)| f(&mut v.value));
+    }
+
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
     }
@@ -176,6 +184,14 @@ impl Predicate {
             name: self.name.clone(),
             args: self.args.iter().map(|term| term.map(f)).collect(),
         }
+    }
+
+    /// Apply `f` to value and return a new term.
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Value),
+    {
+        self.args.iter_mut().for_each(|a| f(&mut a.value));
     }
 }
 
@@ -272,6 +288,27 @@ impl Value {
         f(&mapped)
     }
 
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Value),
+    {
+        f(self);
+        // the match does the recursive calling of map
+        match self {
+            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+            Value::List(terms) => {
+                terms.iter_mut().for_each(|term| f(&mut term.value));
+            }
+            Value::Call(predicate) => predicate.map_in_place(f),
+            Value::Expression(Operation { args, .. }) => {
+                args.iter_mut().for_each(|term| f(&mut term.value));
+            }
+            Value::InstanceLiteral(InstanceLiteral { fields, .. }) => fields.map_in_place(f),
+            Value::ExternalInstance(_) => {}
+            Value::Dictionary(dict) => dict.map_in_place(f),
+        };
+    }
+
     pub fn symbol(self) -> Result<Symbol, RuntimeError> {
         match self {
             Value::Symbol(name) => Ok(name),
@@ -321,6 +358,14 @@ impl Term {
             value: self.value.map(f),
         }
     }
+
+    /// Apply `f` to value and return a new term.
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Value),
+    {
+        self.value.map_in_place(f);
+    }
 }
 
 pub fn unwrap_and(term: Term) -> TermList {
@@ -359,6 +404,13 @@ impl Parameter {
             specializer: self.specializer.clone().map(|t| t.map(f)),
         }
     }
+
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Value),
+    {
+        self.specializer.iter_mut().for_each(|a| f(&mut a.value));
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -378,6 +430,17 @@ impl Rule {
             params: self.params.iter().map(|param| param.map(f)).collect(),
             body: self.body.map(f),
         }
+    }
+
+    /// Apply `f` to value and return a new term.
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Value),
+    {
+        self.params
+            .iter_mut()
+            .for_each(|param| param.map_in_place(f));
+        self.body.map_in_place(f);
     }
 }
 
