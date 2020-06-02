@@ -6,6 +6,7 @@ use super::ToPolarString;
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
+pub const MAX_EXECUTED_GOALS: usize = 100_000;
 
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
@@ -87,6 +88,9 @@ pub struct PolarVirtualMachine {
     bindings: Bindings,
     choices: Choices,
 
+    /// Count executed goals
+    goal_counter: usize,
+
     /// If VM is set to `debug=True`, the VM will return a `QueryEvent::Breakpoint`
     /// after every goal
     debug: bool,
@@ -119,6 +123,7 @@ impl PolarVirtualMachine {
             goals,
             bindings: vec![],
             choices: vec![],
+            goal_counter: 0,
             debug: false,
             kb,
             instances: HashMap::new(),
@@ -169,6 +174,7 @@ impl PolarVirtualMachine {
             if std::env::var("RUST_LOG").is_ok() {
                 eprintln!("{}", goal);
             }
+            self.goal_counter += 1;
             match goal {
                 Goal::Backtrack => self.backtrack(),
                 Goal::Break => return Ok(QueryEvent::Breakpoint),
@@ -233,7 +239,17 @@ impl PolarVirtualMachine {
 
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) {
-        assert!(self.goals.len() < MAX_GOALS, "too many goals");
+        assert!(
+            self.goals.len() < MAX_GOALS,
+            format!("Goal stack overflow! MAX_GOALS = {}", MAX_GOALS)
+        );
+        assert!(
+            self.goal_counter < MAX_EXECUTED_GOALS,
+            format!(
+                "Goal count exceeded! MAX_EXECUTED_GOALS = {}",
+                MAX_EXECUTED_GOALS
+            )
+        );
         self.goals.push(goal);
     }
 
