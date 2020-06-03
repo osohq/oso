@@ -97,7 +97,7 @@ pub struct Load {
     lines: Vec<parser::Line>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Polar {
     pub kb: Arc<KnowledgeBase>,
 }
@@ -161,6 +161,23 @@ impl Polar {
         };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { vm, done: false }
+    }
+
+    #[cfg(not(feature = "tui_"))]
+    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
+        Err(PolarError::Runtime(RuntimeError::Unsupported {
+            msg: "The REPL is not supported in this build.".to_string(),
+        }))
+    }
+
+    #[cfg(feature = "tui_")]
+    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
+        let mut repl = crate::cli::repl::Repl::new();
+        let s = repl.input("Enter query:");
+        match s {
+            Ok(s) => self.new_query(&s),
+            Err(_) => Err(PolarError::Operational(OperationalError::Unknown)),
+        }
     }
 
     // @TODO: Direct load_rules endpoint.

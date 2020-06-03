@@ -1,4 +1,5 @@
 from cffi import FFI
+from os import sys
 
 ffibuilder = FFI()
 
@@ -9,7 +10,7 @@ ffibuilder.set_source(
     """,
     library_dirs=["../../target/debug"],
     include_dirs=["../../polar"],
-    libraries=["polar"],
+    libraries=["polar", "rt"] if sys.platform.startswith("linux") else ["polar"],
 )
 
 with open("../../polar/polar.h") as f:

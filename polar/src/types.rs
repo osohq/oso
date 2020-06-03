@@ -25,6 +25,7 @@ pub enum ParseError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     Serialization { msg: String },
+    Unsupported { msg: String },
     TypeError { msg: String },
     UnboundVariable { sym: Symbol },
 }
@@ -77,13 +78,8 @@ impl std::error::Error for PolarError {}
 
 impl fmt::Display for PolarError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "todo")
-        //match self {
-        // PolarError::Parse(s) | PolarError::Serialization(s) | PolarError::Unimplemented(s) => {
-        //     write!(f, "{}", s)
-        // }
-        // PolarError::Unknown => write!(f, "panic!"),
-        //}
+        let s = serde_json::to_string(&self).unwrap_or_else(|_| "Unknown".to_string());
+        write!(f, "{}", s)
     }
 }
 
