@@ -92,7 +92,7 @@ jobs:
         with:
           name: wheel
       - name: Zip file
-        run: zip --junk-paths -r oso.zip wheel/
+        run: zip --junk-paths -r oso-python.zip wheel/
       # - name: Download docs
       #   uses: actions/download-artifact@v1
       #   with:
