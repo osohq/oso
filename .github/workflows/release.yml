@@ -41,7 +41,7 @@ jobs:
       #   with:
       #     python-version: "3.6"
       - uses: actions/checkout@v2
-      - run: ./package.sh
+      - run: scripts/osx_package.sh
       - uses: actions/upload-artifact@v1
         with:
           name: wheel
