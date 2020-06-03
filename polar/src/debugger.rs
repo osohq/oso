@@ -113,7 +113,12 @@ impl PolarVirtualMachine {
                         .iter()
                         .map(|var| {
                             let var = Symbol::new(var);
-                            Binding(var.clone(), self.deref(&Term::new(Value::Symbol(var))))
+                            let value = self
+                                .bindings()
+                                .get(&var)
+                                .cloned()
+                                .unwrap_or_else(|| Term::new(Value::Symbol(var.clone())));
+                            Binding(var, value)
                         })
                         .collect();
                     self.push_goal(show(&vars)).map_or((), |_| ());
