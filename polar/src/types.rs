@@ -297,7 +297,8 @@ impl Value {
             }
             Value::Call(predicate) => predicate.map_in_place(f),
             Value::Expression(Operation { args, .. }) => {
-                args.iter_mut().for_each(|term| f(&mut term.value));
+                args.iter_mut().for_each(|term| term.map_in_place(f));
+                // args.iter_mut().for_each(|term| f(&mut term.value));
             }
             Value::InstanceLiteral(InstanceLiteral { fields, .. }) => fields.map_in_place(f),
             Value::ExternalInstance(_) => {}

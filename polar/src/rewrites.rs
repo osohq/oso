@@ -133,6 +133,38 @@ mod tests {
         let mut rewrite_again_rule = again_rule.clone();
         rewrite_rule(&mut rewrite_again_rule, &kb);
         assert_eq!(rewrite_again_rule.to_polar(), again_rule.to_polar());
+
+        // Chained lookups
+        let rules = parse_rules("f(a.b.c);").unwrap();
+        let mut rule = rules[0].clone();
+        assert_eq!(rule.to_polar(), "f(a.b.c);");
+        rewrite_rule(&mut rule, &kb);
+        assert_eq!(
+            rule.to_polar(),
+            "f(_value_2) := .(a,b,_value_3),.(_value_3,c,_value_2);"
+        );
+    }
+
+    #[test]
+    fn rewrite_nested_lookups() {
+        let kb = KnowledgeBase::new();
+
+        // Lookups with args
+        let rules = parse_rules("f(a, c) := a.b(c);").unwrap();
+        let mut rule = rules[0].clone();
+        assert_eq!(rule.to_polar(), "f(a,c) := a.b(c);");
+        rewrite_rule(&mut rule, &kb);
+        assert_eq!(rule.to_polar(), "f(a,c) := .(a,b(c),_value_1),_value_1;");
+
+        // Simple Nested lookups
+        let rules = parse_rules("f(a,c,e) := e = a.b(c.d);").unwrap();
+        let mut rule = rules[0].clone();
+        assert_eq!(rule.to_polar(), "f(a,c,e) := e=a.b(c.d);");
+        rewrite_rule(&mut rule, &kb);
+        assert_eq!(
+            rule.to_polar(),
+            "f(a,c,e) := .(c,d,_value_3),.(a,b(_value_3),_value_2),e=_value_2;"
+        );
     }
 
     #[test]
@@ -151,21 +183,12 @@ mod tests {
             ".(a,b,_value_3),.(_value_3,c,_value_2),f(_value_2)"
         );
 
-        let rules = parse_rules("f(a.b.c);").unwrap();
-        let mut rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a.b.c);");
-        rewrite_rule(&mut rule, &kb);
-        assert_eq!(
-            rule.to_polar(),
-            "f(_value_4) := .(a,b,_value_5),.(_value_5,c,_value_4);"
-        );
-
         let mut term = parse_query("a.b = 1").unwrap();
         rewrite_term(&mut term, &kb);
-        assert_eq!(term.to_polar(), ".(a,b,_value_6),_value_6=1");
+        assert_eq!(term.to_polar(), ".(a,b,_value_4),_value_4=1");
         let mut term = parse_query("{x: 1}.x = 1").unwrap();
         assert_eq!(term.to_polar(), "{x: 1}.x=1");
         rewrite_term(&mut term, &kb);
-        assert_eq!(term.to_polar(), ".({x: 1},x,_value_7),_value_7=1");
+        assert_eq!(term.to_polar(), ".({x: 1},x,_value_5),_value_5=1");
     }
 }
