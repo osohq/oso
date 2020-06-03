@@ -166,7 +166,9 @@ impl PolarVirtualMachine {
         }
 
         while let Some(goal) = self.goals.pop() {
-            eprintln!("{}", goal);
+            if std::env::var("RUST_LOG").is_ok() {
+                eprintln!("{}", goal);
+            }
             match goal {
                 Goal::Backtrack => self.backtrack(),
                 Goal::Break => return Ok(QueryEvent::Breakpoint),
@@ -217,7 +219,9 @@ impl PolarVirtualMachine {
             }
         }
 
-        eprintln!("⇒ result");
+        if std::env::var("RUST_LOG").is_ok() {
+            eprintln!("⇒ result");
+        }
         Ok(QueryEvent::Result {
             bindings: self.bindings(),
         })
@@ -283,7 +287,9 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: &Term) {
-        eprintln!("⇒ bind: {} ← {}", var.to_polar(), value.to_polar());
+        if std::env::var("RUST_LOG").is_ok() {
+            eprintln!("⇒ bind: {} ← {}", var.to_polar(), value.to_polar());
+        }
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
@@ -406,7 +412,9 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) {
-        eprintln!("⇒ backtrack");
+        if std::env::var("RUST_LOG").is_ok() {
+            eprintln!("⇒ backtrack");
+        }
         match self.choices.pop() {
             None => self.push_goal(Goal::Halt),
             Some(Choice {
