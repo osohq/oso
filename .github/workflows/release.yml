@@ -40,19 +40,19 @@ jobs:
         with:
           python-version: "3.6"
       - name: Build python 3.6 package
-        run: python setup.py build && python setup.py sdist bdist_sheel
+        run: python setup.py build && python setup.py sdist bdist_wheel
         working-directory: languages/python
       - uses: actions/setup-python@v1
         with:
           python-version: "3.7"
       - name: Build python 3.7 package
-        run: python setup.py build && python setup.py sdist bdist_sheel
+        run: python setup.py build && python setup.py sdist bdist_wheel
         working-directory: languages/python
       - uses: actions/setup-python@v1
         with:
           python-version: "3.8"
       - name: Build python 3.8 package
-        run: python setup.py build && python setup.py sdist bdist_sheel
+        run: python setup.py build && python setup.py sdist bdist_wheel
         working-directory: languages/python
       - uses: actions/upload-artifact@v1
         with:
