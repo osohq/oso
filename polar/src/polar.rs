@@ -110,33 +110,26 @@ impl Polar {
     }
 
     pub fn new_load(&mut self, src: &str) -> PolarResult<Load> {
-        let src_id = self.kb.new_id();
-        let source = Source::Load {
-            filename: None, // @TODO
+        let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
+        let src_id = kb.add_source(Source::Load {
+            filename: None,
             src: src.to_owned(),
-        };
-        let kb =
-            Arc::get_mut(&mut self.kb).expect("Cannot load policy while queries are in progress");
-        kb.sources.insert(src_id, source);
+        });
         let mut lines = parser::parse_lines(src)?;
-        let mut new_term_ids = vec![];
         for line in &mut lines {
             match line {
                 parser::Line::Rule(rule) => {
                     for param in &mut rule.params {
                         if let Some(specializer) = &mut param.specializer {
-                            specializer.gen_ids(kb, &mut new_term_ids);
+                            specializer.gen_ids(kb, src_id);
                         }
                     }
-                    rule.body.gen_ids(kb, &mut new_term_ids);
+                    rule.body.gen_ids(kb, src_id);
                 }
                 parser::Line::Query(t) => {
-                    t.gen_ids(kb, &mut new_term_ids);
+                    t.gen_ids(kb, src_id);
                 }
             }
-        }
-        for term_id in new_term_ids {
-            kb.term_sources.insert(term_id, src_id);
         }
         lines.reverse();
         Ok(Load { lines })

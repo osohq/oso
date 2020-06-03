@@ -365,7 +365,8 @@ impl Term {
     }
 
     // Generates ids for term and all sub terms. Returns vec of new term ids.
-    pub fn gen_ids(&mut self, kb: &mut KnowledgeBase, new_ids: &mut Vec<u64>) {
+    pub fn gen_ids(&mut self, kb: &mut KnowledgeBase, src_id: u64) {
+        kb.add_term_source(self, src_id);
         match &mut self.value {
             Value::Integer(_) => (),
             Value::String(_) => (),
@@ -373,36 +374,31 @@ impl Term {
             Value::ExternalInstance(_) => (),
             Value::InstanceLiteral(instance) => {
                 for (_, t) in &mut instance.fields.fields.iter_mut() {
-                    t.gen_ids(kb, new_ids);
+                    t.gen_ids(kb, src_id);
                 }
             }
             Value::Dictionary(dict) => {
                 for (_, t) in &mut dict.fields.iter_mut() {
-                    t.gen_ids(kb, new_ids);
+                    t.gen_ids(kb, src_id);
                 }
             }
             Value::Call(pred) => {
                 for t in &mut pred.args.iter_mut() {
-                    t.gen_ids(kb, new_ids);
+                    t.gen_ids(kb, src_id);
                 }
             }
             Value::List(list) => {
                 for t in &mut list.iter_mut() {
-                    t.gen_ids(kb, new_ids);
+                    t.gen_ids(kb, src_id);
                 }
             }
             Value::Symbol(_) => (),
             Value::Expression(op) => {
                 for t in &mut op.args.iter_mut() {
-                    t.gen_ids(kb, new_ids);
+                    t.gen_ids(kb, src_id);
                 }
             }
         };
-        if self.id == 0 {
-            let new_id = kb.new_id();
-            self.id = new_id;
-            new_ids.push(new_id);
-        }
     }
 }
 
