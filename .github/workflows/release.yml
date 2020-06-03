@@ -36,20 +36,30 @@ jobs:
     runs-on: macos-10.15
     #runs-on: self-hosted
     #needs: version
+    env:
+      ENV: RELEASE
     steps:
       - uses: actions/checkout@v2
+      - name: Build release library
+        run: cargo build --release
       - uses: actions/setup-python@v1
         with:
           python-version: "3.6"
-      - run: scripts/osx_package.sh
+      - name: Build python 3.6 package
+        run: python setup.py build && python setup.py sdist bdist_sheel
+        working-directory: languages/python
       - uses: actions/setup-python@v1
         with:
           python-version: "3.7"
-      - run: scripts/osx_package.sh
+      - name: Build python 3.7 package
+        run: python setup.py build && python setup.py sdist bdist_sheel
+        working-directory: languages/python
       - uses: actions/setup-python@v1
         with:
           python-version: "3.8"
-      - run: scripts/osx_package.sh
+      - name: Build python 3.8 package
+        run: python setup.py build && python setup.py sdist bdist_sheel
+        working-directory: languages/python
       - uses: actions/upload-artifact@v1
         with:
           name: wheel
