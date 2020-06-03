@@ -108,7 +108,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.oso_version }}
           release_name: Release ${{ steps.version.outputs.oso_version }}
           body: |
-            Automatically generated release from github actions
+            Oso Release ${{ steps.version.outputs.oso_version }}
           draft: false
           prerelease: false
       
