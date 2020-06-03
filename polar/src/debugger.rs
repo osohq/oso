@@ -132,16 +132,19 @@ impl PolarVirtualMachine {
             _ => self
                 .push_goal(Goal::Debug {
                     message: "Debugger Commands
-  bindings                      Print current binding stack.
-  c[ontinue] | q[uit]           Continue evaluation.
-  goals                         Print current goal stack.
-  h[elp]                        Print this help documentation.
-  l[ine] [<n>]                  Print out the current line and <n> lines of context.
-  n[ext] | over                 Stop at the next query.
-  out                           Stop at the next rule.
-  stack | queries               Print current query stack.
-  s[tep]                        Evaluate one goal.
-  var <name> [<name> ...]       Print the value of one or more variables."
+  bindings                Print current binding stack.
+  c[ontinue]              Continue evaluation.
+  goals                   Print current goal stack.
+  h[elp]                  Print this help documentation.
+  l[ine] [<n>]            Print the current line and <n> lines of context.
+  n[ext]                  Alias for 'over'.
+  out                     Stop at the next rule.
+  over                    Stop at the next query.
+  queries                 Print current query stack.
+  q[uit]                  Alias for 'continue'.
+  stack                   Alias for 'queries'.
+  s[tep]                  Evaluate one goal.
+  var <name> ...          Print the value of one or more variables."
                         .to_string(),
                 })
                 .map_or((), |_| ()),
