@@ -194,6 +194,10 @@ impl Polar {
         query.vm.external_call_result(call_id, value)
     }
 
+    pub fn debug_command(&self, query: &mut Query, command: String) {
+        query.vm.debug_command(&command)
+    }
+
     pub fn external_question_result(&self, query: &mut Query, call_id: u64, result: bool) {
         query.vm.external_question_result(call_id, result)
     }

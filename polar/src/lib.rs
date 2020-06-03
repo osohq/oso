@@ -7,6 +7,7 @@ extern crate maplit;
 
 #[cfg(feature = "tui_")]
 pub mod cli;
+mod debugger;
 mod formatting;
 mod lexer;
 pub mod parser;
@@ -277,6 +278,53 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
         Err(_) => {
             set_error(types::OperationalError::Unknown.into());
             null()
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn polar_debug_command(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    value: *const c_char,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        if !value.is_null() {
+            let s = unsafe { ffi_string!(value) };
+            let t = serde_json::from_str(&s);
+            match t {
+                Ok(types::Term {
+                    value: types::Value::String(command),
+                    ..
+                }) => {
+                    polar.debug_command(query, command);
+                    1
+                }
+                Ok(_) => {
+                    set_error(
+                        types::RuntimeError::Serialization {
+                            msg: "received bad command".to_string(),
+                        }
+                        .into(),
+                    );
+                    0
+                }
+                Err(e) => {
+                    set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
+                    0
+                }
+            }
+        } else {
+            0
+        }
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::OperationalError::Unknown.into());
+            0
         }
     }
 }

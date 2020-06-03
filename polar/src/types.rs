@@ -509,6 +509,11 @@ type Bindings = HashMap<Symbol, Term>;
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
+    None,
+    Debug {
+        message: String,
+    },
+
     Done,
 
     MakeExternal {

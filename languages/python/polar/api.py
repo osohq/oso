@@ -498,6 +498,18 @@ class Polar:
                     if result == 0:
                         self._raise_error()
 
+                if kind == "Debug":
+                    if data["message"]:
+                        print(data["message"])
+                    command = input("> ")
+                    # send input back across FFI
+                    term = self.to_polar(command)
+                    msg = json.dumps(term)
+                    c_str = ffi.new("char[]", msg.encode())
+                    result = lib.polar_debug_command(self.polar, query, c_str)
+                    if result == 0:
+                        self._raise_error()
+
                 if kind == "Result":
                     yield {k: self.to_python(v) for k, v in data["bindings"].items()}
 
