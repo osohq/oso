@@ -156,14 +156,14 @@ mod tests {
         rewrite_rule(&mut rule, &kb);
         assert_eq!(rule.to_polar(), "f(a,c) := .(a,b(c),_value_1),_value_1;");
 
-        // Simple Nested lookups
-        let rules = parse_rules("f(a,c,e) := e = a.b(c.d);").unwrap();
+        // Nested lookups
+        let rules = parse_rules("f(a,c,e) := a.b(c.d(e.f));").unwrap();
         let mut rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a,c,e) := e=a.b(c.d);");
+        assert_eq!(rule.to_polar(), "f(a,c,e) := a.b(c.d(e.f));");
         rewrite_rule(&mut rule, &kb);
         assert_eq!(
             rule.to_polar(),
-            "f(a,c,e) := .(c,d,_value_3),.(a,b(_value_3),_value_2),e=_value_2;"
+            "f(a,c,e) := .(e,f,_value_4),.(c,d(_value_4),_value_3),.(a,b(_value_3),_value_2),_value_2;"
         );
     }
 
