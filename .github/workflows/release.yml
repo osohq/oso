@@ -37,10 +37,18 @@ jobs:
     #runs-on: self-hosted
     #needs: version
     steps:
+      - uses: actions/checkout@v2
       - uses: actions/setup-python@v1
         with:
           python-version: "3.6"
-      - uses: actions/checkout@v2
+      - run: scripts/osx_package.sh
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.7"
+      - run: scripts/osx_package.sh
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
       - run: scripts/osx_package.sh
       - uses: actions/upload-artifact@v1
         with:
