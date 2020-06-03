@@ -551,3 +551,43 @@ fn test_infinite_loop() {
     polar.load_str("f(x) := f(x);").unwrap();
     qeval(&mut polar, "f(1)");
 }
+
+fn test_comparisons() {
+    let mut polar = Polar::new();
+
+    // "<"
+    polar
+        .load_str("lt(x, y) := x < y; f(x) := x = 1; g(x) := x = 2;")
+        .unwrap();
+    assert!(qeval(&mut polar, "lt(1,2)"));
+    assert!(!qeval(&mut polar, "lt(2,2)"));
+    assert!(qeval(&mut polar, "lt({a: 1}.a,{a: 2}.a)"));
+    assert!(qeval(&mut polar, "f(x), g(y), lt(x,y)"));
+
+    // "<="
+    polar.load_str("leq(x, y) := x <= y;").unwrap();
+    assert!(qeval(&mut polar, "leq(1,1)"));
+    assert!(qeval(&mut polar, "leq(1,2)"));
+    assert!(!qeval(&mut polar, "leq(2,1)"));
+
+    // ">"
+    polar.load_str("gt(x, y) := x > y;").unwrap();
+    assert!(qeval(&mut polar, "gt(2,1)"));
+    assert!(!qeval(&mut polar, "gt(2,2)"));
+
+    // ">="
+    polar.load_str("geq(x, y) := x >= y;").unwrap();
+    assert!(qeval(&mut polar, "geq(1,1)"));
+    assert!(qeval(&mut polar, "geq(2,1)"));
+    assert!(!qeval(&mut polar, "geq(1,2)"));
+
+    // "=="
+    polar.load_str("eq(x, y) := x == y;").unwrap();
+    assert!(qeval(&mut polar, "eq(1,1)"));
+    assert!(!qeval(&mut polar, "eq(2,1)"));
+
+    let mut query = polar.new_query("eq(bob, bob)").unwrap();
+    polar
+        .query(&mut query)
+        .expect_err("Comparison operators should not allow non-integer operands");
+}

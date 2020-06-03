@@ -812,6 +812,16 @@ impl PolarVirtualMachine {
 
                         self.choose(alternatives);
                     }
+                    op @ Operator::Lt
+                    | op @ Operator::Gt
+                    | op @ Operator::Leq
+                    | op @ Operator::Geq
+                    | op @ Operator::Eq => {
+                        assert_eq!(args.len(), 2);
+                        let left = self.deref(&args[0]).value;
+                        let right = self.deref(&args[1]).value;
+                        self.comparison_helper(op, left, right)?;
+                    }
                     _ => {
                         return Err(RuntimeError::TypeError {
                             msg: format!("can't query for expression: {:?}", operator),
@@ -1241,6 +1251,46 @@ impl PolarVirtualMachine {
                 Ok(None)
             }
         }
+    }
+
+    fn comparison_helper(&mut self, op: Operator, left: Value, right: Value) -> PolarResult<()> {
+        let result: bool;
+        match (op, left, right) {
+            (Operator::Lt, Value::Integer(left), Value::Integer(right)) => {
+                result = left < right;
+            }
+            (Operator::Leq, Value::Integer(left), Value::Integer(right)) => {
+                result = left <= right;
+            }
+            (Operator::Gt, Value::Integer(left), Value::Integer(right)) => {
+                result = left > right;
+            }
+            (Operator::Geq, Value::Integer(left), Value::Integer(right)) => {
+                result = left >= right;
+            }
+            (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
+                result = left == right;
+            }
+            (op, left, right) => {
+                return Err(RuntimeError::TypeError {
+                    msg: format!(
+                        "{} expects integers, got: {}, {}",
+                        op.to_polar(),
+                        left.to_polar(),
+                        right.to_polar()
+                    ),
+                }
+                .into());
+            }
+        }
+        if result {
+            self.push_goal(Goal::Noop);
+        } else {
+            self.push_goal(Goal::Backtrack);
+            self.push_goal(Goal::Cut);
+        }
+
+        Ok(())
     }
 }
 
