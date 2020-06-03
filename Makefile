@@ -1,6 +1,6 @@
 .PHONY: test rust-test rust-build python-build python-test
 
-PYTHON_POLAR_WHEEL := compat_testing/oso-0.0.3-py3-none-any.whl
+PYTHON_POLAR_WHEEL := compat_testing/oso-0.0.4-py3-none-any.whl
 
 test: rust-test python-test
 
