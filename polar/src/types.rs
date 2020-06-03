@@ -110,14 +110,6 @@ impl Dictionary {
         }
     }
 
-    /// Apply `f` to value and return a new term.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Value),
-    {
-        self.fields.iter_mut().for_each(|(_, v)| f(&mut v.value));
-    }
-
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
     }
@@ -181,14 +173,6 @@ impl Predicate {
             name: self.name.clone(),
             args: self.args.iter().map(|term| term.map(f)).collect(),
         }
-    }
-
-    /// Apply `f` to value and return a new term.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Value),
-    {
-        self.args.iter_mut().for_each(|a| a.map_in_place(f));
     }
 }
 
@@ -285,27 +269,6 @@ impl Value {
         f(&mapped)
     }
 
-    pub fn map_in_place<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Value),
-    {
-        f(self);
-        // the match does the recursive calling of map
-        match self {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-            Value::List(terms) => {
-                terms.iter_mut().for_each(|term| f(&mut term.value));
-            }
-            Value::Call(predicate) => predicate.map_in_place(f),
-            Value::Expression(Operation { args, .. }) => {
-                args.iter_mut().for_each(|term| term.map_in_place(f));
-            }
-            Value::InstanceLiteral(InstanceLiteral { fields, .. }) => fields.map_in_place(f),
-            Value::ExternalInstance(_) => {}
-            Value::Dictionary(dict) => dict.map_in_place(f),
-        };
-    }
-
     pub fn symbol(self) -> Result<Symbol, RuntimeError> {
         match self {
             Value::Symbol(name) => Ok(name),
@@ -356,12 +319,30 @@ impl Term {
         }
     }
 
-    /// Apply `f` to value and return a new term.
+    /// Apply `f` to self.
     pub fn map_in_place<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Value),
+        F: FnMut(&mut Self),
     {
-        self.value.map_in_place(f);
+        f(self);
+        // the match does the recursive calling of map
+        match self.value {
+            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+            Value::List(ref mut terms) => {
+                terms.iter_mut().for_each(|mut term| f(&mut term));
+            }
+            Value::Call(ref mut predicate) => predicate.args.iter_mut().for_each(|mut a| f(&mut a)),
+            Value::Expression(Operation { ref mut args, .. }) => {
+                args.iter_mut().for_each(|term| term.map_in_place(f))
+            }
+            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
+                fields.fields.iter_mut().for_each(|(_, mut v)| f(&mut v))
+            }
+            Value::ExternalInstance(_) => {}
+            Value::Dictionary(Dictionary { ref mut fields }) => {
+                fields.iter_mut().for_each(|(_, mut v)| f(&mut v))
+            }
+        };
     }
 
     // Generates ids for term and all sub terms. Returns vec of new term ids.
@@ -441,9 +422,9 @@ impl Parameter {
 
     pub fn map_in_place<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Value),
+        F: FnMut(&mut Term),
     {
-        self.specializer.iter_mut().for_each(|a| f(&mut a.value));
+        self.specializer.iter_mut().for_each(|mut a| f(&mut a));
     }
 }
 
@@ -469,7 +450,7 @@ impl Rule {
     /// Apply `f` to value and return a new term.
     pub fn map_in_place<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Value),
+        F: FnMut(&mut Term),
     {
         self.params
             .iter_mut()

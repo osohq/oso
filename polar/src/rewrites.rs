@@ -1,12 +1,23 @@
 use super::types::*;
 
 /// Replace the left value by the AND of the right and the left
-fn and_wrap(a: &mut Value, b: Value) {
+fn and_wrap(a: &mut Term, b: Value) {
     let mut old_a = Value::Symbol(Symbol::new("_"));
-    std::mem::swap(a, &mut old_a);
-    *a = Value::Expression(Operation {
+    std::mem::swap(&mut a.value, &mut old_a);
+    a.value = Value::Expression(Operation {
         operator: Operator::And,
-        args: vec![Term::new(b), Term::new(old_a)],
+        args: vec![
+            Term {
+                id: a.id,
+                offset: a.offset,
+                value: b,
+            },
+            Term {
+                id: a.id,
+                offset: a.offset,
+                value: old_a,
+            },
+        ],
     });
 }
 
@@ -21,7 +32,11 @@ fn rewrite(value: &mut Value, kb: &KnowledgeBase) -> Option<Value> {
             let mut lookup_args = lookup_args.clone();
             let symbol = kb.gensym("value");
             let var = Value::Symbol(symbol);
-            lookup_args.push(Term::new(var.clone()));
+            lookup_args.push(Term {
+                id: lookup_args[1].id, // Take `id` and `offset` from `b` of lookup `a.b`.
+                offset: lookup_args[1].offset,
+                value: var.clone(),
+            });
             let lookup = Value::Expression(Operation {
                 operator: Operator::Dot,
                 args: lookup_args,
@@ -36,11 +51,15 @@ fn rewrite(value: &mut Value, kb: &KnowledgeBase) -> Option<Value> {
 /// Walks the term and does an in-place rewrite
 /// Uses `rewrites` as a buffer of new lookup terms
 fn do_rewrite(term: &mut Term, kb: &KnowledgeBase, rewrites: &mut Vec<Value>) {
-    term.map_in_place(&mut |value| {
+    term.map_in_place(&mut |term| {
         // First, rewrite this term in place, maybe returning a lookup
         // lookup gets added to rewrites list
-        if let Some(lookup) = rewrite(value, kb) {
-            let mut lookup_term = Term::new(lookup);
+        if let Some(lookup) = rewrite(&mut term.value, kb) {
+            let mut lookup_term = Term {
+                id: term.id,
+                offset: term.offset,
+                value: lookup,
+            };
             // recursively rewrite the lookup term if necesary
             do_rewrite(&mut lookup_term, kb, rewrites);
             rewrites.push(lookup_term.value);
@@ -48,7 +67,7 @@ fn do_rewrite(term: &mut Term, kb: &KnowledgeBase, rewrites: &mut Vec<Value>) {
 
         // Next, if this is an expression, we want to immediately
         // do the recursive rewrite in place
-        if let Value::Expression(op) = value {
+        if let Value::Expression(ref mut op) = term.value {
             if matches!(op.operator, Operator::And | Operator::Or | Operator::Not) {
                 for arg in op.args.iter_mut() {
                     let mut arg_rewrites = Vec::new();
@@ -56,7 +75,7 @@ fn do_rewrite(term: &mut Term, kb: &KnowledgeBase, rewrites: &mut Vec<Value>) {
                     do_rewrite(arg, kb, &mut arg_rewrites);
                     // immediately rewrite the arg in place
                     for rewrite in arg_rewrites.drain(..).rev() {
-                        and_wrap(&mut arg.value, rewrite);
+                        and_wrap(arg, rewrite);
                     }
                 }
             }
@@ -69,7 +88,14 @@ pub fn rewrite_specializer(spec: &mut Term, kb: &KnowledgeBase) -> Vec<Term> {
     let mut rewrites = vec![];
     do_rewrite(spec, kb, &mut rewrites);
 
-    rewrites.into_iter().map(Term::new).collect()
+    rewrites
+        .into_iter()
+        .map(|value| Term {
+            id: spec.id,
+            offset: spec.offset,
+            value,
+        })
+        .collect()
 }
 
 /// Rewrite the term in-place
@@ -81,7 +107,7 @@ pub fn rewrite_term(term: &mut Term, kb: &KnowledgeBase) {
     // any other leftover rewrites which didn't get handled earlier
     // (this should only happen in queries with a single clause)
     for rewrite in rewrites.into_iter().rev() {
-        and_wrap(&mut term.value, rewrite);
+        and_wrap(term, rewrite);
     }
 }
 
