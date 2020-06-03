@@ -16,7 +16,7 @@ jobs:
         run: echo "::set-env name=oso_version::${github_ref/refs\/tags\/v/}"
       - name: Check versions match
         run: grep "__version__ = \"$oso_version\"" oso/__init__.py
-        working-directory: languages/python/oso
+        working-directory: languages/python
   package_linux:
     runs-on: ubuntu-latest
     needs: version
