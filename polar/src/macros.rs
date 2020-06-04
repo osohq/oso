@@ -107,7 +107,7 @@ macro_rules! sym {
 
 #[macro_export]
 macro_rules! pred {
-    ($name:expr, [$($args:expr),+]) => {
+    ($name:expr, [$($args:expr),*]) => {
         Predicate {
             name: sym!($name),
             args: vec![
