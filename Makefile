@@ -15,6 +15,7 @@ python-build: rust-build
 
 python-test: python-build
 	$(MAKE) -C languages/python test
+	python examples/expenses-py/app.py
 
 docs-test: python-build
 	$(MAKE) -C languages/python/docs test
@@ -23,4 +24,4 @@ docs-test: python-build
 test_compat:
 	pip install --force-reinstall $(PYTHON_POLAR_WHEEL)[dev]
 	EXPECT_XFAIL_PASS=1 pytest -rf languages/python/tests/parity
-
+	python examples/expenses-py/app.py
