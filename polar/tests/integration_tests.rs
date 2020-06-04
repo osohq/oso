@@ -4,7 +4,7 @@ use permute::permute;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar::{sym, term, types::*, value, vm::PolarVirtualMachine, Polar, Query};
+use polar::{sym, term, types::*, value, Polar, Query};
 
 type QueryResults = Vec<HashMap<Symbol, Value>>;
 
@@ -12,7 +12,9 @@ fn no_results(_: Symbol, _: Vec<Term>) -> Option<Term> {
     None
 }
 
-fn no_debug(_: &mut PolarVirtualMachine, _: &str) {}
+fn no_debug(_: &str) -> String {
+    "".to_string()
+}
 
 fn query_results<F, G>(
     polar: &mut Polar,
@@ -22,7 +24,7 @@ fn query_results<F, G>(
 ) -> QueryResults
 where
     F: FnMut(Symbol, Vec<Term>) -> Option<Term>,
-    G: FnMut(&mut PolarVirtualMachine, &str),
+    G: FnMut(&str) -> String,
 {
     let mut results = vec![];
     loop {
@@ -42,7 +44,9 @@ where
                     .external_call_result(&mut query, call_id, external_handler(attribute, args))
                     .unwrap();
             }
-            QueryEvent::Debug { message } => debug_handler(&mut query.vm, &message),
+            QueryEvent::Debug { message } => {
+                polar.debug_command(&mut query, debug_handler(&message))
+            }
             _ => {}
         }
     }
@@ -619,25 +623,25 @@ fn test_debug() {
         .unwrap();
 
     let over_query = polar.new_query("a()").unwrap();
-    let debug_handler = |vm: &mut PolarVirtualMachine, s: &str| match s {
-        "\"a\"" => vm.debug_command("over"),
+    let debug_handler = |s: &str| match s {
+        "\"a\"" => "over".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
-                        ^" => vm.debug_command("over"),
+                        ^" => "over".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
-                             ^" => vm.debug_command("over"),
-        "\"c\"" => vm.debug_command("over"),
+                             ^" => "over".to_string(),
+        "\"c\"" => "over".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
-                                  ^" => vm.debug_command("over"),
+                                  ^" => "over".to_string(),
         message => panic!("Unexpected debug message: {}", message),
     };
     let _results = query_results(&mut polar, over_query, no_results, debug_handler);
 
     let out_query = polar.new_query("a()").unwrap();
-    let debug_handler = |vm: &mut PolarVirtualMachine, s: &str| match s {
-        "\"a\"" => vm.debug_command("out"),
-        "\"c\"" => vm.debug_command("out"),
+    let debug_handler = |s: &str| match s {
+        "\"a\"" => "out".to_string(),
+        "\"c\"" => "out".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
-                                  ^" => vm.debug_command("out"),
+                                  ^" => "out".to_string(),
         message => panic!("Unexpected debug message: {}", message),
     };
     let _results = query_results(&mut polar, out_query, no_results, debug_handler);

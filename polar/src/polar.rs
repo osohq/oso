@@ -58,7 +58,7 @@ use super::parser;
 use std::sync::Arc;
 
 pub struct Query {
-    pub vm: PolarVirtualMachine,
+    vm: PolarVirtualMachine,
     done: bool,
 }
 

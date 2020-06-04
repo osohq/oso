@@ -2,6 +2,8 @@ use super::types::*;
 use super::vm::*;
 use super::ToPolarString;
 
+/// Traverse a `Source` line-by-line until `offset` is reached, and then return the source line
+/// containing the `offset` character as well as `source_context_lines` lines above and below it.
 fn source_lines(source: &Source, offset: usize, source_context_lines: usize) -> String {
     // Sliding window of lines: current line + indicator + additional context above + below.
     let max_lines = source_context_lines * 2 + 2;
@@ -43,6 +45,7 @@ fn query_source(kb: &KnowledgeBase, term: Option<&Term>, source_context_lines: u
 }
 
 impl PolarVirtualMachine {
+    /// Potential debugger entrypoints.
     pub fn maybe_break(&mut self, context: Breakpoint) {
         match (&self.breakpoint, context) {
             (Breakpoint::Step { .. }, Breakpoint::Step { goal }) => self
@@ -71,6 +74,9 @@ impl PolarVirtualMachine {
         }
     }
 
+    /// Respond to debugging commands from the user.
+    ///
+    /// The help output in the catch-all arm is a reference for all the other arms.
     pub fn debug_command(&mut self, command: &str) {
         fn show<T>(stack: &[T]) -> Goal
         where
