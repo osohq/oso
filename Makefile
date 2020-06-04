@@ -16,6 +16,9 @@ python-build: rust-build
 python-test: python-build
 	$(MAKE) -C languages/python test
 
+docs-test: python-build
+	$(MAKE) -C languages/python/docs test
+
 # Ensure that parity tests are still compatible with old code.
 test_compat:
 	pip install --force-reinstall $(PYTHON_POLAR_WHEEL)[dev]

@@ -156,38 +156,27 @@ def test_defining_things(tell, qeval):
 
 
 def test_dictionaries(tell, qeval, qvar):
+    # basic dictionary lookup
     tell('dict({hello: "world", foo: "bar"})')
-    tell('dict({hello: {this: {is: "nested"}}})')
+    assert qeval('dict(d), d.hello = "world"')
+
+    ### dictionary lookups with variable fields ###
     tell("attr(d, k, d.(k))")
+
+    # k = "hello", {hello: "steve"}.(k) = "steve"
     assert qeval('attr({hello: "steve"}, "hello", "steve")')
+
+    # k = "hello", {hello: "steve"}.(k) = value, value = "steve"
     assert qvar('attr({hello: "steve"}, "hello", value)', "value", one=True) == "steve"
 
+    # k = key, {hello: "steve"}.(k) = "steve", key = "hello"
+    assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
+
+    ### nested lookups ###
     assert qeval(
         'attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})'
     )
 
-    tell("lookup(dict, result) := result = dict.a.b.c;")
-    assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
-
-    tell('user({name: "steve", job: "programmer", state: "NY"})')
-    tell('user({name: "alex", job: "programmer", state: "CO"})')
-    tell('user({name: "graham", job: "business", state: "NY"})')
-    assert qeval('user(d), d.name = "steve"')
-    assert qvar('user({job: "programmer", name: name, state: state})', "name") == [
-        "steve",
-        "alex",
-    ]
-
-
-@pytest.mark.xfail(
-    EXPECT_XFAIL_PASS, reason="Nested lookups don't work.",
-)
-def test_complex_nested_dictionaries(tell, qvar, qeval):
-    tell('dict({hello: "world", foo: "bar"})')
-    tell('dict({hello: {this: {is: "nested"}}})')
-    tell("attr(d, k, d.(k))")
-
-    assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
     tell("deepget(d, d.hello.this.is)")
     assert qeval('deepget({hello: {this: {is: "nested"}}}, "nested")')
 
@@ -197,6 +186,19 @@ def test_complex_nested_dictionaries(tell, qvar, qeval):
     tell("x({a: {b:{c:123}}})")
     tell("x({a: {y:{c:456}}})")
     assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
+
+    tell("lookup(dict, result) := result = dict.a.b.c;")
+    assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
+
+    ### more basic lookup tests ###
+    tell('user({name: "steve", job: "programmer", state: "NY"})')
+    tell('user({name: "alex", job: "programmer", state: "CO"})')
+    tell('user({name: "graham", job: "business", state: "NY"})')
+    assert qeval('user(d), d.name = "steve"')
+    assert qvar('user({job: "programmer", name: name, state: state})', "name") == [
+        "steve",
+        "alex",
+    ]
 
 
 def test_external_classes(tell, qeval, qvar, externals):
