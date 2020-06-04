@@ -191,4 +191,18 @@ mod tests {
         rewrite_term(&mut term, &kb);
         assert_eq!(term.to_polar(), ".({x: 1},x,_value_5),_value_5=1");
     }
+
+    #[test]
+    fn rewrite_nested_literal() {
+        let kb = KnowledgeBase::new();
+        let mut term = parse_query("Foo { x: bar.y }").unwrap();
+        assert_eq!(term.to_polar(), "Foo{x: bar.y}");
+        rewrite_term(&mut term, &kb);
+        assert_eq!(term.to_polar(), ".(bar,y,_value_1),Foo{x: _value_1}");
+
+        let mut term = parse_query("f(Foo { x: bar.y })").unwrap();
+        assert_eq!(term.to_polar(), "f(Foo{x: bar.y})");
+        rewrite_term(&mut term, &kb);
+        assert_eq!(term.to_polar(), ".(bar,y,_value_2),f(Foo{x: _value_2})");
+    }
 }
