@@ -5,7 +5,7 @@ pub mod macros;
 #[macro_use]
 extern crate maplit;
 
-#[cfg(feature = "tui_")]
+#[cfg(feature = "repl")]
 pub mod cli;
 mod debugger;
 mod formatting;
@@ -17,7 +17,6 @@ pub mod types;
 mod vm;
 
 pub use self::polar::{Load, Polar, Query};
-pub use self::vm::DebugInfo;
 pub use formatting::ToPolarString;
 
 use std::cell::RefCell;

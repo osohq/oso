@@ -604,7 +604,6 @@ pub enum QueryEvent {
     Result {
         bindings: Bindings,
     },
-    Breakpoint,
 }
 
 #[cfg(test)]

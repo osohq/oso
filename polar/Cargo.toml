@@ -9,7 +9,7 @@ crate-type = ["lib", "staticlib"]
 
 [[bin]]
 name = "polar"
-required-features = ["tui_"]
+required-features = ["repl"]
 
 [dependencies]
 anyhow = "1.0.31"
@@ -19,11 +19,9 @@ regex = "1.3.7"
 serde = { version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 
-# TUI dependencies
-crossterm = {version = "0.17", optional = true}
+# REPL dependencies
 rustyline = {version = "6.1.2", optional = true}
 rustyline-derive = {version = "0.3.1", optional = true}
-tui = { version = "0.9", default-features = false, features = ['crossterm'], optional = true }
 
 [build_dependencies]
 cbindgen = "0.14.2"
@@ -37,4 +35,4 @@ maplit = "1.0.2"
 
 [features]
 default = []
-tui_ = ["crossterm", "rustyline", "rustyline-derive", "tui"]
+repl = ["rustyline", "rustyline-derive"]

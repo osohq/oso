@@ -62,20 +62,6 @@ pub struct Query {
     done: bool,
 }
 
-impl Query {
-    pub fn debug(&mut self, set: bool) {
-        if set {
-            self.vm.start_debug();
-        } else {
-            self.vm.stop_debug();
-        }
-    }
-
-    pub fn debug_info(&self) -> crate::DebugInfo {
-        self.vm.debug_info()
-    }
-}
-
 // Query as an iterator returns `None` after the first time `Done` is seen
 impl Iterator for Query {
     type Item = PolarResult<QueryEvent>;
@@ -192,14 +178,14 @@ impl Polar {
         Query { vm, done: false }
     }
 
-    #[cfg(not(feature = "tui_"))]
+    #[cfg(not(feature = "repl"))]
     pub fn new_query_from_repl(&self) -> PolarResult<Query> {
         Err(PolarError::Runtime(RuntimeError::Unsupported {
             msg: "The REPL is not supported in this build.".to_string(),
         }))
     }
 
-    #[cfg(feature = "tui_")]
+    #[cfg(feature = "repl")]
     pub fn new_query_from_repl(&self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
         let s = repl.input("Enter query:");
@@ -235,13 +221,6 @@ impl Polar {
     // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&self) -> u64 {
         self.kb.new_id()
-    }
-
-    /// Turn this Polar instance into a new TUI instance and run it
-    #[cfg(feature = "tui_")]
-    pub fn into_tui(self) {
-        let app = crate::cli::tui::App::new(self);
-        crate::cli::tui::run(app).expect("error in CLI")
     }
 }
 

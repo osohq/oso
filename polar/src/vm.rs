@@ -14,8 +14,6 @@ pub const MAX_EXECUTED_GOALS: usize = 10_000;
 #[allow(clippy::large_enum_variant)]
 pub enum Goal {
     Backtrack,
-    /// An explicit breakpoint, causes the VM to return a `QueryEvent::Breakpoint`
-    Break,
     Cut,
     Debug {
         message: String,
@@ -115,10 +113,6 @@ pub struct PolarVirtualMachine {
     /// Count executed goals
     goal_counter: usize,
 
-    /// If VM is set to `debug=True`, the VM will return a `QueryEvent::Breakpoint`
-    /// after every goal
-    debug: bool,
-
     /// If true, stop after the next goal.
     pub breakpoint: Breakpoint,
 
@@ -134,15 +128,6 @@ pub struct PolarVirtualMachine {
     call_id_symbols: HashMap<u64, Symbol>,
 }
 
-/// Debugging information exposed by the VM
-#[derive(Clone, Debug, Default)]
-pub struct DebugInfo {
-    // we dont use the type bindings so the types can stay private
-    pub goals: Vec<Goal>,
-    pub bindings: Vec<Binding>,
-    pub choices: Vec<Choice>,
-}
-
 // Methods which aren't goals/instructions.
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
@@ -154,7 +139,6 @@ impl PolarVirtualMachine {
             bindings: vec![],
             choices: vec![],
             goal_counter: 0,
-            debug: false,
             queries: vec![],
             breakpoint: Breakpoint::default(),
             source: None,
@@ -174,22 +158,6 @@ impl PolarVirtualMachine {
         call_id
     }
 
-    pub fn start_debug(&mut self) {
-        self.debug = true;
-    }
-
-    pub fn stop_debug(&mut self) {
-        self.debug = false;
-    }
-
-    pub fn debug_info(&self) -> DebugInfo {
-        DebugInfo {
-            bindings: self.bindings.clone(),
-            choices: self.choices.clone(),
-            goals: self.goals.clone(),
-        }
-    }
-
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Goal) -> PolarResult<QueryEvent> {
@@ -199,7 +167,6 @@ impl PolarVirtualMachine {
         self.goal_counter += 1;
         match goal {
             Goal::Backtrack => self.backtrack()?,
-            Goal::Break => return Ok(QueryEvent::Breakpoint),
             Goal::Cut => self.cut(),
             Goal::Debug { message } => return Ok(self.debug(&message)),
             Goal::Halt => return Ok(self.halt()),
@@ -241,11 +208,6 @@ impl PolarVirtualMachine {
                 args,
             } => self.sort_rules(rules, args, outer, inner)?,
             Goal::Unify { left, right } => self.unify(&left, &right)?,
-        }
-        // don't break when the goal stack is empty or a result wont
-        // be returned (this logic seems flaky)
-        if self.debug && !self.goals.is_empty() {
-            return Ok(QueryEvent::Breakpoint);
         }
         Ok(QueryEvent::None)
     }

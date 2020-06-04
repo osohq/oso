@@ -1,6 +1,6 @@
-use polar::cli::tui;
+use polar::cli::repl;
 
 fn main() -> anyhow::Result<()> {
-    tui::main()?;
+    repl::main()?;
     Ok(())
 }
