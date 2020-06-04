@@ -30,7 +30,9 @@ where
                 args,
                 ..
             } => {
-                polar.external_call_result(&mut query, call_id, external_handler(attribute, args));
+                polar
+                    .external_call_result(&mut query, call_id, external_handler(attribute, args))
+                    .unwrap();
             }
             _ => {}
         }
@@ -542,6 +544,7 @@ fn test_externals_instantiated() {
 }
 
 #[test]
+#[ignore] // ignore because this take a LONG time (could consider lowering the goal limit)
 #[should_panic(expected = "Goal count exceeded! MAX_EXECUTED_GOALS = 10000")]
 fn test_infinite_loop() {
     let mut polar = Polar::new();

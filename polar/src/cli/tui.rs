@@ -137,7 +137,7 @@ impl App {
                     self.query.as_mut().expect("app has query"),
                     call_id,
                     result,
-                );
+                )?;
             }
             Some(Ok(e)) => self.messages.push(format!("Event: {:?}", e)),
             Some(Err(e)) => {

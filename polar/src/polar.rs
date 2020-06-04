@@ -185,7 +185,12 @@ impl Polar {
         query.vm.run()
     }
 
-    pub fn external_call_result(&self, query: &mut Query, call_id: u64, value: Option<Term>) {
+    pub fn external_call_result(
+        &self,
+        query: &mut Query,
+        call_id: u64,
+        value: Option<Term>,
+    ) -> PolarResult<()> {
         query.vm.external_call_result(call_id, value)
     }
 
