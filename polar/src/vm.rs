@@ -224,7 +224,11 @@ impl PolarVirtualMachine {
                 instance_id,
             } => return Ok(self.make_external(literal, instance_id)),
             Goal::Noop => {}
-            Goal::Query { term } => return self.query(term),
+            Goal::Query { term } => {
+                let result = self.query(term);
+                self.maybe_break(Breakpoint::Over { queries: vec![] });
+                return result;
+            }
             Goal::PopQuery { .. } => self.pop_query(),
             Goal::SortRules {
                 rules,
@@ -922,7 +926,6 @@ impl PolarVirtualMachine {
                 .into())
             }
         }
-        self.maybe_break(Breakpoint::Over { queries: vec![] });
         Ok(QueryEvent::None)
     }
 
