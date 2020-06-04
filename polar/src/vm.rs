@@ -1143,8 +1143,8 @@ impl PolarVirtualMachine {
             let (arg, mut goals) = self.instantiate_externals(&arg);
             goals.push(Goal::IsSubspecializer {
                 answer,
-                left: left.clone(),
-                right: right.clone(),
+                left,
+                right,
                 arg,
             });
             self.append_goals(goals);
@@ -1290,7 +1290,7 @@ mod tests {
 
         // unbound var -> value
         vm.bind(&x, &value);
-        assert_eq!(vm.deref(&term_x), value.clone());
+        assert_eq!(vm.deref(&term_x), value);
 
         // unbound var -> unbound var -> value
         vm.bind(&x, &term_y);
