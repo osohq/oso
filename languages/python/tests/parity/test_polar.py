@@ -375,7 +375,7 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
     assert qeval("Booler{}.whats_up() = true")
 
 
-def test_arities(tell, polar, qeval):
+def test_arities(tell, qeval):
     tell("f(1);")
     tell("f(x, y);")
     assert qeval("f(1)")
