@@ -557,7 +557,7 @@ impl KnowledgeBase {
     }
 }
 
-type Bindings = HashMap<Symbol, Term>;
+pub type Bindings = HashMap<Symbol, Term>;
 
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]

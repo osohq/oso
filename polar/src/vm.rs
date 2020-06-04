@@ -355,20 +355,19 @@ impl PolarVirtualMachine {
     }
 
     /// Retrieve the current non-temp bindings and returns them as a hash map.
-    fn result_bindings(&mut self) -> HashMap<Symbol, Term> {
+    fn result_bindings(&mut self) -> super::types::Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings {
             if self.is_temporary_var(&var) {
                 continue;
             }
-
             bindings.insert(var.clone(), self.deref(value));
         }
         bindings
     }
 
     /// Retrieve the current bindings and return them as a hash map.
-    pub fn bindings(&mut self) -> HashMap<Symbol, Term> {
+    pub fn bindings(&mut self) -> super::types::Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings {
             bindings.insert(var.clone(), self.deref(value));

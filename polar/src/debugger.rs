@@ -1,5 +1,6 @@
 use super::types::*;
 use super::vm::*;
+use super::ToPolarString;
 
 fn source_lines(source: &Source, offset: usize, source_context_lines: usize) -> String {
     // Sliding window of lines: current line + indicator + additional context above + below.
@@ -109,24 +110,29 @@ impl PolarVirtualMachine {
             "s" | "step" => self.breakpoint = Breakpoint::Step { goal: Goal::Noop },
             "var" => {
                 if parts.len() > 1 {
-                    let vars: Bindings = parts[1..]
+                    let vars: Vec<Binding> = parts[1..]
                         .iter()
                         .map(|var| {
                             let var = Symbol::new(var);
-                            let value = self
-                                .bindings()
-                                .get(&var)
-                                .cloned()
-                                .unwrap_or_else(|| Term::new(Value::Symbol(var.clone())));
+                            let value = self.bindings().get(&var).cloned().unwrap_or_else(|| {
+                                Term::new(Value::Symbol(Symbol::new("<unbound>")))
+                            });
                             Binding(var, value)
                         })
                         .collect();
                     self.push_goal(show(&vars)).map_or((), |_| ());
                 } else {
-                    self.push_goal(Goal::Debug {
-                        message: "Please specify one or more vars.".to_string(),
-                    })
-                    .map_or((), |_| ());
+                    let mut vars = self
+                        .bindings()
+                        .keys()
+                        .map(|k| k.to_polar())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    if vars.is_empty() {
+                        vars = "No variables in scope.".to_string();
+                    }
+                    self.push_goal(Goal::Debug { message: vars })
+                        .map_or((), |_| ());
                 }
             }
             _ => self
@@ -144,7 +150,8 @@ impl PolarVirtualMachine {
   q[uit]                  Alias for 'continue'.
   stack                   Alias for 'queries'.
   s[tep]                  Evaluate one goal.
-  var <name> ...          Print the value of one or more variables."
+  var [<name> ...]        Print available variables. If one or more arguments
+                          are provided, print the value of those variables."
                         .to_string(),
                 })
                 .map_or((), |_| ()),
