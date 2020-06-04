@@ -783,7 +783,7 @@ impl PolarVirtualMachine {
         self.queries.push(term.clone());
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
 
-        match term.value.clone() {
+        match term.value {
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
             // Sort applicable rules by specificity.
