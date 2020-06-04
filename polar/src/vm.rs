@@ -122,6 +122,9 @@ pub struct PolarVirtualMachine {
     /// If true, stop after the next goal.
     pub breakpoint: Breakpoint,
 
+    /// Source string and term for original query.
+    pub source: Option<(Source, Term)>,
+
     /// Rules and types.
     pub kb: Arc<KnowledgeBase>,
 
@@ -154,6 +157,7 @@ impl PolarVirtualMachine {
             debug: false,
             queries: vec![],
             breakpoint: Breakpoint::default(),
+            source: None,
             kb,
             instances: HashMap::new(),
             call_id_symbols: HashMap::new(),

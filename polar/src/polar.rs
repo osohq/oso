@@ -111,7 +111,7 @@ impl Polar {
 
     pub fn new_load(&mut self, src: &str) -> PolarResult<Load> {
         let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
-        let src_id = kb.add_source(Source::Load {
+        let src_id = kb.add_source(Source {
             filename: None,
             src: src.to_owned(),
         });
@@ -170,16 +170,21 @@ impl Polar {
         Ok(())
     }
 
-    pub fn new_query(&mut self, src: &str) -> PolarResult<Query> {
-        let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
-        let src_id = kb.add_source(Source::Query {
-            src: src.to_owned(),
-        });
+    pub fn new_query(&self, src: &str) -> PolarResult<Query> {
         let mut term = parser::parse_query(src)?;
-        kb.add_term_source(&mut term, src_id);
-        Ok(self.new_query_from_term(term))
+        rewrite_term(&mut term, &self.kb);
+        let query = Goal::Query { term: term.clone() };
+        let mut vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
+        let source = Source {
+            src: src.to_string(),
+            filename: None,
+        };
+        vm.source = Some((source, term));
+        Ok(Query { vm, done: false })
     }
 
+    // TODO(gj): Ensure we always pass the source along with the parsed Term for debugging / error
+    // handling purposes.
     pub fn new_query_from_term(&self, mut term: Term) -> Query {
         rewrite_term(&mut term, &self.kb);
         let query = Goal::Query { term };
@@ -195,7 +200,7 @@ impl Polar {
     }
 
     #[cfg(feature = "tui_")]
-    pub fn new_query_from_repl(&mut self) -> PolarResult<Query> {
+    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
         let s = repl.input("Enter query:");
         match s {

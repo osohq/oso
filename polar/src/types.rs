@@ -484,15 +484,10 @@ pub enum Type {
     Group { members: Vec<Type> },
 }
 
-#[derive(Clone, Debug)]
-pub enum Source {
-    Query {
-        src: String,
-    },
-    Load {
-        filename: Option<String>,
-        src: String,
-    },
+#[derive(Clone, Debug, Default)]
+pub struct Source {
+    pub filename: Option<String>,
+    pub src: String,
 }
 
 #[derive(Default)]

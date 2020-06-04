@@ -4,47 +4,46 @@ use super::ToPolarString;
 
 /// Traverse a `Source` line-by-line until `offset` is reached, and then return the source line
 /// containing the `offset` character as well as `source_context_lines` lines above and below it.
-fn source_lines(source: &Source, offset: usize, source_context_lines: usize) -> String {
+fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
     // Sliding window of lines: current line + indicator + additional context above + below.
-    let max_lines = source_context_lines * 2 + 2;
+    let max_lines = num_lines * 2 + 2;
     let push_line = |lines: &mut Vec<String>, line: String| {
         if lines.len() == max_lines {
             lines.remove(0);
         }
         lines.push(line);
     };
-
-    match source {
-        Source::Load { src, .. } | Source::Query { src } => {
-            let mut index = 0;
-            let mut lines = Vec::new();
-            let mut target = None;
-            let prefix_len = "123: ".len();
-            for (lineno, line) in src.lines().enumerate() {
-                push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
-                let end = index + line.len() + 1; // Adding one to account for new line byte.
-                if target.is_none() && end >= offset {
-                    target = Some(lineno);
-                    let spaces = " ".repeat(offset - index + prefix_len);
-                    push_line(&mut lines, format!("{}^", spaces));
-                }
-                index = end;
-                if target.is_some() && lineno == target.unwrap() + source_context_lines {
-                    break;
-                }
-            }
-            lines.join("\n")
+    let mut index = 0;
+    let mut lines = Vec::new();
+    let mut target = None;
+    let prefix_len = "123: ".len();
+    for (lineno, line) in source.src.lines().enumerate() {
+        push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
+        let end = index + line.len() + 1; // Adding one to account for new line byte.
+        if target.is_none() && end >= offset {
+            target = Some(lineno);
+            let spaces = " ".repeat(offset - index + prefix_len);
+            push_line(&mut lines, format!("{}^", spaces));
+        }
+        index = end;
+        if target.is_some() && lineno == target.unwrap() + num_lines {
+            break;
         }
     }
-}
-
-fn query_source(kb: &KnowledgeBase, term: Option<&Term>, source_context_lines: usize) -> String {
-    term.map_or("".to_string(), |term| {
-        source_lines(&kb.get_source(term), term.offset, source_context_lines)
-    })
+    lines.join("\n")
 }
 
 impl PolarVirtualMachine {
+    fn query_source(&self, num_lines: usize) -> String {
+        match (self.queries.last(), self.source.as_ref()) {
+            (Some(query), Some((source, term))) if query == term => {
+                source_lines(&source, term.offset, num_lines)
+            }
+            (Some(query), _) => source_lines(&self.kb.get_source(&query), query.offset, num_lines),
+            _ => "".to_string(),
+        }
+    }
+
     /// Potential debugger entrypoints.
     pub fn maybe_break(&mut self, context: Breakpoint) {
         match (&self.breakpoint, context) {
@@ -57,7 +56,7 @@ impl PolarVirtualMachine {
                 let n = self.queries.len() - 1;
                 if n < queries.len() && self.queries[..n] == queries[..n] {
                     self.push_goal(Goal::Debug {
-                        message: query_source(&self.kb, self.queries.last(), 0),
+                        message: self.query_source(0),
                     })
                     .map_or((), |_| ());
                 }
@@ -65,7 +64,7 @@ impl PolarVirtualMachine {
             (Breakpoint::Out { queries }, Breakpoint::Over { .. }) => {
                 if queries[..queries.len() - 3] == self.queries[..self.queries.len() - 1] {
                     self.push_goal(Goal::Debug {
-                        message: query_source(&self.kb, self.queries.last(), 0),
+                        message: self.query_source(0),
                     })
                     .map_or((), |_| ());
                 }
@@ -98,7 +97,7 @@ impl PolarVirtualMachine {
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
                 self.push_goal(Goal::Debug {
-                    message: query_source(&self.kb, self.queries.last(), lines),
+                    message: self.query_source(lines),
                 })
                 .map_or((), |_| ());
             }
