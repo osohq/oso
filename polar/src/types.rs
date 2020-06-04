@@ -307,6 +307,14 @@ impl Term {
         }
     }
 
+    pub fn clone_with_value(&self, value: Value) -> Self {
+        Self {
+            id: self.id,
+            offset: self.offset,
+            value,
+        }
+    }
+
     /// Apply `f` to value and return a new term.
     pub fn map<F>(&self, f: &mut F) -> Term
     where

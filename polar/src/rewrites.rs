@@ -6,18 +6,7 @@ fn and_wrap(a: &mut Term, b: Value) {
     std::mem::swap(&mut a.value, &mut old_a);
     a.value = Value::Expression(Operation {
         operator: Operator::And,
-        args: vec![
-            Term {
-                id: a.id,
-                offset: a.offset,
-                value: b,
-            },
-            Term {
-                id: a.id,
-                offset: a.offset,
-                value: old_a,
-            },
-        ],
+        args: vec![a.clone_with_value(b), a.clone_with_value(old_a)],
     });
 }
 
@@ -32,11 +21,8 @@ fn rewrite(value: &mut Value, kb: &KnowledgeBase) -> Option<Value> {
             let mut lookup_args = lookup_args.clone();
             let symbol = kb.gensym("value");
             let var = Value::Symbol(symbol);
-            lookup_args.push(Term {
-                id: lookup_args[1].id, // Take `id` and `offset` from `b` of lookup `a.b`.
-                offset: lookup_args[1].offset,
-                value: var.clone(),
-            });
+            // Take `id` and `offset` from `b` of lookup `a.b`.
+            lookup_args.push(lookup_args[1].clone_with_value(var.clone()));
             let lookup = Value::Expression(Operation {
                 operator: Operator::Dot,
                 args: lookup_args,
@@ -55,11 +41,7 @@ fn do_rewrite(term: &mut Term, kb: &KnowledgeBase, rewrites: &mut Vec<Value>) {
         // First, rewrite this term in place, maybe returning a lookup
         // lookup gets added to rewrites list
         if let Some(lookup) = rewrite(&mut term.value, kb) {
-            let mut lookup_term = Term {
-                id: term.id,
-                offset: term.offset,
-                value: lookup,
-            };
+            let mut lookup_term = term.clone_with_value(lookup);
             // recursively rewrite the lookup term if necesary
             do_rewrite(&mut lookup_term, kb, rewrites);
             rewrites.push(lookup_term.value);
@@ -90,11 +72,7 @@ pub fn rewrite_specializer(spec: &mut Term, kb: &KnowledgeBase) -> Vec<Term> {
 
     rewrites
         .into_iter()
-        .map(|value| Term {
-            id: spec.id,
-            offset: spec.offset,
-            value,
-        })
+        .map(|value| spec.clone_with_value(value))
         .collect()
 }
 
