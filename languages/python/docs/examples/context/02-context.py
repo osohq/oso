@@ -1,8 +1,8 @@
 import os
-import polar
+from polar import api
 
 class Env:
     def var(self, variable):
         yield os.environ[variable]
 
-polar.register_python_class(Env)
+api.register_python_class(Env)
