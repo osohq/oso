@@ -30,6 +30,7 @@ test: doctest
 
 	# This test fails because groups are not implemented.
 	cd examples/inheritance && pytest . || test $$? -eq 1
+	cd examples/rbac && pytest .
 
 deps:
 	pip3 install -r requirements-docs.txt

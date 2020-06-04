@@ -1,5 +1,5 @@
 role(actor: User, "employee") :=
-    actor.role = "employee";
+    actor.role = "employee"
     | role(actor, "accountant");
 
 role(actor: User, "accountant") :=
@@ -11,12 +11,12 @@ role(actor: User, "admin") :=
 
 # Employees can submit expenses
 allow(actor, "submit", "expense") :=
-    actor.role = "employee";
+    role(actor, "employee");
 
 # Accountants can view expenses
 allow(actor, "view", "expense") :=
-    actor.role = "accountant";
+    role(actor, "accountant");
 
 # Admins can approve expenses
 allow(actor, "approve", "expense") :=
-    actor.role = "admin";
+    role(actor, "admin");
