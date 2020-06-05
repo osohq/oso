@@ -29,6 +29,7 @@ pub enum RuntimeError {
     Unsupported { msg: String },
     TypeError { msg: String },
     UnboundVariable { sym: Symbol },
+    StackOverflow { msg: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
