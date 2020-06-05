@@ -336,19 +336,20 @@ impl Term {
         // the match does the recursive calling of map
         match self.value {
             Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-            Value::List(ref mut terms) => {
-                terms.iter_mut().for_each(|mut term| f(&mut term));
+            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_in_place(f)),
+            Value::Call(ref mut predicate) => {
+                predicate.args.iter_mut().for_each(|a| a.map_in_place(f))
             }
-            Value::Call(ref mut predicate) => predicate.args.iter_mut().for_each(|mut a| f(&mut a)),
             Value::Expression(Operation { ref mut args, .. }) => {
                 args.iter_mut().for_each(|term| term.map_in_place(f))
             }
-            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
-                fields.fields.iter_mut().for_each(|(_, mut v)| f(&mut v))
-            }
+            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => fields
+                .fields
+                .iter_mut()
+                .for_each(|(_, v)| v.map_in_place(f)),
             Value::ExternalInstance(_) => {}
             Value::Dictionary(Dictionary { ref mut fields }) => {
-                fields.iter_mut().for_each(|(_, mut v)| f(&mut v))
+                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
             }
         };
     }
