@@ -188,7 +188,7 @@ impl Predicate {
     where
         F: FnMut(&mut Value),
     {
-        self.args.iter_mut().for_each(|a| f(&mut a.value));
+        self.args.iter_mut().for_each(|a| a.map_in_place(f));
     }
 }
 
@@ -299,7 +299,6 @@ impl Value {
             Value::Call(predicate) => predicate.map_in_place(f),
             Value::Expression(Operation { args, .. }) => {
                 args.iter_mut().for_each(|term| term.map_in_place(f));
-                // args.iter_mut().for_each(|term| f(&mut term.value));
             }
             Value::InstanceLiteral(InstanceLiteral { fields, .. }) => fields.map_in_place(f),
             Value::ExternalInstance(_) => {}
