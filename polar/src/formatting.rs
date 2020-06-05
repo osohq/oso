@@ -65,10 +65,7 @@ pub mod display {
                         .join(", ")
                 ),
                 Goal::IsSubspecializer {
-                    answer: _,
-                    left,
-                    right,
-                    arg,
+                    left, right, arg, ..
                 } => write!(
                     fmt,
                     "IsSubspecializer({}, {}, {})",
@@ -89,9 +86,9 @@ pub mod display {
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
                 Goal::SortRules {
                     rules,
-                    args: _,
                     outer,
                     inner,
+                    ..
                 } => write!(
                     fmt,
                     "SortRules([{}], outer={}, inner={})",

@@ -30,7 +30,9 @@ where
                 args,
                 ..
             } => {
-                polar.external_call_result(&mut query, call_id, external_handler(attribute, args));
+                polar
+                    .external_call_result(&mut query, call_id, external_handler(attribute, args))
+                    .unwrap();
             }
             _ => {}
         }
@@ -539,4 +541,13 @@ fn test_externals_instantiated() {
     let query = polar.new_query("f(1, Foo{})").unwrap();
     let results = query_results(&mut polar, query, mock_foo);
     assert_eq!(results.len(), 1);
+}
+
+#[test]
+#[ignore] // ignore because this take a LONG time (could consider lowering the goal limit)
+#[should_panic(expected = "Goal count exceeded! MAX_EXECUTED_GOALS = 10000")]
+fn test_infinite_loop() {
+    let mut polar = Polar::new();
+    polar.load_str("f(x) := f(x);").unwrap();
+    qeval(&mut polar, "f(1)");
 }

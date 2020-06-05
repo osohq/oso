@@ -6,6 +6,7 @@ use super::ToPolarString;
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
+pub const MAX_EXECUTED_GOALS: usize = 10_000;
 
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
@@ -87,6 +88,9 @@ pub struct PolarVirtualMachine {
     bindings: Bindings,
     choices: Choices,
 
+    /// Count executed goals
+    goal_counter: usize,
+
     /// If VM is set to `debug=True`, the VM will return a `QueryEvent::Breakpoint`
     /// after every goal
     debug: bool,
@@ -119,6 +123,7 @@ impl PolarVirtualMachine {
             goals,
             bindings: vec![],
             choices: vec![],
+            goal_counter: 0,
             debug: false,
             kb,
             instances: HashMap::new(),
@@ -161,7 +166,7 @@ impl PolarVirtualMachine {
             if self.choices.is_empty() {
                 return Ok(QueryEvent::Done);
             } else {
-                self.backtrack();
+                self.backtrack()?;
             }
         }
 
@@ -169,14 +174,15 @@ impl PolarVirtualMachine {
             if std::env::var("RUST_LOG").is_ok() {
                 eprintln!("{}", goal);
             }
+            self.goal_counter += 1;
             match goal {
-                Goal::Backtrack => self.backtrack(),
+                Goal::Backtrack => self.backtrack()?,
                 Goal::Break => return Ok(QueryEvent::Breakpoint),
                 Goal::Cut => self.cut(),
                 Goal::Halt => return Ok(self.halt()),
-                Goal::Isa { left, right } => self.isa(&left, &right),
+                Goal::Isa { left, right } => self.isa(&left, &right)?,
                 Goal::IsMoreSpecific { left, right, args } => {
-                    self.is_more_specific(left, right, args)
+                    self.is_more_specific(left, right, args)?
                 }
                 Goal::IsSubspecializer {
                     answer,
@@ -184,11 +190,11 @@ impl PolarVirtualMachine {
                     right,
                     arg,
                 } => {
-                    if let Some(event) = self.is_subspecializer(answer, left, right, arg) {
+                    if let Ok(Some(event)) = self.is_subspecializer(answer, left, right, arg) {
                         return Ok(event);
                     }
                 }
-                Goal::Lookup { dict, field, value } => self.lookup(dict, field, value),
+                Goal::Lookup { dict, field, value } => self.lookup(dict, field, value)?,
                 Goal::LookupExternal {
                     call_id,
                     instance_id,
@@ -197,7 +203,7 @@ impl PolarVirtualMachine {
                 Goal::IsaExternal {
                     instance_id,
                     literal,
-                } => return Ok(self.isa_external(instance_id, literal)),
+                } => return self.isa_external(instance_id, literal),
                 Goal::MakeExternal {
                     literal,
                     instance_id,
@@ -209,7 +215,7 @@ impl PolarVirtualMachine {
                     outer,
                     inner,
                     args,
-                } => self.sort_rules(rules, args, outer, inner),
+                } => self.sort_rules(rules, args, outer, inner)?,
                 Goal::Unify { left, right } => self.unify(&left, &right)?,
             }
             // don't break when the goal stack is empty or a result wont
@@ -232,9 +238,24 @@ impl PolarVirtualMachine {
     }
 
     /// Push a goal onto the goal stack.
-    pub fn push_goal(&mut self, goal: Goal) {
-        assert!(self.goals.len() < MAX_GOALS, "too many goals");
+    pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
+        if self.goals.len() >= MAX_GOALS {
+            return Err(RuntimeError::StackOverflow {
+                msg: format!("Goal stack overflow! MAX_GOALS = {}", MAX_GOALS),
+            }
+            .into());
+        }
+        if self.goal_counter >= MAX_EXECUTED_GOALS {
+            return Err(RuntimeError::StackOverflow {
+                msg: format!(
+                    "Goal count exceeded! MAX_EXECUTED_GOALS = {}",
+                    MAX_EXECUTED_GOALS
+                ),
+            }
+            .into());
+        }
         self.goals.push(goal);
+        Ok(())
     }
 
     /// Push a non-trivial choice onto the choice stack.
@@ -411,7 +432,7 @@ impl PolarVirtualMachine {
 impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
-    fn backtrack(&mut self) {
+    fn backtrack(&mut self) -> PolarResult<()> {
         if std::env::var("RUST_LOG").is_ok() {
             eprintln!("⇒ backtrack");
         }
@@ -433,6 +454,7 @@ impl PolarVirtualMachine {
                         goals,
                     });
                 }
+                Ok(())
             }
         }
     }
@@ -451,7 +473,7 @@ impl PolarVirtualMachine {
     }
 
     /// Comparison operator that essentially performs partial unification.
-    pub fn isa(&mut self, left: &Term, right: &Term) {
+    pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match (&left.value, &right.value) {
             (Value::List(left), Value::List(right)) => {
                 if left.len() == right.len() {
@@ -465,7 +487,7 @@ impl PolarVirtualMachine {
                             .collect(),
                     )
                 } else {
-                    self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack)?;
                 }
             }
 
@@ -488,7 +510,7 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Isa {
                         left,
                         right: v.clone(),
-                    })
+                    })?
                 }
             }
 
@@ -533,12 +555,12 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Isa {
                         left: value,
                         right: right.clone(),
-                    });
+                    })?;
                 } else {
                     self.push_goal(Goal::Unify {
                         left: left.clone(),
                         right: right.clone(),
-                    });
+                    })?;
                 }
             }
 
@@ -547,12 +569,12 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Isa {
                         left: left.clone(),
                         right: value,
-                    });
+                    })?;
                 } else {
                     self.push_goal(Goal::Unify {
                         left: left.clone(),
                         right: right.clone(),
-                    });
+                    })?;
                 }
             }
 
@@ -561,22 +583,23 @@ impl PolarVirtualMachine {
                 self.push_goal(Goal::Isa {
                     left: Term::new(Value::ExternalInstance(left.clone())),
                     right: Term::new(Value::Dictionary(right.clone().fields)),
-                });
+                })?;
                 // Check class
                 self.push_goal(Goal::IsaExternal {
                     instance_id: left.instance_id,
                     literal: right.clone(),
-                });
+                })?;
             }
 
             _ => self.push_goal(Goal::Unify {
                 left: left.clone(),
                 right: right.clone(),
-            }),
+            })?,
         }
+        Ok(())
     }
 
-    pub fn lookup(&mut self, dict: Dictionary, field: Term, value: Term) {
+    pub fn lookup(&mut self, dict: Dictionary, field: Term, value: Term) -> PolarResult<()> {
         // check if field is a variable
         match &field.value {
             Value::Symbol(_) => {
@@ -604,12 +627,13 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Unify {
                         left: retrieved.clone(),
                         right: value,
-                    });
+                    })?;
                 } else {
-                    self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack)?;
                 }
             }
         };
+        Ok(())
     }
 
     /// Return an external call event to look up a field's value
@@ -647,20 +671,24 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn isa_external(&mut self, instance_id: u64, literal: InstanceLiteral) -> QueryEvent {
+    pub fn isa_external(
+        &mut self,
+        instance_id: u64,
+        literal: InstanceLiteral,
+    ) -> PolarResult<QueryEvent> {
         let result = self.kb.gensym("isa");
         let call_id = self.new_call_id(&result);
 
         self.push_goal(Goal::Unify {
             left: Term::new(Value::Symbol(result)),
             right: Term::new(Value::Boolean(true)),
-        });
+        })?;
 
-        QueryEvent::ExternalIsa {
+        Ok(QueryEvent::ExternalIsa {
             call_id,
             instance_id,
             class_tag: literal.tag,
-        }
+        })
     }
 
     pub fn make_external(&mut self, literal: InstanceLiteral, instance_id: u64) -> QueryEvent {
@@ -685,10 +713,10 @@ impl PolarVirtualMachine {
             {
                 match &predicate.name.0[..] {
                     // Built-in predicates.
-                    "cut" => self.push_goal(Goal::Cut),
+                    "cut" => self.push_goal(Goal::Cut)?,
                     // User-defined predicates.
                     _ => match self.kb.rules.get(&predicate.name) {
-                        None => self.push_goal(Goal::Backtrack),
+                        None => self.push_goal(Goal::Backtrack)?,
                         Some(generic_rule) => {
                             let generic_rule = generic_rule.clone();
                             assert_eq!(generic_rule.name, predicate.name);
@@ -701,7 +729,7 @@ impl PolarVirtualMachine {
                                 args: predicate.args.clone(),
                                 outer: 1,
                                 inner: 1,
-                            });
+                            })?;
                         }
                     },
                 }
@@ -714,7 +742,7 @@ impl PolarVirtualMachine {
                         assert_eq!(args.len(), 2);
                         let right = args.pop().unwrap();
                         let left = args.pop().unwrap();
-                        self.push_goal(Goal::Unify { left, right });
+                        self.push_goal(Goal::Unify { left, right })?;
                     }
                     Operator::Dot => {
                         assert_eq!(args.len(), 3);
@@ -727,7 +755,7 @@ impl PolarVirtualMachine {
                                 dict,
                                 field: field.clone(),
                                 value: args.remove(2),
-                            }),
+                            })?,
                             Value::InstanceLiteral(_) => {
                                 // Check if there's an external instance for this.
                                 // If there is, use it, if not push a make external then use it.
@@ -741,7 +769,7 @@ impl PolarVirtualMachine {
                                         operator: Operator::Dot,
                                         args,
                                     })),
-                                });
+                                })?;
                                 self.append_goals(field_goals);
                                 self.append_goals(obj_goals);
                             }
@@ -808,7 +836,7 @@ impl PolarVirtualMachine {
     /// symbol associated with the call ID to the result value. If the
     /// value is `None` then the external has no (more) results, so we
     /// backtrack to the choice point left by `Goal::LookupExternal`.
-    pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) {
+    pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> PolarResult<()> {
         // TODO: Open question if we need to pass errors back down to rust.
         // For example what happens if the call asked for a field that doesn't exist?
 
@@ -825,9 +853,10 @@ impl PolarVirtualMachine {
             // No more results. Clean up, cut out the retry alternative,
             // and backtrack.
             self.call_id_symbols.remove(&call_id).expect("bad call ID");
-            self.push_goal(Goal::Backtrack);
-            self.push_goal(Goal::Cut);
+            self.push_goal(Goal::Backtrack)?;
+            self.push_goal(Goal::Cut)?;
         }
+        Ok(())
     }
 
     /// Handle an external response to ExternalIsSubSpecializer,
@@ -853,7 +882,7 @@ impl PolarVirtualMachine {
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         // Unify a symbol `left` with a term `right`.
         // This is sort of a "sub-goal" of `Unify`.
-        let mut unify_var = |left: &Symbol, right: &Term| {
+        let mut unify_var = |left: &Symbol, right: &Term| -> PolarResult<()> {
             let left_value = self.value(&left).cloned();
             let mut right_value = None;
             if let Value::Symbol(ref right_sym) = right.value {
@@ -863,14 +892,14 @@ impl PolarVirtualMachine {
             match (left_value, right_value) {
                 (Some(left), Some(right)) => {
                     // Both are bound, unify their values.
-                    self.push_goal(Goal::Unify { left, right });
+                    self.push_goal(Goal::Unify { left, right })?;
                 }
                 (Some(left), _) => {
                     // Only left is bound, unify with whatever right is.
                     self.push_goal(Goal::Unify {
                         left,
                         right: right.clone(),
-                    });
+                    })?;
                 }
                 (None, Some(value)) => {
                     // Left is unbound, right is bound;
@@ -883,13 +912,14 @@ impl PolarVirtualMachine {
                     self.bind(left, right);
                 }
             }
+            Ok(())
         };
 
         // Unify generic terms.
         match (&left.value, &right.value) {
             // Unify symbols as variables.
-            (Value::Symbol(var), _) => unify_var(var, right),
-            (_, Value::Symbol(var)) => unify_var(var, left),
+            (Value::Symbol(var), _) => unify_var(var, right)?,
+            (_, Value::Symbol(var)) => unify_var(var, left)?,
 
             // Unify lists by recursively unifying the elements.
             (Value::List(left), Value::List(right)) => {
@@ -904,7 +934,7 @@ impl PolarVirtualMachine {
                             .collect(),
                     )
                 } else {
-                    self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack)?;
                 }
             }
 
@@ -913,7 +943,7 @@ impl PolarVirtualMachine {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if left_fields != right_fields {
-                    self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack)?;
                     return Ok(());
                 }
 
@@ -927,28 +957,28 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Unify {
                         left: v.clone(),
                         right,
-                    })
+                    })?
                 }
             }
 
             // Unify integers by value.
             (Value::Integer(left), Value::Integer(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack)?;
                 }
             }
 
             // Unify strings by value.
             (Value::String(left), Value::String(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack)?;
                 }
             }
 
             // Unify bools by value.
             (Value::Boolean(left), Value::Boolean(right)) => {
                 if left != right {
-                    self.push_goal(Goal::Backtrack);
+                    self.push_goal(Goal::Backtrack)?;
                 }
             }
 
@@ -966,7 +996,7 @@ impl PolarVirtualMachine {
                             .collect(),
                     )
                 } else {
-                    self.push_goal(Goal::Backtrack)
+                    self.push_goal(Goal::Backtrack)?
                 }
             }
 
@@ -997,7 +1027,7 @@ impl PolarVirtualMachine {
             }
 
             // Anything else fails.
-            (_, _) => self.push_goal(Goal::Backtrack),
+            (_, _) => self.push_goal(Goal::Backtrack)?,
         }
 
         Ok(())
@@ -1011,7 +1041,13 @@ impl PolarVirtualMachine {
     /// unsorted. The `inner` index tracks our search through the sorted sublist for the correct
     /// position of the candidate rule (the rule at the head of the unsorted portion of the
     /// list).
-    fn sort_rules(&mut self, mut rules: Rules, args: TermList, outer: usize, inner: usize) {
+    fn sort_rules(
+        &mut self,
+        mut rules: Rules,
+        args: TermList,
+        outer: usize,
+        inner: usize,
+    ) -> PolarResult<()> {
         if rules.is_empty() {
             return self.push_goal(Goal::Backtrack);
         }
@@ -1048,7 +1084,7 @@ impl PolarVirtualMachine {
                 self.choose(vec![vec![compare, Goal::Cut, next_inner], vec![next_outer]]);
             } else {
                 assert_eq!(inner, 0);
-                self.push_goal(next_outer);
+                self.push_goal(next_outer)?;
             }
         } else {
             // We're done; the rules are sorted.
@@ -1085,10 +1121,11 @@ impl PolarVirtualMachine {
             // Choose the first alternative, and push a choice for the rest.
             self.choose(alternatives);
         }
+        Ok(())
     }
 
     /// Succeed if `left` is more specific than `right` with respect to `args`.
-    fn is_more_specific(&mut self, left: Rule, right: Rule, args: TermList) {
+    fn is_more_specific(&mut self, left: Rule, right: Rule, args: TermList) -> PolarResult<()> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
             // TODO: Handle the case where one of the params has a specializer and the other does
@@ -1122,12 +1159,13 @@ impl PolarVirtualMachine {
                             right: Term::new(Value::Boolean(true)),
                         },
                     ]);
-                    return;
+                    return Ok(());
                 }
             }
         }
         // If neither rule is more specific, fail!
-        self.push_goal(Goal::Backtrack);
+        self.push_goal(Goal::Backtrack)?;
+        Ok(())
     }
 
     /// Determine if `left` is a more specific specializer ("subspecializer") than `right`
@@ -1137,7 +1175,7 @@ impl PolarVirtualMachine {
         left: Term,
         right: Term,
         arg: Term,
-    ) -> Option<QueryEvent> {
+    ) -> PolarResult<Option<QueryEvent>> {
         // If the arg is an instance literal, convert it to an external instance
         if let Value::InstanceLiteral(_) = arg.value {
             let (arg, mut goals) = self.instantiate_externals(&arg);
@@ -1148,7 +1186,7 @@ impl PolarVirtualMachine {
                 arg,
             });
             self.append_goals(goals);
-            return None;
+            return Ok(None);
         }
 
         match (arg.value, left.value, right.value) {
@@ -1166,15 +1204,15 @@ impl PolarVirtualMachine {
                         left: Term::new(Value::Dictionary(left.fields)),
                         right: Term::new(Value::Dictionary(right.fields)),
                         arg: Term::new(Value::ExternalInstance(instance.clone())),
-                    });
+                    })?;
                 }
                 // check ordering based on the classes
-                Some(QueryEvent::ExternalIsSubSpecializer {
+                Ok(Some(QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     instance_id: instance.instance_id,
                     left_class_tag: left.tag,
                     right_class_tag: right.tag,
-                })
+                }))
             }
             (_, Value::Dictionary(left), Value::Dictionary(right)) => {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
@@ -1192,15 +1230,15 @@ impl PolarVirtualMachine {
                         &Term::new(Value::Boolean(right_fields.len() < left.fields.len())),
                     );
                 }
-                None
+                Ok(None)
             }
             (_, Value::InstanceLiteral(_), Value::Dictionary(_)) => {
                 self.bind(&answer, &Term::new(Value::Boolean(true)));
-                None
+                Ok(None)
             }
             _ => {
                 self.bind(&answer, &Term::new(Value::Boolean(false)));
-                None
+                Ok(None)
             }
         }
     }
@@ -1327,7 +1365,7 @@ mod tests {
         let f3 = term!(pred!("f", [3]));
 
         // Querying for f(1)
-        vm.push_goal(query!(op!(And, f1.clone())));
+        vm.push_goal(query!(op!(And, f1.clone()))).unwrap();
 
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{}},
@@ -1335,14 +1373,14 @@ mod tests {
         ]);
 
         // Querying for f(1), f(2)
-        vm.push_goal(query!(f1.clone(), f2.clone()));
+        vm.push_goal(query!(f1.clone(), f2.clone())).unwrap();
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{}},
             QueryEvent::Done
         ]);
 
         // Querying for f(3)
-        vm.push_goal(query!(op!(And, f3.clone())));
+        vm.push_goal(query!(op!(And, f3.clone()))).unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Querying for f(1), f(2), f(3)
@@ -1353,7 +1391,8 @@ mod tests {
                     operator: Operator::And,
                     args: permutation,
                 })),
-            });
+            })
+            .unwrap();
             assert_query_events!(vm, [QueryEvent::Done]);
         }
     }
@@ -1361,7 +1400,8 @@ mod tests {
     #[test]
     fn unify_expression() {
         let mut vm = PolarVirtualMachine::default();
-        vm.push_goal(query!(op!(Unify, term!(1), term!(1))));
+        vm.push_goal(query!(op!(Unify, term!(1), term!(1))))
+            .unwrap();
 
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{}},
@@ -1369,7 +1409,7 @@ mod tests {
         ]);
 
         let q = op!(Unify, term!(1), term!(2));
-        vm.push_goal(query!(q));
+        vm.push_goal(query!(q)).unwrap();
 
         assert_query_events!(vm, [QueryEvent::Done]);
     }
@@ -1389,7 +1429,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: empty_list.clone(),
             right: empty_list.clone(),
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
@@ -1398,7 +1439,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: one_two_list.clone(),
             right: one_two_list.clone(),
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
@@ -1407,7 +1449,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: one_two_list.clone(),
             right: two_one_list,
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1415,7 +1458,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: one_list.clone(),
             right: one_two_list.clone(),
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1423,7 +1467,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: one_two_list,
             right: one_list.clone(),
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1431,7 +1476,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: one_list.clone(),
             right: empty_list.clone(),
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1439,7 +1485,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: empty_list,
             right: one_list.clone(),
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1447,7 +1494,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: one_list.clone(),
             right: one.clone(),
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1455,7 +1503,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: one,
             right: one_list,
-        });
+        })
+        .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
     }
@@ -1475,7 +1524,8 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT isa.
@@ -1486,42 +1536,48 @@ mod tests {
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // {} isa {}.
         vm.push_goal(Goal::Isa {
             left: term!(btreemap! {}),
             right: term!(btreemap! {}),
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Non-empty dicts should isa against an empty dict.
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right: term!(btreemap! {}),
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
             left: term!(btreemap! {}),
             right: left.clone(),
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Superset dict isa subset dict.
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right: term!(btreemap! {sym!("x") => term!(1)}),
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Subset dict isNOTa superset dict.
         vm.push_goal(Goal::Isa {
             left: term!(btreemap! {sym!("x") => term!(1)}),
             right: left,
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
     }
 
@@ -1540,7 +1596,8 @@ mod tests {
         vm.push_goal(Goal::Unify {
             left: left.clone(),
             right,
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT unify.
@@ -1551,28 +1608,31 @@ mod tests {
         vm.push_goal(Goal::Unify {
             left: left.clone(),
             right,
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Empty dicts unify.
         vm.push_goal(Goal::Unify {
             left: term!(btreemap! {}),
             right: term!(btreemap! {}),
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Empty dict should not unify against a non-empty dict.
         vm.push_goal(Goal::Unify {
             left: left.clone(),
             right: term!(btreemap! {}),
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
 
         // Subset match should fail.
         let right = term!(btreemap! {
             sym!("x") => term!(1),
         });
-        vm.push_goal(Goal::Unify { left, right });
+        vm.push_goal(Goal::Unify { left, right }).unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
     }
 
@@ -1590,7 +1650,7 @@ mod tests {
                 sym!("y") => term!(sym!("result"))
             })
         });
-        vm.push_goal(Goal::Unify { left, right });
+        vm.push_goal(Goal::Unify { left, right }).unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!{sym!("result") => term!(1)} }, QueryEvent::Done]);
     }
 
@@ -1606,7 +1666,8 @@ mod tests {
             dict: dict.clone(),
             field: term!(pred!("x", [])),
             value: term!(1),
-        });
+        })
+        .unwrap();
 
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{}}
@@ -1617,7 +1678,8 @@ mod tests {
             dict: dict.clone(),
             field: term!(pred!("x", [])),
             value: term!(2),
-        });
+        })
+        .unwrap();
 
         assert_query_events!(vm, [QueryEvent::Done]);
 
@@ -1626,7 +1688,8 @@ mod tests {
             dict,
             field: term!(pred!("x", [])),
             value: term!(sym!("y")),
-        });
+        })
+        .unwrap();
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{sym!("y") => term!(1)}}
         ]);
@@ -1689,7 +1752,7 @@ mod tests {
         }]);
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&sym!("x")), Some(&one));
-        vm.backtrack();
+        vm.backtrack().unwrap();
 
         // Left variable bound to value.
         vm.bind(&z, &one);
@@ -1833,7 +1896,9 @@ mod tests {
 
         let answer = vm.kb.gensym("is_subspecializer");
 
-        let event = vm.is_subspecializer(answer.clone(), left, right, arg);
+        let event = vm
+            .is_subspecializer(answer.clone(), left, right, arg)
+            .unwrap();
         if event.is_some() {
             panic!("Expected None, got {:?}", event);
         }

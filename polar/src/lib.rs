@@ -303,8 +303,13 @@ pub extern "C" fn polar_external_call_result(
                 }
             }
         }
-        polar.external_call_result(query, call_id, term);
-        1
+        match polar.external_call_result(query, call_id, term) {
+            Ok(_) => 1,
+            Err(e) => {
+                set_error(e);
+                0
+            }
+        }
     });
     match result {
         Ok(r) => r,
