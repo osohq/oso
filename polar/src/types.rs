@@ -86,7 +86,7 @@ pub enum OperationalError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-/// Parameter passed to function is invalid.
+/// Parameter passed to FFI lib function is invalid.
 pub struct ParameterError(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -176,6 +176,28 @@ pub struct InstanceLiteral {
     pub fields: Dictionary,
 }
 
+impl InstanceLiteral {
+    pub fn map<F>(&self, f: &mut F) -> InstanceLiteral
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        InstanceLiteral {
+            tag: self.tag.clone(),
+            fields: self.fields.map(f),
+        }
+    }
+
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Term),
+    {
+        self.fields
+            .fields
+            .iter_mut()
+            .for_each(|(_, v)| v.map_in_place(f));
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ExternalInstance {
     pub instance_id: u64,
@@ -228,7 +250,7 @@ pub enum Operator {
     Debug,
     Cut,
     In,
-    Make,
+    New,
     Dot,
     Not,
     Mul,
@@ -250,7 +272,7 @@ impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
             Operator::Debug => 11,
-            Operator::Make => 11,
+            Operator::New => 10,
             Operator::Cut => 10,
             Operator::Dot => 9,
             Operator::In => 8,
@@ -308,12 +330,7 @@ impl Value {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
             }),
-            Value::InstanceLiteral(InstanceLiteral { tag, fields }) => {
-                Value::InstanceLiteral(InstanceLiteral {
-                    tag: tag.clone(),
-                    fields: fields.map(f),
-                })
-            }
+            Value::InstanceLiteral(literal) => Value::InstanceLiteral(literal.map(f)),
             Value::ExternalInstance(_) => self.clone(),
             Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
         };
@@ -329,6 +346,24 @@ impl Value {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
                 loc: 0,
                 context: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn instance_literal(self) -> Result<InstanceLiteral, RuntimeError> {
+        match self {
+            Value::InstanceLiteral(literal) => Ok(literal),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+            }),
+        }
+    }
+
+    pub fn expression(self) -> Result<Operation, RuntimeError> {
+        match self {
+            Value::Expression(op) => Ok(op),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!("Expected instance literal, got: {}", self.to_polar()),
             }),
         }
     }
@@ -368,6 +403,10 @@ impl Term {
             offset: self.offset,
             value,
         }
+    }
+
+    pub fn replace_value(&mut self, value: Value) -> Value {
+        std::mem::replace(&mut self.value, value)
     }
 
     /// Apply `f` to value and return a new term.
@@ -501,14 +540,8 @@ impl GenericRule {
 }
 
 #[derive(Clone)]
-pub struct Class {
-    pub name: Symbol,
-}
-
-#[derive(Clone)]
 pub enum Type {
-    Class { class: Class },
-    Group { members: Vec<Type> },
+    Class { name: Symbol },
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -545,8 +578,10 @@ pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
-    // For temporary variable names, call IDs, instance IDs, symbols, etc.
-    counter: AtomicU64,
+    // For symbols returned from gensym
+    gensym_counter: AtomicU64,
+    // For call IDs, instance IDs, symbols, etc.
+    id_counter: AtomicU64,
 }
 
 impl KnowledgeBase {
@@ -555,21 +590,23 @@ impl KnowledgeBase {
             types: HashMap::new(),
             rules: HashMap::new(),
             sources: Sources::default(),
-            counter: AtomicU64::new(1),
+            id_counter: AtomicU64::new(1),
+            gensym_counter: AtomicU64::new(1),
         }
     }
 
     /// Return a monotonically increasing integer ID.
     pub fn new_id(&self) -> u64 {
-        self.counter.fetch_add(1, Ordering::SeqCst)
+        self.id_counter.fetch_add(1, Ordering::SeqCst)
     }
 
     /// Generate a new symbol.
     pub fn gensym(&self, prefix: &str) -> Symbol {
+        let next = self.gensym_counter.fetch_add(1, Ordering::SeqCst);
         if prefix.starts_with('_') {
-            Symbol(format!("{}_{}", prefix, self.new_id()))
+            Symbol(format!("{}_{}", prefix, next))
         } else {
-            Symbol(format!("_{}_{}", prefix, self.new_id()))
+            Symbol(format!("_{}_{}", prefix, next))
         }
     }
 
@@ -600,9 +637,10 @@ pub enum QueryEvent {
     ExternalCall {
         /// Persistent id across all requests for results from the same external call.
         call_id: u64,
-        /// Id of the external instance to make this call on.
+        /// Id of the external instance to make this call on. None for functions or constructors.
         instance_id: u64,
-        /// Field name to lookup or function name to call.
+        /// Field name to lookup or function name to call. A class name indicates a constructor
+        /// should be called.
         attribute: Symbol,
         /// List of arguments to use if this is a method call.
         args: Vec<Term>,

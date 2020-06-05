@@ -61,7 +61,7 @@ pub enum Token {
     LCB,       // {
     RCB,       // }
     Dot,       // .
-    Make,      // make
+    New,       // new
     Not,       // !
     Mul,       // *
     Div,       // /
@@ -99,7 +99,7 @@ impl ToString for Token {
             Token::LCB => "{".to_owned(),       // {
             Token::RCB => "}".to_owned(),       // }
             Token::Dot => ".".to_owned(),       // .
-            Token::Make => "make".to_owned(),   // make
+            Token::New => "new".to_owned(),     // new
             Token::Not => "!".to_owned(),       // !
             Token::Mul => "*".to_owned(),       // *
             Token::Div => "/".to_owned(),       // /
@@ -171,8 +171,8 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Boolean(true), last + 1)))
         } else if &self.buf == "false" {
             Some(Ok((start, Token::Boolean(false), last + 1)))
-        } else if &self.buf == "make" {
-            Some(Ok((start, Token::Make, last + 1)))
+        } else if &self.buf == "new" {
+            Some(Ok((start, Token::New, last + 1)))
         } else if &self.buf == "in" {
             Some(Ok((start, Token::In, last + 1)))
         } else if &self.buf == "cut" {

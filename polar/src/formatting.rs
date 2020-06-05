@@ -204,7 +204,7 @@ pub mod to_polar {
                 Lt => "<",
                 Or => "|",
                 And => ",",
-                Make => "make",
+                New => "new",
                 Dot => ".",
                 Unify => "=",
                 In => "in",
@@ -223,8 +223,17 @@ pub mod to_polar {
             match self.operator {
                 Debug => "debug()".to_owned(),
                 Cut => "cut()".to_owned(),
-                // `Make` formats as a predicate
-                Make => format!("make({})", format_args(self.operator, &self.args, ",")),
+                New => {
+                    if self.args.len() == 1 {
+                        format!("new {}", to_polar_parens(self.operator, &self.args[0]))
+                    } else {
+                        format!(
+                            "new ({}, {})",
+                            to_polar_parens(self.operator, &self.args[0]),
+                            self.args[1].to_polar()
+                        )
+                    }
+                }
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {

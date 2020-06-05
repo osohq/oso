@@ -282,4 +282,13 @@ mod tests {
 
         assert_eq!(line[0], Line::Query(term!(pred!("f", [1]))));
     }
+
+    #[test]
+    fn test_parse_new() {
+        let f = r#"
+        a(x) := x = new Foo{a: 1};
+        "#;
+        let results = parse_rules(f).unwrap();
+        assert_eq!(results[0].to_polar(), r#"a(x) := x=new Foo{a: 1};"#);
+    }
 }
