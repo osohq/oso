@@ -281,6 +281,17 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
     }
 }
 
+/// Execute one debugger command for the given query.
+///
+/// ## Returns
+/// - `0` on error.
+/// - `1` on success.
+///
+/// ## Errors
+/// - Provided value is NULL.
+/// - Provided value contains malformed JSON.
+/// - Provided value cannot be parsed to a Term wrapping a Value::String.
+/// - Anything panics during the parsing/execution of the provided command.
 #[no_mangle]
 pub extern "C" fn polar_debug_command(
     polar_ptr: *mut Polar,
