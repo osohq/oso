@@ -552,6 +552,7 @@ fn test_infinite_loop() {
     qeval(&mut polar, "f(1)");
 }
 
+#[test]
 fn test_comparisons() {
     let mut polar = Polar::new();
 

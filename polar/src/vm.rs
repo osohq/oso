@@ -1288,7 +1288,7 @@ impl PolarVirtualMachine {
             }
         }
         if !result {
-            self.push_goal(Goal::Backtrack);
+            self.push_goal(Goal::Backtrack)?;
         }
 
         Ok(())
