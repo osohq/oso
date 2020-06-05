@@ -142,16 +142,13 @@ pub extern "C" fn polar_load(
         }
     });
 
-    match result {
-        Ok((ret_query, ret_code)) => {
-            unsafe { *query.as_mut() = ret_query };
-            ret_code
-        }
-        Err(_) => {
-            set_error(types::OperationalError::Unknown.into());
-            unsafe { *query.as_mut() = null_mut() };
-            EXIT_FAILURE
-        }
+    if let Ok((ret_query, ret_code)) = result {
+        unsafe { *query.as_mut() = ret_query };
+        ret_code
+    } else {
+        set_error(types::OperationalError::Unknown.into());
+        unsafe { *query.as_mut() = null_mut() };
+        EXIT_FAILURE
     }
 }
 
