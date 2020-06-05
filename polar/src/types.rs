@@ -39,7 +39,7 @@ pub enum OperationalError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-/// Parameter passed to function is invalid.
+/// Parameter passed to FFI lib function is invalid.
 pub struct ParameterError(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -250,6 +250,8 @@ pub enum Value {
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
+    // NOTE: This is potentially not ideal. Needed so that rewrites do not infinitely recur.
+    ExternalConstructor { call: Predicate, result: Symbol },
     List(TermList),
     Symbol(Symbol),
     Expression(Operation),
@@ -267,6 +269,7 @@ impl Value {
             }
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
+            Value::ExternalConstructor { call, result } => Value::ExternalConstructor { call: call.map(f), result: result.clone() },
             Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
@@ -297,6 +300,9 @@ impl Value {
                 terms.iter_mut().for_each(|term| f(&mut term.value));
             }
             Value::Call(predicate) => predicate.map_in_place(f),
+            Value::ExternalConstructor { call, .. } => {
+                call.map_in_place(f);
+            }
             Value::Expression(Operation { args, .. }) => {
                 args.iter_mut().for_each(|term| term.map_in_place(f));
             }
@@ -456,14 +462,8 @@ impl GenericRule {
 }
 
 #[derive(Clone)]
-pub struct Class {
-    pub name: Symbol,
-}
-
-#[derive(Clone)]
 pub enum Type {
-    Class { class: Class },
-    Group { members: Vec<Type> },
+    Class { name: Symbol },
 }
 
 #[derive(Default)]

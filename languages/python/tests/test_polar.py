@@ -391,3 +391,14 @@ def test_predicate(polar, qvar):
     assert polar.query(
         Query(name="f", args=[Predicate("pred", [1, 2])]), single=True
     ).results == [{}]
+
+
+def test_constructor(polar, qvar):
+    """Test that class constructor is called correctly with constructor syntax."""
+    class TestConstructor:
+        def __init__(self, x):
+            self.x = x
+
+    polar.register_python_class(TestConstructor)
+
+    assert qvar("instance = TestConstructor(1), y = instance.x", "y", one=True) == 1

@@ -11,7 +11,7 @@ fn and_wrap(a: &mut Value, b: Value) {
 }
 
 /// Checks if the expression needs to be rewritten.
-/// If so, replaces the value in place with the symbol, and returns the lookup needed
+/// If so, replaces the value in place with the symbol, and returns the rewritten expression.
 fn rewrite(value: &mut Value, kb: &KnowledgeBase) -> Option<Value> {
     match value {
         Value::Expression(Operation {
@@ -28,6 +28,22 @@ fn rewrite(value: &mut Value, kb: &KnowledgeBase) -> Option<Value> {
             });
             *value = var;
             Some(lookup)
+        }
+        // Rewrite predicates if they are a constructor for a class (name is a registered class).
+        Value::Call(Predicate { name, args }) if kb.types.contains_key(name) => {
+            let predicate_args = args.clone();
+            let symbol = kb.gensym("instance");
+            let var = Value::Symbol(symbol.clone());
+            let predicate = Value::ExternalConstructor {
+                call: Predicate {
+                    name: name.clone(),
+                    args: predicate_args,
+                },
+                result: symbol,
+            };
+
+            *value = var;
+            Some(predicate)
         }
         _ => None,
     }
@@ -204,5 +220,64 @@ mod tests {
         assert_eq!(term.to_polar(), "f(Foo{x: bar.y})");
         rewrite_term(&mut term, &kb);
         assert_eq!(term.to_polar(), ".(bar,y,_value_2),f(Foo{x: _value_2})");
+    }
+
+    #[test]
+    fn rewrite_class_constructor() {
+        let mut kb = KnowledgeBase::new();
+        kb.types.insert(
+            Symbol(String::from("Foo")),
+            Type::Class {
+                name: Symbol(String::from("Foo")),
+            },
+        );
+
+        let mut term = parse_query("Foo(1, 2)").unwrap();
+        assert_eq!(term.to_polar(), "Foo(1,2)");
+
+        rewrite_term(&mut term, &kb);
+        // @ means external constructor
+        assert_eq!(term.to_polar(), "@(_instance_1 = Foo(1,2)),_instance_1");
+    }
+
+    #[test]
+    fn rewrite_nested_class_constructor() {
+        let mut kb = KnowledgeBase::new();
+        kb.types.insert(
+            Symbol(String::from("Foo")),
+            Type::Class {
+                name: Symbol(String::from("Foo")),
+            },
+        );
+
+        let mut term = parse_query("Foo(1, Foo(2, 3))").unwrap();
+        assert_eq!(term.to_polar(), "Foo(1,Foo(2,3))");
+
+        rewrite_term(&mut term, &kb);
+        // @ means external constructor
+        assert_eq!(
+            term.to_polar(),
+            "@(_instance_2 = Foo(2,3)),@(_instance_1 = Foo(1,_instance_2)),_instance_1"
+        );
+    }
+
+    #[test]
+    fn rewrite_rules_constructor() {
+        let mut kb = KnowledgeBase::new();
+        kb.types.insert(
+            Symbol(String::from("Foo")),
+            Type::Class {
+                name: Symbol(String::from("Foo")),
+            },
+        );
+
+        let mut rules = parse_rules("rule_test(Foo(1, 2));").unwrap();
+        assert_eq!(rules[0].to_polar(), "rule_test(Foo(1,2));");
+
+        rewrite_rule(&mut rules[0], &kb);
+        assert_eq!(
+            rules[0].to_polar(),
+            "rule_test(_instance_1) := @(_instance_1 = Foo(1,2));"
+        )
     }
 }

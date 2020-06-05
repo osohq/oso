@@ -185,6 +185,16 @@ impl Polar {
         query.vm.run()
     }
 
+    pub fn register_external_class(&mut self, class_name: Symbol) -> PolarResult<()> {
+        let kb = Arc::get_mut(&mut self.kb).expect("Could not get mutable ref to kb");
+        if kb.types.contains_key(&class_name) {
+            return Err(ParameterError(format!("Class named {} already registered", &class_name.0)).into());
+        }
+
+        kb.types.insert(class_name.clone(), Type::Class { name: class_name });
+        Ok(())
+    }
+
     pub fn external_call_result(
         &self,
         query: &mut Query,
