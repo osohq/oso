@@ -743,7 +743,7 @@ impl PolarVirtualMachine {
                     call_id,
                     instance_id: None,
                     field: Term::new(Value::Call(call))
-                });
+                })?;
             },
             Value::Expression(Operation { operator, mut args }) => {
                 match operator {
