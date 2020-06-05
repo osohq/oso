@@ -2,4 +2,4 @@
 Polar
 =====
 
-.. automodule:: polar.facts
+.. automodule:: polar

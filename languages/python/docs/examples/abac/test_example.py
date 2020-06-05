@@ -34,6 +34,7 @@ def oso():
 def load(oso):
     def load(policy):
         oso.load(Path(__file__).parent / policy)
+        oso._kb_load()
 
     return load
 
@@ -42,37 +43,70 @@ def load(oso):
     "policy", ["01-simple.polar", "02-rbac.polar", "03-hierarchy.polar"],
 )
 def test_parses(oso, policy, load):
+    polar_classes = load_python("01-simple.py")
     # Test that policy parses and inline tests pass.
     load(policy)
     oso._kb_load()
 
 
+EXPENSES_DEFAULT = {
+    "location": "NYC",
+    "amount": 50,
+    "project_id": 2,
+}
+
+
 def test_simple_01(oso, load):
-    load("01-simple.polar")
     polar_classes = load_python("01-simple.py")
+    User = polar_classes.User
     Expense = polar_classes.Expense
+    load("01-simple.polar")
 
-    class User:
-        def __init__(self, name):
-            self.name = name
-
-    oso.register_python_class(User)
-
-    assert oso.allow(User("sam"), "view", Expense(0, submitted_by="sam"))
-    assert not oso.allow(User("sam"), "view", Expense(0, submitted_by="steve"))
+    assert oso.allow(
+        User("sam"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="sam")
+    )
+    assert not oso.allow(
+        User("sam"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="steve"),
+    )
 
 
-@pytest.mark.skip
 def test_rbac_02(oso, load):
-    load("02-rbac.polar")
     polar_classes = load_python("01-simple.py")
+    User = polar_classes.User
+    Expense = polar_classes.Expense
+    load("02-rbac.polar")
 
-    class User:
-        def __init__(self, name):
-            self.name = name
+    oso.load_str('role(User { name: "sam" }, "admin", Project { id: 2 });')
+    # expense = Expense(location="NYC", amount=50, project_id=0, submitted_by="steve")
+    # assert not oso.allow(User("sam"), "view", expense)
+    import os
 
-    oso.register_python_class(User)
+    os.environ["RUST_LOG"] = "1"
+    expense = Expense(location="NYC", amount=50, project_id=2, submitted_by="steve")
+    assert oso.allow(User("sam"), "view", expense)
 
-    # this needs more testing still, but the abac policies are not complete.
-    # we either need to include the rbac example in this test or make the
-    # policies include all required rules to execute.
+
+def test_hierarchy_03(oso, load):
+    polar_classes = load_python("01-simple.py")
+    User = polar_classes.User
+    Expense = polar_classes.Expense
+    load("03-hierarchy.polar")
+
+    assert oso.allow(
+        User("bhavik"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="alice")
+    )
+    assert oso.allow(
+        User("cora"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="alice"),
+    )
+    assert oso.allow(
+        User("cora"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="bhavik"),
+    )
+    assert not oso.allow(
+        User("bhavik"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="cora"),
+    )
+    assert not oso.allow(
+        User("alice"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="cora"),
+    )
+    assert not oso.allow(
+        User("alice"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="bhavik"),
+    )

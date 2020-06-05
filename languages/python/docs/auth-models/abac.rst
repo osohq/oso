@@ -18,21 +18,25 @@ Continuing from the RBAC examples, suppose we want to allow employees
 to view *their own* expenses. Recall that we had previously set up our
 users as classes in Polar:
 
-.. literalinclude:: /examples/rbac/04-external.py
+.. literalinclude:: /examples/abac/01-simple.py
    :language: python
+   :start-after: user-class-start
+   :end-before: user-class-end
 
 We can do the same with the resources being requested:
 
 .. literalinclude:: /examples/abac/01-simple.py
    :language: python
+   :start-after: expense-class-start
+   :end-before: expense-class-end
 
 An ``allow()`` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:
 
 .. literalinclude:: /examples/abac/01-simple.polar
    :language: polar
-   :lines: 6-7
-   :emphasize-lines: 7
+   :start-after: rule-start
+   :end-before: rule-end
 
 This simple example shows the potential for ABAC: we took an intuitive concept
 of "can see their own expenses" and represented it as a single comparison.
@@ -60,8 +64,8 @@ with some simple ABAC conditions to achieve this:
 
 .. literalinclude:: /examples/abac/02-rbac.polar
    :language: polar
-   :lines: 7-10
-   :emphasize-lines: 9-10
+   :start-after: simple-rule-start
+   :end-before: simple-rule-end
 
 This is great when what we need is an intersection of models, and you want to
 apply both RBAC and ABAC policies simultaneously. However, the ABAC model
@@ -73,8 +77,8 @@ and therefore is allowed to see all expenses related to that project.
 
 .. literalinclude:: /examples/abac/02-rbac.polar
    :language: polar
-   :lines: 12-19
-   :emphasize-lines: 18
+   :start-after: project-rule-start
+   :end-before: project-rule-end
 
 What we can see is happening here, is that we are associated roles not just
 globally to a user, but to a user for some specific resource. Other examples
@@ -82,11 +86,10 @@ might be team-, or organization- specific roles.
 
 And these can also follow inheritance patterns like we saw with regular roles.
 
-
 .. literalinclude:: /examples/abac/02-rbac.polar
    :language: polar
-   :lines: 20-31
-
+   :start-after: role-inherit-start
+   :end-before: role-inherit-end
 
 Hierachies
 -----------

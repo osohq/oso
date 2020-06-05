@@ -33,8 +33,8 @@ Let's look at a quick example of a Polar policy for an expense management applic
   allow(user, "read", resource) := is_owner(user, resource);
 
   # Ownership is defined by resource properties.
-  is_owner(user: User, budget: Budget) := user = budget.owner;
-  is_owner(user: User, expense: Expense) := user = expense.owner;
+  is_owner(user: User, budget: Budget) := user.id = budget.owner_id;
+  is_owner(user: User, expense: Expense) := user.id = expense.owner_id;
 
   # Ownership is hierarchical across expenses and budgets.
   allow(user, "read", expense: Expense) := is_owner(user, expense.budget);

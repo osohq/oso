@@ -47,7 +47,7 @@ def main():
             load(filename, polar)
 
     # Trigger load
-    next(polar.query_str("1 = 1"))
+    polar._kb_load()
 
 
 if __name__ == "__main__":
