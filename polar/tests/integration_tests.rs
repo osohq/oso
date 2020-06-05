@@ -586,6 +586,11 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "eq(1,1)"));
     assert!(!qeval(&mut polar, "eq(2,1)"));
 
+    // "!="
+    polar.load_str("neq(x, y) := x != y;").unwrap();
+    assert!(qeval(&mut polar, "neq(1,2)"));
+    assert!(!qeval(&mut polar, "neq(1,1)"));
+
     let mut query = polar.new_query("eq(bob, bob)").unwrap();
     polar
         .query(&mut query)

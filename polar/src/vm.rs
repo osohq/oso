@@ -816,7 +816,8 @@ impl PolarVirtualMachine {
                     | op @ Operator::Gt
                     | op @ Operator::Leq
                     | op @ Operator::Geq
-                    | op @ Operator::Eq => {
+                    | op @ Operator::Eq
+                    | op @ Operator::Neq => {
                         assert_eq!(args.len(), 2);
                         let left = self.deref(&args[0]).value;
                         let right = self.deref(&args[1]).value;
@@ -1271,6 +1272,9 @@ impl PolarVirtualMachine {
             (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
                 result = left == right;
             }
+            (Operator::Neq, Value::Integer(left), Value::Integer(right)) => {
+                result = left != right;
+            }
             (op, left, right) => {
                 return Err(RuntimeError::TypeError {
                     msg: format!(
@@ -1283,11 +1287,8 @@ impl PolarVirtualMachine {
                 .into());
             }
         }
-        if result {
-            self.push_goal(Goal::Noop);
-        } else {
+        if !result {
             self.push_goal(Goal::Backtrack);
-            self.push_goal(Goal::Cut);
         }
 
         Ok(())

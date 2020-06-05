@@ -351,7 +351,7 @@ def test_booleans(qeval):
     assert not qeval("true = false")
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="panics, not implemented.")
+# @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="panics, not implemented.")
 def test_comparisons(tell, qeval, qvar, query):
     assert qeval("3 == 3")
     assert qeval("3 != 2")
