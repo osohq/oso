@@ -622,7 +622,10 @@ fn test_debug() {
         .load_str("a() := debug(\"a\"), b(), c(), d();\nb();\nc() := debug(\"c\");\nd();\n")
         .unwrap();
 
-    let over_query = polar.new_query("a()").unwrap();
+    // The `match` statement below is checking that the correct messages are received when a user
+    // repeatedly calls the `over` debugger command. The LHS of the match arms is the message
+    // received from the debugger, and the RHS is the subsequent command the "user" enters into the
+    // debugger prompt.
     let debug_handler = |s: &str| match s {
         "\"a\"" => "over".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
@@ -634,9 +637,13 @@ fn test_debug() {
                                   ^" => "over".to_string(),
         message => panic!("Unexpected debug message: {}", message),
     };
-    let _results = query_results(&mut polar, over_query, no_results, debug_handler);
+    let query = polar.new_query("a()").unwrap();
+    let _results = query_results(&mut polar, query, no_results, debug_handler);
 
-    let out_query = polar.new_query("a()").unwrap();
+    // The `match` statement below is checking that the correct messages are received when a user
+    // repeatedly calls the `out` debugger command. The LHS of the match arms is the message
+    // received from the debugger, and the RHS is the subsequent command the "user" enters into the
+    // debugger prompt.
     let debug_handler = |s: &str| match s {
         "\"a\"" => "out".to_string(),
         "\"c\"" => "out".to_string(),
@@ -644,5 +651,6 @@ fn test_debug() {
                                   ^" => "out".to_string(),
         message => panic!("Unexpected debug message: {}", message),
     };
-    let _results = query_results(&mut polar, out_query, no_results, debug_handler);
+    let query = polar.new_query("a()").unwrap();
+    let _results = query_results(&mut polar, query, no_results, debug_handler);
 }
