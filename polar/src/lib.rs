@@ -49,7 +49,7 @@ macro_rules! box_ptr {
     };
 }
 
-/// We use a non-standard convention of zero as an error term,
+/// We use the convention of zero as an error term,
 /// since we also use `null_ptr()` to indicate an error.
 /// So for consistency, a zero term is an error in both cases.
 const EXIT_FAILURE: i32 = 0;
