@@ -14,6 +14,7 @@ Contents:
 
     rbac
     abac
+    context
     user_types
     inheritance
 
