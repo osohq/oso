@@ -109,6 +109,7 @@ class Polar:
         self.class_constructors = CLASS_CONSTRUCTORS
         # set up the builtin isa rule
         self.id_to_instance = {}
+        # TODO: When does calls get garbage collected?
         self.calls = {}
         self.load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
 
@@ -217,6 +218,10 @@ class Polar:
         class_name = cls.__name__
         self.classes[class_name] = cls
         self.class_constructors[class_name] = from_polar
+
+        if not lib.polar_register_external_class(
+                self.polar, ffi.new("char[]", class_name.encode())):
+            self._raise_error()
 
     def register_class(self, spec, source_class: type):
         raise NotImplementedError()
@@ -387,6 +392,44 @@ class Polar:
                         instance_id = data["instance_id"]
                         attribute = data["attribute"]
                         args = [self.to_python(arg) for arg in data["args"]]
+
+                        if not instance_id:
+                            # External function call or constructor
+                            # TODO (dhatch): Bad code copied.
+                            if attribute in self.class_constructors:
+                                class_name = attribute
+                                cls = self.classes[class_name]
+                                constructor = self.class_constructors[class_name]
+                                try:
+                                    # if from_polar is a string, get it from the instance
+                                    if isinstance(constructor, str):
+                                        constructor = getattr(cls, constructor)
+
+                                    if constructor:
+                                        instance = constructor(args)
+                                    else:
+                                        instance = cls(args)
+                                except Exception as e:
+                                    raise PolarRuntimeException(
+                                        f"Error creating instance of class {class_name}. {e}"
+                                    )
+
+                                term = self.to_polar(instance)
+                                msg = json.dumps(term)
+                                c_str = ffi.new("char[]", msg.encode())
+                                result = lib.polar_external_call_result(
+                                    self.polar, query, call_id, c_str
+                                )
+                                if result == 0:
+                                    self._raise_error()
+
+                                # Empty iterator so the next time this gets called only
+                                # one result is returned.
+                                self.calls[call_id] = iter(tuple())
+                                # TODO: this code is bad really needs refactor into functions
+                                continue
+                            else:
+                                raise NotImplementedError("External functions not implemented.")
 
                         # Lookup the attribute on the instance.
                         instance = self.id_to_instance[instance_id]

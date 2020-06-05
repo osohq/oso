@@ -402,3 +402,5 @@ def test_constructor(polar, qvar):
     polar.register_python_class(TestConstructor)
 
     assert qvar("instance = TestConstructor(1), y = instance.x", "y", one=True) == 1
+    assert qvar("instance = TestConstructor(2), y = instance.x", "y", one=True) == 2
+    assert qvar("instance = TestConstructor(TestConstructor(3)), y = instance.x.x", "y", one=True) == 3

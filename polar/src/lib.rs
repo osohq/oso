@@ -281,6 +281,36 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
     }
 }
 
+/// Register class with `class_name` with polar object.
+///
+/// Returns: 1 on success, 0 on error.
+#[no_mangle]
+pub extern "C" fn polar_register_external_class(
+    polar_ptr: *mut Polar,
+    class_name: *const c_char
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let class_name = unsafe { ffi_string!(class_name) };
+
+        match polar.register_external_class(&class_name) {
+            Ok(()) => 1,
+            Err(e) => {
+                set_error(e);
+                0
+            }
+        }
+    });
+
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::OperationalError::Unknown.into());
+            0
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn polar_external_call_result(
     polar_ptr: *mut Polar,
