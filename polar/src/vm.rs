@@ -746,14 +746,17 @@ impl PolarVirtualMachine {
                     // Built-in predicates.
                     "cut" => self.push_goal(Goal::Cut)?,
                     "debug" => {
-                        let mut message = predicate
-                            .args
-                            .iter()
-                            .map(|arg| self.deref(arg).to_polar())
-                            .collect::<Vec<String>>()
-                            .join(", ");
-                        if message.is_empty() {
-                            message = "Welcome to the debugger!".to_string();
+                        let mut message = "Welcome to the debugger!".to_string();
+                        if !predicate.args.is_empty() {
+                            message += &format!(
+                                "\ndebug({})",
+                                predicate
+                                    .args
+                                    .iter()
+                                    .map(|arg| self.deref(arg).to_polar())
+                                    .collect::<Vec<String>>()
+                                    .join(", ")
+                            );
                         }
                         self.push_goal(Goal::Debug { message })?
                     }

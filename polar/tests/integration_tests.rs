@@ -627,12 +627,12 @@ fn test_debug() {
     // received from the debugger, and the RHS is the subsequent command the "user" enters into the
     // debugger prompt.
     let debug_handler = |s: &str| match s {
-        "\"a\"" => "over".to_string(),
+        "Welcome to the debugger!\ndebug(\"a\")" => "over".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
                         ^" => "over".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
                              ^" => "over".to_string(),
-        "\"c\"" => "over".to_string(),
+        "Welcome to the debugger!\ndebug(\"c\")" => "over".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
                                   ^" => "over".to_string(),
         message => panic!("Unexpected debug message: {}", message),
@@ -645,8 +645,8 @@ fn test_debug() {
     // received from the debugger, and the RHS is the subsequent command the "user" enters into the
     // debugger prompt.
     let debug_handler = |s: &str| match s {
-        "\"a\"" => "out".to_string(),
-        "\"c\"" => "out".to_string(),
+        "Welcome to the debugger!\ndebug(\"a\")" => "out".to_string(),
+        "Welcome to the debugger!\ndebug(\"c\")" => "out".to_string(),
         "001: a() := debug(\"a\"), b(), c(), d();
                                   ^" => "out".to_string(),
         message => panic!("Unexpected debug message: {}", message),
