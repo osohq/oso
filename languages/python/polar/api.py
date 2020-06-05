@@ -30,7 +30,7 @@ from .exceptions import (
 
 ##### API Types ######
 
-POLAR_TYPES = [int, float, bool, str, dict, type(None)]
+POLAR_TYPES = [int, float, bool, str, dict, type(None), list]
 
 
 class Query:

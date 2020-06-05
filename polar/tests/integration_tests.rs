@@ -57,7 +57,7 @@ where
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, no_results, no_debug).len() == 1
+    query_results(polar, query, no_results).len() >= 1
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
@@ -665,4 +665,34 @@ fn test_in() {
         qvar(&mut polar, "f(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
+
+    // strange test case but it's important to note that this returns
+    // 3 results, with 1 binding each
+    let query = polar.new_query("f(1, [x,y,z])").unwrap();
+    let results = query_results(&mut polar, query, no_results);
+    assert_eq!(results.len(), 3);
+    assert_eq!(
+        results[0].get(&Symbol("x".to_string())).unwrap().clone(),
+        value!(1)
+    );
+    assert_eq!(
+        results[1].get(&Symbol("y".to_string())).unwrap().clone(),
+        value!(1)
+    );
+    assert_eq!(
+        results[2].get(&Symbol("z".to_string())).unwrap().clone(),
+        value!(1)
+    );
+
+    assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
+}
+
+#[test]
+#[should_panic]
+// currently panics because you can't use keyword operators as non-operator symbols in a policy right now
+fn test_keyword_bug() {
+    let mut polar = Polar::new();
+    polar.load_str("g(a) := a.make(b);").unwrap();
+
+    polar.load_str("f(a) := a.in(b);").unwrap();
 }

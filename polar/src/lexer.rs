@@ -434,7 +434,7 @@ mod tests {
             matches!(lexer.next(), Some(Ok((56, Token::Symbol(more), 60))) if more == Symbol::new("more"))
         );
         assert!(matches!(lexer.next(), Some(Ok((60, Token::SemiColon, 61)))));
-        assert!(matches!(lexer.next(), Some(Ok((60, Token::In, 63)))));
+        assert!(matches!(lexer.next(), Some(Ok((62, Token::In, 64)))));
         assert!(matches!(lexer.next(), None));
     }
 }

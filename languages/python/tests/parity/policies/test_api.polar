@@ -55,7 +55,7 @@ checkResource("1", resource: Widget); # which to prioritise
 
 # for testing lists
 allow(actor: Actor, "invite", resource: Widget) :=
-    actor.group = "social";
+    "social" in actor.group;
 
 allow(actor: Actor, "keep", resource: Widget) :=
     actor.widget.id = resource.id,
