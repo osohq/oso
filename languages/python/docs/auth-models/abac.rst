@@ -46,7 +46,7 @@ based on who you are and how you are related to the data.
 
 
 ABAC ❤️ RBAC
------------
+------------
 
 As alluded to in the summary on RBAC, provisioning access based on checking whether
 a user has a particular role is technically a simple variant of ABAC. Putting aside
@@ -105,7 +105,7 @@ Starting out with a simple example, suppose managers can view employees' expense
 .. literalinclude:: /examples/abac/03-hierarchy.polar
    :language: polar
    :lines: 7-9
-   :emphasize-lines: 8-9
+   :emphasize-lines: 2-3
 
 First thing we can do, is extract out the logic for checking whether the user manages someone:
 
@@ -119,6 +119,6 @@ then we need to make sure this logic is evaluated recursively:
 .. literalinclude:: /examples/abac/03-hierarchy.polar
    :language: polar
    :lines: 18-21
-   :emphasize-lines: 20-21
+   :emphasize-lines: 3-4
 
 .. TODO: Summary
