@@ -823,6 +823,24 @@ impl PolarVirtualMachine {
             | op @ Operator::Neq => {
                 self.comparison_op_helper(op, args)?;
             }
+            Operator::In => {
+                assert_eq!(args.len(), 2);
+                let item = &args[0];
+                let list = self.deref(&args[1]);
+                let mut alternatives = vec![];
+                match list.value {
+                    Value::List(list) => {
+                        for term in list {
+                            alternatives.push(vec![Goal::Unify {
+                                left: item.clone(),
+                                right: term,
+                            }])
+                        }
+                    }
+                    _ => (),
+                }
+                self.choose(alternatives);
+            }
             _ => {
                 return Err(RuntimeError::TypeError {
                     msg: format!("can't query for expression: {:?}", operator),

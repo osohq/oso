@@ -656,3 +656,13 @@ fn test_debug() {
     let query = polar.new_query("a()").unwrap();
     let _results = query_results(&mut polar, query, no_results, debug_handler);
 }
+
+fn test_in() {
+    let mut polar = Polar::new();
+    polar.load_str("f(x, y) := x in y;").unwrap();
+    assert!(qeval(&mut polar, "f(1, [1,2,3])"));
+    assert_eq!(
+        qvar(&mut polar, "f(x, [1,2,3])", "x"),
+        vec![value!(1), value!(2), value!(3)]
+    );
+}
