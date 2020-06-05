@@ -287,7 +287,7 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
 #[no_mangle]
 pub extern "C" fn polar_register_external_class(
     polar_ptr: *mut Polar,
-    class_name: *const c_char
+    class_name: *const c_char,
 ) -> i32 {
     let result = catch_unwind(|| {
         let polar = unsafe { ffi_ref!(polar_ptr) };

@@ -269,7 +269,10 @@ impl Value {
             }
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
             Value::Call(predicate) => Value::Call(predicate.map(f)),
-            Value::ExternalConstructor { call, result } => Value::ExternalConstructor { call: call.map(f), result: result.clone() },
+            Value::ExternalConstructor { call, result } => Value::ExternalConstructor {
+                call: call.map(f),
+                result: result.clone(),
+            },
             Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),

@@ -189,10 +189,15 @@ impl Polar {
         let class_name = Symbol(String::from(class_name));
         let kb = Arc::get_mut(&mut self.kb).expect("Could not get mutable ref to kb");
         if kb.types.contains_key(&class_name) {
-            return Err(ParameterError(format!("Class named {} already registered", &class_name.0)).into());
+            return Err(ParameterError(format!(
+                "Class named {} already registered",
+                &class_name.0
+            ))
+            .into());
         }
 
-        kb.types.insert(class_name.clone(), Type::Class { name: class_name });
+        kb.types
+            .insert(class_name.clone(), Type::Class { name: class_name });
         Ok(())
     }
 

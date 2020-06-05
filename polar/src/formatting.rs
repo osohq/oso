@@ -82,7 +82,12 @@ pub mod display {
                 ),
                 Goal::LookupExternal {
                     instance_id, field, ..
-                } => write!(fmt, "LookupExternal({:?}.{})", instance_id, field.to_polar(),),
+                } => write!(
+                    fmt,
+                    "LookupExternal({:?}.{})",
+                    instance_id,
+                    field.to_polar(),
+                ),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
                 Goal::SortRules {
                     rules,
@@ -326,7 +331,9 @@ pub mod to_polar {
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 // TODO dhatch: Decide on some syntax for this.
-                Value::ExternalConstructor { call, result } => format!("@({} = {})", result.to_polar(), call.to_polar()),
+                Value::ExternalConstructor { call, result } => {
+                    format!("@({} = {})", result.to_polar(), call.to_polar())
+                }
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ","),),
                 Value::Symbol(s) => s.to_polar(),
                 Value::Expression(e) => e.to_polar(),
