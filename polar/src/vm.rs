@@ -1192,7 +1192,6 @@ impl PolarVirtualMachine {
         arg: Term,
     ) -> PolarResult<Option<QueryEvent>> {
         // If the arg is an instance literal, convert it to an external instance
-        // eprintln!("here");
         let (arg, mut goals) = self.instantiate_externals(&arg);
         if !goals.is_empty() {
             goals.push(Goal::IsSubspecializer {
