@@ -52,8 +52,8 @@ macro_rules! box_ptr {
 /// We use the convention of zero as an error term,
 /// since we also use `null_ptr()` to indicate an error.
 /// So for consistency, a zero term is an error in both cases.
-const EXIT_FAILURE: i32 = 0;
-const EXIT_SUCCESS: i32 = 1;
+pub const POLAR_FAILURE: i32 = 0;
+pub const POLAR_SUCCESS: i32 = 1;
 
 /// Unwrap the result term and return a zero/null pointer in the failure case
 macro_rules! ffi_try {
@@ -63,7 +63,7 @@ macro_rules! ffi_try {
         } else {
             set_error(types::OperationalError::Unknown.into());
             // return as an int or a pointer
-            EXIT_FAILURE as _
+            POLAR_FAILURE as _
         }
     };
 }
@@ -126,7 +126,7 @@ pub extern "C" fn polar_load(
         set_error(
             types::ParameterError(String::from("Query out parameter cannot be null.")).into(),
         );
-        return EXIT_FAILURE;
+        return POLAR_FAILURE;
     };
 
     let result = catch_unwind(|| {
@@ -135,10 +135,10 @@ pub extern "C" fn polar_load(
         match polar.load(load) {
             Err(err) => {
                 set_error(err);
-                (null_mut(), EXIT_FAILURE)
+                (null_mut(), POLAR_FAILURE)
             }
-            Ok(Some(query)) => (box_ptr!(query), EXIT_SUCCESS),
-            Ok(None) => (null_mut(), EXIT_SUCCESS),
+            Ok(Some(query)) => (box_ptr!(query), POLAR_SUCCESS),
+            Ok(None) => (null_mut(), POLAR_SUCCESS),
         }
     });
 
@@ -148,7 +148,7 @@ pub extern "C" fn polar_load(
     } else {
         set_error(types::OperationalError::Unknown.into());
         unsafe { *query.as_mut() = null_mut() };
-        EXIT_FAILURE
+        POLAR_FAILURE
     }
 }
 
@@ -174,9 +174,9 @@ pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) -> i
         let s = unsafe { ffi_string!(src) };
         if let Err(e) = polar.load_str(&s) {
             set_error(e);
-            EXIT_FAILURE
+            POLAR_FAILURE
         } else {
-            EXIT_SUCCESS
+            POLAR_SUCCESS
         }
     })
 }
@@ -317,15 +317,15 @@ pub extern "C" fn polar_external_call_result(
                 Ok(t) => term = Some(t),
                 Err(e) => {
                     set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
-                    return EXIT_FAILURE;
+                    return POLAR_FAILURE;
                 }
             }
         }
         match polar.external_call_result(query, call_id, term) {
-            Ok(_) => EXIT_SUCCESS,
+            Ok(_) => POLAR_SUCCESS,
             Err(e) => {
                 set_error(e);
-                EXIT_FAILURE
+                POLAR_FAILURE
             }
         }
     })
@@ -341,9 +341,9 @@ pub extern "C" fn polar_external_question_result(
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
-        let result = result != EXIT_FAILURE;
+        let result = result != POLAR_FAILURE;
         polar.external_question_result(query, call_id, result);
-        EXIT_SUCCESS
+        POLAR_SUCCESS
     })
 }
 
@@ -360,10 +360,10 @@ pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar) -> u64 {
 pub extern "C" fn string_free(s: *mut c_char) -> i32 {
     ffi_try!({
         if s.is_null() {
-            return EXIT_FAILURE;
+            return POLAR_FAILURE;
         }
         unsafe { CString::from_raw(s) };
-        EXIT_SUCCESS
+        POLAR_SUCCESS
     })
 }
 
@@ -373,7 +373,7 @@ pub extern "C" fn string_free(s: *mut c_char) -> i32 {
 pub extern "C" fn polar_free(polar: *mut Polar) -> i32 {
     ffi_try!({
         std::mem::drop(unsafe { Box::from_raw(polar) });
-        EXIT_SUCCESS
+        POLAR_SUCCESS
     })
 }
 
@@ -383,7 +383,7 @@ pub extern "C" fn polar_free(polar: *mut Polar) -> i32 {
 pub extern "C" fn query_free(query: *mut Query) -> i32 {
     ffi_try!({
         std::mem::drop(unsafe { Box::from_raw(query) });
-        EXIT_SUCCESS
+        POLAR_SUCCESS
     })
 }
 
@@ -392,7 +392,7 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
 pub extern "C" fn load_free(load: *mut Load) -> i32 {
     ffi_try!({
         std::mem::drop(unsafe { Box::from_raw(load) });
-        EXIT_SUCCESS
+        POLAR_SUCCESS
     })
 }
 
