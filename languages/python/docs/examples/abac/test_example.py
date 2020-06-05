@@ -77,11 +77,8 @@ def test_rbac_02(oso, load):
     load("02-rbac.polar")
 
     oso.load_str('role(User { name: "sam" }, "admin", Project { id: 2 });')
-    # expense = Expense(location="NYC", amount=50, project_id=0, submitted_by="steve")
-    # assert not oso.allow(User("sam"), "view", expense)
-    import os
-
-    os.environ["RUST_LOG"] = "1"
+    expense = Expense(location="NYC", amount=50, project_id=0, submitted_by="steve")
+    assert not oso.allow(User("sam"), "view", expense)
     expense = Expense(location="NYC", amount=50, project_id=2, submitted_by="steve")
     assert oso.allow(User("sam"), "view", expense)
 
