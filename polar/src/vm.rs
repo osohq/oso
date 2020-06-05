@@ -37,8 +37,9 @@ pub enum Goal {
         field: Term,
         value: Term,
     },
+    // TODO (dhatch): Rename to `ExternalCall`.
     LookupExternal {
-        instance_id: u64,
+        instance_id: Option<u64>,
         call_id: u64,
         field: Term,
     },
@@ -535,7 +536,7 @@ impl PolarVirtualMachine {
                     let left_value = self.kb.gensym("isa_value");
                     let call_id = self.new_call_id(&left_value);
                     let lookup = Goal::LookupExternal {
-                        instance_id: left.instance_id,
+                        instance_id: Some(left.instance_id),
                         call_id,
                         field: Term::new(Value::Call(Predicate {
                             name: field.clone(),
@@ -647,7 +648,7 @@ impl PolarVirtualMachine {
     pub fn lookup_external(
         &mut self,
         call_id: u64,
-        instance_id: u64,
+        instance_id: Option<u64>,
         field: Term,
     ) -> PolarResult<QueryEvent> {
         let (field_name, args) = match &field.value {
@@ -734,6 +735,16 @@ impl PolarVirtualMachine {
                     },
                 }
             }
+            Value::ExternalConstructor { call, result } => {
+                // Do an external lookup
+                let call_id = self.new_call_id(&result);
+                // TODO dhatch lookup external taking a field is not ideal
+                self.push_goal(Goal::LookupExternal {
+                    call_id,
+                    instance_id: None,
+                    field: Term::new(Value::Call(call))
+                });
+            },
             Value::Expression(Operation { operator, mut args }) => {
                 match operator {
                     Operator::And => self
@@ -781,7 +792,7 @@ impl PolarVirtualMachine {
 
                                 goals.push(Goal::LookupExternal {
                                     call_id,
-                                    instance_id,
+                                    instance_id: Some(instance_id),
                                     field,
                                 });
                                 self.append_goals(goals);

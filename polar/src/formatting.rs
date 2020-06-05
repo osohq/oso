@@ -82,7 +82,7 @@ pub mod display {
                 ),
                 Goal::LookupExternal {
                     instance_id, field, ..
-                } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
+                } => write!(fmt, "LookupExternal({:?}.{})", instance_id, field.to_polar(),),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
                 Goal::SortRules {
                     rules,
