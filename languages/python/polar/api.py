@@ -220,7 +220,8 @@ class Polar:
         self.class_constructors[class_name] = from_polar
 
         if not lib.polar_register_external_class(
-                self.polar, ffi.new("char[]", class_name.encode())):
+            self.polar, ffi.new("char[]", class_name.encode())
+        ):
             self._raise_error()
 
     def register_class(self, spec, source_class: type):
@@ -429,7 +430,9 @@ class Polar:
                                 # TODO: this code is bad really needs refactor into functions
                                 continue
                             else:
-                                raise NotImplementedError("External functions not implemented.")
+                                raise NotImplementedError(
+                                    "External functions not implemented."
+                                )
 
                         # Lookup the attribute on the instance.
                         instance = self.id_to_instance[instance_id]

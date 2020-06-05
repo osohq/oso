@@ -395,6 +395,7 @@ def test_predicate(polar, qvar):
 
 def test_constructor(polar, qvar):
     """Test that class constructor is called correctly with constructor syntax."""
+
     class TestConstructor:
         def __init__(self, x):
             self.x = x
@@ -403,4 +404,11 @@ def test_constructor(polar, qvar):
 
     assert qvar("instance = TestConstructor(1), y = instance.x", "y", one=True) == 1
     assert qvar("instance = TestConstructor(2), y = instance.x", "y", one=True) == 2
-    assert qvar("instance = TestConstructor(TestConstructor(3)), y = instance.x.x", "y", one=True) == 3
+    assert (
+        qvar(
+            "instance = TestConstructor(TestConstructor(3)), y = instance.x.x",
+            "y",
+            one=True,
+        )
+        == 3
+    )
