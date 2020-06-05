@@ -233,7 +233,7 @@ class Polar:
         while True:
             query = ffi.new("polar_Query **")
             loaded = lib.polar_load(self.polar, load, query)
-            if loaded != 0:
+            if loaded == 0:
                 self._raise_error()
 
             query = query[0]
