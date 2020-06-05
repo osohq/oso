@@ -380,3 +380,13 @@ def test_arities(tell, qeval):
     assert qeval("f(1)")
     assert not qeval("f(2)")
     assert qeval("f(2, 3)")
+
+
+def test_rule_ordering(tell, qeval, externals):
+    tell("f(Foo{}) := cut(), 1 = 2;")
+    tell('f(Foo{name: "test"});')
+
+    assert qeval('f(Foo { name: "test" }) ')
+    assert qeval('x = Foo { name: "test" }, f(x) ')
+    assert not qeval('f(Foo { name: "nope" }) ')
+    assert not qeval('x = Foo { name: "nope" }, f(x) ')
