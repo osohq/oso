@@ -111,14 +111,15 @@ First thing we can do, is extract out the logic for checking whether the user ma
 
 .. literalinclude:: /examples/abac/03-hierarchy.polar
    :language: polar
-   :lines: 11-17
+   :start-after: start-manages-rule
+   :end-before: end-manages-rule
 
 Now if we want this logic to apply for managers, and managers' managers, and so on...
 then we need to make sure this logic is evaluated recursively:
 
 .. literalinclude:: /examples/abac/03-hierarchy.polar
    :language: polar
-   :lines: 18-21
-   :emphasize-lines: 3-4
+   :start-after: start-hierarchy-rule
+   :end-before: end-hierarchy-rule
 
 .. TODO: Summary
