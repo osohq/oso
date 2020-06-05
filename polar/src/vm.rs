@@ -828,16 +828,13 @@ impl PolarVirtualMachine {
                 let item = &args[0];
                 let list = self.deref(&args[1]);
                 let mut alternatives = vec![];
-                match list.value {
-                    Value::List(list) => {
-                        for term in list {
-                            alternatives.push(vec![Goal::Unify {
-                                left: item.clone(),
-                                right: term,
-                            }])
-                        }
+                if let Value::List(list) = list.value {
+                    for term in list {
+                        alternatives.push(vec![Goal::Unify {
+                            left: item.clone(),
+                            right: term,
+                        }])
                     }
-                    _ => (),
                 }
                 self.choose(alternatives);
             }
