@@ -504,6 +504,7 @@ pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
 
+    // Pair of maps to go from Term ID -> Source ID -> Source.
     pub sources: HashMap<u64, Source>,
     pub term_sources: HashMap<u64, u64>,
 
