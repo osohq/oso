@@ -392,9 +392,13 @@ impl PolarVirtualMachine {
                     }
                     Value::ExternalInstance(external_instance)
                 }
-                Value::Symbol(_) => {
-                    let t = vm.deref(&Term::new(v.clone()));
-                    instantiate_map(vm, &t, goals).value
+                Value::Symbol(s) => {
+                    // need to clone since `value` otherwise borrows `vm`.
+                    if let Some(t) = vm.value(s).cloned() {
+                        instantiate_map(vm, &t, goals).value
+                    } else {
+                        v.clone()
+                    }
                 }
                 _ => v.clone(),
             })
@@ -1188,8 +1192,8 @@ impl PolarVirtualMachine {
         arg: Term,
     ) -> PolarResult<Option<QueryEvent>> {
         // If the arg is an instance literal, convert it to an external instance
-        if let Value::InstanceLiteral(_) = arg.value {
-            let (arg, mut goals) = self.instantiate_externals(&arg);
+        let (arg, mut goals) = self.instantiate_externals(&arg);
+        if !goals.is_empty() {
             goals.push(Goal::IsSubspecializer {
                 answer,
                 left,
