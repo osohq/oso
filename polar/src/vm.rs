@@ -237,7 +237,7 @@ impl PolarVirtualMachine {
             eprintln!("⇒ result");
         }
         Ok(QueryEvent::Result {
-            bindings: self.result_bindings(),
+            bindings: self.bindings(false),
         })
     }
 
@@ -324,22 +324,13 @@ impl PolarVirtualMachine {
         self.bindings.push(Binding(var.clone(), value.clone()));
     }
 
-    /// Retrieve the current non-temp bindings and returns them as a hash map.
-    fn result_bindings(&mut self) -> super::types::Bindings {
+    /// Retrieve the current bindings and return them as a hash map.
+    pub fn bindings(&mut self, include_temps: bool) -> super::types::Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings {
-            if self.is_temporary_var(&var) {
+            if !include_temps && self.is_temporary_var(&var) {
                 continue;
             }
-            bindings.insert(var.clone(), self.deref(value));
-        }
-        bindings
-    }
-
-    /// Retrieve the current bindings and return them as a hash map.
-    pub fn bindings(&mut self) -> super::types::Bindings {
-        let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings {
             bindings.insert(var.clone(), self.deref(value));
         }
         bindings

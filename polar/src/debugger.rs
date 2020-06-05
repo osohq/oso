@@ -119,16 +119,17 @@ impl PolarVirtualMachine {
                         .iter()
                         .map(|var| {
                             let var = Symbol::new(var);
-                            let value = self.bindings().get(&var).cloned().unwrap_or_else(|| {
-                                Term::new(Value::Symbol(Symbol::new("<unbound>")))
-                            });
+                            let value =
+                                self.bindings(true).get(&var).cloned().unwrap_or_else(|| {
+                                    Term::new(Value::Symbol(Symbol::new("<unbound>")))
+                                });
                             Binding(var, value)
                         })
                         .collect();
                     self.push_goal(show(&vars)).map_or((), |_| ());
                 } else {
                     let mut vars = self
-                        .bindings()
+                        .bindings(true)
                         .keys()
                         .map(|k| k.to_polar())
                         .collect::<Vec<_>>()
