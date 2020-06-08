@@ -179,7 +179,10 @@ impl Debugger {
             (Some(query), Some((source, term))) if query.id == term.id => {
                 source_lines(&source, term.offset, num_lines)
             }
-            (Some(query), _) => source_lines(&vm.kb.get_source(&query), query.offset, num_lines),
+            (Some(query), _) => vm.kb.get_source(&query).map_or_else(
+                || "".to_string(),
+                |source| source_lines(&source, query.offset, num_lines),
+            ),
             _ => "".to_string(),
         }
     }

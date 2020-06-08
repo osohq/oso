@@ -534,12 +534,10 @@ impl KnowledgeBase {
         self.term_sources.insert(term.id, src_id);
     }
 
-    pub fn get_source(&self, term: &Term) -> Source {
+    pub fn get_source(&self, term: &Term) -> Option<Source> {
         self.term_sources
             .get(&term.id)
-            .and_then(|term_source| self.sources.get(&term_source))
-            .cloned()
-            .expect("Terms must have source information.")
+            .and_then(|term_source| self.sources.get(&term_source).cloned())
     }
 
     /// Return a monotonically increasing integer ID.
