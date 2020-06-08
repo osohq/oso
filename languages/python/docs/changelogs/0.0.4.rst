@@ -1,0 +1,11 @@
+=====
+0.0.4
+=====
+
+**Release date:** 2020-06-03
+
+
+Other bugs & improvements
+=========================
+
+- Fixed handling of methods with different arities

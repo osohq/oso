@@ -98,24 +98,25 @@ Now, this ``allow`` rule will be evaluated for any instance that is a subclass
 of ``PatientData``.  Polar's Python integration understands the class
 inheritance structure when selecting rules to evalute!
 
-Working with groups
--------------------
-
-This worked well for us, but remember this is just an example.  Not all
-applications may have encoded relationships this way.  Maybe when we wrote our
-code we didn't create a ``PatientData`` class, and just implemented ``Lab``,
-``Order`` and ``Test`` separately.  We still want to treat them as one concept
-in Polar, but don't want to change our application.
-
-Polar includes a ``group`` feature that can be used for exactly this purpose:
-
-.. literalinclude:: /examples/inheritance/05-group.polar
-   :language: polar
-   :emphasize-lines: 1
-
-The :ref:`group` declaration creates a new type in our Polar file called
-``PatientData``.  This time, we tell Polar that ``Lab``, ``Order`` and ``Test``
-are part of this group.  We can write our rule in the same way as before.
+.. TODO: include when groups are back
+  Working with groups
+  -------------------
+  
+  This worked well for us, but remember this is just an example.  Not all
+  applications may have encoded relationships this way.  Maybe when we wrote our
+  code we didn't create a ``PatientData`` class, and just implemented ``Lab``,
+  ``Order`` and ``Test`` separately.  We still want to treat them as one concept
+  in Polar, but don't want to change our application.
+  
+  Polar includes a ``group`` feature that can be used for exactly this purpose:
+  
+  .. literalinclude:: /examples/inheritance/05-group.polar
+     :language: polar
+     :emphasize-lines: 1
+  
+  The :ref:`group` declaration creates a new type in our Polar file called
+  ``PatientData``.  This time, we tell Polar that ``Lab``, ``Order`` and ``Test``
+  are part of this group.  We can write our rule in the same way as before.
 
 Summary
 -------
@@ -123,7 +124,10 @@ Summary
 In this guide, we saw an example of an application policy that could result in
 significant repetition.   We tried out a few strategies for representing common
 policy, but using it across many resource types.  First, we wrote a custom rule
-that moved duplicated logic into one place.  Then, we used specializers &
+that moved duplicated logic into one place.  Then we used specializers &
 Polar's :ref:`application class` integration to condense our policy even
-further.  Finally, we saw how groups & inheritance can both be exploited to
-write flexible policies that accurately model our application's domain model.
+further.
+
+.. TODO
+  Finally, we saw how groups & inheritance can both be exploited to
+  write flexible policies that accurately model our application's domain model.

@@ -4,34 +4,43 @@
 # - conditional roles
 # - resource-specific roles
 
+# simple-rule-start
 # Accountants can view expenses from their location
 allow(actor: User, "view", resource: Expense) :=
     role(actor, "accountant"),
     actor.location = resource.location;
+# simple-rule-end
 
+role(User {name: "deirdre"}, "accountant");
+
+# As an accountant, deirdre can view expenses in the same location
+?= allow(User { name: "deirdre" }, "view", Expense { id: 0 });
+
+### RBAC Hierarchy
+# Expense > Project > Team > Organization
+
+# project-rule-start
 # Alice is an admin of Project 1
-projectRole("alice", "admin", project: Project) :=
-    project.id = 1;
+role(User { name: "alice" }, "admin", Project { id: 1 });
 
 # Project admins can view expenses of the project
 allow(actor: User, "view", resource: Expense) :=
-    projectRole(actor, "admin", resource.project);
+    role(actor, "admin", Project { id: resource.project_id });
+# project-rule-end
 
-# Alice is an employee of ACME
-orgRole(actor: User, "employee", organization: Organization) :=
-    actor.name = "alice", organization.name = "ACME";
+# role-inherit-start
+# Bhavik is an admin of ACME
+role(User { name: "bhavik" }, "admin",  Organization { name: "ACME" });
 
-# employees can be team guests on a team
-teamRole(actor: User, "guest", team: Team) :=
-    orgRole(actor, "employee", team.organization);
+# Team roles inherit from Organization roles
+role(actor: User, role, team: Team) :=
+    role(actor, role, Organization { id: team.organization_id });
 
-# team guests are project guests
-projectRole(actor: User, "guest", project: Project) :=
-    teamRole(actor, "guest", project.team);
+# Project roles inherit from Team roles
+role(actor: User, role, project: Project) :=
+    role(actor, role, Team { id: project.team_id });
+# role-inherit-end
 
-
-# This is not great
-allow(actor: User, "view", resource: Expense) :=
-    orgRole(actor, Role { name: "admin", organization: resource.organization }) |
-    teamRole(actor, Role { name: "admin", team: resource.team }) |
-    projectRole(actor, Role { name: "admin", project: resource.project });
+# As an admin of ACME, Bhavik can view expenses in the org
+?= allow(User { name: "bhavik" }, "view", Expense { id: 0 });
+?= !allow(User { name: "cora" }, "view", Expense { id: 0 });

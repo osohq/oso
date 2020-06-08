@@ -7,11 +7,7 @@ oso
 Classes
 =======
 .. autoclass:: oso.Oso
-   :members: allow, load
-
-Functions
-=========
-.. autofunction:: oso.register_python_class
+   :members: allow, load, register_python_class
 
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^

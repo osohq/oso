@@ -36,7 +36,7 @@ We can add a new allow rule that allows an actor to access a resource if the app
 
 .. literalinclude:: /examples/context/01-context.polar
    :language: polar
-   :lines: 8-9
+   :lines: 7-8
 
 Summary
 -------

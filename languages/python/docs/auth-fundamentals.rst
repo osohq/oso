@@ -1,6 +1,6 @@
-=========================
+==========================
 Authorization Fundamentals
-=========================
+==========================
 
 .. TODO (leina): high-level explanation here
 
