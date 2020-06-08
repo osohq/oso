@@ -23,6 +23,13 @@ def load(oso):
     ["01-simple.polar", "02-simple.polar", "05-external.polar", "06-external.polar",],
 )
 def test_parses(oso, policy, load):
+    class User:
+        def __init__(self, role=None, name=None):
+            self.role = role
+            self.name = name
+
+    oso.register_python_class(User)
+
     # Test that policy parses and inline tests pass.
     load(policy)
     oso._kb_load()
