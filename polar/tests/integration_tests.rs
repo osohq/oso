@@ -57,7 +57,7 @@ where
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    !query_results(polar, query, no_results).is_empty()
+    !query_results(polar, query, no_results, no_debug).is_empty()
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
@@ -657,6 +657,7 @@ fn test_debug() {
     let _results = query_results(&mut polar, query, no_results, debug_handler);
 }
 
+#[test]
 fn test_in() {
     let mut polar = Polar::new();
     polar.load_str("f(x, y) := x in y;").unwrap();
@@ -669,7 +670,7 @@ fn test_in() {
     // strange test case but it's important to note that this returns
     // 3 results, with 1 binding each
     let query = polar.new_query("f(1, [x,y,z])").unwrap();
-    let results = query_results(&mut polar, query, no_results);
+    let results = query_results(&mut polar, query, no_results, no_debug);
     assert_eq!(results.len(), 3);
     assert_eq!(
         results[0].get(&Symbol("x".to_string())).unwrap().clone(),
