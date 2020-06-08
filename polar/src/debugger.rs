@@ -3,6 +3,7 @@ use super::vm::*;
 use super::ToPolarString;
 
 impl PolarVirtualMachine {
+    /// Drive debugger.
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         let mut debugger = self.debugger.clone();
         let maybe_goal = debugger.debug_command(self, command);
@@ -13,6 +14,8 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
+    /// push it onto the goal stack.
     pub fn maybe_break(&mut self, event: Event) -> PolarResult<()> {
         let maybe_goal = self.debugger.maybe_break(self, event);
         if let Some(goal) = maybe_goal {
@@ -22,8 +25,9 @@ impl PolarVirtualMachine {
     }
 }
 
-/// Traverse a `Source` line-by-line until `offset` is reached, and then return the source line
-/// containing the `offset` character as well as `source_context_lines` lines above and below it.
+/// Traverse a [`Source`](../types/struct.Source.html) line-by-line until `offset` is reached, and
+/// then return the source line containing the `offset` character as well as `num_lines` lines
+/// above and below it.
 fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
     // Sliding window of lines: current line + indicator + additional context above + below.
     let max_lines = num_lines * 2 + 2;
@@ -53,6 +57,7 @@ fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
     lines.join("\n")
 }
 
+/// [`Debugger`](struct.Debugger.html) step granularity.
 #[derive(Clone, Debug)]
 enum Step {
     /// Pause after evaluating the next [`Goal`](../vm/enum.Goal.html).
@@ -142,12 +147,20 @@ enum Step {
     },
 }
 
+/// VM breakpoints.
+///
+/// There are currently two breakpoints in the VM, one that fires after every
+/// [`Goal`](../vm/enum.Goal.html) and another that fires before every
+/// [`Goal::Query`](../vm/enum.Goal.html). When either breakpoint is hit, we check the
+/// [`Debugger`](struct.Debugger.html)'s internal [`step`](struct.Debugger.html#structfield.step)
+/// field to determine how evaluation should proceed.
 #[derive(Clone, Debug)]
 pub enum Event {
     Goal(String),
     Query,
 }
 
+/// Tracks internal debugger state.
 #[derive(Clone, Debug, Default)]
 pub struct Debugger {
     /// Next stopping point, as set by the user.
@@ -159,6 +172,8 @@ pub struct Debugger {
 }
 
 impl Debugger {
+    /// Retrieve the original source line (and, optionally, additional lines of context) for the
+    /// current query.
     fn query_source(&self, vm: &PolarVirtualMachine, num_lines: usize) -> String {
         match (vm.queries.last(), vm.source.as_ref()) {
             (Some(query), Some((source, term))) if query.id == term.id => {
@@ -197,10 +212,18 @@ impl Debugger {
         })
     }
 
-    /// Respond to debugging commands from the user.
+    /// Process debugging commands from the user.
     ///
-    /// The help output in the catch-all arm is a reference for all the other arms.
-    pub fn debug_command(&mut self, vm: &PolarVirtualMachine, command: &str) -> Option<Goal> {
+    /// For informational commands (`"bindings"`, `"goals"`, `"line"`, `"queries"`, and `"var"`),
+    /// look up relevant data via the passed-in
+    /// [`PolarVirtualMachine`](../vm/struct.PolarVirtualMachine.html), format it, and return a
+    /// [`Goal::Debug`](../vm/enum.Goal.html) containing the formatted string that will be
+    /// displayed to the user.
+    ///
+    /// For movement commands (`"continue"`, `"over"`, `"out"`, `"step"`), set the internal state
+    /// of the [`Debugger`](struct.Debugger.html) to the appropriate
+    /// [`Option<Step>`](struct.Debugger.html#structfield.step).
+    fn debug_command(&mut self, vm: &PolarVirtualMachine, command: &str) -> Option<Goal> {
         fn show<T>(stack: &[T]) -> Goal
         where
             T: std::fmt::Display,
