@@ -5,7 +5,7 @@ lalrpop_mod!(
     polar
 );
 
-use super::lexer::{self, loc_to_pos, Lexer};
+use super::lexer::{self, Lexer};
 use super::types::{self, *};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -21,26 +21,25 @@ lazy_static::lazy_static! {
     static ref TERM_PARSER: polar::TermParser = polar::TermParser::new();
 }
 
-fn to_parse_error(
-    src: &str,
-    e: ParseError<usize, lexer::Token, types::ParseError>,
-) -> types::ParseError {
+fn to_parse_error(e: ParseError<usize, lexer::Token, types::ParseError>) -> types::ParseError {
     match e {
-        ParseError::InvalidToken { location } => types::ParseError::InvalidToken {
-            pos: loc_to_pos(src, location),
-        },
-        ParseError::UnrecognizedEOF { location, .. } => types::ParseError::UnrecognizedEOF {
-            pos: loc_to_pos(src, location),
-        },
+        ParseError::InvalidToken { location: loc } => {
+            types::ParseError::InvalidToken { loc, context: None }
+        }
+        ParseError::UnrecognizedEOF { location: loc, .. } => {
+            types::ParseError::UnrecognizedEOF { loc, context: None }
+        }
         ParseError::UnrecognizedToken {
-            token: (s, t, _), ..
+            token: (loc, t, _), ..
         } => types::ParseError::UnrecognizedToken {
             token: t.to_string(),
-            pos: loc_to_pos(src, s),
+            loc,
+            context: None,
         },
-        ParseError::ExtraToken { token: (s, t, _) } => types::ParseError::ExtraToken {
+        ParseError::ExtraToken { token: (loc, t, _) } => types::ParseError::ExtraToken {
             token: t.to_string(),
-            pos: loc_to_pos(src, s),
+            loc,
+            context: None,
         },
         ParseError::User { error } => error,
     }
@@ -49,26 +48,26 @@ fn to_parse_error(
 pub fn parse_term(src: &str) -> PolarResult<Term> {
     TERM_PARSER
         .parse(Lexer::new(src))
-        .map_err(|e| to_parse_error(src, e).into())
+        .map_err(|e| to_parse_error(e).into())
 }
 
 pub fn parse_lines(src: &str) -> PolarResult<Vec<Line>> {
     LINES_PARSER
         .parse(Lexer::new(src))
-        .map_err(|e| to_parse_error(src, e).into())
+        .map_err(|e| to_parse_error(e).into())
 }
 
 pub fn parse_query(src: &str) -> PolarResult<Term> {
     QUERY_PARSER
         .parse(Lexer::new(src))
-        .map_err(|e| to_parse_error(src, e).into())
+        .map_err(|e| to_parse_error(e).into())
 }
 
 #[cfg(test)]
 pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
     RULES_PARSER
         .parse(Lexer::new(src))
-        .map_err(|e| to_parse_error(src, e).into())
+        .map_err(|e| to_parse_error(e).into())
 }
 
 #[cfg(test)]

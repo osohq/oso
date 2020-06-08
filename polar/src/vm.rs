@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
-use super::debugger::{DebugEvent, Debugger};
+use super::debugger::{Debugger, Event};
+use super::lexer::make_context;
 use super::types::*;
 use super::ToPolarString;
 
@@ -837,18 +838,22 @@ impl PolarVirtualMachine {
                         }])
                     }
                 } else {
-                    return Err(RuntimeError::TypeError {
-                        msg: format!("Expected list, got: {}", list.value.to_polar()),
+					return Err(self.type_error(
+                                    &object,
+                                    format!(
+                                    "can only perform lookups on dicts and instances, this is {:?}",
+                                    object.value
+                                ),
+                                ));
                     }
                     .into());
                 }
                 self.choose(alternatives);
             }
             _ => {
-                return Err(RuntimeError::TypeError {
-                    msg: format!("can't query for expression: {:?}", operator),
-                }
-                .into())
+                return Err(
+                    self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))
+                );
             }
         }
         Ok(())
@@ -1139,25 +1144,23 @@ impl PolarVirtualMachine {
                     instance_id: right, ..
                 }),
             ) if left != right => {
-                return Err((RuntimeError::TypeError {
-                    msg: String::from("Cannot unify two external instances."),
-                })
-                .into());
+                return Err(
+                    self.type_error(&left, String::from("Cannot unify two external instances."))
+                );
             }
 
             (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {
-                return Err((RuntimeError::TypeError {
-                    msg: String::from("Cannot unify two instance literals."),
-                })
-                .into());
+                return Err(
+                    self.type_error(&left, String::from("Cannot unify two instance literals."))
+                );
             }
 
             (Value::InstanceLiteral(_), Value::ExternalInstance(_))
             | (Value::ExternalInstance(_), Value::InstanceLiteral(_)) => {
-                return Err((RuntimeError::TypeError {
-                    msg: String::from("Cannot unify instance literal with external instance."),
-                })
-                .into());
+                return Err(self.type_error(
+                    &left,
+                    String::from("Cannot unify instance literal with external instance."),
+                ));
             }
 
             // Anything else fails.
@@ -1373,6 +1376,60 @@ impl PolarVirtualMachine {
                 Ok(QueryEvent::None)
             }
         }
+    }
+
+    fn comparison_helper(&mut self, op: Operator, left: Term, right: Term) -> PolarResult<()> {
+        let result: bool;
+        match (op, &left.value, &right.value) {
+            (Operator::Lt, Value::Integer(left), Value::Integer(right)) => {
+                result = left < right;
+            }
+            (Operator::Leq, Value::Integer(left), Value::Integer(right)) => {
+                result = left <= right;
+            }
+            (Operator::Gt, Value::Integer(left), Value::Integer(right)) => {
+                result = left > right;
+            }
+            (Operator::Geq, Value::Integer(left), Value::Integer(right)) => {
+                result = left >= right;
+            }
+            (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
+                result = left == right;
+            }
+            (Operator::Neq, Value::Integer(left), Value::Integer(right)) => {
+                result = left != right;
+            }
+            (op, l, r) => {
+                return Err(self.type_error(
+                    &left,
+                    format!(
+                        "{} expects integers, got: {}, {}",
+                        op.to_polar(),
+                        l.to_polar(),
+                        r.to_polar()
+                    ),
+                ));
+            }
+        }
+        if !result {
+            self.push_goal(Goal::Backtrack)?;
+        }
+
+        Ok(())
+    }
+
+    fn type_error(&self, term: &Term, msg: String) -> PolarError {
+        let context = if let Some(source) = self.kb.get_source(&term) {
+            make_context(&source, term.offset)
+        } else {
+            None
+        };
+        RuntimeError::TypeError {
+            msg,
+            loc: term.offset,
+            context,
+        }
+        .into()
     }
 }
 
