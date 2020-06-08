@@ -298,8 +298,7 @@ impl Debugger {
   l[ine] [<n>]            Print the current line and <n> lines of context.
   n[ext]                  Alias for 'over'.
   out                     Evaluate goals through the end of the current parent
-                          query and stop at the next sibling of the parent query
-                          (if one exists).
+                          query and stop at its next sibling (if one exists).
   over                    Evaluate goals until reaching the next sibling of the
                           current query (if one exists).
   queries                 Print current query stack.
