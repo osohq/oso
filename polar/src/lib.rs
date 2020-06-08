@@ -291,6 +291,7 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
 /// - Provided value is NULL.
 /// - Provided value contains malformed JSON.
 /// - Provided value cannot be parsed to a Term wrapping a Value::String.
+/// - Polar.debug_command returns an error.
 /// - Anything panics during the parsing/execution of the provided command.
 #[no_mangle]
 pub extern "C" fn polar_debug_command(
@@ -308,10 +309,13 @@ pub extern "C" fn polar_debug_command(
                 Ok(types::Term {
                     value: types::Value::String(command),
                     ..
-                }) => {
-                    polar.debug_command(query, command);
-                    1
-                }
+                }) => match polar.debug_command(query, command) {
+                    Ok(_) => 1,
+                    Err(e) => {
+                        set_error(e);
+                        0
+                    }
+                },
                 Ok(_) => {
                     set_error(
                         types::RuntimeError::Serialization {

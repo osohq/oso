@@ -210,7 +210,7 @@ impl Polar {
         query.vm.external_call_result(call_id, value)
     }
 
-    pub fn debug_command(&self, query: &mut Query, command: String) {
+    pub fn debug_command(&self, query: &mut Query, command: String) -> PolarResult<()> {
         query.vm.debug_command(&command)
     }
 

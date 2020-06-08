@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::string::ToString;
 use std::sync::Arc;
 
+use super::debugger::{Debugger, Event};
 use super::types::*;
 use super::ToPolarString;
 
@@ -87,21 +88,6 @@ pub type Bindings = Vec<Binding>;
 pub type Choices = Vec<Choice>;
 pub type Goals = Vec<Goal>;
 
-#[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug)]
-pub enum Breakpoint {
-    None,
-    Over { queries: TermList },
-    Out { queries: TermList },
-    Step { goal: Goal },
-}
-
-impl Default for Breakpoint {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
 #[derive(Default)]
 pub struct PolarVirtualMachine {
     /// Stacks.
@@ -114,7 +100,7 @@ pub struct PolarVirtualMachine {
     goal_counter: usize,
 
     /// If true, stop after the next goal.
-    pub breakpoint: Breakpoint,
+    pub debugger: Debugger,
 
     /// Source string and term for original query.
     pub source: Option<(Source, Term)>,
@@ -140,7 +126,7 @@ impl PolarVirtualMachine {
             choices: vec![],
             goal_counter: 0,
             queries: vec![],
-            breakpoint: Breakpoint::default(),
+            debugger: Debugger::default(),
             source: None,
             kb,
             instances: HashMap::new(),
@@ -197,7 +183,7 @@ impl PolarVirtualMachine {
             Goal::Noop => {}
             Goal::Query { term } => {
                 let result = self.query(term);
-                self.maybe_break(Breakpoint::Over { queries: vec![] });
+                self.maybe_break(Event::Query)?;
                 return result;
             }
             Goal::PopQuery { .. } => self.pop_query(),
@@ -230,7 +216,7 @@ impl PolarVirtualMachine {
                 QueryEvent::None => (),
                 event => return Ok(event),
             }
-            self.maybe_break(Breakpoint::Step { goal });
+            self.maybe_break(Event::Goal(goal.to_string()))?;
         }
 
         if std::env::var("RUST_LOG").is_ok() {
@@ -325,7 +311,7 @@ impl PolarVirtualMachine {
     }
 
     /// Retrieve the current bindings and return them as a hash map.
-    pub fn bindings(&mut self, include_temps: bool) -> super::types::Bindings {
+    pub fn bindings(&self, include_temps: bool) -> super::types::Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings {
             if !include_temps && self.is_temporary_var(&var) {

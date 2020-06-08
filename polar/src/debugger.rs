@@ -2,6 +2,26 @@ use super::types::*;
 use super::vm::*;
 use super::ToPolarString;
 
+impl PolarVirtualMachine {
+    pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
+        let mut debugger = self.debugger.clone();
+        let maybe_goal = debugger.debug_command(self, command);
+        if let Some(goal) = maybe_goal {
+            self.push_goal(goal)?;
+        }
+        self.debugger = debugger;
+        Ok(())
+    }
+
+    pub fn maybe_break(&mut self, event: Event) -> PolarResult<()> {
+        let maybe_goal = self.debugger.maybe_break(self, event);
+        if let Some(goal) = maybe_goal {
+            self.push_goal(goal)?;
+        }
+        Ok(())
+    }
+}
+
 /// Traverse a `Source` line-by-line until `offset` is reached, and then return the source line
 /// containing the `offset` character as well as `source_context_lines` lines above and below it.
 fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
@@ -33,50 +53,154 @@ fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
     lines.join("\n")
 }
 
-impl PolarVirtualMachine {
-    fn query_source(&self, num_lines: usize) -> String {
-        match (self.queries.last(), self.source.as_ref()) {
-            (Some(query), Some((source, term))) if query == term => {
+#[derive(Clone, Debug)]
+enum Step {
+    /// Pause after evaluating the next [`Goal`](../vm/enum.Goal.html).
+    Goal,
+    /// Step **over** goals until reaching the next sibling [`Goal::Query`](../vm/enum.Goal.html).
+    /// This is not necessarily the next [`Goal::Query`](../vm/enum.Goal.html), but rather the next
+    /// [`Goal::Query`](../vm/enum.Goal.html) where the query stack sans that query is identical to
+    /// the current query stack sans the current query. For example, when the `debug()` predicate
+    /// is evaluated in the following snippet of Polar...
+    ///
+    /// ```polar
+    /// a() := debug(), b();
+    /// b();
+    /// ?= a()
+    /// ```
+    ///
+    /// ...the query stack will look as follows:
+    ///
+    /// ```text
+    /// a()          # Head of rule a().
+    /// debug(), b() # Body of rule a().
+    /// debug()      # First term in the body of rule a().
+    /// ```
+    ///
+    /// If the user wants to jump **over** `debug()` (the current query) to arrive at `b()` (the
+    /// next query in the body of `a()`), evaluate goals until the query stack looks as follows:
+    ///
+    /// ```text
+    /// a()          # Head of rule a().
+    /// debug(), b() # Body of rule a().
+    /// b()          # Second term in the body of rule a().
+    /// ```
+    Over {
+        /// Snapshot of the current query stack sans the current query.
+        snapshot: TermList,
+    },
+    /// Step **out** of the current parent query, evaluating goals until reaching the
+    /// [`Goal::Query`](../vm/enum.Goal.html) for its next sibling.
+    ///
+    /// To illustrate this movement, let's step through the queries for the following snippet of
+    /// polar:
+    ///
+    /// ```text
+    /// a() := b(), c();
+    /// b() := debug(), d();
+    /// c();
+    /// d();
+    /// ?= a()
+    /// ```
+    ///
+    /// First we query for the head of `a()`, then the body of `a()`, and then `b()`, the first
+    /// clause in the body of `a()`. Next we query for the body of `b()` and the first clause in
+    /// the body of `b()`, a `debug()` predicate. By the time we reach that `debug()` predicate,
+    /// the query stack looks like this:
+    ///
+    /// ```text
+    /// a()          # head of a()
+    /// b(), c()     # body of a()
+    /// b()          # first clause in body of a() / head of b()
+    /// debug(), d() # body of b()
+    /// debug()      # first clause in body of b()
+    /// ```
+    ///
+    /// From our current position (evaluating the `debug()` predicate in the body of `b()`), we
+    /// would [`Step::Out`](enum.Step.html) if we wanted to continue evaluating goals until
+    /// reaching `c()` in the body of `a()`. We're stepping entirely **out** of the current parent
+    /// query, `b()`, to arrive at its next sibling, `c()`. When we arrive at the
+    /// [`Goal::Query`](../vm/enum.Goal.html) for `c()`, the query stack will look as follows:
+    ///
+    /// ```text
+    /// a()          # head of a()
+    /// b(), c()     # body of a()
+    /// c()          # second clause in body of a() / head of c()
+    /// ```
+    ///
+    /// The query stack above `c()` is identical to the previous stack snippet above `b()`, which
+    /// makes sense since they share a parent -- the query for the body of `a()`. That gives us our
+    /// test for stepping **out**:
+    ///
+    /// - Store a slice of the current query stack *without the last three queries* (current query,
+    ///   body of current rule, and head of current rule).
+    /// - Evaluate goals until the current query stack *without the current query* matches the
+    ///   stored slice.
+    Out {
+        /// Snapshot of the current query stack sans its last three queries.
+        snapshot: TermList,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum Event {
+    Goal(String),
+    Query,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Debugger {
+    /// Next stopping point, as set by the user.
+    ///
+    /// - `None`: Don't stop.
+    /// - `Some(step)`: View the stopping logic in
+    ///   [`maybe_break`](struct.Debugger.html#method.maybe_break).
+    step: Option<Step>,
+}
+
+impl Debugger {
+    fn query_source(&self, vm: &PolarVirtualMachine, num_lines: usize) -> String {
+        match (vm.queries.last(), vm.source.as_ref()) {
+            (Some(query), Some((source, term))) if query.id == term.id => {
                 source_lines(&source, term.offset, num_lines)
             }
-            (Some(query), _) => source_lines(&self.kb.get_source(&query), query.offset, num_lines),
+            (Some(query), _) => source_lines(&vm.kb.get_source(&query), query.offset, num_lines),
             _ => "".to_string(),
         }
     }
 
-    /// Potential debugger entrypoints.
-    pub fn maybe_break(&mut self, context: Breakpoint) {
-        match (&self.breakpoint, context) {
-            (Breakpoint::Step { .. }, Breakpoint::Step { goal }) => self
-                .push_goal(Goal::Debug {
-                    message: goal.to_string(),
+    /// When the [`VM`](../vm/struct.PolarVirtualMachine.html) hits a breakpoint, check if
+    /// evaluation should pause.
+    ///
+    /// The check is a comparison of the [`Debugger`](struct.Debugger.html)'s
+    /// [`step`](struct.Debugger.html#structfield.step) field with the passed-in
+    /// [`Event`](enum.Event.html). If [`step`](struct.Debugger.html#structfield.step) is set to
+    /// `None`, evaluation continues. For details about how the `Some()` values of
+    /// [`step`](struct.Debugger.html#structfield.step) are handled, see the explanations in the
+    /// [`Step`](enum.Step.html) documentation.
+    ///
+    /// ## Returns
+    ///
+    /// - `Some(Goal::Debug { message })` -> Pause evaluation.
+    /// - `None` -> Continue evaluation.
+    fn maybe_break(&self, vm: &PolarVirtualMachine, event: Event) -> Option<Goal> {
+        self.step.as_ref().and_then(|step| match (step, event) {
+            (Step::Goal, Event::Goal(goal)) => Some(Goal::Debug { message: goal }),
+            (Step::Over { snapshot }, Event::Query) | (Step::Out { snapshot }, Event::Query)
+                if vm.queries[..vm.queries.len() - 1] == snapshot[..] =>
+            {
+                Some(Goal::Debug {
+                    message: self.query_source(vm, 0),
                 })
-                .map_or((), |_| ()),
-            (Breakpoint::Over { queries }, Breakpoint::Over { .. }) => {
-                let n = self.queries.len() - 1;
-                if n < queries.len() && self.queries[..n] == queries[..n] {
-                    self.push_goal(Goal::Debug {
-                        message: self.query_source(0),
-                    })
-                    .map_or((), |_| ());
-                }
             }
-            (Breakpoint::Out { queries }, Breakpoint::Over { .. }) => {
-                if queries[..queries.len() - 3] == self.queries[..self.queries.len() - 1] {
-                    self.push_goal(Goal::Debug {
-                        message: self.query_source(0),
-                    })
-                    .map_or((), |_| ());
-                }
-            }
-            _ => (),
-        }
+            _ => None,
+        })
     }
 
     /// Respond to debugging commands from the user.
     ///
     /// The help output in the catch-all arm is a reference for all the other arms.
-    pub fn debug_command(&mut self, command: &str) {
+    pub fn debug_command(&mut self, vm: &PolarVirtualMachine, command: &str) -> Option<Goal> {
         fn show<T>(stack: &[T]) -> Goal
         where
             T: std::fmt::Display,
@@ -91,44 +215,42 @@ impl PolarVirtualMachine {
         }
         let parts: Vec<&str> = command.split_whitespace().collect();
         match *parts.get(0).unwrap_or(&"help") {
-            "bindings" => self.push_goal(show(&self.bindings)).map_or((), |_| ()),
-            "c" | "continue" | "q" | "quit" => self.breakpoint = Breakpoint::None,
-            "goals" => self.push_goal(show(&self.goals)).map_or((), |_| ()),
+            "bindings" => return Some(show(&vm.bindings)),
+            "c" | "continue" | "q" | "quit" => self.step = None,
+            "goals" => return Some(show(&vm.goals)),
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
-                self.push_goal(Goal::Debug {
-                    message: self.query_source(lines),
-                })
-                .map_or((), |_| ());
+                return Some(Goal::Debug {
+                    message: self.query_source(vm, lines),
+                });
             }
             "n" | "next" | "over" => {
-                self.breakpoint = Breakpoint::Over {
-                    queries: self.queries.clone(),
-                }
+                self.step = Some(Step::Over {
+                    snapshot: vm.queries[..vm.queries.len() - 1].to_vec(),
+                })
             }
             "out" => {
-                self.breakpoint = Breakpoint::Out {
-                    queries: self.queries.clone(),
-                }
+                self.step = Some(Step::Out {
+                    snapshot: vm.queries[..vm.queries.len() - 3].to_vec(),
+                })
             }
-            "stack" | "queries" => self.push_goal(show(&self.queries)).map_or((), |_| ()),
-            "s" | "step" => self.breakpoint = Breakpoint::Step { goal: Goal::Noop },
+            "stack" | "queries" => return Some(show(&vm.queries)),
+            "s" | "step" => self.step = Some(Step::Goal),
             "var" => {
                 if parts.len() > 1 {
                     let vars: Vec<Binding> = parts[1..]
                         .iter()
                         .map(|var| {
                             let var = Symbol::new(var);
-                            let value =
-                                self.bindings(true).get(&var).cloned().unwrap_or_else(|| {
-                                    Term::new(Value::Symbol(Symbol::new("<unbound>")))
-                                });
+                            let value = vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
+                                Term::new(Value::Symbol(Symbol::new("<unbound>")))
+                            });
                             Binding(var, value)
                         })
                         .collect();
-                    self.push_goal(show(&vars)).map_or((), |_| ());
+                    return Some(show(&vars));
                 } else {
-                    let mut vars = self
+                    let mut vars = vm
                         .bindings(true)
                         .keys()
                         .map(|k| k.to_polar())
@@ -137,12 +259,11 @@ impl PolarVirtualMachine {
                     if vars.is_empty() {
                         vars = "No variables in scope.".to_string();
                     }
-                    self.push_goal(Goal::Debug { message: vars })
-                        .map_or((), |_| ());
+                    return Some(Goal::Debug { message: vars });
                 }
             }
-            _ => self
-                .push_goal(Goal::Debug {
+            _ => {
+                return Some(Goal::Debug {
                     message: "Debugger Commands
   bindings                Print current binding stack.
   c[ontinue]              Continue evaluation.
@@ -150,8 +271,11 @@ impl PolarVirtualMachine {
   h[elp]                  Print this help documentation.
   l[ine] [<n>]            Print the current line and <n> lines of context.
   n[ext]                  Alias for 'over'.
-  out                     Stop at the next rule.
-  over                    Stop at the next query.
+  out                     Evaluate goals through the end of the current parent
+                          query and stop at the next sibling of the parent query
+                          (if one exists).
+  over                    Evaluate goals until reaching the next sibling of the
+                          current query (if one exists).
   queries                 Print current query stack.
   q[uit]                  Alias for 'continue'.
   stack                   Alias for 'queries'.
@@ -160,7 +284,8 @@ impl PolarVirtualMachine {
                           are provided, print the value of those variables."
                         .to_string(),
                 })
-                .map_or((), |_| ()),
+            }
         }
+        None
     }
 }

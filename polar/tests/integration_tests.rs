@@ -45,7 +45,9 @@ where
                     .unwrap();
             }
             QueryEvent::Debug { message } => {
-                polar.debug_command(&mut query, debug_handler(&message))
+                polar
+                    .debug_command(&mut query, debug_handler(&message))
+                    .unwrap();
             }
             _ => {}
         }
