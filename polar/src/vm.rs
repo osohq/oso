@@ -99,7 +99,6 @@ pub struct PolarVirtualMachine {
     /// Count executed goals
     goal_counter: usize,
 
-    /// If true, stop after the next goal.
     pub debugger: Debugger,
 
     /// Source string and term for original query.
