@@ -57,7 +57,7 @@ where
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, no_results).len() >= 1
+    !query_results(polar, query, no_results).is_empty()
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
