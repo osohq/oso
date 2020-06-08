@@ -92,7 +92,7 @@ enum Step {
     /// ```
     Over {
         /// Snapshot of the current query stack sans the current query.
-        snapshot: TermList,
+        snapshot: Queries,
     },
     /// Step **out** of the current parent query, evaluating goals until reaching the
     /// [`Goal::Query`](../vm/enum.Goal.html) for its next sibling.
@@ -143,7 +143,7 @@ enum Step {
     ///   stored slice.
     Out {
         /// Snapshot of the current query stack sans its last three queries.
-        snapshot: TermList,
+        snapshot: Queries,
     },
 }
 

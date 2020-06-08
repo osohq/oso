@@ -78,15 +78,16 @@ pub struct Binding(pub Symbol, pub Term);
 #[derive(Clone, Debug)]
 pub struct Choice {
     pub alternatives: Alternatives,
-    bsp: usize,        // binding stack pointer
-    pub goals: Goals,  // goal stack snapshot
-    queries: TermList, // query stack snapshot
+    bsp: usize,       // binding stack pointer
+    pub goals: Goals, // goal stack snapshot
+    queries: Queries, // query stack snapshot
 }
 
 pub type Alternatives = Vec<Goals>;
 pub type Bindings = Vec<Binding>;
 pub type Choices = Vec<Choice>;
 pub type Goals = Vec<Goal>;
+pub type Queries = TermList;
 
 #[derive(Default)]
 pub struct PolarVirtualMachine {
@@ -94,7 +95,7 @@ pub struct PolarVirtualMachine {
     pub goals: Goals,
     pub bindings: Bindings,
     choices: Choices,
-    pub queries: TermList,
+    pub queries: Queries,
 
     /// Count executed goals
     goal_counter: usize,
