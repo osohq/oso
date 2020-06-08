@@ -739,31 +739,27 @@ impl PolarVirtualMachine {
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
-        match &predicate.name.0[..] {
-            // User-defined predicates.
-            _ => {
-                let generic_rule = {
-                    let kb = self.kb.read().unwrap();
-                    kb.rules.get(&predicate.name).cloned()
-                };
-                match generic_rule {
-                    None => self.push_goal(Goal::Backtrack)?,
-                    Some(generic_rule) => {
-                        assert_eq!(generic_rule.name, predicate.name);
-                        self.push_goal(Goal::SortRules {
-                            rules: generic_rule
-                                .rules
-                                .into_iter()
-                                .filter(|r| r.params.len() == predicate.args.len())
-                                .collect(),
-                            args: predicate.args.clone(),
-                            outer: 1,
-                            inner: 1,
-                        })?;
-                    }
-                }
+        let generic_rule = {
+            let kb = self.kb.read().unwrap();
+            kb.rules.get(&predicate.name).cloned()
+        };
+        match generic_rule {
+            None => self.push_goal(Goal::Backtrack)?,
+            Some(generic_rule) => {
+                assert_eq!(generic_rule.name, predicate.name);
+                self.push_goal(Goal::SortRules {
+                    rules: generic_rule
+                        .rules
+                        .into_iter()
+                        .filter(|r| r.params.len() == predicate.args.len())
+                        .collect(),
+                    args: predicate.args.clone(),
+                    outer: 1,
+                    inner: 1,
+                })?;
             }
         }
+
         Ok(())
     }
 
