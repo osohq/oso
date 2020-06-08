@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::string::ToString;
 use std::sync::Arc;
 
-use super::debugger::{Debugger, Event};
+use super::debugger::{DebugEvent, Debugger};
 use super::types::*;
 use super::ToPolarString;
 
@@ -183,7 +183,7 @@ impl PolarVirtualMachine {
             Goal::Noop => {}
             Goal::Query { term } => {
                 let result = self.query(term);
-                self.maybe_break(Event::Query)?;
+                self.maybe_break(DebugEvent::Query)?;
                 return result;
             }
             Goal::PopQuery { .. } => self.pop_query(),
@@ -216,7 +216,7 @@ impl PolarVirtualMachine {
                 QueryEvent::None => (),
                 event => return Ok(event),
             }
-            self.maybe_break(Event::Goal(goal.to_string()))?;
+            self.maybe_break(DebugEvent::Goal(goal.to_string()))?;
         }
 
         if std::env::var("RUST_LOG").is_ok() {

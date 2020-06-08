@@ -16,7 +16,7 @@ impl PolarVirtualMachine {
 
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
     /// push it onto the goal stack.
-    pub fn maybe_break(&mut self, event: Event) -> PolarResult<()> {
+    pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<()> {
         let maybe_goal = self.debugger.maybe_break(self, event);
         if let Some(goal) = maybe_goal {
             self.push_goal(goal)?;
@@ -155,7 +155,7 @@ enum Step {
 /// [`Debugger`](struct.Debugger.html)'s internal [`step`](struct.Debugger.html#structfield.step)
 /// field to determine how evaluation should proceed.
 #[derive(Clone, Debug)]
-pub enum Event {
+pub enum DebugEvent {
     Goal(String),
     Query,
 }
@@ -192,8 +192,8 @@ impl Debugger {
     ///
     /// The check is a comparison of the [`Debugger`](struct.Debugger.html)'s
     /// [`step`](struct.Debugger.html#structfield.step) field with the passed-in
-    /// [`Event`](enum.Event.html). If [`step`](struct.Debugger.html#structfield.step) is set to
-    /// `None`, evaluation continues. For details about how the `Some()` values of
+    /// [`DebugEvent`](enum.DebugEvent.html). If [`step`](struct.Debugger.html#structfield.step) is
+    /// set to `None`, evaluation continues. For details about how the `Some()` values of
     /// [`step`](struct.Debugger.html#structfield.step) are handled, see the explanations in the
     /// [`Step`](enum.Step.html) documentation.
     ///
@@ -201,10 +201,11 @@ impl Debugger {
     ///
     /// - `Some(Goal::Debug { message })` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
-    fn maybe_break(&self, vm: &PolarVirtualMachine, event: Event) -> Option<Goal> {
+    fn maybe_break(&self, vm: &PolarVirtualMachine, event: DebugEvent) -> Option<Goal> {
         self.step.as_ref().and_then(|step| match (step, event) {
-            (Step::Goal, Event::Goal(goal)) => Some(Goal::Debug { message: goal }),
-            (Step::Over { snapshot }, Event::Query) | (Step::Out { snapshot }, Event::Query)
+            (Step::Goal, DebugEvent::Goal(goal)) => Some(Goal::Debug { message: goal }),
+            (Step::Over { snapshot }, DebugEvent::Query)
+            | (Step::Out { snapshot }, DebugEvent::Query)
                 if vm.queries[..vm.queries.len() - 1] == snapshot[..] =>
             {
                 Some(Goal::Debug {
