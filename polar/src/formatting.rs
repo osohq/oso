@@ -208,6 +208,8 @@ pub mod to_polar {
                 Dot => ".",
                 Unify => "=",
                 In => "in",
+                Cut => "cut",
+                Debug => "debug",
             }
             .to_string()
         }
@@ -219,6 +221,8 @@ pub mod to_polar {
             // Adds parentheses when sub expressions have lower precedence (which is what you would have had to have during initial parse)
             // Lets us spit out strings that would reparse to the same ast.
             match self.operator {
+                Debug => "debug()".to_owned(),
+                Cut => "cut()".to_owned(),
                 // `Make` formats as a predicate
                 Make => format!("make({})", format_args(self.operator, &self.args, ",")),
                 // `Dot` sometimes formats as a predicate

@@ -697,11 +697,30 @@ fn test_in() {
 }
 
 #[test]
-#[should_panic]
 // currently panics because you can't use keyword operators as non-operator symbols in a policy right now
 fn test_keyword_bug() {
-    let polar = Polar::new();
-    polar.load_str("g(a) := a.make(b);").unwrap();
+    let mut polar = Polar::new();
+    let result = polar.load_str("g(a) := a.make(b);").unwrap_err();
+    assert!(matches!(
+        result,
+        PolarError::Parse(ParseError::ReservedWord { .. })
+    ));
 
-    polar.load_str("f(a) := a.in(b);").unwrap();
+    let result = polar.load_str("f(a) := a.in(b);").unwrap_err();
+    assert!(matches!(
+        result,
+        PolarError::Parse(ParseError::ReservedWord { .. })
+    ));
+
+    let result = polar.load_str("cut(a) := a;").unwrap_err();
+    assert!(matches!(
+        result,
+        PolarError::Parse(ParseError::ReservedWord { .. })
+    ));
+
+    let result = polar.load_str("debug(a) := a;").unwrap_err();
+    assert!(matches!(
+        result,
+        PolarError::Parse(ParseError::ReservedWord { .. })
+    ));
 }
