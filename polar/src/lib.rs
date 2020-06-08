@@ -255,7 +255,7 @@ pub extern "C" fn polar_debug_command(
     query_ptr: *mut Query,
     value: *const c_char,
 ) -> i32 {
-    let result = catch_unwind(|| {
+    ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
         if !value.is_null() {
@@ -266,10 +266,10 @@ pub extern "C" fn polar_debug_command(
                     value: types::Value::String(command),
                     ..
                 }) => match polar.debug_command(query, command) {
-                    Ok(_) => 1,
+                    Ok(_) => POLAR_SUCCESS,
                     Err(e) => {
                         set_error(e);
-                        0
+                        POLAR_FAILURE
                     }
                 },
                 Ok(_) => {
@@ -279,24 +279,17 @@ pub extern "C" fn polar_debug_command(
                         }
                         .into(),
                     );
-                    0
+                    POLAR_FAILURE
                 }
                 Err(e) => {
                     set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
-                    0
+                    POLAR_FAILURE
                 }
             }
         } else {
-            0
+            POLAR_FAILURE
         }
-    });
-    match result {
-        Ok(r) => r,
-        Err(_) => {
-            set_error(types::OperationalError::Unknown.into());
-            0
-        }
-    }
+    })
 }
 
 #[no_mangle]
