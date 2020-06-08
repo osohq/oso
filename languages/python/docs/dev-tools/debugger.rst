@@ -22,7 +22,8 @@ The debugger can be entered through two mechanisms:
   2. In the REPL, issue a query of the form: ``debug(), <query>``. This will
      enter the debugger before starting the query.
 
-Entering the debugger will pause evaluation of the policy, and a command prompt will appear:
+Entering the debugger will pause evaluation of the policy, and a command prompt
+will appear:
 
 .. code-block:: terminal
 
@@ -56,8 +57,10 @@ Print the debugger command reference.
     h[elp]                  Print this help documentation.
     l[ine] [<n>]            Print the current line and <n> lines of context.
     n[ext]                  Alias for 'over'.
-    out                     Stop at the next rule.
-    over                    Stop at the next query.
+    out                     Evaluate goals through the end of the current parent
+                            query and stop at its next sibling (if one exists).
+    over                    Evaluate goals until reaching the next sibling of the
+                            current query (if one exists).
     queries                 Print current query stack.
     q[uit]                  Alias for 'continue'.
     stack                   Alias for 'queries'.
@@ -68,6 +71,15 @@ Print the debugger command reference.
 Navigation
 ==========
 
+The Polar file used in the following examples looks like this:
+
+.. code-block:: polar
+
+  a() := debug(), b(), c(), d();
+  b();
+  c() := debug();
+  d();
+
 ``s[tep]``
 ----------
 
@@ -76,13 +88,15 @@ Evaluate one goal. This is *very* low level.
 .. code-block:: terminal
 
   > line
-  003: c() := debug("c");
+  003: c() := debug();
               ^
   > step
-  PopQuery(debug("c"))
+  PopQuery(debug)
+  > step
+  PopQuery(debug)
   > line
-  001: a() := debug("a"), b(), c(), d();
-                               ^
+  001: a() := debug(), b(), c(), d();
+                            ^
 
 ``c[ontinue]`` or ``q[uit]``
 ----------------------------
@@ -92,8 +106,8 @@ Continue evaluation.
 .. code-block:: terminal
 
   > line
-  001: a() := debug("a"), b(), c(), d();
-                               ^
+  001: a() := debug(), b(), c(), d();
+                            ^
   > continue
   [exit]
 
@@ -128,7 +142,8 @@ Continue evaluation until the next query.
 ``out``
 -------
 
-Continue evaluation until the next rule.
+Evaluate goals through the end of the current parent query and stop at the next
+sibling of the parent query (if one exists).
 
 .. code-block:: terminal
 
@@ -150,6 +165,15 @@ Continue evaluation until the next rule.
 Context
 =======
 
+The Polar file used in the following examples looks like this:
+
+.. code-block:: polar
+
+  a() := debug(), b(), c(), d();
+  b();
+  c() := debug();
+  d();
+
 ``goals``
 ---------
 
@@ -162,12 +186,12 @@ Print current stack of goals.
   001: a() := debug(), b(), c(), d();
               ^
   > goals
-  PopQuery(a)
-  PopQuery(debug,b,c,d)
-  Query(d)
-  Query(c)
-  Query(b)
-  PopQuery(debug)
+  PopQuery(a())
+  PopQuery(debug(), b(), c(), d())
+  Query(d())
+  Query(c())
+  Query(b())
+  PopQuery(debug())
 
 ``l[ine] [<n>]``
 ----------------
@@ -178,12 +202,12 @@ lines of additional context above and below it.
 .. code-block:: terminal
 
   > line
-  003: c() := debug("c");
+  003: c() := debug();
               ^
   > line 2
-  001: a() := debug("a"), b(), c(), d();
+  001: a() := debug(), b(), c(), d();
   002: b();
-  003: c() := debug("c");
+  003: c() := debug();
               ^
   004: d();
 
@@ -205,10 +229,18 @@ Print current stack of queries.
 Variables
 =========
 
+The Polar file used in the following examples looks like this:
+
+.. code-block:: polar
+
+  a() := x = y, y = z, z = 3, debug();
+
 ``var [<var> ...]``
 -----------------
 
-Print variables in the current scope. If one or more arguments are provided, print the value of those variables. If a provided variable does not exist in the current scope, print ``<unbound>``.
+Print variables in the current scope. If one or more arguments are provided,
+print the value of those variables. If a provided variable does not exist in
+the current scope, print ``<unbound>``.
 
 .. note:: Due to temporaries used inside the engine, variables may not be
           available under the names used in the Polar file. ``var`` with no
@@ -217,14 +249,16 @@ Print variables in the current scope. If one or more arguments are provided, pri
 .. code-block:: terminal
 
   > line
-  001: a() := z = y, y = x, x = 3, debug();
+  001: a() := x = y, y = z, z = 3, debug();
+                                   ^
   > var
-  _z_23, _y_24, _x_25
-  > var _z_23 _x_25
+  _y_22, _x_21, _z_23
+  > var _x_21 _z_23
+  _x_21 = 3
   _z_23 = 3
-  _x_25 = 3
   > var foo
   foo = <unbound>
+
 
 ``bindings``
 ------------
@@ -237,6 +271,6 @@ Print all variable bindings in the current scope.
   001: a() := x = y, y = z, z = 3, debug();
                                    ^
   > bindings
-  _x_32 = _y_33
-  _y_33 = _z_34
-  _z_34 = 3
+  _x_21 = _y_22
+  _y_22 = _z_23
+  _z_23 = 3
