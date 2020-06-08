@@ -110,14 +110,6 @@ impl Dictionary {
         }
     }
 
-    /// Apply `f` to value and return a new term.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Value),
-    {
-        self.fields.iter_mut().for_each(|(_, v)| f(&mut v.value));
-    }
-
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
     }
@@ -181,14 +173,6 @@ impl Predicate {
             name: self.name.clone(),
             args: self.args.iter().map(|term| term.map(f)).collect(),
         }
-    }
-
-    /// Apply `f` to value and return a new term.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Value),
-    {
-        self.args.iter_mut().for_each(|a| a.map_in_place(f));
     }
 }
 
@@ -285,27 +269,6 @@ impl Value {
         f(&mapped)
     }
 
-    pub fn map_in_place<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Value),
-    {
-        f(self);
-        // the match does the recursive calling of map
-        match self {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-            Value::List(terms) => {
-                terms.iter_mut().for_each(|term| f(&mut term.value));
-            }
-            Value::Call(predicate) => predicate.map_in_place(f),
-            Value::Expression(Operation { args, .. }) => {
-                args.iter_mut().for_each(|term| term.map_in_place(f));
-            }
-            Value::InstanceLiteral(InstanceLiteral { fields, .. }) => fields.map_in_place(f),
-            Value::ExternalInstance(_) => {}
-            Value::Dictionary(dict) => dict.map_in_place(f),
-        };
-    }
-
     pub fn symbol(self) -> Result<Symbol, RuntimeError> {
         match self {
             Value::Symbol(name) => Ok(name),
@@ -344,6 +307,14 @@ impl Term {
         }
     }
 
+    pub fn clone_with_value(&self, value: Value) -> Self {
+        Self {
+            id: self.id,
+            offset: self.offset,
+            value,
+        }
+    }
+
     /// Apply `f` to value and return a new term.
     pub fn map<F>(&self, f: &mut F) -> Term
     where
@@ -356,12 +327,68 @@ impl Term {
         }
     }
 
-    /// Apply `f` to value and return a new term.
+    /// Apply `f` to self.
     pub fn map_in_place<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Value),
+        F: FnMut(&mut Self),
     {
-        self.value.map_in_place(f);
+        f(self);
+        // the match does the recursive calling of map
+        match self.value {
+            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_in_place(f)),
+            Value::Call(ref mut predicate) => {
+                predicate.args.iter_mut().for_each(|a| a.map_in_place(f))
+            }
+            Value::Expression(Operation { ref mut args, .. }) => {
+                args.iter_mut().for_each(|term| term.map_in_place(f))
+            }
+            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => fields
+                .fields
+                .iter_mut()
+                .for_each(|(_, v)| v.map_in_place(f)),
+            Value::ExternalInstance(_) => {}
+            Value::Dictionary(Dictionary { ref mut fields }) => {
+                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
+            }
+        };
+    }
+
+    // Generates ids for term and all sub terms. Returns vec of new term ids.
+    pub fn gen_ids(&mut self, kb: &mut KnowledgeBase, src_id: u64) {
+        kb.add_term_source(self, src_id);
+        match &mut self.value {
+            Value::Integer(_) => (),
+            Value::String(_) => (),
+            Value::Boolean(_) => (),
+            Value::ExternalInstance(_) => (),
+            Value::InstanceLiteral(instance) => {
+                for (_, t) in &mut instance.fields.fields.iter_mut() {
+                    t.gen_ids(kb, src_id);
+                }
+            }
+            Value::Dictionary(dict) => {
+                for (_, t) in &mut dict.fields.iter_mut() {
+                    t.gen_ids(kb, src_id);
+                }
+            }
+            Value::Call(pred) => {
+                for t in &mut pred.args.iter_mut() {
+                    t.gen_ids(kb, src_id);
+                }
+            }
+            Value::List(list) => {
+                for t in &mut list.iter_mut() {
+                    t.gen_ids(kb, src_id);
+                }
+            }
+            Value::Symbol(_) => (),
+            Value::Expression(op) => {
+                for t in &mut op.args.iter_mut() {
+                    t.gen_ids(kb, src_id);
+                }
+            }
+        };
     }
 }
 
@@ -404,9 +431,9 @@ impl Parameter {
 
     pub fn map_in_place<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Value),
+        F: FnMut(&mut Term),
     {
-        self.specializer.iter_mut().for_each(|a| f(&mut a.value));
+        self.specializer.iter_mut().for_each(|mut a| f(&mut a));
     }
 }
 
@@ -432,7 +459,7 @@ impl Rule {
     /// Apply `f` to value and return a new term.
     pub fn map_in_place<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Value),
+        F: FnMut(&mut Term),
     {
         self.params
             .iter_mut()
@@ -466,10 +493,20 @@ pub enum Type {
     Group { members: Vec<Type> },
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct Source {
+    pub filename: Option<String>,
+    pub src: String,
+}
+
 #[derive(Default)]
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
+
+    // Pair of maps to go from Term ID -> Source ID -> Source.
+    pub sources: HashMap<u64, Source>,
+    pub term_sources: HashMap<u64, u64>,
 
     // For temporary variable names, call IDs, instance IDs, symbols, etc.
     counter: AtomicU64,
@@ -480,8 +517,27 @@ impl KnowledgeBase {
         Self {
             types: HashMap::new(),
             rules: HashMap::new(),
+            sources: HashMap::new(),
+            term_sources: HashMap::new(),
             counter: AtomicU64::new(1),
         }
+    }
+
+    pub fn add_source(&mut self, source: Source) -> u64 {
+        let id = self.new_id();
+        self.sources.insert(id, source);
+        id
+    }
+
+    pub fn add_term_source(&mut self, term: &mut Term, src_id: u64) {
+        term.id = self.new_id();
+        self.term_sources.insert(term.id, src_id);
+    }
+
+    pub fn get_source(&self, term: &Term) -> Option<Source> {
+        self.term_sources
+            .get(&term.id)
+            .and_then(|term_source| self.sources.get(&term_source).cloned())
     }
 
     /// Return a monotonically increasing integer ID.
@@ -504,11 +560,16 @@ impl KnowledgeBase {
     }
 }
 
-type Bindings = HashMap<Symbol, Term>;
+pub type Bindings = HashMap<Symbol, Term>;
 
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
+    None,
+    Debug {
+        message: String,
+    },
+
     Done,
 
     MakeExternal {
@@ -551,7 +612,6 @@ pub enum QueryEvent {
     Result {
         bindings: Bindings,
     },
-    Breakpoint,
 }
 
 #[cfg(test)]

@@ -3,7 +3,6 @@ use std::fs::{File, OpenOptions};
 use std::io::Read;
 
 pub mod repl;
-pub mod tui;
 
 pub fn load_files(
     polar: &mut crate::Polar,

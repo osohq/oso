@@ -15,11 +15,18 @@ pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
+    use crate::types::Term;
     use crate::vm::*;
 
     impl fmt::Display for Binding {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{} = {}", self.0.to_polar(), self.1.to_polar())
+        }
+    }
+
+    impl fmt::Display for Term {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
         }
     }
 
@@ -83,6 +90,7 @@ pub mod display {
                 Goal::LookupExternal {
                     instance_id, field, ..
                 } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
+                Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
                 Goal::SortRules {
                     rules,

@@ -62,20 +62,6 @@ pub struct Query {
     done: bool,
 }
 
-impl Query {
-    pub fn debug(&mut self, set: bool) {
-        if set {
-            self.vm.start_debug();
-        } else {
-            self.vm.stop_debug();
-        }
-    }
-
-    pub fn debug_info(&self) -> crate::DebugInfo {
-        self.vm.debug_info()
-    }
-}
-
 // Query as an iterator returns `None` after the first time `Done` is seen
 impl Iterator for Query {
     type Item = PolarResult<QueryEvent>;
@@ -110,7 +96,27 @@ impl Polar {
     }
 
     pub fn new_load(&mut self, src: &str) -> PolarResult<Load> {
+        let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
+        let src_id = kb.add_source(Source {
+            filename: None,
+            src: src.to_owned(),
+        });
         let mut lines = parser::parse_lines(src)?;
+        for line in &mut lines {
+            match line {
+                parser::Line::Rule(rule) => {
+                    for param in &mut rule.params {
+                        if let Some(specializer) = &mut param.specializer {
+                            specializer.gen_ids(kb, src_id);
+                        }
+                    }
+                    rule.body.gen_ids(kb, src_id);
+                }
+                parser::Line::Query(t) => {
+                    t.gen_ids(kb, src_id);
+                }
+            }
+        }
         lines.reverse();
         Ok(Load { lines })
     }
@@ -150,11 +156,21 @@ impl Polar {
         Ok(())
     }
 
-    pub fn new_query(&self, query_string: &str) -> PolarResult<Query> {
-        let term = parser::parse_query(query_string)?;
-        Ok(self.new_query_from_term(term))
+    pub fn new_query(&self, src: &str) -> PolarResult<Query> {
+        let mut term = parser::parse_query(src)?;
+        rewrite_term(&mut term, &self.kb);
+        let query = Goal::Query { term: term.clone() };
+        let mut vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
+        let source = Source {
+            src: src.to_string(),
+            filename: None,
+        };
+        vm.source = Some((source, term));
+        Ok(Query { vm, done: false })
     }
 
+    // TODO(gj): Ensure we always pass the source along with the parsed Term for debugging / error
+    // handling purposes.
     pub fn new_query_from_term(&self, mut term: Term) -> Query {
         rewrite_term(&mut term, &self.kb);
         let query = Goal::Query { term };
@@ -162,14 +178,14 @@ impl Polar {
         Query { vm, done: false }
     }
 
-    #[cfg(not(feature = "tui_"))]
+    #[cfg(not(feature = "repl"))]
     pub fn new_query_from_repl(&self) -> PolarResult<Query> {
         Err(PolarError::Runtime(RuntimeError::Unsupported {
             msg: "The REPL is not supported in this build.".to_string(),
         }))
     }
 
-    #[cfg(feature = "tui_")]
+    #[cfg(feature = "repl")]
     pub fn new_query_from_repl(&self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
         let s = repl.input("Enter query:");
@@ -194,6 +210,10 @@ impl Polar {
         query.vm.external_call_result(call_id, value)
     }
 
+    pub fn debug_command(&self, query: &mut Query, command: String) -> PolarResult<()> {
+        query.vm.debug_command(&command)
+    }
+
     pub fn external_question_result(&self, query: &mut Query, call_id: u64, result: bool) {
         query.vm.external_question_result(call_id, result)
     }
@@ -201,13 +221,6 @@ impl Polar {
     // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&self) -> u64 {
         self.kb.new_id()
-    }
-
-    /// Turn this Polar instance into a new TUI instance and run it
-    #[cfg(feature = "tui_")]
-    pub fn into_tui(self) {
-        let app = crate::cli::tui::App::new(self);
-        crate::cli::tui::run(app).expect("error in CLI")
     }
 }
 
