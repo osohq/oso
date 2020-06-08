@@ -83,7 +83,7 @@ The Polar file used in the following examples looks like this:
 ``s[tep]``
 ----------
 
-Evaluate one goal. This is *very* low level.
+Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
 
 .. code-block:: terminal
 
