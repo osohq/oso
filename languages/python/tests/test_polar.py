@@ -391,3 +391,17 @@ def test_predicate(polar, qvar):
     assert polar.query(
         Query(name="f", args=[Predicate("pred", [1, 2])]), single=True
     ).results == [{}]
+
+
+def test_return_list(polar):
+    class Actor:
+        def groups(self):
+            return ["engineering", "social", "admin"]
+
+    polar.register_python_class(Actor)
+
+    # for testing lists
+    polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
+
+    assert polar.query(Query(name="allow", args=[Actor(), "join", "party"])).success
+
