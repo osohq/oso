@@ -5,8 +5,9 @@ pub mod macros;
 #[macro_use]
 extern crate maplit;
 
-#[cfg(feature = "tui_")]
+#[cfg(feature = "repl")]
 pub mod cli;
+mod debugger;
 mod formatting;
 mod lexer;
 pub mod parser;
@@ -16,7 +17,6 @@ pub mod types;
 mod vm;
 
 pub use self::polar::{Load, Polar, Query};
-pub use self::vm::DebugInfo;
 pub use formatting::ToPolarString;
 
 use std::cell::RefCell;
@@ -277,6 +277,68 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
         Err(_) => {
             set_error(types::OperationalError::Unknown.into());
             null()
+        }
+    }
+}
+
+/// Execute one debugger command for the given query.
+///
+/// ## Returns
+/// - `0` on error.
+/// - `1` on success.
+///
+/// ## Errors
+/// - Provided value is NULL.
+/// - Provided value contains malformed JSON.
+/// - Provided value cannot be parsed to a Term wrapping a Value::String.
+/// - Polar.debug_command returns an error.
+/// - Anything panics during the parsing/execution of the provided command.
+#[no_mangle]
+pub extern "C" fn polar_debug_command(
+    polar_ptr: *mut Polar,
+    query_ptr: *mut Query,
+    value: *const c_char,
+) -> i32 {
+    let result = catch_unwind(|| {
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let query = unsafe { ffi_ref!(query_ptr) };
+        if !value.is_null() {
+            let s = unsafe { ffi_string!(value) };
+            let t = serde_json::from_str(&s);
+            match t {
+                Ok(types::Term {
+                    value: types::Value::String(command),
+                    ..
+                }) => match polar.debug_command(query, command) {
+                    Ok(_) => 1,
+                    Err(e) => {
+                        set_error(e);
+                        0
+                    }
+                },
+                Ok(_) => {
+                    set_error(
+                        types::RuntimeError::Serialization {
+                            msg: "received bad command".to_string(),
+                        }
+                        .into(),
+                    );
+                    0
+                }
+                Err(e) => {
+                    set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
+                    0
+                }
+            }
+        } else {
+            0
+        }
+    });
+    match result {
+        Ok(r) => r,
+        Err(_) => {
+            set_error(types::OperationalError::Unknown.into());
+            0
         }
     }
 }

@@ -109,7 +109,6 @@ pub fn main() -> anyhow::Result<()> {
                     }
                     has_result = true;
                 }
-                Ok(QueryEvent::Breakpoint) => {}
                 Ok(e) => println!("Event: {:?}", e),
                 Err(e) => println!("Error: {:?}", e),
             }

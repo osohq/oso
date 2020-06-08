@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
+use std::string::ToString;
 use std::sync::Arc;
 
+use super::debugger::{Debugger, Event};
 use super::types::*;
 use super::ToPolarString;
 
@@ -13,9 +15,10 @@ pub const MAX_EXECUTED_GOALS: usize = 10_000;
 #[allow(clippy::large_enum_variant)]
 pub enum Goal {
     Backtrack,
-    /// An explicit breakpoint, causes the VM to return a `QueryEvent::Breakpoint`
-    Break,
     Cut,
+    Debug {
+        message: String,
+    },
     Halt,
     Isa {
         left: Term,
@@ -54,6 +57,9 @@ pub enum Goal {
     Query {
         term: Term,
     },
+    PopQuery {
+        term: Term,
+    },
     SortRules {
         rules: Rules,
         args: TermList,
@@ -74,43 +80,38 @@ pub struct Choice {
     pub alternatives: Alternatives,
     bsp: usize,       // binding stack pointer
     pub goals: Goals, // goal stack snapshot
+    queries: Queries, // query stack snapshot
 }
 
-type Alternatives = Vec<Goals>;
-type Bindings = Vec<Binding>;
-type Choices = Vec<Choice>;
-type Goals = Vec<Goal>;
+pub type Alternatives = Vec<Goals>;
+pub type Bindings = Vec<Binding>;
+pub type Choices = Vec<Choice>;
+pub type Goals = Vec<Goal>;
+pub type Queries = TermList;
 
 #[derive(Default)]
 pub struct PolarVirtualMachine {
     /// Stacks.
-    goals: Goals,
-    bindings: Bindings,
+    pub goals: Goals,
+    pub bindings: Bindings,
     choices: Choices,
+    pub queries: Queries,
 
     /// Count executed goals
     goal_counter: usize,
 
-    /// If VM is set to `debug=True`, the VM will return a `QueryEvent::Breakpoint`
-    /// after every goal
-    debug: bool,
+    pub debugger: Debugger,
+
+    /// Source string and term for original query.
+    pub source: Option<(Source, Term)>,
 
     /// Rules and types.
-    kb: Arc<KnowledgeBase>,
+    pub kb: Arc<KnowledgeBase>,
 
     /// Instance Literal -> External Instance table.
     instances: HashMap<InstanceLiteral, ExternalInstance>,
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
-}
-
-/// Debugging information exposed by the VM
-#[derive(Clone, Debug, Default)]
-pub struct DebugInfo {
-    // we dont use the type bindings so the types can stay private
-    pub goals: Vec<Goal>,
-    pub bindings: Vec<Binding>,
-    pub choices: Vec<Choice>,
 }
 
 // Methods which aren't goals/instructions.
@@ -124,7 +125,9 @@ impl PolarVirtualMachine {
             bindings: vec![],
             choices: vec![],
             goal_counter: 0,
-            debug: false,
+            queries: vec![],
+            debugger: Debugger::default(),
+            source: None,
             kb,
             instances: HashMap::new(),
             call_id_symbols: HashMap::new(),
@@ -141,20 +144,58 @@ impl PolarVirtualMachine {
         call_id
     }
 
-    pub fn start_debug(&mut self) {
-        self.debug = true;
-    }
-
-    pub fn stop_debug(&mut self) {
-        self.debug = false;
-    }
-
-    pub fn debug_info(&self) -> DebugInfo {
-        DebugInfo {
-            bindings: self.bindings.clone(),
-            choices: self.choices.clone(),
-            goals: self.goals.clone(),
+    /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
+    /// result is needed to achieve it, or `None` if it can run internally.
+    fn next(&mut self, goal: Goal) -> PolarResult<QueryEvent> {
+        if std::env::var("RUST_LOG").is_ok() {
+            eprintln!("{}", goal);
         }
+        self.goal_counter += 1;
+        match goal {
+            Goal::Backtrack => self.backtrack()?,
+            Goal::Cut => self.cut(),
+            Goal::Debug { message } => return Ok(self.debug(&message)),
+            Goal::Halt => return Ok(self.halt()),
+            Goal::Isa { left, right } => self.isa(&left, &right)?,
+            Goal::IsMoreSpecific { left, right, args } => {
+                self.is_more_specific(left, right, args)?
+            }
+            Goal::IsSubspecializer {
+                answer,
+                left,
+                right,
+                arg,
+            } => return self.is_subspecializer(answer, left, right, arg),
+            Goal::Lookup { dict, field, value } => self.lookup(dict, field, value)?,
+            Goal::LookupExternal {
+                call_id,
+                instance_id,
+                field,
+            } => return self.lookup_external(call_id, instance_id, field),
+            Goal::IsaExternal {
+                instance_id,
+                literal,
+            } => return self.isa_external(instance_id, literal),
+            Goal::MakeExternal {
+                literal,
+                instance_id,
+            } => return Ok(self.make_external(literal, instance_id)),
+            Goal::Noop => {}
+            Goal::Query { term } => {
+                let result = self.query(term);
+                self.maybe_break(Event::Query)?;
+                return result;
+            }
+            Goal::PopQuery { .. } => self.pop_query(),
+            Goal::SortRules {
+                rules,
+                outer,
+                inner,
+                args,
+            } => self.sort_rules(rules, args, outer, inner)?,
+            Goal::Unify { left, right } => self.unify(&left, &right)?,
+        }
+        Ok(QueryEvent::None)
     }
 
     /// Run the virtual machine. While there are goals on the stack,
@@ -171,68 +212,22 @@ impl PolarVirtualMachine {
         }
 
         while let Some(goal) = self.goals.pop() {
-            if std::env::var("RUST_LOG").is_ok() {
-                eprintln!("{}", goal);
+            match self.next(goal.clone())? {
+                QueryEvent::None => (),
+                event => return Ok(event),
             }
-            self.goal_counter += 1;
-            match goal {
-                Goal::Backtrack => self.backtrack()?,
-                Goal::Break => return Ok(QueryEvent::Breakpoint),
-                Goal::Cut => self.cut(),
-                Goal::Halt => return Ok(self.halt()),
-                Goal::Isa { left, right } => self.isa(&left, &right)?,
-                Goal::IsMoreSpecific { left, right, args } => {
-                    self.is_more_specific(left, right, args)?
-                }
-                Goal::IsSubspecializer {
-                    answer,
-                    left,
-                    right,
-                    arg,
-                } => {
-                    if let Ok(Some(event)) = self.is_subspecializer(answer, left, right, arg) {
-                        return Ok(event);
-                    }
-                }
-                Goal::Lookup { dict, field, value } => self.lookup(dict, field, value)?,
-                Goal::LookupExternal {
-                    call_id,
-                    instance_id,
-                    field,
-                } => return self.lookup_external(call_id, instance_id, field),
-                Goal::IsaExternal {
-                    instance_id,
-                    literal,
-                } => return self.isa_external(instance_id, literal),
-                Goal::MakeExternal {
-                    literal,
-                    instance_id,
-                } => return Ok(self.make_external(literal, instance_id)),
-                Goal::Noop => (),
-                Goal::Query { term } => self.query(term)?,
-                Goal::SortRules {
-                    rules,
-                    outer,
-                    inner,
-                    args,
-                } => self.sort_rules(rules, args, outer, inner)?,
-                Goal::Unify { left, right } => self.unify(&left, &right)?,
-            }
-            // don't break when the goal stack is empty or a result wont
-            // be returned (this logic seems flaky)
-            if self.debug && !self.goals.is_empty() {
-                return Ok(QueryEvent::Breakpoint);
-            }
+            self.maybe_break(Event::Goal(goal.to_string()))?;
         }
 
         if std::env::var("RUST_LOG").is_ok() {
             eprintln!("⇒ result");
         }
         Ok(QueryEvent::Result {
-            bindings: self.bindings(),
+            bindings: self.bindings(false),
         })
     }
 
+    /// Return true if there is nothing left to do.
     pub fn is_halted(&self) -> bool {
         self.goals.is_empty() && self.choices.is_empty()
     }
@@ -281,6 +276,7 @@ impl PolarVirtualMachine {
                 alternatives,
                 bsp: self.bsp(),
                 goals: self.goals.clone(),
+                queries: self.queries.clone(),
             });
         }
     }
@@ -315,13 +311,12 @@ impl PolarVirtualMachine {
     }
 
     /// Retrieve the current bindings and return them as a hash map.
-    fn bindings(&mut self) -> HashMap<Symbol, Term> {
+    pub fn bindings(&self, include_temps: bool) -> super::types::Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings {
-            if self.is_temporary_var(&var) {
+            if !include_temps && self.is_temporary_var(&var) {
                 continue;
             }
-
             bindings.insert(var.clone(), self.deref(value));
         }
         bindings
@@ -361,7 +356,7 @@ impl PolarVirtualMachine {
     }
 
     /// Recursively dereference a variable.
-    fn deref(&self, term: &Term) -> Term {
+    pub fn deref(&self, term: &Term) -> Term {
         match &term.value {
             Value::Symbol(symbol) => self.value(&symbol).map_or(term.clone(), |t| self.deref(t)),
             _ => term.clone(),
@@ -446,8 +441,10 @@ impl PolarVirtualMachine {
                 mut alternatives,
                 bsp,
                 goals,
+                queries,
             }) => {
                 self.bindings.drain(bsp..);
+                self.queries = queries.clone();
                 self.goals = goals.clone();
                 self.append_goals(alternatives.pop().expect("must have alternative"));
 
@@ -456,6 +453,7 @@ impl PolarVirtualMachine {
                         alternatives,
                         bsp,
                         goals,
+                        queries,
                     });
                 }
                 Ok(())
@@ -466,6 +464,18 @@ impl PolarVirtualMachine {
     /// Commit to the current choice.
     fn cut(&mut self) {
         self.choices.pop();
+    }
+
+    /// Clean up the query stack after completing a query.
+    fn pop_query(&mut self) {
+        self.queries.pop();
+    }
+
+    /// Interact with the debugger.
+    fn debug(&mut self, message: &str) -> QueryEvent {
+        QueryEvent::Debug {
+            message: message.to_string(),
+        }
     }
 
     /// Halt the VM by clearing all goals and choices.
@@ -708,7 +718,10 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: Term) -> PolarResult<()> {
+    fn query(&mut self, term: Term) -> PolarResult<QueryEvent> {
+        self.queries.push(term.clone());
+        self.push_goal(Goal::PopQuery { term: term.clone() })?;
+
         match term.value {
             Value::Call(predicate) =>
             // Select applicable rules for predicate.
@@ -718,6 +731,22 @@ impl PolarVirtualMachine {
                 match &predicate.name.0[..] {
                     // Built-in predicates.
                     "cut" => self.push_goal(Goal::Cut)?,
+                    "debug" => {
+                        let mut message = "Welcome to the debugger!".to_string();
+                        if !predicate.args.is_empty() {
+                            message += &format!(
+                                "\ndebug({})",
+                                predicate
+                                    .args
+                                    .iter()
+                                    .map(|arg| self.deref(arg).to_polar())
+                                    .collect::<Vec<String>>()
+                                    .join(", ")
+                            );
+                        }
+                        self.push_goal(Goal::Debug { message })?
+                    }
+
                     // User-defined predicates.
                     _ => match self.kb.rules.get(&predicate.name) {
                         None => self.push_goal(Goal::Backtrack)?,
@@ -802,7 +831,8 @@ impl PolarVirtualMachine {
                         }
                     }
                     Operator::Or => self.choose(
-                        args.into_iter()
+                        args.iter()
+                            .cloned()
                             .map(|term| vec![Goal::Query { term }])
                             .collect(),
                     ),
@@ -842,7 +872,7 @@ impl PolarVirtualMachine {
                 .into())
             }
         }
-        Ok(())
+        Ok(QueryEvent::None)
     }
 
     /// Handle an external result provided by the application.
@@ -1126,9 +1156,7 @@ impl PolarVirtualMachine {
                 }
 
                 // Query for the body clauses.
-                goals.push(Goal::Query {
-                    term: Term::new(body.value.clone()),
-                });
+                goals.push(Goal::Query { term: body.clone() });
 
                 alternatives.push(goals)
             }
@@ -1190,7 +1218,7 @@ impl PolarVirtualMachine {
         left: Term,
         right: Term,
         arg: Term,
-    ) -> PolarResult<Option<QueryEvent>> {
+    ) -> PolarResult<QueryEvent> {
         // If the arg is an instance literal, convert it to an external instance
         let (arg, mut goals) = self.instantiate_externals(&arg);
         if !goals.is_empty() {
@@ -1201,7 +1229,7 @@ impl PolarVirtualMachine {
                 arg,
             });
             self.append_goals(goals);
-            return Ok(None);
+            return Ok(QueryEvent::None);
         }
 
         match (arg.value, left.value, right.value) {
@@ -1222,12 +1250,12 @@ impl PolarVirtualMachine {
                     })?;
                 }
                 // check ordering based on the classes
-                Ok(Some(QueryEvent::ExternalIsSubSpecializer {
+                Ok(QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     instance_id: instance.instance_id,
                     left_class_tag: left.tag,
                     right_class_tag: right.tag,
-                }))
+                })
             }
             (_, Value::Dictionary(left), Value::Dictionary(right)) => {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
@@ -1245,15 +1273,15 @@ impl PolarVirtualMachine {
                         &Term::new(Value::Boolean(right_fields.len() < left.fields.len())),
                     );
                 }
-                Ok(None)
+                Ok(QueryEvent::None)
             }
             (_, Value::InstanceLiteral(_), Value::Dictionary(_)) => {
                 self.bind(&answer, &Term::new(Value::Boolean(true)));
-                Ok(None)
+                Ok(QueryEvent::None)
             }
             _ => {
                 self.bind(&answer, &Term::new(Value::Boolean(false)));
-                Ok(None)
+                Ok(QueryEvent::None)
             }
         }
     }
@@ -1762,6 +1790,20 @@ mod tests {
     }
 
     #[test]
+    fn debug() {
+        let mut vm = PolarVirtualMachine::new(
+            Arc::new(KnowledgeBase::new()),
+            vec![Goal::Debug {
+                message: "Hello".to_string(),
+            }],
+        );
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Debug { message } if &message[..] == "Hello"
+        ));
+    }
+
+    #[test]
     fn halt() {
         let mut vm = PolarVirtualMachine::new(Arc::new(KnowledgeBase::new()), vec![Goal::Halt]);
         let _ = vm.run().unwrap();
@@ -1951,11 +1993,12 @@ mod tests {
 
         let answer = vm.kb.gensym("is_subspecializer");
 
-        let event = vm
+        match vm
             .is_subspecializer(answer.clone(), left, right, arg)
-            .unwrap();
-        if event.is_some() {
-            panic!("Expected None, got {:?}", event);
+            .unwrap()
+        {
+            QueryEvent::None => (),
+            event => panic!("Expected None, got {:?}", event),
         }
 
         assert_eq!(vm.deref(&term!(Value::Symbol(answer))), term!(value!(true)));
