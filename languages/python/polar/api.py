@@ -2,26 +2,14 @@ import json
 
 from _polar_lib import ffi, lib
 from .extras import Http, PathMapper
+from .errors import _get_error, _raise_error
 
 from collections.abc import Iterable
 from pathlib import Path
 from types import GeneratorType
 from typing import Any, Sequence, List
 
-from .exceptions import (
-    InvalidTokenCharacter,
-    Serialization,
-    Unknown,
-    ParserException,
-    PolarApiException,
-    PolarRuntimeException,
-    IntegerOverflow,
-    InvalidToken,
-    InvalidTokenCharacter,
-    UnrecognizedEOF,
-    UnrecognizedToken,
-    ExtraToken,
-)
+from .exceptions import PolarApiException, PolarRuntimeException
 
 
 ##### API Types ######
@@ -136,65 +124,6 @@ class Polar:
         if policy_file not in self.load_queue:
             self.load_queue.append(policy_file)
 
-    def _get_error(self):
-        # Raise polar errors as the correct python exception type.
-        err_s = lib.polar_get_error()
-        err_json = ffi.string(err_s).decode()
-        error = json.loads(err_json)
-
-        # All errors should be mapped to python exceptions.
-        # Raise Unknown if we haven't mapped the error.
-        exception = Unknown(f"Unknown Internal Error: {err_json}")
-
-        kind = [*error][0]
-        data = error[kind]
-
-        if kind == "Parse":
-            parse_err_kind = [*error][0]
-            parse_err_data = error[kind]
-
-            if parse_err_kind == "IntegerOverflow":
-                token = parse_err_data["token"]
-                pos = parse_err_data["pos"]
-                exception = IntegerOverflow(token, pos)
-            elif parse_err_kind == "InvalidTokenCharacter":
-                token = parse_err_data["token"]
-                c = parse_err_data["c"]
-                pos = parse_err_data["pos"]
-                exception = InvalidTokenCharacter(token, c, pos)
-            elif parse_err_kind == "InvalidToken":
-                pos = parse_err_data["pos"]
-                exception = InvalidToken(pos)
-            elif parse_err_kind == "UnrecognizedEOF":
-                pos = parse_err_data["pos"]
-                exception = UnrecognizedEOF(pos)
-            elif parse_err_kind == "UnrecognizedToken":
-                token = parse_err_data["token"]
-                pos = parse_err_data["pos"]
-                exception = UnrecognizedToken(token, pos)
-            elif parse_err_kind == "ExtraToken":
-                token = parse_err_data["token"]
-                pos = parse_err_data["pos"]
-                exception = ExtraToken(token, pos)
-            else:
-                exception = ParserException(f"Parser Exception: {json.dumps(data)}")
-
-        elif kind == "Runtime":
-            # @TODO: Runtime exception types.
-            exception = PolarRuntimeException(json.dumps(data))
-
-        elif kind == "Operational":
-            if data == "Unknown":
-                # This happens on panics from rust.
-                exception = Unknown("Unknown Internal Error: See console.")
-
-        lib.string_free(err_s)
-        return exception
-
-    def _raise_error(self):
-        e = self._get_error()
-        raise e
-
     def _read_in_file(self, path):
         """Reads in a file and adds to the knowledge base."""
         with open(path) as file:
@@ -231,13 +160,13 @@ class Polar:
         c_str = ffi.new("char[]", src_str.encode())
         load = lib.polar_new_load(self.polar, c_str)
         if load == ffi.NULL:
-            self._raise_error()
+            _raise_error()
 
         while True:
             query = ffi.new("polar_Query **")
             loaded = lib.polar_load(self.polar, load, query)
             if loaded == 0:
-                self._raise_error()
+                _raise_error()
 
             query = query[0]
             if query == ffi.NULL:
@@ -257,7 +186,7 @@ class Polar:
         """ Create or look up a polar external_instance for an object """
         instance_id = lib.polar_get_external_id(self.polar)
         if instance_id == 0:
-            self._raise_error()
+            _raise_error()
         self.id_to_instance[instance_id] = python_obj
         return instance_id
 
@@ -368,7 +297,7 @@ class Polar:
             while True:
                 event_s = lib.polar_query(self.polar, query)
                 if event_s == ffi.NULL:
-                    self._raise_error()
+                    _raise_error()
 
                 event = json.loads(ffi.string(event_s).decode())
                 lib.string_free(event_s)
@@ -407,7 +336,7 @@ class Polar:
                                 self.polar, query, call_id, ffi.NULL
                             )
                             if result == 0:
-                                self._raise_error()
+                                _raise_error()
                             continue
                             # @TODO: polar line numbers in errors once polar errors are better.
                             # raise PolarRuntimeException(f"Error calling {attribute}")
@@ -442,13 +371,13 @@ class Polar:
                             self.polar, query, call_id, c_str
                         )
                         if result == 0:
-                            self._raise_error()
+                            _raise_error()
                     except StopIteration:
                         result = lib.polar_external_call_result(
                             self.polar, query, call_id, ffi.NULL
                         )
                         if result == 0:
-                            self._raise_error()
+                            _raise_error()
 
                 if kind == "ExternalIsa":
                     call_id = data["call_id"]
@@ -466,7 +395,7 @@ class Polar:
                         self.polar, query, call_id, 1 if isa else 0
                     )
                     if result == 0:
-                        self._raise_error()
+                        _raise_error()
 
                 if kind == "ExternalIsSubSpecializer":
                     call_id = data["call_id"]
@@ -489,7 +418,7 @@ class Polar:
                         self.polar, query, call_id, 1 if is_sub_specializer else 0
                     )
                     if result == 0:
-                        self._raise_error()
+                        _raise_error()
 
                 if kind == "ExternalUnify":
                     call_id = data["call_id"]
@@ -506,7 +435,7 @@ class Polar:
                         self.polar, query, call_id, 1 if unify else 0
                     )
                     if result == 0:
-                        self._raise_error()
+                        _raise_error()
 
                 if kind == "Debug":
                     if data["message"]:
@@ -518,7 +447,7 @@ class Polar:
                     c_str = ffi.new("char[]", msg.encode())
                     result = lib.polar_debug_command(self.polar, query, c_str)
                     if result == 0:
-                        self._raise_error()
+                        _raise_error()
 
                 if kind == "Result":
                     yield {k: self.to_python(v) for k, v in data["bindings"].items()}
@@ -531,7 +460,7 @@ class Polar:
         c_str = ffi.new("char[]", query_str.encode())
         query = lib.polar_new_query(self.polar, c_str)
         if query == ffi.NULL:
-            self._raise_error()
+            _raise_error()
 
         yield from self._do_query(query)
 
@@ -557,7 +486,7 @@ class Polar:
         c_str = ffi.new("char[]", query_term.encode())
         query = lib.polar_new_query_from_term(self.polar, c_str)
         if query == ffi.NULL:
-            self._raise_error()
+            _raise_error()
 
         results = []
         for res in self._do_query(query):
@@ -590,7 +519,7 @@ class Polar:
             query = lib.polar_query_from_repl(self.polar)
             had_result = False
             if query == ffi.NULL:
-                e = self._get_error()
+                e = _get_error()
                 print("Query error: ", e)
                 break
             for res in self._do_query(query):

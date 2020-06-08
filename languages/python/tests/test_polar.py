@@ -329,35 +329,26 @@ def test_parser_errors(polar):
     rules = """
     f(a) := a = 18446744073709551616;
     """
-    with pytest.raises(ParserException) as e:
+    with pytest.raises(exceptions.IntegerOverflow) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"IntegerOverflow": {"token": "18446744073709551616", "pos": [1, 16]}}'
-    )
+    assert str(e.value) == "('18446744073709551616', [1, 16])"
 
     # InvalidTokenCharacter
     rules = """
     f(a) := a = "this is not
     allowed";
     """
-    with pytest.raises(ParserException) as e:
+    with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"InvalidTokenCharacter": {"token": "this is not", "c": "\\n", "pos": [1, 28]}}'
-    )
+    assert str(e.value) == "('this is not', '\\n', [1, 28])"
 
     rules = """
     f(a) := a = "this is not allowed\0
     """
 
-    with pytest.raises(ParserException) as e:
+    with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"InvalidTokenCharacter": {"token": "this is not allowed", "c": "\\u0000", "pos": [1, 16]}}'
-    )
+    assert str(e.value) == "('this is not allowed', '\\x00', [1, 16])"
 
     # InvalidToken -- not sure what causes this
 
@@ -365,20 +356,17 @@ def test_parser_errors(polar):
     rules = """
     f(a)
     """
-    with pytest.raises(ParserException) as e:
+    with pytest.raises(exceptions.UnrecognizedEOF) as e:
         polar.load_str(rules)
-    assert str(e.value) == 'Parser Exception: {"UnrecognizedEOF": {"pos": [1, 8]}}'
+    assert str(e.value) == "[1, 8]"
 
     # UnrecognizedToken
     rules = """
     1;
     """
-    with pytest.raises(ParserException) as e:
+    with pytest.raises(exceptions.UnrecognizedToken) as e:
         polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"UnrecognizedToken": {"token": "1", "pos": [1, 4]}}'
-    )
+    assert str(e.value) == "('1', [1, 4])"
 
     # ExtraToken -- not sure what causes this
 
