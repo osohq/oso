@@ -404,4 +404,3 @@ def test_return_list(polar):
     polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
 
     assert polar.query(Query(name="allow", args=[Actor(), "join", "party"])).success
-
