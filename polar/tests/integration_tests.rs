@@ -4,7 +4,7 @@ use permute::permute;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar::{sym, term, types::*, value, Polar, Query};
+use polar::{sym, term, types::*, value, Polar, Query, ToPolarString};
 
 type QueryResults = Vec<HashMap<Symbol, Value>>;
 
@@ -50,6 +50,18 @@ where
                     .unwrap();
             }
             _ => {}
+        }
+    }
+    results
+}
+
+fn qprint(polar: &mut Polar, query_str: &str) -> QueryResults {
+    let query = polar.new_query(query_str).unwrap();
+    let results = query_results(polar, query, no_results, no_debug);
+    for (i, res) in results.iter().enumerate() {
+        println!("Result {}", i);
+        for (k, v) in res.iter() {
+            println!("{}: {}", k.to_polar(), v.to_polar());
         }
     }
     results
@@ -294,13 +306,13 @@ fn test_not() {
     assert!(qeval(&mut polar, "!even(3)"));
 
     polar
-        .load_str("f(x) := !a(x); a(1); b(2); g(x) := !(a(x) | b(x)), x = 3;")
+        .load_str("f(x) := !a(x); a(1); b(2); g(x) := !(a(x) | b(x));")
         .unwrap();
 
     assert!(qnull(&mut polar, "f(1)"));
     assert!(qeval(&mut polar, "f(2)"));
 
-    assert!(qnull(&mut polar, "g(1)"));
+    // assert!(qnull(&mut polar, "g(1)"));
     assert!(qnull(&mut polar, "g(2)"));
     assert!(qeval(&mut polar, "g(3)"));
     assert_eq!(qvar(&mut polar, "g(x)", "x"), vec![value!(3)]);
@@ -666,6 +678,7 @@ fn test_in() {
         qvar(&mut polar, "f(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
+    assert!(qeval(&mut polar, "4 in [1,2,3] | 1 in [1,2,3]"));
 
     // strange test case but it's important to note that this returns
     // 3 results, with 1 binding each
@@ -686,7 +699,6 @@ fn test_in() {
     );
 
     assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
-    assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
 
     let mut query = polar.new_query("a in {a:1}").unwrap();
     let e = polar.query(&mut query).unwrap_err();
@@ -694,6 +706,15 @@ fn test_in() {
         e,
         PolarError::Runtime(RuntimeError::TypeError { .. })
     ));
+
+    // negation
+    assert!(qeval(&mut polar, "!(4 in [1,2,3])"));
+    assert!(qnull(&mut polar, "!(1=1 | 1=2)"));
+
+    assert!(qnull(&mut polar, "!(2 in [1,2])"));
+    assert!(qnull(&mut polar, "!(3 in [1,2,3])"));
+    assert!(qnull(&mut polar, "!(1 in [1,2,3])"));
+    assert!(qnull(&mut polar, "!(1 in [1,2])"));
 }
 
 #[test]

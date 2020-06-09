@@ -101,7 +101,7 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.c() = x", "x", one=True) == "c"
     assert qvar("Foo{} = f, f.a() = x", "x", one=True) == "A"
     assert qvar("Foo{}.bar().y() = x", "x", one=True) == "y"
-    assert qvar("Foo{}.e = x", "x") == [[1, 2, 3]]
+    assert qvar("Foo{}.e = x", "x", one=True) == [1, 2, 3]  # returns an actual list
     assert qvar("Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
     assert qvar("Foo{}.g.hello = x", "x", one=True) == "world"
     assert qvar("Foo{}.h = x", "x", one=True) is True
@@ -271,8 +271,6 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
     canine = 'Animal{genus: "canis", family: "canidae"}'
-    canid = 'Animal{family: "canidae"}'
-    animal = "Animal{}"
 
     wolf_dict = '{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog_dict = '{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -463,3 +461,10 @@ def test_constructor(polar, qvar):
         )
         == 2
     )
+
+def test_in(polar, qeval):
+    polar.load_str("g(x, y) := debug(), !x in y;")
+    polar.load_str("f(x) := debug(), !(x=1 | x=2);")
+    assert not qeval("f(1)")
+    assert qeval("g(4, [1,2,3])")
+    assert not qeval("g(1, [1,1,1])")
