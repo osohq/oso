@@ -4,7 +4,7 @@ use permute::permute;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar::{sym, term, types::*, value, Polar, Query, ToPolarString};
+use polar::{sym, term, types::*, value, Polar, Query};
 
 type QueryResults = Vec<HashMap<Symbol, Value>>;
 
@@ -50,18 +50,6 @@ where
                     .unwrap();
             }
             _ => {}
-        }
-    }
-    results
-}
-
-fn qprint(polar: &mut Polar, query_str: &str) -> QueryResults {
-    let query = polar.new_query(query_str).unwrap();
-    let results = query_results(polar, query, no_results, no_debug);
-    for (i, res) in results.iter().enumerate() {
-        println!("Result {}", i);
-        for (k, v) in res.iter() {
-            println!("{}: {}", k.to_polar(), v.to_polar());
         }
     }
     results
