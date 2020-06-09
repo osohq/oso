@@ -405,6 +405,7 @@ def test_return_list(polar):
 
     assert polar.query(Query(name="allow", args=[Actor(), "join", "party"])).success
 
+
 def test_in(polar, qeval):
     polar.load_str("g(x, y) := !x in y;")
     polar.load_str("f(x) := !(x=1 | x=2);")
