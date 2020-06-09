@@ -729,8 +729,8 @@ fn test_cut() {
         )
         .unwrap();
 
-    // assert!(qeval(&mut polar, "f(1)"));
-    // assert!(qeval(&mut polar, "f(2)"));
+    assert!(qeval(&mut polar, "f(1)"));
+    assert!(qeval(&mut polar, "f(2)"));
 
     // this should only reach the first choice point
     assert_eq!(qvar(&mut polar, "f(x)", "x"), [value!(1)]);
