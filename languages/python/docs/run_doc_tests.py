@@ -47,7 +47,7 @@ def main():
             load(filename, polar)
 
     # Trigger load
-    polar._kb_load()
+    polar.load_queued_files()
 
 
 if __name__ == "__main__":

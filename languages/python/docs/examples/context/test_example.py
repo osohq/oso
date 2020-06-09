@@ -24,7 +24,7 @@ def test_policy(oso, load):
     load("01-context.polar")
     imp.load_source("context", "02-context.py")
 
-    oso._kb_load()
+    oso.load_queued_files()
 
     os.environ["ENV"] = "production"
     assert not oso.allow("steve", "test", "policy")
