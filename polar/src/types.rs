@@ -178,6 +178,7 @@ impl Predicate {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
+    In,
     Make,
     Dot,
     Not,
@@ -199,8 +200,9 @@ pub enum Operator {
 impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
-            Operator::Make => 9,
-            Operator::Dot => 8,
+            Operator::Make => 10,
+            Operator::Dot => 9,
+            Operator::In => 8,
             Operator::Not => 7,
             Operator::Mul => 6,
             Operator::Div => 6,
