@@ -68,7 +68,7 @@ class Polar:
         lib.polar_free(self.polar)
 
     def to_polar(self, value):
-        return to_polar(value, self._to_external_id)
+        return to_polar(value, self._cache_instance)
 
     def load(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
@@ -105,13 +105,14 @@ class Polar:
         """Load a Polar string, checking that all inline queries succeed."""
         load_str(self.polar, string, self._do_query)
 
-    def _to_external_id(self, instance):
+    def _cache_instance(self, instance, id=None):
         """Cache Python instance under externally generated id."""
-        id = new_id(self.polar)
+        if id is None:
+            id = new_id(self.polar)
         self.instances[id] = instance
         return id
 
-    def _from_external_id(self, id):
+    def _lookup_instance(self, id):
         """Look up Python instance by id."""
         return self.instances[id]
 
@@ -126,7 +127,7 @@ class Polar:
         elif tag == "Dictionary":
             return {k: self.to_python(v) for k, v in value[tag]["fields"].items()}
         elif tag == "ExternalInstance":
-            return self._from_external_id(value[tag]["instance_id"])
+            return self._lookup_instance(value[tag]["instance_id"])
         elif tag == "InstanceLiteral":
             # TODO(gj): Should InstanceLiterals ever be making it to Python?
             # convert instance literals to external instances
@@ -144,45 +145,29 @@ class Polar:
             )
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
-    def make_external_instance(self, class_name, term_fields, instance_id=None):
-        """Method to make and cache a new instance of an external class from
-        `class_name`, `term_fields`, and optional `instance_id`."""
-        # Convert all fields to Python
-        fields = {}
-        for k, v in term_fields.items():
-            fields[k] = self.to_python(v)
-
-        # Confirm class has been registered and has a class constructor
-        if class_name not in self.classes:
-            raise PolarRuntimeException(
-                f"Error creating instance of class {class_name}. Has not been registered."
-            )
-        assert class_name in self.class_constructors
-
-        # make the instance
-        cls = self.classes[class_name]
-        constructor = self.class_constructors[class_name]
+    def make_external_instance(self, cls_name, fields, instance_id=None):
+        """Make new instance of external class."""
+        if cls_name not in self.classes:
+            raise PolarRuntimeException(f"Unregistered class: {cls_name}.")
+        if cls_name not in self.class_constructors:
+            raise PolarRuntimeException(f"Missing constructor for class: {cls_name}.")
+        cls = self.classes[cls_name]
+        constructor = self.class_constructors[cls_name]
         try:
-            # if from_polar is a string, get it from the instance
+            # If constructor is a string, look it up on the class.
             if isinstance(constructor, str):
                 constructor = getattr(cls, constructor)
-
+            fields = {k: self.to_python(v) for k, v in fields.items()}
             if constructor:
                 instance = constructor(**fields)
             else:
                 instance = cls(**fields)
+            self._cache_instance(instance, instance_id)
+            return instance
         except Exception as e:
             raise PolarRuntimeException(
-                f"Error creating instance of class {class_name}. {e}"
+                f"Error constructing instance of {cls_name}: {e}"
             )
-
-        # cache the instance
-        if instance_id is None:
-            instance_id = self._to_external_id(instance)
-
-        self.instances[instance_id] = instance
-
-        return instance
 
     def _do_query(self, q):
         """Method which performs the query loop over an already constructed query"""
@@ -249,7 +234,7 @@ class Polar:
                     # Return the next result of the call.
                     try:
                         value = next(self.calls[call_id])
-                        stringified = stringify(value, self._to_external_id)
+                        stringified = stringify(value, self._cache_instance)
                         external_call(self.polar, query, call_id, stringified)
                     except StopIteration:
                         external_call(self.polar, query, call_id, None)
@@ -301,7 +286,7 @@ class Polar:
                         print(data["message"])
                     command = input("> ")
                     # send input back across FFI
-                    stringified = stringify(command, self._to_external_id)
+                    stringified = stringify(command, self._cache_instance)
                     check_result(
                         lib.polar_debug_command(self.polar, query, stringified)
                     )
@@ -318,7 +303,7 @@ class Polar:
     def query(self, query: Predicate, debug=False, single=False):
         """Query the knowledge base."""
         self._load_queued_files()
-        query = stringify(query, self._to_external_id)
+        query = stringify(query, self._cache_instance)
         query = check_result(lib.polar_new_query_from_term(self.polar, query))
         results = []
         for res in self._do_query(query):
