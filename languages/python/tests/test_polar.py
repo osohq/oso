@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from polar import Polar, exceptions, Predicate, Query, Variable
+from polar import exceptions, Polar, Predicate, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
 
@@ -377,7 +377,7 @@ def test_predicate(polar, qvar):
     assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
 
     assert polar.query(
-        Query(name="f", args=[Predicate("pred", [1, 2])]), single=True
+        Predicate(name="f", args=[Predicate("pred", [1, 2])]), single=True
     ).results == [{}]
 
 
@@ -391,7 +391,7 @@ def test_return_list(polar):
     # for testing lists
     polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
 
-    assert polar.query(Query(name="allow", args=[Actor(), "join", "party"])).success
+    assert polar.query(Predicate(name="allow", args=[Actor(), "join", "party"])).success
 
 
 def test_query(load_file, polar):
@@ -400,7 +400,7 @@ def test_query(load_file, polar):
     load_file(Path(__file__).parent / "test_file.polar")
     # plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
-    assert polar.query(Query(name="f", args=[Variable("a")])).results == [
+    assert polar.query(Predicate(name="f", args=[Variable("a")])).results == [
         {"a": 1},
         {"a": 2},
         {"a": 3},

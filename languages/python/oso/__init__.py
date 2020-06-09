@@ -9,7 +9,7 @@ from typing import Any, cast, Callable, List, TYPE_CHECKING
 import inspect
 
 from polar import api
-from polar.api import Polar, Http, Query, QueryResult
+from polar.api import Http, Polar, Predicate, QueryResult
 
 if TYPE_CHECKING:
     import flask
@@ -32,11 +32,7 @@ class Oso(api.Polar):
     """
 
     def __init__(self, enable_audit: bool = False):
-        """Create an oso object.
-
-        Optionally ``kb`` can be provided, which will use an already created
-        polar knowledge base.
-        """
+        """Create an oso object."""
         super().__init__()
 
     # TODO (dhatch): should we name this 'is_allowed'?
@@ -56,7 +52,7 @@ class Oso(api.Polar):
         """
         # actor + resource are python classes
         return self.query(
-            Query(name="allow", args=[actor, action, resource]),
+            Predicate(name="allow", args=[actor, action, resource]),
             debug=debug,
             single=True,
         ).success

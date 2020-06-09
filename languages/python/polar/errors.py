@@ -15,11 +15,11 @@ from .exceptions import (
 )
 
 
-def _raise_error():
-    raise _get_error()
+def raise_error():
+    raise get_error()
 
 
-def _get_error():
+def get_error():
     """Fetch a Polar error and map it into a Python exception."""
     try:
         err_s = lib.polar_get_error()

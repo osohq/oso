@@ -1,26 +1,32 @@
 import json
-
-from _polar_lib import ffi, lib
-from .extras import Http, PathMapper
-from .errors import _get_error, _raise_error
-
 from collections.abc import Iterable
 from pathlib import Path
 from types import GeneratorType
 from typing import Any, Sequence, List
 
+from _polar_lib import lib
+
+from .errors import get_error
 from .exceptions import PolarApiException, PolarRuntimeException
+from .extras import Http, PathMapper
+from .ffi import (
+    external_answer,
+    external_call,
+    load_str,
+    check_result,
+    is_null,
+    new_id,
+    polar_query,
+    Predicate,
+    stringify,
+    to_c_str,
+    to_polar,
+    unstringify,
+    Variable,
+)
 
-
-##### API Types ######
 
 POLAR_TYPES = [int, float, bool, str, dict, type(None), list]
-
-
-class Variable(str):
-    """An unbound variable type, can be used to query the KB for information"""
-
-    pass
 
 
 class QueryResult:
@@ -30,38 +36,6 @@ class QueryResult:
         self.results = results
         self.success = len(results) > 0
 
-
-class Predicate:
-    """Represent a predicate in Polar (`name(args, ...)`)."""
-
-    def __init__(self, name: str, args: Sequence[Any]):
-        self.name = name
-        self.args = args
-
-    def __str__(self):
-        return f'{self.name}({self.args.join(", ")})'
-
-    def __eq__(self, other):
-        if not isinstance(other, Predicate):
-            return False
-        return (
-            self.name == other.name
-            and len(self.args) == len(other.args)
-            and all(x == y for x, y in zip(self.args, other.args))
-        )
-
-
-class Query(Predicate):
-    """Request type for a `query` API call.
-
-    :param name: the predicate to query
-    :param args: a list of arguments to the predicate
-    """
-
-    pass
-
-
-#### Polar implementation
 
 # These need to be global for now...
 # So that register_python_class works from anywhere
@@ -74,72 +48,49 @@ def register_python_class(cls, from_polar=None):
     Polar().register_python_class(cls, from_polar)
 
 
-class CleanupQuery:
-    """ Context manager for the polar native query object. """
-
-    def __init__(self, query):
-        self.query = query
-
-    def __enter__(self):
-        return self.query
-
-    def __exit__(self, type, value, traceback):
-        lib.query_free(self.query)
-
-
 class Polar:
     """Polar API"""
 
     def __init__(self):
         self.polar = lib.polar_new()
-        self.loaded_files = {}
         self.load_queue = []
         global CLASSES
         self.classes = CLASSES
         global CLASS_CONSTRUCTORS
         self.class_constructors = CLASS_CONSTRUCTORS
-        # set up the builtin isa rule
-        self.id_to_instance = {}
+        self.instances = {}
         self.calls = {}
+        # set up the builtin isa rule
         self.load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
         lib.polar_free(self.polar)
 
+    def to_polar(self, value):
+        return to_polar(value, self._to_external_id)
+
     def load(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
-        until a query is made.
-        """
-
+        until a query is made."""
         policy_file = Path(policy_file)
-
         extension = policy_file.suffix
         if extension not in (".pol", ".polar"):
-            raise PolarApiException(f"Policy names must have .pol or .polar extension")
-
+            raise PolarApiException(f"Polar files must have .pol or .polar extension.")
         if not policy_file.exists():
             raise PolarApiException(f"Could not find file: {policy_file}")
-
         if policy_file not in self.load_queue:
             self.load_queue.append(policy_file)
 
-    def _read_in_file(self, path):
-        """Reads in a file and adds to the knowledge base."""
-        with open(path) as file:
-            contents = file.read()
-            self.loaded_files[path] = contents
-            self.load_str(contents)
-
-    def _kb_load(self):
+    def _load_queued_files(self):
         """Load queued policy files into the knowledge base."""
-        files = self.load_queue.copy()
-        for policy_file in files:
-            self._read_in_file(policy_file)
-            self.load_queue.remove(policy_file)
+        self._clear_instances()
+        while self.load_queue:
+            with open(self.load_queue.pop(0)) as file:
+                self.load_str(file.read())
 
-    def import_builtin_module(self, name: str):
-        raise NotImplementedError()
+    def _clear_instances(self):
+        self.instances = {}
 
     def register_python_class(self, cls, from_polar=None):
         """Registers `cls` as a class accessible by Polar.
@@ -150,55 +101,22 @@ class Polar:
         self.classes[class_name] = cls
         self.class_constructors[class_name] = from_polar
 
-    def register_class(self, spec, source_class: type):
-        raise NotImplementedError()
+    def load_str(self, string):
+        """Load a Polar string, checking that all inline queries succeed."""
+        load_str(self.polar, string, self._do_query)
 
-    def load_str(self, src_str):
-        """Load string into knowledge base.
+    def _to_external_id(self, instance):
+        """Cache Python instance under externally generated id."""
+        id = new_id(self.polar)
+        self.instances[id] = instance
+        return id
 
-        If it contains inline queries, ensure they succeed."""
-        c_str = ffi.new("char[]", src_str.encode())
-        load = lib.polar_new_load(self.polar, c_str)
-        if load == ffi.NULL:
-            _raise_error()
-
-        while True:
-            query = ffi.new("polar_Query **")
-            loaded = lib.polar_load(self.polar, load, query)
-            if loaded == 0:
-                _raise_error()
-
-            query = query[0]
-            if query == ffi.NULL:
-                # Load is done
-                break
-
-            results = self._do_query(query)
-
-            success = False
-            # drain all results, and set success to True if at least one result is found
-            for _ in results:
-                success = True
-            if not success:
-                raise PolarRuntimeException("Inline query in file failed.")
-
-    def _to_external_id(self, python_obj):
-        """ Create or look up a polar external_instance for an object """
-        instance_id = lib.polar_get_external_id(self.polar)
-        if instance_id == 0:
-            _raise_error()
-        self.id_to_instance[instance_id] = python_obj
-        return instance_id
-
-    def _from_external_id(self, external_id):
-        """ Lookup python object by external_id """
-        assert external_id in self.id_to_instance
-        return self.id_to_instance[external_id]
+    def _from_external_id(self, id):
+        """Look up Python instance by id."""
+        return self.instances[id]
 
     def to_python(self, v):
         """ Convert polar terms to python values """
-        # i = v['id']
-        # offset = v['offset']
         value = v["value"]
         tag = [*value][0]
         if tag in ["Integer", "String", "Boolean"]:
@@ -210,6 +128,7 @@ class Polar:
         elif tag == "ExternalInstance":
             return self._from_external_id(value[tag]["instance_id"])
         elif tag == "InstanceLiteral":
+            # TODO(gj): Should InstanceLiterals ever be making it to Python?
             # convert instance literals to external instances
             cls_name = value[tag]["tag"]
             fields = value[tag]["fields"]["fields"]
@@ -223,37 +142,11 @@ class Polar:
             raise PolarRuntimeException(
                 f"variable: {value} is unbound. make sure the value is set before using it in a method call"
             )
-
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
-    def to_polar(self, v):
-        """ Convert python values to polar terms """
-        if type(v) == bool:
-            val = {"Boolean": v}
-        elif type(v) == int:
-            val = {"Integer": v}
-        elif type(v) == str:
-            val = {"String": v}
-        elif type(v) == list:
-            val = {"List": [self.to_polar(i) for i in v]}
-        elif type(v) == dict:
-            val = {
-                "Dictionary": {"fields": {k: self.to_polar(v) for k, v in v.items()}}
-            }
-        elif isinstance(v, Predicate):
-            val = {"Call": {"name": v.name, "args": [self.to_polar(v) for v in v.args]}}
-        elif type(v) == Variable:
-            # This is supported so that we can query for unbound variables
-            val = {"Symbol": v}
-        else:
-            instance_id = self._to_external_id(v)
-            val = {"ExternalInstance": {"instance_id": instance_id}}
-        term = {"id": 0, "offset": 0, "value": val}
-        return term
-
     def make_external_instance(self, class_name, term_fields, instance_id=None):
-        """ Method to make and cache a new instance of an external class from
-        `class_name`, `term_fields`, and optional `instance_id`"""
+        """Method to make and cache a new instance of an external class from
+        `class_name`, `term_fields`, and optional `instance_id`."""
         # Convert all fields to Python
         fields = {}
         for k, v in term_fields.items():
@@ -287,20 +180,16 @@ class Polar:
         if instance_id is None:
             instance_id = self._to_external_id(instance)
 
-        self.id_to_instance[instance_id] = instance
+        self.instances[instance_id] = instance
 
         return instance
 
     def _do_query(self, q):
-        """Method which performs the query loop over an already contructed query"""
-        with CleanupQuery(q) as query:
+        """Method which performs the query loop over an already constructed query"""
+        with polar_query(q) as query:
             while True:
                 event_s = lib.polar_query(self.polar, query)
-                if event_s == ffi.NULL:
-                    _raise_error()
-
-                event = json.loads(ffi.string(event_s).decode())
-                lib.string_free(event_s)
+                event = unstringify(event_s)
                 if event == "Done":
                     break
 
@@ -311,7 +200,7 @@ class Polar:
                     instance_id = data["instance_id"]
                     instance = data["instance"]
 
-                    assert instance_id not in self.id_to_instance
+                    assert instance_id not in self.instances
 
                     class_name = instance["tag"]
                     term_fields = instance["fields"]["fields"]
@@ -328,15 +217,11 @@ class Polar:
                         args = [self.to_python(arg) for arg in data["args"]]
 
                         # Lookup the attribute on the instance.
-                        instance = self.id_to_instance[instance_id]
+                        instance = self.instances[instance_id]
                         try:
                             attr = getattr(instance, attribute)
                         except AttributeError:
-                            result = lib.polar_external_call_result(
-                                self.polar, query, call_id, ffi.NULL
-                            )
-                            if result == 0:
-                                _raise_error()
+                            external_call(self.polar, query, call_id, None)
                             continue
                             # @TODO: polar line numbers in errors once polar errors are better.
                             # raise PolarRuntimeException(f"Error calling {attribute}")
@@ -363,164 +248,99 @@ class Polar:
 
                     # Return the next result of the call.
                     try:
-                        val = next(self.calls[call_id])
-                        term = self.to_polar(val)
-                        msg = json.dumps(term)
-                        c_str = ffi.new("char[]", msg.encode())
-                        result = lib.polar_external_call_result(
-                            self.polar, query, call_id, c_str
-                        )
-                        if result == 0:
-                            _raise_error()
+                        value = next(self.calls[call_id])
+                        stringified = stringify(value, self._to_external_id)
+                        external_call(self.polar, query, call_id, stringified)
                     except StopIteration:
-                        result = lib.polar_external_call_result(
-                            self.polar, query, call_id, ffi.NULL
-                        )
-                        if result == 0:
-                            _raise_error()
+                        external_call(self.polar, query, call_id, None)
 
                 if kind == "ExternalIsa":
                     call_id = data["call_id"]
                     instance_id = data["instance_id"]
                     class_name = data["class_tag"]
-                    instance = self.id_to_instance[instance_id]
+                    instance = self.instances[instance_id]
                     # @TODO: make sure we even know about this class.
                     if class_name in self.classes:
                         cls = self.classes[class_name]
                         isa = isinstance(instance, cls)
                     else:
                         isa = False
-
-                    result = lib.polar_external_question_result(
-                        self.polar, query, call_id, 1 if isa else 0
-                    )
-                    if result == 0:
-                        _raise_error()
+                    external_answer(self.polar, query, call_id, isa)
 
                 if kind == "ExternalIsSubSpecializer":
                     call_id = data["call_id"]
                     instance_id = data["instance_id"]
-                    left_class_tag = data["left_class_tag"]
-                    right_class_tag = data["right_class_tag"]
-                    instance = self.id_to_instance[instance_id]
-                    instance_cls = instance.__class__
-                    mro = instance_cls.__mro__
+                    left_tag = data["left_class_tag"]
+                    right_tag = data["right_class_tag"]
+                    instance = self.instances[instance_id]
+                    mro = instance.__class__.__mro__
                     try:
-                        left_class = self.classes[left_class_tag]
-                        right_class = self.classes[right_class_tag]
-                        is_sub_specializer = mro.index(left_class) < mro.index(
-                            right_class
-                        )
+                        left = self.classes[left_tag]
+                        right = self.classes[right_tag]
+                        is_sub_specializer = mro.index(left) < mro.index(right)
                     except (KeyError, ValueError) as e:
                         is_sub_specializer = False
-
-                    result = lib.polar_external_question_result(
-                        self.polar, query, call_id, 1 if is_sub_specializer else 0
-                    )
-                    if result == 0:
-                        _raise_error()
+                    finally:
+                        external_answer(self.polar, query, call_id, is_sub_specializer)
 
                 if kind == "ExternalUnify":
                     call_id = data["call_id"]
-                    left_instance_id = data["left_instance_id"]
-                    right_instance_id = data["right_instance_id"]
-                    left_instance = self.id_to_instance[left_instance_id]
-                    right_instance = self.id_to_instance[right_instance_id]
+                    left_id = data["left_instance_id"]
+                    right_id = data["right_instance_id"]
+                    left = self.instances[left_id]
+                    right = self.instances[right_id]
 
-                    # COMMENT (leina): does this get used? This isn't super useful behavior for instances because it only
-                    # works predictably if they have `eq()` defined
-                    unify = left_instance == right_instance
-
-                    result = lib.polar_external_question_result(
-                        self.polar, query, call_id, 1 if unify else 0
-                    )
-                    if result == 0:
-                        _raise_error()
+                    # COMMENT (leina): does this get used? This isn't super
+                    # useful behavior for instances because it only works
+                    # predictably if they have `eq()` defined
+                    unify = left == right
+                    external_answer(self.polar, query, call_id, unify)
 
                 if kind == "Debug":
                     if data["message"]:
                         print(data["message"])
                     command = input("> ")
                     # send input back across FFI
-                    term = self.to_polar(command)
-                    msg = json.dumps(term)
-                    c_str = ffi.new("char[]", msg.encode())
-                    result = lib.polar_debug_command(self.polar, query, c_str)
-                    if result == 0:
-                        _raise_error()
+                    stringified = stringify(command, self._to_external_id)
+                    check_result(
+                        lib.polar_debug_command(self.polar, query, stringified)
+                    )
 
                 if kind == "Result":
                     yield {k: self.to_python(v) for k, v in data["bindings"].items()}
 
-    def query_str(self, query_str):
-        # Make sure KB is loaded in
-        self._kb_load()
-        self.clear_cache()
-
-        c_str = ffi.new("char[]", query_str.encode())
-        query = lib.polar_new_query(self.polar, c_str)
-        if query == ffi.NULL:
-            _raise_error()
-
+    def query_str(self, string):
+        self._load_queued_files()
+        string = to_c_str(string)
+        query = check_result(lib.polar_new_query(self.polar, string))
         yield from self._do_query(query)
 
-    def query(self, query: Query, debug=False, single=False):
+    def query(self, query: Predicate, debug=False, single=False):
         """Query the knowledge base."""
-
-        # Make sure KB is loaded in
-        self._kb_load()
-        self.clear_cache()
-
-        query_term = json.dumps(
-            {
-                "id": 0,
-                "offset": 0,
-                "value": {
-                    "Call": {
-                        "name": query.name,
-                        "args": [self.to_polar(arg) for arg in query.args],
-                    }
-                },
-            }
-        )
-        c_str = ffi.new("char[]", query_term.encode())
-        query = lib.polar_new_query_from_term(self.polar, c_str)
-        if query == ffi.NULL:
-            _raise_error()
-
+        self._load_queued_files()
+        query = stringify(query, self._to_external_id)
+        query = check_result(lib.polar_new_query_from_term(self.polar, query))
         results = []
         for res in self._do_query(query):
             results.append(res)
             if single:
                 break
-
-        result = QueryResult(results)
-        # if result.success:
-        #     log(query, result.results[0].trace())
-        # else:
-        #     log(query)
-        return result
+        return QueryResult(results)
 
     def clear(self):
-        """ Clear all facts and internal Polar classes from the knowledge base."""
+        """Clear all facts and internal Polar classes from the knowledge base."""
         self.load_queue = []
         lib.polar_free(self.polar)
         self.polar = None
         self.polar = lib.polar_new()
 
-    def clear_cache(self):
-        self.id_to_instance = {}
-
     def repl(self):
-        # Make sure KB is loaded in
-        self._kb_load()
-        self.clear_cache()
+        self._load_queued_files()
         while True:
             query = lib.polar_query_from_repl(self.polar)
             had_result = False
-            if query == ffi.NULL:
-                e = _get_error()
-                print("Query error: ", e)
+            if is_null(query):
+                print("Query error: ", get_error())
                 break
             for res in self._do_query(query):
                 had_result = True
