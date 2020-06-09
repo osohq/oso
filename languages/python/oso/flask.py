@@ -1,6 +1,6 @@
-
 class OsoFlask(Oso):
     """Flask-specific oso functionality"""
+
     def filter_map(
         self,
         request: "flask.Request",
