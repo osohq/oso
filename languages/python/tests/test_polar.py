@@ -409,6 +409,7 @@ def test_return_list(polar):
     ).success
 
 
+
 def test_query(load_file, polar):
     """Test that queries work with variable arguments"""
 
@@ -463,8 +464,8 @@ def test_constructor(polar, qvar):
     )
 
 def test_in(polar, qeval):
-    polar.load_str("g(x, y) := debug(), !x in y;")
-    polar.load_str("f(x) := debug(), !(x=1 | x=2);")
+    polar._load_str("g(x, y) := !x in y;")
+    polar._load_str("f(x) := !(x=1 | x=2);")
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")
