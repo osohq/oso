@@ -102,9 +102,6 @@ pub struct PolarVirtualMachine {
 
     pub debugger: Debugger,
 
-    /// Source string and term for original query.
-    pub source: Option<(Source, Term)>,
-
     /// Rules and types.
     pub kb: Arc<KnowledgeBase>,
 
@@ -127,7 +124,6 @@ impl PolarVirtualMachine {
             goal_counter: 0,
             queries: vec![],
             debugger: Debugger::default(),
-            source: None,
             kb,
             instances: HashMap::new(),
             call_id_symbols: HashMap::new(),
