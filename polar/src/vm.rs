@@ -85,11 +85,17 @@ pub struct Choice {
     queries: Queries, // query stack snapshot
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct QueryFrame {
+    choice_index: usize,
+    pub term: Term,
+}
+
 pub type Alternatives = Vec<Goals>;
 pub type Bindings = Vec<Binding>;
 pub type Choices = Vec<Choice>;
 pub type Goals = Vec<Goal>;
-pub type Queries = TermList;
+pub type Queries = Vec<QueryFrame>;
 
 #[derive(Default)]
 pub struct PolarVirtualMachine {
@@ -719,7 +725,10 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: Term) -> PolarResult<QueryEvent> {
-        self.queries.push(term.clone());
+        self.queries.push(QueryFrame {
+            term: term.clone(),
+            choice_index: self.choices.len(),
+        });
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
 
         match term.value {
@@ -746,7 +755,8 @@ impl PolarVirtualMachine {
         match &predicate.name.0[..] {
             // Built-in predicates.
             "cut" => self.push_goal(Goal::Cut {
-                choice_index: self.choices.len() - 1,
+                // cut goes to the last query's choice point
+                choice_index: self.queries.last().map(|q| q.choice_index).unwrap_or(0),
             })?,
             "debug" => {
                 let mut message = "Welcome to the debugger!".to_string();

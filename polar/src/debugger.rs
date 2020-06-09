@@ -176,12 +176,12 @@ impl Debugger {
     /// current query.
     fn query_source(&self, vm: &PolarVirtualMachine, num_lines: usize) -> String {
         match (vm.queries.last(), vm.source.as_ref()) {
-            (Some(query), Some((source, term))) if query.id == term.id => {
+            (Some(query), Some((source, term))) if query.term.id == term.id => {
                 source_lines(&source, term.offset, num_lines)
             }
-            (Some(query), _) => vm.kb.get_source(&query).map_or_else(
+            (Some(query), _) => vm.kb.get_source(&query.term).map_or_else(
                 || "".to_string(),
-                |source| source_lines(&source, query.offset, num_lines),
+                |source| source_lines(&source, query.term.offset, num_lines),
             ),
             _ => "".to_string(),
         }
@@ -227,14 +227,15 @@ impl Debugger {
     /// of the [`Debugger`](struct.Debugger.html) to the appropriate
     /// [`Option<Step>`](struct.Debugger.html#structfield.step).
     fn debug_command(&mut self, vm: &PolarVirtualMachine, command: &str) -> Option<Goal> {
-        fn show<T>(stack: &[T]) -> Goal
+        fn show<I>(stack: I) -> Goal
         where
-            T: std::fmt::Display,
+            I: IntoIterator,
+            I::Item: std::fmt::Display,
         {
             Goal::Debug {
                 message: stack
-                    .iter()
-                    .map(ToString::to_string)
+                    .into_iter()
+                    .map(|i| format!("{}", i))
                     .collect::<Vec<_>>()
                     .join("\n"),
             }
@@ -260,21 +261,19 @@ impl Debugger {
                     snapshot: vm.queries[..vm.queries.len() - 3].to_vec(),
                 })
             }
-            "stack" | "queries" => return Some(show(&vm.queries)),
+            "stack" | "queries" => return Some(show(vm.queries.iter().map(|q| &q.term))),
             "s" | "step" => self.step = Some(Step::Goal),
             "var" => {
                 if parts.len() > 1 {
-                    let vars: Vec<Binding> = parts[1..]
-                        .iter()
-                        .map(|var| {
-                            let var = Symbol::new(var);
-                            let value = vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
+                    let vars = parts[1..].iter().map(|var| {
+                        let var = Symbol::new(var);
+                        let value =
+                            vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
                                 Term::new(Value::Symbol(Symbol::new("<unbound>")))
                             });
-                            Binding(var, value)
-                        })
-                        .collect();
-                    return Some(show(&vars));
+                        Binding(var, value)
+                    });
+                    return Some(show(vars));
                 } else {
                     let mut vars = vm
                         .bindings(true)

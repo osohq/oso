@@ -719,3 +719,29 @@ fn test_keyword_bug() {
 
     polar.load_str("f(a) := a.in(b);").unwrap();
 }
+
+#[test]
+fn test_cut() {
+    let mut polar = Polar::new();
+    polar
+        .load_str(
+            "f(x) := g(x), h(x); g(x) := (1 = 1 | 2 = 2), ((x = 1, cut()) | x = 2); h(1); h(2);",
+        )
+        .unwrap();
+
+    // assert!(qeval(&mut polar, "f(1)"));
+    // assert!(qeval(&mut polar, "f(2)"));
+
+    // this should only reach the first choice point
+    assert_eq!(qvar(&mut polar, "f(x)", "x"), [value!(1)]);
+
+    polar.load_str("k(x) := (x = 1 | x = 2), f(x);").unwrap();
+
+    assert!(qeval(&mut polar, "k(1)"));
+    assert!(qeval(&mut polar, "k(2)"));
+    // evaluates x=2 branch twice
+    assert_eq!(
+        qvar(&mut polar, "k(x)", "x"),
+        [value!(1), value!(2), value!(2)]
+    );
+}
