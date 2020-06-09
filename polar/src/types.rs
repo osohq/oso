@@ -521,6 +521,7 @@ impl KnowledgeBase {
     }
 
     /// Add a generic rule to the knowledge base.
+    #[cfg(test)]
     pub fn add_generic_rule(&mut self, rule: GenericRule) {
         self.rules.insert(rule.name.clone(), rule);
     }

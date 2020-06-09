@@ -205,7 +205,7 @@ impl Debugger {
                 Some(Goal::Debug {
                     message: vm.queries.last().map_or_else(
                         || "".to_string(),
-                        |query| self.query_source(&query, &vm.kb.sources, 0),
+                        |query| self.query_source(&query, &vm.kb.read().unwrap().sources, 0),
                     ),
                 })
             }
@@ -247,7 +247,7 @@ impl Debugger {
                 return Some(Goal::Debug {
                     message: vm.queries.last().map_or_else(
                         || "".to_string(),
-                        |query| self.query_source(&query, &vm.kb.sources, lines),
+                        |query| self.query_source(&query, &vm.kb.read().unwrap().sources, lines),
                     ),
                 });
             }

@@ -55,7 +55,7 @@ use super::parser;
 
 // @TODO: Once the external constructor stuff and instance ids are worked out explain them.
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 pub struct Query {
     vm: PolarVirtualMachine,
@@ -86,40 +86,38 @@ pub struct Load {
 
 #[derive(Clone, Default)]
 pub struct Polar {
-    pub kb: Arc<KnowledgeBase>,
+    pub kb: Arc<RwLock<KnowledgeBase>>,
 }
 
 impl Polar {
     pub fn new() -> Self {
         Self {
-            kb: Arc::new(KnowledgeBase::new()),
+            kb: Arc::new(RwLock::new(KnowledgeBase::new())),
         }
     }
 
-    pub fn new_load(&mut self, src: &str) -> PolarResult<Load> {
-        let src_id = self.kb.new_id();
-        {
-            let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
-            kb.sources.add_source(
-                Source {
-                    filename: None,
-                    src: src.to_owned(),
-                },
-                src_id,
-            );
-        }
+    pub fn new_load(&self, src: &str) -> PolarResult<Load> {
         let mut lines = parser::parse_lines(src)?;
         lines.reverse();
+        let mut kb = self.kb.write().unwrap();
+        let src_id = kb.new_id();
+        kb.sources.add_source(
+            Source {
+                filename: None,
+                src: src.to_owned(),
+            },
+            src_id,
+        );
         Ok(Load { lines, src_id })
     }
 
-    pub fn load(&mut self, load: &mut Load) -> PolarResult<Option<Query>> {
+    pub fn load(&self, load: &mut Load) -> PolarResult<Option<Query>> {
         while let Some(line) = load.lines.pop() {
             match line {
                 parser::Line::Rule(mut rule) => {
                     let name = rule.name.clone();
-                    let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
-                    rewrite_rule(&mut rule, kb, load.src_id);
+                    let mut kb = self.kb.write().unwrap();
+                    rewrite_rule(&mut rule, &mut kb, load.src_id);
                     let generic_rule = kb.rules.entry(name.clone()).or_insert(GenericRule {
                         name,
                         rules: vec![],
@@ -135,7 +133,7 @@ impl Polar {
         Ok(None)
     }
 
-    pub fn load_str(&mut self, src: &str) -> PolarResult<()> {
+    pub fn load_str(&self, src: &str) -> PolarResult<()> {
         let mut load = self.new_load(src)?;
         while let Some(_query) = self.load(&mut load)? {
             // Queries are ignored in `load_str`.
@@ -145,17 +143,17 @@ impl Polar {
         Ok(())
     }
 
-    pub fn new_query(&mut self, src: &str) -> PolarResult<Query> {
+    pub fn new_query(&self, src: &str) -> PolarResult<Query> {
         let mut term = parser::parse_query(src)?;
-        let src_id = self.kb.new_id();
         let source = Source {
             src: src.to_string(),
             filename: None,
         };
         {
-            let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
+            let mut kb = self.kb.write().unwrap();
+            let src_id = kb.new_id();
             kb.sources.add_source(source, src_id);
-            rewrite_term(&mut term, kb, src_id);
+            rewrite_term(&mut term, &mut kb, src_id);
         }
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
@@ -164,10 +162,10 @@ impl Polar {
 
     // TODO(gj): Ensure we always pass the source along with the parsed Term for debugging / error
     // handling purposes.
-    pub fn new_query_from_term(&mut self, mut term: Term) -> Query {
+    pub fn new_query_from_term(&self, mut term: Term) -> Query {
         {
-            let kb = Arc::get_mut(&mut self.kb).expect("Couldn't get KB.");
-            rewrite_term(&mut term, kb, 0);
+            let mut kb = self.kb.write().unwrap();
+            rewrite_term(&mut term, &mut kb, 0);
         }
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
@@ -182,7 +180,7 @@ impl Polar {
     }
 
     #[cfg(feature = "repl")]
-    pub fn new_query_from_repl(&mut self) -> PolarResult<Query> {
+    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
         let s = repl.input("Enter query:");
         match s {
@@ -216,7 +214,7 @@ impl Polar {
 
     // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&self) -> u64 {
-        self.kb.new_id()
+        self.kb.read().unwrap().new_id()
     }
 }
 
@@ -224,9 +222,9 @@ impl Polar {
 mod tests {
     use super::*;
     #[test]
-    #[should_panic]
-    fn cannot_load_and_query() {
-        let mut polar = Polar::new();
+
+    fn can_load_and_query() {
+        let polar = Polar::new();
         let _query = polar.new_query("1 = 1");
         let _ = polar.load_str("f(x);");
     }
