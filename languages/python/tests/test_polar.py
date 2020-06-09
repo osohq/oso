@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from polar import Polar, exceptions, Predicate, Query
+from polar import Polar, exceptions, Predicate, Query, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
 
@@ -404,3 +404,16 @@ def test_return_list(polar):
     polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
 
     assert polar.query(Query(name="allow", args=[Actor(), "join", "party"])).success
+
+
+def test_query(load_file, polar):
+    """Test that queries work with variable arguments"""
+
+    load_file(Path(__file__).parent / "test_file.polar")
+    # plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
+
+    assert polar.query(Query(name="f", args=[Variable("a")])).results == [
+        {"a": 1},
+        {"a": 2},
+        {"a": 3},
+    ]

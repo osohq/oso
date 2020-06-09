@@ -14,6 +14,8 @@ test-requirements: .make.test-requirements-install
 
 test: test-requirements
 	pytest tests
+	pytest oso
+	$(MAKE) -C docs test
 
 fmt:
 	black .

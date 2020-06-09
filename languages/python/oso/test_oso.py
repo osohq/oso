@@ -1,5 +1,6 @@
 """Tests the Polar API as an external consumer"""
 
+from authlib.jose import jwt
 from contextlib import contextmanager
 from flask import Flask, request, Response, g
 from pathlib import Path
@@ -9,9 +10,10 @@ from dataclasses import dataclass
 
 import oso
 from oso import Oso, polar_class
+from oso.jwt import Jwt
 from polar import api
-from polar.api import Polar, Query, Jwt
-
+from polar.api import Polar, Query
+from polar.test_helpers import public_key, private_key
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
@@ -100,10 +102,6 @@ class Foo:
 @polar_class
 class Bar(Foo):
     bar: int = 1
-
-
-from authlib.jose import jwt  # type: ignore
-from polar.test_helpers import public_key, private_key
 
 
 def token(name):
