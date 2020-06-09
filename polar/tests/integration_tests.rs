@@ -686,6 +686,14 @@ fn test_in() {
     );
 
     assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
+    assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
+
+    let mut query = polar.new_query("a in {a:1}").unwrap();
+    let e = polar.query(&mut query).unwrap_err();
+    assert!(matches!(
+        e,
+        PolarError::Runtime(RuntimeError::TypeError { .. })
+    ));
 }
 
 #[test]

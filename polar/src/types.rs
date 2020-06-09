@@ -200,9 +200,9 @@ pub enum Operator {
 impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
-            Operator::In => 10,
-            Operator::Make => 9,
-            Operator::Dot => 8,
+            Operator::Make => 10,
+            Operator::Dot => 9,
+            Operator::In => 8,
             Operator::Not => 7,
             Operator::Mul => 6,
             Operator::Div => 6,

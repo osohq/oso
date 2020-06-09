@@ -835,6 +835,11 @@ impl PolarVirtualMachine {
                             right: term,
                         }])
                     }
+                } else {
+                    return Err(RuntimeError::TypeError {
+                        msg: format!("Expected list, got: {}", list.value.to_polar()),
+                    }
+                    .into());
                 }
                 self.choose(alternatives);
             }
