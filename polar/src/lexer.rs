@@ -71,6 +71,7 @@ pub enum Token {
     SemiColon, // ;
     Define,    // :=
     Query,     // ?=
+    In,        // in
 }
 
 impl ToString for Token {
@@ -106,6 +107,7 @@ impl ToString for Token {
             Token::SemiColon => ";".to_owned(), // ;
             Token::Define => ":=".to_owned(),   // :=
             Token::Query => "?=".to_owned(),    // ?=
+            Token::In => "in".to_owned(),       // in
         }
     }
 }
@@ -160,6 +162,8 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Boolean(false), last + 1)))
         } else if &self.buf == "make" {
             Some(Ok((start, Token::Make, last + 1)))
+        } else if &self.buf == "in" {
+            Some(Ok((start, Token::In, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }
@@ -404,7 +408,7 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn test_lexer() {
         let f = r#"hello "world" 12345 < + <= { ] =99 #comment
-            more;"#;
+            more; in"#;
         let mut lexer = Lexer::new(&f);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(hello), 5))) if hello == Symbol::new("hello"))
@@ -430,6 +434,7 @@ mod tests {
             matches!(lexer.next(), Some(Ok((56, Token::Symbol(more), 60))) if more == Symbol::new("more"))
         );
         assert!(matches!(lexer.next(), Some(Ok((60, Token::SemiColon, 61)))));
+        assert!(matches!(lexer.next(), Some(Ok((62, Token::In, 64)))));
         assert!(matches!(lexer.next(), None));
     }
 }

@@ -723,147 +723,11 @@ impl PolarVirtualMachine {
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
 
         match term.value {
-            Value::Call(predicate) =>
-            // Select applicable rules for predicate.
-            // Sort applicable rules by specificity.
-            // Create a choice over the applicable rules.
-            {
-                match &predicate.name.0[..] {
-                    // Built-in predicates.
-                    "cut" => self.push_goal(Goal::Cut)?,
-                    "debug" => {
-                        let mut message = "Welcome to the debugger!".to_string();
-                        if !predicate.args.is_empty() {
-                            message += &format!(
-                                "\ndebug({})",
-                                predicate
-                                    .args
-                                    .iter()
-                                    .map(|arg| self.deref(arg).to_polar())
-                                    .collect::<Vec<String>>()
-                                    .join(", ")
-                            );
-                        }
-                        self.push_goal(Goal::Debug { message })?
-                    }
-
-                    // User-defined predicates.
-                    _ => match self.kb.rules.get(&predicate.name) {
-                        None => self.push_goal(Goal::Backtrack)?,
-                        Some(generic_rule) => {
-                            let generic_rule = generic_rule.clone();
-                            assert_eq!(generic_rule.name, predicate.name);
-                            self.push_goal(Goal::SortRules {
-                                rules: generic_rule
-                                    .rules
-                                    .into_iter()
-                                    .filter(|r| r.params.len() == predicate.args.len())
-                                    .collect(),
-                                args: predicate.args.clone(),
-                                outer: 1,
-                                inner: 1,
-                            })?;
-                        }
-                    },
-                }
+            Value::Call(predicate) => {
+                self.query_for_predicate(predicate)?;
             }
-            Value::Expression(Operation { operator, mut args }) => {
-                match operator {
-                    Operator::And => self
-                        .append_goals(args.into_iter().map(|term| Goal::Query { term }).collect()),
-                    Operator::Unify => {
-                        assert_eq!(args.len(), 2);
-                        let right = args.pop().unwrap();
-                        let left = args.pop().unwrap();
-                        self.push_goal(Goal::Unify { left, right })?;
-                    }
-                    Operator::Dot => {
-                        assert_eq!(args.len(), 3);
-                        let object = self.deref(&args[0]);
-                        let field = &args[1];
-                        let value = &args[2];
-
-                        match object.value {
-                            Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
-                                dict,
-                                field: field.clone(),
-                                value: args.remove(2),
-                            })?,
-                            Value::InstanceLiteral(_) => {
-                                // Check if there's an external instance for this.
-                                // If there is, use it, if not push a make external then use it.
-                                // instantiate the instance and the predicate lookup
-                                let (object, obj_goals) = self.instantiate_externals(&object);
-                                let (field, field_goals) = self.instantiate_externals(field);
-                                args[0] = object;
-                                args[1] = field;
-                                self.push_goal(Goal::Query {
-                                    term: Term::new(Value::Expression(Operation {
-                                        operator: Operator::Dot,
-                                        args,
-                                    })),
-                                })?;
-                                self.append_goals(field_goals);
-                                self.append_goals(obj_goals);
-                            }
-                            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                                let value =
-                                    value.clone().value.symbol().expect("Bad lookup value.");
-                                let call_id = self.new_call_id(&value);
-                                let (field, mut goals) = self.instantiate_externals(field);
-
-                                goals.push(Goal::LookupExternal {
-                                    call_id,
-                                    instance_id,
-                                    field,
-                                });
-                                self.append_goals(goals);
-                            }
-                            _ => {
-                                return Err(RuntimeError::TypeError {
-                                    msg: format!(
-                                    "can only perform lookups on dicts and instances, this is {:?}",
-                                    object.value
-                                ),
-                                }
-                                .into())
-                            }
-                        }
-                    }
-                    Operator::Or => self.choose(
-                        args.iter()
-                            .cloned()
-                            .map(|term| vec![Goal::Query { term }])
-                            .collect(),
-                    ),
-                    Operator::Not => {
-                        assert_eq!(args.len(), 1);
-                        let term = args.pop().unwrap();
-                        let alternatives = vec![
-                            vec![Goal::Query { term }, Goal::Cut, Goal::Backtrack],
-                            vec![Goal::Noop],
-                        ];
-
-                        self.choose(alternatives);
-                    }
-                    op @ Operator::Lt
-                    | op @ Operator::Gt
-                    | op @ Operator::Leq
-                    | op @ Operator::Geq
-                    | op @ Operator::Eq
-                    | op @ Operator::Neq => {
-                        assert_eq!(args.len(), 2);
-                        let left = self.deref(&args[0]).value;
-                        let right = self.deref(&args[1]).value;
-                        self.comparison_helper(op, left, right)?;
-                    }
-                    _ => {
-                        return Err(RuntimeError::TypeError {
-                            msg: format!("can't query for expression: {:?}", operator),
-                        }
-                        .into())
-                    }
-                }
+            Value::Expression(Operation { operator, args }) => {
+                self.query_for_operation(operator, args)?;
             }
             _ => {
                 return Err(RuntimeError::TypeError {
@@ -873,6 +737,221 @@ impl PolarVirtualMachine {
             }
         }
         Ok(QueryEvent::None)
+    }
+
+    /// Select applicable rules for predicate.
+    /// Sort applicable rules by specificity.
+    /// Create a choice over the applicable rules.
+    fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
+        match &predicate.name.0[..] {
+            // Built-in predicates.
+            "cut" => self.push_goal(Goal::Cut)?,
+            "debug" => {
+                let mut message = "Welcome to the debugger!".to_string();
+                if !predicate.args.is_empty() {
+                    message += &format!(
+                        "\ndebug({})",
+                        predicate
+                            .args
+                            .iter()
+                            .map(|arg| self.deref(arg).to_polar())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    );
+                }
+                self.push_goal(Goal::Debug { message })?
+            }
+            // User-defined predicates.
+            _ => match self.kb.rules.get(&predicate.name) {
+                None => self.push_goal(Goal::Backtrack)?,
+                Some(generic_rule) => {
+                    let generic_rule = generic_rule.clone();
+                    assert_eq!(generic_rule.name, predicate.name);
+                    self.push_goal(Goal::SortRules {
+                        rules: generic_rule
+                            .rules
+                            .into_iter()
+                            .filter(|r| r.params.len() == predicate.args.len())
+                            .collect(),
+                        args: predicate.args.clone(),
+                        outer: 1,
+                        inner: 1,
+                    })?;
+                }
+            },
+        }
+        Ok(())
+    }
+
+    fn query_for_operation(&mut self, operator: Operator, mut args: Vec<Term>) -> PolarResult<()> {
+        match operator {
+            Operator::And => {
+                // Append a `Query` goal for each term in the args list
+                self.append_goals(args.into_iter().map(|term| Goal::Query { term }).collect())
+            }
+            Operator::Or => {
+                // Create a choice point with alternatives to query for each arg, and start on the first alternative
+                self.choose(
+                    args.into_iter()
+                        .map(|term| vec![Goal::Query { term }])
+                        .collect(),
+                )
+            }
+            Operator::Not => {
+                // Push a choice point that queries for the term; if the query succeeds cut and backtrack
+                assert_eq!(args.len(), 1);
+                let term = args.pop().unwrap();
+                let alternatives = vec![
+                    vec![Goal::Query { term }, Goal::Cut, Goal::Backtrack],
+                    vec![Goal::Noop],
+                ];
+                self.choose(alternatives);
+            }
+            Operator::Unify => {
+                // Push a `Unify` goal
+                assert_eq!(args.len(), 2);
+                let right = args.pop().unwrap();
+                let left = args.pop().unwrap();
+                self.push_goal(Goal::Unify { left, right })?
+            }
+            Operator::Dot => self.dot_op_helper(args)?,
+            op @ Operator::Lt
+            | op @ Operator::Gt
+            | op @ Operator::Leq
+            | op @ Operator::Geq
+            | op @ Operator::Eq
+            | op @ Operator::Neq => {
+                self.comparison_op_helper(op, args)?;
+            }
+            Operator::In => {
+                assert_eq!(args.len(), 2);
+                let item = &args[0];
+                let list = self.deref(&args[1]);
+                let mut alternatives = vec![];
+                if let Value::List(list) = list.value {
+                    for term in list {
+                        alternatives.push(vec![Goal::Unify {
+                            left: item.clone(),
+                            right: term,
+                        }])
+                    }
+                } else {
+                    return Err(RuntimeError::TypeError {
+                        msg: format!("Expected list, got: {}", list.value.to_polar()),
+                    }
+                    .into());
+                }
+                self.choose(alternatives);
+            }
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: format!("can't query for expression: {:?}", operator),
+                }
+                .into())
+            }
+        }
+        Ok(())
+    }
+
+    /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
+    fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
+        assert_eq!(args.len(), 3);
+        let object = self.deref(&args[0]);
+        let field = &args[1];
+        let value = &args[2];
+
+        match object.value {
+            // Push a `Lookup` goal for dictionaries
+            Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
+                dict,
+                field: field.clone(),
+                value: args.remove(2),
+            })?,
+            // Instantiate InstanceLiterals then push a new `Dot` query with the instantiated instance
+            Value::InstanceLiteral(_) => {
+                // instantiate the instance and the predicate lookup
+                let (object, obj_goals) = self.instantiate_externals(&object);
+                let (field, field_goals) = self.instantiate_externals(field);
+                args[0] = object;
+                args[1] = field;
+                self.push_goal(Goal::Query {
+                    term: Term::new(Value::Expression(Operation {
+                        operator: Operator::Dot,
+                        args,
+                    })),
+                })?;
+                self.append_goals(field_goals);
+                self.append_goals(obj_goals);
+            }
+            // Push an `ExternalLookup` goal for external instances
+            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                let value = value.clone().value.symbol().expect("Bad lookup value.");
+                let call_id = self.new_call_id(&value);
+                let (field, mut goals) = self.instantiate_externals(field);
+
+                goals.push(Goal::LookupExternal {
+                    call_id,
+                    instance_id,
+                    field,
+                });
+                self.append_goals(goals);
+            }
+            _ => {
+                return Err(RuntimeError::TypeError {
+                    msg: format!(
+                        "can only perform lookups on dicts and instances, this is {:?}",
+                        object.value
+                    ),
+                }
+                .into())
+            }
+        }
+        Ok(())
+    }
+
+    /// Evaluate numerical comparisons
+    fn comparison_op_helper(&mut self, op: Operator, args: Vec<Term>) -> PolarResult<()> {
+        assert_eq!(args.len(), 2);
+        let left = self.deref(&args[0]).value;
+        let right = self.deref(&args[1]).value;
+
+        let result: bool;
+        match (op, left, right) {
+            (Operator::Lt, Value::Integer(left), Value::Integer(right)) => {
+                result = left < right;
+            }
+            (Operator::Leq, Value::Integer(left), Value::Integer(right)) => {
+                result = left <= right;
+            }
+            (Operator::Gt, Value::Integer(left), Value::Integer(right)) => {
+                result = left > right;
+            }
+            (Operator::Geq, Value::Integer(left), Value::Integer(right)) => {
+                result = left >= right;
+            }
+            (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
+                result = left == right;
+            }
+            (Operator::Neq, Value::Integer(left), Value::Integer(right)) => {
+                result = left != right;
+            }
+            (op, left, right) => {
+                return Err(RuntimeError::TypeError {
+                    msg: format!(
+                        "{} expects integers, got: {}, {}",
+                        op.to_polar(),
+                        left.to_polar(),
+                        right.to_polar()
+                    ),
+                }
+                .into());
+            }
+        }
+        if !result {
+            self.push_goal(Goal::Backtrack)?;
+        }
+
+        Ok(())
     }
 
     /// Handle an external result provided by the application.
@@ -1284,46 +1363,6 @@ impl PolarVirtualMachine {
                 Ok(QueryEvent::None)
             }
         }
-    }
-
-    fn comparison_helper(&mut self, op: Operator, left: Value, right: Value) -> PolarResult<()> {
-        let result: bool;
-        match (op, left, right) {
-            (Operator::Lt, Value::Integer(left), Value::Integer(right)) => {
-                result = left < right;
-            }
-            (Operator::Leq, Value::Integer(left), Value::Integer(right)) => {
-                result = left <= right;
-            }
-            (Operator::Gt, Value::Integer(left), Value::Integer(right)) => {
-                result = left > right;
-            }
-            (Operator::Geq, Value::Integer(left), Value::Integer(right)) => {
-                result = left >= right;
-            }
-            (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
-                result = left == right;
-            }
-            (Operator::Neq, Value::Integer(left), Value::Integer(right)) => {
-                result = left != right;
-            }
-            (op, left, right) => {
-                return Err(RuntimeError::TypeError {
-                    msg: format!(
-                        "{} expects integers, got: {}, {}",
-                        op.to_polar(),
-                        left.to_polar(),
-                        right.to_polar()
-                    ),
-                }
-                .into());
-            }
-        }
-        if !result {
-            self.push_goal(Goal::Backtrack)?;
-        }
-
-        Ok(())
     }
 }
 

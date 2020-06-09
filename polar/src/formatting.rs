@@ -207,6 +207,7 @@ pub mod to_polar {
                 Make => "make",
                 Dot => ".",
                 Unify => "=",
+                In => "in",
             }
             .to_string()
         }
@@ -243,6 +244,11 @@ pub mod to_polar {
                 ),
                 // n-ary operators
                 Or | And => format_args(self.operator, &self.args, &self.operator.to_polar()),
+                In => format!(
+                    "{} in {}",
+                    &self.args[0].to_polar(),
+                    &self.args[1].to_polar()
+                ),
             }
         }
     }

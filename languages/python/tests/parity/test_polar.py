@@ -180,8 +180,8 @@ def test_dictionaries(tell, qeval, qvar):
     tell("deepget(d, d.hello.this.is)")
     assert qeval('deepget({hello: {this: {is: "nested"}}}, "nested")')
 
-    tell("myget(d, d.get.in)")
-    assert qeval('myget({get: {in: "nested"}}, "nested")')
+    tell("myget(d, d.get.inner)")
+    assert qeval('myget({get: {inner: "nested"}}, "nested")')
 
     tell("x({a: {b:{c:123}}})")
     tell("x({a: {y:{c:456}}})")
