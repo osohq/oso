@@ -753,8 +753,8 @@ impl PolarVirtualMachine {
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
         match &predicate.name.0[..] {
+            // Built-in predicates.
             "cut" => {
-                eprintln!("{:?}", self.queries);
                 // get the last query that is a predicate
                 let last_predicate_choice_index = self
                     .queries
@@ -769,8 +769,6 @@ impl PolarVirtualMachine {
                         }
                     })
                     .unwrap_or(0);
-                eprintln!("Last: {}", last_predicate_choice_index);
-                // Built-in predicates.
                 self.push_goal(Goal::Cut {
                     // cut goes to the last query's choice point
                     choice_index: last_predicate_choice_index,
