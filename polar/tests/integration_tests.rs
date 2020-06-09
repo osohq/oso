@@ -312,10 +312,11 @@ fn test_not() {
     assert!(qnull(&mut polar, "f(1)"));
     assert!(qeval(&mut polar, "f(2)"));
 
-    // assert!(qnull(&mut polar, "g(1)"));
+    assert!(qnull(&mut polar, "g(1)"));
     assert!(qnull(&mut polar, "g(2)"));
     assert!(qeval(&mut polar, "g(3)"));
-    assert_eq!(qvar(&mut polar, "g(x)", "x"), vec![value!(3)]);
+    assert!(qnull(&mut polar, "g(x), x=3")); // this should fail because unbound x means g(x) always fails
+    assert!(qeval(&mut polar, "x=3, g(x)"));
 }
 
 #[test]
@@ -709,12 +710,9 @@ fn test_in() {
 
     // negation
     assert!(qeval(&mut polar, "!(4 in [1,2,3])"));
-    assert!(qnull(&mut polar, "!(1=1 | 1=2)"));
-
-    assert!(qnull(&mut polar, "!(2 in [1,2])"));
-    assert!(qnull(&mut polar, "!(3 in [1,2,3])"));
     assert!(qnull(&mut polar, "!(1 in [1,2,3])"));
-    assert!(qnull(&mut polar, "!(1 in [1,2])"));
+    assert!(qnull(&mut polar, "!(2 in [1,2,3])"));
+    assert!(qnull(&mut polar, "!(3 in [1,2,3])"));
 }
 
 #[test]

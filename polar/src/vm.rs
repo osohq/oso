@@ -15,7 +15,9 @@ pub const MAX_EXECUTED_GOALS: usize = 10_000;
 #[allow(clippy::large_enum_variant)]
 pub enum Goal {
     Backtrack,
-    Cut,
+    Cut {
+        choice_index: usize, // cuts all choices in range [choice_index..]
+    },
     Debug {
         message: String,
     },
@@ -153,7 +155,7 @@ impl PolarVirtualMachine {
         self.goal_counter += 1;
         match goal {
             Goal::Backtrack => self.backtrack()?,
-            Goal::Cut => self.cut(),
+            Goal::Cut { choice_index } => self.cut(choice_index),
             Goal::Debug { message } => return Ok(self.debug(&message)),
             Goal::Halt => return Ok(self.halt()),
             Goal::Isa { left, right } => self.isa(&left, &right)?,
@@ -264,21 +266,19 @@ impl PolarVirtualMachine {
     /// choice until a backtrack occurs.  To immediately execute the choice on
     /// top of the current stack, use `choose`.
     ///
-    /// Do nothing if there are no alternatives; this saves every caller a
+    /// ~~Do nothing if there are no alternatives; this saves every caller a
     /// conditional, and maintains the invariant that only choice points with
-    /// alternatives are on the choice stack.
+    /// alternatives are on the choice stack.~~ TODO: this comment is not true any more
     fn push_choice(&mut self, mut alternatives: Alternatives) {
-        if !alternatives.is_empty() {
-            // Make sure that alternatives are executed in order of first to last.
-            alternatives.reverse();
-            assert!(self.choices.len() < MAX_CHOICES, "too many choices");
-            self.choices.push(Choice {
-                alternatives,
-                bsp: self.bsp(),
-                goals: self.goals.clone(),
-                queries: self.queries.clone(),
-            });
-        }
+        // Make sure that alternatives are executed in order of first to last.
+        alternatives.reverse();
+        assert!(self.choices.len() < MAX_CHOICES, "too many choices");
+        self.choices.push(Choice {
+            alternatives,
+            bsp: self.bsp(),
+            goals: self.goals.clone(),
+            queries: self.queries.clone(),
+        });
     }
 
     /// Push a choice onto the choice stack, and execute immediately by
@@ -435,35 +435,35 @@ impl PolarVirtualMachine {
         if std::env::var("RUST_LOG").is_ok() {
             eprintln!("⇒ backtrack");
         }
-        match self.choices.pop() {
-            None => self.push_goal(Goal::Halt),
-            Some(Choice {
-                mut alternatives,
-                bsp,
-                goals,
-                queries,
-            }) => {
-                self.bindings.drain(bsp..);
-                self.queries = queries.clone();
-                self.goals = goals.clone();
-                self.append_goals(alternatives.pop().expect("must have alternative"));
+        loop {
+            match self.choices.last_mut() {
+                None => return self.push_goal(Goal::Halt),
+                Some(Choice {
+                    alternatives,
+                    bsp,
+                    goals,
+                    queries,
+                }) => {
+                    self.bindings.drain(*bsp..);
+                    if let Some(alternative) = alternatives.pop() {
+                        self.goals = goals.clone();
+                        self.queries = queries.clone();
+                        self.append_goals(alternative);
 
-                if !alternatives.is_empty() {
-                    self.choices.push(Choice {
-                        alternatives,
-                        bsp,
-                        goals,
-                        queries,
-                    });
+                        break; // we have our alternative, end the loop
+                    }
+
+                    // falling through means no alternatives found
+                    let _ = self.choices.pop();
                 }
-                Ok(())
             }
         }
+        Ok(())
     }
 
     /// Commit to the current choice.
-    fn cut(&mut self) {
-        self.choices.pop();
+    fn cut(&mut self, index: usize) {
+        let _ = self.choices.drain(index..);
     }
 
     /// Clean up the query stack after completing a query.
@@ -745,7 +745,9 @@ impl PolarVirtualMachine {
     fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
         match &predicate.name.0[..] {
             // Built-in predicates.
-            "cut" => self.push_goal(Goal::Cut)?,
+            "cut" => self.push_goal(Goal::Cut {
+                choice_index: self.choices.len() - 1,
+            })?,
             "debug" => {
                 let mut message = "Welcome to the debugger!".to_string();
                 if !predicate.args.is_empty() {
@@ -802,7 +804,13 @@ impl PolarVirtualMachine {
                 assert_eq!(args.len(), 1);
                 let term = args.pop().unwrap();
                 let alternatives = vec![
-                    vec![Goal::Query { term }, Goal::Cut, Goal::Backtrack],
+                    vec![
+                        Goal::Query { term },
+                        Goal::Cut {
+                            choice_index: self.choices.len(),
+                        },
+                        Goal::Backtrack,
+                    ],
                     vec![Goal::Noop],
                 ];
                 self.choose(alternatives);
@@ -978,7 +986,9 @@ impl PolarVirtualMachine {
             // and backtrack.
             self.call_id_symbols.remove(&call_id).expect("bad call ID");
             self.push_goal(Goal::Backtrack)?;
-            self.push_goal(Goal::Cut)?;
+            self.push_goal(Goal::Cut {
+                choice_index: self.choices.len() - 1,
+            })?;
         }
         Ok(())
     }
@@ -1205,7 +1215,16 @@ impl PolarVirtualMachine {
                 };
                 // If the comparison fails, break out of the inner loop.
                 // If the comparison succeeds, continue the inner loop with the swapped rules.
-                self.choose(vec![vec![compare, Goal::Cut, next_inner], vec![next_outer]]);
+                self.choose(vec![
+                    vec![
+                        compare,
+                        Goal::Cut {
+                            choice_index: self.choices.len(),
+                        },
+                        next_inner,
+                    ],
+                    vec![next_outer],
+                ]);
             } else {
                 assert_eq!(inner, 0);
                 self.push_goal(next_outer)?;

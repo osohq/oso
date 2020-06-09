@@ -406,8 +406,8 @@ def test_return_list(polar):
     assert polar.query(Query(name="allow", args=[Actor(), "join", "party"])).success
 
 def test_in(polar, qeval):
-    polar.load_str("g(x, y) := debug(), !x in y;")
-    polar.load_str("f(x) := debug(), !(x=1 | x=2);")
+    polar.load_str("g(x, y) := !x in y;")
+    polar.load_str("f(x) := !(x=1 | x=2);")
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")
