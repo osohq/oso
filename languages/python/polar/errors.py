@@ -60,4 +60,3 @@ def _parse_error(kind, data):
     return parse_errors.get(
         kind, ParserException(f"Parser Exception: {json.dumps(data)}")
     )
-
