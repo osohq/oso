@@ -9,8 +9,7 @@ class Http:
     def __init__(self, path="", query={}, hostname=None):
         self.path = path
         self.query = query
-        if hostname:
-            self.hostname = hostname
+        self.hostname = hostname
 
     def __repr__(self):
         return str(self)
