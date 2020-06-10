@@ -7,4 +7,4 @@ class Env:
         yield os.environ[variable]
 
 
-api.register_python_class(Env)
+api.register_class(Env)

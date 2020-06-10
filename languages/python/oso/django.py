@@ -10,4 +10,4 @@ def add_model(model):
             return model.objects.get(**actual_kwargs)
 
     setattr(model, "_from_polar", from_polar)
-    Polar().register_python_class(model, from_polar=model._from_polar)
+    Polar().register_class(model, from_polar=model._from_polar)

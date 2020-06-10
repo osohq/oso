@@ -12,7 +12,7 @@ import oso
 from oso import Oso, polar_class
 from oso.jwt import Jwt
 from polar import api
-from polar.api import Polar, Query
+from polar.api import Polar, Predicate
 from polar.test_helpers import public_key, private_key
 
 # Fake global actor name → company ID map.
@@ -77,6 +77,7 @@ class Company:
 @pytest.fixture(scope="module")
 def test_oso():
     _oso = Oso()
+    _oso.register_class(Jwt)
     # import the test policy
     _oso.load(Path(__file__).parent / "test_oso.polar")
 
@@ -91,7 +92,9 @@ def test_decorators(test_oso):
     actor = Actor(name="president")
     action = "create"
     resource = Company(id="1")
-    assert test_oso.query(Query(name="allow", args=(actor, action, resource))).success
+    assert test_oso._query_pred(
+        Predicate(name="allow", args=(actor, action, resource))
+    ).success
 
 
 @polar_class

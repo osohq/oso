@@ -984,8 +984,7 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    /// Handle an external response to ExternalIsSubSpecializer,
-    /// ExternalIsa, and ExternalUnify.
+    /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
     pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
         self.bind(
             &self
@@ -1125,11 +1124,21 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // external instances can unify if they are exactly the same type, i.e. have
-            // the same instance ID
-            // this is necessary for the case that an instance appears multiple times
-            // in the same rule head, for example
-            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
+            // TODO(gj): Is this case necessary to handle at all? What is an example rule that
+            // would lead to this? When would you need to unify an instance with itself?
+            //
+            // External instances can unify if they are the same instance, i.e., have the same
+            // instance ID. This is necessary for the case where an instance appears multiple times
+            // in the same rule head. For example, `f(foo, foo) := ...` or `isa(x, y, x: y) := ...`
+            // or `max(x, y, x) := x > y;`.
+            (
+                Value::ExternalInstance(ExternalInstance {
+                    instance_id: left, ..
+                }),
+                Value::ExternalInstance(ExternalInstance {
+                    instance_id: right, ..
+                }),
+            ) if left != right => {
                 return Err((RuntimeError::TypeError {
                     msg: String::from("Cannot unify two external instances."),
                 })
