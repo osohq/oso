@@ -6,7 +6,7 @@ from pathlib import Path
 
 from polar.api import Http, Polar
 
-if not os.environ["OSO_COMPAT"]:
+if not os.getenv("OSO_COMPAT"):
     from polar.api import Predicate
 else:
     from polar.api import Query
