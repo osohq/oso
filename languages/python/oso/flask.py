@@ -1,3 +1,8 @@
+from typing import Any, Callable, List
+from . import Oso
+from polar.api import Http, Query
+
+
 class OsoFlask(Oso):
     """Flask-specific oso functionality"""
 
@@ -22,7 +27,7 @@ class OsoFlask(Oso):
         if not credentials:
             credentials = {}
         action = request.method.lower()
-        resource = api.Http(path=request.path, hostname=hostname)
+        resource = Http(path=request.path, hostname=hostname)
         query = Query(name="allow", args=(credentials, action, resource))
         return list(f(r) for r in self.query(query, single=True).results if f(r))
 
@@ -42,6 +47,6 @@ class OsoFlask(Oso):
         if not credentials:
             credentials = {}
         action = request.method.lower()
-        resource = api.Http(path=request.path, hostname=hostname)
+        resource = Http(path=request.path, hostname=hostname)
         query = Query(name="allow", args=(credentials, action, resource))
         return self.query(query, single=True).success
