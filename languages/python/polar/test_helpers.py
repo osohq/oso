@@ -30,7 +30,7 @@ def tell(polar):
         if not f.endswith(";"):
             f += ";"
 
-        polar.load_str(f)
+        polar._load_str(f)
 
     return _tell
 
@@ -50,7 +50,7 @@ def query(polar):
     """ Query something and return the results as a list """
 
     def _query(q):
-        return list(polar.query_str(q))
+        return list(polar._query_str(q))
 
     return _query
 

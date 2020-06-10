@@ -91,7 +91,7 @@ def test_decorators(test_oso):
     actor = Actor(name="president")
     action = "create"
     resource = Company(id="1")
-    assert test_oso.query_pred(
+    assert test_oso._query_pred(
         Query(name="allow", args=(actor, action, resource))
     ).success
 

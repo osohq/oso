@@ -57,7 +57,7 @@ class Polar:
         self.calls = {}
 
         # Load built-in `isa()` rule.
-        self.load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
+        self._load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
         # Register built-in classes.
         self.register_class(Http)
         self.register_class(PathMapper)
@@ -67,7 +67,7 @@ class Polar:
         lib.polar_free(self.polar)
 
     def _to_polar_term(self, value):
-        return to_polar_term(value, self._cache_instance)
+        return to_polar_term(value, self.__cache_instance)
 
     def load(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
@@ -83,25 +83,25 @@ class Polar:
 
     def _load_queued_files(self):
         """Load queued policy files into the knowledge base."""
-        self._clear_instances()
+        self.__clear_instances()
         while self.load_queue:
             with open(self.load_queue.pop(0)) as file:
-                self.load_str(file.read())
+                self._load_str(file.read())
 
-    def _cache_instance(self, instance, id=None):
+    def __cache_instance(self, instance, id=None):
         """Cache Python instance under externally generated id."""
         if id is None:
             id = new_id(self.polar)
         self.instances[id] = instance
         return id
 
-    def _get_instance(self, id):
+    def __get_instance(self, id):
         """Look up Python instance by id."""
         if id not in self.instances:
             raise PolarRuntimeException(f"Unregistered instance: {id}.")
         return self.instances[id]
 
-    def _clear_instances(self):
+    def __clear_instances(self):
         self.instances = {}
 
     def register_class(self, cls, from_polar=None):
@@ -112,32 +112,32 @@ class Polar:
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
 
-    def load_str(self, string):
+    def _load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
-        load_str(self.polar, string, self._run_query)
+        load_str(self.polar, string, self.__run_query)
 
-    def to_python(self, v):
+    def _to_python(self, v):
         """ Convert polar terms to python values """
         value = v["value"]
         tag = [*value][0]
         if tag in ["Integer", "String", "Boolean"]:
             return value[tag]
         elif tag == "List":
-            return [self.to_python(e) for e in value[tag]]
+            return [self._to_python(e) for e in value[tag]]
         elif tag == "Dictionary":
-            return {k: self.to_python(v) for k, v in value[tag]["fields"].items()}
+            return {k: self._to_python(v) for k, v in value[tag]["fields"].items()}
         elif tag == "ExternalInstance":
-            return self._get_instance(value[tag]["instance_id"])
+            return self.__get_instance(value[tag]["instance_id"])
         elif tag == "InstanceLiteral":
             # TODO(gj): Should InstanceLiterals ever be making it to Python?
             # convert instance literals to external instances
             cls_name = value[tag]["tag"]
             fields = value[tag]["fields"]["fields"]
-            return self._make_external_instance(cls_name, fields)
+            return self.__make_external_instance(cls_name, fields)
         elif tag == "Call":
             return Predicate(
                 name=value[tag]["name"],
-                args=[self.to_python(v) for v in value[tag]["args"]],
+                args=[self._to_python(v) for v in value[tag]["args"]],
             )
         elif tag == "Symbol":
             raise PolarRuntimeException(
@@ -145,7 +145,7 @@ class Polar:
             )
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
-    def _make_external_instance(self, cls_name, fields, instance_id=None):
+    def __make_external_instance(self, cls_name, fields, instance_id=None):
         """Make new instance of external class."""
         if cls_name not in self.classes:
             raise PolarRuntimeException(f"Unregistered class: {cls_name}.")
@@ -157,36 +157,36 @@ class Polar:
             # If constructor is a string, look it up on the class.
             if isinstance(constructor, str):
                 constructor = getattr(cls, constructor)
-            fields = {k: self.to_python(v) for k, v in fields.items()}
+            fields = {k: self._to_python(v) for k, v in fields.items()}
             if constructor:
                 instance = constructor(**fields)
             else:
                 instance = cls(**fields)
-            self._cache_instance(instance, instance_id)
+            self.__cache_instance(instance, instance_id)
             return instance
         except Exception as e:
             raise PolarRuntimeException(
                 f"Error constructing instance of {cls_name}: {e}"
             )
 
-    def _handle_make_external(self, data):
+    def __handle_make_external(self, data):
         id = data["instance_id"]
         if id in self.instances:
             raise PolarRuntimeException(f"Instance {id} already registered.")
         cls_name = data["instance"]["tag"]
         fields = data["instance"]["fields"]["fields"]
-        self._make_external_instance(cls_name, fields, id)
+        self.__make_external_instance(cls_name, fields, id)
 
-    def _handle_external_call(self, query, data):
+    def __handle_external_call(self, query, data):
         call_id = data["call_id"]
 
         if call_id not in self.calls:
             instance_id = data["instance_id"]
             attribute = data["attribute"]
-            args = [self.to_python(arg) for arg in data["args"]]
+            args = [self._to_python(arg) for arg in data["args"]]
 
             # Lookup the attribute on the instance.
-            instance = self._get_instance(instance_id)
+            instance = self.__get_instance(instance_id)
             try:
                 attr = getattr(instance, attribute)
             except AttributeError:
@@ -213,23 +213,23 @@ class Polar:
         # Return the next result of the call.
         try:
             value = next(self.calls[call_id])
-            stringified = stringify(value, self._cache_instance)
+            stringified = stringify(value, self.__cache_instance)
             external_call(self.polar, query, call_id, stringified)
         except StopIteration:
             external_call(self.polar, query, call_id, None)
 
-    def _handle_external_isa(self, query, data):
+    def __handle_external_isa(self, query, data):
         cls_name = data["class_tag"]
         if cls_name in self.classes:
-            instance = self._get_instance(data["instance_id"])
+            instance = self.__get_instance(data["instance_id"])
             cls = self.classes[cls_name]
             isa = isinstance(instance, cls)
         else:
             isa = False
         external_answer(self.polar, query, data["call_id"], isa)
 
-    def _handle_external_is_subspecializer(self, query, data):
-        mro = self._get_instance(data["instance_id"]).__class__.__mro__
+    def __handle_external_is_subspecializer(self, query, data):
+        mro = self.__get_instance(data["instance_id"]).__class__.__mro__
         try:
             left = self.classes[data["left_class_tag"]]
             right = self.classes[data["right_class_tag"]]
@@ -239,14 +239,14 @@ class Polar:
         finally:
             external_answer(self.polar, query, data["call_id"], is_subspecializer)
 
-    def _handle_debug(self, query, data):
+    def __handle_debug(self, query, data):
         if data["message"]:
             print(data["message"])
         command = input("> ")
-        stringified = stringify(command, self._cache_instance)
+        stringified = stringify(command, self.__cache_instance)
         check_result(lib.polar_debug_command(self.polar, query, stringified))
 
-    def _run_query(self, q):
+    def __run_query(self, q):
         """Method which performs the query loop over an already constructed query"""
         with manage_query(q) as query:
             while True:
@@ -258,31 +258,31 @@ class Polar:
                 data = event[kind]
 
                 if kind == "MakeExternal":
-                    self._handle_make_external(data)
+                    self.__handle_make_external(data)
                 if kind == "ExternalCall":
-                    self._handle_external_call(query, data)
+                    self.__handle_external_call(query, data)
                 if kind == "ExternalIsa":
-                    self._handle_external_isa(query, data)
+                    self.__handle_external_isa(query, data)
                 if kind == "ExternalIsSubSpecializer":
-                    self._handle_external_is_subspecializer(query, data)
+                    self.__handle_external_is_subspecializer(query, data)
                 if kind == "Debug":
-                    self._handle_debug(query, data)
+                    self.__handle_debug(query, data)
                 if kind == "Result":
-                    yield {k: self.to_python(v) for k, v in data["bindings"].items()}
+                    yield {k: self._to_python(v) for k, v in data["bindings"].items()}
 
-    def query_str(self, string):
+    def _query_str(self, string):
         self._load_queued_files()
         string = to_c_str(string)
         query = check_result(lib.polar_new_query(self.polar, string))
-        yield from self._run_query(query)
+        yield from self.__run_query(query)
 
-    def query_pred(self, query: Predicate, debug=False, single=False):
+    def _query_pred(self, query: Predicate, debug=False, single=False):
         """Query the knowledge base."""
         self._load_queued_files()
-        query = stringify(query, self._cache_instance)
+        query = stringify(query, self.__cache_instance)
         query = check_result(lib.polar_new_query_from_term(self.polar, query))
         results = []
-        for res in self._run_query(query):
+        for res in self.__run_query(query):
             results.append(res)
             if single:
                 break
@@ -303,7 +303,7 @@ class Polar:
             if is_null(query):
                 print("Query error: ", get_error())
                 break
-            for res in self._run_query(query):
+            for res in self.__run_query(query):
                 had_result = True
                 print(f"Result: {res}")
             if not had_result:

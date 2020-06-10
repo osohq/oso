@@ -51,7 +51,7 @@ class Oso(api.Polar):
         :return: ``True`` if the request is allowed, ``False`` otherwise.
         """
         # actor + resource are python classes
-        return self.query_pred(
+        return self._query_pred(
             Predicate(name="allow", args=[actor, action, resource]),
             debug=debug,
             single=True,
