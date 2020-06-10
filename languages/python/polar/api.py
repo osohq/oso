@@ -20,7 +20,7 @@ from .ffi import (
     Predicate,
     stringify,
     to_c_str,
-    to_polar,
+    to_polar_term,
     unstringify,
     Variable,
 )
@@ -67,8 +67,8 @@ class Polar:
         # Not usually needed but useful for tests since we make a lot of these.
         lib.polar_free(self.polar)
 
-    def to_polar(self, value):
-        return to_polar(value, self._cache_instance)
+    def to_polar_term(self, value):
+        return to_polar_term(value, self._cache_instance)
 
     def load(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base

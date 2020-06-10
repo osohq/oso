@@ -49,8 +49,8 @@ def to_c_str(string):
     return ffi.new("char[]", string.encode())
 
 
-def to_polar(v, new_id):
-    """ Convert python values to polar terms """
+def to_polar_term(v, new_id):
+    """Convert Python values to Polar terms."""
     if isinstance(v, bool):
         val = {"Boolean": v}
     elif isinstance(v, int):
@@ -58,11 +58,17 @@ def to_polar(v, new_id):
     elif isinstance(v, str):
         val = {"String": v}
     elif isinstance(v, list):
-        val = {"List": [to_polar(i, new_id) for i in v]}
+        val = {"List": [to_polar_term(i, new_id) for i in v]}
     elif isinstance(v, dict):
-        val = {"Dictionary": {"fields": {k: to_polar(v, new_id) for k, v in v.items()}}}
+        val = {
+            "Dictionary": {
+                "fields": {k: to_polar_term(v, new_id) for k, v in v.items()}
+            }
+        }
     elif isinstance(v, Predicate):
-        val = {"Call": {"name": v.name, "args": [to_polar(v, new_id) for v in v.args]}}
+        val = {
+            "Call": {"name": v.name, "args": [to_polar_term(v, new_id) for v in v.args]}
+        }
     elif isinstance(v, Variable):
         # This is supported so that we can query for unbound variables
         val = {"Symbol": v}
@@ -73,7 +79,7 @@ def to_polar(v, new_id):
 
 
 def stringify(value, new_id):
-    formatted = to_polar(value, new_id)
+    formatted = to_polar_term(value, new_id)
     dumped = json.dumps(formatted)
     return to_c_str(dumped)
 
