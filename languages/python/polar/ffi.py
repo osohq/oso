@@ -117,7 +117,7 @@ def _check_inline_queries(polar, load, do_query):
     while True:
         query = ffi.new("polar_Query **")
         check_result(lib.polar_load(polar, load, query))
-        if query[0] == ffi.NULL:  # Load is done
+        if is_null(query[0]):  # Load is done
             break
         else:
             try:
