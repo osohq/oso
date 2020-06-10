@@ -22,10 +22,7 @@ from polar.test_helpers import tell, qvar, query, oso_monkeypatch as polar_monke
 if not os.getenv("OSO_COMPAT"):
     from polar.api import Predicate
 else:
-    from polar.api import Query
-
-    class Predicate(Query):
-        pass
+    from polar.api import Query as Predicate
 
     setattr(Polar, "register_class", Polar.register_python_class)
     setattr(Polar, "_to_python", Polar.to_python)
