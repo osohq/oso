@@ -4,7 +4,17 @@ import pytest
 
 from pathlib import Path
 
-from polar.api import Http, Polar, Predicate
+from polar.api import Http, Polar
+
+if not os.environ["OSO_COMPAT"]:
+    from polar.api import Predicate
+else:
+    from polar.api import Query
+
+    class Predicate(Query):
+        pass
+
+
 from polar.exceptions import PolarRuntimeException, PolarApiException
 
 from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
