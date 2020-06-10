@@ -37,15 +37,10 @@ class QueryResult:
         self.success = len(results) > 0
 
 
-# These need to be global for now...
-# So that register_class works from anywhere
-# @TODO: Fix all examples to call polar.register_class and deprecate this.
+# @TODO: Fix this! These need to be global for now so that `Oso.register_class`
+# works from anywhere.
 CLASSES = {}
 CLASS_CONSTRUCTORS = {}
-
-
-def register_class(cls, from_polar=None):
-    Polar().register_class(cls, from_polar)
 
 
 class Polar:
@@ -60,8 +55,12 @@ class Polar:
         self.class_constructors = CLASS_CONSTRUCTORS
         self.instances = {}
         self.calls = {}
-        # set up the builtin isa rule
+
+        # Load built-in `isa()` rule.
         self.load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
+        # Register built-in classes.
+        self.register_class(Http)
+        self.register_class(PathMapper)
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -309,7 +308,3 @@ class Polar:
                 print(f"Result: {res}")
             if not had_result:
                 print("False")
-
-
-register_class(Http)
-register_class(PathMapper)
