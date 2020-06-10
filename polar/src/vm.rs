@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::string::ToString;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
-use super::debugger::{Debugger, Event};
+use super::debugger::{DebugEvent, Debugger};
 use super::types::*;
 use super::ToPolarString;
 
@@ -102,11 +102,8 @@ pub struct PolarVirtualMachine {
 
     pub debugger: Debugger,
 
-    /// Source string and term for original query.
-    pub source: Option<(Source, Term)>,
-
     /// Rules and types.
-    pub kb: Arc<KnowledgeBase>,
+    pub kb: Arc<RwLock<KnowledgeBase>>,
 
     /// Instance Literal -> External Instance table.
     instances: HashMap<InstanceLiteral, ExternalInstance>,
@@ -118,7 +115,7 @@ pub struct PolarVirtualMachine {
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
     /// Reverse the goal list for the sanity of callers.
-    pub fn new(kb: Arc<KnowledgeBase>, mut goals: Goals) -> Self {
+    pub fn new(kb: Arc<RwLock<KnowledgeBase>>, mut goals: Goals) -> Self {
         goals.reverse();
         Self {
             goals,
@@ -127,15 +124,14 @@ impl PolarVirtualMachine {
             goal_counter: 0,
             queries: vec![],
             debugger: Debugger::default(),
-            source: None,
             kb,
             instances: HashMap::new(),
             call_id_symbols: HashMap::new(),
         }
     }
 
-    pub fn new_id(&mut self) -> u64 {
-        self.kb.new_id()
+    pub fn new_id(&self) -> u64 {
+        self.kb.read().expect("Couldn't acquire lock.").new_id()
     }
 
     fn new_call_id(&mut self, symbol: &Symbol) -> u64 {
@@ -183,7 +179,7 @@ impl PolarVirtualMachine {
             Goal::Noop => {}
             Goal::Query { term } => {
                 let result = self.query(term);
-                self.maybe_break(Event::Query)?;
+                self.maybe_break(DebugEvent::Query)?;
                 return result;
             }
             Goal::PopQuery { .. } => self.pop_query(),
@@ -216,7 +212,7 @@ impl PolarVirtualMachine {
                 QueryEvent::None => (),
                 event => return Ok(event),
             }
-            self.maybe_break(Event::Goal(goal.to_string()))?;
+            self.maybe_break(DebugEvent::Goal(goal.to_string()))?;
         }
 
         if std::env::var("RUST_LOG").is_ok() {
@@ -410,14 +406,14 @@ impl PolarVirtualMachine {
 
     /// Generate a fresh set of variables for a rule
     /// by renaming them to temporaries.
-    fn rename_vars(&mut self, rule: &Rule) -> Rule {
+    fn rename_vars(&self, rule: &Rule) -> Rule {
         let mut renames = HashMap::<Symbol, Symbol>::new();
         rule.map(&mut move |value| match value {
             Value::Symbol(sym) => {
                 if let Some(new) = renames.get(sym) {
                     Value::Symbol(new.clone())
                 } else {
-                    let new = self.kb.gensym(&sym.0);
+                    let new = self.kb.read().unwrap().gensym(&sym.0);
                     renames.insert(sym.clone(), new.clone());
                     Value::Symbol(new)
                 }
@@ -472,7 +468,7 @@ impl PolarVirtualMachine {
     }
 
     /// Interact with the debugger.
-    fn debug(&mut self, message: &str) -> QueryEvent {
+    fn debug(&self, message: &str) -> QueryEvent {
         QueryEvent::Debug {
             message: message.to_string(),
         }
@@ -546,7 +542,7 @@ impl PolarVirtualMachine {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
                 for (field, right_value) in right.fields.iter() {
-                    let left_value = self.kb.gensym("isa_value");
+                    let left_value = self.kb.read().unwrap().gensym("isa_value");
                     let call_id = self.new_call_id(&left_value);
                     let lookup = Goal::LookupExternal {
                         instance_id: left.instance_id,
@@ -690,7 +686,7 @@ impl PolarVirtualMachine {
         instance_id: u64,
         literal: InstanceLiteral,
     ) -> PolarResult<QueryEvent> {
-        let result = self.kb.gensym("isa");
+        let result = self.kb.read().unwrap().gensym("isa");
         let call_id = self.new_call_id(&result);
 
         self.push_goal(Goal::Unify {
@@ -705,7 +701,7 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn make_external(&mut self, literal: InstanceLiteral, instance_id: u64) -> QueryEvent {
+    pub fn make_external(&self, literal: InstanceLiteral, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
             instance_id,
             instance: literal,
@@ -762,23 +758,28 @@ impl PolarVirtualMachine {
                 self.push_goal(Goal::Debug { message })?
             }
             // User-defined predicates.
-            _ => match self.kb.rules.get(&predicate.name) {
-                None => self.push_goal(Goal::Backtrack)?,
-                Some(generic_rule) => {
-                    let generic_rule = generic_rule.clone();
-                    assert_eq!(generic_rule.name, predicate.name);
-                    self.push_goal(Goal::SortRules {
-                        rules: generic_rule
-                            .rules
-                            .into_iter()
-                            .filter(|r| r.params.len() == predicate.args.len())
-                            .collect(),
-                        args: predicate.args.clone(),
-                        outer: 1,
-                        inner: 1,
-                    })?;
+            _ => {
+                let generic_rule = {
+                    let kb = self.kb.read().unwrap();
+                    kb.rules.get(&predicate.name).cloned()
+                };
+                match generic_rule {
+                    None => self.push_goal(Goal::Backtrack)?,
+                    Some(generic_rule) => {
+                        assert_eq!(generic_rule.name, predicate.name);
+                        self.push_goal(Goal::SortRules {
+                            rules: generic_rule
+                                .rules
+                                .into_iter()
+                                .filter(|r| r.params.len() == predicate.args.len())
+                                .collect(),
+                            args: predicate.args.clone(),
+                            outer: 1,
+                            inner: 1,
+                        })?;
+                    }
                 }
-            },
+            }
         }
         Ok(())
     }
@@ -1261,7 +1262,7 @@ impl PolarVirtualMachine {
                 // that aren't the same and you can compare them and ask which one is more specific
                 // to the relevant argument, you're done.
                 if left_spec != right_spec {
-                    let answer = self.kb.gensym("is_subspecializer");
+                    let answer = self.kb.read().unwrap().gensym("is_subspecializer");
                     // Bind answer to false as a starting point in case is subspecializer doesn't
                     // bind any result.
                     // This is done here for safety to avoid a bug where `answer` is unbound by
@@ -1474,7 +1475,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(Arc::new(kb), vec![goal]);
+        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), vec![goal]);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -1831,7 +1832,7 @@ mod tests {
     #[test]
     fn debug() {
         let mut vm = PolarVirtualMachine::new(
-            Arc::new(KnowledgeBase::new()),
+            Arc::new(RwLock::new(KnowledgeBase::new())),
             vec![Goal::Debug {
                 message: "Hello".to_string(),
             }],
@@ -1844,7 +1845,10 @@ mod tests {
 
     #[test]
     fn halt() {
-        let mut vm = PolarVirtualMachine::new(Arc::new(KnowledgeBase::new()), vec![Goal::Halt]);
+        let mut vm = PolarVirtualMachine::new(
+            Arc::new(RwLock::new(KnowledgeBase::new())),
+            vec![Goal::Halt],
+        );
         let _ = vm.run().unwrap();
         assert_eq!(vm.goals.len(), 0);
         assert_eq!(vm.bindings.len(), 0);
@@ -1859,7 +1863,7 @@ mod tests {
         let one = value!(1);
         let vals = term!([zero.clone(), one.clone()]);
         let mut vm = PolarVirtualMachine::new(
-            Arc::new(KnowledgeBase::new()),
+            Arc::new(RwLock::new(KnowledgeBase::new())),
             vec![Goal::Unify {
                 left: vars,
                 right: vals,
@@ -1911,7 +1915,7 @@ mod tests {
 
     #[test]
     fn test_gen_var() {
-        let mut vm = PolarVirtualMachine::default();
+        let vm = PolarVirtualMachine::default();
 
         let rule = Rule {
             name: Symbol::new("foo"),
@@ -1966,7 +1970,7 @@ mod tests {
         kb.add_generic_rule(bar_rule);
 
         let mut vm = PolarVirtualMachine::new(
-            Arc::new(kb),
+            Arc::new(RwLock::new(kb)),
             vec![query!(pred!(
                 "bar",
                 [instance!("doesn't"), instance!("matter"), sym!("z")]
@@ -2030,7 +2034,7 @@ mod tests {
             fields: btreemap! {sym!("a") => term!("a")},
         }));
 
-        let answer = vm.kb.gensym("is_subspecializer");
+        let answer = vm.kb.read().unwrap().gensym("is_subspecializer");
 
         match vm
             .is_subspecializer(answer.clone(), left, right, arg)

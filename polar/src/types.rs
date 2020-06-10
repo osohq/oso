@@ -355,43 +355,6 @@ impl Term {
             }
         };
     }
-
-    // Generates ids for term and all sub terms. Returns vec of new term ids.
-    pub fn gen_ids(&mut self, kb: &mut KnowledgeBase, src_id: u64) {
-        kb.add_term_source(self, src_id);
-        match &mut self.value {
-            Value::Integer(_) => (),
-            Value::String(_) => (),
-            Value::Boolean(_) => (),
-            Value::ExternalInstance(_) => (),
-            Value::InstanceLiteral(instance) => {
-                for (_, t) in &mut instance.fields.fields.iter_mut() {
-                    t.gen_ids(kb, src_id);
-                }
-            }
-            Value::Dictionary(dict) => {
-                for (_, t) in &mut dict.fields.iter_mut() {
-                    t.gen_ids(kb, src_id);
-                }
-            }
-            Value::Call(pred) => {
-                for t in &mut pred.args.iter_mut() {
-                    t.gen_ids(kb, src_id);
-                }
-            }
-            Value::List(list) => {
-                for t in &mut list.iter_mut() {
-                    t.gen_ids(kb, src_id);
-                }
-            }
-            Value::Symbol(_) => (),
-            Value::Expression(op) => {
-                for t in &mut op.args.iter_mut() {
-                    t.gen_ids(kb, src_id);
-                }
-            }
-        };
-    }
 }
 
 pub fn unwrap_and(term: Term) -> TermList {
@@ -502,14 +465,33 @@ pub struct Source {
 }
 
 #[derive(Default)]
+pub struct Sources {
+    // Pair of maps to go from Term ID -> Source ID -> Source.
+    sources: HashMap<u64, Source>,
+    term_sources: HashMap<u64, u64>,
+}
+
+impl Sources {
+    pub fn add_source(&mut self, source: Source, id: u64) {
+        self.sources.insert(id, source);
+    }
+
+    pub fn add_term_source(&mut self, term: &Term, src_id: u64) {
+        self.term_sources.insert(term.id, src_id);
+    }
+
+    pub fn get_source(&self, term: &Term) -> Option<Source> {
+        self.term_sources
+            .get(&term.id)
+            .and_then(|term_source| self.sources.get(&term_source).cloned())
+    }
+}
+
+#[derive(Default)]
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
-
-    // Pair of maps to go from Term ID -> Source ID -> Source.
-    pub sources: HashMap<u64, Source>,
-    pub term_sources: HashMap<u64, u64>,
-
+    pub sources: Sources,
     // For temporary variable names, call IDs, instance IDs, symbols, etc.
     counter: AtomicU64,
 }
@@ -519,27 +501,9 @@ impl KnowledgeBase {
         Self {
             types: HashMap::new(),
             rules: HashMap::new(),
-            sources: HashMap::new(),
-            term_sources: HashMap::new(),
+            sources: Sources::default(),
             counter: AtomicU64::new(1),
         }
-    }
-
-    pub fn add_source(&mut self, source: Source) -> u64 {
-        let id = self.new_id();
-        self.sources.insert(id, source);
-        id
-    }
-
-    pub fn add_term_source(&mut self, term: &mut Term, src_id: u64) {
-        term.id = self.new_id();
-        self.term_sources.insert(term.id, src_id);
-    }
-
-    pub fn get_source(&self, term: &Term) -> Option<Source> {
-        self.term_sources
-            .get(&term.id)
-            .and_then(|term_source| self.sources.get(&term_source).cloned())
     }
 
     /// Return a monotonically increasing integer ID.
@@ -557,6 +521,7 @@ impl KnowledgeBase {
     }
 
     /// Add a generic rule to the knowledge base.
+    #[cfg(test)]
     pub fn add_generic_rule(&mut self, rule: GenericRule) {
         self.rules.insert(rule.name.clone(), rule);
     }
