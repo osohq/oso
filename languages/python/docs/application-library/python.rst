@@ -39,7 +39,7 @@ be made.
 Registering application classes with Polar
 ==========================================
 
-Python classes can be registered as :ref:`application-types` with Polar using either the :py:func:`oso.register_python_class` function or the
+Python classes can be registered as :ref:`application-types` with Polar using either the :py:func:`oso.register_class` function or the
 :py:func:`oso.polar_class` decorator.
 
 The class's fields, class variables, and methods may then be accessed from within Polar as well.

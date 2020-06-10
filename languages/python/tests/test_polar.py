@@ -92,7 +92,7 @@ def test_external(polar, qvar):
     def capital_foo():
         return Foo(a="A")
 
-    polar.register_python_class(Foo, from_polar=capital_foo)
+    polar.register_class(Foo, from_polar=capital_foo)
     assert qvar("Foo{}.a = x", "x", one=True) == "A"
     assert qvar("Foo{}.a() = x", "x", one=True) == "A"
     assert qvar("Foo{}.b = x", "x", one=True) == "b"
@@ -133,10 +133,10 @@ def test_class_specializers(polar, qvar, qeval, query):
         def x(self):
             return "X"
 
-    polar.register_python_class(A)
-    polar.register_python_class(B)
-    polar.register_python_class(C)
-    polar.register_python_class(X)
+    polar.register_class(A)
+    polar.register_class(B)
+    polar.register_class(C)
+    polar.register_class(X)
 
     rules = """
     test(A{});
@@ -174,7 +174,7 @@ def test_dict_specializers(polar, qvar, qeval, query):
             self.genus = genus
             self.species = species
 
-    polar.register_python_class(Animal)
+    polar.register_class(Animal)
 
     rules = """
     what_is(animal: {genus: "canis"}, res) := res = "canine";
@@ -203,7 +203,7 @@ def test_class_field_specializers(polar, qvar, qeval, query):
             self.species = species
             self.family = family
 
-    polar.register_python_class(Animal)
+    polar.register_class(Animal)
 
     rules = """
     what_is(animal: Animal{}, res) := res = "animal";
@@ -253,7 +253,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
             self.species = species
             self.family = family
 
-    polar.register_python_class(Animal)
+    polar.register_class(Animal)
 
     # load rules
     rules = """
@@ -386,7 +386,7 @@ def test_return_list(polar):
         def groups(self):
             return ["engineering", "social", "admin"]
 
-    polar.register_python_class(Actor)
+    polar.register_class(Actor)
 
     # for testing lists
     polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')

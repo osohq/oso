@@ -30,7 +30,7 @@ How would we read that environment variable from polar though? We can use a cust
    :lines: 1-7
 
 The above class exposes a `var` method that reads the application's environment variables and returns the value asked for.
-We can then register the class with :python:`register_python_class`, which will let us use it in polar rules.
+We can then register the class with :python:`register_class`, which will let us use it in polar rules.
 
 We can add a new allow rule that allows an actor to access a resource if the application is in development mode.
 

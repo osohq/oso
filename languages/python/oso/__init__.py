@@ -41,7 +41,7 @@ class Oso(api.Polar):
 
         Uses allow rules in the Polar policy to determine whether a request is
         permitted. ``actor`` and ``resource`` should be classes that have been
-        registered with Polar using the :py:func:`register_python_class` function or
+        registered with Polar using the :py:func:`register_class` function or
         the ``polar_class`` decorator.
 
         :param actor: The actor performing the request.
@@ -59,14 +59,14 @@ class Oso(api.Polar):
 
 
 def polar_class(_cls=None, *, from_polar=None):
-    """Decorator to register a Python class with Polar. An alternative to ``register_python_class()``.
+    """Decorator to register a Python class with Polar. An alternative to ``register_class()``.
 
     :param str from_polar: Name of static class function to create a new class instance from ``fields``.
                             Defaults to class constructor.
     """
 
     def wrap(cls):
-        Polar().register_python_class(cls, from_polar)
+        Polar().register_class(cls, from_polar)
         return cls
 
     if _cls is None:

@@ -38,14 +38,14 @@ class QueryResult:
 
 
 # These need to be global for now...
-# So that register_python_class works from anywhere
-# @TODO: Fix all examples to call polar.register_python_class and depreciate this.
+# So that register_class works from anywhere
+# @TODO: Fix all examples to call polar.register_class and deprecate this.
 CLASSES = {}
 CLASS_CONSTRUCTORS = {}
 
 
-def register_python_class(cls, from_polar=None):
-    Polar().register_python_class(cls, from_polar)
+def register_class(cls, from_polar=None):
+    Polar().register_class(cls, from_polar)
 
 
 class Polar:
@@ -105,7 +105,7 @@ class Polar:
     def _clear_instances(self):
         self.instances = {}
 
-    def register_python_class(self, cls, from_polar=None):
+    def register_class(self, cls, from_polar=None):
         """Registers `cls` as a class accessible by Polar. `from_polar` can
         either be a method or a string. In the case of a string, Polar will
         look for the method using `getattr(cls, from_polar)`."""
@@ -311,5 +311,5 @@ class Polar:
                 print("False")
 
 
-register_python_class(Http)
-register_python_class(PathMapper)
+register_class(Http)
+register_class(PathMapper)

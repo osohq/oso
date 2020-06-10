@@ -27,10 +27,10 @@ EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 @pytest.fixture
 def load_policy(polar):
     # register all classes
-    polar.register_python_class(Widget)
-    polar.register_python_class(DooDad)
-    polar.register_python_class(Actor)
-    polar.register_python_class(Company)
+    polar.register_class(Widget)
+    polar.register_class(DooDad)
+    polar.register_class(Actor)
+    polar.register_class(Company)
 
     # import the test policy
     polar.load(Path(__file__).parent / "policies" / "test_api.polar")
@@ -55,7 +55,7 @@ def actor_in_role(polar_monkeypatch):
 ## TESTS ##
 
 
-def test_register_python_class(polar, load_policy):
+def test_register_class(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"

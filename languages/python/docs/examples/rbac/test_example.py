@@ -28,7 +28,7 @@ def test_parses(oso, policy, load):
             self.role = role
             self.name = name
 
-    oso.register_python_class(User)
+    oso.register_class(User)
 
     # Test that policy parses and inline tests pass.
     load(policy)
@@ -43,7 +43,7 @@ def test_external_policy(oso, load):
             self.role = role
             self.name = name
 
-    oso.register_python_class(User)
+    oso.register_class(User)
 
     oso.load_queued_files()
 
@@ -62,7 +62,7 @@ def test_external_policy(oso, load):
             self.role = role
             self.name = name
 
-    oso.register_python_class(User)
+    oso.register_class(User)
 
     oso.load_queued_files()
 
