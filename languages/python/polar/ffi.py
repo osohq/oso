@@ -85,7 +85,7 @@ def stringify(value, new_id):
 
 
 @contextmanager
-def polar_query(query):
+def manage_query(query):
     """Context manager for Polar queries."""
     try:
         yield query

@@ -16,7 +16,7 @@ from .ffi import (
     check_result,
     is_null,
     new_id,
-    polar_query,
+    manage_query,
     Predicate,
     stringify,
     to_c_str,
@@ -257,7 +257,7 @@ class Polar:
 
     def _run_query(self, q):
         """Method which performs the query loop over an already constructed query"""
-        with polar_query(q) as query:
+        with manage_query(q) as query:
             while True:
                 event_s = lib.polar_query(self.polar, query)
                 event = unstringify(event_s)
