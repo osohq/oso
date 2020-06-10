@@ -51,15 +51,15 @@ def to_c_str(string):
 
 def to_polar_term(v, new_id):
     """Convert Python values to Polar terms."""
-    if isinstance(v, bool):
+    if type(v) == bool:
         val = {"Boolean": v}
-    elif isinstance(v, int):
+    elif type(v) == int:
         val = {"Integer": v}
-    elif isinstance(v, str):
+    elif type(v) == str:
         val = {"String": v}
-    elif isinstance(v, list):
+    elif type(v) == list:
         val = {"List": [to_polar_term(i, new_id) for i in v]}
-    elif isinstance(v, dict):
+    elif type(v) == dict:
         val = {
             "Dictionary": {
                 "fields": {k: to_polar_term(v, new_id) for k, v in v.items()}
