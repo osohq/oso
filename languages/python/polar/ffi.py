@@ -84,15 +84,6 @@ def stringify(value, new_id):
     return to_c_str(dumped)
 
 
-@contextmanager
-def manage_query(query):
-    """Context manager for Polar queries."""
-    try:
-        yield query
-    finally:
-        lib.query_free(query)
-
-
 def unstringify(string):
     """Reconstruct Python object from JSON-encoded C string."""
     try:
@@ -101,6 +92,15 @@ def unstringify(string):
     finally:
         if not is_null(string):
             lib.string_free(string)
+
+
+@contextmanager
+def manage_query(query):
+    """Context manager for Polar queries."""
+    try:
+        yield query
+    finally:
+        lib.query_free(query)
 
 
 def load_str(polar, string, do_query):
@@ -126,16 +126,16 @@ def _check_inline_queries(polar, load, do_query):
                 raise PolarRuntimeException("Inline query in file failed.")
 
 
+def new_id(polar):
+    """Request a unique ID from the canonical external ID tracker."""
+    return check_result(lib.polar_get_external_id(polar))
+
+
 def external_call(polar, query, call_id, value):
     """Make an external call and propagate FFI errors."""
     if value is None:
         value = ffi.NULL
     check_result(lib.polar_external_call_result(polar, query, call_id, value))
-
-
-def new_id(polar):
-    """Request a unique ID from the canonical external ID tracker."""
-    return check_result(lib.polar_get_external_id(polar))
 
 
 def external_answer(polar, query, call_id, answer):
