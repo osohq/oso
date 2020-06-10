@@ -6,7 +6,7 @@ impl PolarVirtualMachine {
     /// Drive debugger.
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         let mut debugger = self.debugger.clone();
-        let maybe_goal = debugger.debug_command(self, command);
+        let maybe_goal = debugger.debug_command(command, self);
         if let Some(goal) = maybe_goal {
             self.push_goal(goal)?;
         }
@@ -16,8 +16,8 @@ impl PolarVirtualMachine {
 
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
     /// push it onto the goal stack.
-    pub fn maybe_break(&mut self, event: Event) -> PolarResult<()> {
-        let maybe_goal = self.debugger.maybe_break(self, event);
+    pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<()> {
+        let maybe_goal = self.debugger.maybe_break(event, self);
         if let Some(goal) = maybe_goal {
             self.push_goal(goal)?;
         }
@@ -155,7 +155,7 @@ enum Step {
 /// [`Debugger`](struct.Debugger.html)'s internal [`step`](struct.Debugger.html#structfield.step)
 /// field to determine how evaluation should proceed.
 #[derive(Clone, Debug)]
-pub enum Event {
+pub enum DebugEvent {
     Goal(String),
     Query,
 }
@@ -174,17 +174,11 @@ pub struct Debugger {
 impl Debugger {
     /// Retrieve the original source line (and, optionally, additional lines of context) for the
     /// current query.
-    fn query_source(&self, vm: &PolarVirtualMachine, num_lines: usize) -> String {
-        match (vm.queries.last(), vm.source.as_ref()) {
-            (Some(query), Some((source, term))) if query.id == term.id => {
-                source_lines(&source, term.offset, num_lines)
-            }
-            (Some(query), _) => vm.kb.get_source(&query).map_or_else(
-                || "".to_string(),
-                |source| source_lines(&source, query.offset, num_lines),
-            ),
-            _ => "".to_string(),
-        }
+    fn query_source(&self, query: &Term, sources: &Sources, num_lines: usize) -> String {
+        sources.get_source(query).map_or_else(
+            || "".to_string(),
+            |source| source_lines(&source, query.offset, num_lines),
+        )
     }
 
     /// When the [`VM`](../vm/struct.PolarVirtualMachine.html) hits a breakpoint, check if
@@ -192,8 +186,8 @@ impl Debugger {
     ///
     /// The check is a comparison of the [`Debugger`](struct.Debugger.html)'s
     /// [`step`](struct.Debugger.html#structfield.step) field with the passed-in
-    /// [`Event`](enum.Event.html). If [`step`](struct.Debugger.html#structfield.step) is set to
-    /// `None`, evaluation continues. For details about how the `Some()` values of
+    /// [`DebugEvent`](enum.DebugEvent.html). If [`step`](struct.Debugger.html#structfield.step) is
+    /// set to `None`, evaluation continues. For details about how the `Some()` values of
     /// [`step`](struct.Debugger.html#structfield.step) are handled, see the explanations in the
     /// [`Step`](enum.Step.html) documentation.
     ///
@@ -201,14 +195,18 @@ impl Debugger {
     ///
     /// - `Some(Goal::Debug { message })` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
-    fn maybe_break(&self, vm: &PolarVirtualMachine, event: Event) -> Option<Goal> {
+    fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Goal> {
         self.step.as_ref().and_then(|step| match (step, event) {
-            (Step::Goal, Event::Goal(goal)) => Some(Goal::Debug { message: goal }),
-            (Step::Over { snapshot }, Event::Query) | (Step::Out { snapshot }, Event::Query)
+            (Step::Goal, DebugEvent::Goal(goal)) => Some(Goal::Debug { message: goal }),
+            (Step::Over { snapshot }, DebugEvent::Query)
+            | (Step::Out { snapshot }, DebugEvent::Query)
                 if vm.queries[..vm.queries.len() - 1] == snapshot[..] =>
             {
                 Some(Goal::Debug {
-                    message: self.query_source(vm, 0),
+                    message: vm.queries.last().map_or_else(
+                        || "".to_string(),
+                        |query| self.query_source(&query, &vm.kb.read().unwrap().sources, 0),
+                    ),
                 })
             }
             _ => None,
@@ -226,7 +224,7 @@ impl Debugger {
     /// For movement commands (`"continue"`, `"over"`, `"out"`, `"step"`), set the internal state
     /// of the [`Debugger`](struct.Debugger.html) to the appropriate
     /// [`Option<Step>`](struct.Debugger.html#structfield.step).
-    fn debug_command(&mut self, vm: &PolarVirtualMachine, command: &str) -> Option<Goal> {
+    fn debug_command(&mut self, command: &str, vm: &PolarVirtualMachine) -> Option<Goal> {
         fn show<T>(stack: &[T]) -> Goal
         where
             T: std::fmt::Display,
@@ -247,7 +245,10 @@ impl Debugger {
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
                 return Some(Goal::Debug {
-                    message: self.query_source(vm, lines),
+                    message: vm.queries.last().map_or_else(
+                        || "".to_string(),
+                        |query| self.query_source(&query, &vm.kb.read().unwrap().sources, lines),
+                    ),
                 });
             }
             "n" | "next" | "over" => {
