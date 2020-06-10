@@ -1,18 +1,18 @@
-require 'ffi'
+require "ffi"
 
-module LibC
-    extend FFI::LIBC
-    # memory allocators
-    attach_function :malloc, [:size_t], :pointer
-    attach_function :calloc, [:size_t], :pointer
-    attach_function :valloc, [:size_t], :pointer
-    attach_function :realloc, [:pointer, :size_t], :pointer
-    attach_function :free, [:pointer], :void
+# module LibC
+#     extend FFI::LIBC
+#     # memory allocators
+#     attach_function :malloc, [:size_t], :pointer
+#     attach_function :calloc, [:size_t], :pointer
+#     attach_function :valloc, [:size_t], :pointer
+#     attach_function :realloc, [:pointer, :size_t], :pointer
+#     attach_function :free, [:pointer], :void
 
-    # memory movers
-    attach_function :memcpy, [:pointer, :pointer, :size_t], :pointer
-    attach_function :bcopy, [:pointer, :pointer, :size_t], :void
-end # module LibC
+#     # memory movers
+#     attach_function :memcpy, [:pointer, :pointer, :size_t], :pointer
+#     attach_function :bcopy, [:pointer, :pointer, :size_t], :void
+# end # module LibC
 
 module PolarLib
     extend FFI::Library
