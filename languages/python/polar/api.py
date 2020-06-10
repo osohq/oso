@@ -277,7 +277,7 @@ class Polar:
         query = check_result(lib.polar_new_query(self.polar, string))
         yield from self._run_query(query)
 
-    def query(self, query: Predicate, debug=False, single=False):
+    def query_pred(self, query: Predicate, debug=False, single=False):
         """Query the knowledge base."""
         self.load_queued_files()
         query = stringify(query, self._cache_instance)

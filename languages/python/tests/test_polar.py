@@ -376,7 +376,7 @@ def test_predicate(polar, qvar):
     polar.load_str("f(x) := x = pred(1, 2);")
     assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
 
-    assert polar.query(
+    assert polar.query_pred(
         Predicate(name="f", args=[Predicate("pred", [1, 2])]), single=True
     ).results == [{}]
 
@@ -391,7 +391,9 @@ def test_return_list(polar):
     # for testing lists
     polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
 
-    assert polar.query(Predicate(name="allow", args=[Actor(), "join", "party"])).success
+    assert polar.query_pred(
+        Predicate(name="allow", args=[Actor(), "join", "party"])
+    ).success
 
 
 def test_query(load_file, polar):
@@ -400,7 +402,7 @@ def test_query(load_file, polar):
     load_file(Path(__file__).parent / "test_file.polar")
     # plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
-    assert polar.query(Predicate(name="f", args=[Variable("a")])).results == [
+    assert polar.query_pred(Predicate(name="f", args=[Variable("a")])).results == [
         {"a": 1},
         {"a": 2},
         {"a": 3},
