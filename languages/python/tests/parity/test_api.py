@@ -106,7 +106,6 @@ def test_cut(polar, load_policy):
     assert get_frobbed() == ["DooDad"]
 
 
-@pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Cut not implemented.")
 def test_querystring_resource_map(polar, load_policy):
     assert polar.query(
         Query(

@@ -1,16 +1,12 @@
 import json
 
 from _polar_lib import ffi, lib
-from .extras import Http, Jwt, PathMapper
+from .extras import Http, PathMapper
 
 from collections.abc import Iterable
 from pathlib import Path
 from types import GeneratorType
 from typing import Any, Sequence, List
-import weakref
-
-from dataclasses import dataclass
-
 
 from .exceptions import (
     InvalidTokenCharacter,
@@ -33,22 +29,10 @@ from .exceptions import (
 POLAR_TYPES = [int, float, bool, str, dict, type(None), list]
 
 
-class Query:
-    """Request type for a `query` API call.
+class Variable(str):
+    """An unbound variable type, can be used to query the KB for information"""
 
-    :param name: the predicate to query
-    :param args: a list of arguments to the predicate
-    """
-
-    name: str
-    args: Sequence[Any]
-
-    def __init__(self, name: str, args: Sequence[Any]):
-        """Initialize Polar
-
-        Initializes a new Polar FFI instance"""
-        self.name = name
-        self.args = args
+    pass
 
 
 class QueryResult:
@@ -59,15 +43,34 @@ class QueryResult:
         self.success = len(results) > 0
 
 
-@dataclass(frozen=True)
 class Predicate:
     """Represent a predicate in Polar (`name(args, ...)`)."""
 
-    name: str
-    args: List[str]
+    def __init__(self, name: str, args: Sequence[Any]):
+        self.name = name
+        self.args = args
 
     def __str__(self):
         return f'{self.name}({self.args.join(", ")})'
+
+    def __eq__(self, other):
+        if not isinstance(other, Predicate):
+            return False
+        return (
+            self.name == other.name
+            and len(self.args) == len(other.args)
+            and all(x == y for x, y in zip(self.args, other.args))
+        )
+
+
+class Query(Predicate):
+    """Request type for a `query` API call.
+
+    :param name: the predicate to query
+    :param args: a list of arguments to the predicate
+    """
+
+    pass
 
 
 #### Polar implementation
@@ -287,6 +290,10 @@ class Polar:
                 name=value[tag]["name"],
                 args=[self.to_python(v) for v in value[tag]["args"]],
             )
+        elif tag == "Symbol":
+            raise PolarRuntimeException(
+                f"variable: {value} is unbound. make sure the value is set before using it in a method call"
+            )
 
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
@@ -304,8 +311,11 @@ class Polar:
             val = {
                 "Dictionary": {"fields": {k: self.to_polar(v) for k, v in v.items()}}
             }
-        elif type(v) == Predicate:
+        elif isinstance(v, Predicate):
             val = {"Call": {"name": v.name, "args": [self.to_polar(v) for v in v.args]}}
+        elif type(v) == Variable:
+            # This is supported so that we can query for unbound variables
+            val = {"Symbol": v}
         else:
             instance_id = self._to_external_id(v)
             val = {"ExternalInstance": {"instance_id": instance_id}}
@@ -591,5 +601,4 @@ class Polar:
 
 
 register_python_class(Http)
-register_python_class(Jwt)
 register_python_class(PathMapper)
