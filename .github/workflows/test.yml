@@ -48,4 +48,4 @@ jobs:
       with:
         python-version: "3.6"
     - name: Run compatibility test against python Polar implementation
-      run: OSO_COMPAT=1 make test_compat
+      run: make test_compat

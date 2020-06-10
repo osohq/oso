@@ -7,19 +7,6 @@ import os
 from polar.api import Polar
 
 
-if not os.getenv("OSO_COMPAT"):
-    from polar.api import Predicate
-else:
-    from polar.api import Query
-
-    class Predicate(Query):
-        pass
-
-    setattr(Polar, "register_class", Polar.register_python_class)
-    setattr(Polar, "_to_python", Polar.to_python)
-    setattr(Polar, "_to_polar_term", Polar.to_polar)
-
-
 # DEFINED So pytests have same interface.
 @pytest.fixture
 def db():

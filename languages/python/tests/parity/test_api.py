@@ -4,7 +4,7 @@ import pytest
 
 from pathlib import Path
 
-from polar.api import Http
+from polar.api import Http, Polar
 from polar.exceptions import PolarRuntimeException, PolarApiException
 
 from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
@@ -16,14 +16,22 @@ try:
 except ImportError:
     pass
 
-from polar.test_helpers import (
-    tell,
-    qvar,
-    query,
-    oso_monkeypatch as polar_monkeypatch,
-    Polar,
-    Predicate,
-)
+from polar.test_helpers import tell, qvar, query, oso_monkeypatch as polar_monkeypatch
+
+if not os.getenv("OSO_COMPAT"):
+    from polar.api import Predicate
+else:
+    from polar.api import Query
+
+    class Predicate(Query):
+        pass
+
+    setattr(Polar, "register_class", Polar.register_python_class)
+    setattr(Polar, "_to_python", Polar.to_python)
+    setattr(Polar, "_to_polar_term", Polar.to_polar)
+    setattr(Polar, "_load_queued_files", Polar._kb_load)
+    setattr(Polar, "_query_pred", Polar.query)
+
 
 # Set if running tests against old code
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))

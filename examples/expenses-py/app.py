@@ -140,6 +140,8 @@ if __name__ == "__main__":
     the policy.
     """
     oso = load_oso()
+    if os.getenv("OSO_COMPAT"):
+        setattr(oso, "_load_queued_files", oso._kb_load)
     oso._load_queued_files()
     print("Policy loaded OK")
 
