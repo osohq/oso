@@ -9,7 +9,7 @@ from typing import Any, cast, Callable, List, TYPE_CHECKING
 import inspect
 
 from polar import api
-from polar.api import Polar, Http, Query, QueryResult
+from polar.api import Http, Polar, Predicate, QueryResult
 
 if TYPE_CHECKING:
     import flask
@@ -32,11 +32,7 @@ class Oso(api.Polar):
     """
 
     def __init__(self):
-        """Create an oso object.
-
-        Optionally ``kb`` can be provided, which will use an already created
-        polar knowledge base.
-        """
+        """Create an oso object."""
         super().__init__()
 
     # TODO (dhatch): should we name this 'is_allowed'?
@@ -45,7 +41,7 @@ class Oso(api.Polar):
 
         Uses allow rules in the Polar policy to determine whether a request is
         permitted. ``actor`` and ``resource`` should be classes that have been
-        registered with Polar using the :py:func:`register_python_class` function or
+        registered with Polar using the :py:func:`register_class` function or
         the ``polar_class`` decorator.
 
         :param actor: The actor performing the request.
@@ -55,22 +51,22 @@ class Oso(api.Polar):
         :return: ``True`` if the request is allowed, ``False`` otherwise.
         """
         # actor + resource are python classes
-        return self.query(
-            Query(name="allow", args=[actor, action, resource]),
+        return self._query_pred(
+            Predicate(name="allow", args=[actor, action, resource]),
             debug=debug,
             single=True,
         ).success
 
 
 def polar_class(_cls=None, *, from_polar=None):
-    """Decorator to register a Python class with Polar. An alternative to ``register_python_class()``.
+    """Decorator to register a Python class with Polar. An alternative to ``register_class()``.
 
     :param str from_polar: Name of static class function to create a new class instance from ``fields``.
                             Defaults to class constructor.
     """
 
     def wrap(cls):
-        Polar().register_python_class(cls, from_polar)
+        Polar().register_class(cls, from_polar)
         return cls
 
     if _cls is None:

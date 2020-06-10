@@ -34,7 +34,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -- -D warnings
-      - run: RUST_LOG=1 make test
+      - run: make test
       - name: Doc test
         run: make -C languages/python/docs test
   compat_test:

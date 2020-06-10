@@ -31,12 +31,12 @@ EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
 @pytest.fixture
 def externals(polar):
-    polar.register_python_class(Qux)
-    polar.register_python_class(Bar)
-    polar.register_python_class(Foo)
-    polar.register_python_class(MyClass)
-    polar.register_python_class(YourClass)
-    polar.register_python_class(OurClass)
+    polar.register_class(Qux)
+    polar.register_class(Bar)
+    polar.register_class(Foo)
+    polar.register_class(MyClass)
+    polar.register_class(YourClass)
+    polar.register_class(OurClass)
 
 
 def test_load_file(load_file, tell, qeval, qvar):
@@ -368,7 +368,7 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
         def whats_up(self):
             yield True
 
-    polar.register_python_class(Booler)
+    polar.register_class(Booler)
 
     result = qvar("Booler{}.whats_up() = var", "var", one=True)
     assert qeval("Booler{}.whats_up() = true")

@@ -1,3 +1,6 @@
+from polar.api import Http, Predicate
+
+
 class OsoFlask(Oso):
     """Flask-specific oso functionality"""
 
@@ -22,9 +25,9 @@ class OsoFlask(Oso):
         if not credentials:
             credentials = {}
         action = request.method.lower()
-        resource = api.Http(path=request.path, hostname=hostname)
-        query = Query(name="allow", args=(credentials, action, resource))
-        return list(f(r) for r in self.query(query, single=True).results if f(r))
+        resource = Http(path=request.path, hostname=hostname)
+        query = Predicate(name="allow", args=(credentials, action, resource))
+        return list(f(r) for r in self._query_pred(query, single=True).results if f(r))
 
     def verify_flask_request(
         self,
@@ -42,6 +45,6 @@ class OsoFlask(Oso):
         if not credentials:
             credentials = {}
         action = request.method.lower()
-        resource = api.Http(path=request.path, hostname=hostname)
-        query = Query(name="allow", args=(credentials, action, resource))
-        return self.query(query, single=True).success
+        resource = Http(path=request.path, hostname=hostname)
+        query = Predicate(name="allow", args=(credentials, action, resource))
+        return self._query_pred(query, single=True).success
