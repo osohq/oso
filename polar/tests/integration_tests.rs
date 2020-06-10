@@ -700,7 +700,7 @@ fn test_in() {
 #[should_panic]
 // currently panics because you can't use keyword operators as non-operator symbols in a policy right now
 fn test_keyword_bug() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar.load_str("g(a) := a.make(b);").unwrap();
 
     polar.load_str("f(a) := a.in(b);").unwrap();
