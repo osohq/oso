@@ -46,7 +46,7 @@ class QueryResult:
 class Predicate:
     """Represent a predicate in Polar (`name(args, ...)`)."""
 
-    def __init__(self, name: str, args: List[str]):
+    def __init__(self, name: str, args: Sequence[Any]):
         self.name = name
         self.args = args
 
