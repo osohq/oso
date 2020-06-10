@@ -1,4 +1,3 @@
-from frozendict import frozendict
 import re
 
 from typing import List
@@ -9,7 +8,7 @@ class Http:
 
     def __init__(self, path="", query={}, hostname=None):
         self.path = path
-        self.query = frozendict(query)
+        self.query = query
         if hostname:
             self.hostname = hostname
 
@@ -45,39 +44,3 @@ class PathMapper:
         match = self.pattern.match(string)
         if match:
             yield match.groupdict()
-
-
-# WOW HACK
-JWT_DECODE_KEYS: List[str] = []
-
-
-class Jwt:
-    """ Takes in a jwt and exposes the attributes as a dictionary"""
-
-    # @TODO: Some way to pass in the key or something.
-    def __init__(self, token):
-        self.token = token
-        self.attribs = None
-        from authlib.jose import jwt  # type: ignore
-
-        for key in JWT_DECODE_KEYS:
-            try:
-                claims = jwt.decode(token, key)
-                self.attribs = dict(claims)
-                break
-            except:
-                pass
-
-    @classmethod
-    def add_key(cls, key):
-        global JWT_DECODE_KEYS
-        JWT_DECODE_KEYS.append(key)
-
-    @classmethod
-    def clear_keys(cls):
-        global JWT_DECODE_KEYS
-        JWT_DECODE_KEYS.clear()
-
-    def attributes(self):
-        if self.attribs:
-            yield self.attribs
