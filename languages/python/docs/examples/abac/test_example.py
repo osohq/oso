@@ -34,7 +34,7 @@ def oso():
 def load(oso):
     def load(policy):
         oso.load(Path(__file__).parent / policy)
-        oso.load_queued_files()
+        oso._load_queued_files()
 
     return load
 
@@ -46,7 +46,7 @@ def test_parses(oso, policy, load):
     polar_classes = load_python("01-simple.py")
     # Test that policy parses and inline tests pass.
     load(policy)
-    oso.load_queued_files()
+    oso._load_queued_files()
 
 
 EXPENSES_DEFAULT = {

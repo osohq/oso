@@ -66,7 +66,7 @@ class Polar:
         # Not usually needed but useful for tests since we make a lot of these.
         lib.polar_free(self.polar)
 
-    def to_polar_term(self, value):
+    def _to_polar_term(self, value):
         return to_polar_term(value, self._cache_instance)
 
     def load(self, policy_file):
@@ -81,7 +81,7 @@ class Polar:
         if policy_file not in self.load_queue:
             self.load_queue.append(policy_file)
 
-    def load_queued_files(self):
+    def _load_queued_files(self):
         """Load queued policy files into the knowledge base."""
         self._clear_instances()
         while self.load_queue:
@@ -271,14 +271,14 @@ class Polar:
                     yield {k: self.to_python(v) for k, v in data["bindings"].items()}
 
     def query_str(self, string):
-        self.load_queued_files()
+        self._load_queued_files()
         string = to_c_str(string)
         query = check_result(lib.polar_new_query(self.polar, string))
         yield from self._run_query(query)
 
     def query_pred(self, query: Predicate, debug=False, single=False):
         """Query the knowledge base."""
-        self.load_queued_files()
+        self._load_queued_files()
         query = stringify(query, self._cache_instance)
         query = check_result(lib.polar_new_query_from_term(self.polar, query))
         results = []
@@ -296,7 +296,7 @@ class Polar:
         self.polar = lib.polar_new()
 
     def repl(self):
-        self.load_queued_files()
+        self._load_queued_files()
         while True:
             query = lib.polar_query_from_repl(self.polar)
             had_result = False

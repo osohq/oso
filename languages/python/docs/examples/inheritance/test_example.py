@@ -70,7 +70,7 @@ def load(oso):
 def test_loads(oso, policy, load):
     # Test that policy loads.
     oso.load(Path(__file__).parent / policy)
-    oso.load_queued_files()
+    oso._load_queued_files()
 
 
 @pytest.mark.parametrize(
