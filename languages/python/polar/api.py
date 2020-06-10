@@ -240,14 +240,6 @@ class Polar:
         finally:
             external_answer(self.polar, query, data["call_id"], is_subspecializer)
 
-    def _handle_external_unify(self, query, data):
-        # COMMENT (leina): does this get used? This isn't super
-        # useful behavior for instances because it only works
-        # predictably if they have `eq()` defined
-        left = self._get_instance(data["left_instance_id"])
-        right = self._get_instance(data["right_instance_id"])
-        external_answer(self.polar, query, data["call_id"], left == right)
-
     def _handle_debug(self, query, data):
         if data["message"]:
             print(data["message"])
@@ -274,8 +266,6 @@ class Polar:
                     self._handle_external_isa(query, data)
                 if kind == "ExternalIsSubSpecializer":
                     self._handle_external_is_subspecializer(query, data)
-                if kind == "ExternalUnify":
-                    self._handle_external_unify(query, data)
                 if kind == "Debug":
                     self._handle_debug(query, data)
                 if kind == "Result":

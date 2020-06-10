@@ -570,12 +570,6 @@ pub enum QueryEvent {
         right_class_tag: Symbol,
     },
 
-    ExternalUnify {
-        call_id: u64,
-        left_instance_id: u64,
-        right_instance_id: u64,
-    },
-
     Result {
         bindings: Bindings,
     },
