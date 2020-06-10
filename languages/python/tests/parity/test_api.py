@@ -18,6 +18,7 @@ except ImportError:
 
 from polar.test_helpers import tell, qvar, query, oso_monkeypatch as polar_monkeypatch
 
+# WOWHACK until API stabilizes.
 if not os.getenv("OSO_COMPAT"):
     from polar.api import Predicate
 else:
