@@ -11,7 +11,7 @@ module Osohq
       class FreeError < ::RuntimeError; end
       class UnhandledEventError < ::RuntimeError; end
       class PolarRuntimeException < ::RuntimeError
-        def initialize(msg="")
+        def initialize(msg = '')
           super
         end
       end
@@ -26,14 +26,12 @@ module Osohq
       end
 
       def self.get_error
-        err_s = FFI.polar_get_error()
+        err_s = FFI.polar_get_error
         err = PolarError.new(JSON.parse(err_s))
-        puts err.kind + " Error: " + JSON.dump(err.data)
-
+        puts err.kind + ' Error: ' + JSON.dump(err.data)
       ensure
         FFI.string_free(err_s)
       end
-
     end
 
     class Polar
@@ -55,42 +53,31 @@ module Osohq
 
       def query_str(str)
         query = Query.from_str(str, pointer)
-        results = query.run
-        if results.empty?
-          puts 'False'
-        else
-          results.each {|res| Event.print_result(res)}
+        query.results.each do |result|
+          puts result
         end
-      ensure
-        query.free
       end
 
       def repl
-        had_result = false
         loop do
           query = Query.from_repl(pointer)
           if query.pointer.null?
-            Error::get_error()
+            Error.get_error
             break
           end
-          results = query.run
+          results = query.results.to_a
           if results.empty?
             puts 'False'
           else
-            results.each {|res| Event.print_result(res)}
+            results.each do |result|
+              puts result
+            end
           end
         end
       end
     end
 
     class Query
-      attr_reader :pointer, :polar
-
-      def initialize(pointer, polar)
-        @pointer = pointer
-        @polar = polar
-      end
-
       def self.from_str(query_str, polar)
         res = FFI.polar_new_query(polar, query_str)
         raise Error if res.null?
@@ -103,31 +90,66 @@ module Osohq
         new(pointer, polar)
       end
 
+      attr_reader :pointer, :polar, :fiber
+
+      def initialize(pointer, polar)
+        @pointer = pointer
+        @polar = polar
+        start
+      end
+
+      def results
+        Enumerator.new do |yielder|
+          loop do
+            result = fiber.resume
+            break if result.nil?
+
+            yielder << result
+          end
+        end
+      end
+
+      private
+
       def free
         res = FFI.query_free(pointer)
         raise FreeError if res.zero?
       end
 
-      # run a query
-      def run
-        # hack around not having generators
-        results = Array.new
-        loop do
-          string = FFI.polar_query(polar, pointer)
-          event = JSON.parse(string)
-          if event == 'Done'
-            break
-          end
-          event = Event.new(event)
-          case event.kind
-          when 'Result'
-            results.push(event.data['bindings'])
-          else
-            puts event.inspect
-            raise UnhandledEventError, event.kind
+      def start
+        @fiber = Fiber.new do
+          begin
+            loop do
+              string = FFI.polar_query(polar, pointer)
+              event = JSON.parse(string)
+              break if event == 'Done'
+
+              event = Event.new(event)
+              case event.kind
+              when 'Result'
+                Fiber.yield event.bindings
+              else
+                p event
+                raise UnhandledEventError, event.kind
+              end
+            end
+          ensure
+            free
           end
         end
-        return results
+      end
+    end
+
+    class Binding
+      attr_reader :var, :value
+
+      def initialize(var, value)
+        @var = var
+        @value = value
+      end
+
+      def to_s
+        "#{var} => #{Term.from_json(value)}"
       end
     end
 
@@ -138,14 +160,8 @@ module Osohq
         @kind, @data = [*json][0]
       end
 
-      def self.print_result(bindings)
-        if bindings.empty?
-          puts "True"
-        else
-          bindings.each do |k, v|
-            puts "#{k} => #{Term.from_json(v)}"
-          end
-        end
+      def bindings
+        data['bindings'].sort.map { |k, v| Binding.new(k, v) }
       end
     end
 
@@ -172,13 +188,11 @@ module Osohq
 end
 
 Osohq::Polar::Polar.new.tap do |polar|
-  # polar.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
+  polar.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
   # polar.query_str('k(x)')
 
   polar.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
-  polar.query_str('foo(x, y)')
-  polar.repl
+  # polar.query_str('foo(x, y)')
 
-  # polar.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
-  # polar.repl
+  polar.repl
 end
