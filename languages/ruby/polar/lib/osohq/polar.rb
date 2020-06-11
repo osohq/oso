@@ -7,11 +7,34 @@ require 'osohq/polar/ffi'
 
 module Osohq
   module Polar
-    class Error < ::RuntimeError; end
-    class FreeError < Error; end
-    class UnhandledEventError < Error; end
-    class PolarRuntimeException < Error; end
-    class Unimplemented < Error; end
+    module Error
+      class FreeError < ::RuntimeError; end
+      class UnhandledEventError < ::RuntimeError; end
+      class PolarRuntimeException < ::RuntimeError
+        def initialize(msg="")
+          super
+        end
+      end
+      class Unimplemented < ::RuntimeError; end
+
+      class PolarError
+        attr_reader :kind, :data, :subkind
+        def initialize(json)
+          @kind, @data = [*json][0]
+          @subkind = [*data][0]
+        end
+      end
+
+      def self.get_error
+        err_s = FFI.polar_get_error()
+        err = PolarError.new(JSON.parse(err_s))
+        puts err.kind + " Error: " + JSON.dump(err.data)
+
+      ensure
+        FFI.string_free(err_s)
+      end
+
+    end
 
     class Polar
       attr_reader :pointer
@@ -32,21 +55,29 @@ module Osohq
 
       def query_str(str)
         query = Query.from_str(str, pointer)
-        query.run
+        results = query.run
+        if results.empty?
+          puts 'False'
+        else
+          results.each {|res| Event.print_result(res)}
+        end
       ensure
         query.free
       end
 
       def repl
+        had_result = false
         loop do
           query = Query.from_repl(pointer)
-          break if query.pointer.null?
-
-          bindings = query.run
-          if bindings.empty?
+          if query.pointer.null?
+            Error::get_error()
+            break
+          end
+          results = query.run
+          if results.empty?
             puts 'False'
           else
-            puts bindings
+            results.each {|res| Event.print_result(res)}
           end
         end
       end
@@ -77,21 +108,26 @@ module Osohq
         raise FreeError if res.zero?
       end
 
+      # run a query
       def run
+        # hack around not having generators
+        results = Array.new
         loop do
           string = FFI.polar_query(polar, pointer)
           event = JSON.parse(string)
-          break if event == 'Done'
-
+          if event == 'Done'
+            break
+          end
           event = Event.new(event)
           case event.kind
           when 'Result'
-            event.as_results
+            results.push(event.data['bindings'])
           else
             puts event.inspect
             raise UnhandledEventError, event.kind
           end
         end
+        return results
       end
     end
 
@@ -102,13 +138,13 @@ module Osohq
         @kind, @data = [*json][0]
       end
 
-      def bindings
-        data['bindings'].sort
-      end
-
-      def as_results
-        bindings.each do |k, v|
-          puts "#{k} => #{Term.from_json(v)}"
+      def self.print_result(bindings)
+        if bindings.empty?
+          puts "True"
+        else
+          bindings.each do |k, v|
+            puts "#{k} => #{Term.from_json(v)}"
+          end
         end
       end
     end
@@ -141,6 +177,7 @@ Osohq::Polar::Polar.new.tap do |polar|
 
   polar.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
   polar.query_str('foo(x, y)')
+  polar.repl
 
   # polar.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
   # polar.repl
