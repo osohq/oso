@@ -35,7 +35,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -159,3 +158,6 @@ dmypy.json
 cython_debug/
 
 .make*
+
+# Project-local CoC settings
+**/.vim/coc-settings.json
