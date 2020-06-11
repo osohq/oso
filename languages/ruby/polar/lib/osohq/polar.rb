@@ -4,46 +4,13 @@ require 'json'
 
 require 'osohq/polar/version'
 require 'osohq/polar/ffi'
+require 'osohq/polar/errors'
 
 module Osohq
   module Polar
-    module Error
-      class FreeError < ::RuntimeError; end
-      class UnhandledEventError < ::RuntimeError; end
-      class PolarRuntimeException < ::RuntimeError
-        def initialize(msg = '')
-          super
-        end
-      end
-      class Unimplemented < ::RuntimeError; end
-
-      class PolarError
-        attr_reader :kind, :data, :subkind
-        def initialize(json)
-          @kind, @data = [*json][0]
-          @subkind = [*data][0]
-        end
-      end
-
-      def self.get_error
-        err_s = FFI.polar_get_error
-        err = PolarError.new(JSON.parse(err_s))
-        puts err.kind + ' Error: ' + JSON.dump(err.data)
-      ensure
-        FFI.string_free(err_s)
-      end
-    end
-
     class Polar
-      attr_reader :pointer
-
       def initialize
         @pointer = FFI.polar_new
-      end
-
-      def free
-        res = FFI.polar_free(pointer)
-        raise FreeError if res.zero?
       end
 
       def load_str(str)
@@ -75,6 +42,15 @@ module Osohq
           end
         end
       end
+
+      private
+
+      attr_reader :pointer
+
+      def free
+        res = FFI.polar_free(pointer)
+        raise Errors::FreeError if res.zero?
+      end
     end
 
     class Query
@@ -89,8 +65,6 @@ module Osohq
         pointer = FFI.polar_query_from_repl(polar)
         new(pointer, polar)
       end
-
-      attr_reader :pointer, :polar, :fiber
 
       def initialize(pointer, polar)
         @pointer = pointer
@@ -110,6 +84,8 @@ module Osohq
       end
 
       private
+
+      attr_reader :pointer, :polar, :fiber
 
       def free
         res = FFI.query_free(pointer)
@@ -141,8 +117,6 @@ module Osohq
     end
 
     class Binding
-      attr_reader :var, :value
-
       def initialize(var, value)
         @var = var
         @value = value
@@ -151,10 +125,14 @@ module Osohq
       def to_s
         "#{var} => #{Term.from_json(value)}"
       end
+
+      private
+
+      attr_reader :var, :value
     end
 
     class Event
-      attr_reader :kind, :data
+      attr_reader :kind
 
       def initialize(json)
         @kind, @data = [*json][0]
@@ -163,6 +141,10 @@ module Osohq
       def bindings
         data['bindings'].sort.map { |k, v| Binding.new(k, v) }
       end
+
+      private
+
+      attr_reader :data
     end
 
     class Term
@@ -192,7 +174,7 @@ Osohq::Polar::Polar.new.tap do |polar|
   # polar.query_str('k(x)')
 
   polar.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
-  # polar.query_str('foo(x, y)')
+  polar.query_str('foo(x, y)')
 
-  polar.repl
+  # polar.repl
 end
