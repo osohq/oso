@@ -8,7 +8,7 @@ rust-test:
 	cargo test
 
 rust-build:
-	cargo build
+	cargo build --all-features
 
 python-build: rust-build
 	$(MAKE) -C languages/python build
