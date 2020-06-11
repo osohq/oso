@@ -1,3 +1,5 @@
+from typing import Any, Callable, List
+from . import Oso
 from polar.api import Http, Predicate
 
 
