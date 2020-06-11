@@ -1,5 +1,4 @@
 from authlib.jose import jwt
-from polar.api import register_python_class
 from typing import List
 
 # Global JWT decode keys
@@ -35,6 +34,3 @@ class Jwt:
     def attributes(self):
         if self.attribs:
             yield self.attribs
-
-
-register_python_class(Jwt)

@@ -34,7 +34,7 @@ def oso():
 def load(oso):
     def load(policy):
         oso.load(Path(__file__).parent / policy)
-        oso._kb_load()
+        oso._load_queued_files()
 
     return load
 
@@ -46,7 +46,7 @@ def test_parses(oso, policy, load):
     polar_classes = load_python("01-simple.py")
     # Test that policy parses and inline tests pass.
     load(policy)
-    oso._kb_load()
+    oso._load_queued_files()
 
 
 EXPENSES_DEFAULT = {
@@ -76,7 +76,7 @@ def test_rbac_02(oso, load):
     Expense = polar_classes.Expense
     load("02-rbac.polar")
 
-    oso.load_str('role(User { name: "sam" }, "admin", Project { id: 2 });')
+    oso._load_str('role(User { name: "sam" }, "admin", Project { id: 2 });')
     expense = Expense(location="NYC", amount=50, project_id=0, submitted_by="steve")
     assert not oso.allow(User("sam"), "view", expense)
     expense = Expense(location="NYC", amount=50, project_id=2, submitted_by="steve")

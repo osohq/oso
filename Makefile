@@ -23,5 +23,5 @@ docs-test: python-build
 # Ensure that parity tests are still compatible with old code.
 test_compat:
 	pip install --force-reinstall $(PYTHON_POLAR_WHEEL)[dev]
-	EXPECT_XFAIL_PASS=1 pytest -rf languages/python/tests/parity
-	python examples/expenses-py/app.py
+	EXPECT_XFAIL_PASS=1 OSO_COMPAT=1 pytest -rf languages/python/tests/parity
+	OSO_COMPAT=1 python examples/expenses-py/app.py

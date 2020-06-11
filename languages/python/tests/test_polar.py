@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from polar import Polar, exceptions, Predicate, Query, Variable
+from polar import exceptions, Polar, Predicate, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
 
@@ -9,10 +9,10 @@ import pytest
 
 def test_anything_works():
     p = Polar()
-    p.load_str("f(1);")
-    results = list(p.query_str("f(x)"))
+    p._load_str("f(1);")
+    results = list(p._query_str("f(x)"))
     assert results[0]["x"] == 1
-    results = list(p.query_str("f(y)"))
+    results = list(p._query_str("f(y)"))
     assert results[0]["y"] == 1
     del p
 
@@ -24,7 +24,7 @@ def test_helpers(polar, load_file, query, qeval, qvar):
 
 
 def test_data_conversions(polar, qvar):
-    polar.load_str('a(1);b("two");c(true);d([1,"two",true]);')
+    polar._load_str('a(1);b("two");c(true);d([1,"two",true]);')
     assert qvar("a(x)", "x", one=True) == 1
     assert qvar("b(x)", "x", one=True) == "two"
     assert qvar("c(x)", "x", one=True)
@@ -92,7 +92,7 @@ def test_external(polar, qvar):
     def capital_foo():
         return Foo(a="A")
 
-    polar.register_python_class(Foo, from_polar=capital_foo)
+    polar.register_class(Foo, from_polar=capital_foo)
     assert qvar("Foo{}.a = x", "x", one=True) == "A"
     assert qvar("Foo{}.a() = x", "x", one=True) == "A"
     assert qvar("Foo{}.b = x", "x", one=True) == "b"
@@ -133,10 +133,10 @@ def test_class_specializers(polar, qvar, qeval, query):
         def x(self):
             return "X"
 
-    polar.register_python_class(A)
-    polar.register_python_class(B)
-    polar.register_python_class(C)
-    polar.register_python_class(X)
+    polar.register_class(A)
+    polar.register_class(B)
+    polar.register_class(C)
+    polar.register_class(X)
 
     rules = """
     test(A{});
@@ -146,7 +146,7 @@ def test_class_specializers(polar, qvar, qeval, query):
     try(v: C{}, res) := res = 3;
     try(v: A{}, res) := res = 1;
     """
-    polar.load_str(rules)
+    polar._load_str(rules)
 
     assert qvar("A{}.a = x", "x", one=True) == "A"
     assert qvar("A{}.x = x", "x", one=True) == "A"
@@ -174,14 +174,14 @@ def test_dict_specializers(polar, qvar, qeval, query):
             self.genus = genus
             self.species = species
 
-    polar.register_python_class(Animal)
+    polar.register_class(Animal)
 
     rules = """
     what_is(animal: {genus: "canis"}, res) := res = "canine";
     what_is(animal: {species: "canis lupus", genus: "canis"}, res) := res = "wolf";
     what_is(animal: {species: "canis familiaris", genus: "canis"}, res) := res = "dog";
     """
-    polar.load_str(rules)
+    polar._load_str(rules)
 
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -203,7 +203,7 @@ def test_class_field_specializers(polar, qvar, qeval, query):
             self.species = species
             self.family = family
 
-    polar.register_python_class(Animal)
+    polar.register_class(Animal)
 
     rules = """
     what_is(animal: Animal{}, res) := res = "animal";
@@ -213,7 +213,7 @@ def test_class_field_specializers(polar, qvar, qeval, query):
     what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog";
     what_is(animal: Animal{species: s, genus: "canis"}, res) := res = s;
     """
-    polar.load_str(rules)
+    polar._load_str(rules)
 
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -253,7 +253,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
             self.species = species
             self.family = family
 
-    polar.register_python_class(Animal)
+    polar.register_class(Animal)
 
     # load rules
     rules = """
@@ -266,7 +266,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) := res = "wolf_class";
     what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog_class";
     """
-    polar.load_str(rules)
+    polar._load_str(rules)
 
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -318,10 +318,10 @@ def test_specializers_mixed(polar, qvar, qeval, query):
 
 def test_load_and_query():
     p = Polar()
-    p.load_str("f(1); f(2); ?= f(1); ?= !f(3);")
+    p._load_str("f(1); f(2); ?= f(1); ?= !f(3);")
 
     with pytest.raises(exceptions.PolarException):
-        p.load_str("g(1); ?= g(2);")
+        p._load_str("g(1); ?= g(2);")
 
 
 def test_parser_errors(polar):
@@ -329,35 +329,26 @@ def test_parser_errors(polar):
     rules = """
     f(a) := a = 18446744073709551616;
     """
-    with pytest.raises(ParserException) as e:
-        polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"IntegerOverflow": {"token": "18446744073709551616", "pos": [1, 16]}}'
-    )
+    with pytest.raises(exceptions.IntegerOverflow) as e:
+        polar._load_str(rules)
+    assert str(e.value) == "('18446744073709551616', [1, 16])"
 
     # InvalidTokenCharacter
     rules = """
     f(a) := a = "this is not
     allowed";
     """
-    with pytest.raises(ParserException) as e:
-        polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"InvalidTokenCharacter": {"token": "this is not", "c": "\\n", "pos": [1, 28]}}'
-    )
+    with pytest.raises(exceptions.InvalidTokenCharacter) as e:
+        polar._load_str(rules)
+    assert str(e.value) == "('this is not', '\\n', [1, 28])"
 
     rules = """
     f(a) := a = "this is not allowed\0
     """
 
-    with pytest.raises(ParserException) as e:
-        polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"InvalidTokenCharacter": {"token": "this is not allowed", "c": "\\u0000", "pos": [1, 16]}}'
-    )
+    with pytest.raises(exceptions.InvalidTokenCharacter) as e:
+        polar._load_str(rules)
+    assert str(e.value) == "('this is not allowed', '\\x00', [1, 16])"
 
     # InvalidToken -- not sure what causes this
 
@@ -365,31 +356,28 @@ def test_parser_errors(polar):
     rules = """
     f(a)
     """
-    with pytest.raises(ParserException) as e:
-        polar.load_str(rules)
-    assert str(e.value) == 'Parser Exception: {"UnrecognizedEOF": {"pos": [1, 8]}}'
+    with pytest.raises(exceptions.UnrecognizedEOF) as e:
+        polar._load_str(rules)
+    assert str(e.value) == "[1, 8]"
 
     # UnrecognizedToken
     rules = """
     1;
     """
-    with pytest.raises(ParserException) as e:
-        polar.load_str(rules)
-    assert (
-        str(e.value)
-        == 'Parser Exception: {"UnrecognizedToken": {"token": "1", "pos": [1, 4]}}'
-    )
+    with pytest.raises(exceptions.UnrecognizedToken) as e:
+        polar._load_str(rules)
+    assert str(e.value) == "('1', [1, 4])"
 
     # ExtraToken -- not sure what causes this
 
 
 def test_predicate(polar, qvar):
     """Test that predicates can be converted to and from python."""
-    polar.load_str("f(x) := x = pred(1, 2);")
+    polar._load_str("f(x) := x = pred(1, 2);")
     assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
 
-    assert polar.query(
-        Query(name="f", args=[Predicate("pred", [1, 2])]), single=True
+    assert polar._query_pred(
+        Predicate(name="f", args=[Predicate("pred", [1, 2])]), single=True
     ).results == [{}]
 
 
@@ -398,12 +386,14 @@ def test_return_list(polar):
         def groups(self):
             return ["engineering", "social", "admin"]
 
-    polar.register_python_class(Actor)
+    polar.register_class(Actor)
 
     # for testing lists
-    polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
+    polar._load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
 
-    assert polar.query(Query(name="allow", args=[Actor(), "join", "party"])).success
+    assert polar._query_pred(
+        Predicate(name="allow", args=[Actor(), "join", "party"])
+    ).success
 
 
 def test_query(load_file, polar):
@@ -412,7 +402,7 @@ def test_query(load_file, polar):
     load_file(Path(__file__).parent / "test_file.polar")
     # plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
-    assert polar.query(Query(name="f", args=[Variable("a")])).results == [
+    assert polar._query_pred(Predicate(name="f", args=[Variable("a")])).results == [
         {"a": 1},
         {"a": 2},
         {"a": 3},
