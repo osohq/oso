@@ -11,6 +11,10 @@ crate-type = ["lib", "staticlib", "cdylib"]
 name = "polar"
 required-features = ["repl"]
 
+[[bench]]
+name = "bench"
+harness = false
+
 [dependencies]
 anyhow = "1.0.31"
 lalrpop-util = "0.18.1"
@@ -28,6 +32,7 @@ cbindgen = "0.14.2"
 lalrpop = {version = "0.18.1", features = ["lexer"]}
 
 [dev-dependencies]
+criterion = "0.3"
 permute = "0.1.0"
 proptest = "0.9.6"
 pretty_assertions = "0.6.1"
@@ -36,3 +41,7 @@ maplit = "1.0.2"
 [features]
 default = []
 repl = ["rustyline", "rustyline-derive"]
+
+
+[profile.release]
+debug = true
