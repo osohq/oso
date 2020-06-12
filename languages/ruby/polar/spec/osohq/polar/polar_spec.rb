@@ -57,4 +57,80 @@ RSpec.describe Osohq::Polar::Polar do
       expect(query(subject, 'f(x)')).to be false
     end
   end
+
+  context '#register_class' do
+    before(:example) { pending 'Polar#register_class is unimplemented' }
+
+    it 'registers a Ruby class with Polar' do
+      class Bar
+        def y
+          'y'
+        end
+      end
+
+      class Foo
+        attr_reader :a
+
+        def initialize(a)
+          @a = a
+        end
+
+        def b
+          Enumerator.new do |e|
+            e.yield 'b'
+          end
+        end
+
+        def c
+          'c'
+        end
+
+        def d(x)
+          x
+        end
+
+        def bar
+          Bar.new
+        end
+
+        def e
+          [1, 2, 3]
+        end
+
+        def f
+          Enumerator.new do |e|
+            e.yield [1, 2, 3]
+            e.yield [4, 5, 6]
+            e.yield 7
+          end
+        end
+
+        def g
+          { "hello": 'world' }
+        end
+
+        def h
+          true
+        end
+      end
+
+      def capital_foo
+        Foo.new('A')
+      end
+
+      subject.register_class(Foo, from_polar: capital_foo)
+      expect(qvar(subject, 'Foo{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'Foo{}.a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'Foo{}.b = x', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'Foo{}.b() = x', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'Foo{}.c = x', 'x', one: true)).to eq('c')
+      expect(qvar(subject, 'Foo{}.c() = x', 'x', one: true)).to eq('c')
+      expect(qvar(subject, 'Foo{} = f, f.a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'Foo{}.bar().y() = x', 'x', one: true)).to eq('y')
+      expect(qvar(subject, 'Foo{}.e = x', 'x')).to eq([[1, 2, 3]])
+      expect(qvar(subject, 'Foo{}.f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
+      expect(qvar(subject, 'Foo{}.g.hello = x', 'x', one: true)).to eq('world')
+      expect(qvar(subject, 'Foo{}.h = x', 'x', one: true)).to be true
+    end
+  end
 end
