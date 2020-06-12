@@ -25,10 +25,6 @@ module Osohq
       def repl
         loop do
           query = Query.from_repl(pointer)
-          if query.pointer.null?
-            Error.get_error
-            break
-          end
           results = query.results.to_a
           if results.empty?
             puts 'False'
@@ -51,6 +47,7 @@ module Osohq
     end
 
     class Query
+      include Errors
       def self.from_str(query_str, polar)
         res = FFI.polar_new_query(polar, query_str)
         raise Errors::PolarError if res.null?
@@ -60,6 +57,10 @@ module Osohq
 
       def self.from_repl(polar)
         pointer = FFI.polar_query_from_repl(polar)
+        if pointer.null?
+          Errors.get_error
+          raise RuntimeError
+        end
         new(pointer, polar)
       end
 
@@ -121,7 +122,8 @@ module Osohq
       end
 
       def bindings
-        data['bindings'].sort.map { |k, v| [k, Term.new(v)] }.to_h
+        # Still skeptical about whether we should have a method that only works for certain types of events
+        data['bindings'].sort.map { |k, v| [k, Term.new(v).to_ruby] }.to_h
       end
 
       private
@@ -130,15 +132,16 @@ module Osohq
     end
 
     class Term
-      def self.to_ruby(value)
-        tag, value = [*value][0]
+      attr_reader :value, :tag, :id, :offset
+
+      def to_ruby
         case tag
         when 'Integer', 'String', 'Boolean'
           value
         when 'List'
-          value.map { |term| Term.to_ruby(term['value']) }
+          value.map { |term| Term.new(term).to_ruby }
         when 'Dictionary'
-          value['fields'].map { |k, v| [k, Term.to_ruby(v['value'])] }.to_h
+          value['fields'].map { |k, v| [k, Term.new(v).to_ruby] }.to_h
         when 'ExternalInstance', 'InstanceLiteral', 'Call'
           raise Errors::Unimplemented
         when 'Symbol'
@@ -151,26 +154,19 @@ module Osohq
       def initialize(data)
         @id = data['id']
         @offset = data['offset']
-        @value = data['value']
+        @tag, @value = [*data['value']][0]
       end
 
-      def to_ruby
-        self.class.to_ruby(value)
-      end
-
-      private
-
-      attr_reader :value
     end
   end
 end
 
 Osohq::Polar::Polar.new.tap do |polar|
   polar.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
+  polar.query_str('f(x)')
   # polar.query_str('k(x)')
 
   polar.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
-  polar.query_str('foo(x, y)')
+  raise "AssertionError" if polar.query_str('foo(x, y)').to_a != [{"x"=>1, "y"=>2}, {"x"=>3, "y"=>4}, {"x"=>5, "y"=>6}]
 
-  # polar.repl
 end
