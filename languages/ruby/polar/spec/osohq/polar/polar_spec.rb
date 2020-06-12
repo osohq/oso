@@ -18,9 +18,18 @@ RSpec.describe Osohq::Polar::Polar do
     expect { results.next }.to raise_error StopIteration
   end
 
-  it 'converts Polar values into Ruby values' do
-    subject.load_str('f({x: [1, "two", true], y: {z: false}});')
-    expect(qvar(subject, 'f(x)', 'x', one: true)).to eq({ 'x' => [1, 'two', true], 'y' => { 'z' => false } })
+  context 'when converting between Polar and Ruby values' do
+    it 'converts Polar values into Ruby values' do
+      subject.load_str('f({x: [1, "two", true], y: {z: false}});')
+      expect(qvar(subject, 'f(x)', 'x', one: true)).to eq({ 'x' => [1, 'two', true], 'y' => { 'z' => false } })
+    end
+
+    it 'converts predicates in both directions' do
+      pending 'Predicates not yet implemented'
+      subject.load_str('f(x) := x = pred(1, 2);')
+      expect(qvar(subject, 'f(x)', 'x')).to eq([Predicate.new('pred', [1, 2])])
+      expect(subject.query_pred(Predicate.new('f', [Predicate.new('pred', [1, 2])])).results.next).to eq([{}])
+    end
   end
 
   context '#load' do
@@ -353,5 +362,27 @@ RSpec.describe Osohq::Polar::Polar do
 
     # Not sure what causes this.
     it 'raises on ExtraToken'
+  end
+
+  context 'querying for a predicate' do
+    before(:example) { pending 'Predicates not yet implemented' }
+
+    it 'can return a list' do
+      class Actor
+        def groups
+          %w[engineering social admin]
+        end
+      end
+      subject.register_class(Actor)
+      subject.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
+      expect(subject.query_pred(Predicate.new('allow', [Actor(), 'join', 'party'])).success).to be true
+    end
+
+    it 'can handle variables as arguments' do
+      subject.load(test_file)
+      expect(subject.query_pred(Predicate.new('f', [Variable.new('a')])).results.to_a).to eq(
+        [{ "a": 1 }, { "a": 2 }, { "a": 3 }]
+      )
+    end
   end
 end
