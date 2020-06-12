@@ -136,9 +136,9 @@ module Osohq
         when 'Integer', 'String', 'Boolean'
           value
         when 'List'
-          value.map { |term| Term.to_ruby(term) }
+          value.map { |term| Term.to_ruby(term['value']) }
         when 'Dictionary'
-          value['fields'].map { |k, v| [k, Term.to_ruby(v)] }.to_h
+          value['fields'].map { |k, v| [k, Term.to_ruby(v['value'])] }.to_h
         when 'ExternalInstance', 'InstanceLiteral', 'Call'
           raise Errors::Unimplemented
         when 'Symbol'
