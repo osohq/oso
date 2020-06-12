@@ -53,7 +53,7 @@ module Osohq
     class Query
       def self.from_str(query_str, polar)
         res = FFI.polar_new_query(polar, query_str)
-        raise Error if res.null?
+        raise Errors::PolarError if res.null?
 
         new(res, polar)
       end
@@ -86,7 +86,7 @@ module Osohq
 
       def free
         res = FFI.query_free(pointer)
-        raise FreeError if res.zero?
+        raise Errors::FreeError if res.zero?
       end
 
       def start
@@ -103,7 +103,7 @@ module Osohq
                 Fiber.yield event.bindings
               else
                 p event
-                raise UnhandledEventError, event.kind
+                raise Errors::UnhandledEventError, event.kind
               end
             end
           ensure
@@ -140,11 +140,11 @@ module Osohq
         when 'Dictionary'
           value['fields'].map { |k, v| [k, Term.to_ruby(v)] }.to_h
         when 'ExternalInstance', 'InstanceLiteral', 'Call'
-          raise Unimplemented
+          raise Errors::Unimplemented
         when 'Symbol'
-          raise PolarRuntimeException
+          raise Errors::PolarRuntimeException
         else
-          raise Unimplemented
+          raise Errors::Unimplemented
         end
       end
 
