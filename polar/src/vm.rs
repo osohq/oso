@@ -1442,6 +1442,11 @@ impl PolarVirtualMachine {
                 Value::ExternalInstance(instance),
                 Value::InstanceLiteral(left),
                 Value::InstanceLiteral(right),
+            )
+            | (
+                Value::ExternalInstance(instance),
+                Value::Pattern(Pattern::Instance(left)),
+                Value::Pattern(Pattern::Instance(right)),
             ) => {
                 let call_id = self.new_call_id(&answer);
                 if left.tag == right.tag
@@ -1462,7 +1467,12 @@ impl PolarVirtualMachine {
                     right_class_tag: right.tag,
                 })
             }
-            (_, Value::Dictionary(left), Value::Dictionary(right)) => {
+            (_, Value::Dictionary(left), Value::Dictionary(right))
+            | (
+                _,
+                Value::Pattern(Pattern::Dictionary(left)),
+                Value::Pattern(Pattern::Dictionary(right)),
+            ) => {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
 
@@ -1480,7 +1490,8 @@ impl PolarVirtualMachine {
                 }
                 Ok(QueryEvent::None)
             }
-            (_, Value::InstanceLiteral(_), Value::Dictionary(_)) => {
+            (_, Value::InstanceLiteral(_), Value::Dictionary(_))
+            | (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
                 self.bind(&answer, &Term::new(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }

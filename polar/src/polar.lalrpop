@@ -374,6 +374,7 @@ Parameter: Parameter = {
         if let Term{value: Value::Symbol(name), ..} = specializer {
             Parameter{name: Some(name), specializer: None}
         } else {
+            // TODO (dhatch): Does this branch behave as a pattern?
             Parameter{name: None, specializer: Some(specializer)}
         }
     },
@@ -381,7 +382,7 @@ Parameter: Parameter = {
     <name:Name> ":" "(" <specializer:Exp> ")" => {
         Parameter {
             name: Some(name),
-            specializer: Some(specializer),
+            specializer: Some(Pattern::term_as_pattern(&specializer)),
         }
     },
     // unparenthesized specializers can only be terms
@@ -391,9 +392,9 @@ Parameter: Parameter = {
         if let Term{value: Value::Symbol(class_name), ..} = specializer {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name, fields: Dictionary{fields}};
-            Parameter{name: Some(name), specializer: Some(Term{id: 0, offset, value: Value::InstanceLiteral(instance_literal)})}
+            Parameter{name: Some(name), specializer: Some(Term{id: 0, offset, value: Value::Pattern(Pattern::Instance(instance_literal))})}
         } else {
-            Parameter{name: Some(name), specializer: Some(specializer)}
+            Parameter{name: Some(name), specializer: Some(Pattern::term_as_pattern(&specializer))}
         }
     }
 };
