@@ -281,14 +281,77 @@ RSpec.describe Osohq::Polar::Polar do
   end
 
   context 'when loading a file with inline queries' do
-    before(:example) { pending "Don't handle inline queries yet" }
-
     it 'succeeds if all inline queries succeed' do
       subject.load_str('f(1); f(2); ?= f(1); ?= !f(3);')
     end
 
     it 'fails if an inline query fails' do
-      subject.load_str('g(1); ?= g(2);')
+      pending "Don't handle inline queries yet"
+      expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Errors::PolarException
     end
+  end
+
+  context 'when parsing' do
+    before(:example) { pending "Don't handle parser errors yet" }
+
+    it 'raises on IntegerOverflow errors' do
+      int = '18446744073709551616'
+      rule = <<~POLAR
+        f(a) := a = #{int};
+      POLAR
+      expect { subject.load_str(rule) }.to raise_error do |e|
+        expect(e).to be_an Errors::IntegerOverflow
+        expect(e.value).to eq("('#{int}', [1, 16])")
+      end
+    end
+
+    context 'raises InvalidTokenCharacter' do
+      it 'on unexpected newlines' do
+        rule = <<~POLAR
+          f(a) := a = "this is not
+          allowed";
+        POLAR
+        expect { subject.load_str(rule) }.to raise_error do |e|
+          expect(e).to be_an Errors::InvalidTokenCharacter
+          expect(e.value).to eq("('this is not', '\\n', [1, 28])")
+        end
+      end
+
+      it 'on null bytes' do
+        rule = <<~POLAR
+          f(a) := a = "this is not allowed\0
+        POLAR
+        expect { subject.load_str(rule) }.to raise_error do |e|
+          expect(e).to be_an Errors::InvalidTokenCharacter
+          expect(e.value).to eq("('this is not allowed', '\\x00', [1, 16])")
+        end
+      end
+    end
+
+    # Not sure what causes this.
+    it 'raises on InvalidToken'
+
+    it 'raises on UnrecognizedEOF errors' do
+      rule = <<~POLAR
+        f(a)
+      POLAR
+      expect { subject.load_str(rule) }.to raise_error do |e|
+        expect(e).to be_an Errors::UnrecognizedEOF
+        expect(e.value).to eq('[1, 8]')
+      end
+    end
+
+    it 'raises on UnrecognizedToken errors' do
+      rule = <<~POLAR
+        1;
+      POLAR
+      expect { subject.load_str(rule) }.to raise_error do |e|
+        expect(e).to be_an Errors::UnrecognizedToken
+        expect(e.value).to eq("('1', [1, 4])")
+      end
+    end
+
+    # Not sure what causes this.
+    it 'raises on ExtraToken'
   end
 end
