@@ -10,7 +10,7 @@ RSpec.describe Osohq::Polar::Polar do
   it 'works' do
     subject.load_str('f(1);')
     results = subject.query_str('f(x)')
-    expect(next_result(results)).to eq({ 'x' => 1 })
+    expect(results.next).to eq({ 'x' => 1 })
     expect { results.next }.to raise_error StopIteration
   end
 
