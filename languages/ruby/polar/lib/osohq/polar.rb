@@ -19,10 +19,7 @@ module Osohq
       end
 
       def query_str(str)
-        query = Query.from_str(str, pointer)
-        query.results.each do |result|
-          puts result
-        end
+        Query.from_str(str, pointer).results
       end
 
       def repl
@@ -116,21 +113,6 @@ module Osohq
       end
     end
 
-    class Binding
-      def initialize(var, value)
-        @var = var
-        @value = value
-      end
-
-      def to_s
-        "#{var} => #{Term.from_json(value)}"
-      end
-
-      private
-
-      attr_reader :var, :value
-    end
-
     class Event
       attr_reader :kind
 
@@ -139,7 +121,7 @@ module Osohq
       end
 
       def bindings
-        data['bindings'].sort.map { |k, v| Binding.new(k, v) }
+        data['bindings'].sort.map { |k, v| [k, Term.new(v)] }.to_h
       end
 
       private
@@ -148,15 +130,15 @@ module Osohq
     end
 
     class Term
-      def self.from_json(json)
-        tag, value = [*json['value']][0]
+      def self.to_ruby(value)
+        tag, value = [*value][0]
         case tag
         when 'Integer', 'String', 'Boolean'
           value
         when 'List'
-          value.map { |term| Term.from_json(term) }
+          value.map { |term| Term.to_ruby(term) }
         when 'Dictionary'
-          value['fields'].map { |k, v| [k, Term.from_json(v)] }.to_h
+          value['fields'].map { |k, v| [k, Term.to_ruby(v)] }.to_h
         when 'ExternalInstance', 'InstanceLiteral', 'Call'
           raise Unimplemented
         when 'Symbol'
@@ -165,6 +147,20 @@ module Osohq
           raise Unimplemented
         end
       end
+
+      def initialize(data)
+        @id = data['id']
+        @offset = data['offset']
+        @value = data['value']
+      end
+
+      def to_ruby
+        self.class.to_ruby(value)
+      end
+
+      private
+
+      attr_reader :value
     end
   end
 end
