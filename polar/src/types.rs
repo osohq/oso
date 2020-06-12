@@ -160,6 +160,11 @@ impl Dictionary {
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
     }
+
+    /// Convert all terms in this dictionary to patterns.
+    pub fn as_pattern(&self) -> Pattern {
+        Pattern::Dictionary(self.map(&mut Pattern::value_as_pattern))
+    }
 }
 
 pub fn field_name(field: &Term) -> Symbol {
@@ -195,6 +200,11 @@ impl InstanceLiteral {
             .fields
             .iter_mut()
             .for_each(|(_, v)| v.map_in_place(f));
+    }
+
+    /// Convert all terms in this instance literal to patterns.
+    pub fn as_pattern(&self) -> Pattern {
+        Pattern::Instance(self.map(&mut Pattern::value_as_pattern))
     }
 }
 
@@ -303,6 +313,40 @@ pub struct Operation {
     pub args: TermList,
 }
 
+
+/// Represents a pattern in a specializer or after isa.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub enum Pattern {
+    Dictionary(Dictionary),
+    Instance(InstanceLiteral)
+}
+
+impl Pattern {
+    pub fn value_as_pattern(value: &Value) -> Value {
+        value.map(&mut |v| {
+            match v {
+                Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
+                Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
+                _ => v.clone()
+            }
+        })
+    }
+
+    pub fn term_as_pattern(term: &Term) -> Term {
+        term.map(&mut Pattern::value_as_pattern)
+    }
+
+    pub fn map<F>(&self, f: &mut F) -> Pattern
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        match self {
+            Pattern::Instance(lit) => Pattern::Instance(lit.map(f)),
+            Pattern::Dictionary(dict) => Pattern::Dictionary(dict.map(f))
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Value {
     Integer(i64),
@@ -311,6 +355,7 @@ pub enum Value {
     ExternalInstance(ExternalInstance),
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
+    Pattern(Pattern),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
     Symbol(Symbol),
@@ -336,6 +381,7 @@ impl Value {
             Value::InstanceLiteral(literal) => Value::InstanceLiteral(literal.map(f)),
             Value::ExternalInstance(_) => self.clone(),
             Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
+            Value::Pattern(pat) => Value::Pattern(pat.map(f)),
         };
         // actually does the mapping of nodes: applies to all nodes, both leaves and
         // intermediate nodes
@@ -452,6 +498,13 @@ impl Term {
             Value::Dictionary(Dictionary { ref mut fields }) => {
                 fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
             }
+            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
+                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
+            }
+            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => fields
+                .fields
+                .iter_mut()
+                .for_each(|(_, v)| v.map_in_place(f)),
         };
     }
 }

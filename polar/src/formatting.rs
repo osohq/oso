@@ -355,6 +355,15 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for Pattern {
+        fn to_polar(&self) -> String {
+            match self {
+                Pattern::Dictionary(d) => d.to_polar(),
+                Pattern::Instance(i) => i.to_polar()
+            }
+        }
+    }
+
     impl ToPolarString for Value {
         fn to_polar(&self) -> String {
             match self {
@@ -369,6 +378,7 @@ pub mod to_polar {
                 }
                 Value::InstanceLiteral(i) => i.to_polar(),
                 Value::Dictionary(i) => i.to_polar(),
+                Value::Pattern(i) => i.to_polar(),
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ","),),

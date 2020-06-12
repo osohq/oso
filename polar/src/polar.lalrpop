@@ -209,6 +209,7 @@ Exp8: Term = {
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     <start:@L> <left:Exp9> "isa" <right:Exp9> => {
+        let right = Pattern::term_as_pattern(&right);
         let args = vec![left, right];
         let op = Operation{operator: Operator::Isa, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
@@ -224,8 +225,8 @@ Exp7: Term = {
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     // TODO (dhatch): Maybe a different type here
-    <start:@L> "new" <pattern:InstanceLiteral> => {
-        let args = vec![pattern];
+    <start:@L> "new" <literal:InstanceLiteral> => {
+        let args = vec![literal];
         let op = Operation{operator: Operator::New, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
