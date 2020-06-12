@@ -543,7 +543,8 @@ impl PolarVirtualMachine {
             }
 
             // TODO (dhatch:) Remove dict, dict branch
-            (Value::Dictionary(left), Value::Dictionary(right)) | (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
+            (Value::Dictionary(left), Value::Dictionary(right))
+            | (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
                 // Check that the left is more specific than the right.
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
@@ -580,7 +581,8 @@ impl PolarVirtualMachine {
                 self.append_goals(goals);
             }
 
-            (Value::ExternalInstance(left), Value::Dictionary(right)) | (Value::ExternalInstance(left), Value::Pattern(Pattern::Dictionary(right))) => {
+            (Value::ExternalInstance(left), Value::Dictionary(right))
+            | (Value::ExternalInstance(left), Value::Pattern(Pattern::Dictionary(right))) => {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
                 for (field, right_value) in right.fields.iter() {
@@ -630,7 +632,8 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (Value::ExternalInstance(left), Value::InstanceLiteral(right)) | (Value::ExternalInstance(left), Value::Pattern(Pattern::Instance(right))) => {
+            (Value::ExternalInstance(left), Value::InstanceLiteral(right))
+            | (Value::ExternalInstance(left), Value::Pattern(Pattern::Instance(right))) => {
                 // Check fields
                 self.push_goal(Goal::Isa {
                     left: Term::new(Value::ExternalInstance(left.clone())),

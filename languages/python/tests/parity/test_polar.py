@@ -264,9 +264,7 @@ def test_isa(qeval, qvar, externals):
 
 
 def test_nested_isa(qeval, qvar, externals):
-    assert qeval(
-        "MyClass{x: MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}"
-    )
+    assert qeval("MyClass{x: MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}")
     assert not qeval("MyClass{x: MyClass{x: 1}, y: 2} isa MyClass{x: MyClass{y: 2}}")
 
 

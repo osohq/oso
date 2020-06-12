@@ -313,22 +313,19 @@ pub struct Operation {
     pub args: TermList,
 }
 
-
 /// Represents a pattern in a specializer or after isa.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Pattern {
     Dictionary(Dictionary),
-    Instance(InstanceLiteral)
+    Instance(InstanceLiteral),
 }
 
 impl Pattern {
     pub fn value_as_pattern(value: &Value) -> Value {
-        value.map(&mut |v| {
-            match v {
-                Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
-                Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
-                _ => v.clone()
-            }
+        value.map(&mut |v| match v {
+            Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
+            Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
+            _ => v.clone(),
         })
     }
 
@@ -342,7 +339,7 @@ impl Pattern {
     {
         match self {
             Pattern::Instance(lit) => Pattern::Instance(lit.map(f)),
-            Pattern::Dictionary(dict) => Pattern::Dictionary(dict.map(f))
+            Pattern::Dictionary(dict) => Pattern::Dictionary(dict.map(f)),
         }
     }
 }
