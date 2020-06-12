@@ -161,3 +161,6 @@ cython_debug/
 
 # Project-local CoC settings
 **/.vim/coc-settings.json
+
+# Generated C files
+*.c
