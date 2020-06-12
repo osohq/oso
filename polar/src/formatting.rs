@@ -261,9 +261,14 @@ pub mod to_polar {
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {
-                        format!("{}.{}", self.args[0].to_polar(), self.args[1].to_polar())
+                        let call = self.args[1].value.clone().call().unwrap();
+                        if call.args.is_empty() {
+                            format!("{}.{}", self.args[0].to_polar(), call.name.to_polar())
+                        } else {
+                            format!("{}.{}", self.args[0].to_polar(), call.to_polar())
+                        }
                     } else {
-                        format!(".({})", format_args(self.operator, &self.args, ","))
+                        format!(".({})", format_args(self.operator, &self.args, ", "))
                     }
                 }
                 // Unary operators
@@ -275,14 +280,15 @@ pub mod to_polar {
                 // Binary operators
                 Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa | In => {
                     format!(
-                        "{}{}{}",
+                        "{} {} {}",
                         to_polar_parens(self.operator, &self.args[0]),
                         self.operator.to_polar(),
                         to_polar_parens(self.operator, &self.args[1])
                     )
                 }
                 // n-ary operators
-                Or | And => format_args(self.operator, &self.args, &self.operator.to_polar()),
+                And => format_args(self.operator, &self.args, &format!("{} ", self.operator.to_polar())),
+                Or => format_args(self.operator, &self.args, &format!(" {} ", self.operator.to_polar())),
             }
         }
     }
@@ -302,15 +308,11 @@ pub mod to_polar {
 
     impl ToPolarString for Predicate {
         fn to_polar(&self) -> String {
-            if self.args.is_empty() {
-                self.name.to_polar()
-            } else {
-                format!(
-                    "{}({})",
-                    self.name.to_polar(),
-                    format_args(Operator::And, &self.args, ",")
-                )
-            }
+            format!(
+                "{}({})",
+                self.name.to_polar(),
+                format_args(Operator::And, &self.args, ", ")
+            )
         }
     }
 
@@ -329,14 +331,14 @@ pub mod to_polar {
                         format!(
                             "{}({});",
                             self.name.to_polar(),
-                            format_params(&self.params, ",")
+                            format_params(&self.params, ", ")
                         )
                     } else {
                         format!(
                             "{}({}) := {};",
                             self.name.to_polar(),
-                            format_params(&self.params, ","),
-                            format_args(Operator::And, &args, ","),
+                            format_params(&self.params, ", "),
+                            format_args(Operator::And, &args, ", "),
                         )
                     }
                 }
@@ -383,7 +385,7 @@ pub mod to_polar {
                 Value::Pattern(i) => i.to_polar(),
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
-                Value::List(l) => format!("[{}]", format_args(Operator::And, l, ","),),
+                Value::List(l) => format!("[{}]", format_args(Operator::And, l, ", "),),
                 Value::Symbol(s) => s.to_polar(),
                 Value::Expression(e) => e.to_polar(),
             }
