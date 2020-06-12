@@ -12,16 +12,15 @@ from .extras import Http, PathMapper
 from .ffi import (
     external_answer,
     external_call,
+    ffi_deserialize,
+    ffi_serialize,
     load_str,
     check_result,
     is_null,
     new_id,
     manage_query,
     Predicate,
-    stringify,
     to_c_str,
-    to_polar_term,
-    unstringify,
     Variable,
 )
 
@@ -66,8 +65,7 @@ class Polar:
         # Not usually needed but useful for tests since we make a lot of these.
         lib.polar_free(self.polar)
 
-    def _to_polar_term(self, value):
-        return to_polar_term(value, self.__cache_instance)
+    ########## PUBLIC METHODS ##########
 
     def load(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
@@ -81,28 +79,26 @@ class Polar:
         if policy_file not in self.load_queue:
             self.load_queue.append(policy_file)
 
-    def _load_queued_files(self):
-        """Load queued policy files into the knowledge base."""
-        self.__clear_instances()
-        while self.load_queue:
-            with open(self.load_queue.pop(0)) as file:
-                self._load_str(file.read())
+    def clear(self):
+        """Clear all facts and internal Polar classes from the knowledge base."""
+        self.load_queue = []
+        lib.polar_free(self.polar)
+        self.polar = None
+        self.polar = lib.polar_new()
 
-    def __cache_instance(self, instance, id=None):
-        """Cache Python instance under externally generated id."""
-        if id is None:
-            id = new_id(self.polar)
-        self.instances[id] = instance
-        return id
-
-    def __get_instance(self, id):
-        """Look up Python instance by id."""
-        if id not in self.instances:
-            raise PolarRuntimeException(f"Unregistered instance: {id}.")
-        return self.instances[id]
-
-    def __clear_instances(self):
-        self.instances = {}
+    def repl(self):
+        self._load_queued_files()
+        while True:
+            query = lib.polar_query_from_repl(self.polar)
+            had_result = False
+            if is_null(query):
+                print("Query error: ", get_error())
+                break
+            for res in self.__run_query(query):
+                had_result = True
+                print(f"Result: {res}")
+            if not had_result:
+                print("False")
 
     def register_class(self, cls, from_polar=None):
         """Registers `cls` as a class accessible by Polar. `from_polar` can
@@ -112,9 +108,37 @@ class Polar:
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
 
+
+    ########## HIDDEN METHODS ##########
+
+    def _load_queued_files(self):
+        """Load queued policy files into the knowledge base."""
+        self.instances = {}
+        while self.load_queue:
+            with open(self.load_queue.pop(0)) as file:
+                self._load_str(file.read())
+
     def _load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
         load_str(self.polar, string, self.__run_query)
+
+    def _query_str(self, string):
+        self._load_queued_files()
+        string = to_c_str(string)
+        query = check_result(lib.polar_new_query(self.polar, string))
+        yield from self.__run_query(query)
+
+    def _query_pred(self, query: Predicate, debug=False, single=False):
+        """Query the knowledge base."""
+        self._load_queued_files()
+        query = ffi_serialize(self._to_polar_term(query))
+        query = check_result(lib.polar_new_query_from_term(self.polar, query))
+        results = []
+        for res in self.__run_query(query):
+            results.append(res)
+            if single:
+                break
+        return QueryResult(results)
 
     def _to_python(self, v):
         """ Convert polar terms to python values """
@@ -145,6 +169,61 @@ class Polar:
             )
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
+    def _to_polar_term(self, v):
+        """Convert Python values to Polar terms."""
+        if type(v) == bool:
+            val = {"Boolean": v}
+        elif type(v) == int:
+            val = {"Integer": v}
+        elif type(v) == str:
+            val = {"String": v}
+        elif type(v) == list:
+            val = {"List": [self._to_polar_term(i) for i in v]}
+        elif type(v) == dict:
+            val = {
+                "Dictionary": {
+                    "fields": {k: self._to_polar_term(v) for k, v in v.items()}
+                }
+            }
+        elif isinstance(v, Predicate):
+            val = {
+                "Call": {"name": v.name, "args": [self._to_polar_term(v) for v in v.args]}
+            }
+        elif isinstance(v, Variable):
+            # This is supported so that we can query for unbound variables
+            val = {"Symbol": v}
+        else:
+            val = {"ExternalInstance": {"instance_id": self.__cache_instance(v)}}
+        term = {"id": 0, "offset": 0, "value": val}
+        return term
+
+
+    ########## PRIVATE METHODS ##########
+
+    def __run_query(self, q):
+        """Method which performs the query loop over an already constructed query"""
+        with manage_query(q) as query:
+            while True:
+                event_s = lib.polar_query(self.polar, query)
+                event = ffi_deserialize(event_s)
+                if event == "Done":
+                    break
+                kind = [*event][0]
+                data = event[kind]
+
+                if kind == "MakeExternal":
+                    self.__handle_make_external(data)
+                if kind == "ExternalCall":
+                    self.__handle_external_call(query, data)
+                if kind == "ExternalIsa":
+                    self.__handle_external_isa(query, data)
+                if kind == "ExternalIsSubSpecializer":
+                    self.__handle_external_is_subspecializer(query, data)
+                if kind == "Debug":
+                    self.__handle_debug(query, data)
+                if kind == "Result":
+                    yield {k: self._to_python(v) for k, v in data["bindings"].items()}
+
     def __make_external_instance(self, cls_name, fields, instance_id=None):
         """Make new instance of external class."""
         if cls_name not in self.classes:
@@ -168,6 +247,19 @@ class Polar:
             raise PolarRuntimeException(
                 f"Error constructing instance of {cls_name}: {e}"
             )
+
+    def __cache_instance(self, instance, id=None):
+        """Cache Python instance under externally generated id."""
+        if id is None:
+            id = new_id(self.polar)
+        self.instances[id] = instance
+        return id
+
+    def __get_instance(self, id):
+        """Look up Python instance by id."""
+        if id not in self.instances:
+            raise PolarRuntimeException(f"Unregistered instance: {id}.")
+        return self.instances[id]
 
     def __handle_make_external(self, data):
         id = data["instance_id"]
@@ -213,7 +305,7 @@ class Polar:
         # Return the next result of the call.
         try:
             value = next(self.calls[call_id])
-            stringified = stringify(value, self.__cache_instance)
+            stringified = ffi_serialize(self._to_polar_term(value))
             external_call(self.polar, query, call_id, stringified)
         except StopIteration:
             external_call(self.polar, query, call_id, None)
@@ -243,68 +335,11 @@ class Polar:
         if data["message"]:
             print(data["message"])
         command = input("> ")
-        stringified = stringify(command, self.__cache_instance)
+        stringified = ffi_serialize(self._to_polar_term(command))
         check_result(lib.polar_debug_command(self.polar, query, stringified))
 
-    def __run_query(self, q):
-        """Method which performs the query loop over an already constructed query"""
-        with manage_query(q) as query:
-            while True:
-                event_s = lib.polar_query(self.polar, query)
-                event = unstringify(event_s)
-                if event == "Done":
-                    break
-                kind = [*event][0]
-                data = event[kind]
 
-                if kind == "MakeExternal":
-                    self.__handle_make_external(data)
-                if kind == "ExternalCall":
-                    self.__handle_external_call(query, data)
-                if kind == "ExternalIsa":
-                    self.__handle_external_isa(query, data)
-                if kind == "ExternalIsSubSpecializer":
-                    self.__handle_external_is_subspecializer(query, data)
-                if kind == "Debug":
-                    self.__handle_debug(query, data)
-                if kind == "Result":
-                    yield {k: self._to_python(v) for k, v in data["bindings"].items()}
 
-    def _query_str(self, string):
-        self._load_queued_files()
-        string = to_c_str(string)
-        query = check_result(lib.polar_new_query(self.polar, string))
-        yield from self.__run_query(query)
 
-    def _query_pred(self, query: Predicate, debug=False, single=False):
-        """Query the knowledge base."""
-        self._load_queued_files()
-        query = stringify(query, self.__cache_instance)
-        query = check_result(lib.polar_new_query_from_term(self.polar, query))
-        results = []
-        for res in self.__run_query(query):
-            results.append(res)
-            if single:
-                break
-        return QueryResult(results)
 
-    def clear(self):
-        """Clear all facts and internal Polar classes from the knowledge base."""
-        self.load_queue = []
-        lib.polar_free(self.polar)
-        self.polar = None
-        self.polar = lib.polar_new()
 
-    def repl(self):
-        self._load_queued_files()
-        while True:
-            query = lib.polar_query_from_repl(self.polar)
-            had_result = False
-            if is_null(query):
-                print("Query error: ", get_error())
-                break
-            for res in self.__run_query(query):
-                had_result = True
-                print(f"Result: {res}")
-            if not had_result:
-                print("False")
