@@ -279,4 +279,16 @@ RSpec.describe Osohq::Polar::Polar do
       end
     end
   end
+
+  context 'when loading a file with inline queries' do
+    before(:example) { pending "Don't handle inline queries yet" }
+
+    it 'succeeds if all inline queries succeed' do
+      subject.load_str('f(1); f(2); ?= f(1); ?= !f(3);')
+    end
+
+    it 'fails if an inline query fails' do
+      subject.load_str('g(1); ?= g(2);')
+    end
+  end
 end
