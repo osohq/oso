@@ -41,14 +41,6 @@ def test_load_function(polar, query, qvar):
 
     polar.clear()
     polar.load(Path(__file__).parent / "test_file.polar")
-    assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
-    assert qvar("f(x)", "x") == [1, 2, 3]
-    polar.load(Path(__file__).parent / "test_file_gx.polar")
-    assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
-    assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
-
-    polar.clear()
-    polar.load(Path(__file__).parent / "test_file.polar")
     polar.load(Path(__file__).parent / "test_file_gx.polar")
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
