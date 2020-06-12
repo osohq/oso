@@ -132,5 +132,77 @@ RSpec.describe Osohq::Polar::Polar do
       expect(qvar(subject, 'Foo{}.g.hello = x', 'x', one: true)).to eq('world')
       expect(qvar(subject, 'Foo{}.h = x', 'x', one: true)).to be true
     end
+
+    it 'respects the Ruby inheritance hierarchy for class specialization' do
+      class A
+        def a
+          'A'
+        end
+
+        def x
+          'A'
+        end
+      end
+
+      class B < A
+        def b
+          'B'
+        end
+
+        def x
+          'B'
+        end
+      end
+
+      class C < B
+        def c
+          'C'
+        end
+
+        def x
+          'C'
+        end
+      end
+
+      class X
+        def x
+          'X'
+        end
+      end
+
+      subject.register_class(A)
+      subject.register_class(B)
+      subject.register_class(C)
+      subject.register_class(X)
+
+      rules = <<~POLAR
+        test(A{});
+        test(B{});
+
+        try(v: B{}, res) := res = 2;
+        try(v: C{}, res) := res = 3;
+        try(v: A{}, res) := res = 1;
+      POLAR
+      subject.load_str(rules)
+
+      expect(qvar(subject, 'A{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'A{}.x = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'B{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'B{}.b = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'B{}.x = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'C{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'C{}.b = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'C{}.c = x', 'x', one: true)).to eq('C')
+      expect(qvar(subject, 'C{}.x = x', 'x', one: true)).to eq('C')
+      expect(qvar(subject, 'X{}.x = x', 'x', one: true)).to eq('X')
+
+      expect(query(subject, 'test(A{})').length).to be 1
+      expect(query(subject, 'test(B{})').length).to be 2
+
+      expect(qvar(subject, 'try(A{}, x)', 'x')).to eq([1])
+      expect(qvar(subject, 'try(B{}, x)', 'x')).to eq([2, 1])
+      expect(qvar(subject, 'try(C{}, x)', 'x')).to eq([3, 2, 1])
+      expect(qvar(subject, 'try(X{}, x)', 'x')).to eq([])
+    end
   end
 end
