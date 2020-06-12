@@ -15,7 +15,7 @@ include_dirs = {
     "LINUX": "native",
 }
 env = os.environ.get("ENV", "DEVELOPMENT")
-lib_dir = lib_dirs[env]
+lib = lib_dirs[env] + "/libpolar.a"  # @TODO: Windows
 include_dir = include_dirs[env]
 
 ffibuilder.set_source(
@@ -23,9 +23,11 @@ ffibuilder.set_source(
     r"""
     #include "polar.h"
     """,
-    library_dirs=[lib_dir],
+    library_dirs=[lib_dirs[env]],
     include_dirs=[include_dir],
-    libraries=["polar", "rt"] if sys.platform.startswith("linux") else ["polar"],
+    libraries=["rt"] if sys.platform.startswith("linux") else [],
+    extra_link_args=[lib]
+    # extra_compile_args=[lib],
 )
 
 with open(include_dir + "/polar.h") as f:

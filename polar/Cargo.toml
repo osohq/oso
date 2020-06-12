@@ -5,7 +5,7 @@ authors = ["oso <dev@osohq.com>"]
 edition = "2018"
 
 [lib]
-crate-type = ["lib", "staticlib"]
+crate-type = ["lib", "staticlib", "cdylib"]
 
 [[bin]]
 name = "polar"
