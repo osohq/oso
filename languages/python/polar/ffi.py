@@ -49,42 +49,11 @@ def to_c_str(string):
     return ffi.new("char[]", string.encode())
 
 
-def to_polar_term(v, new_id):
-    """Convert Python values to Polar terms."""
-    if type(v) == bool:
-        val = {"Boolean": v}
-    elif type(v) == int:
-        val = {"Integer": v}
-    elif type(v) == str:
-        val = {"String": v}
-    elif type(v) == list:
-        val = {"List": [to_polar_term(i, new_id) for i in v]}
-    elif type(v) == dict:
-        val = {
-            "Dictionary": {
-                "fields": {k: to_polar_term(v, new_id) for k, v in v.items()}
-            }
-        }
-    elif isinstance(v, Predicate):
-        val = {
-            "Call": {"name": v.name, "args": [to_polar_term(v, new_id) for v in v.args]}
-        }
-    elif isinstance(v, Variable):
-        # This is supported so that we can query for unbound variables
-        val = {"Symbol": v}
-    else:
-        val = {"ExternalInstance": {"instance_id": new_id(v)}}
-    term = {"id": 0, "offset": 0, "value": val}
-    return term
+def ffi_serialize(value):
+    return to_c_str(json.dumps(value))
 
 
-def stringify(value, new_id):
-    formatted = to_polar_term(value, new_id)
-    dumped = json.dumps(formatted)
-    return to_c_str(dumped)
-
-
-def unstringify(string):
+def ffi_deserialize(string):
     """Reconstruct Python object from JSON-encoded C string."""
     try:
         check_result(string)
