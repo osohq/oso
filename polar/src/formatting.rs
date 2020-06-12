@@ -233,6 +233,7 @@ pub mod to_polar {
                 In => "in",
                 Cut => "cut",
                 Debug => "debug",
+                Isa => "isa",
             }
             .to_string()
         }
@@ -272,7 +273,7 @@ pub mod to_polar {
                     to_polar_parens(self.operator, &self.args[0])
                 ),
                 // Binary operators
-                Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify => format!(
+                Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa | In => format!(
                     "{}{}{}",
                     to_polar_parens(self.operator, &self.args[0]),
                     self.operator.to_polar(),
@@ -280,11 +281,6 @@ pub mod to_polar {
                 ),
                 // n-ary operators
                 Or | And => format_args(self.operator, &self.args, &self.operator.to_polar()),
-                In => format!(
-                    "{} in {}",
-                    &self.args[0].to_polar(),
-                    &self.args[1].to_polar()
-                ),
             }
         }
     }

@@ -202,8 +202,8 @@ def test_dictionaries(tell, qeval, qvar):
 
 
 def test_external_classes(tell, qeval, qvar, externals):
-    assert qeval("isa(Bar{}, Foo{})")
-    assert not qeval("isa(Qux{}, Foo{})")
+    assert qeval("Bar{} isa Foo{}")
+    assert not qeval("Qux{} isa Foo{}")
     assert qeval('Foo{}.foo = "Foo!"')
     assert qeval('Bar{}.foo = "Bar!"')
 
@@ -237,37 +237,37 @@ def test_keys_are_confusing(tell, qeval, qvar, externals):
 
 
 def test_isa(qeval, qvar, externals):
-    assert qeval("isa({}, {})")
-    assert qeval("isa({x: 1}, {})")
-    assert qeval("isa({x: 1}, {x: 1})")
-    assert qeval("isa({x: 1, y: 2}, {x: 1})")
-    assert qeval("isa({x: 1, y: 2}, {x: 1, y: 2})")
-    assert qeval("isa({a: {x: 1, y: 2}}, {a: {y: 2}})")
-    assert not qeval("isa({a: {x: 1, y: 2}}, {b: {y: 2}})")
-    assert not qeval("isa({x: 1}, {x: 1, y: 2})")
-    assert not qeval("isa({y: 2}, {x: 1, y: 2})")
-    assert not qeval("isa({}, {x: 1, y: 2})")
-    assert not qeval("isa({}, {x: 1})")
+    assert qeval("{} isa {}")
+    assert qeval("{x: 1} isa {}")
+    assert qeval("{x: 1} isa {x: 1}")
+    assert qeval("{x: 1, y: 2} isa {x: 1}")
+    assert qeval("{x: 1, y: 2} isa {x: 1, y: 2}")
+    assert qeval("{a: {x: 1, y: 2}} isa {a: {y: 2}}")
+    assert not qeval("{a: {x: 1, y: 2}} isa {b: {y: 2}}")
+    assert not qeval("{x: 1} isa {x: 1, y: 2}")
+    assert not qeval("{y: 2} isa {x: 1, y: 2}")
+    assert not qeval("{} isa {x: 1, y: 2}")
+    assert not qeval("{} isa {x: 1}")
 
-    assert qeval("isa(MyClass{x: 1, y: 2}, {})")
-    assert qeval("isa(MyClass{x: 1, y: 2}, {x: 1, y: 2})")
-    assert not qeval("isa({x: 1, y: 2}, MyClass{x: 1, y: 2})")
+    assert qeval("MyClass{x: 1, y: 2} isa {}")
+    assert qeval("MyClass{x: 1, y: 2} isa {x: 1, y: 2}")
+    assert not qeval("{x: 1, y: 2} isa MyClass{x: 1, y: 2}")
 
-    assert qeval("isa(MyClass{x: 1, y: 2}, MyClass{x: 1})")
-    assert not qeval("isa(MyClass{y: 2}, MyClass{x: 1, y: 2})")
+    assert qeval("MyClass{x: 1, y: 2} isa MyClass{x: 1}")
+    assert not qeval("MyClass{y: 2} isa MyClass{x: 1, y: 2}")
 
-    assert qeval("isa(OurClass{x: 1, y: 2}, YourClass{})")
-    assert qeval("isa(OurClass{x: 1, y: 2}, MyClass{x: 1})")
-    assert qeval("isa(OurClass{x: 1, y: 2}, MyClass{x: 1, y: 2})")
-    assert not qeval("isa(MyClass{x: 1, y: 2}, OurClass{x: 1})")
-    assert not qeval("isa(MyClass{x: 1, y: 2}, YourClass{})")
+    assert qeval("OurClass{x: 1, y: 2} isa YourClass{}")
+    assert qeval("OurClass{x: 1, y: 2} isa MyClass{x: 1}")
+    assert qeval("OurClass{x: 1, y: 2} isa MyClass{x: 1, y: 2}")
+    assert not qeval("MyClass{x: 1, y: 2} isa OurClass{x: 1}")
+    assert not qeval("MyClass{x: 1, y: 2} isa YourClass{}")
 
 
 def test_nested_isa(qeval, qvar, externals):
     assert qeval(
-        "isa(MyClass{x: MyClass{x: 1, y: 2}, y: 2}, MyClass{x: MyClass{x: 1}})"
+        "MyClass{x: MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}"
     )
-    assert not qeval("isa(MyClass{x: MyClass{x: 1}, y: 2}, MyClass{x: MyClass{y: 2}})")
+    assert not qeval("MyClass{x: MyClass{x: 1}, y: 2} isa MyClass{x: MyClass{y: 2}}")
 
 
 def test_field_unification(qeval):

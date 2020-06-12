@@ -923,9 +923,13 @@ impl PolarVirtualMachine {
                 literal_value.map_in_place(&mut |t| *t = self.deref(t));
                 return Ok(self.make_external(literal_value, instance_id));
             }
-            Operator::Cut => self.push_goal(Goal::Cut {
-                choice_index: self.choices.len() - 1,
-            })?,
+            Operator::Cut => self.push_goal(Goal::Cut)?,
+            Operator::Isa => {
+                assert_eq!(args.len(), 2);
+                let right = args.pop().unwrap();
+                let left = args.pop().unwrap();
+                self.push_goal(Goal::Isa { left, right })?
+            }
             _ => {
                 return Err(
                     self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))

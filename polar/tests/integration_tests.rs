@@ -720,6 +720,18 @@ fn test_in() {
 }
 
 #[test]
+fn test_isa() {
+    let mut polar = Polar::new();
+    qnull(&mut polar, "x = 1, y = 2, x isa y");
+    qeval(&mut polar, "x = 1, y = 1, x isa y");
+
+    qeval(&mut polar, "x = {foo: 1}, x isa {foo: 1}");
+    qnull(&mut polar, "x = {foo: 1}, x isa {foo: 1, bar: 2}");
+    qnull(&mut polar, "x = {foo: 1}, x isa {foo: 2}");
+}
+
+#[test]
+#[should_panic]
 // currently panics because you can't use keyword operators as non-operator symbols in a policy right now
 fn test_keyword_bug() {
     let polar = Polar::new();

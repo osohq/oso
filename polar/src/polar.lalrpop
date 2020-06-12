@@ -48,9 +48,10 @@ extern {
         ";" => lexer::Token::SemiColon, // ;
         ":=" => lexer::Token::Define,   // :=
         "?=" => lexer::Token::Query,    // ?=
-        "in" => lexer::Token::In,
         "cut" => lexer::Token::Cut,
         "debug" => lexer::Token::Debug,
+        "in" => lexer::Token::In,       // in
+        "isa" => lexer::Token::Isa,     // isa
     }
 }
 
@@ -200,11 +201,16 @@ Exp9: Term = {
     <exp10:Exp10> => exp10
 };
 
-// in
+// in isa
 Exp8: Term = {
     <start:@L> <left:Exp9> "in" <right:Exp9> => {
         let args = vec![left, right];
         let op = Operation{operator: Operator::In, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <left:Exp9> "isa" <right:Exp9> => {
+        let args = vec![left, right];
+        let op = Operation{operator: Operator::Isa, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     <exp9:Exp9> => exp9

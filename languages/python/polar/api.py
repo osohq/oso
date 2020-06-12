@@ -55,8 +55,6 @@ class Polar:
         self.instances = {}
         self.calls = {}
 
-        # Load built-in `isa()` rule.
-        self._load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
         # Register built-in classes.
         self.register_class(Http)
         self.register_class(PathMapper)
