@@ -108,7 +108,6 @@ class Polar:
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
 
-
     ########## HIDDEN METHODS ##########
 
     def _load_queued_files(self):
@@ -187,7 +186,10 @@ class Polar:
             }
         elif isinstance(v, Predicate):
             val = {
-                "Call": {"name": v.name, "args": [self._to_polar_term(v) for v in v.args]}
+                "Call": {
+                    "name": v.name,
+                    "args": [self._to_polar_term(v) for v in v.args],
+                }
             }
         elif isinstance(v, Variable):
             # This is supported so that we can query for unbound variables
@@ -196,7 +198,6 @@ class Polar:
             val = {"ExternalInstance": {"instance_id": self.__cache_instance(v)}}
         term = {"id": 0, "offset": 0, "value": val}
         return term
-
 
     ########## PRIVATE METHODS ##########
 
@@ -337,9 +338,3 @@ class Polar:
         command = input("> ")
         stringified = ffi_serialize(self._to_polar_term(command))
         check_result(lib.polar_debug_command(self.polar, query, stringified))
-
-
-
-
-
-

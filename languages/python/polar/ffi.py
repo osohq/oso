@@ -48,8 +48,10 @@ def is_null(result):
 def to_c_str(string):
     return ffi.new("char[]", string.encode())
 
+
 def ffi_serialize(value):
     return to_c_str(json.dumps(value))
+
 
 def ffi_deserialize(string):
     """Reconstruct Python object from JSON-encoded C string."""
@@ -68,6 +70,7 @@ def manage_query(query):
         yield query
     finally:
         lib.query_free(query)
+
 
 def load_str(polar, string, do_query):
     """Load a Polar string, checking that all inline queries succeed."""
