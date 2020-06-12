@@ -175,7 +175,7 @@ RSpec.describe Osohq::Polar::Polar do
       subject.register_class(C)
       subject.register_class(X)
 
-      rules = <<~POLAR
+      subject.load_str <<~POLAR
         test(A{});
         test(B{});
 
@@ -183,7 +183,6 @@ RSpec.describe Osohq::Polar::Polar do
         try(v: C{}, res) := res = 3;
         try(v: A{}, res) := res = 1;
       POLAR
-      subject.load_str(rules)
 
       expect(qvar(subject, 'A{}.a = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'A{}.x = x', 'x', one: true)).to eq('A')
@@ -203,6 +202,81 @@ RSpec.describe Osohq::Polar::Polar do
       expect(qvar(subject, 'try(B{}, x)', 'x')).to eq([2, 1])
       expect(qvar(subject, 'try(C{}, x)', 'x')).to eq([3, 2, 1])
       expect(qvar(subject, 'try(X{}, x)', 'x')).to eq([])
+    end
+
+    context 'animal tests' do
+      class Animal
+        attr_reader :family, :genus, :species
+
+        def initialize(family: nil, genus: nil, species: nil)
+          @family = family
+          @genus = genus
+          @species = species
+        end
+      end
+      let(:wolf) { 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}' }
+      let(:dog) {  'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
+      let(:canine) { 'Animal{genus: "canis", family: "canidae"}' }
+      let(:canid) {  'Animal{family: "canidae"}' }
+      let(:animal) { 'Animal{}' }
+
+      before(:example) { subject.register_class(Animal) }
+
+      it 'can specialize on dict fields' do
+        subject.load_str <<~POLAR
+          what_is(animal: {genus: "canis"}, r) := r = "canine";
+          what_is(animal: {species: "canis lupus", genus: "canis"}, r) := r = "wolf";
+          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) := r = "dog";
+        POLAR
+        expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(%w[wolf canine])
+        expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(%w[dog canine])
+        expect(qvar(subject, "what_is(#{canine}, r)", 'r')).to eq(['canine'])
+      end
+
+      it 'can specialize on class fields' do
+        subject.load_str <<~POLAR
+          what_is(animal: Animal{}, r) := r = "animal";
+          what_is(animal: Animal{genus: "canis"}, r) := r = "canine";
+          what_is(animal: Animal{family: "canidae"}, r) := r = "canid";
+          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) := r = "wolf";
+          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) := r = "dog";
+          what_is(animal: Animal{species: s, genus: "canis"}, r) := r = s;
+        POLAR
+        expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(['wolf', 'canis lupus', 'canine', 'canid', 'animal'])
+        expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(['dog', 'canis familiaris', 'canine', 'canid', 'animal'])
+        expect(qvar(subject, "what_is(#{canine}, r)", 'r')).to eq([None, 'canine', 'canid', 'animal'])
+        expect(qvar(subject, "what_is(#{canid}, r)", 'r')).to eq(%w[canid animal])
+        expect(qvar(subject, "what_is(#{animal}, r)", 'r')).to eq(['animal'])
+      end
+
+      it 'can specialize with a mix of class and dict fields' do
+        subject.load_str <<~POLAR
+          what_is(animal: Animal{}, r) := r = "animal_class";
+          what_is(animal: Animal{genus: "canis"}, r) := r = "canine_class";
+          what_is(animal: {genus: "canis"}, r) := r = "canine_dict";
+          what_is(animal: Animal{family: "canidae"}, r) := r = "canid_class";
+          what_is(animal: {species: "canis lupus", genus: "canis"}, r) := r = "wolf_dict";
+          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) := r = "dog_dict";
+          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) := r = "wolf_class";
+          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) := r = "dog_class";
+        POLAR
+
+        wolf_dict = '{species: "canis lupus", genus: "canis", family: "canidae"}'
+        dog_dict = '{species: "canis familiaris", genus: "canis", family: "canidae"}'
+        canine_dict = '{genus: "canis", family: "canidae"}'
+
+        # test rule ordering for instances
+        expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(%w[wolf_class canine_class canid_class animal_class
+                                                                   wolf_dict canine_dict])
+        expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(%w[dog_class canine_class canid_class animal_class
+                                                                  dog_dict canine_dict])
+        expect(qvar(subject, "what_is(#{canine}, r)", 'r')).to eq(%w[canine_class canid_class animal_class canine_dict])
+
+        # test rule ordering for dicts
+        expect(qvar(subject, "what_is(#{wolf_dict}, r)", 'r')).to eq(%w[wolf_dict canine_dict])
+        expect(qvar(subject, "what_is(#{dog_dict}, r)", 'r')).to eq(%w[dog_dict canine_dict])
+        expect(qvar(subject, "what_is(#{canine_dict}, r)", 'r')).to eq(['canine_dict'])
+      end
     end
   end
 end
