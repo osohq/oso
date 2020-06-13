@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'set'
 
 require 'osohq/polar/version'
 require 'osohq/polar/ffi'
@@ -17,6 +18,7 @@ module Osohq
         @class_constructors = {}
         @instances = {}
         @calls = {}
+        @load_queue = Set.new
       end
 
       def load_str(str)
@@ -24,6 +26,7 @@ module Osohq
       end
 
       def query_str(str)
+        load_queued_files
         Query.from_str(str, self).results
       end
 
@@ -34,6 +37,7 @@ module Osohq
       end
 
       def repl
+        load_queued_files
         loop do
           query = Query.from_repl(self)
           results = query.results.to_a
@@ -70,9 +74,26 @@ module Osohq
         end
       end
 
+      # Clear the KB but retain all registered classes and constructors.
+      def clear
+        # TODO(gj): Should we clear out instance + call caches as well?
+        free
+        @pointer = FFI.polar_new
+      end
+
+      # Enqueue a Polar policy file for loading into the KB.
+      def load(file)
+        unless ['.pol', '.polar'].include? File.extname(file)
+          raise Errors::PolarRuntimeException, 'Polar files must have .pol or .polar extension.'
+        end
+        raise Errors::PolarRuntimeException, "Could not find file: #{file}" unless File.file?(file)
+
+        load_queue << file
+      end
+
       private
 
-      attr_reader :classes, :class_constructors
+      attr_reader :classes, :class_constructors, :load_queue, :instances
 
       def cache_instance(instance, id = nil)
         id = Errors.check_result(FFI.polar_get_external_id(pointer)) if id.nil?
@@ -83,6 +104,14 @@ module Osohq
       def free
         res = FFI.polar_free(pointer)
         raise Errors::FreeError if res.zero?
+      end
+
+      def load_queued_files
+        instances.clear
+        load_queue.reject! do |file|
+          File.open(file) { |f| load_str(f.read) }
+          true
+        end
       end
     end
 
