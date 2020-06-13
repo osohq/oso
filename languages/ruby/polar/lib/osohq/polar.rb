@@ -11,22 +11,22 @@ module Osohq
     class Polar
       def initialize
         @pointer = FFI.polar_new
-        @classes = Hash.new
-        @class_constructors = Hash.new
-        @instances = Hash.new
-        @calls = Hash.new
+        @classes = {}
+        @class_constructors = {}
+        @instances = {}
+        @calls = {}
       end
 
       def load_str(str)
         res = FFI.polar_load_str(pointer, str)
-        raise StandardError.new if res.zero?
+        raise StandardError if res.zero?
       end
 
       def query_str(str)
         Query.from_str(str, pointer).results
       end
 
-      def register_class(cls, from_polar=nil)
+      def register_class(cls, from_polar = nil)
         cls_name = cls.name
         classes[cls_name] = cls
         class_constructors[cls_name] = from_polar
@@ -52,7 +52,7 @@ module Osohq
 
       def free
         res = FFI.polar_free(pointer)
-        raise Errors::FreeError.new if res.zero?
+        raise Errors::FreeError if res.zero?
       end
     end
 
@@ -166,14 +166,13 @@ module Osohq
         @offset = data['offset']
         @tag, @value = [*data['value']][0]
       end
-
     end
   end
 end
 
 class TestClass
   def my_method
-    puts "hi"
+    puts 'hi'
   end
 end
 
@@ -183,8 +182,9 @@ Osohq::Polar::Polar.new.tap do |polar|
   # polar.query_str('k(x)')
 
   polar.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
-  raise "AssertionError" if polar.query_str('foo(x, y)').to_a != [{"x"=>1, "y"=>2}, {"x"=>3, "y"=>4}, {"x"=>5, "y"=>6}]
+  if polar.query_str('foo(x, y)').to_a != [{ 'x' => 1, 'y' => 2 }, { 'x' => 3, 'y' => 4 }, { 'x' => 5, 'y' => 6 }]
+    raise 'AssertionError'
+  end
 
   polar.register_class(TestClass)
-
 end
