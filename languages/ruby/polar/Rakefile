@@ -15,7 +15,7 @@ task :dylib do
   dylib = File.join(root, "target/debug/libpolar.#{::FFI::Platform::LIBSUFFIX}")
   ext_dir = File.join(File.dirname(__FILE__), 'ext/osohq-polar/')
   Dir.chdir(root) do
-    `make rust-build`
+    `cargo build --all-features`
     FileUtils.copy dylib, ext_dir, preserve: true
   end
 end

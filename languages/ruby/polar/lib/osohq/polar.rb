@@ -9,6 +9,8 @@ require 'osohq/polar/errors'
 module Osohq
   module Polar
     class Polar
+      attr_reader :pointer
+
       def initialize
         @pointer = FFI.polar_new
         @classes = {}
@@ -18,12 +20,11 @@ module Osohq
       end
 
       def load_str(str)
-        res = FFI.polar_load_str(pointer, str)
-        raise StandardError if res.zero?
+        Errors.check_result(FFI.polar_load_str(pointer, str))
       end
 
       def query_str(str)
-        Query.from_str(str, pointer).results
+        Query.from_str(str, self).results
       end
 
       def register_class(cls, from_polar = nil)
@@ -34,7 +35,7 @@ module Osohq
 
       def repl
         loop do
-          query = Query.from_repl(pointer)
+          query = Query.from_repl(self)
           results = query.results.to_a
           if results.empty?
             puts 'False'
@@ -46,9 +47,41 @@ module Osohq
         end
       end
 
+      def make_external_instance(cls_name, fields, instance_id=nil)
+        if !classes.key?(cls_name)
+            raise PolarRuntimeException.new("Unregistered class: #{cls_name}.")
+        end
+        if !class_constructors.key?(cls_name)
+            raise PolarRuntimeException.new("Missing constructor for class: #{cls_name}.")
+        end
+        cls = classes[cls_name]
+        constructor = class_constructors[cls_name]
+        begin
+            # If constructor is a string, look it up on the class.
+            fields = fields.map {|k,v| [k, Term.new(v).to_ruby]}
+            if constructor.nil?
+              instance = cls.new(fields)
+            else
+              instance = cls.send constructor, fields
+            end
+            cache_instance(instance, instance_id)
+            instance
+        rescue StandardError => e
+            raise PolarRuntimeException.new("Error constructing instance of #{cls_name}: #{e}")
+        end
+      end
+
       private
 
-      attr_reader :pointer, :classes, :class_constructors
+      attr_reader :classes, :class_constructors
+
+      def cache_instance(instance, id=nil)
+        if id.nil?
+          id = Errors.check_result(FFI.polar_get_external_id(pointer))
+        end
+        self.instances[id] = instance
+        id
+      end
 
       def free
         res = FFI.polar_free(pointer)
@@ -59,14 +92,14 @@ module Osohq
     class Query
       include Errors
       def self.from_str(query_str, polar)
-        res = FFI.polar_new_query(polar, query_str)
+        res = FFI.polar_new_query(polar.pointer, query_str)
         raise Errors::PolarError if res.null?
 
         new(res, polar)
       end
 
       def self.from_repl(polar)
-        pointer = FFI.polar_query_from_repl(polar)
+        pointer = FFI.polar_query_from_repl(polar.pointer)
         if pointer.null?
           Errors.get_error
           raise RuntimeError
@@ -104,7 +137,10 @@ module Osohq
         @fiber = Fiber.new do
           begin
             loop do
-              string = FFI.polar_query(polar, pointer)
+              string = FFI.polar_query(polar.pointer, pointer)
+              if string.nil?
+                raise PolarRuntimeException.new Errors.get_error
+              end
               event = JSON.parse(string)
               break if event == 'Done'
 
@@ -112,6 +148,14 @@ module Osohq
               case event.kind
               when 'Result'
                 Fiber.yield event.bindings
+              when "MakeExternal"
+                id = event.data["instance_id"]
+                if polar.instances.key?(id)
+                    raise PolarRuntimeException "Instance #{id} already registered."
+                end
+                cls_name = data["instance"]["tag"]
+                fields = data["instance"]["fields"]["fields"]
+                polar.make_external_instance(cls_name, fields, id)
               else
                 p event
                 raise Errors::UnhandledEventError, event.kind
@@ -172,7 +216,7 @@ end
 
 class TestClass
   def my_method
-    puts 'hi'
+    1
   end
 end
 
@@ -186,5 +230,10 @@ Osohq::Polar::Polar.new.tap do |polar|
     raise 'AssertionError'
   end
 
+  t = TestClass.new
   polar.register_class(TestClass)
+
+  # polar.load_str('external(x) := x = TestClass{};')
+  # raise "AssertionError" if polar.query_str('external(x)').to_a != [{"x"=>1}]
+
 end
