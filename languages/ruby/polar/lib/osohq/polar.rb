@@ -9,6 +9,7 @@ require 'osohq/polar/errors'
 
 module Osohq
   module Polar
+    # TODO(gj): document
     class Polar
       attr_reader :pointer
 
@@ -21,8 +22,12 @@ module Osohq
         @load_queue = Set.new
       end
 
+      # Load a Polar string into the KB.
+      #
+      # @param str [String] Polar string to load.
+      # @return [Boolean] Success / failure.
       def load_str(str)
-        Errors.check_result(FFI.polar_load_str(pointer, str))
+        FFI.polar_load_str(pointer, str).zero?
       end
 
       def query_str(str)
@@ -67,7 +72,7 @@ module Osohq
                      else
                        cls.send constructor, fields
                      end
-          cache_instance(instance, instance_id)
+          cache_instance(instance: instance, id: instance_id)
           instance
         rescue StandardError => e
           raise PolarRuntimeException, "Error constructing instance of #{cls_name}: #{e}"
@@ -84,9 +89,9 @@ module Osohq
       # Enqueue a Polar policy file for loading into the KB.
       def load(file)
         unless ['.pol', '.polar'].include? File.extname(file)
-          raise Errors::PolarRuntimeException, 'Polar files must have .pol or .polar extension.'
+          raise PolarRuntimeException, 'Polar files must have .pol or .polar extension.'
         end
-        raise Errors::PolarRuntimeException, "Could not find file: #{file}" unless File.file?(file)
+        raise PolarRuntimeException, "Could not find file: #{file}" unless File.file?(file)
 
         load_queue << file
       end
@@ -95,15 +100,17 @@ module Osohq
 
       attr_reader :classes, :class_constructors, :load_queue, :instances
 
-      def cache_instance(instance, id = nil)
-        id = Errors.check_result(FFI.polar_get_external_id(pointer)) if id.nil?
+      def cache_instance(instance:, id: nil)
+        if id.nil?
+          id = FFI.polar_get_external_id(pointer)
+          raise FFIError if id.zero?
+        end
         instances[id] = instance
         id
       end
 
       def free
-        res = FFI.polar_free(pointer)
-        raise Errors::FreeError if res.zero?
+        raise FreeError if FFI.polar_free(pointer).zero?
       end
 
       def load_queued_files
@@ -115,26 +122,24 @@ module Osohq
       end
     end
 
+    # TODO(gj): document
     class Query
-      include Errors
       def self.from_str(query_str, polar)
-        res = FFI.polar_new_query(polar.pointer, query_str)
-        raise Errors::PolarError if res.null?
+        ptr = FFI.polar_new_query(polar.pointer, query_str)
+        raise FFI.error if ptr.null?
 
-        new(res, polar)
+        new(ptr: ptr, polar: polar)
       end
 
       def self.from_repl(polar)
-        pointer = FFI.polar_query_from_repl(polar.pointer)
-        if pointer.null?
-          Errors.get_error
-          raise RuntimeError
-        end
-        new(pointer, polar)
+        ptr = FFI.polar_query_from_repl(polar.pointer)
+        raise FFI.error if ptr.null?
+
+        new(ptr: ptr, polar: polar)
       end
 
-      def initialize(pointer, polar)
-        @pointer = pointer
+      def initialize(ptr:, polar:)
+        @ptr = ptr
         @polar = polar
         start
       end
@@ -152,18 +157,17 @@ module Osohq
 
       private
 
-      attr_reader :pointer, :polar, :fiber
+      attr_reader :ptr, :polar, :fiber
 
       def free
-        res = FFI.query_free(pointer)
-        raise Errors::FreeError if res.zero?
+        raise FreeError if FFI.query_free(ptr).zero?
       end
 
       def start
         @fiber = Fiber.new do
           begin
             loop do
-              string = FFI.polar_query(polar.pointer, pointer)
+              string = FFI.polar_query(polar.pointer, ptr)
               raise PolarRuntimeException, Errors.get_error if string.nil?
 
               event = JSON.parse(string)
@@ -182,7 +186,7 @@ module Osohq
                 polar.make_external_instance(cls_name, fields, id)
               else
                 p event
-                raise Errors::UnhandledEventError, event.kind
+                raise UnhandledEventError, event.kind
               end
             end
           ensure
@@ -192,11 +196,12 @@ module Osohq
       end
     end
 
+    # TODO(gj): document
     class Event
       attr_reader :kind
 
       def initialize(json)
-        @kind, @data = [*json][0]
+        @kind, @data = json.first
       end
 
       def bindings
@@ -209,6 +214,7 @@ module Osohq
       attr_reader :data
     end
 
+    # TODO(gj): document
     class Term
       attr_reader :value, :tag, :id, :offset
 
@@ -221,11 +227,11 @@ module Osohq
         when 'Dictionary'
           value['fields'].map { |k, v| [k, Term.new(v).to_ruby] }.to_h
         when 'ExternalInstance', 'InstanceLiteral', 'Call'
-          raise Errors::Unimplemented
+          raise UnimplementedError
         when 'Symbol'
-          raise Errors::PolarRuntimeException
+          raise PolarRuntimeException
         else
-          raise Errors::Unimplemented
+          raise UnimplementedError
         end
       end
 
@@ -246,8 +252,8 @@ end
 
 Osohq::Polar::Polar.new.tap do |polar|
   polar.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
-  polar.query_str('f(x)')
-  # polar.query_str('k(x)')
+  p 'f(x)', polar.query_str('f(x)').to_a
+  p 'k(x)', polar.query_str('k(x)').to_a
 
   polar.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
   if polar.query_str('foo(x, y)').to_a != [{ 'x' => 1, 'y' => 2 }, { 'x' => 3, 'y' => 4 }, { 'x' => 5, 'y' => 6 }]
