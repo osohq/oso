@@ -47,27 +47,26 @@ module Osohq
         end
       end
 
-      def make_external_instance(cls_name, fields, instance_id=nil)
-        if !classes.key?(cls_name)
-            raise PolarRuntimeException.new("Unregistered class: #{cls_name}.")
+      def make_external_instance(cls_name, fields, instance_id = nil)
+        raise PolarRuntimeException, "Unregistered class: #{cls_name}." unless classes.key?(cls_name)
+        unless class_constructors.key?(cls_name)
+          raise PolarRuntimeException, "Missing constructor for class: #{cls_name}."
         end
-        if !class_constructors.key?(cls_name)
-            raise PolarRuntimeException.new("Missing constructor for class: #{cls_name}.")
-        end
+
         cls = classes[cls_name]
         constructor = class_constructors[cls_name]
         begin
-            # If constructor is a string, look it up on the class.
-            fields = fields.map {|k,v| [k, Term.new(v).to_ruby]}
-            if constructor.nil?
-              instance = cls.new(fields)
-            else
-              instance = cls.send constructor, fields
-            end
-            cache_instance(instance, instance_id)
-            instance
+          # If constructor is a string, look it up on the class.
+          fields = fields.map { |k, v| [k, Term.new(v).to_ruby] }
+          instance = if constructor.nil?
+                       cls.new(fields)
+                     else
+                       cls.send constructor, fields
+                     end
+          cache_instance(instance, instance_id)
+          instance
         rescue StandardError => e
-            raise PolarRuntimeException.new("Error constructing instance of #{cls_name}: #{e}")
+          raise PolarRuntimeException, "Error constructing instance of #{cls_name}: #{e}"
         end
       end
 
@@ -75,11 +74,9 @@ module Osohq
 
       attr_reader :classes, :class_constructors
 
-      def cache_instance(instance, id=nil)
-        if id.nil?
-          id = Errors.check_result(FFI.polar_get_external_id(pointer))
-        end
-        self.instances[id] = instance
+      def cache_instance(instance, id = nil)
+        id = Errors.check_result(FFI.polar_get_external_id(pointer)) if id.nil?
+        instances[id] = instance
         id
       end
 
@@ -138,9 +135,8 @@ module Osohq
           begin
             loop do
               string = FFI.polar_query(polar.pointer, pointer)
-              if string.nil?
-                raise PolarRuntimeException.new Errors.get_error
-              end
+              raise PolarRuntimeException, Errors.get_error if string.nil?
+
               event = JSON.parse(string)
               break if event == 'Done'
 
@@ -148,13 +144,12 @@ module Osohq
               case event.kind
               when 'Result'
                 Fiber.yield event.bindings
-              when "MakeExternal"
-                id = event.data["instance_id"]
-                if polar.instances.key?(id)
-                    raise PolarRuntimeException "Instance #{id} already registered."
-                end
-                cls_name = data["instance"]["tag"]
-                fields = data["instance"]["fields"]["fields"]
+              when 'MakeExternal'
+                id = event.data['instance_id']
+                raise PolarRuntimeException "Instance #{id} already registered." if polar.instances.key?(id)
+
+                cls_name = data['instance']['tag']
+                fields = data['instance']['fields']['fields']
                 polar.make_external_instance(cls_name, fields, id)
               else
                 p event
@@ -235,5 +230,4 @@ Osohq::Polar::Polar.new.tap do |polar|
 
   # polar.load_str('external(x) := x = TestClass{};')
   # raise "AssertionError" if polar.query_str('external(x)').to_a != [{"x"=>1}]
-
 end
