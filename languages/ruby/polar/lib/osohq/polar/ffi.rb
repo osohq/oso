@@ -68,8 +68,60 @@ module Osohq
 
       # int32_t string_free(char *s);
       attach_function :string_free, [:string], :int32
+
+      # Check for an FFI error and convert it into a Ruby exception.
+      #
+      # @return [Osohq::Polar::Error] if there's an FFI error.
+      # @raise [Osohq::Polar::FFIError] if there isn't one.
+      def self.error
+        error = polar_get_error
+        raise Polar::FFIError if error.null?
+
+        kind, body = JSON.parse(error).first
+        subkind, details = body.first
+        case kind
+        when 'Parse'
+          return parse_error(kind: subkind, details: details)
+        when 'Runtime'
+          # TODO(gj): Runtime exception types.
+          return Polar::RuntimeException.new(body: body)
+        when 'Operational'
+          return Polar::InternalError.new if subkind == 'Unknown' # Rust panic.
+        end
+        # All errors should be mapped to Ruby exceptions.
+        # Raise InternalError if we haven't mapped the error.
+        Polar::InternalError.new(body)
+      ensure
+        string_free(error) unless error.null?
+      end
+
+      # Map FFI parse errors into Ruby exceptions.
+      #
+      # @param kind [String]
+      # @param details [Hash<String, Object>]
+      # @return [Osohq::Polar::ParseError] the object converted into the expected format.
+      def self.parse_error(kind:, details:)
+        token = details['token']
+        pos = details['pos']
+        char = details['c']
+        case kind
+        when 'ExtraToken'
+          Polar::ParseError::ExtraToken.new(token: token, pos: pos)
+        when 'IntegerOverflow'
+          Polar::ParseError::IntegerOverflow.new(token: token, pos: pos)
+        when 'InvalidToken'
+          Polar::ParseError::InvalidToken.new(pos: pos)
+        when 'InvalidTokenCharacter'
+          Polar::ParseError::InvalidTokenCharacter.new(token: token, char: char, pos: pos)
+        when 'UnrecognizedEOF'
+          Polar::ParseError::UnrecognizedEOF.new(pos: pos)
+        when 'UnrecognizedToken'
+          Polar::ParseError::UnrecognizedToken.new(token: token, pos: pos)
+        else
+          Polar::ParseError.new(kind: subkind, details: details)
+        end
+      end
     end
-    # TODO(gj): test whether this is actually doing anything
     private_constant :FFI
   end
 end
