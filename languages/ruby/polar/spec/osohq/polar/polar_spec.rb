@@ -32,8 +32,6 @@ RSpec.describe Osohq::Polar::Polar do
   end
 
   context '#load' do
-    before(:example) { pending 'Polar#load is unimplemented' }
-
     it 'loads a Polar file' do
       subject.load(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
@@ -57,12 +55,11 @@ RSpec.describe Osohq::Polar::Polar do
   end
 
   context '#clear' do
-    before(:example) { pending 'Polar#clear is unimplemented' }
-
     it 'clears the KB' do
       subject.load(test_file)
+      expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       subject.clear
-      expect(query(subject, 'f(x)')).to be false
+      expect(query(subject, 'f(x)')).to eq([])
     end
   end
 
@@ -295,7 +292,7 @@ RSpec.describe Osohq::Polar::Polar do
 
     it 'fails if an inline query fails' do
       pending "Don't handle inline queries yet"
-      expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Osohq::Polar::Errors::PolarException
+      expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Osohq::Polar::Errors::PolarRuntimeException
     end
   end
 
@@ -303,6 +300,7 @@ RSpec.describe Osohq::Polar::Polar do
     before(:example) { pending "Don't handle parser errors yet" }
 
     it 'raises on IntegerOverflow errors' do
+      skip 'This test is all sorts of weird.'
       int = '18446744073709551616'
       rule = <<~POLAR
         f(a) := a = #{int};
