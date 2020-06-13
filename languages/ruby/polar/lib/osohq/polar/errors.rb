@@ -34,8 +34,8 @@ module Osohq
 
       def self.check_result(result)
         if result.zero? || result.nil?
-            err_s = Errors.get_error
-            raise PolarRuntimeException.new err_s
+          err_s = Errors.get_error
+          raise PolarRuntimeException, err_s
         end
         result
       end
