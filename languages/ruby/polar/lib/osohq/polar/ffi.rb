@@ -75,7 +75,7 @@ module Osohq
       # @raise [Osohq::Polar::FFIError] if there isn't one.
       def self.error
         error = polar_get_error
-        raise Polar::FFIError if error.null?
+        raise Polar::FFIError if error.nil?
 
         kind, body = JSON.parse(error).first
         subkind, details = body.first
@@ -84,15 +84,15 @@ module Osohq
           return parse_error(kind: subkind, details: details)
         when 'Runtime'
           # TODO(gj): Runtime exception types.
-          return Polar::RuntimeException.new(body: body)
+          return ::Osohq::Polar::PolarRuntimeException.new(body: body)
         when 'Operational'
-          return Polar::InternalError.new if subkind == 'Unknown' # Rust panic.
+          return ::Osohq::Polar::InternalError.new if subkind == 'Unknown' # Rust panic.
         end
         # All errors should be mapped to Ruby exceptions.
         # Raise InternalError if we haven't mapped the error.
         Polar::InternalError.new(body)
       ensure
-        string_free(error) unless error.null?
+        string_free(error) unless error.nil?
       end
 
       # Map FFI parse errors into Ruby exceptions.
