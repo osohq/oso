@@ -584,7 +584,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
-        trace: Trace,
+        trace: Option<Trace>,
     },
 }
 

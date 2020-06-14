@@ -259,15 +259,14 @@ impl PolarVirtualMachine {
 
         if std::env::var("RUST_LOG").is_ok() {
             eprintln!("⇒ result");
-        }
-        assert!(self.trace.len() == 1);
-        for t in &self.trace {
-            draw(t, 0);
+            for t in &self.trace {
+                draw(t, 0);
+            }
         }
 
         Ok(QueryEvent::Result {
             bindings: self.bindings(false),
-            trace: self.trace.first().unwrap().clone(),
+            trace: self.trace.first().map(|t| t.clone()),
         })
     }
 
@@ -1493,11 +1492,11 @@ mod tests {
             assert!($vm.is_halted());
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}]) => {
-            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == $result));
+            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, []);
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}, $($tail:tt)*]) => {
-            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == $result));
+            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, [$($tail)*]);
         };
         ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?]) => {
@@ -1635,7 +1634,9 @@ mod tests {
             right: empty_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(
+            matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+        );
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1645,7 +1646,9 @@ mod tests {
             right: one_two_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(
+            matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+        );
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -2062,7 +2065,7 @@ mod tests {
         loop {
             match vm.run().unwrap() {
                 QueryEvent::Done => break,
-                QueryEvent::Result { bindings } => results.push(bindings),
+                QueryEvent::Result { bindings, .. } => results.push(bindings),
                 QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     left_class_tag,

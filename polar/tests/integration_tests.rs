@@ -31,7 +31,7 @@ where
         let event = polar.query(&mut query).unwrap();
         match event {
             QueryEvent::Done => break,
-            QueryEvent::Result { bindings } => {
+            QueryEvent::Result { bindings, .. } => {
                 results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
             }
             QueryEvent::ExternalCall {
