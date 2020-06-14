@@ -89,9 +89,7 @@ module Osohq
 
       def external_call_result(query, call_id, value)
         result = FFI.polar_external_call_result(pointer, query, call_id, value)
-        if result == 0 or result.nil?
-           FFI.error
-        end
+        FFI.error if (result == 0) || result.nil?
         result
       end
 
@@ -106,11 +104,11 @@ module Osohq
           # Lookup the attribute on the instance.
           instance = get_instance(instance_id)
           begin
-            if args.empty?
-              attribute = instance.send attribute
-            else
-              attribute = instance.send attribute *args
-            end
+            attribute = if args.empty?
+                          instance.send attribute
+                        else
+                          instance.send attribute * args
+                        end
           rescue StandardError
             external_call_result(polar, query, call_id, nil)
             # @TODO: polar line numbers in errors once polar errors are better.
@@ -163,39 +161,39 @@ module Osohq
       def to_polar_term(v)
         case v.class
         when TrueClass, FalseClass
-          val = {"Boolean"=> v}
+          val = { 'Boolean' => v }
         when Integer
-          val = {"Integer"=> v}
+          val = { 'Integer' => v }
         when String
-          val = {"String"=> v}
+          val = { 'String' => v }
         when Array
-          val = {"List"=> v.map{|i| to_polar_term(i)}}
+          val = { 'List' => v.map { |i| to_polar_term(i) } }
         when Hash
           val = {
-              "Dictionary"=> {
-                  "fields"=> v.map {[k, to_polar_term(v)]}.to_h
-              }
+            'Dictionary' => {
+              'fields' => v.map { [k, to_polar_term(v)] }.to_h
+            }
           }
-        # else
-        #   if v.is_a? Predicate
-        #     val = {
-        #         "Call"=> {
-        #             "name"=> v.name,
-        #             "args"=> v.args.map { |v| to_polar_term(v)},
-        #         }
-        #     }
-        #   elsif v.is_a? Variable
-        #     # This is supported so that we can query for unbound variables
-        #     val = {"Symbol"=> v}
-        #   else
-        #     val = {"ExternalInstance"=> {"instance_id"=> cache_instance(v)}}
-        #   end
+          # else
+          #   if v.is_a? Predicate
+          #     val = {
+          #         "Call"=> {
+          #             "name"=> v.name,
+          #             "args"=> v.args.map { |v| to_polar_term(v)},
+          #         }
+          #     }
+          #   elsif v.is_a? Variable
+          #     # This is supported so that we can query for unbound variables
+          #     val = {"Symbol"=> v}
+          #   else
+          #     val = {"ExternalInstance"=> {"instance_id"=> cache_instance(v)}}
+          #   end
         end
-        {"id": 0, "offset": 0, "value": val}
+        { "id": 0, "offset": 0, "value": val }
       end
 
-
       private
+
       #### PRIVATE FIELDS + METHODS ####
 
       attr_reader :classes, :class_constructors, :load_queue
