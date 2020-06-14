@@ -487,6 +487,18 @@ impl Sources {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum Node {
+    Rule(Rule),
+    Term(Term),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Trace {
+    pub node: Node,
+    pub children: Vec<Trace>,
+}
+
 #[derive(Default)]
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
@@ -572,6 +584,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
+        trace: Trace,
     },
 }
 

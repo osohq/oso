@@ -345,4 +345,13 @@ pub mod to_polar {
             }
         }
     }
+
+    impl ToPolarString for Trace {
+        fn to_polar(&self) -> String {
+            match &self.node {
+                Node::Rule(rule) => rule.to_polar(),
+                Node::Term(term) => term.to_polar(),
+            }
+        }
+    }
 }

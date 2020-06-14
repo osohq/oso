@@ -140,6 +140,17 @@ fn test_jealous() {
 }
 
 #[test]
+fn test_successes() {
+    let mut polar = Polar::new();
+    polar
+        //.load_str("f(x) := x = 1 | x = 2 | x = 3 | x = 4; f(y) := y = 1; f(z) := !g(z); g(2);")
+        .load_str("f(x) := x = 1, x = 1; f(y) := y = 1;")
+        .unwrap();
+
+    assert!(qeval(&mut polar, "f(1)"));
+}
+
+#[test]
 fn test_nested_rule() {
     let mut polar = Polar::new();
     polar
