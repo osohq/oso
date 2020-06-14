@@ -9,9 +9,11 @@ require 'osohq/polar/errors'
 
 module Osohq
   module Polar
+    POLAR_TYPES = [Integer, Float, TrueClass, FalseClass, String, Hash, NilClass, Array].freeze
+
     # TODO(gj): document
     class Polar
-      attr_reader :pointer
+      attr_reader :pointer, :instances, :calls
 
       def initialize
         @pointer = FFI.polar_new
@@ -66,16 +68,78 @@ module Osohq
         constructor = class_constructors[cls_name]
         begin
           # If constructor is a string, look it up on the class.
-          fields = fields.map { |k, v| [k, Term.new(v).to_ruby] }
+          fields = fields.map { |k, v| [k, Term.new(v).to_ruby] }.to_h
           instance = if constructor.nil?
-                       cls.new(fields)
+                       cls.new(**fields)
                      else
-                       cls.send constructor, fields
+                       cls.send constructor, **fields
                      end
-          cache_instance(instance: instance, id: instance_id)
+          cache_instance(instance, instance_id)
           instance
         rescue StandardError => e
           raise PolarRuntimeException, "Error constructing instance of #{cls_name}: #{e}"
+        end
+      end
+
+      def get_instance(id)
+        raise PolarRuntimeException, "Unregistered instance: #{id}." unless instances.include?(id)
+
+        instances[id]
+      end
+
+      def external_call_result(query, call_id, value)
+        result = FFI.polar_external_call_result(pointer, query, call_id, value)
+        if result == 0 or result.nil?
+           FFI.error
+        end
+        result
+      end
+
+      def external_call(query, data)
+        call_id = data['call_id']
+
+        unless calls.key?(call_id)
+          instance_id = data['instance_id']
+          attribute = data['attribute']
+          args = data['args'].map { |arg| Term.new(arg).to_ruby }
+
+          # Lookup the attribute on the instance.
+          instance = get_instance(instance_id)
+          begin
+            if args.empty?
+              attribute = instance.send attribute
+            else
+              attribute = instance.send attribute *args
+            end
+          rescue StandardError
+            external_call_result(polar, query, call_id, nil)
+            # @TODO: polar line numbers in errors once polar errors are better.
+            # raise PolarRuntimeException(f"Error calling {attribute}")
+            return
+          end
+
+          # We now have either a generator or a result.
+          # Call must be a generator so we turn anything else into one.
+          call = if POLAR_TYPES.include?(attribute.class) || !attribute.is_a?(Enumerable)
+                   Enumerator.new do |y|
+                     y.yield attribute
+                   end
+                 elsif attribute.nil?
+                   Enumerator.new do |y|
+                   end
+                 else
+                   attribute.each
+                 end
+          calls[call_id] = call
+        end
+
+        # Return the next result of the call.
+        begin
+          value = calls[call_id].next
+          stringified = JSON.dump(to_polar_term(value))
+          external_call_result(query, call_id, stringified)
+        rescue StopIteration
+          external_call_result(query, call_id, nil)
         end
       end
 
@@ -96,11 +160,47 @@ module Osohq
         load_queue << file
       end
 
+      def to_polar_term(v)
+        case v.class
+        when TrueClass, FalseClass
+          val = {"Boolean"=> v}
+        when Integer
+          val = {"Integer"=> v}
+        when String
+          val = {"String"=> v}
+        when Array
+          val = {"List"=> v.map{|i| to_polar_term(i)}}
+        when Hash
+          val = {
+              "Dictionary"=> {
+                  "fields"=> v.map {[k, to_polar_term(v)]}.to_h
+              }
+          }
+        # else
+        #   if v.is_a? Predicate
+        #     val = {
+        #         "Call"=> {
+        #             "name"=> v.name,
+        #             "args"=> v.args.map { |v| to_polar_term(v)},
+        #         }
+        #     }
+        #   elsif v.is_a? Variable
+        #     # This is supported so that we can query for unbound variables
+        #     val = {"Symbol"=> v}
+        #   else
+        #     val = {"ExternalInstance"=> {"instance_id"=> cache_instance(v)}}
+        #   end
+        end
+        {"id": 0, "offset": 0, "value": val}
+      end
+
+
       private
+      #### PRIVATE FIELDS + METHODS ####
 
-      attr_reader :classes, :class_constructors, :load_queue, :instances
+      attr_reader :classes, :class_constructors, :load_queue
 
-      def cache_instance(instance:, id: nil)
+      def cache_instance(instance, id = nil)
         if id.nil?
           id = FFI.polar_get_external_id(pointer)
           raise FFIError if id.zero?
@@ -181,9 +281,11 @@ module Osohq
                 id = event.data['instance_id']
                 raise PolarRuntimeException "Instance #{id} already registered." if polar.instances.key?(id)
 
-                cls_name = data['instance']['tag']
-                fields = data['instance']['fields']['fields']
+                cls_name = event.data['instance']['tag']
+                fields = event.data['instance']['fields']['fields']
                 polar.make_external_instance(cls_name, fields, id)
+              when 'ExternalCall'
+                polar.external_call(ptr, event.data)
               else
                 p event
                 raise UnhandledEventError, event.kind
@@ -198,7 +300,7 @@ module Osohq
 
     # TODO(gj): document
     class Event
-      attr_reader :kind
+      attr_reader :kind, :data
 
       def initialize(json)
         @kind, @data = json.first
@@ -208,10 +310,6 @@ module Osohq
         # Still skeptical about whether we should have a method that only works for certain types of events
         data['bindings'].sort.map { |k, v| [k, Term.new(v).to_ruby] }.to_h
       end
-
-      private
-
-      attr_reader :data
     end
 
     # TODO(gj): document
@@ -263,6 +361,8 @@ Osohq::Polar::Polar.new.tap do |polar|
   t = TestClass.new
   polar.register_class(TestClass)
 
-  # polar.load_str('external(x) := x = TestClass{};')
-  # raise "AssertionError" if polar.query_str('external(x)').to_a != [{"x"=>1}]
+  polar.load_str('external(x) := x = TestClass{}.my_method;')
+  results = polar.query_str('external(1)')
+  results.next
+  # raise 'AssertionError' if polar.query_str('external(1)').to_a != [{ 'x' => 1 }]
 end
