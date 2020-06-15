@@ -37,13 +37,6 @@ module Osohq
         Query.new(query_ffi_instance, polar: self).results
       end
 
-      # @param cls [Class]
-      # @param from_polar [Symbol]
-      def register_class(cls, from_polar: :new)
-        classes[cls.name] = cls
-        constructors[cls.name] = from_polar
-      end
-
       def repl
         load_queued_files
         loop do
@@ -59,10 +52,31 @@ module Osohq
         end
       end
 
+      # @param cls [Class]
+      # @param from_polar [Symbol]
+      def register_class(cls, from_polar: :new)
+        classes[cls.name] = cls
+        constructors[cls.name] = from_polar
+      end
+
+      # @param method [#to_sym]
+      # @param args [Array<Hash>]
+      # @param call_id [Integer]
+      # @param instance_id [Integer]
+      def register_call(method, args:, call_id:, instance_id:)
+        args = args.map { |arg| Term.new(arg).to_ruby }
+        instance = get_instance(instance_id)
+        result = instance.__send__(method, *args)
+        result = [result] unless result.instance_of? Enumerator
+        calls[call_id] = result.to_enum.lazy # Call must be a generator.
+      rescue ArgumentError, NoMethodError
+        raise InvalidCallError
+      end
+
       # @param cls_name [String]
       # @param fields [Hash<String, Object>]
       # @param id [Integer]
-      def make_external_instance(cls_name, fields:, id: nil)
+      def make_instance(cls_name, fields:, id: nil)
         raise UnregisteredClassError, cls_name unless classes.key?(cls_name)
         raise MissingConstructorError, cls_name unless constructors.key?(cls_name)
 
@@ -173,42 +187,13 @@ module Osohq
         ffi_instance.call_result(result, call_id: call_id, polar: polar.ffi_instance)
       end
 
-      def external_call(data)
-        call_id = data['call_id']
-
+      # @param method [#to_sym]
+      # @param args [Array<Hash>]
+      # @param call_id [Integer]
+      # @param instance_id [Integer]
+      def handle_call(method, args:, call_id:, instance_id:)
         unless polar.calls.key?(call_id)
-          instance_id = data['instance_id']
-          attribute = data['attribute']
-          args = data['args'].map { |arg| Term.new(arg).to_ruby }
-
-          # Lookup the attribute on the instance.
-          instance = polar.get_instance(instance_id)
-          begin
-            attribute = if args.empty?
-                          instance.send attribute
-                        else
-                          instance.send attribute * args
-                        end
-          rescue StandardError
-            call_result(nil, call_id: call_id)
-            # @TODO: polar line numbers in errors once polar errors are better.
-            # raise PolarRuntimeError(f"Error calling {attribute}")
-            return
-          end
-
-          # We now have either a generator or a result.
-          # Call must be a generator so we turn anything else into one.
-          call = if POLAR_TYPES.include?(attribute.class) || !attribute.is_a?(Enumerable)
-                   Enumerator.new do |y|
-                     y.yield attribute
-                   end
-                 elsif attribute.nil?
-                   Enumerator.new do |y|
-                   end
-                 else
-                   attribute.each
-                 end
-          polar.calls[call_id] = call
+          polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
         end
 
         # Return the next result of the call.
@@ -219,6 +204,10 @@ module Osohq
         rescue StopIteration
           call_result(nil, call_id: call_id)
         end
+      rescue InvalidCallError
+        call_result(nil, call_id: call_id)
+        # @TODO: polar line numbers in errors once polar errors are better.
+        # raise PolarRuntimeError(f"Error calling {attribute}")
       end
 
       private
@@ -240,12 +229,15 @@ module Osohq
 
               cls_name = event.data['instance']['tag']
               fields = event.data['instance']['fields']['fields']
-              polar.make_external_instance(cls_name, fields: fields, id: id)
+              polar.make_instance(cls_name, fields: fields, id: id)
             when 'ExternalCall'
-              external_call(event.data)
+              call_id = event.data['call_id']
+              instance_id = event.data['instance_id']
+              method = event.data['attribute']
+              args = event.data['args']
+              handle_call(method, args: args, call_id: call_id, instance_id: instance_id)
             else
-              p event
-              raise "Unhandled event: #{event.kind}"
+              raise "Unhandled event: #{JSON.dump(event)}"
             end
           end
         end
