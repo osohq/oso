@@ -1387,46 +1387,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn comparison_helper(&mut self, op: Operator, left: Term, right: Term) -> PolarResult<()> {
-        let result: bool;
-        match (op, &left.value, &right.value) {
-            (Operator::Lt, Value::Integer(left), Value::Integer(right)) => {
-                result = left < right;
-            }
-            (Operator::Leq, Value::Integer(left), Value::Integer(right)) => {
-                result = left <= right;
-            }
-            (Operator::Gt, Value::Integer(left), Value::Integer(right)) => {
-                result = left > right;
-            }
-            (Operator::Geq, Value::Integer(left), Value::Integer(right)) => {
-                result = left >= right;
-            }
-            (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
-                result = left == right;
-            }
-            (Operator::Neq, Value::Integer(left), Value::Integer(right)) => {
-                result = left != right;
-            }
-            (op, l, r) => {
-                return Err(self.type_error(
-                    &left,
-                    format!(
-                        "{} expects integers, got: {}, {}",
-                        op.to_polar(),
-                        l.to_polar(),
-                        r.to_polar()
-                    ),
-                ));
-            }
-        }
-        if !result {
-            self.push_goal(Goal::Backtrack)?;
-        }
-
-        Ok(())
-    }
-
     fn type_error(&self, term: &Term, msg: String) -> PolarError {
         let source = { self.kb.read().unwrap().sources.get_source(&term) };
         let context = if let Some(source) = source {
