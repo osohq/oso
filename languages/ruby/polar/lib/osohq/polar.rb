@@ -26,6 +26,7 @@ module Osohq
       #
       # @param str [String] Polar string to load.
       def load_str(str)
+        raise ParseError::InvalidTokenCharacter.new(token: str, char: ?\0, pos: [0, str.index(?\0)]) if str.include? ?\0
         ffi_instance.load_str(str)
       end
 

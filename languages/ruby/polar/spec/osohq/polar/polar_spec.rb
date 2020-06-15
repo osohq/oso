@@ -314,19 +314,18 @@ RSpec.describe Osohq::Polar::Polar do
       end
 
       it 'on null bytes' do
-        skip "Ruby, written in C, doesn't seem to be able to represent a string with a null byte in it."
         rule = <<~POLAR
           f(a) := a = "this is not allowed\0
         POLAR
         expect { subject.load_str(rule) }.to raise_error do |e|
           expect(e).to be_an Osohq::Polar::ParseError::InvalidTokenCharacter
-          expect(e.message).to eq("('this is not allowed', \"\\x00\", [1, 16])")
+          expect(e.message).to eq("{:token=>\"f(a) := a = \\\"this is not allowed\\u0000\\n\", :char=>\"\\u0000\", :pos=>[0, 32]}")
         end
       end
     end
 
     # Not sure what causes this.
-    it 'raises on InvalidToken'
+    xit 'raises on InvalidToken'
 
     it 'raises on UnrecognizedEOF errors' do
       rule = <<~POLAR
@@ -349,7 +348,7 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     # Not sure what causes this.
-    it 'raises on ExtraToken'
+    xit 'raises on ExtraToken'
   end
 
   context 'querying for a predicate' do
