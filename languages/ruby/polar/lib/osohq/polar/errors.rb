@@ -26,7 +26,7 @@ module Osohq
 
     # Catch-all for a parsing error that doesn't match any of the more specific types.
     class ParseError < Error
-      # @param [Hash] details about the error
+      # @param details [Hash] details about the error
       # @option details [String] :char Character in question.
       # @option details [Array<(Integer, Integer)>] :pos Position of the error.
       # @option details [String] :token Token in question.
