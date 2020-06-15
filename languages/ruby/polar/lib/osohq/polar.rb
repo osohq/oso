@@ -267,9 +267,19 @@ module Osohq
       end
     end
 
-    # TODO(gj): document
+    # Polar term.
     class Term
       attr_reader :value, :tag, :id, :offset
+
+      # @param data [Hash<String, Object>]
+      # @option data [Integer] :id
+      # @option data [Integer] :offset Character offset of the term in its source string.
+      # @option data [Hash<String, Object>] :value
+      def initialize(data)
+        @id = data['id']
+        @offset = data['offset']
+        @tag, @value = data['value'].first
+      end
 
       def to_ruby
         case tag
@@ -286,12 +296,6 @@ module Osohq
         else
           raise 'Unimplemented!'
         end
-      end
-
-      def initialize(data)
-        @id = data['id']
-        @offset = data['offset']
-        @tag, @value = data['value'].first
       end
     end
   end
