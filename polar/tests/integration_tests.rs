@@ -548,10 +548,7 @@ fn test_load_with_query() {
     let src = "f(1); f(2); ?= f(1); ?= !f(3);";
     polar.load_str(src).expect("load_str failed");
 
-    while let Some(query) = polar
-        .check_inline_queries()
-        .expect("check_inline_queries failed")
-    {
+    while let Some(query) = polar.next_inline_query() {
         assert_eq!(
             query_results(&mut polar, query, no_results, no_debug).len(),
             1
