@@ -206,7 +206,7 @@ RSpec.describe Osohq::Polar::Polar do
       class Animal
         attr_reader :family, :genus, :species
 
-        def initialize(family, genus: nil, species: nil)
+        def initialize(family: nil, genus: nil, species: nil)
           @family = family
           @genus = genus
           @species = species
