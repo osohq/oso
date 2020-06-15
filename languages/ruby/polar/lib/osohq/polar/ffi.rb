@@ -61,7 +61,7 @@ module Osohq
         # @param src [String]
         # @return [FFI::Load] if there's an FFI error.
         # @raise [FFI::Error] if the FFI call returns an error.
-        def new_load(src:)
+        def new_load(src)
           load = Rust.new_load(self, src)
           raise FFI::Error.get if load.null?
 
@@ -70,7 +70,7 @@ module Osohq
 
         # @param str [String]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def load_str(str:)
+        def load_str(str)
           load = Rust.load_str(self, str)
           raise FFI::Error.get if load.zero?
 
@@ -89,9 +89,9 @@ module Osohq
         end
 
         # @param str [String] Query string.
-        # @return [FFI::Query]
+        # @return [Osohq::Polar::Query]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def new_query_from_str(str:)
+        def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str)
           # TODO(gj): I don't think this error check is correct. If getting a new ID fails on the
           # Rust side, it'll probably surface as a panic (e.g., the KB lock is poisoned).
@@ -103,7 +103,7 @@ module Osohq
         # @param term [Term]
         # @return [FFI::Query]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def new_query_from_term(term:)
+        def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term))
           raise FFI::Error.get if query.null?
 
@@ -138,51 +138,42 @@ module Osohq
 
         # @param cmd [String]
         # @param polar [FFI::Polar]
-        # @return [self]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def debug_command(cmd:, polar:)
+        def debug_command(cmd, polar:)
           res = Rust.debug_command(polar, self, cmd)
           raise FFI::Error.get if res.zero?
-
-          self
         end
 
-        # @param call_id [Integer]
         # @param result [String]
+        # @param call_id [Integer]
         # @param polar [FFI::Polar]
-        # @return [self]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def call_result(call_id:, result:, polar:)
+        def call_result(result, call_id:, polar:)
           res = Rust.call_result(polar, self, call_id, result)
           raise FFI::Error.get if res.zero?
-
-          self
         end
 
-        # @param call_id [Integer]
         # @param result [Boolean]
+        # @param call_id [Integer]
         # @param polar [FFI::Polar]
-        # @return [self]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def question_result(call_id:, result:, polar:)
+        def question_result(result, call_id:, polar:)
           result = result ? 1 : 0
           res = Rust.question_result(polar, self, call_id, result)
           raise FFI::Error.get if res.zero?
-
-          self
         end
 
         # @param polar [FFI::Polar]
         # @return [String] if event type is "Done"
         # @return [Osohq::Polar::QueryEvent] if event type is not "Done"
         # @raise [FFI::Error] if the FFI call returns an error.
-        def next_event(polar:)
+        def next_event(polar)
           event_json = Rust.next_event(polar, self)
           # TODO(gj): figure out if the FFI gem's auto conversion to `:string` means this will never be a null pointer
           if event_json.respond_to?(:null?)
             raise FFI::Error.get if event_json.null?
           end
-          Osohq::Polar::QueryEvent.new(event_data: JSON.parse(event_json.to_s))
+          Osohq::Polar::QueryEvent.new(JSON.parse(event_json.to_s))
         end
       end
 
@@ -216,13 +207,10 @@ module Osohq
 
         # @param polar [FFI::Polar]
         # @param query [FFI::Query]
-        # @return [self]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def load(polar:, query:)
+        def load(polar, query:)
           res = Rust.polar_load(polar, self, query)
           raise FFI::Error.get if res.zero?
-
-          self
         end
       end
 
@@ -258,11 +246,11 @@ module Osohq
           subkind, details = body.first
           case kind
           when 'Parse'
-            parse_error(kind: subkind, details: details)
+            parse_error(subkind, details: details)
           when 'Runtime'
-            runtime_error(kind: subkind, details: details)
+            runtime_error(subkind, details: details)
           when 'Operational'
-            operational_error(kind: subkind, details: details)
+            operational_error(subkind, details: details)
             # return Osohq::Polar::InternalError.new if subkind == 'Unknown' # Rust panic.
           end
           # # All errors should be mapped to Ruby exceptions.
@@ -275,7 +263,7 @@ module Osohq
         # @param kind [String]
         # @param details [Hash<String, Object>]
         # @return [Osohq::Polar::ParseError] the object converted into the expected format.
-        private_class_method def self.parse_error(kind:, details:)
+        private_class_method def self.parse_error(kind, details:)
           token = details['token']
           pos = details['pos']
           char = details['c']
@@ -302,7 +290,7 @@ module Osohq
         # @param kind [String]
         # @param details [Hash<String, Object>]
         # @return [Osohq::Polar::PolarRuntimeError] the object converted into the expected format.
-        private_class_method def self.runtime_error(kind:, details:)
+        private_class_method def self.runtime_error(kind, details:)
           msg = details['msg']
           case kind
           when 'Serialization'
@@ -323,7 +311,7 @@ module Osohq
         # @param kind [String]
         # @param details [Hash<String, Object>]
         # @return [Osohq::Polar::OperationalError] the object converted into the expected format.
-        private_class_method def self.operational_error(kind:, details:)
+        private_class_method def self.operational_error(kind, details:)
           msg = details['msg']
           case kind
           when 'Unknown' # Rust panics.
