@@ -228,18 +228,15 @@ mod tests {
     #[test]
     fn rewrite_nested_literal() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("Foo { x: bar.y }").unwrap();
-        assert_eq!(term.to_polar(), "Foo{x: bar.y}");
+        let mut term = parse_query("new Foo { x: bar.y }").unwrap();
+        assert_eq!(term.to_polar(), "new Foo{x: bar.y}");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar, y(), _value_1), Foo{x: _value_1}");
+        assert_eq!(term.to_polar(), ".(bar, y(), _value_2), new (Foo{x: _value_2}, _instance_1), _instance_1");
 
-        let mut term = parse_query("f(Foo { x: bar.y })").unwrap();
-        assert_eq!(term.to_polar(), "f(Foo{x: bar.y})");
+        let mut term = parse_query("f(new Foo { x: bar.y })").unwrap();
+        assert_eq!(term.to_polar(), "f(new Foo{x: bar.y})");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(
-            term.to_polar(),
-            ".(bar, y(), _value_2), f(Foo{x: _value_2})"
-        );
+        assert_eq!(term.to_polar(), ".(bar, y(), _value_4), new (Foo{x: _value_4}, _instance_3), f(_instance_3)");
     }
 
     #[test]

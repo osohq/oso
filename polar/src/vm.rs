@@ -900,16 +900,17 @@ impl PolarVirtualMachine {
                     .symbol()
                     .expect("Must have result as second arg.");
                 let mut literal_term = args.pop().unwrap();
+                let mut literal_value = literal_term
+                    .value
+                    .clone()
+                    .instance_literal()
+                    .expect("Arg must be instance literal");
 
                 let instance_id = self.new_id();
-
-                let mut literal_value = literal_term
-                    .replace_value(Value::ExternalInstance(ExternalInstance {
-                        instance_id,
-                        literal: None,
-                    }))
-                    .instance_literal()
-                    .expect("Arg 0 must be instance literal");
+                literal_term.value = Value::ExternalInstance(ExternalInstance {
+                    instance_id,
+                    literal: Some(literal_value.clone())
+                });
 
                 self.bind(&result, &literal_term);
 
@@ -917,6 +918,7 @@ impl PolarVirtualMachine {
                     *t = self.deref(t);
                     true
                 });
+
                 return Ok(self.make_external(literal_value, instance_id));
             }
             Operator::Cut => self.push_goal(Goal::Cut {
