@@ -323,6 +323,12 @@ module Osohq
               class_tag = event.data['class_tag']
               answer = polar.isa?(instance_id, class_tag: class_tag)
               question_result(answer, call_id: event.data['call_id'])
+            when 'Debug'
+              puts event.data['message'] if event.data['message']
+              print '> '
+              input = gets.chomp!
+              command = JSON.dump(polar.to_polar_term(input))
+              ffi_instance.debug_command(command, polar: polar.ffi_instance)
             else
               raise "Unhandled event: #{JSON.dump(event.inspect)}"
             end
@@ -411,5 +417,7 @@ Osohq::Polar::Polar.new.tap do |polar|
   polar.load_str('external(x, 3) := x = TestClass{}.my_method;')
   results = polar.query_str('external(1, x)')
   p results.next
-  # raise 'AssertionError' if polar.query_str('external(1)').to_a != [{ 'x' => 1 }]
+
+  polar.load_str('testDebug() := debug(), foo(x, y), k(y);')
+  polar.query_str('testDebug()').next
 end
