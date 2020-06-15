@@ -724,7 +724,7 @@ impl PolarVirtualMachine {
                 self.query_for_predicate(predicate.clone())?;
             }
             Value::Expression(Operation { operator, args }) => {
-                self.query_for_operation(&term, operator.clone(), args.clone())?;
+                self.query_for_operation(&term, *operator, args.clone())?;
             }
             _ => {
                 return Err(
