@@ -24,10 +24,9 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     it 'converts predicates in both directions' do
-      pending 'Predicates not yet implemented'
       subject.load_str('f(x) := x = pred(1, 2);')
       expect(qvar(subject, 'f(x)', 'x')).to eq([Osohq::Polar::Predicate.new('pred', args: [1, 2])])
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Predicate.new('pred', args: [1, 2])])).results.next).to eq([{}])
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Predicate.new('pred', args: [1, 2])])).to_a).to eq([{}])
     end
   end
 
@@ -64,8 +63,6 @@ RSpec.describe Osohq::Polar::Polar do
   end
 
   context '#register_class' do
-    before(:example) { pending 'Polar#register_class is unimplemented' }
-
     it 'registers a Ruby class with Polar' do
       class Bar
         def y
@@ -119,11 +116,7 @@ RSpec.describe Osohq::Polar::Polar do
         end
       end
 
-      def capital_foo
-        Foo.new('A')
-      end
-
-      subject.register_class(Foo, from_polar: capital_foo)
+      subject.register_class(Foo) { Foo.new('A') }
       expect(qvar(subject, 'Foo{}.a = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'Foo{}.a() = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'Foo{}.b = x', 'x', one: true)).to eq('b')
@@ -213,14 +206,14 @@ RSpec.describe Osohq::Polar::Polar do
       class Animal
         attr_reader :family, :genus, :species
 
-        def initialize(family: nil, genus: nil, species: nil)
+        def initialize(family, genus: nil, species: nil)
           @family = family
           @genus = genus
           @species = species
         end
       end
       let(:wolf) { 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}' }
-      let(:dog) {  'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
+      let(:dog) { 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
       let(:canine) { 'Animal{genus: "canis", family: "canidae"}' }
       let(:canid) {  'Animal{family: "canidae"}' }
       let(:animal) { 'Animal{}' }
@@ -249,7 +242,7 @@ RSpec.describe Osohq::Polar::Polar do
         POLAR
         expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(['wolf', 'canis lupus', 'canine', 'canid', 'animal'])
         expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(['dog', 'canis familiaris', 'canine', 'canid', 'animal'])
-        expect(qvar(subject, "what_is(#{canine}, r)", 'r')).to eq([None, 'canine', 'canid', 'animal'])
+        expect(qvar(subject, "what_is(#{canine}, r)", 'r')).to eq([nil, 'canine', 'canid', 'animal'])
         expect(qvar(subject, "what_is(#{canid}, r)", 'r')).to eq(%w[canid animal])
         expect(qvar(subject, "what_is(#{animal}, r)", 'r')).to eq(['animal'])
       end
@@ -360,8 +353,6 @@ RSpec.describe Osohq::Polar::Polar do
   end
 
   context 'querying for a predicate' do
-    before(:example) { pending 'Predicates not yet implemented' }
-
     it 'can return a list' do
       class Actor
         def groups
@@ -370,13 +361,13 @@ RSpec.describe Osohq::Polar::Polar do
       end
       subject.register_class(Actor)
       subject.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [Actor(), 'join', 'party'])).success).to be true
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [Actor.new, 'join', 'party'])).to_a).to eq([{}])
     end
 
     it 'can handle variables as arguments' do
       subject.load(test_file)
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Variable.new('a')])).results.to_a).to eq(
-        [{ "a": 1 }, { "a": 2 }, { "a": 3 }]
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Variable.new('a')])).to_a).to eq(
+        [{ 'a' => 1 }, { 'a' => 2 }, { 'a' => 3 }]
       )
     end
   end

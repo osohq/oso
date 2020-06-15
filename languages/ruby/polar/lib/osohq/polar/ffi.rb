@@ -73,8 +73,6 @@ module Osohq
         def load_str(str)
           load = Rust.load_str(self, str)
           raise FFI::Error.get if load.zero?
-
-          self
         end
 
         # @return [Integer]
@@ -240,7 +238,7 @@ module Osohq
         # @return [Osohq::Polar::FFIErrorNotFound] if there isn't one.
         def self.get
           error = Rust.get
-          return ::Osohq::Polar::FFIErrorNotFound if error.null?
+          return Osohq::Polar::FFIErrorNotFound if error.null?
 
           kind, body = JSON.parse(error.to_s).first
           subkind, details = body.first
@@ -251,11 +249,7 @@ module Osohq
             runtime_error(subkind, details: details)
           when 'Operational'
             operational_error(subkind, details: details)
-            # return Osohq::Polar::InternalError.new if subkind == 'Unknown' # Rust panic.
           end
-          # # All errors should be mapped to Ruby exceptions.
-          # # Raise InternalError if we haven't mapped the error.
-          # ::Osohq::Polar::InternalError.new(body: body)
         end
 
         # Map FFI parse errors into Ruby exceptions.
