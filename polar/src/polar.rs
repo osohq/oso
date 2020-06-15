@@ -137,12 +137,6 @@ impl Iterator for Query {
     }
 }
 
-#[derive(Default)]
-pub struct Load {
-    lines: Vec<parser::Line>,
-    src_id: u64,
-}
-
 #[derive(Clone, Default)]
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -155,8 +149,7 @@ impl Polar {
         }
     }
 
-    pub fn new_load(&self, src: &str) -> PolarResult<Load> {
-        let mut kb = self.kb.write().unwrap();
+    pub fn load_str(&self, src: &str) -> PolarResult<()> {
         let source = Source {
             filename: None,
             src: src.to_owned(),
@@ -164,17 +157,13 @@ impl Polar {
         let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
         lines.reverse();
         let src_id = kb.new_id();
+        let mut kb = self.kb.write().unwrap();
         kb.sources.add_source(source, src_id);
-        Ok(Load { lines, src_id })
-    }
-
-    pub fn load(&self, load: &mut Load) -> PolarResult<Option<Query>> {
-        while let Some(line) = load.lines.pop() {
+        while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(mut rule) => {
                     let name = rule.name.clone();
-                    let mut kb = self.kb.write().unwrap();
-                    rewrite_rule(&mut rule, &mut kb, load.src_id);
+                    rewrite_rule(&mut rule, &mut kb, src_id);
                     let generic_rule = kb.rules.entry(name.clone()).or_insert(GenericRule {
                         name,
                         rules: vec![],
@@ -182,22 +171,21 @@ impl Polar {
                     generic_rule.rules.push(rule);
                 }
                 parser::Line::Query(term) => {
-                    return Ok(Some(self.new_query_from_term(term)));
+                    kb.inline_queries.push(term);
                 }
             }
         }
 
-        Ok(None)
+        Ok(())
     }
 
-    pub fn load_str(&self, src: &str) -> PolarResult<()> {
-        let mut load = self.new_load(src)?;
-        while let Some(_query) = self.load(&mut load)? {
-            // Queries are ignored in `load_str`.
-            continue;
+    pub fn check_inline_queries(&self) -> PolarResult<Option<Query>> {
+        let term = { self.kb.write().unwrap().inline_queries.pop() };
+        if let Some(term) = term {
+            Ok(Some(self.new_query_from_term(term)))
+        } else {
+            Ok(None)
         }
-
-        Ok(())
     }
 
     pub fn new_query(&self, src: &str) -> PolarResult<Query> {
