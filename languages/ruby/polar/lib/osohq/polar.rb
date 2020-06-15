@@ -102,7 +102,7 @@ module Osohq
       end
 
       def to_polar_term(v)
-        case v.class
+        case v
         when TrueClass, FalseClass
           val = { 'Boolean' => v }
         when Integer
