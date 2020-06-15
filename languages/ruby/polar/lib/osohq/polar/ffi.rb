@@ -269,17 +269,17 @@ module Osohq
           char = details['c']
           case kind
           when 'ExtraToken'
-            Osohq::Polar::ParseError::ExtraToken.new({ token: token, pos: pos })
+            Osohq::Polar::ParseError::ExtraToken.new(token: token, pos: pos)
           when 'IntegerOverflow'
-            Osohq::Polar::ParseError::IntegerOverflow.new({ token: token, pos: pos })
+            Osohq::Polar::ParseError::IntegerOverflow.new(token: token, pos: pos)
           when 'InvalidToken'
-            Osohq::Polar::ParseError::InvalidToken.new({ pos: pos })
+            Osohq::Polar::ParseError::InvalidToken.new(pos: pos)
           when 'InvalidTokenCharacter'
-            Osohq::Polar::ParseError::InvalidTokenCharacter.new({ token: token, char: char, pos: pos })
+            Osohq::Polar::ParseError::InvalidTokenCharacter.new(token: token, char: char, pos: pos)
           when 'UnrecognizedEOF'
-            Osohq::Polar::ParseError::UnrecognizedEOF.new({ pos: pos })
+            Osohq::Polar::ParseError::UnrecognizedEOF.new(pos: pos)
           when 'UnrecognizedToken'
-            Osohq::Polar::ParseError::UnrecognizedToken.new({ token: token, pos: pos })
+            Osohq::Polar::ParseError::UnrecognizedToken.new(token: token, pos: pos)
           else
             Osohq::Polar::ParseError.new(details)
           end
