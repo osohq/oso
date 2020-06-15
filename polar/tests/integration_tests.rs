@@ -521,11 +521,13 @@ fn test_rule_order() {
 #[test]
 fn test_load_with_query() {
     let mut polar = Polar::new();
-    let mut load = polar
-        .new_load("f(1); f(2); ?= f(1); ?= !f(3);")
-        .expect("new_load failed");
+    let src = "f(1); f(2); ?= f(1); ?= !f(3);";
+    polar.load_str(src).expect("load_str failed");
 
-    while let Some(query) = polar.load(&mut load).expect("load failed") {
+    while let Some(query) = polar
+        .check_inline_queries()
+        .expect("check_inline_queries failed")
+    {
         assert_eq!(
             query_results(&mut polar, query, no_results, no_debug).len(),
             1

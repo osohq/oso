@@ -536,6 +536,7 @@ pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
+    pub inline_queries: Vec<Term>,
     // For temporary variable names, call IDs, instance IDs, symbols, etc.
     counter: AtomicU64,
 }
@@ -546,6 +547,7 @@ impl KnowledgeBase {
             types: HashMap::new(),
             rules: HashMap::new(),
             sources: Sources::default(),
+            inline_queries: vec![],
             counter: AtomicU64::new(1),
         }
     }
