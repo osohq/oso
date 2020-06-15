@@ -179,13 +179,9 @@ impl Polar {
         Ok(())
     }
 
-    pub fn check_inline_queries(&self) -> PolarResult<Option<Query>> {
+    pub fn next_inline_query(&self) -> Option<Query> {
         let term = { self.kb.write().unwrap().inline_queries.pop() };
-        if let Some(term) = term {
-            Ok(Some(self.new_query_from_term(term)))
-        } else {
-            Ok(None)
-        }
+        term.map(|t| self.new_query_from_term(t))
     }
 
     pub fn new_query(&self, src: &str) -> PolarResult<Query> {

@@ -112,36 +112,14 @@ pub extern "C" fn polar_load(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn polar_check_inline_queries(polar_ptr: *mut Polar, query: *mut *mut Query) -> i32 {
-    let mut query = if let Some(not_null) = std::ptr::NonNull::new(query) {
-        not_null
-    } else {
-        set_error(
-            types::ParameterError(String::from("Query out parameter cannot be null.")).into(),
-        );
-        return POLAR_FAILURE;
-    };
-
-    let result = catch_unwind(|| {
+pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
+    ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
-        match polar.check_inline_queries() {
-            Err(err) => {
-                set_error(err);
-                (null_mut(), POLAR_FAILURE)
-            }
-            Ok(Some(query)) => (box_ptr!(query), POLAR_SUCCESS),
-            Ok(None) => (null_mut(), POLAR_SUCCESS),
+        match polar.next_inline_query() {
+            Some(query) => box_ptr!(query),
+            None => null_mut(),
         }
-    });
-
-    if let Ok((ret_query, ret_code)) = result {
-        unsafe { *query.as_mut() = ret_query };
-        ret_code
-    } else {
-        set_error(types::OperationalError::Unknown.into());
-        unsafe { *query.as_mut() = null_mut() };
-        POLAR_FAILURE
-    }
+    })
 }
 
 #[no_mangle]
