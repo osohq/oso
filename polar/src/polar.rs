@@ -157,17 +157,14 @@ impl Polar {
 
     pub fn new_load(&self, src: &str) -> PolarResult<Load> {
         let mut kb = self.kb.write().unwrap();
-		let source = Source {
+        let source = Source {
             filename: None,
             src: src.to_owned(),
         };
-		let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
-		lines.reverse();
+        let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
+        lines.reverse();
         let src_id = kb.new_id();
-        kb.sources.add_source(
-            source,
-            src_id,
-        );
+        kb.sources.add_source(source, src_id);
         Ok(Load { lines, src_id })
     }
 
@@ -208,7 +205,7 @@ impl Polar {
             filename: None,
             src: src.to_owned(),
         };
-		let mut term = parser::parse_query(src).map_err(|e| fill_context(e, &source))?;
+        let mut term = parser::parse_query(src).map_err(|e| fill_context(e, &source))?;
         {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
