@@ -60,8 +60,8 @@ module Osohq
       end
 
       def make_external_instance(cls_name, fields, instance_id = nil)
-        raise PolarRuntimeError, "Unregistered class: #{cls_name}." unless classes.key?(cls_name)
-        raise PolarRuntimeError, "Missing constructor for class: #{cls_name}." unless constructors.key?(cls_name)
+        raise UnregisteredClassError, cls_name unless classes.key?(cls_name)
+        raise MissingConstructorError, cls_name unless constructors.key?(cls_name)
 
         cls = classes[cls_name]
         constructor = constructors[cls_name]
@@ -80,8 +80,11 @@ module Osohq
         end
       end
 
+      # @param id [Integer]
+      # @return [
+      # @raise [UnregisteredInstanceError] if the ID has not been registered.
       def get_instance(id)
-        raise PolarRuntimeError, "Unregistered instance: #{id}." unless instances.include?(id)
+        raise UnregisteredInstanceError, id unless instances.key? id
 
         instances[id]
       end
@@ -134,6 +137,9 @@ module Osohq
 
       attr_reader :classes, :constructors, :load_queue
 
+      # @param instance [Object]
+      # @param id [Integer]
+      # @return [Integer]
       def cache_instance(instance, id: nil)
         id = ffi_instance.new_id if id.nil?
         instances[id] = instance
@@ -295,7 +301,7 @@ module Osohq
       def initialize(data)
         @id = data['id']
         @offset = data['offset']
-        @tag, @value = [*data['value']][0]
+        @tag, @value = data['value'].first
       end
     end
   end

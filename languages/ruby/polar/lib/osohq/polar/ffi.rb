@@ -294,13 +294,13 @@ module Osohq
           msg = details['msg']
           case kind
           when 'Serialization'
-            Osohq::Polar::PolarRuntimeError::Serialization.new(msg)
+            Osohq::Polar::SerializationError.new(msg)
           when 'Unsupported'
-            Osohq::Polar::PolarRuntimeError::Unsupported.new(msg)
+            Osohq::Polar::UnsupportedError.new(msg)
           when 'TypeError'
-            Osohq::Polar::PolarRuntimeError::TypeError.new(msg)
+            Osohq::Polar::PolarTypeError.new(msg)
           when 'StackOverflow'
-            Osohq::Polar::PolarRuntimeError::StackOverflow.new(msg)
+            Osohq::Polar::StackOverflowError.new(msg)
           else
             Osohq::Polar::PolarRuntimeError.new(msg)
           end
@@ -315,7 +315,7 @@ module Osohq
           msg = details['msg']
           case kind
           when 'Unknown' # Rust panics.
-            Osohq::Polar::OperationalError::Unknown.new(msg)
+            Osohq::Polar::UnknownError.new(msg)
           else
             Osohq::Polar::OperationalError.new(msg)
           end
