@@ -19,6 +19,7 @@ module Osohq
     class UnregisteredClassError < PolarRuntimeError; end
     class MissingConstructorError < PolarRuntimeError; end
     class UnregisteredInstanceError < PolarRuntimeError; end
+    class DuplicateInstanceRegistrationError < PolarRuntimeError; end
 
     class OperationalError < Error; end
     class UnknownError < OperationalError; end
