@@ -9,8 +9,6 @@ require 'osohq/polar/errors'
 
 module Osohq
   module Polar
-    POLAR_TYPES = [Integer, Float, TrueClass, FalseClass, String, Hash, NilClass, Array].freeze
-
     # TODO(gj): document
     class Polar
       attr_reader :ffi_instance, :instances, :calls
@@ -37,6 +35,13 @@ module Osohq
         Query.new(query_ffi_instance, polar: self).results
       end
 
+      # @param pred [Predicate]
+      def query_pred(pred)
+        load_queued_files
+        query_ffi_instance = ffi_instance.new_query_from_term(to_polar_term(pred))
+        Query.new(query_ffi_instance, polar: self).results
+      end
+
       def repl
         load_queued_files
         loop do
@@ -53,9 +58,10 @@ module Osohq
       end
 
       # @param cls [Class]
-      # @param from_polar [Symbol]
-      def register_class(cls, from_polar: :new)
+      # @param from_polar [Object]
+      def register_class(cls, &from_polar)
         classes[cls.name] = cls
+        from_polar = :new if from_polar.nil?
         constructors[cls.name] = from_polar
       end
 
@@ -67,8 +73,8 @@ module Osohq
         args = args.map { |a| to_ruby(Term.new(a)) }
         instance = get_instance(instance_id)
         result = instance.__send__(method, *args)
-        result = [result] unless result.instance_of? Enumerator
-        calls[call_id] = result.to_enum.lazy # Call must be a generator.
+        result = [result].to_enum unless result.instance_of? Enumerator # Call must be a generator.
+        calls[call_id] = result.lazy
       rescue ArgumentError, NoMethodError
         raise InvalidCallError
       end
@@ -77,23 +83,17 @@ module Osohq
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
       def make_instance(cls_name, fields:, id: nil)
-        raise UnregisteredClassError, cls_name unless classes.key?(cls_name)
         raise MissingConstructorError, cls_name unless constructors.key?(cls_name)
 
         fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(Term.new(v))] }]
-        instance = classes[cls_name].__send__(constructors[cls_name], **fields)
+        instance = if constructors[cls_name] == :new
+                     get_class(cls_name).__send__(:new, **fields)
+                   else
+                     constructors[cls_name].call(**fields)
+                   end
         cache_instance(instance, id: id)
       rescue StandardError => e
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
-      end
-
-      # @param id [Integer]
-      # @return [
-      # @raise [UnregisteredInstanceError] if the ID has not been registered.
-      def get_instance(id)
-        raise UnregisteredInstanceError, id unless instances.key? id
-
-        instances[id]
       end
 
       # Clear the KB but retain all registered classes and constructors.
@@ -111,6 +111,27 @@ module Osohq
         raise PolarRuntimeError, "Could not find file: #{file}" unless File.file?(file)
 
         load_queue << file
+      end
+
+      # @param instance_id [Integer]
+      # @param left_tag [String]
+      # @param right_tag [String]
+      # @return [Boolean]
+      def subspecializer?(instance_id, left_tag:, right_tag:)
+        mro = get_instance(instance_id).class.ancestors
+        mro.index(get_class(left_tag)) < mro.index(get_class(right_tag))
+      rescue StandardError
+        false
+      end
+
+      # @param instance_id [Integer]
+      # @param class_tag [String]
+      def isa?(instance_id, class_tag:)
+        cls = get_class(class_tag)
+        instance = get_instance(instance_id)
+        instance.is_a? cls
+      rescue PolarRuntimeError
+        false
       end
 
       # Turn a Ruby value into a Polar term.
@@ -182,6 +203,24 @@ module Osohq
         id
       end
 
+      # @param id [Integer]
+      # @return [Object]
+      # @raise [UnregisteredInstanceError] if the ID has not been registered.
+      def get_instance(id)
+        raise UnregisteredInstanceError, id unless instances.key? id
+
+        instances[id]
+      end
+
+      # @param name [String]
+      # @return [Class]
+      # @raise [UnregisteredClassError] if the class has not been registered.
+      def get_class(name)
+        raise UnregisteredClassError, name unless classes.key? name
+
+        classes[name]
+      end
+
       def load_queued_files
         instances.clear
         load_queue.reject! do |file|
@@ -214,6 +253,10 @@ module Osohq
 
       def call_result(result, call_id:)
         ffi_instance.call_result(result, call_id: call_id, polar: polar.ffi_instance)
+      end
+
+      def question_result(result, call_id:)
+        ffi_instance.question_result(result, call_id: call_id, polar: polar.ffi_instance)
       end
 
       # @param method [#to_sym]
@@ -251,7 +294,7 @@ module Osohq
             when 'Done'
               break
             when 'Result'
-              Fiber.yield event.data['bindings'].transform_values { |v| polar.to_ruby(Term.new(v)) }
+              Fiber.yield(event.data['bindings'].transform_values { |v| polar.to_ruby(Term.new(v)) })
             when 'MakeExternal'
               id = event.data['instance_id']
               raise DuplicateInstanceRegistrationError, id if polar.instances.key?(id)
@@ -265,6 +308,17 @@ module Osohq
               method = event.data['attribute']
               args = event.data['args']
               handle_call(method, args: args, call_id: call_id, instance_id: instance_id)
+            when 'ExternalIsSubSpecializer'
+              instance_id = event.data['instance_id']
+              left_tag = event.data['left_class_tag']
+              right_tag = event.data['right_class_tag']
+              answer = polar.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
+              question_result(answer, call_id: event.data['call_id'])
+            when 'ExternalIsa'
+              instance_id = event.data['instance_id']
+              class_tag = event.data['class_tag']
+              answer = polar.isa?(instance_id, class_tag: class_tag)
+              question_result(answer, call_id: event.data['call_id'])
             else
               raise "Unhandled event: #{JSON.dump(event.inspect)}"
             end
@@ -304,10 +358,16 @@ module Osohq
 
       # @param name [String]
       # @param args [Array]
-      def initialize(name, args: arguments)
+      def initialize(name, args:)
         @name = name
-        @args = arguments
+        @args = args
       end
+
+      def ==(other)
+        name == other.name && args == other.args
+      end
+
+      alias eql? ==
     end
 
     # Polar variable.
@@ -317,6 +377,10 @@ module Osohq
       # @param name [String]
       def initialize(name)
         @name = name
+      end
+
+      def to_s
+        name
       end
     end
   end
