@@ -250,8 +250,8 @@ impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
             Operator::Debug => 11,
-            Operator::Cut => 11,
-            Operator::Make => 10,
+            Operator::Make => 11,
+            Operator::Cut => 10,
             Operator::Dot => 9,
             Operator::In => 8,
             Operator::Not => 7,
