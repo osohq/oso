@@ -229,7 +229,7 @@ impl PolarVirtualMachine {
                     .append(&mut children);
             }
             Goal::TraceRule { trace } => {
-                self.trace.push(trace.clone());
+                self.trace.push(trace);
             }
             Goal::Unify { left, right } => self.unify(&left, &right)?,
         }
@@ -266,7 +266,7 @@ impl PolarVirtualMachine {
 
         Ok(QueryEvent::Result {
             bindings: self.bindings(false),
-            trace: self.trace.first().map(|t| t.clone()),
+            trace: self.trace.first().cloned(),
         })
     }
 

@@ -541,6 +541,7 @@ impl KnowledgeBase {
 
 pub type Bindings = HashMap<Symbol, Term>;
 
+#[allow(clippy::large_enum_variant)]
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
