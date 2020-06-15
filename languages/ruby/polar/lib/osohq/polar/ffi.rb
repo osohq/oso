@@ -4,121 +4,333 @@ require 'ffi'
 
 module Osohq
   module Polar
-    # TODO(gj): document
     module FFI
-      extend ::FFI::Library
-
-      LIB_PATH = "../../../../ext/osohq-polar/libpolar.#{::FFI::Platform::LIBSUFFIX}"
-
-      ffi_lib [File.expand_path(File.join(__FILE__, LIB_PATH))]
-
-      # int32_t polar_debug_command(polar_Polar *polar_ptr, polar_Query *query_ptr, const char *value);
-      attach_function :polar_debug_command, %i[pointer pointer string], :int32
-
-      # int32_t polar_external_call_result(polar_Polar *polar_ptr,
-      #                                    polar_Query *query_ptr,
-      #                                    uint64_t call_id,
-      #                                    const char *value);
-      attach_function :polar_external_call_result, %i[pointer pointer uint64 string], :int32
-
-      # int32_t polar_external_question_result(polar_Polar *polar_ptr,
-      #                                        polar_Query *query_ptr,
-      #                                        uint64_t call_id,
-      #                                        int32_t result);
-      attach_function :polar_external_question_result, %i[pointer pointer uint64 string], :int32
-
-      # int32_t polar_free(polar_Polar *polar);
-      attach_function :polar_free, [:pointer], :int32
-
-      # const char *polar_get_error(void);
-      attach_function :polar_get_error, [], :string
-
-      # uint64_t polar_get_external_id(polar_Polar *polar_ptr);
-      attach_function :polar_get_external_id, [:pointer], :uint64
-
-      # int32_t polar_load(polar_Polar *polar_ptr, polar_Load *load, polar_Query **query);
-      attach_function :polar_load, %i[pointer pointer pointer], :int32
-
-      # int32_t polar_load_str(polar_Polar *polar_ptr, const char *src);
-      attach_function :polar_load_str, %i[pointer string], :int32
-
-      # polar_Polar *polar_new(void);
-      attach_function :polar_new, [], :pointer
-
-      # polar_Load *polar_new_load(polar_Polar *polar_ptr, const char *src);
-      attach_function :polar_new_load, %i[pointer string], :pointer
-
-      # polar_Query *polar_new_query(polar_Polar *polar_ptr, const char *query_str);
-      attach_function :polar_new_query, %i[pointer string], :pointer
-
-      # polar_Query *polar_new_query_from_term(polar_Polar *polar_ptr, const char *query_term);
-      attach_function :polar_new_query_from_term, %i[pointer pointer], :pointer
-
-      # const char *polar_query(polar_Polar *polar_ptr, polar_Query *query_ptr);
-      attach_function :polar_query, %i[pointer pointer], :string
-
-      # polar_Query *polar_query_from_repl(polar_Polar *polar_ptr);
-      attach_function :polar_query_from_repl, [:pointer], :pointer
-
-      # int32_t load_free(polar_Load *load);
-      attach_function :load_free, [:pointer], :int32
-
-      # int32_t query_free(polar_Query *query);
-      attach_function :query_free, [:pointer], :int32
-
-      # int32_t string_free(char *s);
-      attach_function :string_free, [:string], :int32
-
-      # Check for an FFI error and convert it into a Ruby exception.
-      #
-      # @return [Osohq::Polar::Error] if there's an FFI error.
-      # @raise [Osohq::Polar::FFIError] if there isn't one.
-      def self.error
-        error = polar_get_error
-        raise Polar::FFIError if error.nil?
-
-        kind, body = JSON.parse(error).first
-        subkind, details = body.first
-        case kind
-        when 'Parse'
-          return parse_error(kind: subkind, details: details)
-        when 'Runtime'
-          # TODO(gj): Runtime exception types.
-          return ::Osohq::Polar::PolarRuntimeException.new(body: body)
-        when 'Operational'
-          return ::Osohq::Polar::InternalError.new if subkind == 'Unknown' # Rust panic.
+      LIB = ::FFI::Platform::LIBPREFIX + 'polar.' + ::FFI::Platform::LIBSUFFIX
+      LIB_PATH = File.expand_path(File.join(__dir__, "../../../../../../target/debug/#{LIB}"))
+      # Defined upfront to fix Ruby loading issues.
+      class Polar < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr)
         end
-        # All errors should be mapped to Ruby exceptions.
-        # Raise InternalError if we haven't mapped the error.
-        Polar::InternalError.new(body)
-      ensure
-        string_free(error) unless error.nil?
+      end
+      # Defined upfront to fix Ruby loading issues.
+      class Query < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr)
+        end
+      end
+      # Defined upfront to fix Ruby loading issues.
+      class QueryEvent < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr)
+        end
+      end
+      # Defined upfront to fix Ruby loading issues.
+      class Load < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr)
+        end
       end
 
-      # Map FFI parse errors into Ruby exceptions.
-      #
-      # @param kind [String]
-      # @param details [Hash<String, Object>]
-      # @return [Osohq::Polar::ParseError] the object converted into the expected format.
-      def self.parse_error(kind:, details:)
-        token = details['token']
-        pos = details['pos']
-        char = details['c']
-        case kind
-        when 'ExtraToken'
-          Polar::ParseError::ExtraToken.new(token: token, pos: pos)
-        when 'IntegerOverflow'
-          Polar::ParseError::IntegerOverflow.new(token: token, pos: pos)
-        when 'InvalidToken'
-          Polar::ParseError::InvalidToken.new(pos: pos)
-        when 'InvalidTokenCharacter'
-          Polar::ParseError::InvalidTokenCharacter.new(token: token, char: char, pos: pos)
-        when 'UnrecognizedEOF'
-          Polar::ParseError::UnrecognizedEOF.new(pos: pos)
-        when 'UnrecognizedToken'
-          Polar::ParseError::UnrecognizedToken.new(token: token, pos: pos)
-        else
-          Polar::ParseError.new(kind: subkind, details: details)
+      # TODO(gj): document
+      class Polar < ::FFI::AutoPointer
+        Rust = Module.new do
+          extend ::FFI::Library
+          ffi_lib FFI::LIB_PATH
+
+          attach_function :new, :polar_new, [], Polar
+          attach_function :new_load, :polar_new_load, [Polar, :string], FFI::Load
+          attach_function :new_id, :polar_get_external_id, [Polar], :uint64
+          attach_function :load_str, :polar_load_str, [Polar, :string], :int32
+          attach_function :new_query_from_str, :polar_new_query, [Polar, :string], FFI::Query
+          attach_function :new_query_from_term, :polar_new_query_from_term, [Polar, :string], FFI::Query
+          attach_function :new_query_from_repl, :polar_query_from_repl, [Polar], FFI::Query
+          attach_function :free, :polar_free, [Polar], :int32
+        end
+        private_constant :Rust
+
+        # @return [Polar]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def self.create
+          polar = Rust.new
+          raise FFI::Error.get if polar.null?
+
+          polar
+        end
+
+        # @param src [String]
+        # @return [FFI::Load] if there's an FFI error.
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def new_load(src:)
+          load = Rust.new_load(self, src)
+          raise FFI::Error.get if load.null?
+
+          load
+        end
+
+        # @param str [String]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def load_str(str:)
+          load = Rust.load_str(self, str)
+          raise FFI::Error.get if load.zero?
+
+          self
+        end
+
+        # @return [Integer]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def new_id
+          id = Rust.new_id(self)
+          # TODO(gj): I don't think this error check is correct. If getting a new ID fails on the
+          # Rust side, it'll probably surface as a panic (e.g., the KB lock is poisoned).
+          raise FFI::Error.get if id.zero?
+
+          id
+        end
+
+        # @param str [String] Query string.
+        # @return [FFI::Query]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def new_query_from_str(str:)
+          query = Rust.new_query_from_str(self, str)
+          # TODO(gj): I don't think this error check is correct. If getting a new ID fails on the
+          # Rust side, it'll probably surface as a panic (e.g., the KB lock is poisoned).
+          raise FFI::Error.get if query.null?
+
+          query
+        end
+
+        # @param term [Term]
+        # @return [FFI::Query]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def new_query_from_term(term:)
+          query = Rust.new_query_from_term(self, JSON.dump(term))
+          raise FFI::Error.get if query.null?
+
+          query
+        end
+
+        # @return [FFI::Query]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def new_query_from_repl
+          query = Rust.new_query_from_repl(self)
+          raise FFI::Error.get if query.null?
+
+          query
+        end
+      end
+
+      # TODO(gj): document
+      class Query < ::FFI::AutoPointer
+        # TODO(gj): document
+        Rust = Module.new do
+          extend ::FFI::Library
+          ffi_lib FFI::LIB_PATH
+
+          attach_function :debug_command, :polar_debug_command, [FFI::Polar, Query, :string], :int32
+          attach_function :call_result, :polar_external_call_result, [FFI::Polar, Query, :uint64, :string], :int32
+          attach_function :question_result, :polar_external_question_result, [FFI::Polar, Query, :uint64, :int32], :int32
+          attach_function :next_event, :polar_query, [FFI::Polar, Query], FFI::QueryEvent
+          attach_function :free_event, :string_free, [:string], :int32
+          attach_function :free, :query_free, [Query], :int32
+        end
+        private_constant :Rust
+
+        # @param cmd [String]
+        # @param polar [FFI::Polar]
+        # @return [self]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def debug_command(cmd:, polar:)
+          res = Rust.debug_command(polar, self, cmd)
+          raise FFI::Error.get if res.zero?
+
+          self
+        end
+
+        # @param call_id [Integer]
+        # @param result [String]
+        # @param polar [FFI::Polar]
+        # @return [self]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def call_result(call_id:, result:, polar:)
+          res = Rust.call_result(polar, self, call_id, result)
+          raise FFI::Error.get if res.zero?
+
+          self
+        end
+
+        # @param call_id [Integer]
+        # @param result [Boolean]
+        # @param polar [FFI::Polar]
+        # @return [self]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def question_result(call_id:, result:, polar:)
+          result = result ? 1 : 0
+          res = Rust.question_result(polar, self, call_id, result)
+          raise FFI::Error.get if res.zero?
+
+          self
+        end
+
+        # @param polar [FFI::Polar]
+        # @return [String] if event type is "Done"
+        # @return [Osohq::Polar::QueryEvent] if event type is not "Done"
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def next_event(polar:)
+          event_json = Rust.next_event(polar, self)
+          # TODO(gj): figure out if the FFI gem's auto conversion to `:string` means this will never be a null pointer
+          if event_json.respond_to?(:null?)
+            raise FFI::Error.get if event_json.null?
+          end
+          Osohq::Polar::QueryEvent.new(event_data: JSON.parse(event_json.to_s))
+        end
+      end
+
+      # TODO(gj): document
+      class QueryEvent < ::FFI::AutoPointer
+        def to_s
+          @to_s ||= read_string.force_encoding('UTF-8')
+        end
+
+        # TODO(gj): document
+        Rust = Module.new do
+          extend ::FFI::Library
+          ffi_lib FFI::LIB_PATH
+
+          attach_function :free, :string_free, [QueryEvent], :int32
+        end
+        private_constant :Rust
+      end
+
+      # TODO(gj): document
+      class Load < ::FFI::AutoPointer
+        # TODO(gj): document
+        module Rust
+          extend ::FFI::Library
+          ffi_lib FFI::LIB_PATH
+
+          attach_function :free, :load_free, [Load], :int32
+          attach_function :load, :polar_load, [FFI::Polar, Load, FFI::Query], :int32
+        end
+        private_constant :Rust
+
+        # @param polar [FFI::Polar]
+        # @param query [FFI::Query]
+        # @return [self]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def load(polar:, query:)
+          res = Rust.polar_load(polar, self, query)
+          raise FFI::Error.get if res.zero?
+
+          self
+        end
+      end
+
+      # TODO(gj): document
+      class Error < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr)
+        end
+
+        def to_s
+          @to_s ||= read_string.force_encoding('UTF-8')
+        end
+
+        # TODO(gj): document
+        Rust = Module.new do
+          extend ::FFI::Library
+          ffi_lib FFI::LIB_PATH
+
+          attach_function :get, :polar_get_error, [], Error
+          attach_function :free, :string_free, [Error], :int32
+        end
+        private_constant :Rust
+
+        # Check for an FFI error and convert it into a Ruby exception.
+        #
+        # @return [Osohq::Polar::Error] if there's an FFI error.
+        # @return [Osohq::Polar::FFIErrorNotFound] if there isn't one.
+        def self.get
+          error = Rust.get
+          return ::Osohq::Polar::FFIErrorNotFound if error.null?
+
+          kind, body = JSON.parse(error.to_s).first
+          subkind, details = body.first
+          case kind
+          when 'Parse'
+            parse_error(kind: subkind, details: details)
+          when 'Runtime'
+            runtime_error(kind: subkind, details: details)
+          when 'Operational'
+            operational_error(kind: subkind, details: details)
+            # return Osohq::Polar::InternalError.new if subkind == 'Unknown' # Rust panic.
+          end
+          # # All errors should be mapped to Ruby exceptions.
+          # # Raise InternalError if we haven't mapped the error.
+          # ::Osohq::Polar::InternalError.new(body: body)
+        end
+
+        # Map FFI parse errors into Ruby exceptions.
+        #
+        # @param kind [String]
+        # @param details [Hash<String, Object>]
+        # @return [Osohq::Polar::ParseError] the object converted into the expected format.
+        private_class_method def self.parse_error(kind:, details:)
+          token = details['token']
+          pos = details['pos']
+          char = details['c']
+          case kind
+          when 'ExtraToken'
+            Osohq::Polar::ParseError::ExtraToken.new({ token: token, pos: pos })
+          when 'IntegerOverflow'
+            Osohq::Polar::ParseError::IntegerOverflow.new({ token: token, pos: pos })
+          when 'InvalidToken'
+            Osohq::Polar::ParseError::InvalidToken.new({ pos: pos })
+          when 'InvalidTokenCharacter'
+            Osohq::Polar::ParseError::InvalidTokenCharacter.new({ token: token, char: char, pos: pos })
+          when 'UnrecognizedEOF'
+            Osohq::Polar::ParseError::UnrecognizedEOF.new({ pos: pos })
+          when 'UnrecognizedToken'
+            Osohq::Polar::ParseError::UnrecognizedToken.new({ token: token, pos: pos })
+          else
+            Osohq::Polar::ParseError.new(details)
+          end
+        end
+
+        # Map FFI runtime errors into Ruby exceptions.
+        #
+        # @param kind [String]
+        # @param details [Hash<String, Object>]
+        # @return [Osohq::Polar::PolarRuntimeError] the object converted into the expected format.
+        private_class_method def self.runtime_error(kind:, details:)
+          msg = details['msg']
+          case kind
+          when 'Serialization'
+            Osohq::Polar::PolarRuntimeError::Serialization.new(msg)
+          when 'Unsupported'
+            Osohq::Polar::PolarRuntimeError::Unsupported.new(msg)
+          when 'TypeError'
+            Osohq::Polar::PolarRuntimeError::TypeError.new(msg)
+          when 'StackOverflow'
+            Osohq::Polar::PolarRuntimeError::StackOverflow.new(msg)
+          else
+            Osohq::Polar::PolarRuntimeError.new(msg)
+          end
+        end
+
+        # Map FFI operational errors into Ruby exceptions.
+        #
+        # @param kind [String]
+        # @param details [Hash<String, Object>]
+        # @return [Osohq::Polar::OperationalError] the object converted into the expected format.
+        private_class_method def self.operational_error(kind:, details:)
+          msg = details['msg']
+          case kind
+          when 'Unknown' # Rust panics.
+            Osohq::Polar::OperationalError::Unknown.new(msg)
+          else
+            Osohq::Polar::OperationalError.new(msg)
+          end
         end
       end
     end
