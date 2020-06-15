@@ -59,25 +59,18 @@ module Osohq
         end
       end
 
-      def make_external_instance(cls_name, fields, instance_id = nil)
+      # @param cls_name [String]
+      # @param fields [Hash<String, Object>]
+      # @param id [Integer]
+      def make_external_instance(cls_name, fields:, id: nil)
         raise UnregisteredClassError, cls_name unless classes.key?(cls_name)
         raise MissingConstructorError, cls_name unless constructors.key?(cls_name)
 
-        cls = classes[cls_name]
-        constructor = constructors[cls_name]
-        begin
-          # If constructor is a string, look it up on the class.
-          fields = fields.map { |k, v| [k, Term.new(v).to_ruby] }.to_h
-          instance = if constructor.nil?
-                       cls.new(**fields)
-                     else
-                       cls.send constructor, **fields
-                     end
-          cache_instance(instance, id: instance_id)
-          instance
-        rescue StandardError => e
-          raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
-        end
+        fields = fields.transform_values { |v| Term.new(v).to_ruby }
+        instance = classes[cls_name].send(constructors[cls_name], **fields)
+        cache_instance(instance, id: id)
+      rescue StandardError => e
+        raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
       end
 
       # @param id [Integer]
@@ -243,11 +236,11 @@ module Osohq
               Fiber.yield event.bindings
             when 'MakeExternal'
               id = event.data['instance_id']
-              raise PolarRuntimeError "Instance #{id} already registered." if polar.instances.key?(id)
+              raise DuplicateInstanceRegistrationError, id if polar.instances.key?(id)
 
               cls_name = event.data['instance']['tag']
               fields = event.data['instance']['fields']['fields']
-              polar.make_external_instance(cls_name, fields, id)
+              polar.make_external_instance(cls_name, fields: fields, id: id)
             when 'ExternalCall'
               external_call(event.data)
             else
