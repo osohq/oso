@@ -9,16 +9,19 @@ module Osohq
     class FFIErrorNotFound < Error; end
 
     # Generic runtime exception.
-    class PolarRuntimeError < Error
-      class Serialization < PolarRuntimeError; end
-      class Unsupported < PolarRuntimeError; end
-      class TypeError < PolarRuntimeError; end
-      class StackOverflow < PolarRuntimeError; end
-    end
+    class PolarRuntimeError < Error; end
+    # Errors from across the FFI boundary.
+    class SerializationError < PolarRuntimeError; end
+    class UnsupportedError < PolarRuntimeError; end
+    class PolarTypeError < PolarRuntimeError; end
+    class StackOverflowError < PolarRuntimeError; end
+    # Errors originating from this side of the FFI boundary.
+    class UnregisteredClassError < PolarRuntimeError; end
+    class MissingConstructorError < PolarRuntimeError; end
+    class UnregisteredInstanceError < PolarRuntimeError; end
 
-    class OperationalError < Error
-      class Unknown < OperationalError; end
-    end
+    class OperationalError < Error; end
+    class UnknownError < OperationalError; end
 
     # Catch-all for a parsing error that doesn't match any of the more specific types.
     class ParseError < Error
