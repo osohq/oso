@@ -3,76 +3,39 @@
 module Osohq
   module Polar
     # Base error type for the Osohq::Polar library.
-    class Error < RuntimeError; end
+    class Error < ::RuntimeError; end
 
-    class FFIError < Error; end
-    class FreeError < FFIError; end
-    class PolarRuntimeException < Error; end
-    class UnhandledEventError < Error; end
-    class UnimplementedError < Error; end
+    # Expected to find an FFI error to convert into a Ruby exception, but none was found.
+    class FFIErrorNotFound < Error; end
+
+    # Generic runtime exception.
+    class PolarRuntimeError < Error
+      class Serialization < PolarRuntimeError; end
+      class Unsupported < PolarRuntimeError; end
+      class TypeError < PolarRuntimeError; end
+      class StackOverflow < PolarRuntimeError; end
+    end
+
+    class OperationalError < Error
+      class Unknown < OperationalError; end
+    end
 
     # Catch-all for a parsing error that doesn't match any of the more specific types.
     class ParseError < Error
-      # @param kind [String]
-      # @param details [Hash<String, #to_s>]
-      def initialize(kind:, details:)
-        super("ParseError - #{kind} - #{details}")
-        @kind = kind
-        @details = details
+      # @param [Hash] details about the error
+      # @option details [String] :char Character in question.
+      # @option details [Array<(Integer, Integer)>] :pos Position of the error.
+      # @option details [String] :token Token in question.
+      def initialize(**details)
+        super(details)
       end
 
-      # Unexpected additional token.
-      class ExtraToken < ParseError
-        # @param token [String]
-        # @param pos [Array<(Fixnum, Fixnum)>]
-        def initialize(token:, pos:)
-          super(kind: 'ExtraToken', details: { 'token' => token, 'pos' => pos })
-        end
-      end
-
-      # These go to eleven.
-      class IntegerOverflow < ParseError
-        # @param token [String]
-        # @param pos [Array<(Fixnum, Fixnum)>]
-        def initialize(token:, pos:)
-          super(kind: 'IntegerOverflow', details: { 'token' => token, 'pos' => pos })
-        end
-      end
-
-      # TODO(gj): document
-      class InvalidTokenCharacter < ParseError
-        # @param token [String]
-        # @param char [String]
-        # @param pos [Array<(Fixnum, Fixnum)>]
-        def initialize(token:, char:, pos:)
-          super(kind: 'InvalidTokenCharacter', details: { 'token' => token, 'char' => char, 'pos' => pos })
-        end
-      end
-
-      # TODO(gj): document
-      class InvalidToken < ParseError
-        # @param pos [Array<(Fixnum, Fixnum)>]
-        def initialize(pos:)
-          super(kind: 'InvalidToken', details: { 'pos' => pos })
-        end
-      end
-
-      # TODO(gj): document
-      class UnrecognizedEOF < ParseError
-        # @param pos [Array<(Fixnum, Fixnum)>]
-        def initialize(pos:)
-          super(kind: 'UnrecognizedEOF', details: { 'pos' => pos })
-        end
-      end
-
-      # TODO(gj): document
-      class UnrecognizedToken < ParseError
-        # @param token [String]
-        # @param pos [Array<(Fixnum, Fixnum)>]
-        def initialize(token:, pos:)
-          super(kind: 'UnrecognizedToken', details: { 'token' => token, 'pos' => pos })
-        end
-      end
+      class ExtraToken < ParseError; end
+      class IntegerOverflow < ParseError; end
+      class InvalidTokenCharacter < ParseError; end
+      class InvalidToken < ParseError; end
+      class UnrecognizedEOF < ParseError; end
+      class UnrecognizedToken < ParseError; end
     end
   end
 end
