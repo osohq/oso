@@ -64,7 +64,7 @@ module Osohq
       # @param call_id [Integer]
       # @param instance_id [Integer]
       def register_call(method, args:, call_id:, instance_id:)
-        args = args.map { |arg| Term.new(arg).to_ruby }
+        args = args.map { |a| to_ruby(Term.new(a)) }
         instance = get_instance(instance_id)
         result = instance.__send__(method, *args)
         result = [result] unless result.instance_of? Enumerator
@@ -74,14 +74,14 @@ module Osohq
       end
 
       # @param cls_name [String]
-      # @param fields [Hash<String, Object>]
+      # @param fields [Hash<String, Hash>]
       # @param id [Integer]
       def make_instance(cls_name, fields:, id: nil)
         raise UnregisteredClassError, cls_name unless classes.key?(cls_name)
         raise MissingConstructorError, cls_name unless constructors.key?(cls_name)
 
-        fields = fields.transform_values { |v| Term.new(v).to_ruby }
-        instance = classes[cls_name].send(constructors[cls_name], **fields)
+        fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(Term.new(v))] }]
+        instance = classes[cls_name].__send__(constructors[cls_name], **fields)
         cache_instance(instance, id: id)
       rescue StandardError => e
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
@@ -136,6 +136,35 @@ module Osohq
           val = { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
         end
         { "id": 0, "offset": 0, "value": val }
+      end
+
+      # @param term [Term]
+      # @return [Object]
+      def to_ruby(term)
+        tag = term.tag
+        value = term.value
+        case tag
+        when 'Integer', 'String', 'Boolean'
+          value
+        when 'List'
+          value.map { |el| to_ruby(Term.new(el)) }
+        when 'Dictionary'
+          value['fields'].transform_values { |v| to_ruby(Term.new(v)) }
+        when 'ExternalInstance'
+          get_instance(value['instance_id'])
+        when 'InstanceLiteral'
+          # TODO(gj): Should InstanceLiterals ever be making it to Ruby?
+          # convert instance literals to external instances
+          cls_name = value['tag']
+          fields = value['fields']['fields']
+          make_instance(cls_name, fields: fields)
+        when 'Call'
+          Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(Term.new(a)) })
+        when 'Symbol'
+          raise PolarRuntimeError
+        else
+          raise 'Unimplemented!'
+        end
       end
 
       private
@@ -222,7 +251,7 @@ module Osohq
             when 'Done'
               break
             when 'Result'
-              Fiber.yield event.bindings
+              Fiber.yield event.data['bindings'].transform_values { |v| polar.to_ruby(Term.new(v)) }
             when 'MakeExternal'
               id = event.data['instance_id']
               raise DuplicateInstanceRegistrationError, id if polar.instances.key?(id)
@@ -237,7 +266,7 @@ module Osohq
               args = event.data['args']
               handle_call(method, args: args, call_id: call_id, instance_id: instance_id)
             else
-              raise "Unhandled event: #{JSON.dump(event)}"
+              raise "Unhandled event: #{JSON.dump(event.inspect)}"
             end
           end
         end
@@ -252,16 +281,11 @@ module Osohq
         event_data = { event_data => nil } if event_data == 'Done'
         @kind, @data = event_data.first
       end
-
-      def bindings
-        # Still skeptical about whether we should have a method that only works for certain types of events
-        data['bindings'].sort.map { |k, v| [k, Term.new(v).to_ruby] }.to_h
-      end
     end
 
     # Polar term.
     class Term
-      attr_reader :value, :tag, :id, :offset
+      attr_reader :value, :tag
 
       # @param data [Hash<String, Object>]
       # @option data [Integer] :id
@@ -272,22 +296,27 @@ module Osohq
         @offset = data['offset']
         @tag, @value = data['value'].first
       end
+    end
 
-      def to_ruby
-        case tag
-        when 'Integer', 'String', 'Boolean'
-          value
-        when 'List'
-          value.map { |term| Term.new(term).to_ruby }
-        when 'Dictionary'
-          value['fields'].map { |k, v| [k, Term.new(v).to_ruby] }.to_h
-        when 'ExternalInstance', 'InstanceLiteral', 'Call'
-          raise 'Unimplemented!'
-        when 'Symbol'
-          raise PolarRuntimeError
-        else
-          raise 'Unimplemented!'
-        end
+    # Polar predicate.
+    class Predicate
+      attr_reader :name, :args
+
+      # @param name [String]
+      # @param args [Array]
+      def initialize(name, args: arguments)
+        @name = name
+        @args = arguments
+      end
+    end
+
+    # Polar variable.
+    class Variable
+      attr_reader :name
+
+      # @param name [String]
+      def initialize(name)
+        @name = name
       end
     end
   end
