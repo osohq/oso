@@ -264,11 +264,8 @@ module Osohq
       attr_reader :kind, :data
 
       def initialize(event_data)
-        if event_data == 'Done'
-          @kind = 'Done'
-        else
-          @kind, @data = event_data.first
-        end
+        event_data = { event_data => nil } if event_data == 'Done'
+        @kind, @data = event_data.first
       end
 
       def bindings
