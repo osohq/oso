@@ -26,8 +26,8 @@ RSpec.describe Osohq::Polar::Polar do
     it 'converts predicates in both directions' do
       pending 'Predicates not yet implemented'
       subject.load_str('f(x) := x = pred(1, 2);')
-      expect(qvar(subject, 'f(x)', 'x')).to eq([Predicate.new('pred', [1, 2])])
-      expect(subject.query_pred(Predicate.new('f', [Predicate.new('pred', [1, 2])])).results.next).to eq([{}])
+      expect(qvar(subject, 'f(x)', 'x')).to eq([Osohq::Polar::Predicate.new('pred', args: [1, 2])])
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Predicate.new('pred', args: [1, 2])])).results.next).to eq([{}])
     end
   end
 
@@ -38,7 +38,7 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     it 'raises if given a non-Polar file' do
-      expect { subject.load('other.ext') }.to raise_error Osohq::Polar::Errors::PolarRuntimeException
+      expect { subject.load('other.ext') }.to raise_error Osohq::Polar::PolarRuntimeError
     end
 
     it 'is idempotent' do
@@ -292,22 +292,19 @@ RSpec.describe Osohq::Polar::Polar do
 
     it 'fails if an inline query fails' do
       pending "Don't handle inline queries yet"
-      expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Osohq::Polar::Errors::PolarRuntimeException
+      expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Osohq::Polar::PolarRuntimeError
     end
   end
 
   context 'when parsing' do
-    before(:example) { pending "Don't handle parser errors yet" }
-
     it 'raises on IntegerOverflow errors' do
-      skip 'This test is all sorts of weird.'
       int = '18446744073709551616'
       rule = <<~POLAR
         f(a) := a = #{int};
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
-        expect(e).to be_an Osohq::Polar::Errors::IntegerOverflow
-        expect(e.value).to eq("('#{int}', [1, 16])")
+        expect(e).to be_an Osohq::Polar::ParseError::IntegerOverflow
+        expect(e.message).to eq("{:token=>\"#{int}\", :pos=>[0, 12]}")
       end
     end
 
@@ -318,18 +315,19 @@ RSpec.describe Osohq::Polar::Polar do
           allowed";
         POLAR
         expect { subject.load_str(rule) }.to raise_error do |e|
-          expect(e).to be_an Osohq::Polar::Errors::InvalidTokenCharacter
-          expect(e.value).to eq("('this is not', '\\n', [1, 28])")
+          expect(e).to be_an Osohq::Polar::ParseError::InvalidTokenCharacter
+          expect(e.message).to eq('{:token=>"this is not", :char=>"\\n", :pos=>[0, 24]}')
         end
       end
 
       it 'on null bytes' do
+        skip "Ruby, written in C, doesn't seem to be able to represent a string with a null byte in it."
         rule = <<~POLAR
           f(a) := a = "this is not allowed\0
         POLAR
         expect { subject.load_str(rule) }.to raise_error do |e|
-          expect(e).to be_an Osohq::Polar::Errors::InvalidTokenCharacter
-          expect(e.value).to eq("('this is not allowed', '\\x00', [1, 16])")
+          expect(e).to be_an Osohq::Polar::ParseError::InvalidTokenCharacter
+          expect(e.message).to eq("('this is not allowed', \"\\x00\", [1, 16])")
         end
       end
     end
@@ -342,8 +340,8 @@ RSpec.describe Osohq::Polar::Polar do
         f(a)
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
-        expect(e).to be_an Osohq::Polar::Errors::UnrecognizedEOF
-        expect(e.value).to eq('[1, 8]')
+        expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedEOF
+        expect(e.message).to eq('{:pos=>[0, 4]}')
       end
     end
 
@@ -352,8 +350,8 @@ RSpec.describe Osohq::Polar::Polar do
         1;
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
-        expect(e).to be_an Osohq::Polar::Errors::UnrecognizedToken
-        expect(e.value).to eq("('1', [1, 4])")
+        expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedToken
+        expect(e.message).to eq('{:token=>"1", :pos=>[0, 0]}')
       end
     end
 
@@ -372,12 +370,12 @@ RSpec.describe Osohq::Polar::Polar do
       end
       subject.register_class(Actor)
       subject.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
-      expect(subject.query_pred(Predicate.new('allow', [Actor(), 'join', 'party'])).success).to be true
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [Actor(), 'join', 'party'])).success).to be true
     end
 
     it 'can handle variables as arguments' do
       subject.load(test_file)
-      expect(subject.query_pred(Predicate.new('f', [Variable.new('a')])).results.to_a).to eq(
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Variable.new('a')])).results.to_a).to eq(
         [{ "a": 1 }, { "a": 2 }, { "a": 3 }]
       )
     end
