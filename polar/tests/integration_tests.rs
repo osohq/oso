@@ -151,10 +151,10 @@ fn test_trace() {
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
   f(x) := x=1,x=1; [
-    _x_9=1,_x_9=1 [
-      _x_9=1 [
+    _x_1=1,_x_1=1 [
+      _x_1=1 [
       ]
-      _x_9=1 [
+      _x_1=1 [
       ]
     ]
   ]
