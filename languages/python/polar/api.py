@@ -32,8 +32,9 @@ class QueryResult:
     """Response type of a call to the `query` API"""
 
     def __init__(self, results: list):
-        self.results = results
         self.success = len(results) > 0
+        self.results = [r["bindings"] for r in results]
+        self.traces = [r["trace"] for r in results]
 
 
 # @TODO: Fix this! These need to be global for now so that `Oso.register_class`
@@ -94,7 +95,7 @@ class Polar:
                 break
             for res in self.__run_query(query):
                 had_result = True
-                print(f"Result: {res}")
+                print(f"Result: {res['bindings']}")
             if not had_result:
                 print("False")
 
@@ -123,7 +124,8 @@ class Polar:
         self._load_queued_files()
         string = to_c_str(string)
         query = check_result(lib.polar_new_query(self.polar, string))
-        yield from self.__run_query(query)
+        for res in self.__run_query(query):
+            yield res["bindings"]
 
     def _query_pred(self, query: Predicate, debug=False, single=False):
         """Query the knowledge base."""
@@ -221,7 +223,11 @@ class Polar:
                 if kind == "Debug":
                     self.__handle_debug(query, data)
                 if kind == "Result":
-                    yield {k: self._to_python(v) for k, v in data["bindings"].items()}
+                    bindings = {
+                        k: self._to_python(v) for k, v in data["bindings"].items()
+                    }
+                    trace = data["trace"]
+                    yield {"bindings": bindings, "trace": trace}
 
     def __make_external_instance(self, cls_name, fields, instance_id=None):
         """Make new instance of external class."""
