@@ -13,23 +13,65 @@ use std::sync::atomic::{AtomicU64, Ordering};
 pub type SrcPos = (usize, usize);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorContext {
+    pub source: Source,
+    pub row: usize,
+    pub column: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
-    IntegerOverflow { token: String, pos: SrcPos },
-    InvalidTokenCharacter { token: String, c: char, pos: SrcPos }, //@TODO: Line and column instead of loc.
-    InvalidToken { pos: SrcPos },
-    UnrecognizedEOF { pos: SrcPos },
-    UnrecognizedToken { token: String, pos: SrcPos },
-    ExtraToken { token: String, pos: SrcPos },
+    IntegerOverflow {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    InvalidTokenCharacter {
+        token: String,
+        c: char,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    InvalidToken {
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    UnrecognizedEOF {
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    UnrecognizedToken {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    ExtraToken {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
 }
 
 // @TODO: Information about the context of the error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
-    Serialization { msg: String },
-    Unsupported { msg: String },
-    TypeError { msg: String },
-    UnboundVariable { sym: Symbol },
-    StackOverflow { msg: String },
+    Serialization {
+        msg: String,
+    },
+    Unsupported {
+        msg: String,
+    },
+    TypeError {
+        msg: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    UnboundVariable {
+        sym: Symbol,
+    },
+    StackOverflow {
+        msg: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -276,6 +318,8 @@ impl Value {
             Value::Symbol(name) => Ok(name),
             _ => Err(RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
             }),
         }
     }
@@ -458,7 +502,7 @@ pub enum Type {
     Group { members: Vec<Type> },
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,
@@ -644,7 +688,8 @@ mod tests {
         let e = ParseError::InvalidTokenCharacter {
             token: "Integer".to_owned(),
             c: 'x',
-            pos: (99, 99),
+            loc: 99,
+            context: None,
         };
         let er: PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&er).unwrap());

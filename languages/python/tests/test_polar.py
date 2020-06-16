@@ -331,7 +331,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.IntegerOverflow) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('18446744073709551616', [1, 16])"
+    assert (
+        str(e.value)
+        == "('18446744073709551616', {'source': {'filename': None, 'src': '\\n    f(a) := a = 18446744073709551616;\\n    '}, 'row': 1, 'column': 16})"
+    )
 
     # InvalidTokenCharacter
     rules = """
@@ -340,7 +343,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('this is not', '\\n', [1, 28])"
+    assert (
+        str(e.value)
+        == "('this is not', '\\n', {'source': {'filename': None, 'src': '\\n    f(a) := a = \"this is not\\n    allowed\";\\n    '}, 'row': 1, 'column': 28})"
+    )
 
     rules = """
     f(a) := a = "this is not allowed\0
@@ -348,7 +354,10 @@ def test_parser_errors(polar):
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('this is not allowed', '\\x00', [1, 16])"
+    assert (
+        str(e.value)
+        == "('this is not allowed', '\\x00', {'source': {'filename': None, 'src': '\\n    f(a) := a = \"this is not allowed'}, 'row': 1, 'column': 16})"
+    )
 
     # InvalidToken -- not sure what causes this
 
@@ -358,7 +367,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedEOF) as e:
         polar._load_str(rules)
-    assert str(e.value) == "[1, 8]"
+    assert (
+        str(e.value)
+        == "{'source': {'filename': None, 'src': '\\n    f(a)\\n    '}, 'row': 1, 'column': 8}"
+    )
 
     # UnrecognizedToken
     rules = """
@@ -366,7 +378,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedToken) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('1', [1, 4])"
+    assert (
+        str(e.value)
+        == "('1', {'source': {'filename': None, 'src': '\\n    1;\\n    '}, 'row': 1, 'column': 4})"
+    )
 
     # ExtraToken -- not sure what causes this
 
