@@ -785,50 +785,29 @@ impl PolarVirtualMachine {
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
-        match &predicate.name.0[..] {
-            // Built-in predicates.
-            "cut" => self.push_goal(Goal::Cut)?,
-            "debug" => {
-                let mut message = "Welcome to the debugger!".to_string();
-                if !predicate.args.is_empty() {
-                    message += &format!(
-                        "\ndebug({})",
-                        predicate
-                            .args
-                            .iter()
-                            .map(|arg| self.deref(arg).to_polar())
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    );
-                }
-                self.push_goal(Goal::Debug { message })?
-            }
-            // User-defined predicates.
-            _ => {
-                let generic_rule = {
-                    let kb = self.kb.read().unwrap();
-                    kb.rules.get(&predicate.name).cloned()
-                };
-                match generic_rule {
-                    None => self.push_goal(Goal::Backtrack)?,
-                    Some(generic_rule) => {
-                        assert_eq!(generic_rule.name, predicate.name);
-                        self.push_goal(Goal::TracePop)?;
-                        self.push_goal(Goal::SortRules {
-                            rules: generic_rule
-                                .rules
-                                .into_iter()
-                                .filter(|r| r.params.len() == predicate.args.len())
-                                .collect(),
-                            args: predicate.args.clone(),
-                            outer: 1,
-                            inner: 1,
-                        })?;
-                        self.push_goal(Goal::TracePush)?;
-                    }
-                }
+        let generic_rule = {
+            let kb = self.kb.read().unwrap();
+            kb.rules.get(&predicate.name).cloned()
+        };
+        match generic_rule {
+            None => self.push_goal(Goal::Backtrack)?,
+            Some(generic_rule) => {
+                assert_eq!(generic_rule.name, predicate.name);
+                self.push_goal(Goal::TracePop)?;
+                self.push_goal(Goal::SortRules {
+                    rules: generic_rule
+                        .rules
+                        .into_iter()
+                        .filter(|r| r.params.len() == predicate.args.len())
+                        .collect(),
+                    args: predicate.args,
+                    outer: 1,
+                    inner: 1,
+                })?;
+                self.push_goal(Goal::TracePush)?;
             }
         }
+
         Ok(())
     }
 
@@ -902,6 +881,20 @@ impl PolarVirtualMachine {
                 }
                 self.choose(alternatives);
             }
+            Operator::Debug => {
+                let mut message = "Welcome to the debugger!".to_string();
+                if !args.is_empty() {
+                    message += &format!(
+                        "\ndebug({})",
+                        args.iter()
+                            .map(|arg| self.deref(arg).to_polar())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    );
+                }
+                self.push_goal(Goal::Debug { message })?
+            }
+            Operator::Cut => self.push_goal(Goal::Cut)?,
             _ => {
                 return Err(
                     self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))

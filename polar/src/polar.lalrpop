@@ -49,6 +49,8 @@ extern {
         ":=" => lexer::Token::Define,   // :=
         "?=" => lexer::Token::Query,    // ?=
         "in" => lexer::Token::In,
+        "cut" => lexer::Token::Cut,
+        "debug" => lexer::Token::Debug,
     }
 }
 
@@ -120,7 +122,8 @@ pub Term: Term = {
 RewritableOperator: Operator = {
     "." => Operator::Dot,
     "make" => Operator::Make,
-    "in" => Operator::In
+    "in" => Operator::In,
+    "debug" => Operator::Debug,
 };
 
 pub RewrittenOperation: Operation = {
@@ -141,7 +144,7 @@ pub Predicate: Predicate = {
     }
 };
 
-Exp10: Term = {
+Exp11: Term = {
     <term:Term> => term,
     "(" <exp:Exp> ")" => exp // seems sorta impossible to support parrens for expressions and list literals.
 }
@@ -175,6 +178,20 @@ DotOp: Term = {
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     }
+}
+
+Exp10: Term = {
+    <start:@L> "cut" "(" ")" => {
+        let args = vec![];
+        let op = Operation{operator: Operator::Cut, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> "cut" => {
+        let args = vec![];
+        let op = Operation{operator: Operator::Cut, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp11:Exp11> => exp11
 }
 
 // .
