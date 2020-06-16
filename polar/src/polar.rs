@@ -156,8 +156,8 @@ impl Polar {
         };
         let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
         lines.reverse();
-        let src_id = kb.new_id();
         let mut kb = self.kb.write().unwrap();
+        let src_id = kb.new_id();
         kb.sources.add_source(source, src_id);
         while let Some(line) = lines.pop() {
             match line {

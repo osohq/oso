@@ -405,11 +405,11 @@ module Osohq
 end
 
 Osohq::Polar::Polar.new.tap do |polar|
-  polar.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
+  polar.load('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
   puts 'f(x)', polar.query_str('f(x)').to_a
   puts 'k(x)', polar.query_str('k(x)').to_a
 
-  polar.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
+  polar.load('foo(1, 2); foo(3, 4); foo(5, 6);')
   if polar.query_str('foo(x, y)').to_a != [{ 'x' => 1, 'y' => 2 }, { 'x' => 3, 'y' => 4 }, { 'x' => 5, 'y' => 6 }]
     raise 'AssertionError'
   end
@@ -422,10 +422,10 @@ Osohq::Polar::Polar.new.tap do |polar|
 
   polar.register_class(TestClass)
 
-  polar.load_str('external(x, 3) := x = TestClass{}.my_method;')
+  polar.load('external(x, 3) := x = TestClass{}.my_method;')
   results = polar.query_str('external(1, x)')
   p results.next
 
-  # polar.load_str('testDebug() := debug(), foo(x, y), k(y);')
+  # polar.load('testDebug() := debug(), foo(x, y), k(y);')
   # polar.query_str('testDebug()').next
 end

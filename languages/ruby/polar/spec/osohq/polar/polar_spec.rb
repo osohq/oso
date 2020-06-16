@@ -314,7 +314,7 @@ RSpec.describe Osohq::Polar::Polar do
         f(a) := a = "this is not
         allowed";
       POLAR
-      expect { subject.load_str(rule) }.to raise_error do |e|
+      expect { subject.load(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::InvalidTokenCharacter
         expect(e.message).to eq('{"token"=>"this is not", "c"=>"\n", "loc"=>24, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a) := a = \\"this is not\\nallowed\\";\n"}, "row"=>0, "column"=>24}}')
       end
