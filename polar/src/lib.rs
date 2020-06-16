@@ -137,21 +137,6 @@ pub extern "C" fn polar_query_from_repl(polar_ptr: *mut Polar) -> *mut Query {
 }
 
 #[no_mangle]
-/// Bools aren't portable, 0 means error 1 means success.
-pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        let s = unsafe { ffi_string!(src) };
-        if let Err(e) = polar.load_str(&s) {
-            set_error(e);
-            POLAR_FAILURE
-        } else {
-            POLAR_SUCCESS
-        }
-    })
-}
-
-#[no_mangle]
 pub extern "C" fn polar_new_query_from_term(
     polar_ptr: *mut Polar,
     query_term: *const c_char,
