@@ -724,7 +724,7 @@ impl PolarVirtualMachine {
                 self.query_for_predicate(predicate.clone())?;
             }
             Value::Expression(Operation { operator, args }) => {
-                self.query_for_operation(&term, *operator, args.clone())?;
+                return self.query_for_operation(&term, *operator, args.clone());
             }
             _ => {
                 return Err(
@@ -768,7 +768,7 @@ impl PolarVirtualMachine {
         term: &Term,
         operator: Operator,
         mut args: Vec<Term>,
-    ) -> PolarResult<()> {
+    ) -> PolarResult<QueryEvent> {
         match operator {
             Operator::And => {
                 // Append a `Query` goal for each term in the args list
@@ -844,6 +844,31 @@ impl PolarVirtualMachine {
                 }
                 self.push_goal(Goal::Debug { message })?
             }
+            Operator::New => {
+                assert_eq!(args.len(), 2);
+                let result = args
+                    .pop()
+                    .unwrap()
+                    .value
+                    .symbol()
+                    .expect("Must have result as second arg.");
+                let mut literal_term = args.pop().unwrap();
+
+                let instance_id = self.new_id();
+
+                let mut literal_value = literal_term
+                    .replace_value(Value::ExternalInstance(ExternalInstance {
+                        instance_id,
+                        literal: None,
+                    }))
+                    .instance_literal()
+                    .expect("Arg 0 must be instance literal");
+
+                self.bind(&result, &literal_term);
+
+                literal_value.map_in_place(&mut |t| *t = self.deref(t));
+                return Ok(self.make_external(literal_value, instance_id));
+            }
             Operator::Cut => self.push_goal(Goal::Cut)?,
             _ => {
                 return Err(
@@ -851,7 +876,7 @@ impl PolarVirtualMachine {
                 );
             }
         }
-        Ok(())
+        Ok(QueryEvent::None)
     }
 
     /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
