@@ -33,13 +33,11 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, types::ParseError>) -> type
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
-            Token::Debug | Token::Cut | Token::In | Token::New => {
-                types::ParseError::ReservedWord {
-                    token: t.to_string(),
-                    loc,
-                    context: None,
-                }
-            }
+            Token::Debug | Token::Cut | Token::In | Token::New => types::ParseError::ReservedWord {
+                token: t.to_string(),
+                loc,
+                context: None,
+            },
             _ => types::ParseError::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
