@@ -41,12 +41,3 @@ maplit = "1.0.2"
 [features]
 default = []
 repl = ["rustyline", "rustyline-derive"]
-
-
-[profile.release]
-debug = true
-
-[profile.bench]
-debug = true
-# Comment out when actually benchmarking
-# opt-level = 0

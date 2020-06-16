@@ -7,21 +7,27 @@ use std::iter::{once, repeat};
 use polar::*;
 use polar::{types::*, Polar, Query};
 
+fn runner_from_query(q: &str) -> Runner {
+    let polar = Polar::new();
+    let query_term = polar::parser::parse_query(q).unwrap();
+    let query = polar.new_query_from_term(query_term);
+    Runner::new(polar, query)
+}
+
 pub fn simple_queries(c: &mut Criterion) {
-    let mut runner = Runner::new(Polar::new());
-    c.bench_function("1=1", |b| {
-        let query = polar::parser::parse_query("1 = 1").unwrap();
-        b.iter(|| {
-            let query = runner.new_query_from_term(query.clone());
-            runner.run(query);
-        })
+    c.bench_function("simple 1=1", |b| {
+        b.iter_batched(
+            || runner_from_query("1=1"),
+            |mut runner| runner.run(),
+            criterion::BatchSize::SmallInput,
+        )
     });
-    c.bench_function("1=1,2=2", |b| {
-        let query = polar::parser::parse_query("1 = 1, 2 = 2").unwrap();
-        b.iter(|| {
-            let query = runner.new_query_from_term(query.clone());
-            runner.run(query);
-        })
+    c.bench_function("simple 1=1,2=2", |b| {
+        b.iter_batched(
+            || runner_from_query("1=1,2=2"),
+            |mut runner| runner.run(),
+            criterion::BatchSize::SmallInput,
+        )
     });
 }
 
@@ -30,27 +36,40 @@ pub fn simple_queries(c: &mut Criterion) {
 /// This basically measures the performance of the rule sorting
 pub fn too_many_predicates(c: &mut Criterion) {
     const TARGET: usize = 10;
-    let polar = Polar::new();
-    polar.load_str("f(0);").unwrap();
-    for i in 1..=TARGET {
-        polar
-            .load_str(&format!("f({}) := f({});", i, i - 1))
-            .unwrap();
-    }
-    let mut runner = Runner::new(polar);
-    runner.expected_result(Bindings::new());
-    let query_term = polar::parser::parse_query(&format!("f({})", TARGET)).unwrap();
-    let query = runner.new_query_from_term(query_term.clone());
-    runner.run(query);
-    c.bench_function("f(N) := f(N-1) := ... := f(0)", |b| {
-        b.iter(|| {
-            let query = runner.new_query_from_term(query_term.clone());
-            runner.run(query);
-        })
+    let make_runner = || {
+        let mut runner = runner_from_query(&format!("f({})", TARGET));
+        runner.load_str("f(0);").unwrap();
+        for i in 1..=TARGET {
+            runner
+                .load_str(&format!("f({}) := f({});", i, i - 1))
+                .unwrap();
+        }
+        runner.expected_result(Bindings::new());
+        runner
+    };
+
+    c.bench_function("many_rules f(N) := f(N-1) := ... := f(0)", |b| {
+        b.iter_batched(
+            make_runner,
+            |mut runner| runner.run(),
+            criterion::BatchSize::SmallInput,
+        )
     });
 }
 
+/// Bench: Example policy showing N+1 query behaviour.
+/// The first query is to `grandparent.children`, then
+/// for every result `child`, there will be a further query to
+/// `child.children`. Implemented naively, this results in N+1
+/// database lookups.
 pub fn n_plus_one_queries(c: &mut Criterion) {
+    let policy = "
+        has_grandchild_called(grandparent: Person, name) :=
+            child in grandparent.children,
+            grandchild in child.childern,
+            grandchild.name = name;
+    ";
+
     /// Constructs `N` external results
     fn n_results(runner: &mut Runner, n: usize) {
         // make some instances. The literals dont change anything, but is convenient for
@@ -58,7 +77,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
         let child = runner.make_external(instance!("Person"));
         let grandchild = runner.make_external(instance!("Person"));
 
-        let n_children = term!(vec![child; n + 1]); // n children in a list
+        let n_children = term!(vec![child; n]); // n children in a list
         let one_grandchild = term!(vec![grandchild]);
 
         let grandchild_alice = vec![
@@ -75,11 +94,11 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
         ];
 
         // List of n children (one term)
-        // then n times grandchild -> name = Alice
+        // then n-1 times grandchild -> name = Alice
         // then once grandchild -> name = Bert
         // then None (no more children)
         let external_calls = once(Some(n_children))
-            .chain(repeat(grandchild_alice).take(n).flatten())
+            .chain(repeat(grandchild_alice).take(n - 1).flatten())
             .chain(grandchild_bert.into_iter())
             .chain(once(None))
             .collect();
@@ -88,38 +107,32 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
         runner.expected_result(Bindings::new());
     }
 
-    let polar = Polar::new();
-    polar
-        .load_str(
-            "
-        has_grandchild_called(grandparent: Person, name) :=
-            child in grandparent.children,
-            grandchild in child.childern,
-            grandchild.name = name;
-    ",
-        )
-        .unwrap();
-    let mut runner = Runner::new(polar);
+    let n_array = [1, 20];
+    let delays = [100_000, 1_000_000];
 
-    let n_array = [1, 5, 20];
-    let delays = [0, 10_000, 100_000];
-
-    let mut group = c.benchmark_group("N+1 query");
+    let mut group = c.benchmark_group("n_plus_one query");
     for delay in &delays {
         for n in &n_array {
-            n_results(&mut runner, *n);
-            runner.external_cost = Some(std::time::Duration::new(0, *delay));
             group.throughput(Throughput::Elements(*n as u64));
             group.bench_function(
                 BenchmarkId::from_parameter(format!("N={}, cost={}ns", n, delay)),
                 |b| {
-                    let query =
-                        polar::parser::parse_query("has_grandchild_called(Person{}, \"bert\")")
-                            .unwrap();
-                    b.iter(|| {
-                        let query = runner.new_query_from_term(query.clone());
-                        runner.run(query);
-                    })
+                    b.iter_batched(
+                        || {
+                            let mut runner =
+                                runner_from_query("has_grandchild_called(Person{}, \"bert\")");
+                            runner.load_str(policy).unwrap();
+                            n_results(&mut runner, *n);
+                            runner.external_cost = Some(std::time::Duration::new(0, *delay));
+                            runner
+                        },
+                        |mut runner| {
+                            runner.run();
+                            // check: we do actually run N+1 queries
+                            assert_eq!(runner.calls_count, 1 + *n);
+                        },
+                        criterion::BatchSize::SmallInput,
+                    )
                 },
             );
         }
@@ -140,18 +153,20 @@ struct Runner {
     polar: Polar,
     expected_result: Option<Bindings>,
     external_calls: Vec<Option<Term>>,
-    query: Option<Query>,
+    query: Query,
     external_cost: Option<std::time::Duration>,
+    calls_count: usize,
 }
 
 impl Runner {
-    fn new(polar: Polar) -> Self {
+    fn new(polar: Polar, query: Query) -> Self {
         Self {
             polar,
             expected_result: None,
             external_calls: Vec::new(),
-            query: None,
+            query,
             external_cost: None,
+            calls_count: 0,
         }
     }
 
@@ -165,14 +180,10 @@ impl Runner {
     }
 
     fn next(&mut self) -> QueryEvent {
-        self.polar
-            .query(self.query.as_mut().unwrap())
-            .expect("query errored")
+        self.polar.query(&mut self.query).expect("query errored")
     }
 
-    fn run(&mut self, query: Query) {
-        self.query = Some(query);
-        let mut external_calls = self.external_calls.clone();
+    fn run(&mut self) {
         loop {
             let event = self.next();
             match event {
@@ -182,14 +193,12 @@ impl Runner {
                 QueryEvent::MakeExternal { .. } => {}
                 QueryEvent::ExternalIsa { call_id, .. } => self.handle_external_isa(call_id),
                 QueryEvent::ExternalCall { call_id, .. } => {
-                    let result = external_calls.pop().expect("a result ready to return");
-                    self.handle_external_call(call_id, result);
+                    self.handle_external_call(call_id);
                 }
                 QueryEvent::Debug { message } => self.handle_debug(message),
                 event => todo!("{:?}", event),
             }
         }
-        self.query = None;
     }
 
     fn handle_result(&mut self, bindings: Bindings) {
@@ -200,28 +209,32 @@ impl Runner {
 
     fn handle_external_isa(&mut self, call_id: u64) {
         self.polar
-            .external_question_result(self.query.as_mut().unwrap(), call_id, true)
+            .external_question_result(&mut self.query, call_id, true)
     }
 
-    fn handle_external_call(&mut self, call_id: u64, result: Option<Term>) {
+    fn handle_external_call(&mut self, call_id: u64) {
+        let result = self.external_calls.pop().expect("more results");
         if matches!(result, Some(Term { value: Value::ExternalInstance { .. }, ..}) | Some(Term { value: Value::List { .. }, ..}))
         {
+            self.calls_count += 1;
             if let Some(cost) = self.external_cost {
                 std::thread::sleep(cost);
             }
         }
         self.polar
-            .external_call_result(self.query.as_mut().unwrap(), call_id, result)
+            .external_call_result(&mut self.query, call_id, result)
             .unwrap();
     }
 
+    #[cfg(not(feature = "repl"))]
+    fn handle_debug(&mut self, _: String) {}
+
+    #[cfg(feature = "repl")]
     fn handle_debug(&mut self, message: String) {
-        // let mut repl = crate::cli::repl::Repl::new();
-        // println!("{}", message);
-        // let input = repl.plain_input("> ").unwrap();
-        // self.polar
-        //     .debug_command(self.query.as_mut().unwrap(), input)
-        //     .unwrap();
+        let mut repl = crate::cli::repl::Repl::new();
+        println!("{}", message);
+        let input = repl.plain_input("> ").unwrap();
+        self.polar.debug_command(&mut self.query, input).unwrap();
     }
 
     fn make_external(&mut self, literal: InstanceLiteral) -> Term {
