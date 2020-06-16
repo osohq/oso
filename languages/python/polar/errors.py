@@ -47,15 +47,15 @@ def get_error():
 def _parse_error(kind, data):
     """Map parsing errors."""
     token = data[kind].get("token")
-    pos = data[kind].get("pos")
+    context = data[kind].get("context")
     c = data[kind].get("c")
     parse_errors = {
-        "ExtraToken": ExtraToken(token, pos),
-        "IntegerOverflow": IntegerOverflow(token, pos),
-        "InvalidToken": InvalidToken(pos),
-        "InvalidTokenCharacter": InvalidTokenCharacter(token, c, pos),
-        "UnrecognizedEOF": UnrecognizedEOF(pos),
-        "UnrecognizedToken": UnrecognizedToken(token, pos),
+        "ExtraToken": ExtraToken(token, context),
+        "IntegerOverflow": IntegerOverflow(token, context),
+        "InvalidToken": InvalidToken(context),
+        "InvalidTokenCharacter": InvalidTokenCharacter(token, c, context),
+        "UnrecognizedEOF": UnrecognizedEOF(context),
+        "UnrecognizedToken": UnrecognizedToken(token, context),
     }
     return parse_errors.get(
         kind, ParserException(f"Parser Exception: {json.dumps(data)}")

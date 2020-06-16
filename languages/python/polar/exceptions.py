@@ -19,38 +19,38 @@ class ParserException(PolarException):
 
 
 class IntegerOverflow(ParserException):
-    def __init__(self, token, pos):
+    def __init__(self, token, context):
         self.token = token
-        self.pos = pos
+        self.context = context
 
 
 class InvalidTokenCharacter(ParserException):
-    def __init__(self, token, c, pos):
+    def __init__(self, token, c, context):
         self.token = token
         self.c = c
-        self.pos = pos
+        self.context = context
 
 
 class InvalidToken(ParserException):
-    def __init__(self, pos):
-        self.pos = pos
+    def __init__(self, context):
+        self.context = context
 
 
 class UnrecognizedEOF(ParserException):
-    def __init__(self, pos):
-        self.pos = pos
+    def __init__(self, context):
+        self.context = context
 
 
 class UnrecognizedToken(ParserException):
-    def __init__(self, token, pos):
+    def __init__(self, token, context):
         self.token = token
-        self.pos = pos
+        self.context = context
 
 
 class ExtraToken(ParserException):
-    def __init__(self, token, pos):
+    def __init__(self, token, context):
         self.token = token
-        self.pos = pos
+        self.context = context
 
 
 class PolarRuntimeException(PolarException):

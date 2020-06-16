@@ -1,3 +1,4 @@
+use super::lexer::make_context;
 use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
@@ -57,6 +58,64 @@ use super::parser;
 
 use std::sync::{Arc, RwLock};
 
+fn fill_context(e: PolarError, source: &Source) -> PolarError {
+    match e {
+        PolarError::Parse(parse_error) => {
+            let parse_error = match parse_error {
+                ParseError::IntegerOverflow {
+                    token,
+                    loc,
+                    context: None,
+                } => ParseError::IntegerOverflow {
+                    token,
+                    loc,
+                    context: make_context(source, loc),
+                },
+                ParseError::InvalidTokenCharacter {
+                    token,
+                    c,
+                    loc,
+                    context: None,
+                } => ParseError::InvalidTokenCharacter {
+                    token,
+                    c,
+                    loc,
+                    context: make_context(source, loc),
+                },
+                ParseError::InvalidToken { loc, context: None } => ParseError::InvalidToken {
+                    loc,
+                    context: make_context(source, loc),
+                },
+                ParseError::UnrecognizedEOF { loc, context: None } => ParseError::UnrecognizedEOF {
+                    loc,
+                    context: make_context(source, loc),
+                },
+                ParseError::UnrecognizedToken {
+                    token,
+                    loc,
+                    context: None,
+                } => ParseError::UnrecognizedToken {
+                    token,
+                    loc,
+                    context: make_context(source, loc),
+                },
+                ParseError::ExtraToken {
+                    token,
+                    loc,
+                    context: None,
+                } => ParseError::ExtraToken {
+                    token,
+                    loc,
+                    context: make_context(source, loc),
+                },
+                _ => parse_error,
+            };
+            PolarError::Parse(parse_error)
+        }
+        _ => e,
+    }
+}
+
 pub struct Query {
     vm: PolarVirtualMachine,
     done: bool,
@@ -97,17 +156,15 @@ impl Polar {
     }
 
     pub fn new_load(&self, src: &str) -> PolarResult<Load> {
-        let mut lines = parser::parse_lines(src)?;
-        lines.reverse();
         let mut kb = self.kb.write().unwrap();
+        let source = Source {
+            filename: None,
+            src: src.to_owned(),
+        };
+        let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
+        lines.reverse();
         let src_id = kb.new_id();
-        kb.sources.add_source(
-            Source {
-                filename: None,
-                src: src.to_owned(),
-            },
-            src_id,
-        );
+        kb.sources.add_source(source, src_id);
         Ok(Load { lines, src_id })
     }
 
@@ -144,11 +201,11 @@ impl Polar {
     }
 
     pub fn new_query(&self, src: &str) -> PolarResult<Query> {
-        let mut term = parser::parse_query(src)?;
         let source = Source {
-            src: src.to_string(),
             filename: None,
+            src: src.to_owned(),
         };
+        let mut term = parser::parse_query(src).map_err(|e| fill_context(e, &source))?;
         {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
@@ -180,7 +237,7 @@ impl Polar {
     }
 
     #[cfg(feature = "repl")]
-    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
+    pub fn new_query_from_repl(&mut self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
         let s = repl.input("Enter query:");
         match s {

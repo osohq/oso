@@ -3,6 +3,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
+use super::lexer::make_context;
 use super::types::*;
 use super::ToPolarString;
 
@@ -718,18 +719,17 @@ impl PolarVirtualMachine {
         self.queries.push(term.clone());
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
 
-        match term.value {
+        match &term.value {
             Value::Call(predicate) => {
-                self.query_for_predicate(predicate)?;
+                self.query_for_predicate(predicate.clone())?;
             }
             Value::Expression(Operation { operator, args }) => {
-                self.query_for_operation(operator, args)?;
+                self.query_for_operation(&term, *operator, args.clone())?;
             }
             _ => {
-                return Err(RuntimeError::TypeError {
-                    msg: format!("can't query for: {}", term.value.to_polar()),
-                }
-                .into())
+                return Err(
+                    self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))
+                );
             }
         }
         Ok(QueryEvent::None)
@@ -784,7 +784,12 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    fn query_for_operation(&mut self, operator: Operator, mut args: Vec<Term>) -> PolarResult<()> {
+    fn query_for_operation(
+        &mut self,
+        term: &Term,
+        operator: Operator,
+        mut args: Vec<Term>,
+    ) -> PolarResult<()> {
         match operator {
             Operator::And => {
                 // Append a `Query` goal for each term in the args list
@@ -822,7 +827,7 @@ impl PolarVirtualMachine {
             | op @ Operator::Geq
             | op @ Operator::Eq
             | op @ Operator::Neq => {
-                self.comparison_op_helper(op, args)?;
+                self.comparison_op_helper(term, op, args)?;
             }
             Operator::In => {
                 assert_eq!(args.len(), 2);
@@ -837,18 +842,20 @@ impl PolarVirtualMachine {
                         }])
                     }
                 } else {
-                    return Err(RuntimeError::TypeError {
-                        msg: format!("Expected list, got: {}", list.value.to_polar()),
-                    }
-                    .into());
+                    return Err(self.type_error(
+                        item,
+                        format!(
+                            "can only perform lookups on dicts and instances, this is {:?}",
+                            item.value
+                        ),
+                    ));
                 }
                 self.choose(alternatives);
             }
             _ => {
-                return Err(RuntimeError::TypeError {
-                    msg: format!("can't query for expression: {:?}", operator),
-                }
-                .into())
+                return Err(
+                    self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))
+                );
             }
         }
         Ok(())
@@ -898,20 +905,25 @@ impl PolarVirtualMachine {
                 self.append_goals(goals);
             }
             _ => {
-                return Err(RuntimeError::TypeError {
-                    msg: format!(
+                return Err(self.type_error(
+                    &object,
+                    format!(
                         "can only perform lookups on dicts and instances, this is {:?}",
                         object.value
                     ),
-                }
-                .into())
+                ))
             }
         }
         Ok(())
     }
 
     /// Evaluate numerical comparisons
-    fn comparison_op_helper(&mut self, op: Operator, args: Vec<Term>) -> PolarResult<()> {
+    fn comparison_op_helper(
+        &mut self,
+        term: &Term,
+        op: Operator,
+        args: Vec<Term>,
+    ) -> PolarResult<()> {
         assert_eq!(args.len(), 2);
         let left = self.deref(&args[0]).value;
         let right = self.deref(&args[1]).value;
@@ -937,15 +949,15 @@ impl PolarVirtualMachine {
                 result = left != right;
             }
             (op, left, right) => {
-                return Err(RuntimeError::TypeError {
-                    msg: format!(
+                return Err(self.type_error(
+                    term,
+                    format!(
                         "{} expects integers, got: {}, {}",
                         op.to_polar(),
                         left.to_polar(),
                         right.to_polar()
                     ),
-                }
-                .into());
+                ));
             }
         }
         if !result {
@@ -1133,31 +1145,31 @@ impl PolarVirtualMachine {
             // or `max(x, y, x) := x > y;`.
             (
                 Value::ExternalInstance(ExternalInstance {
-                    instance_id: left, ..
+                    instance_id: left_instance,
+                    ..
                 }),
                 Value::ExternalInstance(ExternalInstance {
-                    instance_id: right, ..
+                    instance_id: right_instance,
+                    ..
                 }),
-            ) if left != right => {
-                return Err((RuntimeError::TypeError {
-                    msg: String::from("Cannot unify two external instances."),
-                })
-                .into());
+            ) if left_instance != right_instance => {
+                return Err(
+                    self.type_error(&left, String::from("Cannot unify two external instances."))
+                );
             }
 
             (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {
-                return Err((RuntimeError::TypeError {
-                    msg: String::from("Cannot unify two instance literals."),
-                })
-                .into());
+                return Err(
+                    self.type_error(&left, String::from("Cannot unify two instance literals."))
+                );
             }
 
             (Value::InstanceLiteral(_), Value::ExternalInstance(_))
             | (Value::ExternalInstance(_), Value::InstanceLiteral(_)) => {
-                return Err((RuntimeError::TypeError {
-                    msg: String::from("Cannot unify instance literal with external instance."),
-                })
-                .into());
+                return Err(self.type_error(
+                    &left,
+                    String::from("Cannot unify instance literal with external instance."),
+                ));
             }
 
             // Anything else fails.
@@ -1373,6 +1385,21 @@ impl PolarVirtualMachine {
                 Ok(QueryEvent::None)
             }
         }
+    }
+
+    fn type_error(&self, term: &Term, msg: String) -> PolarError {
+        let source = { self.kb.read().unwrap().sources.get_source(&term) };
+        let context = if let Some(source) = source {
+            make_context(&source, term.offset)
+        } else {
+            None
+        };
+        RuntimeError::TypeError {
+            msg,
+            loc: term.offset,
+            context,
+        }
+        .into()
     }
 }
 
