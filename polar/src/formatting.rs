@@ -11,6 +11,22 @@ pub use display::*;
 
 pub use to_polar::*;
 
+use crate::types::Trace;
+
+pub fn draw(trace: &Trace, nest: usize) {
+    for _ in 0..nest {
+        eprint!("  ");
+    }
+    eprint!("{} [\n", trace.to_polar());
+    for c in &trace.children {
+        draw(c, nest + 1);
+    }
+    for _ in 0..nest {
+        eprint!(" ");
+    }
+    eprint!("]\n");
+}
+
 pub mod display {
     use std::fmt;
 
@@ -358,20 +374,4 @@ pub mod to_polar {
             }
         }
     }
-}
-
-use crate::types::Trace;
-
-pub fn draw(trace: &Trace, nest: usize) {
-    for _ in 0..nest {
-        eprint!("  ");
-    }
-    eprint!("{} [\n", trace.to_polar());
-    for c in &trace.children {
-        draw(c, nest + 1);
-    }
-    for _ in 0..nest {
-        eprint!(" ");
-    }
-    eprint!("]\n");
 }
