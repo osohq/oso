@@ -753,7 +753,7 @@ impl PolarVirtualMachine {
                         .into_iter()
                         .filter(|r| r.params.len() == predicate.args.len())
                         .collect(),
-                    args: predicate.args.clone(),
+                    args: predicate.args,
                     outer: 1,
                     inner: 1,
                 })?;
