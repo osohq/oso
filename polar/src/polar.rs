@@ -21,7 +21,7 @@ use super::parser;
 // types linked to it). There is no global state (except in some ffi details) so you can have multiple
 // instances of polar and it's not a problem.
 
-// With an Instance you can call polar_load_str() to load some polar code into the knowledge base.
+// With an Instance you can call polar_load() to load some polar code into the knowledge base.
 // With an Instance you can call polar_new_query() or polar_new_query_from_predicate() to create a
 // query object that can be used to execute a query against the knowledge base.
 
@@ -31,7 +31,7 @@ use super::parser;
 // Running a query looks something like this.
 
 // polar = polar_new();
-// polar_load_str(polar, "foo(1);foo(2);");
+// polar_load(polar, "foo(1);foo(2);");
 // query = polar_new_query(polar, "foo(x)");
 // event = polar_query(query);
 // while event != Event::Done {
@@ -149,7 +149,7 @@ impl Polar {
         }
     }
 
-    pub fn load_str(&self, src: &str) -> PolarResult<()> {
+    pub fn load(&self, src: &str) -> PolarResult<()> {
         let source = Source {
             filename: None,
             src: src.to_owned(),
@@ -267,6 +267,6 @@ mod tests {
     fn can_load_and_query() {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1");
-        let _ = polar.load_str("f(x);");
+        let _ = polar.load("f(x);");
     }
 }

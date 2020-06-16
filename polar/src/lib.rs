@@ -101,7 +101,7 @@ pub extern "C" fn polar_load(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let src = unsafe { ffi_string!(src) };
-        match polar.load_str(&src) {
+        match polar.load(&src) {
             Err(err) => {
                 set_error(err);
                 POLAR_FAILURE
