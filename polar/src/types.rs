@@ -50,6 +50,11 @@ pub enum ParseError {
         loc: usize,
         context: Option<ErrorContext>,
     },
+    ReservedWord {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
 }
 
 // @TODO: Information about the context of the error.
@@ -220,6 +225,8 @@ impl Predicate {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
+    Debug,
+    Cut,
     In,
     Make,
     Dot,
@@ -242,7 +249,9 @@ pub enum Operator {
 impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
-            Operator::Make => 10,
+            Operator::Debug => 11,
+            Operator::Make => 11,
+            Operator::Cut => 10,
             Operator::Dot => 9,
             Operator::In => 8,
             Operator::Not => 7,
