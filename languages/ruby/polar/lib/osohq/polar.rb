@@ -108,7 +108,7 @@ module Osohq
 
       # Enqueue a Polar policy file for loading into the KB.
       # @param file [String]
-      def load(file)
+      def load_file(file)
         unless ['.pol', '.polar'].include? File.extname(file)
           raise PolarRuntimeError, 'Polar files must have .pol or .polar extension.'
         end

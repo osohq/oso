@@ -30,24 +30,24 @@ RSpec.describe Osohq::Polar::Polar do
     end
   end
 
-  context '#load' do
+  context '#load_file' do
     it 'loads a Polar file' do
-      subject.load(test_file)
+      subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
     end
 
     it 'raises if given a non-Polar file' do
-      expect { subject.load('other.ext') }.to raise_error Osohq::Polar::PolarRuntimeError
+      expect { subject.load_file('other.ext') }.to raise_error Osohq::Polar::PolarRuntimeError
     end
 
     it 'is idempotent' do
-      2.times { subject.load(test_file) }
+      2.times { subject.load_file(test_file) }
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
     end
 
     it 'can load multiple files' do
-      subject.load(test_file)
-      subject.load(test_file_gx)
+      subject.load_file(test_file)
+      subject.load_file(test_file_gx)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       expect(qvar(subject, 'g(x)', 'x')).to eq([1, 2, 3])
     end
@@ -55,7 +55,7 @@ RSpec.describe Osohq::Polar::Polar do
 
   context '#clear' do
     it 'clears the KB' do
-      subject.load(test_file)
+      subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       subject.clear
       expect(query(subject, 'f(x)')).to eq([])
@@ -364,7 +364,7 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     it 'can handle variables as arguments' do
-      subject.load(test_file)
+      subject.load_file(test_file)
       expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Variable.new('a')])).to_a).to eq(
         [{ 'a' => 1 }, { 'a' => 2 }, { 'a' => 3 }]
       )
