@@ -3,6 +3,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
+use super::formatting::draw;
 use super::lexer::make_context;
 use super::types::*;
 use super::ToPolarString;
@@ -70,8 +71,8 @@ pub enum Goal {
     TraceRule {
         trace: Trace,
     },
-    TracePush {},
-    TracePop {},
+    TracePush,
+    TracePop,
     Unify {
         left: Term,
         right: Term,
@@ -105,8 +106,8 @@ pub struct PolarVirtualMachine {
     choices: Choices,
     pub queries: Queries,
 
-    pub trace_stack: Vec<Vec<Trace>>,
-    pub trace: Vec<Trace>,
+    pub trace_stack: Vec<Vec<Trace>>, // Stack of traces higher up the tree.
+    pub trace: Vec<Trace>,            // Traces for the current level of the trace tree.
 
     /// Count executed goals
     goal_counter: usize,
@@ -120,20 +121,6 @@ pub struct PolarVirtualMachine {
     instances: HashMap<InstanceLiteral, ExternalInstance>,
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
-}
-
-fn draw(trace: &Trace, nest: usize) {
-    for _ in 0..nest {
-        eprint!("  ");
-    }
-    eprint!("{} [\n", trace.to_polar());
-    for c in &trace.children {
-        draw(c, nest + 1);
-    }
-    for _ in 0..nest {
-        eprint!(" ");
-    }
-    eprint!("]\n");
 }
 
 // Methods which aren't goals/instructions.
@@ -216,11 +203,11 @@ impl PolarVirtualMachine {
                 inner,
                 args,
             } => self.sort_rules(rules, args, outer, inner)?,
-            Goal::TracePush {} => {
+            Goal::TracePush => {
                 self.trace_stack.push(self.trace.clone());
                 self.trace = vec![];
             }
-            Goal::TracePop {} => {
+            Goal::TracePop => {
                 let mut children = self.trace.clone();
                 self.trace = self.trace_stack.pop().unwrap();
                 self.trace
@@ -826,7 +813,7 @@ impl PolarVirtualMachine {
                     None => self.push_goal(Goal::Backtrack)?,
                     Some(generic_rule) => {
                         assert_eq!(generic_rule.name, predicate.name);
-                        self.push_goal(Goal::TracePop {})?;
+                        self.push_goal(Goal::TracePop)?;
                         self.push_goal(Goal::SortRules {
                             rules: generic_rule
                                 .rules
@@ -837,7 +824,7 @@ impl PolarVirtualMachine {
                             outer: 1,
                             inner: 1,
                         })?;
-                        self.push_goal(Goal::TracePush {})?;
+                        self.push_goal(Goal::TracePush)?;
                     }
                 }
             }

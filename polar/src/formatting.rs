@@ -355,3 +355,19 @@ pub mod to_polar {
         }
     }
 }
+
+use crate::types::Trace;
+
+pub fn draw(trace: &Trace, nest: usize) {
+    for _ in 0..nest {
+        eprint!("  ");
+    }
+    eprint!("{} [\n", trace.to_polar());
+    for c in &trace.children {
+        draw(c, nest + 1);
+    }
+    for _ in 0..nest {
+        eprint!(" ");
+    }
+    eprint!("]\n");
+}
