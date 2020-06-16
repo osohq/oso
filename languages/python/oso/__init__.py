@@ -10,6 +10,7 @@ import inspect
 
 from polar import api
 from polar.api import Http, Polar, Predicate, QueryResult
+from . import audit
 
 if TYPE_CHECKING:
     import flask
@@ -34,6 +35,8 @@ class Oso(api.Polar):
     def __init__(self, enable_audit: bool = False):
         """Create an oso object."""
         super().__init__()
+        if enable_audit:
+            audit.enable()
 
     # TODO (dhatch): should we name this 'is_allowed'?
     def allow(self, actor, action, resource, debug=False) -> bool:
@@ -51,11 +54,10 @@ class Oso(api.Polar):
         :return: ``True`` if the request is allowed, ``False`` otherwise.
         """
         # actor + resource are python classes
-        return self._query_pred(
-            Predicate(name="allow", args=[actor, action, resource]),
-            debug=debug,
-            single=True,
-        ).success
+        pred = Predicate(name="allow", args=[actor, action, resource])
+        result = self._query_pred(pred, debug=debug, single=True,)
+        audit.log(pred, result)
+        return result.success
 
 
 def polar_class(_cls=None, *, from_polar=None):
