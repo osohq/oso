@@ -11,6 +11,25 @@ pub use display::*;
 
 pub use to_polar::*;
 
+use crate::types::Trace;
+use std::fmt::Write;
+
+pub fn draw(trace: &Trace, nest: usize) -> String {
+    let mut res = String::new();
+    for _ in 0..nest {
+        res.push_str("  ");
+    }
+    writeln!(&mut res, "{} [", trace.to_polar()).unwrap();
+    for c in &trace.children {
+        res.push_str(&draw(c, nest + 1));
+    }
+    for _ in 0..nest {
+        res.push_str("  ");
+    }
+    res.push_str("]\n");
+    res
+}
+
 pub mod display {
     use std::fmt;
 
@@ -355,6 +374,15 @@ pub mod to_polar {
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ","),),
                 Value::Symbol(s) => s.to_polar(),
                 Value::Expression(e) => e.to_polar(),
+            }
+        }
+    }
+
+    impl ToPolarString for Trace {
+        fn to_polar(&self) -> String {
+            match &self.node {
+                Node::Rule(rule) => rule.to_polar(),
+                Node::Term(term) => term.to_polar(),
             }
         }
     }

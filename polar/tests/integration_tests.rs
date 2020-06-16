@@ -4,9 +4,9 @@ use permute::permute;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar::{sym, term, types::*, value, Polar, Query};
+use polar::{draw, sym, term, types::*, value, Polar, Query};
 
-type QueryResults = Vec<HashMap<Symbol, Value>>;
+type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Trace>)>;
 
 fn no_results(_: Symbol, _: Vec<Term>) -> Option<Term> {
     None
@@ -31,8 +31,11 @@ where
         let event = polar.query(&mut query).unwrap();
         match event {
             QueryEvent::Done => break,
-            QueryEvent::Result { bindings } => {
-                results.push(bindings.into_iter().map(|(k, v)| (k, v.value)).collect());
+            QueryEvent::Result { bindings, trace } => {
+                results.push((
+                    bindings.into_iter().map(|(k, v)| (k, v.value)).collect(),
+                    trace,
+                ));
             }
             QueryEvent::ExternalCall {
                 call_id,
@@ -76,7 +79,7 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
     let query = polar.new_query(query_str).unwrap();
     query_results(polar, query, no_results, no_debug)
         .iter()
-        .map(|bindings| bindings.get(&Symbol(var.to_string())).unwrap().clone())
+        .map(|bindings| bindings.0.get(&Symbol(var.to_string())).unwrap().clone())
         .collect()
 }
 
@@ -87,7 +90,7 @@ fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
         .iter()
         .map(|bindings| {
             vars.iter()
-                .map(|&var| bindings.get(&Symbol(var.to_string())).unwrap().clone())
+                .map(|&var| bindings.0.get(&Symbol(var.to_string())).unwrap().clone())
                 .collect()
         })
         .collect()
@@ -123,10 +126,8 @@ fn test_jealous() {
     let results = query_results(&mut polar, query, no_results, no_debug);
     let jealous = |who: &str, of: &str| {
         assert!(
-            &results.contains(&HashMap::from_iter(vec![
-                (sym!("who"), value!(who)),
-                (sym!("of"), value!(of))
-            ])),
+            &results.iter().any(|(r, _)| r
+                == &HashMap::from_iter(vec![(sym!("who"), value!(who)), (sym!("of"), value!(of))])),
             "{} is not jealous of {} (but should be)",
             who,
             of
@@ -137,6 +138,29 @@ fn test_jealous() {
     jealous("vincent", "marcellus");
     jealous("marcellus", "vincent");
     jealous("marcellus", "marcellus");
+}
+
+#[test]
+fn test_trace() {
+    let mut polar = Polar::new();
+    polar
+        .load_str("f(x) := x = 1, x = 1; f(y) := y = 1;")
+        .unwrap();
+    let query = polar.new_query("f(1)").unwrap();
+    let results = query_results(&mut polar, query, no_results, no_debug);
+    let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
+    let expected = r#"f(1) [
+  f(x) := x=1,x=1; [
+    _x_1=1,_x_1=1 [
+      _x_1=1 [
+      ]
+      _x_1=1 [
+      ]
+    ]
+  ]
+]
+"#;
+    assert!(trace == expected);
 }
 
 #[test]
@@ -673,15 +697,15 @@ fn test_in() {
     let results = query_results(&mut polar, query, no_results, no_debug);
     assert_eq!(results.len(), 3);
     assert_eq!(
-        results[0].get(&Symbol("x".to_string())).unwrap().clone(),
+        results[0].0.get(&Symbol("x".to_string())).unwrap().clone(),
         value!(1)
     );
     assert_eq!(
-        results[1].get(&Symbol("y".to_string())).unwrap().clone(),
+        results[1].0.get(&Symbol("y".to_string())).unwrap().clone(),
         value!(1)
     );
     assert_eq!(
-        results[2].get(&Symbol("z".to_string())).unwrap().clone(),
+        results[2].0.get(&Symbol("z".to_string())).unwrap().clone(),
         value!(1)
     );
 
