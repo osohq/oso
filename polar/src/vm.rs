@@ -248,7 +248,7 @@ impl PolarVirtualMachine {
         if std::env::var("RUST_LOG").is_ok() {
             eprintln!("⇒ result");
             for t in &self.trace {
-                draw(t, 0);
+                eprintln!("trace\n{}", draw(t, 0));
             }
         }
 
@@ -820,9 +820,9 @@ impl PolarVirtualMachine {
         match operator {
             Operator::And => {
                 // Append a `Query` goal for each term in the args list
-                self.push_goal(Goal::TracePop {})?;
+                self.push_goal(Goal::TracePop)?;
                 self.append_goals(args.into_iter().map(|term| Goal::Query { term }).collect());
-                self.push_goal(Goal::TracePush {})?;
+                self.push_goal(Goal::TracePush)?;
             }
             Operator::Or => {
                 // Create a choice point with alternatives to query for each arg, and start on the first alternative
@@ -1287,7 +1287,7 @@ impl PolarVirtualMachine {
                         children: vec![],
                     },
                 });
-                goals.push(Goal::TracePush {});
+                goals.push(Goal::TracePush);
                 let Rule { body, params, .. } = self.rename_vars(rule);
 
                 // Unify the arguments with the formal parameters.
@@ -1308,7 +1308,7 @@ impl PolarVirtualMachine {
 
                 // Query for the body clauses.
                 goals.push(Goal::Query { term: body.clone() });
-                goals.push(Goal::TracePop {});
+                goals.push(Goal::TracePop);
 
                 alternatives.push(goals)
             }

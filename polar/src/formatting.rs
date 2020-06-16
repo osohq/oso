@@ -12,19 +12,22 @@ pub use display::*;
 pub use to_polar::*;
 
 use crate::types::Trace;
+use std::fmt::Write;
 
-pub fn draw(trace: &Trace, nest: usize) {
+pub fn draw(trace: &Trace, nest: usize) -> String {
+    let mut res = String::new();
     for _ in 0..nest {
-        eprint!("  ");
+        res.push_str("  ");
     }
-    eprint!("{} [\n", trace.to_polar());
+    writeln!(&mut res, "{} [", trace.to_polar()).unwrap();
     for c in &trace.children {
-        draw(c, nest + 1);
+        res.push_str(&draw(c, nest + 1));
     }
     for _ in 0..nest {
-        eprint!(" ");
+        res.push_str("  ");
     }
-    eprint!("]\n");
+    res.push_str("]\n");
+    res
 }
 
 pub mod display {
