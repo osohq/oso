@@ -172,11 +172,10 @@ pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_cha
 }
 
 #[no_mangle]
-pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *const c_char {
+pub extern "C" fn polar_next_query_event(query_ptr: *mut Query) -> *const c_char {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
-        let event = polar.query(query);
+        let event = query.next_event();
         match event {
             Ok(event) => {
                 let event_json = serde_json::to_string(&event).unwrap();
@@ -202,16 +201,11 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
 /// - Provided value is NULL.
 /// - Provided value contains malformed JSON.
 /// - Provided value cannot be parsed to a Term wrapping a Value::String.
-/// - Polar.debug_command returns an error.
+/// - Query.debug_command returns an error.
 /// - Anything panics during the parsing/execution of the provided command.
 #[no_mangle]
-pub extern "C" fn polar_debug_command(
-    polar_ptr: *mut Polar,
-    query_ptr: *mut Query,
-    value: *const c_char,
-) -> i32 {
+pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_char) -> i32 {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
         if !value.is_null() {
             let s = unsafe { ffi_string!(value) };
@@ -220,7 +214,7 @@ pub extern "C" fn polar_debug_command(
                 Ok(types::Term {
                     value: types::Value::String(command),
                     ..
-                }) => match polar.debug_command(query, command) {
+                }) => match query.debug_command(command) {
                     Ok(_) => POLAR_SUCCESS,
                     Err(e) => {
                         set_error(e);
@@ -248,14 +242,12 @@ pub extern "C" fn polar_debug_command(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_external_call_result(
-    polar_ptr: *mut Polar,
+pub extern "C" fn polar_call_result(
     query_ptr: *mut Query,
     call_id: u64,
     value: *const c_char,
 ) -> i32 {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
         let mut term = None;
         if !value.is_null() {
@@ -269,7 +261,7 @@ pub extern "C" fn polar_external_call_result(
                 }
             }
         }
-        match polar.external_call_result(query, call_id, term) {
+        match query.call_result(call_id, term) {
             Ok(_) => POLAR_SUCCESS,
             Err(e) => {
                 set_error(e);
@@ -280,17 +272,11 @@ pub extern "C" fn polar_external_call_result(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_external_question_result(
-    polar_ptr: *mut Polar,
-    query_ptr: *mut Query,
-    call_id: u64,
-    result: i32,
-) -> i32 {
+pub extern "C" fn polar_question_result(query_ptr: *mut Query, call_id: u64, result: i32) -> i32 {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
         let result = result != POLAR_FAILURE;
-        polar.external_question_result(query, call_id, result);
+        query.question_result(call_id, result);
         POLAR_SUCCESS
     })
 }

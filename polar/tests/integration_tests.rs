@@ -17,7 +17,6 @@ fn no_debug(_: &str) -> String {
 }
 
 fn query_results<F, G>(
-    polar: &mut Polar,
     mut query: Query,
     mut external_handler: F,
     mut debug_handler: G,
@@ -28,7 +27,7 @@ where
 {
     let mut results = vec![];
     loop {
-        let event = polar.query(&mut query).unwrap();
+        let event = query.next_event().unwrap();
         match event {
             QueryEvent::Done => break,
             QueryEvent::Result { bindings, trace } => {
@@ -43,14 +42,12 @@ where
                 args,
                 ..
             } => {
-                polar
-                    .external_call_result(&mut query, call_id, external_handler(attribute, args))
+                query
+                    .call_result(call_id, external_handler(attribute, args))
                     .unwrap();
             }
             QueryEvent::Debug { message } => {
-                polar
-                    .debug_command(&mut query, debug_handler(&message))
-                    .unwrap();
+                query.debug_command(debug_handler(&message)).unwrap();
             }
             _ => {}
         }
@@ -60,24 +57,24 @@ where
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    !query_results(polar, query, no_results, no_debug).is_empty()
+    !query_results(query, no_results, no_debug).is_empty()
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, no_results, no_debug).is_empty()
+    query_results(query, no_results, no_debug).is_empty()
 }
 
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
     let mut external_results: Vec<Term> =
         external_results.into_iter().map(Term::new).rev().collect();
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, |_, _| external_results.pop(), no_debug)
+    query_results(query, |_, _| external_results.pop(), no_debug)
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
     let query = polar.new_query(query_str).unwrap();
-    query_results(polar, query, no_results, no_debug)
+    query_results(query, no_results, no_debug)
         .iter()
         .map(|bindings| bindings.0.get(&Symbol(var.to_string())).unwrap().clone())
         .collect()
@@ -86,7 +83,7 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
 fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
     let query = polar.new_query(query_str).unwrap();
 
-    query_results(polar, query, no_results, no_debug)
+    query_results(query, no_results, no_debug)
         .iter()
         .map(|bindings| {
             vars.iter()
@@ -113,7 +110,7 @@ fn test_functions() {
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_jealous() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar
         .load(
             r#"loves("vincent", "mia");
@@ -123,7 +120,7 @@ fn test_jealous() {
         .unwrap();
 
     let query = polar.new_query("jealous(who, of)").unwrap();
-    let results = query_results(&mut polar, query, no_results, no_debug);
+    let results = query_results(query, no_results, no_debug);
     let jealous = |who: &str, of: &str| {
         assert!(
             &results.iter().any(|(r, _)| r
@@ -474,7 +471,7 @@ fn test_bindings() {
 
 #[test]
 fn test_lookup_derefs() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar
         .load("f(x) := x = y, g(y); g(y) := Foo{}.get(y) = y;")
         .unwrap();
@@ -485,7 +482,7 @@ fn test_lookup_derefs() {
         assert!(matches!(args[0].value, Value::Integer(_)));
         foo_lookups.pop()
     };
-    let results = query_results(&mut polar, query, mock_foo, no_debug);
+    let results = query_results(query, mock_foo, no_debug);
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
@@ -494,7 +491,7 @@ fn test_lookup_derefs() {
         foo_lookups.pop()
     };
     let query = polar.new_query("f(2)").unwrap();
-    let results = query_results(&mut polar, query, mock_foo, no_debug);
+    let results = query_results(query, mock_foo, no_debug);
     assert!(results.is_empty());
 }
 
@@ -538,21 +535,18 @@ fn test_rule_order() {
 
 #[test]
 fn test_load_with_query() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     let src = "f(1); f(2); ?= f(1); ?= !f(3);";
     polar.load(src).expect("load failed");
 
     while let Some(query) = polar.next_inline_query() {
-        assert_eq!(
-            query_results(&mut polar, query, no_results, no_debug).len(),
-            1
-        );
+        assert_eq!(query_results(query, no_results, no_debug).len(), 1);
     }
 }
 
 #[test]
 fn test_externals_instantiated() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar
         .load("f(x, foo: Foo) := foo.bar(Bar{x: x}) = 1;")
         .unwrap();
@@ -575,7 +569,7 @@ fn test_externals_instantiated() {
         foo_lookups.pop()
     };
     let query = polar.new_query("f(1, Foo{})").unwrap();
-    let results = query_results(&mut polar, query, mock_foo, no_debug);
+    let results = query_results(query, mock_foo, no_debug);
     assert_eq!(results.len(), 1);
 }
 
@@ -629,14 +623,14 @@ fn test_comparisons() {
     assert!(!qeval(&mut polar, "neq(1,1)"));
 
     let mut query = polar.new_query("eq(bob, bob)").unwrap();
-    polar
-        .query(&mut query)
+    query
+        .next_event()
         .expect_err("Comparison operators should not allow non-integer operands");
 }
 
 #[test]
 fn test_debug() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar
         .load("a() := debug(\"a\"), b(), c(), d();\nb();\nc() := debug(\"c\");\nd();\n")
         .unwrap();
@@ -657,7 +651,7 @@ fn test_debug() {
         message => panic!("Unexpected debug message: {}", message),
     };
     let query = polar.new_query("a()").unwrap();
-    let _results = query_results(&mut polar, query, no_results, debug_handler);
+    let _results = query_results(query, no_results, debug_handler);
 
     // The `match` statement below is checking that the correct messages are received when a user
     // repeatedly calls the `out` debugger command. The LHS of the match arms is the message
@@ -671,7 +665,7 @@ fn test_debug() {
         message => panic!("Unexpected debug message: {}", message),
     };
     let query = polar.new_query("a()").unwrap();
-    let _results = query_results(&mut polar, query, no_results, debug_handler);
+    let _results = query_results(query, no_results, debug_handler);
 }
 
 #[test]
@@ -687,7 +681,7 @@ fn test_in() {
     // strange test case but it's important to note that this returns
     // 3 results, with 1 binding each
     let query = polar.new_query("f(1, [x,y,z])").unwrap();
-    let results = query_results(&mut polar, query, no_results, no_debug);
+    let results = query_results(query, no_results, no_debug);
     assert_eq!(results.len(), 3);
     assert_eq!(
         results[0].0.get(&Symbol("x".to_string())).unwrap().clone(),
@@ -706,7 +700,7 @@ fn test_in() {
     assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
 
     let mut query = polar.new_query("a in {a:1}").unwrap();
-    let e = polar.query(&mut query).unwrap_err();
+    let e = query.next_event().unwrap_err();
     assert!(matches!(
         e,
         PolarError::Runtime(RuntimeError::TypeError { .. })

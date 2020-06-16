@@ -121,6 +121,24 @@ pub struct Query {
     done: bool,
 }
 
+impl Query {
+    pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
+        self.vm.run()
+    }
+
+    pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
+        self.vm.external_call_result(call_id, value)
+    }
+
+    pub fn question_result(&mut self, call_id: u64, result: bool) {
+        self.vm.external_question_result(call_id, result)
+    }
+
+    pub fn debug_command(&mut self, command: String) -> PolarResult<()> {
+        self.vm.debug_command(&command)
+    }
+}
+
 // Query as an iterator returns `None` after the first time `Done` is seen
 impl Iterator for Query {
     type Item = PolarResult<QueryEvent>;
@@ -231,27 +249,6 @@ impl Polar {
     }
 
     // @TODO: Direct load_rules endpoint.
-
-    pub fn query(&self, query: &mut Query) -> PolarResult<QueryEvent> {
-        query.vm.run()
-    }
-
-    pub fn external_call_result(
-        &self,
-        query: &mut Query,
-        call_id: u64,
-        value: Option<Term>,
-    ) -> PolarResult<()> {
-        query.vm.external_call_result(call_id, value)
-    }
-
-    pub fn debug_command(&self, query: &mut Query, command: String) -> PolarResult<()> {
-        query.vm.debug_command(&command)
-    }
-
-    pub fn external_question_result(&self, query: &mut Query, call_id: u64, result: bool) {
-        query.vm.external_question_result(call_id, result)
-    }
 
     // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&self) -> u64 {
