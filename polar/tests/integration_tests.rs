@@ -139,10 +139,10 @@ fn test_jealous() {
 
 #[test]
 fn test_trace() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar.load("f(x) := x = 1, x = 1; f(y) := y = 1;").unwrap();
     let query = polar.new_query("f(1)").unwrap();
-    let results = query_results(&mut polar, query, no_results, no_debug);
+    let results = query_results(query, no_results, no_debug);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
   f(x) := x=1,x=1; [
