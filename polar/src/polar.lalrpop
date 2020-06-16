@@ -224,7 +224,21 @@ Exp8: Term = {
         let op = Operation{operator: Operator::In, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
+    // Symbols on the RHS are treated as class names, just like in a specializers
     <start:@L> <left:Exp9> "isa" <right:Exp9> => {
+        let right = if let Value::Symbol(ref sym) = right.value {
+            right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
+                tag: sym.clone(),
+                fields: Dictionary::new()
+            })))
+        } else {
+            Pattern::term_as_pattern(&right)
+        };
+        let args = vec![left, right];
+        let op = Operation{operator: Operator::Isa, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> <left:Exp9> "isa" <right:InstanceLiteral> => {
         let right = Pattern::term_as_pattern(&right);
         let args = vec![left, right];
         let op = Operation{operator: Operator::Isa, args};
@@ -361,22 +375,16 @@ pub Exp: Term = {
     <exp1:Exp1> => exp1
 }
 
-SpecializerList: Vec<Term> = {
-    <term:Exp5> => vec![term],
-    <mut list:SpecializerList> "," <term:Exp5> => {
-        list.push(term);
-        list
-    },
-};
-
 Parameter: Parameter = {
     <specializer:Exp5> => {
         if let Term{value: Value::Symbol(name), ..} = specializer {
             Parameter{name: Some(name), specializer: None}
         } else {
-            // TODO (dhatch): Does this branch behave as a pattern?
             Parameter{name: None, specializer: Some(specializer)}
         }
+    },
+    <specializer_pattern:InstanceLiteral> => {
+        Parameter{name: None, specializer: Some(Pattern::term_as_pattern(&specializer_pattern))}
     },
     // parenthesized specializers can be arbitrary expressions
     <name:Name> ":" "(" <specializer:Exp> ")" => {

@@ -202,38 +202,38 @@ def test_dictionaries(tell, qeval, qvar):
 
 
 def test_external_classes(tell, qeval, qvar, externals):
-    assert qeval("Bar{} isa Foo{}")
-    assert not qeval("Qux{} isa Foo{}")
-    assert qeval('Foo{}.foo = "Foo!"')
-    assert qeval('Bar{}.foo = "Bar!"')
+    assert qeval("new Bar{} isa Foo")
+    assert not qeval("new Qux{} isa Foo")
+    assert qeval('new Foo{}.foo = "Foo!"')
+    assert qeval('new Bar{}.foo = "Bar!"')
 
 
 def test_unify_class_fields(tell, qeval, qvar, externals):
     tell("check(name, Foo{name: name})")
 
-    assert qeval('check("sam", Foo{name: "sam"})')
-    assert not qeval('check("alex", Foo{name: "sam"})')
+    assert qeval('check("sam", new Foo{name: "sam"})')
+    assert not qeval('check("alex", new Foo{name: "sam"})')
 
 
 def test_argument_patterns(tell, qeval, qvar, externals):
     tell("isaFoo(name, foo: Foo) := name = foo.name")
 
-    assert qeval('isaFoo(sam, Foo{name: "sam"})')
-    assert qeval('isaFoo(sam, Bar{name: "sam"})')
-    assert not qeval('isaFoo("alex", Foo{name: "sam"})')
-    assert not qeval('isaFoo("alex", Bar{name: "sam"})')
-    assert not qeval('isaFoo("alex", Qux{})')
+    assert qeval('isaFoo(sam, new Foo{name: "sam"})')
+    assert qeval('isaFoo(sam, new Bar{name: "sam"})')
+    assert not qeval('isaFoo("alex", new Foo{name: "sam"})')
+    assert not qeval('isaFoo("alex", new Bar{name: "sam"})')
+    assert not qeval('isaFoo("alex", new Qux{})')
 
 
 @pytest.mark.skip(reason="No longer support external instance unification")
 # TODO: update to use internal classes (depends on instantiation bug fix)
 def test_keys_are_confusing(tell, qeval, qvar, externals):
-    assert qeval("MyClass{x: 1, y: 2} = MyClass{y: 2, x: 1}")
-    assert qeval("MyClass{x: 1, y: 2} = MyClass{x: 1, y: 2}")
-    assert not qeval("MyClass{x: 1, y: 2} = MyClass{x: 2, y: 1}")
-    assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 1, x: 2}")
-    assert not qeval("MyClass{x: 1} = MyClass{x: 1, y: 2}")
-    assert not qeval("MyClass{x: 1, y: 2} = MyClass{y: 2}")
+    assert qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2, x: 1}")
+    assert qeval("new MyClass{x: 1, y: 2} = new MyClass{x: 1, y: 2}")
+    assert not qeval("new MyClass{x: 1, y: 2} = new MyClass{x: 2, y: 1}")
+    assert not qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 1, x: 2}")
+    assert not qeval("new MyClass{x: 1} = new MyClass{x: 1, y: 2}")
+    assert not qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2}")
 
 
 def test_isa(qeval, qvar, externals):
@@ -249,23 +249,25 @@ def test_isa(qeval, qvar, externals):
     assert not qeval("{} isa {x: 1, y: 2}")
     assert not qeval("{} isa {x: 1}")
 
-    assert qeval("MyClass{x: 1, y: 2} isa {}")
-    assert qeval("MyClass{x: 1, y: 2} isa {x: 1, y: 2}")
+    assert qeval("new MyClass{x: 1, y: 2} isa {}")
+    assert qeval("new MyClass{x: 1, y: 2} isa {x: 1, y: 2}")
     assert not qeval("{x: 1, y: 2} isa MyClass{x: 1, y: 2}")
 
-    assert qeval("MyClass{x: 1, y: 2} isa MyClass{x: 1}")
-    assert not qeval("MyClass{y: 2} isa MyClass{x: 1, y: 2}")
+    assert qeval("new MyClass{x: 1, y: 2} isa MyClass{x: 1}")
+    assert not qeval("new MyClass{y: 2} isa MyClass{x: 1, y: 2}")
 
-    assert qeval("OurClass{x: 1, y: 2} isa YourClass{}")
-    assert qeval("OurClass{x: 1, y: 2} isa MyClass{x: 1}")
-    assert qeval("OurClass{x: 1, y: 2} isa MyClass{x: 1, y: 2}")
-    assert not qeval("MyClass{x: 1, y: 2} isa OurClass{x: 1}")
-    assert not qeval("MyClass{x: 1, y: 2} isa YourClass{}")
+    assert qeval("new OurClass{x: 1, y: 2} isa YourClass")
+    assert qeval("new OurClass{x: 1, y: 2} isa MyClass{x: 1}")
+    assert qeval("new OurClass{x: 1, y: 2} isa MyClass{x: 1, y: 2}")
+    assert not qeval("new MyClass{x: 1, y: 2} isa OurClass{x: 1}")
+    assert not qeval("new MyClass{x: 1, y: 2} isa YourClass")
+    assert not qeval("new MyClass{x: 1, y: 2} isa YourClass{}")
 
 
 def test_nested_isa(qeval, qvar, externals):
-    assert qeval("MyClass{x: MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}")
-    assert not qeval("MyClass{x: MyClass{x: 1}, y: 2} isa MyClass{x: MyClass{y: 2}}")
+    # TODO Need instance literal pattern here.
+    assert qeval("new MyClass{x: new MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}")
+    assert not qeval("new MyClass{x: new MyClass{x: 1}, y: 2} isa MyClass{x: MyClass{y: 2}}")
 
 
 def test_field_unification(qeval):
@@ -281,13 +283,13 @@ def test_field_unification(qeval):
 def test_field_unification_external(qeval, externals):
     # test instance field unification (not allowed for external instances)
     with pytest.raises(PolarRuntimeException):
-        assert qeval("MyClass{x: 1, y: 2} = MyClass{y: 2, x: 1}")
+        assert qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2, x: 1}")
     # with pytest.raises(PolarRuntimeException):
-    assert not qeval("MyClass{x: 1, y: 2} = {y: 2, x: 1}")
+    assert not qeval("new MyClass{x: 1, y: 2} = {y: 2, x: 1}")
     with pytest.raises(PolarRuntimeException):
-        assert not qeval("MyClass{x: 1, y: 2} = OurClass{y: 2, x: 1}")
+        assert not qeval("new MyClass{x: 1, y: 2} = new OurClass{y: 2, x: 1}")
     with pytest.raises(PolarRuntimeException):
-        assert not qeval("MyClass{x: 1, y: 2} = YourClass{y: 2, x: 1}")
+        assert not qeval("new MyClass{x: 1, y: 2} = new YourClass{y: 2, x: 1}")
 
 
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Internal classes not implemented yet.")
@@ -368,8 +370,8 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
 
     polar.register_class(Booler)
 
-    result = qvar("Booler{}.whats_up() = var", "var", one=True)
-    assert qeval("Booler{}.whats_up() = true")
+    result = qvar("new Booler{}.whats_up() = var", "var", one=True)
+    assert qeval("new Booler{}.whats_up() = true")
 
 
 def test_numbers_from_external_call(polar, qeval, qvar, query):
@@ -403,7 +405,7 @@ def test_rule_ordering(tell, qeval, externals):
     tell("f(Foo{}) := cut(), 1 = 2;")
     tell('f(Foo{name: "test"});')
 
-    assert qeval('f(Foo { name: "test" }) ')
-    assert qeval('x = Foo { name: "test" }, f(x) ')
-    assert not qeval('f(Foo { name: "nope" }) ')
-    assert not qeval('x = Foo { name: "nope" }, f(x) ')
+    assert qeval('f(new Foo{ name: "test" }) ')
+    assert qeval('x = new Foo{ name: "test" }, f(x) ')
+    assert not qeval('f(new Foo{ name: "nope" }) ')
+    assert not qeval('x = new Foo{ name: "nope" }, f(x) ')
