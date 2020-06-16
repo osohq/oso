@@ -98,9 +98,9 @@ def external_call(polar, query, call_id, value):
     """Make an external call and propagate FFI errors."""
     if value is None:
         value = ffi.NULL
-    check_result(lib.polar_external_call_result(polar, query, call_id, value))
+    check_result(lib.polar_call_result(query, call_id, value))
 
 
 def external_answer(polar, query, call_id, answer):
     answer = 1 if answer else 0
-    check_result(lib.polar_external_question_result(polar, query, call_id, answer))
+    check_result(lib.polar_question_result(query, call_id, answer))
