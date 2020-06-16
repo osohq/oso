@@ -12,7 +12,7 @@ pub fn load_files(
         let mut f = File::open(file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
-        polar.load_str(&policy)?;
+        polar.load(&policy)?;
     }
     Ok(())
 }

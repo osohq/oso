@@ -598,6 +598,7 @@ pub struct KnowledgeBase {
     gensym_counter: AtomicU64,
     // For call IDs, instance IDs, symbols, etc.
     id_counter: AtomicU64,
+    pub inline_queries: Vec<Term>,
 }
 
 impl KnowledgeBase {
@@ -608,6 +609,7 @@ impl KnowledgeBase {
             sources: Sources::default(),
             id_counter: AtomicU64::new(1),
             gensym_counter: AtomicU64::new(1),
+            inline_queries: vec![],
         }
     }
 
