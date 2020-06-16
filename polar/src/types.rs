@@ -288,7 +288,6 @@ impl Operator {
             Operator::Dot => 9,
             Operator::In => 8,
             Operator::Isa => 8,
-            Operator::New => 7,
             Operator::Not => 7,
             Operator::Mul => 6,
             Operator::Div => 6,
