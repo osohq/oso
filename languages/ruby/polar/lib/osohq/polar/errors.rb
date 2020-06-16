@@ -27,14 +27,6 @@ module Osohq
 
     # Catch-all for a parsing error that doesn't match any of the more specific types.
     class ParseError < Error
-      # @param details [Hash] details about the error
-      # @option details [String] :char Character in question.
-      # @option details [Array<(Integer, Integer)>] :pos Position of the error.
-      # @option details [String] :token Token in question.
-      def initialize(**details)
-        super(details)
-      end
-
       class ExtraToken < ParseError; end
       class IntegerOverflow < ParseError; end
       class InvalidTokenCharacter < ParseError; end

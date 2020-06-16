@@ -418,6 +418,6 @@ Osohq::Polar::Polar.new.tap do |polar|
   results = polar.query_str('external(1, x)')
   p results.next
 
-  polar.load_str('testDebug() := debug(), foo(x, y), k(y);')
-  polar.query_str('testDebug()').next
+  # polar.load_str('testDebug() := debug(), foo(x, y), k(y);')
+  # polar.query_str('testDebug()').next
 end

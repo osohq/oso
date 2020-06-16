@@ -258,22 +258,19 @@ module Osohq
         # @param details [Hash<String, Object>]
         # @return [Osohq::Polar::ParseError] the object converted into the expected format.
         private_class_method def self.parse_error(kind, details:)
-          token = details['token']
-          pos = details['pos']
-          char = details['c']
           case kind
           when 'ExtraToken'
-            Osohq::Polar::ParseError::ExtraToken.new(token: token, pos: pos)
+            Osohq::Polar::ParseError::ExtraToken.new(details)
           when 'IntegerOverflow'
-            Osohq::Polar::ParseError::IntegerOverflow.new(token: token, pos: pos)
+            Osohq::Polar::ParseError::IntegerOverflow.new(details)
           when 'InvalidToken'
-            Osohq::Polar::ParseError::InvalidToken.new(pos: pos)
+            Osohq::Polar::ParseError::InvalidToken.new(details)
           when 'InvalidTokenCharacter'
-            Osohq::Polar::ParseError::InvalidTokenCharacter.new(token: token, char: char, pos: pos)
+            Osohq::Polar::ParseError::InvalidTokenCharacter.new(details)
           when 'UnrecognizedEOF'
-            Osohq::Polar::ParseError::UnrecognizedEOF.new(pos: pos)
+            Osohq::Polar::ParseError::UnrecognizedEOF.new(details)
           when 'UnrecognizedToken'
-            Osohq::Polar::ParseError::UnrecognizedToken.new(token: token, pos: pos)
+            Osohq::Polar::ParseError::UnrecognizedToken.new(details)
           else
             Osohq::Polar::ParseError.new(details)
           end

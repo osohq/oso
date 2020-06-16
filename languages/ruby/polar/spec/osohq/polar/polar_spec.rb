@@ -297,7 +297,7 @@ RSpec.describe Osohq::Polar::Polar do
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::IntegerOverflow
-        expect(e.message).to eq("{:token=>\"#{int}\", :pos=>[0, 12]}")
+        expect(e.message).to eq(%Q({"token"=>"#{int}", "loc"=>12, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a) := a = #{int};\\n"}, "row"=>0, "column"=>12}}))
       end
     end
 
@@ -309,7 +309,7 @@ RSpec.describe Osohq::Polar::Polar do
         POLAR
         expect { subject.load_str(rule) }.to raise_error do |e|
           expect(e).to be_an Osohq::Polar::ParseError::InvalidTokenCharacter
-          expect(e.message).to eq('{:token=>"this is not", :char=>"\\n", :pos=>[0, 24]}')
+          expect(e.message).to eq('{"token"=>"this is not", "c"=>"\n", "loc"=>24, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a) := a = \\"this is not\\nallowed\\";\n"}, "row"=>0, "column"=>24}}')
         end
       end
 
@@ -333,7 +333,7 @@ RSpec.describe Osohq::Polar::Polar do
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedEOF
-        expect(e.message).to eq('{:pos=>[0, 4]}')
+        expect(e.message).to eq('{"loc"=>4, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a)\n"}, "row"=>0, "column"=>4}}')
       end
     end
 
@@ -343,7 +343,7 @@ RSpec.describe Osohq::Polar::Polar do
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedToken
-        expect(e.message).to eq('{:token=>"1", :pos=>[0, 0]}')
+        expect(e.message).to eq('{"token"=>"1", "loc"=>0, "context"=>{"source"=>{"filename"=>nil, "src"=>"1;\n"}, "row"=>0, "column"=>0}}')
       end
     end
 
