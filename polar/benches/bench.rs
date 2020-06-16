@@ -86,12 +86,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
             None,
             None,
         ];
-        let grandchild_bert = vec![
-            Some(one_grandchild.clone()),
-            Some(term!("bert")),
-            None,
-            None,
-        ];
+        let grandchild_bert = vec![Some(one_grandchild), Some(term!("bert")), None, None];
 
         // List of n children (one term)
         // then n-1 times grandchild -> name = Alice
