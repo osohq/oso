@@ -31,7 +31,7 @@ extern {
         "{" => lexer::Token::LCB,       // {
         "}" => lexer::Token::RCB,       // }
         "." => lexer::Token::Dot,       // .
-        "make" => lexer::Token::Make,   // make
+        "new" => lexer::Token::New,     // new
         "!" => lexer::Token::Not,       // !
         "*" => lexer::Token::Mul,       // *
         "/" => lexer::Token::Div,       // /
@@ -121,7 +121,7 @@ pub Term: Term = {
 
 RewritableOperator: Operator = {
     "." => Operator::Dot,
-    "make" => Operator::Make,
+    "new" => Operator::New,
     "in" => Operator::In,
     "debug" => Operator::Debug,
 };
@@ -210,11 +210,17 @@ Exp8: Term = {
     <exp9:Exp9> => exp9
 }
 
-// !
+// ! new
 Exp7: Term = {
     <start:@L> "!" <exp8:Exp8> => {
         let args = vec![exp8];
         let op = Operation{operator: Operator::Not, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    // TODO (dhatch): Maybe a different type here
+    <start:@L> "new" <pattern:InstanceLiteral> => {
+        let args = vec![pattern];
+        let op = Operation{operator: Operator::New, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     <exp8:Exp8> => exp8

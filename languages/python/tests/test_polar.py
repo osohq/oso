@@ -422,3 +422,44 @@ def test_query(load_file, polar):
         {"a": 2},
         {"a": 3},
     ]
+
+
+def test_constructor(polar, qvar):
+    """Test that class constructor is called correctly with constructor syntax."""
+
+    class TestConstructor:
+        def __init__(self, x):
+            self.x = x
+
+    polar.register_class(TestConstructor)
+
+    assert (
+        qvar("instance = new TestConstructor{x: 1}, y = instance.x", "y", one=True) == 1
+    )
+    assert (
+        qvar("instance = new TestConstructor{x: 2}, y = instance.x", "y", one=True) == 2
+    )
+    assert (
+        qvar(
+            "instance = new TestConstructor{x: new TestConstructor{x: 3}}, y = instance.x.x",
+            "y",
+            one=True,
+        )
+        == 3
+    )
+
+    class TestConstructorTwo:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+    polar.register_class(TestConstructorTwo)
+
+    assert (
+        qvar(
+            "instance = new TestConstructorTwo{x: 1, y: 2}, x = instance.x, y = instance.y",
+            "y",
+            one=True,
+        )
+        == 2
+    )

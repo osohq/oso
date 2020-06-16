@@ -33,13 +33,11 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, types::ParseError>) -> type
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
-            Token::Debug | Token::Cut | Token::In | Token::Make => {
-                types::ParseError::ReservedWord {
-                    token: t.to_string(),
-                    loc,
-                    context: None,
-                }
-            }
+            Token::Debug | Token::Cut | Token::In | Token::New => types::ParseError::ReservedWord {
+                token: t.to_string(),
+                loc,
+                context: None,
+            },
             _ => types::ParseError::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
@@ -281,5 +279,14 @@ mod tests {
         let line = parse_lines(&f).unwrap();
 
         assert_eq!(line[0], Line::Query(term!(pred!("f", [1]))));
+    }
+
+    #[test]
+    fn test_parse_new() {
+        let f = r#"
+        a(x) := x = new Foo{a: 1};
+        "#;
+        let results = parse_rules(f).unwrap();
+        assert_eq!(results[0].to_polar(), r#"a(x) := x=new Foo{a: 1};"#);
     }
 }

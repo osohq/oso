@@ -700,7 +700,7 @@ fn test_in() {
 // currently panics because you can't use keyword operators as non-operator symbols in a policy right now
 fn test_keyword_bug() {
     let polar = Polar::new();
-    let result = polar.load_str("g(a) := a.make(b);").unwrap_err();
+    let result = polar.load_str("g(a) := a.new(b);").unwrap_err();
     assert!(matches!(
         result,
         PolarError::Parse(ParseError::ReservedWord { .. })
