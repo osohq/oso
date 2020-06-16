@@ -120,7 +120,7 @@ impl ToString for Token {
             Token::In => "in".to_owned(),       // in
             Token::Cut => "cut".to_owned(),     // cut
             Token::Debug => "debug".to_owned(),
-            Token::Isa => "isa".to_owned(),     // isa
+            Token::Isa => "isa".to_owned(), // isa
         }
     }
 }
