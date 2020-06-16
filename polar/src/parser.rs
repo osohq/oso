@@ -125,7 +125,7 @@ mod tests {
             .parse(Lexer::new(r#"f(x);"#))
             .unwrap();
         assert_eq!(rule.to_polar(), r#"f(x);"#);
-        let _instance = polar::InstanceLiteralParser::new()
+        let _instance = polar::InstanceLiteralTermParser::new()
             .parse(Lexer::new(r#"Foo{bar: 1, baz: y, biz: "hi"}"#))
             .unwrap();
         // This won't work. There's no ordering to fields. Need to use sam macros.
@@ -296,5 +296,12 @@ mod tests {
         "#;
         let results = parse_rules(f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(x) := x = new Foo{a: 1};"#);
+    }
+
+    #[test]
+    fn test_parse_isa() {
+        let term = parse_query("{} isa {}").unwrap();
+        assert_eq!(term.to_polar(), r#"{} isa {}"#);
+        let term = parse_query("{x: 1} isa {}").unwrap();
     }
 }

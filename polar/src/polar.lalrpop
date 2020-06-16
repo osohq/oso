@@ -112,17 +112,23 @@ InstanceLiteral<T>: Term = <start:@L> <tag:Name> <fields:Object<T>> => {
     Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
 };
 
+pub InstanceLiteralTerm: Term = <InstanceLiteral<Term>> => <>;
+
 pub Pattern: Term = {
     <term:InstanceLiteral<Pattern>> => Pattern::term_as_pattern(&term),
+    <term:Dictionary<Pattern>> => Pattern::term_as_pattern(&term),
+    <term:Integer> => term,
+    <term:PolarString> => term,
+    <term:Boolean> => term,
+    <term:Symbol> => term,
+    <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
+    <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
+    <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
+    <start:@L> "[" <exp:PatternExp> "]" => {
+        let terms = unwrap_and(exp);
+        Term{id:0, offset: start, value: Value::List(terms)}
+    }
 };
-
-:=
-    x = new Foo{a: 1}
-    x = new Foo{a: new Foo{a: 1}}
-    x = new Foo{a: Foo{a: 1}}
-
-    x isa Foo{a: Foo{a: 1}}
-    x isa {a: Foo{a: new Foo{a: 1}}}
 
 pub Term: Term = {
     <term:Number> => term,
@@ -194,28 +200,28 @@ New: Term = <start:@L> "new" <literal:InstanceLiteral<Term>> => {
 };
 
 // @TODO: Think about this.
-Callable: Term = {
-    <Dictionary<Term>> => <>,
+Callable<T>: Term = {
+    <Dictionary<T>> => <>,
     <Symbol> => <>,
-    <DotOp> => <>,
+    <DotOp<T>> => <>,
     <New> => <>,
 };
 
-DotOp: Term = {
-    <start:@L> <head:Callable> "." <call_loc:@L> <mut call:Predicate> => {
+DotOp<T>: Term = {
+    <start:@L> <head:Callable<T>> "." <call_loc:@L> <mut call:Predicate> => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <start:@L> <head:Callable> "." <call_loc:@L> <name:Name> => {
+    <start:@L> <head:Callable<T>> "." <call_loc:@L> <name:Name> => {
         let call = Predicate{name, args: vec![]};
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <start:@L> <head:Callable> "." <call_loc:@L> "(" <name:Name> ")" => {
+    <start:@L> <head:Callable<T>> "." <call_loc:@L> "(" <name:Name> ")" => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Symbol(name)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
@@ -225,19 +231,19 @@ DotOp: Term = {
 
 // .
 Exp9<T>: Term = {
-    <dot_op:DotOp> => dot_op,
+    <dot_op:DotOp<T>> => dot_op,
     <exp10:Exp10<T>> => exp10
 };
 
 // in isa
 Exp8<T>: Term = {
-    <start:@L> <left:Exp9<T>> "in" <right:Exp9<T>> => {
+    <start:@L> <left:Exp8<T>> "in" <right:Exp9<T>> => {
         let args = vec![left, right];
         let op = Operation{operator: Operator::In, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     // Symbols on the RHS are treated as class names, just like in a specializers
-    <start:@L> <left:Exp9<T>> "isa" <right:Exp9<T>> => {
+    <start:@L> <left:Exp8<T>> "isa" <right:Exp9<Pattern>> => {
         let right = if let Value::Symbol(ref sym) = right.value {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
@@ -246,12 +252,6 @@ Exp8<T>: Term = {
         } else {
             Pattern::term_as_pattern(&right)
         };
-        let args = vec![left, right];
-        let op = Operation{operator: Operator::Isa, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
-    },
-    <start:@L> <left:Exp9<T>> "isa" <right:InstanceLiteral<Term>> => {
-        let right = Pattern::term_as_pattern(&right);
         let args = vec![left, right];
         let op = Operation{operator: Operator::Isa, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
@@ -388,18 +388,15 @@ Exp<T>: Term = {
 }
 
 Parameter: Parameter = {
-    <specializer:Exp5<Term>> => {
+    <specializer:Exp5<Pattern>> => {
         if let Term{value: Value::Symbol(name), ..} = specializer {
             Parameter{name: Some(name), specializer: None}
         } else {
             Parameter{name: None, specializer: Some(specializer)}
         }
     },
-    <specializer_pattern:InstanceLiteral<Term>> => {
-        Parameter{name: None, specializer: Some(Pattern::term_as_pattern(&specializer_pattern))}
-    },
     // parenthesized specializers can be arbitrary expressions
-    <name:Name> ":" "(" <specializer:TermExp> ")" => {
+    <name:Name> ":" "(" <specializer:PatternExp> ")" => {
         Parameter {
             name: Some(name),
             specializer: Some(Pattern::term_as_pattern(&specializer)),
@@ -407,7 +404,7 @@ Parameter: Parameter = {
     },
     // unparenthesized specializers can only be terms
     // and symbols are interpreted as class names
-    <name:Name> ":" <specializer:Term> => {
+    <name:Name> ":" <specializer:Pattern> => {
         let offset = specializer.offset;
         if let Term{value: Value::Symbol(class_name), ..} = specializer {
             let fields = BTreeMap::new();
@@ -417,16 +414,14 @@ Parameter: Parameter = {
             Parameter{name: Some(name), specializer: Some(Pattern::term_as_pattern(&specializer))}
         }
     },
-    <name:Name> ":" <specializer_pattern:InstanceLiteral<Term>> => {
-        Parameter{name: Some(name), specializer: Some(Pattern::term_as_pattern(&specializer_pattern))}
-    },
-    <name:Name> ":" "(" <specializer_pattern:InstanceLiteral<Term>> ")" => {
-        Parameter{name: Some(name), specializer: Some(Pattern::term_as_pattern(&specializer_pattern))}
-    }
 };
 
 pub TermExp: Term = {
     <Exp<Term>> => <>
+};
+
+pub PatternExp: Term = {
+    <Exp<Pattern>> => <>
 };
 
 ParameterList: Vec<Parameter> = {
