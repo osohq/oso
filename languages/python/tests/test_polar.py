@@ -409,7 +409,6 @@ def test_return_list(polar):
     ).success
 
 
-
 def test_query(load_file, polar):
     """Test that queries work with variable arguments"""
 
@@ -462,6 +461,7 @@ def test_constructor(polar, qvar):
         )
         == 2
     )
+
 
 def test_in(polar, qeval):
     polar._load_str("g(x, y) := !x in y;")
