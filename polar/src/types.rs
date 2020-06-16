@@ -355,6 +355,8 @@ impl Value {
             Value::InstanceLiteral(literal) => Ok(literal),
             _ => Err(RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
             }),
         }
     }
@@ -364,6 +366,8 @@ impl Value {
             Value::Expression(op) => Ok(op),
             _ => Err(RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
             }),
         }
     }
