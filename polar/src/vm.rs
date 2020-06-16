@@ -3,6 +3,7 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
+use super::formatting::draw;
 use super::lexer::make_context;
 use super::types::*;
 use super::ToPolarString;
@@ -67,6 +68,11 @@ pub enum Goal {
         outer: usize,
         inner: usize,
     },
+    TraceRule {
+        trace: Trace,
+    },
+    TracePush,
+    TracePop,
     Unify {
         left: Term,
         right: Term,
@@ -79,9 +85,11 @@ pub struct Binding(pub Symbol, pub Term);
 #[derive(Clone, Debug)]
 pub struct Choice {
     pub alternatives: Alternatives,
-    bsp: usize,       // binding stack pointer
-    pub goals: Goals, // goal stack snapshot
-    queries: Queries, // query stack snapshot
+    bsp: usize,        // binding stack pointer
+    pub goals: Goals,  // goal stack snapshot
+    queries: Queries,  // query stack snapshot
+    trace: Vec<Trace>, // trace snapshot
+    trace_stack: Vec<Vec<Trace>>,
 }
 
 pub type Alternatives = Vec<Goals>;
@@ -97,6 +105,9 @@ pub struct PolarVirtualMachine {
     pub bindings: Bindings,
     choices: Choices,
     pub queries: Queries,
+
+    pub trace_stack: Vec<Vec<Trace>>, // Stack of traces higher up the tree.
+    pub trace: Vec<Trace>,            // Traces for the current level of the trace tree.
 
     /// Count executed goals
     goal_counter: usize,
@@ -124,6 +135,8 @@ impl PolarVirtualMachine {
             choices: vec![],
             goal_counter: 0,
             queries: vec![],
+            trace_stack: vec![],
+            trace: vec![],
             debugger: Debugger::default(),
             kb,
             instances: HashMap::new(),
@@ -190,6 +203,22 @@ impl PolarVirtualMachine {
                 inner,
                 args,
             } => self.sort_rules(rules, args, outer, inner)?,
+            Goal::TracePush => {
+                self.trace_stack.push(self.trace.clone());
+                self.trace = vec![];
+            }
+            Goal::TracePop => {
+                let mut children = self.trace.clone();
+                self.trace = self.trace_stack.pop().unwrap();
+                self.trace
+                    .last_mut()
+                    .unwrap()
+                    .children
+                    .append(&mut children);
+            }
+            Goal::TraceRule { trace } => {
+                self.trace.push(trace);
+            }
             Goal::Unify { left, right } => self.unify(&left, &right)?,
         }
         Ok(QueryEvent::None)
@@ -218,9 +247,14 @@ impl PolarVirtualMachine {
 
         if std::env::var("RUST_LOG").is_ok() {
             eprintln!("⇒ result");
+            for t in &self.trace {
+                eprintln!("trace\n{}", draw(t, 0));
+            }
         }
+
         Ok(QueryEvent::Result {
             bindings: self.bindings(false),
+            trace: self.trace.first().cloned(),
         })
     }
 
@@ -274,6 +308,8 @@ impl PolarVirtualMachine {
                 bsp: self.bsp(),
                 goals: self.goals.clone(),
                 queries: self.queries.clone(),
+                trace: self.trace.clone(),
+                trace_stack: self.trace_stack.clone(),
             });
         }
     }
@@ -439,8 +475,12 @@ impl PolarVirtualMachine {
                 bsp,
                 goals,
                 queries,
+                trace,
+                trace_stack,
             }) => {
                 self.bindings.drain(bsp..);
+                self.trace = trace.clone();
+                self.trace_stack = trace_stack.clone();
                 self.queries = queries.clone();
                 self.goals = goals.clone();
                 self.append_goals(alternatives.pop().expect("must have alternative"));
@@ -451,6 +491,8 @@ impl PolarVirtualMachine {
                         bsp,
                         goals,
                         queries,
+                        trace,
+                        trace_stack,
                     });
                 }
                 Ok(())
@@ -718,6 +760,10 @@ impl PolarVirtualMachine {
     fn query(&mut self, term: Term) -> PolarResult<QueryEvent> {
         self.queries.push(term.clone());
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
+        self.trace.push(Trace {
+            node: Node::Term(term.clone()),
+            children: vec![],
+        });
 
         match &term.value {
             Value::Call(predicate) => {
@@ -747,6 +793,7 @@ impl PolarVirtualMachine {
             None => self.push_goal(Goal::Backtrack)?,
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
+                self.push_goal(Goal::TracePop)?;
                 self.push_goal(Goal::SortRules {
                     rules: generic_rule
                         .rules
@@ -757,6 +804,7 @@ impl PolarVirtualMachine {
                     outer: 1,
                     inner: 1,
                 })?;
+                self.push_goal(Goal::TracePush)?;
             }
         }
 
@@ -772,7 +820,9 @@ impl PolarVirtualMachine {
         match operator {
             Operator::And => {
                 // Append a `Query` goal for each term in the args list
-                self.append_goals(args.into_iter().map(|term| Goal::Query { term }).collect())
+                self.push_goal(Goal::TracePop)?;
+                self.append_goals(args.into_iter().map(|term| Goal::Query { term }).collect());
+                self.push_goal(Goal::TracePush)?;
             }
             Operator::Or => {
                 // Create a choice point with alternatives to query for each arg, and start on the first alternative
@@ -1255,8 +1305,15 @@ impl PolarVirtualMachine {
             // Make alternatives for calling them.
             let mut alternatives = vec![];
             for rule in rules.iter() {
-                let Rule { body, params, .. } = self.rename_vars(rule);
                 let mut goals = vec![];
+                goals.push(Goal::TraceRule {
+                    trace: Trace {
+                        node: Node::Rule(rule.clone()),
+                        children: vec![],
+                    },
+                });
+                goals.push(Goal::TracePush);
+                let Rule { body, params, .. } = self.rename_vars(rule);
 
                 // Unify the arguments with the formal parameters.
                 for (arg, param) in args.iter().zip(params.iter()) {
@@ -1276,6 +1333,7 @@ impl PolarVirtualMachine {
 
                 // Query for the body clauses.
                 goals.push(Goal::Query { term: body.clone() });
+                goals.push(Goal::TracePop);
 
                 alternatives.push(goals)
             }
@@ -1466,11 +1524,11 @@ mod tests {
             assert!($vm.is_halted());
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}]) => {
-            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == $result));
+            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, []);
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}, $($tail:tt)*]) => {
-            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings} if bindings == $result));
+            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, [$($tail)*]);
         };
         ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?]) => {
@@ -1608,7 +1666,9 @@ mod tests {
             right: empty_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(
+            matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+        );
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -1618,7 +1678,9 @@ mod tests {
             right: one_two_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Result{bindings} if bindings.is_empty()));
+        assert!(
+            matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+        );
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
 
@@ -2035,7 +2097,7 @@ mod tests {
         loop {
             match vm.run().unwrap() {
                 QueryEvent::Done => break,
-                QueryEvent::Result { bindings } => results.push(bindings),
+                QueryEvent::Result { bindings, .. } => results.push(bindings),
                 QueryEvent::ExternalIsSubSpecializer {
                     call_id,
                     left_class_tag,
