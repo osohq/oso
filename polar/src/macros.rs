@@ -76,25 +76,31 @@ macro_rules! param {
     };
 }
 
-impl<S: AsRef<str>> From<S> for TestHelper<InstanceLiteral> {
-    fn from(other: S) -> Self {
-        Self(InstanceLiteral {
-            tag: Symbol(other.as_ref().to_string()),
-            fields: Dictionary::new(),
-        })
-    }
-}
-
 #[macro_export]
 macro_rules! instance {
     ($instance:expr) => {
-        $crate::macros::TestHelper::<InstanceLiteral>::from($instance).0
+        InstanceLiteral {
+            tag: sym!($instance),
+            fields: Dictionary::new(),
+        }
+    };
+    ($tag:expr, $fields:expr) => {
+        InstanceLiteral {
+            tag: sym!($tag),
+            fields: $crate::macros::TestHelper::<Dictionary>::from($fields).0,
+        }
     };
 }
 
 impl<S: AsRef<str>> From<S> for TestHelper<Symbol> {
     fn from(other: S) -> Self {
         Self(Symbol(other.as_ref().to_string()))
+    }
+}
+
+impl From<BTreeMap<Symbol, Term>> for TestHelper<Dictionary> {
+    fn from(other: BTreeMap<Symbol, Term>) -> Self {
+        Self(Dictionary { fields: other })
     }
 }
 

@@ -241,7 +241,7 @@ impl Polar {
     #[cfg(feature = "repl")]
     pub fn new_query_from_repl(&mut self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
-        let s = repl.input("Enter query:");
+        let s = repl.polar_input("Enter query:");
         match s {
             Ok(s) => self.new_query(&s),
             Err(_) => Err(PolarError::Operational(OperationalError::Unknown)),
