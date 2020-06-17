@@ -117,7 +117,7 @@ class Env:
     """Helper class for oso, looks up environment variables"""
 
     def var(self, variable):
-        yield os.environ[variable]
+        yield os.environ.get(variable, None)
 
 
 def load_oso():
