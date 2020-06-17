@@ -708,8 +708,8 @@ fn test_in() {
     let mut query = polar.new_query("a in {a:1}").unwrap();
     let e = query.next_event().unwrap_err();
     assert!(matches!(
-        e,
-        RuntimeError::TypeError { .. }.into()
+        e.kind,
+        ErrorKind::Runtime(RuntimeError::TypeError { .. })
     ));
 
     // negation
@@ -726,24 +726,24 @@ fn test_keyword_bug() {
     let result = polar.load("g(a) := a.new(b);").unwrap_err();
     assert!(matches!(
         result.kind,
-        ParseError::ReservedWord { .. }
+        ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 
     let result = polar.load("f(a) := a.in(b);").unwrap_err();
     assert!(matches!(
         result.kind,
-        ParseError::ReservedWord { .. }
+        ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 
     let result = polar.load("cut(a) := a;").unwrap_err();
     assert!(matches!(
         result.kind,
-        ParseError::ReservedWord { .. }
+        ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 
     let result = polar.load("debug(a) := a;").unwrap_err();
     assert!(matches!(
         result.kind,
-        ParseError::ReservedWord { .. }
+        ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 }
