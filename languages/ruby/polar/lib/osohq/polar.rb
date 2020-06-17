@@ -47,9 +47,11 @@ module Osohq
         Query.new(query_ffi_instance, polar: self).results
       end
 
-      # @param pred [Predicate]
-      def query_pred(pred)
+      # @param name [String]
+      # @param args [Array<Object>]
+      def query_pred(name, args:)
         load_queued_files
+        pred = Predicate.new(name, args: args)
         query_ffi_instance = ffi_instance.new_query_from_term(to_polar_term(pred))
         Query.new(query_ffi_instance, polar: self).results
       end
