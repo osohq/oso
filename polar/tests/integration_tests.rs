@@ -313,7 +313,7 @@ fn test_not() {
     assert!(qeval(&mut polar, "!even(3)"));
 
     polar
-        .load("f(x) := !a(x); a(1); b(2); g(x) := !(a(x) | b(x)), x = 3;")
+        .load("f(x) := !a(x); a(1); b(2); g(x) := !(a(x) | b(x));")
         .unwrap();
 
     assert!(qnull(&mut polar, "f(1)"));
@@ -322,7 +322,13 @@ fn test_not() {
     assert!(qnull(&mut polar, "g(1)"));
     assert!(qnull(&mut polar, "g(2)"));
     assert!(qeval(&mut polar, "g(3)"));
-    assert_eq!(qvar(&mut polar, "g(x)", "x"), vec![value!(3)]);
+    assert!(qnull(&mut polar, "g(x), x=3")); // this should fail because unbound x means g(x) always fails
+    assert!(qeval(&mut polar, "x=3, g(x)"));
+
+    polar.load("h(x) := !(!(x = 1 | x = 3) | x = 3);").unwrap();
+    assert!(qeval(&mut polar, "h(1)"));
+    assert!(qnull(&mut polar, "h(2)"));
+    assert!(qnull(&mut polar, "h(3)"));
 }
 
 #[test]
@@ -677,6 +683,7 @@ fn test_in() {
         qvar(&mut polar, "f(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
+    assert!(qeval(&mut polar, "4 in [1,2,3] | 1 in [1,2,3]"));
 
     // strange test case but it's important to note that this returns
     // 3 results, with 1 binding each
@@ -697,7 +704,6 @@ fn test_in() {
     );
 
     assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
-    assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
 
     let mut query = polar.new_query("a in {a:1}").unwrap();
     let e = query.next_event().unwrap_err();
@@ -705,6 +711,12 @@ fn test_in() {
         e,
         PolarError::Runtime(RuntimeError::TypeError { .. })
     ));
+
+    // negation
+    assert!(qeval(&mut polar, "!(4 in [1,2,3])"));
+    assert!(qnull(&mut polar, "!(1 in [1,2,3])"));
+    assert!(qnull(&mut polar, "!(2 in [1,2,3])"));
+    assert!(qnull(&mut polar, "!(3 in [1,2,3])"));
 }
 
 #[test]
