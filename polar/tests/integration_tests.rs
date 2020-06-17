@@ -325,9 +325,7 @@ fn test_not() {
     assert!(qnull(&mut polar, "g(x), x=3")); // this should fail because unbound x means g(x) always fails
     assert!(qeval(&mut polar, "x=3, g(x)"));
 
-    polar
-        .load_str("h(x) := !(!(x = 1 | x = 3) | x = 3);")
-        .unwrap();
+    polar.load("h(x) := !(!(x = 1 | x = 3) | x = 3);").unwrap();
     assert!(qeval(&mut polar, "h(1)"));
     assert!(qnull(&mut polar, "h(2)"));
     assert!(qnull(&mut polar, "h(3)"));
