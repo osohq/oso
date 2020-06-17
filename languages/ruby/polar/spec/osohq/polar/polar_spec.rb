@@ -18,6 +18,31 @@ RSpec.describe Osohq::Polar::Polar do
   end
 
   context 'when converting between Polar and Ruby values' do
+    before do
+      stub_const('Widget', Class.new do
+        attr_reader :id
+        def initialize(id)
+          @id = id
+        end
+      end)
+
+      stub_const('Actor', Class.new do
+        def initialize(n)
+          @name = n
+        end
+
+        def widget
+          Widget.new(1)
+        end
+
+        def widgets
+          [Widget.new(2), Widget.new(3)].to_enum
+        end
+      end)
+      subject.register_class(Widget)
+      subject.register_class(Actor)
+    end
+
     it 'converts Polar values into Ruby values' do
       subject.load('f({x: [1, "two", true], y: {z: false}});')
       expect(qvar(subject, 'f(x)', 'x', one: true)).to eq({ 'x' => [1, 'two', true], 'y' => { 'z' => false } })
@@ -27,6 +52,28 @@ RSpec.describe Osohq::Polar::Polar do
       subject.load('f(x) := x = pred(1, 2);')
       expect(qvar(subject, 'f(x)', 'x')).to eq([Osohq::Polar::Predicate.new('pred', args: [1, 2])])
       expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Predicate.new('pred', args: [1, 2])])).to_a).to eq([{}])
+    end
+
+    it 'converts Ruby instances in both directions' do
+      actor = Actor.new('sam')
+      # puts "#{Osohq::Polar::Term.new(subject.to_polar_term(actor))}"
+      # puts "#{subject.to_polar_term(actor)}"
+      polar_term = Osohq::Polar::Term.new(subject.to_polar_term(actor))
+      ruby_term = subject.to_ruby(polar_term)
+      expect(ruby_term).to eq(actor)
+    end
+
+    it 'returns Ruby instances from external calls' do
+      actor = Actor.new('sam')
+      widget = Widget.new(1)
+      subject.load('allow(actor, resource) := actor.widget.id = resource.id;')
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [actor, widget])).to_a.length).to eq 1
+    end
+
+    it 'handles enumerator external call results' do
+      actor = Actor.new('sam')
+      subject.load('widgets(actor, x) := x = actor.widgets.id;')
+      expect(subject.query_pred(Osohq::Polar::Predicate.new('widgets', args: [actor, Osohq::Polar::Variable.new('x')])).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
   end
 
@@ -348,17 +395,18 @@ RSpec.describe Osohq::Polar::Polar do
   end
 
   context 'querying for a predicate' do
-    it 'can return a list' do
-      class Actor
+    before do
+      stub_const('Actor', Class.new do
         def groups
           %w[engineering social admin]
         end
-      end
+      end)
+    end
+    it 'can return a list' do
       subject.register_class(Actor)
       subject.load('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
       expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [Actor.new, 'join', 'party'])).to_a).to eq([{}])
     end
-
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
       expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Variable.new('a')])).to_a).to eq(
