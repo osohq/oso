@@ -10,25 +10,19 @@ module Osohq
       # Defined upfront to fix Ruby loading issues.
       class Polar < ::FFI::AutoPointer
         def self.release(ptr)
-          Rust.free(ptr)
+          Rust.free(ptr) unless ptr.null?
         end
       end
       # Defined upfront to fix Ruby loading issues.
       class Query < ::FFI::AutoPointer
         def self.release(ptr)
-          Rust.free(ptr)
+          Rust.free(ptr) unless ptr.null?
         end
       end
       # Defined upfront to fix Ruby loading issues.
       class QueryEvent < ::FFI::AutoPointer
         def self.release(ptr)
-          Rust.free(ptr)
-        end
-      end
-      # Defined upfront to fix Ruby loading issues.
-      class Load < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr)
+          Rust.free(ptr) unless ptr.null?
         end
       end
 
@@ -39,9 +33,9 @@ module Osohq
           ffi_lib FFI::LIB_PATH
 
           attach_function :new, :polar_new, [], Polar
-          attach_function :new_load, :polar_new_load, [Polar, :string], FFI::Load
+          attach_function :load, :polar_load, [Polar, :string], :int32
+          attach_function :next_inline_query, :polar_next_inline_query, [Polar], FFI::Query
           attach_function :new_id, :polar_get_external_id, [Polar], :uint64
-          attach_function :load_str, :polar_load_str, [Polar, :string], :int32
           attach_function :new_query_from_str, :polar_new_query, [Polar, :string], FFI::Query
           attach_function :new_query_from_term, :polar_new_query_from_term, [Polar, :string], FFI::Query
           attach_function :new_query_from_repl, :polar_query_from_repl, [Polar], FFI::Query
@@ -59,20 +53,16 @@ module Osohq
         end
 
         # @param src [String]
-        # @return [FFI::Load] if there's an FFI error.
         # @raise [FFI::Error] if the FFI call returns an error.
-        def new_load(src)
-          load = Rust.new_load(self, src)
-          raise FFI::Error.get if load.null?
-
-          load
+        def load(src)
+          raise FFI::Error.get if Rust.load(self, src).zero?
         end
 
-        # @param str [String]
-        # @raise [FFI::Error] if the FFI call returns an error.
-        def load_str(str)
-          load = Rust.load_str(self, str)
-          raise FFI::Error.get if load.zero?
+        # @return [FFI::Query] if there are remaining inline queries.
+        # @return [nil] if there are no remaining inline queries.
+        def next_inline_query
+          query = Rust.next_inline_query(self)
+          query.null? ? nil : query
         end
 
         # @return [Integer]
@@ -91,8 +81,6 @@ module Osohq
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str)
-          # TODO(gj): I don't think this error check is correct. If getting a new ID fails on the
-          # Rust side, it'll probably surface as a panic (e.g., the KB lock is poisoned).
           raise FFI::Error.get if query.null?
 
           query
@@ -125,53 +113,45 @@ module Osohq
           extend ::FFI::Library
           ffi_lib FFI::LIB_PATH
 
-          attach_function :debug_command, :polar_debug_command, [FFI::Polar, Query, :string], :int32
-          attach_function :call_result, :polar_external_call_result, [FFI::Polar, Query, :uint64, :string], :int32
-          attach_function :question_result, :polar_external_question_result, [FFI::Polar, Query, :uint64, :int32], :int32
-          attach_function :next_event, :polar_query, [FFI::Polar, Query], FFI::QueryEvent
-          attach_function :free_event, :string_free, [:string], :int32
+          attach_function :debug_command, :polar_debug_command, [Query, :string], :int32
+          attach_function :call_result, :polar_call_result, [Query, :uint64, :string], :int32
+          attach_function :question_result, :polar_question_result, [Query, :uint64, :int32], :int32
+          attach_function :next_event, :polar_next_query_event, [Query], FFI::QueryEvent
           attach_function :free, :query_free, [Query], :int32
         end
         private_constant :Rust
 
         # @param cmd [String]
-        # @param polar [FFI::Polar]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def debug_command(cmd, polar:)
-          res = Rust.debug_command(polar, self, cmd)
+        def debug_command(cmd)
+          res = Rust.debug_command(self, cmd)
           raise FFI::Error.get if res.zero?
         end
 
         # @param result [String]
         # @param call_id [Integer]
-        # @param polar [FFI::Polar]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def call_result(result, call_id:, polar:)
-          res = Rust.call_result(polar, self, call_id, result)
+        def call_result(result, call_id:)
+          res = Rust.call_result(self, call_id, result)
           raise FFI::Error.get if res.zero?
         end
 
         # @param result [Boolean]
         # @param call_id [Integer]
-        # @param polar [FFI::Polar]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def question_result(result, call_id:, polar:)
+        def question_result(result, call_id:)
           result = result ? 1 : 0
-          res = Rust.question_result(polar, self, call_id, result)
+          res = Rust.question_result(self, call_id, result)
           raise FFI::Error.get if res.zero?
         end
 
-        # @param polar [FFI::Polar]
-        # @return [String] if event type is "Done"
-        # @return [Osohq::Polar::QueryEvent] if event type is not "Done"
+        # @return [Osohq::Polar::QueryEvent]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def next_event(polar)
-          event_json = Rust.next_event(polar, self)
-          # TODO(gj): figure out if the FFI gem's auto conversion to `:string` means this will never be a null pointer
-          if event_json.respond_to?(:null?)
-            raise FFI::Error.get if event_json.null?
-          end
-          Osohq::Polar::QueryEvent.new(JSON.parse(event_json.to_s))
+        def next_event
+          event = Rust.next_event(self)
+          raise FFI::Error.get if event.null?
+
+          Osohq::Polar::QueryEvent.new(JSON.parse(event.to_s))
         end
       end
 
@@ -189,27 +169,6 @@ module Osohq
           attach_function :free, :string_free, [QueryEvent], :int32
         end
         private_constant :Rust
-      end
-
-      # TODO(gj): document
-      class Load < ::FFI::AutoPointer
-        # TODO(gj): document
-        module Rust
-          extend ::FFI::Library
-          ffi_lib FFI::LIB_PATH
-
-          attach_function :free, :load_free, [Load], :int32
-          attach_function :load, :polar_load, [FFI::Polar, Load, FFI::Query], :int32
-        end
-        private_constant :Rust
-
-        # @param polar [FFI::Polar]
-        # @param query [FFI::Query]
-        # @raise [FFI::Error] if the FFI call returns an error.
-        def load(polar, query:)
-          res = Rust.polar_load(polar, self, query)
-          raise FFI::Error.get if res.zero?
-        end
       end
 
       # TODO(gj): document
