@@ -322,7 +322,7 @@ def test_load_and_query():
         p._load_str("g(1); ?= g(2);")
 
 
-@pytest.mark.xfail(reason = "do we really want this test?")
+@pytest.mark.xfail(reason="do we really want this test?")
 def test_parser_errors(polar):
     # IntegerOverflow
     rules = """
