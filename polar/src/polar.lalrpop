@@ -82,12 +82,12 @@ pub Symbol: Term  = <start:@L> <n:Name> => {
 };
 
 Fields<T>: BTreeMap<Symbol, Term> = {
-    <name:Name> ":" <value:Exp5<T>> => {
+    <name:Name> ":" <value:T> => {
         let mut fields = BTreeMap::new();
         fields.insert(name, value);
         fields
     },
-    <name:Name> ":" <value:Exp5<T>> "," <mut fields:Fields<T>> => {
+    <name:Name> ":" <value:T> "," <mut fields:Fields<T>> => {
         fields.insert(name, value);
         fields
     }
@@ -107,26 +107,30 @@ Dictionary<T>: Term = <start:@L> <fields:Object<T>> => {
     Term{id: 0, offset: start, value: Value::Dictionary(dict)}
 };
 
+DictionaryTerm: Term = <Dictionary<Exp5<Term>>> => <>;
+// Pattern dictionaries cannot contain any operators.
+DictionaryPattern: Term = <Dictionary<Pattern>> => <>;
+
 InstanceLiteral<T>: Term = <start:@L> <tag:Name> <fields:Object<T>> => {
     let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
     Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
 };
 
-pub InstanceLiteralTerm: Term = <InstanceLiteral<Term>> => <>;
+pub InstanceLiteralTerm: Term = <InstanceLiteral<Exp5<Term>>> => <>;
+pub InstanceLiteralPattern: Term = <InstanceLiteral<Pattern>> => <>;
 
 pub Pattern: Term = {
-    <term:InstanceLiteral<Pattern>> => Pattern::term_as_pattern(&term),
-    <term:Dictionary<Pattern>> => Pattern::term_as_pattern(&term),
+    <term:InstanceLiteralPattern> => Pattern::term_as_pattern(&term),
+    <term:DictionaryPattern> => Pattern::term_as_pattern(&term),
     <term:Number> => term,
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,
-    <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
-    <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
-    <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
-    <start:@L> "[" <exp:PatternExp> "]" => {
-        let terms = unwrap_and(exp);
-        Term{id:0, offset: start, value: Value::List(terms)}
+    <start:@L> "[" <terms:(<Pattern> ",")*> <term:Pattern?> "]" => {
+        match term {
+            Some(term) => Term{id:0, offset: start, value: Value::List(vec![term])},
+            None => Term{id: 0, offset: start, value: Value::List(terms)}
+        }
     }
 };
 
@@ -135,7 +139,7 @@ pub Term: Term = {
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,
-    <term:Dictionary<Term>> => term,
+    <term:DictionaryTerm> => term,
     <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
     <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
     <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
@@ -193,35 +197,35 @@ Exp10<T>: Term = {
     <exp11:Exp11<T>> => exp11,
 }
 
-New: Term = <start:@L> "new" <literal:InstanceLiteral<Term>> => {
+New: Term = <start:@L> "new" <literal:InstanceLiteralTerm> => {
     let args = vec![literal];
     let op = Operation{operator: Operator::New, args};
     Term{id: 0, offset: start, value: Value::Expression(op)}
 };
 
 // @TODO: Think about this.
-Callable<T>: Term = {
-    <Dictionary<T>> => <>,
+Callable: Term = {
+    <DictionaryTerm> => <>,
     <Symbol> => <>,
-    <DotOp<T>> => <>,
+    <DotOp> => <>,
     <New> => <>,
 };
 
-DotOp<T>: Term = {
-    <start:@L> <head:Callable<T>> "." <call_loc:@L> <mut call:Predicate> => {
+DotOp: Term = {
+    <start:@L> <head:Callable> "." <call_loc:@L> <mut call:Predicate> => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <start:@L> <head:Callable<T>> "." <call_loc:@L> <name:Name> => {
+    <start:@L> <head:Callable> "." <call_loc:@L> <name:Name> => {
         let call = Predicate{name, args: vec![]};
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <start:@L> <head:Callable<T>> "." <call_loc:@L> "(" <name:Name> ")" => {
+    <start:@L> <head:Callable> "." <call_loc:@L> "(" <name:Name> ")" => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Symbol(name)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
@@ -231,7 +235,7 @@ DotOp<T>: Term = {
 
 // .
 Exp9<T>: Term = {
-    <dot_op:DotOp<T>> => dot_op,
+    <dot_op:DotOp> => dot_op,
     <exp10:Exp10<T>> => exp10
 };
 
@@ -243,7 +247,7 @@ Exp8<T>: Term = {
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     // Symbols on the RHS are treated as class names, just like in a specializers
-    <start:@L> <left:Exp8<T>> "isa" <right:Exp9<Pattern>> => {
+    <start:@L> <left:Exp8<T>> "isa" <right:Pattern> => {
         let right = if let Value::Symbol(ref sym) = right.value {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
@@ -388,46 +392,41 @@ Exp<T>: Term = {
 }
 
 Parameter: Parameter = {
-    <specializer:Exp5<Term>> => {
-        if let Term{value: Value::Symbol(_), ..} = specializer {
-            Parameter{parameter: Some(specializer), specializer: None}
-        } else {
-            Parameter{parameter: None, specializer: Some(specializer)}
-        }
+    <param:Exp5<Term>> => {
+        Parameter{parameter: Some(param), specializer: None}
     },
-    // parenthesized specializers can be arbitrary expressions
-    <name:Name> ":" "(" <specializer:TermExp> ")" => {
+    // parenthesized specializers do not have symbol translation to class names applied
+    <start:@L> <name:Name> ":" "(" <specializer:Pattern> ")" => {
+        let mut name = Term::new(Value::Symbol(name));
+        name.offset = start;
         Parameter {
-            parameter: Some(Term::new(Value::Symbol(name))),
+            parameter: Some(name),
             specializer: Some(specializer),
         }
     },
-    // unparenthesized specializers can only be terms
-    // and symbols are interpreted as class names
-    <name:Name> ":" <specializer:Term> => {
+    <start:@L> <name:Name> ":" <specializer:Pattern> => {
+        let mut name = Term::new(Value::Symbol(name));
+        name.offset = start;
         let offset = specializer.offset;
         if let Term{value: Value::Symbol(class_name), ..} = specializer {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name, fields: Dictionary{fields}};
-            Parameter{parameter: Some(Term::new(Value::Symbol(name))), specializer: Some(Term{id: 0, offset, value: Value::InstanceLiteral(instance_literal)})}
+            Parameter {
+                parameter: Some(name),
+                specializer: Some(Term {
+                    id: 0,
+                    offset,
+                    value: Value::Pattern(Pattern::Instance(instance_literal))
+                })
+            }
         } else {
-            Parameter{parameter: Some(Term::new(Value::Symbol(name))), specializer: Some(specializer)}
+            Parameter{parameter: Some(name), specializer: Some(specializer)}
         }
-    },
-    <name:Name> ":" <specializer:InstanceLiteral<Term>> => {
-        Parameter{parameter: Some(Term::new(Value::Symbol(name))), specializer: Some(specializer)}
-    },
-    <specializer:InstanceLiteral<Term>> => {
-        Parameter{parameter: None, specializer: Some(specializer)}
     },
 };
 
 pub TermExp: Term = {
     <Exp<Term>> => <>
-};
-
-pub PatternExp: Term = {
-    <Exp<Pattern>> => <>
 };
 
 ParameterList: Vec<Parameter> = {

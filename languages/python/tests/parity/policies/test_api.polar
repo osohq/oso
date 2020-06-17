@@ -5,19 +5,19 @@ allow(actor, action, resource) :=
 actorInRole(actor, role, resource: Widget) :=
     role = resource.company.role(actor);
 
-allow(actor, "get", Http{path: path}) :=
+allow(actor, "get", _: Http{path: path}) :=
     new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
     allow(actor, "get", new Widget{id: id});
 
-allow(actor, "post", Http{path: path}) :=
+allow(actor, "post", _: Http{path: path}) :=
     new PathMapper{template: "/widget/"}.map(path) = {},
     allow(actor, "create", new Widget{});
 
-allow(actor, "what", Http{path: path}) :=
+allow(actor, "what", _: Http{path: path}) :=
     new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
     allow(actor, "unparameterised_get", new Widget{id: id});
 
-allow(actor, "what", Http{path: path, query: {param: "foo"}}) :=
+allow(actor, "what", _: Http{path: path, query: {param: "foo"}}) :=
     new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
     allow(actor, "parameterised_get", new Widget{id: id});
 
@@ -62,5 +62,5 @@ allow(actor: Actor, "keep", resource: Widget) :=
     actor.widget.name = resource.name;
 
 # for testing iter
-allow(actor: Actor, "can_have", Widget{name: "stapler"}) :=
+allow(actor: Actor, "can_have", _: Widget{name: "stapler"}) :=
     actor.companies_iter isa Company{id: "Initech"};

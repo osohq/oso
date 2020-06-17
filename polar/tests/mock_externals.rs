@@ -31,6 +31,7 @@ impl MockExternal {
             return None;
         }
 
+        self.calls.insert(call_id);
         self.externals
             .get(&instance_id)
             .expect("Instance not constructed")

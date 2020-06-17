@@ -916,9 +916,18 @@ impl PolarVirtualMachine {
                     literal: Some(literal_value.clone()),
                 });
 
-                self.bind(&result, &literal_term);
-
-                return Ok(self.make_external(literal_value, instance_id));
+                // A goal is used here in case the result is already bound to some external
+                // instance.
+                self.append_goals(vec![
+                    Goal::Unify {
+                        left: Term::new(Value::Symbol(result)),
+                        right: literal_term,
+                    },
+                    Goal::MakeExternal {
+                        instance_id,
+                        literal: literal_value,
+                    },
+                ]);
             }
             Operator::Cut => self.push_goal(Goal::Cut {
                 choice_index: self.choices.len() - 1,
@@ -2114,10 +2123,10 @@ mod tests {
         let bar_rule = GenericRule::new(
             sym!("bar"),
             vec![
-                rule!("bar", [instance!("b"), instance!("a"), value!(3)]),
-                rule!("bar", [instance!("a"), instance!("a"), value!(1)]),
-                rule!("bar", [instance!("a"), instance!("b"), value!(2)]),
-                rule!("bar", [instance!("b"), instance!("b"), value!(4)]),
+                rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)]),
+                rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)]),
+                rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)]),
+                rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)]),
             ],
         );
 

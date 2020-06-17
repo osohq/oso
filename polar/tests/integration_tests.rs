@@ -526,22 +526,31 @@ fn test_or() {
 fn test_dict_head() {
     let mut polar = Polar::new();
     polar.load("f({x: 1});").unwrap();
+    polar.load("g(_: {x: 1});").unwrap();
 
-    // Test isa-ing dicts against our dict head.
+    // Test unifying dicts against our dict head.
     assert!(qeval(&mut polar, "f({x: 1})"));
-    assert!(qeval(&mut polar, "f({x: 1, y: 2})"));
+    assert!(qnull(&mut polar, "f({x: 1, y: 2})"));
     assert!(qnull(&mut polar, "f(1)"));
     assert!(qnull(&mut polar, "f({})"));
     assert!(qnull(&mut polar, "f({x: 2})"));
     assert!(qnull(&mut polar, "f({y: 1})"));
 
-    // Test isa-ing instances against our dict head.
-    assert_eq!(qext(&mut polar, "f(new a{x: 1})", vec![value!(1)]).len(), 1);
+    assert!(qeval(&mut polar, "g({x: 1})"));
+    assert!(qeval(&mut polar, "g({x: 1, y: 2})"));
+    assert!(qnull(&mut polar, "g(1)"));
+    assert!(qnull(&mut polar, "g({})"));
+    assert!(qnull(&mut polar, "g({x: 2})"));
+    assert!(qnull(&mut polar, "g({y: 1})"));
+
+    // Test unifying & isa-ing instances against our rules.
+    assert!(qnull(&mut polar, "f(new a{x: 1})"));
+    assert_eq!(qext(&mut polar, "g(new a{x: 1})", vec![value!(1)]).len(), 1);
     assert!(qnull(&mut polar, "f(new a{})"));
     assert!(qnull(&mut polar, "f(new a{x: {}})"));
-    assert!(qext(&mut polar, "f(new a{x: 2})", vec![value!(2)]).is_empty());
+    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2)]).is_empty());
     assert_eq!(
-        qext(&mut polar, "f(new a{y: 2, x: 1})", vec![value!(1)]).len(),
+        qext(&mut polar, "g(new a{y: 2, x: 1})", vec![value!(1)]).len(),
         1
     );
 }
@@ -866,9 +875,28 @@ fn test_unify_rule_head() {
         PolarError::Parse(_)
     ));
 
-    polar.load("f(_: Foo{a: 1}, x) := x = 1;").unwrap();
+    assert!(matches!(
+        polar
+            .load("f(x: new Foo{a: 1});")
+            .expect_err("Must have a parser error"),
+        PolarError::Parse(_)
+    ));
 
-    let query = polar.new_query("f(new Foo{a: 1})").unwrap();
+    assert!(matches!(
+        polar
+            .load("f(x: Foo{a: new Foo{a: 1}});")
+            .expect_err("Must have a parser error"),
+        PolarError::Parse(_)
+    ));
+
+    polar.load("f(_: Foo{a: 1}, x) := x = 1;").unwrap();
+    polar.load("g(_: Foo{a: Foo{a: 1}}, x) := x = 1;").unwrap();
+
+    let query = polar.new_query("f(new Foo{a: 1}, x)").unwrap();
+    let (results, _externals) = query_results_with_externals(query);
+    assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
+
+    let query = polar.new_query("g(new Foo{a: Foo{a: 1}}, x)").unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 }
