@@ -105,7 +105,7 @@ pub fn main() -> anyhow::Result<()> {
         };
         let mut has_result = false;
         loop {
-            let event = polar.query(&mut query);
+            let event = query.next_event();
             match event {
                 Ok(QueryEvent::Done) => {
                     if !has_result {
@@ -123,7 +123,7 @@ pub fn main() -> anyhow::Result<()> {
                 Ok(QueryEvent::Debug { message }) => {
                     println!("{}", message);
                     let input = repl.plain_input("> ").unwrap();
-                    polar.debug_command(&mut query, input).unwrap();
+                    query.debug_command(input).unwrap();
                 }
                 Ok(e) => println!("Unsupported event: {:?}", e),
                 Err(e) => println!("Error: {:?}", e),
