@@ -30,7 +30,6 @@ role(actor: User, role, team: Team) :=
 
 # As an admin of ACME, Bhavik can view expenses in the org
 ?= allow(User { name: "bhavik" }, "view", Expense { id: 0 });
-?= !allow(User { name: "cora" }, "view", Expense { id: 0 });
 
 
 # Management hierarchies
@@ -42,7 +41,7 @@ manages(manager: User, employee) :=
     employee = manager.employees() |
     manages(manager.employees(), employee);
 
-# Now Cora can view the expense because Cora manager Bhavik who manager Alice
+# Cora can view the expense because Cora manager Bhavik who manager Alice
 ?= allow(User { name: "cora"}, "view", Expense { id: 0 });
 
 # If ENV="development" is set as an environment variable
