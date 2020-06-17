@@ -9,15 +9,15 @@ programming error on our part.
 class PolarException(Exception):
     """Base class for all exceptions from within polar."""
 
-    pass
+    def __init__(self, message, error=None):
+        super(PolarException, self).__init__(message)
+        self.__inner = error
 
 
 class ParserException(PolarException):
     """Parse time errors."""
 
-    def __init__(self, message, value):
-        super(PolarException, self).__init__(message)
-        self._inner_error = value
+    pass
 
 
 class PolarRuntimeException(PolarException):
@@ -35,4 +35,28 @@ class PolarOperationalException(PolarException):
 class PolarApiException(PolarException):
     """ Exceptions coming from the python bindings to polar, not the engine itself. """
 
+    pass
+
+
+class IntegerOverflow(ParserException):
+    pass
+
+
+class InvalidTokenCharacter(ParserException):
+    pass
+
+
+class InvalidToken(ParserException):
+    pass
+
+
+class UnrecognizedEOF(ParserException):
+    pass
+
+
+class UnrecognizedToken(ParserException):
+    pass
+
+
+class ExtraToken(ParserException):
     pass
