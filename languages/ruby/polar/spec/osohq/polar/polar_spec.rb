@@ -406,6 +406,7 @@ RSpec.describe Osohq::Polar::Polar do
       subject.load('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
       expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [Actor.new, 'join', 'party'])).to_a).to eq([{}])
     end
+
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
       expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Variable.new('a')])).to_a).to eq(
