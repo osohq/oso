@@ -9,10 +9,10 @@ pub fn load_files(
     files: &mut dyn Iterator<Item = String>,
 ) -> anyhow::Result<()> {
     for file in files {
-        let mut f = File::open(file)?;
+        let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
-        polar.load(&policy)?;
+        polar.load_file(&policy, Some(file))?;
     }
     Ok(())
 }

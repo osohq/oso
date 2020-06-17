@@ -4,7 +4,7 @@ use permute::permute;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar::{draw, sym, term, types::*, value, Polar, Query};
+use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Trace>)>;
 
@@ -709,7 +709,7 @@ fn test_in() {
     let e = query.next_event().unwrap_err();
     assert!(matches!(
         e,
-        PolarError::Runtime(RuntimeError::TypeError { .. })
+        RuntimeError::TypeError { .. }.into()
     ));
 
     // negation
@@ -725,25 +725,25 @@ fn test_keyword_bug() {
     let polar = Polar::new();
     let result = polar.load("g(a) := a.new(b);").unwrap_err();
     assert!(matches!(
-        result,
-        PolarError::Parse(ParseError::ReservedWord { .. })
+        result.kind,
+        ParseError::ReservedWord { .. }
     ));
 
     let result = polar.load("f(a) := a.in(b);").unwrap_err();
     assert!(matches!(
-        result,
-        PolarError::Parse(ParseError::ReservedWord { .. })
+        result.kind,
+        ParseError::ReservedWord { .. }
     ));
 
     let result = polar.load("cut(a) := a;").unwrap_err();
     assert!(matches!(
-        result,
-        PolarError::Parse(ParseError::ReservedWord { .. })
+        result.kind,
+        ParseError::ReservedWord { .. }
     ));
 
     let result = polar.load("debug(a) := a;").unwrap_err();
     assert!(matches!(
-        result,
-        PolarError::Parse(ParseError::ReservedWord { .. })
+        result.kind,
+        ParseError::ReservedWord { .. }
     ));
 }

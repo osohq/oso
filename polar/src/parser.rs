@@ -6,8 +6,10 @@ lalrpop_mod!(
     polar
 );
 
+use super::error;
 use super::lexer::{self, Lexer};
-use super::types::{self, *};
+use super::types::*;
+use super::PolarResult;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
@@ -22,29 +24,29 @@ lazy_static::lazy_static! {
     static ref TERM_PARSER: polar::TermParser = polar::TermParser::new();
 }
 
-fn to_parse_error(e: ParseError<usize, lexer::Token, types::ParseError>) -> types::ParseError {
+fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
     match e {
         ParseError::InvalidToken { location: loc } => {
-            types::ParseError::InvalidToken { loc, context: None }
+            error::ParseError::InvalidToken { loc, context: None }
         }
         ParseError::UnrecognizedEOF { location: loc, .. } => {
-            types::ParseError::UnrecognizedEOF { loc, context: None }
+            error::ParseError::UnrecognizedEOF { loc, context: None }
         }
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
-            Token::Debug | Token::Cut | Token::In | Token::New => types::ParseError::ReservedWord {
+            Token::Debug | Token::Cut | Token::In | Token::New => error::ParseError::ReservedWord {
                 token: t.to_string(),
                 loc,
                 context: None,
             },
-            _ => types::ParseError::UnrecognizedToken {
+            _ => error::ParseError::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
                 context: None,
             },
         },
-        ParseError::ExtraToken { token: (loc, t, _) } => types::ParseError::ExtraToken {
+        ParseError::ExtraToken { token: (loc, t, _) } => error::ParseError::ExtraToken {
             token: t.to_string(),
             loc,
             context: None,

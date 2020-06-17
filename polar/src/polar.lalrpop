@@ -7,7 +7,8 @@ use std::collections::{HashMap, BTreeMap};
 
 use crate::lexer::{self, Token};
 use crate::parser::Line;
-use crate::types::{self, *};
+use crate::error;
+use crate::types::*;
 
 use lalrpop_util::ParseError;
 
@@ -15,7 +16,7 @@ grammar;
 
 extern {
     type Location = usize;
-    type Error = types::ParseError;
+    type Error = error::ParseError;
 
     enum Token {
         "Integer" => lexer::Token::Integer(<i64>),

@@ -8,6 +8,7 @@ extern crate maplit;
 #[cfg(feature = "repl")]
 pub mod cli;
 mod debugger;
+pub mod error;
 mod formatting;
 mod lexer;
 pub mod parser;
@@ -17,6 +18,7 @@ pub mod types;
 mod vm;
 
 pub use self::polar::{Polar, Query};
+pub use error::{PolarError, PolarResult};
 pub use formatting::{draw, ToPolarString};
 
 use std::cell::RefCell;
@@ -61,7 +63,7 @@ macro_rules! ffi_try {
         if let Ok(res) = catch_unwind(|| $body) {
             res
         } else {
-            set_error(types::OperationalError::Unknown.into());
+            set_error(error::OperationalError::Unknown.into());
             // return as an int or a pointer
             POLAR_FAILURE as _
         }
@@ -69,10 +71,10 @@ macro_rules! ffi_try {
 }
 
 thread_local! {
-    static LAST_ERROR: RefCell<Option<Box<types::PolarError>>> = RefCell::new(None);
+    static LAST_ERROR: RefCell<Option<Box<error::PolarError>>> = RefCell::new(None);
 }
 
-fn set_error(e: types::PolarError) {
+fn set_error(e: error::PolarError) {
     LAST_ERROR.with(|prev| *prev.borrow_mut() = Some(Box::new(e)))
 }
 
@@ -97,11 +99,21 @@ pub extern "C" fn polar_new() -> *mut Polar {
 }
 
 #[no_mangle]
-pub extern "C" fn polar_load(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
+pub extern "C" fn polar_load(
+    polar_ptr: *mut Polar,
+    src: *const c_char,
+    filename: *const c_char,
+) -> i32 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let src = unsafe { ffi_string!(src) };
-        match polar.load(&src) {
+        let filename = unsafe {
+            filename
+                .as_ref()
+                .map(|ptr| CStr::from_ptr(ptr).to_string_lossy().to_string())
+        };
+
+        match polar.load_file(&src, filename) {
             Err(err) => {
                 set_error(err);
                 POLAR_FAILURE
@@ -129,7 +141,7 @@ pub extern "C" fn polar_query_from_repl(polar_ptr: *mut Polar) -> *mut Query {
         match polar.new_query_from_repl() {
             Ok(query) => box_ptr!(query),
             Err(e) => {
-                set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
+                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
                 null_mut()
             }
         }
@@ -148,7 +160,7 @@ pub extern "C" fn polar_new_query_from_term(
         match term {
             Ok(term) => box_ptr!(polar.new_query_from_term(term)),
             Err(e) => {
-                set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
+                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
                 null_mut()
             }
         }
@@ -223,7 +235,7 @@ pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_cha
                 },
                 Ok(_) => {
                     set_error(
-                        types::RuntimeError::Serialization {
+                        error::RuntimeError::Serialization {
                             msg: "received bad command".to_string(),
                         }
                         .into(),
@@ -231,7 +243,7 @@ pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_cha
                     POLAR_FAILURE
                 }
                 Err(e) => {
-                    set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
+                    set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
                     POLAR_FAILURE
                 }
             }
@@ -256,7 +268,7 @@ pub extern "C" fn polar_call_result(
             match t {
                 Ok(t) => term = Some(t),
                 Err(e) => {
-                    set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
+                    set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
                     return POLAR_FAILURE;
                 }
             }

@@ -114,12 +114,13 @@ class Polar:
         """Load queued policy files into the knowledge base."""
         self.instances = {}
         while self.load_queue:
-            with open(self.load_queue.pop(0)) as file:
-                self._load_str(file.read())
+            filename = self.load_queue.pop(0)
+            with open(filename) as file:
+                load_str(self.polar, file.read(), filename, self.__run_query)
 
     def _load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
-        load_str(self.polar, string, self.__run_query)
+        load_str(self.polar, string, None, self.__run_query)
 
     def _query_str(self, string):
         self._load_queued_files()
