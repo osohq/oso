@@ -29,6 +29,7 @@ impl Validator for InputValidator {
 
 pub struct Repl {
     editor: Editor<InputValidator>,
+    plain_editor: Editor<()>,
     history: Option<std::path::PathBuf>,
 }
 
@@ -52,14 +53,22 @@ impl Repl {
             }
         }
 
-        Self { editor, history }
+        Self {
+            editor,
+            history,
+            plain_editor: Editor::new(),
+        }
     }
 
-    pub fn input(&mut self, prompt: &str) -> anyhow::Result<String> {
+    pub fn polar_input(&mut self, prompt: &str) -> anyhow::Result<String> {
         let mut input = self.editor.readline(prompt)?;
         self.editor.add_history_entry(input.as_str());
         input.pop(); // remove the trailing ';'
         Ok(input)
+    }
+
+    pub fn plain_input(&mut self, prompt: &str) -> anyhow::Result<String> {
+        Ok(self.plain_editor.readline(prompt)?)
     }
 }
 
@@ -80,14 +89,14 @@ pub fn main() -> anyhow::Result<()> {
     super::load_files(&mut polar, &mut args)?;
     loop {
         // get input
-        let input: String = match repl.input(">> ") {
+        let input: String = match repl.polar_input(">> ") {
             Ok(input) => input,
             Err(e) => {
                 eprintln!("Readline error: {}", e);
                 break;
             }
         };
-        let query = match polar.new_query(&input) {
+        let mut query = match polar.new_query(&input) {
             Err(e) => {
                 println!("Error: {}", e);
                 continue;
@@ -95,12 +104,14 @@ pub fn main() -> anyhow::Result<()> {
             Ok(q) => q,
         };
         let mut has_result = false;
-        for event in query {
+        loop {
+            let event = query.next_event();
             match event {
                 Ok(QueryEvent::Done) => {
                     if !has_result {
                         println!("False");
                     }
+                    break;
                 }
                 Ok(QueryEvent::Result { bindings, .. }) => {
                     println!("True");
@@ -109,7 +120,12 @@ pub fn main() -> anyhow::Result<()> {
                     }
                     has_result = true;
                 }
-                Ok(e) => println!("Event: {:?}", e),
+                Ok(QueryEvent::Debug { message }) => {
+                    println!("{}", message);
+                    let input = repl.plain_input("> ").unwrap();
+                    query.debug_command(input).unwrap();
+                }
+                Ok(e) => println!("Unsupported event: {:?}", e),
                 Err(e) => println!("Error: {:?}", e),
             }
         }
