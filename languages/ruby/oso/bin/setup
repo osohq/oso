@@ -3,4 +3,6 @@ set -euo pipefail
 IFS=$'\n\t'
 set -vx
 
+bundle config local.osohq-polar ../polar
+bundle update --local
 bundle install

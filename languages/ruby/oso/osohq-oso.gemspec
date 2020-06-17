@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require_relative 'lib/osohq/polar/version'
+require_relative 'lib/osohq/oso/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'osohq-polar'
-  spec.version       = Osohq::Polar::VERSION
+  spec.name          = 'osohq-oso'
+  spec.version       = Osohq::Oso::VERSION
   spec.authors       = ['Oso Security']
   spec.email         = ['support@osohq.com']
 
-  spec.summary       = 'Polar language interface.'
+  spec.summary       = 'Oso authorization interface.'
   spec.homepage      = 'https://www.osohq.com/'
   spec.required_ruby_version = Gem::Requirement.new('>= 2.7.0')
 
@@ -23,8 +23,8 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  # Runtime dependencies
-  spec.add_runtime_dependency 'ffi', '~> 1.13'
+  # # Runtime dependencies
+  # spec.add_runtime_dependency 'osohq-polar', '~> 0.1'
 
   # Development dependencies
   spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
