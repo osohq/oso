@@ -1,3 +1,1 @@
---format documentation
---color
---require spec_helper
+../.rspec

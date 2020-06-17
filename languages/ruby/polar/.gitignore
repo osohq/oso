@@ -1,12 +1,1 @@
-/.bundle/
-/.yardoc
-/_yardoc/
-/coverage/
-/doc/
-/pkg/
-/spec/reports/
-/tmp/
-_tmp_
-
-# rspec failure tracking
-.rspec_status
+../.gitignore
