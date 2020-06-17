@@ -1,8 +1,8 @@
 name: Create Release
 on:
   push:
-  #  tags:
-  #    - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+   tags:
+     - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
   version:
@@ -20,7 +20,7 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # needs: version
+    needs: version
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-latest] # Later: windows-latest
@@ -87,56 +87,56 @@ jobs:
   #       with:
   #         name: docs
   #         path: docs/_build/html/
-  # release:
-  #   name: Create release
-  #   runs-on: ubuntu-latest
-  #   needs: [build_wheels]
-  #   steps:
-  #     - name: Set version output
-  #       id: version
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-  #     - name: Download oso wheel from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: wheel
-  #     - name: Zip file
-  #       run: zip --junk-paths -r oso-python.zip wheel/
-  #     # - name: Download docs
-  #     #   uses: actions/download-artifact@v1
-  #     #   with:
-  #     #     name: docs
-  #     # - name: Zip docs
-  #     #   run: zip -r oso-docs.zip docs/
-  #     - name: Create Release
-  #       id: create_release
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-  #       with:
-  #         tag_name: ${{ steps.version.outputs.oso_version }}
-  #         release_name: Release ${{ steps.version.outputs.oso_version }}
-  #         body: |
-  #           Oso Release ${{ steps.version.outputs.oso_version }}
-  #         draft: false
-  #         prerelease: false
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: [build_wheels]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - name: Download oso wheel from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: Zip file
+        run: zip --junk-paths -r oso-python.zip wheel/
+      # - name: Download docs
+      #   uses: actions/download-artifact@v1
+      #   with:
+      #     name: docs
+      # - name: Zip docs
+      #   run: zip -r oso-docs.zip docs/
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ steps.version.outputs.oso_version }}
+          release_name: Release ${{ steps.version.outputs.oso_version }}
+          body: |
+            Oso Release ${{ steps.version.outputs.oso_version }}
+          draft: true
+          prerelease: false
       
-  #     - name: Upload Release Package
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #         asset_path: ./oso-python.zip
-  #         asset_name: oso-python.zip
-  #         asset_content_type: application/zip
-  #     # - name: Upload Release Docs
-  #     #   uses: actions/upload-release-asset@v1
-  #     #   env:
-  #     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #     #   with:
-  #     #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #     #     asset_path: ./oso-docs.zip
-  #     #     asset_name: oso-docs.zip
-  #     #     asset_content_type: application/zip
+      - name: Upload Release Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-python.zip
+          asset_name: oso-python-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      # - name: Upload Release Docs
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+      #     asset_path: ./oso-docs.zip
+      #     asset_name: oso-docs.zip
+      #     asset_content_type: application/zip
