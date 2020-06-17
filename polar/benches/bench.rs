@@ -1,6 +1,6 @@
 //! Polar benchmarking suite
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use std::iter::{once, repeat};
 
@@ -36,7 +36,7 @@ pub fn simple_queries(c: &mut Criterion) {
 /// This basically measures the performance of the rule sorting
 pub fn too_many_predicates(c: &mut Criterion) {
     const TARGET: usize = 10;
-    let make_runner = || {
+    fn make_runner() -> Runner {
         let mut runner = runner_from_query(&format!("f({})", TARGET));
         runner.load_str("f(0);").unwrap();
         for i in 1..=TARGET {
@@ -46,7 +46,7 @@ pub fn too_many_predicates(c: &mut Criterion) {
         }
         runner.expected_result(Bindings::new());
         runner
-    };
+    }
 
     c.bench_function("many_rules f(N) := f(N-1) := ... := f(0)", |b| {
         b.iter_batched(
@@ -108,7 +108,6 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
     let mut group = c.benchmark_group("n_plus_one query");
     for delay in &delays {
         for n in &n_array {
-            group.throughput(Throughput::Elements(*n as u64));
             group.bench_function(
                 BenchmarkId::from_parameter(format!("N={}, cost={}ns", n, delay)),
                 |b| {
