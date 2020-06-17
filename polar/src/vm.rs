@@ -517,6 +517,13 @@ impl PolarVirtualMachine {
 
     /// Comparison operator that essentially performs partial unification.
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+        // TODO (dhatch): These errors could potentially be caused by the user.
+        // rule(foo) :=
+        //    x = {a: 1},
+        //    foo isa x
+        assert!(!matches!(&right.value, Value::InstanceLiteral(_)), "Called isa with bare instance lit!");
+        assert!(!matches!(&right.value, Value::Dictionary(_)), "Called isa with bare dictionary!");
+
         match (&left.value, &right.value) {
             (Value::List(left), Value::List(right)) => {
                 if left.len() == right.len() {
@@ -534,9 +541,7 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // TODO (dhatch:) Remove dict, dict branch
-            (Value::Dictionary(left), Value::Dictionary(right))
-            | (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
+            (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
                 // Check that the left is more specific than the right.
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
@@ -573,8 +578,7 @@ impl PolarVirtualMachine {
                 self.append_goals(goals);
             }
 
-            (Value::ExternalInstance(left), Value::Dictionary(right))
-            | (Value::ExternalInstance(left), Value::Pattern(Pattern::Dictionary(right))) => {
+            (Value::ExternalInstance(left), Value::Pattern(Pattern::Dictionary(right))) => {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
                 for (field, right_value) in right.fields.iter() {
@@ -624,12 +628,11 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (Value::ExternalInstance(left), Value::InstanceLiteral(right))
-            | (Value::ExternalInstance(left), Value::Pattern(Pattern::Instance(right))) => {
+            (Value::ExternalInstance(left), Value::Pattern(Pattern::Instance(right))) => {
                 // Check fields
                 self.push_goal(Goal::Isa {
                     left: Term::new(Value::ExternalInstance(left.clone())),
-                    right: Term::new(Value::Dictionary(right.clone().fields)),
+                    right: Term::new(Value::Pattern(Pattern::Dictionary(right.clone().fields))),
                 })?;
                 // Check class
                 self.push_goal(Goal::IsaExternal {
@@ -1804,10 +1807,10 @@ mod tests {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
-        let right = term!(btreemap! {
+        let right = Pattern::term_as_pattern(&term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
-        });
+        }));
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
@@ -1816,10 +1819,10 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
 
         // Dicts with identical keys and different values DO NOT isa.
-        let right = term!(btreemap! {
+        let right = Pattern::term_as_pattern(&term!(btreemap! {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
-        });
+        }));
         vm.push_goal(Goal::Isa {
             left: left.clone(),
             right,
@@ -1830,7 +1833,7 @@ mod tests {
         // {} isa {}.
         vm.push_goal(Goal::Isa {
             left: term!(btreemap! {}),
-            right: term!(btreemap! {}),
+            right: Pattern::term_as_pattern(&term!(btreemap! {})),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
@@ -1838,7 +1841,7 @@ mod tests {
         // Non-empty dicts should isa against an empty dict.
         vm.push_goal(Goal::Isa {
             left: left.clone(),
-            right: term!(btreemap! {}),
+            right: Pattern::term_as_pattern(&term!(btreemap! {})),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
@@ -1846,7 +1849,7 @@ mod tests {
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
             left: term!(btreemap! {}),
-            right: left.clone(),
+            right: Pattern::term_as_pattern(&left.clone()),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
@@ -1854,7 +1857,7 @@ mod tests {
         // Superset dict isa subset dict.
         vm.push_goal(Goal::Isa {
             left: left.clone(),
-            right: term!(btreemap! {sym!("x") => term!(1)}),
+            right: Pattern::term_as_pattern(&term!(btreemap! {sym!("x") => term!(1)})),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
@@ -1862,7 +1865,7 @@ mod tests {
         // Subset dict isNOTa superset dict.
         vm.push_goal(Goal::Isa {
             left: term!(btreemap! {sym!("x") => term!(1)}),
-            right: left,
+            right: Pattern::term_as_pattern(&left),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);

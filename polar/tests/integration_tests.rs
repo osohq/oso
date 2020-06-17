@@ -896,7 +896,7 @@ fn test_unify_rule_head() {
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 
-    let query = polar.new_query("g(new Foo{a: Foo{a: 1}}, x)").unwrap();
+    let query = polar.new_query("g(new Foo{a: new Foo{a: 1}}, x)").unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 }
