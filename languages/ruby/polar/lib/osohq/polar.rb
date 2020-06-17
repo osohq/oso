@@ -151,20 +151,20 @@ module Osohq
       # Turn a Ruby value into a Polar term.
       # @param x [Object]
       def to_polar_term(x)
-        case x
-        when TrueClass, FalseClass
+        case true
+        when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
           val = { 'Boolean' => x }
-        when Integer
+        when x.instance_of?(Integer)
           val = { 'Integer' => x }
-        when String
+        when x.instance_of?(String)
           val = { 'String' => x }
-        when Array
+        when x.instance_of?(Array)
           val = { 'List' => x.map { |el| to_polar_term(el) } }
-        when Hash
+        when x.instance_of?(Hash)
           val = { 'Dictionary' => { 'fields' => x.transform_values { |v| to_polar_term(v) } } }
-        when Predicate
+        when x.instance_of?(Predicate)
           val = { 'Call' => { 'name' => x.name, 'args' => x.args.map { |el| to_polar_term(el) } } }
-        when Variable
+        when x.instance_of?(Variable)
           # This is supported so that we can query for unbound variables
           val = { 'Symbol' => x }
         else
