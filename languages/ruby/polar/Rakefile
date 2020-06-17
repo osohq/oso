@@ -1,21 +1,9 @@
 # frozen_string_literal: true
 
-require 'fileutils'
-
 require 'bundler/gem_tasks'
 require 'rspec/core/rake_task'
-require 'ffi'
 
 RSpec::Core::RakeTask.new(:spec)
 
 task default: :spec
 
-task :dylib do
-  root = File.expand_path(File.join(__FILE__, '../../../..'))
-  dylib = File.join(root, "target/debug/libpolar.#{::FFI::Platform::LIBSUFFIX}")
-  ext_dir = File.join(File.dirname(__FILE__), 'ext/osohq-polar/')
-  Dir.chdir(root) do
-    `cargo build --all-features`
-    FileUtils.copy dylib, ext_dir, preserve: true
-  end
-end

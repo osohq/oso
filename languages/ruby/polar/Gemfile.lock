@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     osohq-polar (0.1.0)
+      ffi (~> 1.13)
 
 GEM
   remote: https://rubygems.org/
@@ -83,7 +84,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  ffi (~> 1.13)
   osohq-polar!
   pry-byebug (~> 3.9.0)
   rake (~> 12.0)

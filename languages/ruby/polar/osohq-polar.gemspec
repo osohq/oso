@@ -9,12 +9,10 @@ Gem::Specification.new do |spec|
   spec.email         = ['support@osohq.com']
 
   spec.summary       = 'Polar language interface.'
-  spec.homepage      = 'https://osohq.com/'
+  spec.homepage      = 'https://www.osohq.com/'
   spec.required_ruby_version = Gem::Requirement.new('>= 2.7.0')
 
   spec.metadata['homepage_uri'] = spec.homepage
-  spec.metadata['source_code_uri'] = 'https://github.com/osohq/oso'
-  spec.metadata['changelog_uri'] = 'https://github.com/osohq/oso/blob/master/CHANGELOG.md'
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
@@ -24,4 +22,13 @@ Gem::Specification.new do |spec|
   spec.bindir        = 'exe'
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
+
+  # Runtime dependencies
+  spec.add_runtime_dependency 'ffi', '~> 1.13'
+
+  # Development dependencies
+  spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
+  spec.add_development_dependency 'rake', '~> 12.0'
+  spec.add_development_dependency 'rspec', '~> 3.0'
+  spec.add_development_dependency 'solargraph', '~> 0.39.8'
 end
