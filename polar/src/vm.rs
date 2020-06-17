@@ -928,7 +928,7 @@ impl PolarVirtualMachine {
                 return Ok(self.make_external(literal_value, instance_id));
             }
             Operator::Cut => self.push_goal(Goal::Cut {
-                    choice_index: self.choices.len() - 1,
+                choice_index: self.choices.len() - 1,
             })?,
             Operator::Isa => {
                 assert_eq!(args.len(), 2);
