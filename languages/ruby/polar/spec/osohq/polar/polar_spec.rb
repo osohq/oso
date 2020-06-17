@@ -400,6 +400,7 @@ RSpec.describe Osohq::Polar::Polar do
         end
       end)
     end
+
     it 'can return a list' do
       subject.register_class(Actor)
       subject.load('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
