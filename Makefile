@@ -2,7 +2,7 @@
 
 PYTHON_POLAR_WHEEL := compat_testing/oso-0.0.4-py3-none-any.whl
 
-test: rust-test python-test
+test: rust-test python-test ruby-test
 
 rust-test:
 	cargo test
@@ -16,6 +16,9 @@ python-build: rust-build
 python-test: python-build
 	$(MAKE) -C languages/python test
 	python examples/expenses-py/app.py
+
+ruby-test:
+	$(MAKE) -C languages/ruby/polar test
 
 docs-test: python-build
 	$(MAKE) -C languages/python/docs test
