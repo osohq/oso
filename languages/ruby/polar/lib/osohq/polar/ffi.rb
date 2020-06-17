@@ -25,6 +25,12 @@ module Osohq
           Rust.free(ptr) unless ptr.null?
         end
       end
+      # Defined upfront to fix Ruby loading issues.
+      class Error < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr)
+        end
+      end
 
       # TODO(gj): document
       class Polar < ::FFI::AutoPointer
@@ -173,10 +179,6 @@ module Osohq
 
       # TODO(gj): document
       class Error < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr)
-        end
-
         def to_s
           @to_s ||= read_string.force_encoding('UTF-8')
         end
