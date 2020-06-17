@@ -49,13 +49,11 @@ where
                 query
                     .call_result(call_id, external_call_handler(attribute, args))
                     .unwrap();
-            },
+            }
             QueryEvent::MakeExternal {
                 instance_id,
-                instance
-            } => {
-                make_external_handler(instance_id, instance)
-            },
+                instance,
+            } => make_external_handler(instance_id, instance),
             QueryEvent::Debug { message } => {
                 query.debug_command(debug_handler(&message)).unwrap();
             }
@@ -379,7 +377,10 @@ fn test_instance_lookup() {
     let mut polar = Polar::new();
     // Q: Not sure if this should be allowed? I can't get (new a{x: 1}).x to parse, but that might
     // be the only thing we should permit
-    assert_eq!(qext(&mut polar, "new a{x: 1}.x = 1", vec![value!(1)]).len(), 1);
+    assert_eq!(
+        qext(&mut polar, "new a{x: 1}.x = 1", vec![value!(1)]).len(),
+        1
+    );
 }
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>

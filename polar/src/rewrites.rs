@@ -231,12 +231,18 @@ mod tests {
         let mut term = parse_query("new Foo { x: bar.y }").unwrap();
         assert_eq!(term.to_polar(), "new Foo{x: bar.y}");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar, y(), _value_2), new (Foo{x: _value_2}, _instance_1), _instance_1");
+        assert_eq!(
+            term.to_polar(),
+            ".(bar, y(), _value_2), new (Foo{x: _value_2}, _instance_1), _instance_1"
+        );
 
         let mut term = parse_query("f(new Foo { x: bar.y })").unwrap();
         assert_eq!(term.to_polar(), "f(new Foo{x: bar.y})");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar, y(), _value_4), new (Foo{x: _value_4}, _instance_3), f(_instance_3)");
+        assert_eq!(
+            term.to_polar(),
+            ".(bar, y(), _value_4), new (Foo{x: _value_4}, _instance_3), f(_instance_3)"
+        );
     }
 
     #[test]

@@ -909,7 +909,7 @@ impl PolarVirtualMachine {
                 let instance_id = self.new_id();
                 literal_term.value = Value::ExternalInstance(ExternalInstance {
                     instance_id,
-                    literal: Some(literal_value.clone())
+                    literal: Some(literal_value.clone()),
                 });
 
                 self.bind(&result, &literal_term);

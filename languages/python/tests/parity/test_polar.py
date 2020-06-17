@@ -266,8 +266,12 @@ def test_isa(qeval, qvar, externals):
 
 def test_nested_isa(qeval, qvar, externals):
     # TODO Need instance literal pattern here.
-    assert qeval("new MyClass{x: new MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}")
-    assert not qeval("new MyClass{x: new MyClass{x: 1}, y: 2} isa MyClass{x: MyClass{y: 2}}")
+    assert qeval(
+        "new MyClass{x: new MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}"
+    )
+    assert not qeval(
+        "new MyClass{x: new MyClass{x: 1}, y: 2} isa MyClass{x: MyClass{y: 2}}"
+    )
 
 
 def test_field_unification(qeval):
