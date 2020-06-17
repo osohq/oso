@@ -45,7 +45,7 @@ impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
         Self(Parameter {
             name: Some(arg.0),
-            specializer: Some(Pattern::term_as_pattern(&arg.1)),
+            specializer: Some(arg.1),
         })
     }
 }
@@ -63,7 +63,7 @@ impl From<Value> for TestHelper<Parameter> {
         } else {
             Self(Parameter {
                 name: None,
-                specializer: Some(Pattern::term_as_pattern(&Term::new(name))),
+                specializer: Some(Term::new(name)),
             })
         }
     }

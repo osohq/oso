@@ -302,6 +302,6 @@ mod tests {
     fn test_parse_isa() {
         let term = parse_query("{} isa {}").unwrap();
         assert_eq!(term.to_polar(), r#"{} isa {}"#);
-        let term = parse_query("{x: 1} isa {}").unwrap();
+        let _term = parse_query("{x: 1} isa {}").unwrap();
     }
 }

@@ -7,4 +7,4 @@ class Env:
         yield os.environ[variable]
 
 
-api.register_class(Env)
+api.Polar().register_class(Env)
