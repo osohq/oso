@@ -38,11 +38,9 @@ pub fn too_many_predicates(c: &mut Criterion) {
     const TARGET: usize = 10;
     fn make_runner() -> Runner {
         let mut runner = runner_from_query(&format!("f({})", TARGET));
-        runner.load_str("f(0);").unwrap();
+        runner.load("f(0);").unwrap();
         for i in 1..=TARGET {
-            runner
-                .load_str(&format!("f({}) := f({});", i, i - 1))
-                .unwrap();
+            runner.load(&format!("f({}) := f({});", i, i - 1)).unwrap();
         }
         runner.expected_result(Bindings::new());
         runner
@@ -115,7 +113,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                         || {
                             let mut runner =
                                 runner_from_query("has_grandchild_called(Person{}, \"bert\")");
-                            runner.load_str(policy).unwrap();
+                            runner.load(policy).unwrap();
                             n_results(&mut runner, *n);
                             runner.external_cost = Some(std::time::Duration::new(0, *delay));
                             runner
@@ -174,14 +172,14 @@ impl Runner {
     }
 
     fn next(&mut self) -> QueryEvent {
-        self.polar.query(&mut self.query).expect("query errored")
+        self.query.next_event().expect("query errored")
     }
 
     fn run(&mut self) {
         loop {
             let event = self.next();
             match event {
-                QueryEvent::Result { bindings } => return self.handle_result(bindings),
+                QueryEvent::Result { bindings, .. } => return self.handle_result(bindings),
                 QueryEvent::Done if self.expected_result.is_some() => panic!("Result expected"),
                 QueryEvent::Done => break,
                 QueryEvent::MakeExternal { .. } => {}
@@ -202,8 +200,7 @@ impl Runner {
     }
 
     fn handle_external_isa(&mut self, call_id: u64) {
-        self.polar
-            .external_question_result(&mut self.query, call_id, true)
+        self.query.question_result(call_id, true)
     }
 
     fn handle_external_call(&mut self, call_id: u64) {
@@ -215,9 +212,7 @@ impl Runner {
                 std::thread::sleep(cost);
             }
         }
-        self.polar
-            .external_call_result(&mut self.query, call_id, result)
-            .unwrap();
+        self.query.call_result(call_id, result).unwrap();
     }
 
     #[cfg(not(feature = "repl"))]

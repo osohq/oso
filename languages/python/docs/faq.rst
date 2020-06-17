@@ -53,7 +53,7 @@ and `dataloaders <https://github.com/graphql/dataloader>`_ for `GraphQL <https:/
 
 Here we will show how these patterns can be leveraged in oso.
 
-**Option 1.**  Implement a lookup method that accepts as input a list of keys.
+**Option 1.**  Implement a lookup method that accepts as input a list.
 
 For example:
 
@@ -61,7 +61,7 @@ For example:
 
     class Person:
         @classmethod
-        def lookup_children(cls, ids: List[int]]):
+        def batch_lookup_children(cls, ids: List[Person]]):
             # select * from people where id in ids
             return children
 
@@ -69,7 +69,7 @@ For example:
 
     has_grandchild_called(grandparent: Person, name) :=
         children = grandparent.children, # gets the _list_ of children
-        grandchild in Person.lookup_children(children.id),
+        grandchild in Person.batch_lookup_children(children),
         grandchild.name = name;
 
 This has the benefit of being the simplest, and most explicit. But does not
