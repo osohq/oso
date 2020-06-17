@@ -7,12 +7,12 @@ ffibuilder = FFI()
 lib_dirs = {
     "DEVELOPMENT": "../../target/debug",
     "RELEASE": "../../target/release",
-    "LINUX": "native",
+    "CI": "native",
 }
 include_dirs = {
     "DEVELOPMENT": "../../polar",
     "RELEASE": "../../polar",
-    "LINUX": "native",
+    "CI": "native",
 }
 env = os.environ.get("ENV", "DEVELOPMENT")
 lib = lib_dirs[env] + "/libpolar.a"  # @TODO: Windows

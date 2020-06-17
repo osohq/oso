@@ -1,5 +1,6 @@
 name: Development
-on: [push]
+on:
+  push:
 
 jobs:
   test:
