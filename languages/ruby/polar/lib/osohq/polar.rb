@@ -175,6 +175,7 @@ module Osohq
 
       # @param term [Term]
       # @return [Object]
+      # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
       def to_ruby(term)
         tag = term.tag
         value = term.value
@@ -187,18 +188,10 @@ module Osohq
           value['fields'].transform_values { |v| to_ruby(Term.new(v)) }
         when 'ExternalInstance'
           get_instance(value['instance_id'])
-        when 'InstanceLiteral'
-          # TODO(gj): Should InstanceLiterals ever be making it to Ruby?
-          # convert instance literals to external instances
-          cls_name = value['tag']
-          fields = value['fields']['fields']
-          make_instance(cls_name, fields: fields)
         when 'Call'
           Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(Term.new(a)) })
-        when 'Symbol'
-          raise PolarRuntimeError
         else
-          raise 'Unimplemented!'
+          raise UnexpectedPolarTypeError, tag
         end
       end
 

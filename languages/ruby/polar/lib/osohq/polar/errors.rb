@@ -23,6 +23,7 @@ module Osohq
     class InvalidCallError < PolarRuntimeError; end
     class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
+    class UnexpectedPolarTypeError < PolarRuntimeError; end
 
     class OperationalError < Error; end
     class UnknownError < OperationalError; end
