@@ -56,8 +56,6 @@ RSpec.describe Osohq::Polar::Polar do
 
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
-      # puts "#{Osohq::Polar::Term.new(subject.to_polar_term(actor))}"
-      # puts "#{subject.to_polar_term(actor)}"
       polar_term = Osohq::Polar::Term.new(subject.to_polar_term(actor))
       ruby_term = subject.to_ruby(polar_term)
       expect(ruby_term).to eq(actor)
