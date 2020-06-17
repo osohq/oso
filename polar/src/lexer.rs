@@ -1,5 +1,8 @@
-use super::types::{ErrorContext, ParseError, Source, SrcPos, Symbol};
+use super::error::{ErrorContext, ParseError};
+use super::types::{Source, Symbol};
 use std::str::{CharIndices, FromStr};
+
+pub type SrcPos = (usize, usize);
 
 // Take a location in a string and return the row and column.
 pub fn loc_to_pos(src: &str, loc: usize) -> SrcPos {
