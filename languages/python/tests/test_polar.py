@@ -376,10 +376,7 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedToken) as e:
         polar._load_str(rules)
-    assert (
-        str(e.value)
-        == "did not expect to find the token '1' at line 2, column 5"
-    )
+    assert str(e.value) == "did not expect to find the token '1' at line 2, column 5"
 
     # ExtraToken -- not sure what causes this
 
