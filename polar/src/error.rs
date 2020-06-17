@@ -129,13 +129,18 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let context = match self {
             Self::IntegerOverflow { token, context, .. } => {
-                write!(f, "'{}' caused an integer overflow", token)?;
+                write!(f, "'{}' caused an integer overflow", token.escape_debug())?;
                 context
             }
             Self::InvalidTokenCharacter {
                 token, c, context, ..
             } => {
-                write!(f, "'{}' is not a valid character. Found in {}", c, token)?;
+                write!(
+                    f,
+                    "'{}' is not a valid character. Found in {}",
+                    c.escape_debug(),
+                    token.escape_debug()
+                )?;
                 context
             }
             Self::InvalidToken { context, .. } => {
@@ -150,18 +155,26 @@ impl fmt::Display for ParseError {
                 context
             }
             Self::UnrecognizedToken { token, context, .. } => {
-                write!(f, "did not expect to find the token '{}'", token)?;
+                write!(
+                    f,
+                    "did not expect to find the token '{}'",
+                    token.escape_debug()
+                )?;
                 context
             }
             Self::ExtraToken { token, context, .. } => {
-                write!(f, "did not expect to find the token '{}'", token)?;
+                write!(
+                    f,
+                    "did not expect to find the token '{}'",
+                    token.escape_debug()
+                )?;
                 context
             }
             Self::ReservedWord { token, context, .. } => {
                 write!(
                     f,
                     "{} is a reserved Polar word and cannot be used here",
-                    token
+                    token.escape_debug()
                 )?;
                 context
             }

@@ -8,6 +8,12 @@ from .exceptions import (
     PolarException,
     PolarOperationalException,
     PolarRuntimeException,
+    IntegerOverflow,
+    InvalidTokenCharacter,
+    InvalidToken,
+    UnrecognizedEOF,
+    UnrecognizedToken,
+    ExtraToken,
 )
 
 
@@ -27,12 +33,27 @@ def get_error():
         message = err["formatted"]
 
         if kind == "Parse":
-            return ParserException(message, data)
+            return _parse_error(message, data)
         elif kind == "Runtime":
-            return PolarRuntimeException(message)
+            return PolarRuntimeException(message, data)
         elif kind == "Operational":
-            return PolarOperationalException(message)
+            return PolarOperationalException(message, data)
         elif kind == "Parameter":
-            return PolarApiException(message)
+            return PolarApiException(message, data)
     finally:
         lib.string_free(err_s)
+
+
+def _parse_error(message, data):
+    """Map parsing errors."""
+    kind = [*data][0]
+    data = data[kind]
+    parse_errors = {
+        "ExtraToken": ExtraToken(message, data),
+        "IntegerOverflow": IntegerOverflow(message, data),
+        "InvalidToken": InvalidToken(message, data),
+        "InvalidTokenCharacter": InvalidTokenCharacter(message, data),
+        "UnrecognizedEOF": UnrecognizedEOF(message, data),
+        "UnrecognizedToken": UnrecognizedToken(message, data),
+    }
+    return parse_errors.get(kind, ParserException(message, data))

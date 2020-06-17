@@ -322,17 +322,16 @@ def test_load_and_query():
         p._load_str("g(1); ?= g(2);")
 
 
-@pytest.mark.xfail(reason="do we really want this test?")
 def test_parser_errors(polar):
     # IntegerOverflow
     rules = """
     f(a) := a = 18446744073709551616;
     """
-    with pytest.raises(exceptions.ParserException) as e:
+    with pytest.raises(exceptions.IntegerOverflow) as e:
         polar._load_str(rules)
     assert (
         str(e.value)
-        == "('18446744073709551616', {'source': {'filename': None, 'src': '\\n    f(a) := a = 18446744073709551616;\\n    '}, 'row': 1, 'column': 16})"
+        == "'18446744073709551616' caused an integer overflow at line 2, column 17"
     )
 
     # InvalidTokenCharacter
@@ -340,22 +339,22 @@ def test_parser_errors(polar):
     f(a) := a = "this is not
     allowed";
     """
-    with pytest.raises(exceptions.ParserException) as e:
+    with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar._load_str(rules)
     assert (
         str(e.value)
-        == "('this is not', '\\n', {'source': {'filename': None, 'src': '\\n    f(a) := a = \"this is not\\n    allowed\";\\n    '}, 'row': 1, 'column': 28})"
+        == "'\\n' is not a valid character. Found in this is not at line 2, column 29"
     )
 
     rules = """
     f(a) := a = "this is not allowed\0
     """
 
-    with pytest.raises(exceptions.ParserException) as e:
+    with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar._load_str(rules)
     assert (
         str(e.value)
-        == "('this is not allowed', '\\x00', {'source': {'filename': None, 'src': '\\n    f(a) := a = \"this is not allowed'}, 'row': 1, 'column': 16})"
+        == "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
     )
 
     # InvalidToken -- not sure what causes this
@@ -364,11 +363,11 @@ def test_parser_errors(polar):
     rules = """
     f(a)
     """
-    with pytest.raises(exceptions.ParserException) as e:
+    with pytest.raises(exceptions.UnrecognizedEOF) as e:
         polar._load_str(rules)
     assert (
         str(e.value)
-        == "{'source': {'filename': None, 'src': '\\n    f(a)\\n    '}, 'row': 1, 'column': 8}"
+        == "hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9"
     )
 
     # UnrecognizedToken
@@ -379,7 +378,7 @@ def test_parser_errors(polar):
         polar._load_str(rules)
     assert (
         str(e.value)
-        == "('1', {'source': {'filename': None, 'src': '\\n    1;\\n    '}, 'row': 1, 'column': 4})"
+        == "did not expect to find the token '1' at line 2, column 5"
     )
 
     # ExtraToken -- not sure what causes this
