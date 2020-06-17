@@ -1,11 +1,11 @@
-# Osohq::Polar
+# Osohq::Oso
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'osohq-polar'
+gem 'osohq-oso'
 ```
 
 And then execute:
@@ -14,7 +14,7 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install osohq-polar
+    $ gem install osohq-oso
 
 ## Development
 

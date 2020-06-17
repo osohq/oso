@@ -51,7 +51,7 @@ RSpec.describe Osohq::Polar::Polar do
     it 'converts predicates in both directions' do
       subject.load('f(x) := x = pred(1, 2);')
       expect(qvar(subject, 'f(x)', 'x')).to eq([Osohq::Polar::Predicate.new('pred', args: [1, 2])])
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Predicate.new('pred', args: [1, 2])])).to_a).to eq([{}])
+      expect(subject.query_pred('f', args: [Osohq::Polar::Predicate.new('pred', args: [1, 2])]).to_a).to eq([{}])
     end
 
     it 'converts Ruby instances in both directions' do
@@ -65,13 +65,13 @@ RSpec.describe Osohq::Polar::Polar do
       actor = Actor.new('sam')
       widget = Widget.new(1)
       subject.load('allow(actor, resource) := actor.widget.id = resource.id;')
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [actor, widget])).to_a.length).to eq 1
+      expect(subject.query_pred('allow', args: [actor, widget]).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
       subject.load('widgets(actor, x) := x = actor.widgets.id;')
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('widgets', args: [actor, Osohq::Polar::Variable.new('x')])).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
+      expect(subject.query_pred('widgets', args: [actor, Osohq::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
   end
 
@@ -404,12 +404,12 @@ RSpec.describe Osohq::Polar::Polar do
     it 'can return a list' do
       subject.register_class(Actor)
       subject.load('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('allow', args: [Actor.new, 'join', 'party'])).to_a).to eq([{}])
+      expect(subject.query_pred('allow', args: [Actor.new, 'join', 'party']).to_a).to eq([{}])
     end
 
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
-      expect(subject.query_pred(Osohq::Polar::Predicate.new('f', args: [Osohq::Polar::Variable.new('a')])).to_a).to eq(
+      expect(subject.query_pred('f', args: [Osohq::Polar::Variable.new('a')]).to_a).to eq(
         [{ 'a' => 1 }, { 'a' => 2 }, { 'a' => 3 }]
       )
     end
