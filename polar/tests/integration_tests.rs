@@ -513,18 +513,6 @@ fn unify_predicates() {
     assert!(qeval(&mut polar, "k(1)"));
 }
 
-#[test]
-fn test_isa_predicate() {
-    let mut polar = Polar::new();
-    polar
-        .load("isa(x, y, x: (y)); isa(x, y) := isa(x, y, x);")
-        .unwrap();
-    assert!(qeval(&mut polar, "isa(1, 1)"));
-    assert!(qnull(&mut polar, "isa(1, 2)"));
-    assert!(qeval(&mut polar, "isa({x: 1, y: 2}, {y: 2})"));
-    assert!(qnull(&mut polar, "isa({x: 1, y: 2}, {x: 2})"));
-}
-
 /// Test that rules are executed in the correct order.
 #[test]
 fn test_rule_order() {
@@ -720,7 +708,17 @@ fn test_in() {
 }
 
 #[test]
-// currently panics because you can't use keyword operators as non-operator symbols in a policy right now
+fn test_isa() {
+    let mut polar = Polar::new();
+    qnull(&mut polar, "x = 1, y = 2, x isa y");
+    qeval(&mut polar, "x = 1, y = 1, x isa y");
+
+    qeval(&mut polar, "x = {foo: 1}, x isa {foo: 1}");
+    qnull(&mut polar, "x = {foo: 1}, x isa {foo: 1, bar: 2}");
+    qnull(&mut polar, "x = {foo: 1}, x isa {foo: 2}");
+}
+
+#[test]
 fn test_keyword_bug() {
     let polar = Polar::new();
     let result = polar.load("g(a) := a.new(b);").unwrap_err();
