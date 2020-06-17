@@ -11,6 +11,29 @@ pub use display::*;
 
 pub use to_polar::*;
 
+use crate::types::{Node, Trace};
+use std::fmt::Write;
+
+pub fn draw(trace: &Trace, nest: usize) -> String {
+    let mut res = String::new();
+    for _ in 0..nest {
+        res.push_str("  ");
+    }
+    match &trace.node {
+        Node::Term(t) => write!(&mut res, "{}", t.to_polar()).unwrap(),
+        Node::Rule(r) => write!(&mut res, "{}", r.to_polar()).unwrap(),
+    }
+    res.push_str(" [\n");
+    for c in &trace.children {
+        res.push_str(&draw(c, nest + 1));
+    }
+    for _ in 0..nest {
+        res.push_str("  ");
+    }
+    res.push_str("]\n");
+    res
+}
+
 pub mod display {
     use std::fmt;
 

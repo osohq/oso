@@ -577,6 +577,18 @@ impl Sources {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum Node {
+    Rule(Rule),
+    Term(Term),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Trace {
+    pub node: Node,
+    pub children: Vec<Trace>,
+}
+
 #[derive(Default)]
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
@@ -586,6 +598,7 @@ pub struct KnowledgeBase {
     gensym_counter: AtomicU64,
     // For call IDs, instance IDs, symbols, etc.
     id_counter: AtomicU64,
+    pub inline_queries: Vec<Term>,
 }
 
 impl KnowledgeBase {
@@ -596,6 +609,7 @@ impl KnowledgeBase {
             sources: Sources::default(),
             id_counter: AtomicU64::new(1),
             gensym_counter: AtomicU64::new(1),
+            inline_queries: vec![],
         }
     }
 
@@ -623,6 +637,7 @@ impl KnowledgeBase {
 
 pub type Bindings = HashMap<Symbol, Term>;
 
+#[allow(clippy::large_enum_variant)]
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
@@ -667,6 +682,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
+        trace: Option<Trace>,
     },
 }
 

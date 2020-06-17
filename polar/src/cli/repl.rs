@@ -102,7 +102,7 @@ pub fn main() -> anyhow::Result<()> {
                         println!("False");
                     }
                 }
-                Ok(QueryEvent::Result { bindings }) => {
+                Ok(QueryEvent::Result { bindings, .. }) => {
                     println!("True");
                     for (k, v) in bindings {
                         println!("\t{:?} = {:?}", k, v);

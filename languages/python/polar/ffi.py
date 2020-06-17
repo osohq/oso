@@ -75,22 +75,16 @@ def manage_query(query):
 def load_str(polar, string, do_query):
     """Load a Polar string, checking that all inline queries succeed."""
     string = to_c_str(string)
-    load = check_result(lib.polar_new_load(polar, string))
-    try:
-        _check_inline_queries(polar, load, do_query)
-    finally:
-        lib.load_free(load)
+    check_result(lib.polar_load(polar, string))
 
-
-def _check_inline_queries(polar, load, do_query):
+    # check inline queries
     while True:
-        query = ffi.new("polar_Query **")
-        check_result(lib.polar_load(polar, load, query))
-        if is_null(query[0]):  # Load is done
+        query = lib.polar_next_inline_query(polar)
+        if is_null(query):  # Load is done
             break
         else:
             try:
-                next(do_query(query[0]))
+                next(do_query(query))
             except StopIteration:
                 raise PolarRuntimeException("Inline query in file failed.")
 
@@ -104,9 +98,9 @@ def external_call(polar, query, call_id, value):
     """Make an external call and propagate FFI errors."""
     if value is None:
         value = ffi.NULL
-    check_result(lib.polar_external_call_result(polar, query, call_id, value))
+    check_result(lib.polar_call_result(query, call_id, value))
 
 
 def external_answer(polar, query, call_id, answer):
     answer = 1 if answer else 0
-    check_result(lib.polar_external_question_result(polar, query, call_id, answer))
+    check_result(lib.polar_question_result(query, call_id, answer))

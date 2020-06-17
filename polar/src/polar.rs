@@ -21,7 +21,7 @@ use super::parser;
 // types linked to it). There is no global state (except in some ffi details) so you can have multiple
 // instances of polar and it's not a problem.
 
-// With an Instance you can call polar_load_str() to load some polar code into the knowledge base.
+// With an Instance you can call polar_load() to load some polar code into the knowledge base.
 // With an Instance you can call polar_new_query() or polar_new_query_from_predicate() to create a
 // query object that can be used to execute a query against the knowledge base.
 
@@ -31,7 +31,7 @@ use super::parser;
 // Running a query looks something like this.
 
 // polar = polar_new();
-// polar_load_str(polar, "foo(1);foo(2);");
+// polar_load(polar, "foo(1);foo(2);");
 // query = polar_new_query(polar, "foo(x)");
 // event = polar_query(query);
 // while event != Event::Done {
@@ -121,6 +121,24 @@ pub struct Query {
     done: bool,
 }
 
+impl Query {
+    pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
+        self.vm.run()
+    }
+
+    pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
+        self.vm.external_call_result(call_id, value)
+    }
+
+    pub fn question_result(&mut self, call_id: u64, result: bool) {
+        self.vm.external_question_result(call_id, result)
+    }
+
+    pub fn debug_command(&mut self, command: String) -> PolarResult<()> {
+        self.vm.debug_command(&command)
+    }
+}
+
 // Query as an iterator returns `None` after the first time `Done` is seen
 impl Iterator for Query {
     type Item = PolarResult<QueryEvent>;
@@ -137,12 +155,6 @@ impl Iterator for Query {
     }
 }
 
-#[derive(Default)]
-pub struct Load {
-    lines: Vec<parser::Line>,
-    src_id: u64,
-}
-
 #[derive(Clone, Default)]
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -155,26 +167,21 @@ impl Polar {
         }
     }
 
-    pub fn new_load(&self, src: &str) -> PolarResult<Load> {
-        let mut kb = self.kb.write().unwrap();
+    pub fn load(&self, src: &str) -> PolarResult<()> {
         let source = Source {
             filename: None,
             src: src.to_owned(),
         };
         let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
         lines.reverse();
+        let mut kb = self.kb.write().unwrap();
         let src_id = kb.new_id();
         kb.sources.add_source(source, src_id);
-        Ok(Load { lines, src_id })
-    }
-
-    pub fn load(&self, load: &mut Load) -> PolarResult<Option<Query>> {
-        while let Some(line) = load.lines.pop() {
+        while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(mut rule) => {
                     let name = rule.name.clone();
-                    let mut kb = self.kb.write().unwrap();
-                    rewrite_rule(&mut rule, &mut kb, load.src_id);
+                    rewrite_rule(&mut rule, &mut kb, src_id);
                     let generic_rule = kb.rules.entry(name.clone()).or_insert(GenericRule {
                         name,
                         rules: vec![],
@@ -182,22 +189,17 @@ impl Polar {
                     generic_rule.rules.push(rule);
                 }
                 parser::Line::Query(term) => {
-                    return Ok(Some(self.new_query_from_term(term)));
+                    kb.inline_queries.push(term);
                 }
             }
         }
 
-        Ok(None)
+        Ok(())
     }
 
-    pub fn load_str(&self, src: &str) -> PolarResult<()> {
-        let mut load = self.new_load(src)?;
-        while let Some(_query) = self.load(&mut load)? {
-            // Queries are ignored in `load_str`.
-            continue;
-        }
-
-        Ok(())
+    pub fn next_inline_query(&self) -> Option<Query> {
+        let term = { self.kb.write().unwrap().inline_queries.pop() };
+        term.map(|t| self.new_query_from_term(t))
     }
 
     pub fn new_query(&self, src: &str) -> PolarResult<Query> {
@@ -248,27 +250,6 @@ impl Polar {
 
     // @TODO: Direct load_rules endpoint.
 
-    pub fn query(&self, query: &mut Query) -> PolarResult<QueryEvent> {
-        query.vm.run()
-    }
-
-    pub fn external_call_result(
-        &self,
-        query: &mut Query,
-        call_id: u64,
-        value: Option<Term>,
-    ) -> PolarResult<()> {
-        query.vm.external_call_result(call_id, value)
-    }
-
-    pub fn debug_command(&self, query: &mut Query, command: String) -> PolarResult<()> {
-        query.vm.debug_command(&command)
-    }
-
-    pub fn external_question_result(&self, query: &mut Query, call_id: u64, result: bool) {
-        query.vm.external_question_result(call_id, result)
-    }
-
     // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&self) -> u64 {
         self.kb.read().unwrap().new_id()
@@ -283,6 +264,6 @@ mod tests {
     fn can_load_and_query() {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1");
-        let _ = polar.load_str("f(x);");
+        let _ = polar.load("f(x);");
     }
 }
