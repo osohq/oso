@@ -1346,10 +1346,10 @@ impl PolarVirtualMachine {
 
                 // Unify the arguments with the formal parameters.
                 for (arg, param) in args.iter().zip(params.iter()) {
-                    if let Some(name) = &param.name {
+                    if let Some(right) = &param.parameter {
                         goals.push(Goal::Unify {
                             left: arg.clone(),
-                            right: Term::new(Value::Symbol(name.clone())),
+                            right: right.clone(),
                         });
                     }
                     if let Some(specializer) = &param.specializer {

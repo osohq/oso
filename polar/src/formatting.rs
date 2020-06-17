@@ -312,12 +312,12 @@ pub mod to_polar {
 
     impl ToPolarString for Parameter {
         fn to_polar(&self) -> String {
-            match (&self.name, &self.specializer) {
-                (Some(name), Some(specializer)) => {
-                    format!("{}: {}", name.to_polar(), specializer.to_polar())
+            match (&self.parameter, &self.specializer) {
+                (Some(parameter), Some(specializer)) => {
+                    format!("{}: {}", parameter.to_polar(), specializer.to_polar())
                 }
                 (None, Some(specializer)) => specializer.to_polar(),
-                (Some(name), None) => name.to_polar(),
+                (Some(parameter), None) => parameter.to_polar(),
                 (None, None) => panic!("Invalid specializer"),
             }
         }

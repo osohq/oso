@@ -389,16 +389,16 @@ Exp<T>: Term = {
 
 Parameter: Parameter = {
     <specializer:Exp5<Term>> => {
-        if let Term{value: Value::Symbol(name), ..} = specializer {
-            Parameter{name: Some(name), specializer: None}
+        if let Term{value: Value::Symbol(_), ..} = specializer {
+            Parameter{parameter: Some(specializer), specializer: None}
         } else {
-            Parameter{name: None, specializer: Some(specializer)}
+            Parameter{parameter: None, specializer: Some(specializer)}
         }
     },
     // parenthesized specializers can be arbitrary expressions
     <name:Name> ":" "(" <specializer:TermExp> ")" => {
         Parameter {
-            name: Some(name),
+            parameter: Some(Term::new(Value::Symbol(name))),
             specializer: Some(specializer),
         }
     },
@@ -409,16 +409,16 @@ Parameter: Parameter = {
         if let Term{value: Value::Symbol(class_name), ..} = specializer {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name, fields: Dictionary{fields}};
-            Parameter{name: Some(name), specializer: Some(Term{id: 0, offset, value: Value::InstanceLiteral(instance_literal)})}
+            Parameter{parameter: Some(Term::new(Value::Symbol(name))), specializer: Some(Term{id: 0, offset, value: Value::InstanceLiteral(instance_literal)})}
         } else {
-            Parameter{name: Some(name), specializer: Some(specializer)}
+            Parameter{parameter: Some(Term::new(Value::Symbol(name))), specializer: Some(specializer)}
         }
     },
     <name:Name> ":" <specializer:InstanceLiteral<Term>> => {
-        Parameter{name: Some(name), specializer: Some(specializer)}
+        Parameter{parameter: Some(Term::new(Value::Symbol(name))), specializer: Some(specializer)}
     },
     <specializer:InstanceLiteral<Term>> => {
-        Parameter{name: None, specializer: Some(specializer)}
+        Parameter{parameter: None, specializer: Some(specializer)}
     },
 };
 
