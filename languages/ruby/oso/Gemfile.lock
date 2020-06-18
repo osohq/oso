@@ -1,7 +1,7 @@
 GIT
   remote: https://github.com/osohq/oso.git
-  revision: 760d63ea2857c162ac207565ea270c42c5bb8b51
-  branch: leina/ruby_prototype
+  revision: 245f36ce19eb16242ab8ab7ee39e7fba5aac53b9
+  branch: leina/oso_extras
   specs:
     osohq-polar (0.1.0)
       ffi (~> 1.13)
