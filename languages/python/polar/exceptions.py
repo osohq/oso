@@ -11,7 +11,7 @@ class PolarException(Exception):
 
     def __init__(self, message, error=None):
         super(PolarException, self).__init__(message)
-        self.__inner = error
+        self._inner = error
 
 
 class ParserException(PolarException):
