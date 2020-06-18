@@ -182,7 +182,10 @@ mod tests {
         let mut rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "f(a, c) := a.b(c);");
         rewrite_rule(&mut rule, &mut kb, 0);
-        assert_eq!(rule.to_polar(), "f(a, c) := .(a, b(c), _value_1), _value_1;");
+        assert_eq!(
+            rule.to_polar(),
+            "f(a, c) := .(a, b(c), _value_1), _value_1;"
+        );
 
         // Nested lookups
         let rules = parse_rules("f(a, c, e) := a.b(c.d(e.f));").unwrap();
@@ -231,7 +234,10 @@ mod tests {
         let mut term = parse_query("f(Foo { x: bar.y })").unwrap();
         assert_eq!(term.to_polar(), "f(Foo{x: bar.y})");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar, y(), _value_2), f(Foo{x: _value_2})");
+        assert_eq!(
+            term.to_polar(),
+            ".(bar, y(), _value_2), f(Foo{x: _value_2})"
+        );
     }
 
     #[test]

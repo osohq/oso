@@ -287,8 +287,16 @@ pub mod to_polar {
                     )
                 }
                 // n-ary operators
-                And => format_args(self.operator, &self.args, &format!("{} ", self.operator.to_polar())),
-                Or => format_args(self.operator, &self.args, &format!(" {} ", self.operator.to_polar())),
+                And => format_args(
+                    self.operator,
+                    &self.args,
+                    &format!("{} ", self.operator.to_polar()),
+                ),
+                Or => format_args(
+                    self.operator,
+                    &self.args,
+                    &format!(" {} ", self.operator.to_polar()),
+                ),
             }
         }
     }
