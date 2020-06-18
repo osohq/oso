@@ -372,6 +372,25 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
     assert qeval("Booler{}.whats_up() = true")
 
 
+def test_numbers_from_external_call(polar, qeval, qvar, query):
+    class Numberer:
+        def give_me_an_int(self):
+            yield 1
+
+        def give_me_a_float(self):
+            yield 1.234
+
+    polar.register_class(Numberer)
+
+    result = qvar("Numberer{}.give_me_an_int() = var", "var", one=True)
+    assert result == 1
+    assert qeval("Numberer{}.give_me_an_int() = 1")
+
+    result = qvar("Numberer{}.give_me_a_float() = var", "var", one=True)
+    assert result == 1.234
+    assert qeval("Numberer{}.give_me_a_float() = 1.234")
+
+
 def test_arities(tell, qeval):
     tell("f(1);")
     tell("f(x, y);")

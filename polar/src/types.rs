@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, HashMap};
+use std::convert::TryFrom;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -221,9 +222,61 @@ impl Pattern {
     }
 }
 
+pub type Float = ordered_float::OrderedFloat<f64>;
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq, Hash)]
+pub enum Numeric {
+    Integer(i64),
+    Float(Float),
+}
+
+impl PartialEq for Numeric {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(self.partial_cmp(other), Some(std::cmp::Ordering::Equal))
+    }
+}
+
+impl PartialOrd for Numeric {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        // compare the integer `i` and the float `f`
+        // if `swap` then do `f.partial_cmp(i)` otherwise do `i.partial_cmp(f)`
+        let cmp_and_swap = |i: i64, f: Float, swap: bool| {
+            if let Ok(i) = u32::try_from(i) {
+                // integer and float are equal if they are within Ɛ of each other
+                if (f.into_inner() - f64::from(i)).abs() <= f64::EPSILON {
+                    Some(std::cmp::Ordering::Equal)
+                } else if swap {
+                    f.into_inner().partial_cmp(&f64::from(i))
+                } else {
+                    f64::from(i).partial_cmp(&f)
+                }
+            } else {
+                None
+            }
+        };
+        match (*self, *other) {
+            (Self::Integer(left), Self::Integer(right)) => left.partial_cmp(&right),
+            (Self::Integer(i), Self::Float(f)) => cmp_and_swap(i, f, false),
+            (Self::Float(f), Self::Integer(i)) => cmp_and_swap(i, f, true),
+            (Self::Float(left), Self::Float(right)) => left.partial_cmp(&right),
+        }
+    }
+}
+
+impl From<i64> for Numeric {
+    fn from(other: i64) -> Self {
+        Self::Integer(other)
+    }
+}
+impl From<f64> for Numeric {
+    fn from(other: f64) -> Self {
+        Self::Float(other.into())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Value {
-    Integer(i64),
+    Number(Numeric),
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
@@ -243,7 +296,7 @@ impl Value {
     {
         // the match does the recursive calling of map
         let mapped = match self {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {
+            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {
                 self.clone()
             }
             Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
@@ -368,7 +421,7 @@ impl Term {
         let walk_children = f(self);
         if walk_children {
             match self.value {
-                Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+                Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
                 Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.walk_mut(f)),
                 Value::Call(ref mut predicate) => {
                     predicate.args.iter_mut().for_each(|a| a.walk_mut(f))
@@ -638,12 +691,12 @@ mod tests {
             args: vec![Term {
                 id: 2,
                 offset: 0,
-                value: Value::Integer(0),
+                value: value!(0),
             }],
         };
         assert_eq!(
             serde_json::to_string(&pred).unwrap(),
-            r#"{"name":"foo","args":[{"id":2,"offset":0,"value":{"Integer":0}}]}"#
+            r#"{"name":"foo","args":[{"id":2,"offset":0,"value":{"Number":{"Integer":0}}}]}"#
         );
         let event = QueryEvent::ExternalCall {
             call_id: 2,
@@ -653,7 +706,7 @@ mod tests {
                 Term {
                     id: 2,
                     offset: 0,
-                    value: Value::Integer(0),
+                    value: value!(0),
                 },
                 Term {
                     id: 3,
@@ -666,11 +719,11 @@ mod tests {
         let term = Term {
             id: 0,
             offset: 0,
-            value: Value::Integer(1),
+            value: value!(1),
         };
         eprintln!("{}", serde_json::to_string(&term).unwrap());
         let mut fields = BTreeMap::new();
-        fields.insert(Symbol::new("hello"), Term::new(Value::Integer(1234)));
+        fields.insert(Symbol::new("hello"), term!(1234));
         fields.insert(
             Symbol::new("world"),
             Term::new(Value::String("something".to_owned())),

@@ -38,7 +38,7 @@ pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::Term;
+    use crate::types::{Numeric, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -135,6 +135,15 @@ pub mod display {
                     write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
                 }
                 g => write!(fmt, "{:?}", g),
+            }
+        }
+    }
+
+    impl fmt::Display for Numeric {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::Integer(i) => write!(f, "{}", i),
+                Self::Float(float) => write!(f, "{}", float),
             }
         }
     }
@@ -379,7 +388,7 @@ pub mod to_polar {
     impl ToPolarString for Value {
         fn to_polar(&self) -> String {
             match self {
-                Value::Integer(i) => format!("{}", i),
+                Value::Number(i) => format!("{}", i),
                 Value::String(s) => format!("\"{}\"", s),
                 Value::Boolean(b) => {
                     if *b {

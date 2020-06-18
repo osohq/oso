@@ -144,8 +144,10 @@ class Polar:
         """ Convert polar terms to python values """
         value = v["value"]
         tag = [*value][0]
-        if tag in ["Integer", "String", "Boolean"]:
+        if tag in ["String", "Boolean"]:
             return value[tag]
+        elif tag == "Number":
+            return [*value[tag].values()][0]
         elif tag == "List":
             return [self._to_python(e) for e in value[tag]]
         elif tag == "Dictionary":
@@ -174,7 +176,9 @@ class Polar:
         if type(v) == bool:
             val = {"Boolean": v}
         elif type(v) == int:
-            val = {"Integer": v}
+            val = {"Number": {"Integer": v}}
+        elif type(v) == float:
+            val = {"Number": {"Float": v}}
         elif type(v) == str:
             val = {"String": v}
         elif type(v) == list:
