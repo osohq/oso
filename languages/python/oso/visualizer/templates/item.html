@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div>
+  {% if action_actors %}
+  <h2>Actions</h2>
+
+  <ul>
+    {% for action, actors in action_actors.items() %}
+    <a href={{ action[1] }}>
+      <li>
+        {{ action[0]|safe }}
+
+        <ul>
+          {% for actor in actors %}
+          <li>
+            <a href={{ actor[1] }}>
+              {{ actor[0]|safe }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
+    </a>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if actors %}
+  <h2>Actors</h2>
+
+  <ul>
+    {% for actor in actors %}
+    <li>
+      <a href={{ actor[1] }}>
+        {{ actor[0]|safe }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if actor_actions %}
+  <h2>Actors</h2>
+
+  <ul>
+    {% for actor, actions in actor_actions.items() %}
+    <a href={{ actor[1] }}>
+      <li>
+        {{ actor[0]|safe }}
+
+        <ul>
+          {% for action in actions %}
+          <li>
+            <a href={{ action[1] }}>
+              {{ action[0]|safe }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
+    </a>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if resource_actions %}
+  <h2>Resources</h2>
+
+  <ul>
+    {% for resource, actions in resource_actions.items() %}
+    <a href={{ resource[1] }}>
+      <li>
+        {{ resource[0]|safe }}
+
+        <ul>
+          {% for action in actions %}
+          <li>
+            <a href={{ action[1] }}>
+              {{ action[0]|safe }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
+    </a>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if resource_actors %}
+  <h2>Resources</h2>
+
+  <ul>
+    {% for resource, actors in resource_actors.items() %}
+    <a href={{ resource[1] }}>
+      <li>
+        {{ resource[0]|safe }}
+
+        <ul>
+          {% for actor in actors %}
+          <li>
+            <a href={{ actor[1] }}>
+              {{ actor[0]|safe }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
+    </a>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if roles %}
+  <h2>Roles</h2>
+
+  <ul>
+    {% for role in roles %}
+    <li>
+      <a href={{ role[1] }}>
+        {{ role[0]|safe }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if relationships %}
+  <h2>Relationships</h2>
+
+  <ul>
+    {% for relationship in relationships %}
+    <li>
+      <a href={{ relationship[1] }}>
+        {{ relationship[0]|safe }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endblock %}
