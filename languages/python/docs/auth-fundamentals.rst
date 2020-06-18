@@ -40,8 +40,8 @@ a URI or other string, or may be an :ref:`application type <application-types>`.
 
 Actions
 -------
-Actions are the verbs of authorization queries.  They distinguish between
-different kinds of requests for a given resource by indicating what the
+Actions are the verbs of authorization queries. They distinguish between
+different kinds of queries for a given resource by indicating what the
 actor is attempting to do. For a web application, the action might be an
 HTTP request method like ``GET`` or ``POST``.
 
@@ -53,16 +53,18 @@ Policies
 oso evaluates queries using authorization logic contained in **policies**.
 Policies are written as code in a logic programming language called Polar.
 Polar is designed to provide a simple but expressive syntax for authorization
-logic. For more information on Polar, see the :ref:`language documentation <polar>`.
+logic. For more information on Polar, see the :ref:`language documentation <polar>`,
+and for examples of different kinds of policies you can express with it,
+see the :doc:`authorization models </auth-models/index>` section.
 
 Policies are stored in Polar files (extension ``.polar``), which are loaded
 into the authorization engine using the oso :doc:`/application-library/index`.
 Once loaded, policies can be used to evaulate authorization queries.
 
 Policies are made up of :ref:`rules <polar-rules>`. Each rule defines
-a predicate—a statement that is either true or false. In oso, one such
-rule is distinguished, and used to drive the authorization decision:
-the ``allow`` rule.
+a :ref:`predicate <predicates>`—a statement that is either true or false.
+In oso, one such rule is distinguished, and used to drive the authorization
+decision: the ``allow`` rule.
 
 Allow rules
 ===========

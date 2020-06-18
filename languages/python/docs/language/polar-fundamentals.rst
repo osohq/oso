@@ -202,7 +202,7 @@ true or false for a certain set of **arguments**, e.g.,
 
 To determine whether a predicate is true or false with respect to a
 particular knowledge base, we can **query** it from the interactive
-REPL::
+:ref:`REPL <repl>`::
 
   >> father("Artemis", "Zeus");
   True
@@ -236,7 +236,8 @@ query for::
 
 Notice that there is no problem having both a variable and a predicate
 named ``mother``. In Polar, variables cannot be bound to predicates
-(it is a first-order logic language), so they use different namespaces.
+(it is a `first-order logic language <https://en.wikipedia.org/wiki/First-order_logic>`_),
+so they use different namespaces.
 
 Now let's augment our simple facts with some **rules**. Rules are
 like facts, but conditional—they define relations that are true
@@ -310,7 +311,7 @@ let's look in a little more detail at how it executes queries against
 a given set of rules.
 
 Recall that rules have a **head** and an optional **body** (the part
-after a `:=`). If there is no body, we call the rule a **fact**. The head
+after a ``:=``). If there is no body, we call the rule a **fact**. The head
 must contain exactly one predicate, with any number of **parameters**
 in parenthesis; e.g., ``1`` is not a valid head, nor is a bare ``foo``.
 Unlike most non-logic languages, each parameter may be either a variable
@@ -371,7 +372,7 @@ the head of the rule. That unification may or may not bind variables,
 either from the parameter or the argument. Each unification occurs in
 a dynamic environment that contains the bindings from the previous
 unifications. If all of the unifications of the query arguments with
-the parameters in the head succeed, then a recursive query for the body
+the parameters in the head succeed, then a sub-query for the body
 of the rule is executed. The body of a rule may consist of a single
 predicate, or a conjunction of them, or of any of the operators
 described in the :doc:`Polar language reference </language/index>`,
@@ -396,6 +397,8 @@ untaken branch of a disjunction. When backtracking, all variable bindings
 that occurred since the last alternative are undone. If no unexplored
 alternatives remain, the query as a whole fails, and a false result
 is reported.
+
+.. todo a graphical representation of the search procedure.
 
 Summary
 =======

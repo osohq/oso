@@ -106,6 +106,8 @@ in a Polar file and terminated with a semicolon. Instances of any of the
 data types above may be defined as facts, but the most important kind
 of facts are predicates, which we'll discuss next.
 
+.. _predicates:
+
 Predicates
 ----------
 
@@ -200,6 +202,8 @@ bound to ``1`` or unbound.
 Unification is also used to determine if queries match rule ``HEAD`` s,
 and if the ``BODY`` of rules match other facts in the knowledge base.
 We will cover unification further in :doc:`polar-queries`.
+
+.. todo add a little table with unification examples, esp. w/dictionaries.
 
 Conjunction (and)
 ^^^^^^^^^^^^^^^^^
