@@ -11,8 +11,6 @@ module Osohq
   module Polar
     # TODO(gj): document
     class Polar
-      attr_reader :instances, :calls
-
       def initialize
         @ffi_instance = FFI::Polar.create
         @classes = {}
@@ -216,9 +214,7 @@ module Osohq
 
       private
 
-      #### PRIVATE FIELDS + METHODS ####
-
-      attr_reader :ffi_instance, :classes, :constructors, :load_queue
+      attr_reader :calls, :classes, :constructors, :ffi_instance, :instances, :load_queue
 
       # @param instance [Object]
       # @param id [Integer]
@@ -287,6 +283,10 @@ module Osohq
         end
       end
 
+      private
+
+      attr_reader :ffi_instance, :fiber, :polar
+
       def call_result(result, call_id:)
         ffi_instance.call_result(result, call_id: call_id)
       end
@@ -312,10 +312,6 @@ module Osohq
         # @TODO: polar line numbers in errors once polar errors are better.
         # raise PolarRuntimeError(f"Error calling {attribute}")
       end
-
-      private
-
-      attr_reader :ffi_instance, :polar, :fiber
 
       def start
         @fiber = Fiber.new do
