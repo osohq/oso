@@ -61,7 +61,7 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Value>
         term.id = kb.new_id();
         kb.sources.add_term_source(&term, src_id);
     }
-    term.map_in_place(&mut |term| {
+    term.walk_mut(&mut |term| {
         // First, rewrite this term in place, maybe returning a lookup
         // lookup gets added to rewrites list
         if let Some(lookup) = rewrite(&mut term.value, kb) {

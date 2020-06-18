@@ -924,7 +924,7 @@ impl PolarVirtualMachine {
 
                 self.bind(&result, &literal_term);
 
-                literal_value.map_in_place(&mut |t| {
+                literal_value.walk_mut(&mut |t| {
                     *t = self.deref(t);
                     true
                 });
