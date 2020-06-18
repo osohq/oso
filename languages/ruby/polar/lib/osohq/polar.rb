@@ -11,21 +11,19 @@ module Osohq
   module Polar
     # TODO(gj): document
     class Polar
-      attr_reader :instances, :calls
-
       def initialize
         @ffi_instance = FFI::Polar.create
+        @calls = {}
         @classes = {}
         @constructors = {}
         @instances = {}
-        @calls = {}
         @load_queue = Set.new
       end
 
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
-      def load(str)
+      def load_str(str)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         ffi_instance.load(str)
@@ -41,15 +39,10 @@ module Osohq
         end
       end
 
-      def query_str(str)
-        load_queued_files
-        query_ffi_instance = ffi_instance.new_query_from_str(str)
-        Query.new(query_ffi_instance, polar: self).results
-      end
-
       # @param name [String]
       # @param args [Array<Object>]
       def query_pred(name, args:)
+        clear_query_state
         load_queued_files
         pred = Predicate.new(name, args: args)
         query_ffi_instance = ffi_instance.new_query_from_term(to_polar_term(pred))
@@ -57,6 +50,7 @@ module Osohq
       end
 
       def repl
+        clear_query_state
         load_queued_files
         loop do
           query = Query.new(ffi_instance.new_query_from_repl, polar: self)
@@ -79,15 +73,28 @@ module Osohq
         constructors[cls.name] = from_polar
       end
 
+      # @return [Integer]
+      def new_id
+        ffi_instance.new_id
+      end
+
+      # @param id [Integer]
+      # @return [Boolean]
+      def instance?(id)
+        instances.key? id
+      end
+
       # @param method [#to_sym]
       # @param args [Array<Hash>]
       # @param call_id [Integer]
       # @param instance_id [Integer]
       def register_call(method, args:, call_id:, instance_id:)
-        args = args.map { |a| to_ruby(Term.new(a)) }
+        return if calls.key?(call_id)
+
+        args = args.map { |a| to_ruby(a) }
         instance = get_instance(instance_id)
         result = instance.__send__(method, *args)
-        result = [result].to_enum unless result.instance_of? Enumerator # Call must be a generator.
+        result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
       rescue ArgumentError, NoMethodError
         raise InvalidCallError
@@ -97,13 +104,12 @@ module Osohq
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
       def make_instance(cls_name, fields:, id: nil)
-        raise MissingConstructorError, cls_name unless constructors.key?(cls_name)
-
-        fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(Term.new(v))] }]
-        instance = if constructors[cls_name] == :new
+        constructor = get_constructor(cls_name)
+        fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(v)] }]
+        instance = if constructor == :new
                      get_class(cls_name).__send__(:new, **fields)
                    else
-                     constructors[cls_name].call(**fields)
+                     constructor.call(**fields)
                    end
         cache_instance(instance, id: id)
       rescue StandardError => e
@@ -112,7 +118,6 @@ module Osohq
 
       # Clear the KB but retain all registered classes and constructors.
       def clear
-        # TODO(gj): Should we clear out instance + call caches as well?
         @ffi_instance = FFI::Polar.create
       end
 
@@ -140,9 +145,10 @@ module Osohq
 
       # @param instance_id [Integer]
       # @param class_tag [String]
+      # @return [Boolean]
       def isa?(instance_id, class_tag:)
-        cls = get_class(class_tag)
         instance = get_instance(instance_id)
+        cls = get_class(class_tag)
         instance.is_a? cls
       rescue PolarRuntimeError
         false
@@ -150,46 +156,58 @@ module Osohq
 
       # Turn a Ruby value into a Polar term.
       # @param x [Object]
+      # @return [Hash<String, Object>]
       def to_polar_term(x)
-        case true
-        when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
-          val = { 'Boolean' => x }
-        when x.instance_of?(Integer)
-          val = { 'Integer' => x }
-        when x.instance_of?(String)
-          val = { 'String' => x }
-        when x.instance_of?(Array)
-          val = { 'List' => x.map { |el| to_polar_term(el) } }
-        when x.instance_of?(Hash)
-          val = { 'Dictionary' => { 'fields' => x.transform_values { |v| to_polar_term(v) } } }
-        when x.instance_of?(Predicate)
-          val = { 'Call' => { 'name' => x.name, 'args' => x.args.map { |el| to_polar_term(el) } } }
-        when x.instance_of?(Variable)
-          # This is supported so that we can query for unbound variables
-          val = { 'Symbol' => x }
-        else
-          val = { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
-        end
+        val = case true
+              when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
+                { 'Boolean' => x }
+              when x.instance_of?(Integer)
+                { 'Integer' => x }
+              when x.instance_of?(String)
+                { 'String' => x }
+              when x.instance_of?(Array)
+                { 'List' => x.map { |el| to_polar_term(el) } }
+              when x.instance_of?(Hash)
+                { 'Dictionary' => { 'fields' => x.transform_values { |v| to_polar_term(v) } } }
+              when x.instance_of?(Predicate)
+                { 'Call' => { 'name' => x.name, 'args' => x.args.map { |el| to_polar_term(el) } } }
+              when x.instance_of?(Variable)
+                # This is supported so that we can query for unbound variables
+                { 'Symbol' => x }
+              else
+                { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
+              end
         { 'id' => 0, 'offset' => 0, 'value' => val }
       end
 
-      # @param term [Term]
+      # @param id [Integer]
+      # @return [Hash]
+      # @raise [StopIteration] if the call has been exhausted.
+      def next_call_result(id)
+        to_polar_term(calls[id].next)
+      end
+
+      # @param data [Hash<String, Object>]
+      # @option data [Integer] :id
+      # @option data [Integer] :offset Character offset of the term in its source string.
+      # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(term)
-        tag = term.tag
-        value = term.value
+      def to_ruby(data)
+        id = data['id']
+        offset = data['offset']
+        tag, value = data['value'].first
         case tag
         when 'Integer', 'String', 'Boolean'
           value
         when 'List'
-          value.map { |el| to_ruby(Term.new(el)) }
+          value.map { |el| to_ruby(el) }
         when 'Dictionary'
-          value['fields'].transform_values { |v| to_ruby(Term.new(v)) }
+          value['fields'].transform_values { |v| to_ruby(v) }
         when 'ExternalInstance'
           get_instance(value['instance_id'])
         when 'Call'
-          Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(Term.new(a)) })
+          Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(a) })
         else
           raise UnexpectedPolarTypeError, tag
         end
@@ -197,15 +215,26 @@ module Osohq
 
       private
 
-      #### PRIVATE FIELDS + METHODS ####
+      attr_reader :calls, :classes, :constructors, :ffi_instance, :instances, :load_queue
 
-      attr_reader :ffi_instance, :classes, :constructors, :load_queue
+      # Clear the instance and call caches
+      def clear_query_state
+        calls.clear
+        instances.clear
+      end
+
+      def query_str(str)
+        clear_query_state
+        load_queued_files
+        query_ffi_instance = ffi_instance.new_query_from_str(str)
+        Query.new(query_ffi_instance, polar: self).results
+      end
 
       # @param instance [Object]
       # @param id [Integer]
       # @return [Integer]
       def cache_instance(instance, id: nil)
-        id = ffi_instance.new_id if id.nil?
+        id = new_id if id.nil?
         instances[id] = instance
         id
       end
@@ -214,9 +243,16 @@ module Osohq
       # @return [Object]
       # @raise [UnregisteredInstanceError] if the ID has not been registered.
       def get_instance(id)
-        raise UnregisteredInstanceError, id unless instances.key? id
+        raise UnregisteredInstanceError, id unless instance? id
 
         instances[id]
+      end
+
+      def load_queued_files
+        load_queue.reject! do |file|
+          File.open(file) { |f| load_str(f.read) }
+          true
+        end
       end
 
       # @param name [String]
@@ -228,12 +264,14 @@ module Osohq
         classes[name]
       end
 
-      def load_queued_files
-        instances.clear
-        load_queue.reject! do |file|
-          File.open(file) { |f| load(f.read) }
-          true
-        end
+      # @param name [String]
+      # @return [Symbol] if constructor is the default of `:new`.
+      # @return [Proc] if a custom constructor was registered.
+      # @raise [UnregisteredConstructorError] if the constructor has not been registered.
+      def get_constructor(name)
+        raise MissingConstructorError, name unless constructors.key? name
+
+        constructors[name]
       end
     end
 
@@ -258,6 +296,10 @@ module Osohq
         end
       end
 
+      private
+
+      attr_reader :ffi_instance, :fiber, :polar
+
       def call_result(result, call_id:)
         ffi_instance.call_result(result, call_id: call_id)
       end
@@ -271,15 +313,10 @@ module Osohq
       # @param call_id [Integer]
       # @param instance_id [Integer]
       def handle_call(method, args:, call_id:, instance_id:)
-        unless polar.calls.key?(call_id)
-          polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
-        end
-
-        # Return the next result of the call.
-        begin
-          value = polar.calls[call_id].next
-          stringified = JSON.dump(polar.to_polar_term(value))
-          call_result(stringified, call_id: call_id)
+        polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
+        begin # Return the next result of the call.
+          result = JSON.dump(polar.next_call_result(call_id))
+          call_result(result, call_id: call_id)
         rescue StopIteration
           call_result(nil, call_id: call_id)
         end
@@ -289,10 +326,6 @@ module Osohq
         # raise PolarRuntimeError(f"Error calling {attribute}")
       end
 
-      private
-
-      attr_reader :ffi_instance, :polar, :fiber
-
       def start
         @fiber = Fiber.new do
           loop do
@@ -301,10 +334,10 @@ module Osohq
             when 'Done'
               break
             when 'Result'
-              Fiber.yield(event.data['bindings'].transform_values { |v| polar.to_ruby(Term.new(v)) })
+              Fiber.yield(event.data['bindings'].transform_values { |v| polar.to_ruby(v) })
             when 'MakeExternal'
               id = event.data['instance_id']
-              raise DuplicateInstanceRegistrationError, id if polar.instances.key?(id)
+              raise DuplicateInstanceRegistrationError, id if polar.instance? id
 
               cls_name = event.data['instance']['tag']
               fields = event.data['instance']['fields']['fields']
@@ -347,21 +380,6 @@ module Osohq
       def initialize(event_data)
         event_data = { event_data => nil } if event_data == 'Done'
         @kind, @data = event_data.first
-      end
-    end
-
-    # Polar term.
-    class Term
-      attr_reader :value, :tag
-
-      # @param data [Hash<String, Object>]
-      # @option data [Integer] :id
-      # @option data [Integer] :offset Character offset of the term in its source string.
-      # @option data [Hash<String, Object>] :value
-      def initialize(data)
-        @id = data['id']
-        @offset = data['offset']
-        @tag, @value = data['value'].first
       end
     end
 

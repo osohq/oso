@@ -11,10 +11,8 @@ RSpec.describe Osohq::Polar::Polar do
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
 
   it 'works' do
-    subject.load('f(1);')
-    results = subject.query_str('f(x)')
-    expect(results.next).to eq({ 'x' => 1 })
-    expect { results.next }.to raise_error StopIteration
+    subject.load_str('f(1);')
+    expect(query(subject, 'f(x)')).to eq([{ 'x' => 1 }])
   end
 
   context 'when converting between Polar and Ruby values' do
@@ -25,6 +23,7 @@ RSpec.describe Osohq::Polar::Polar do
           @id = id
         end
       end)
+      subject.register_class(Widget)
 
       stub_const('Actor', Class.new do
         def initialize(n)
@@ -39,38 +38,35 @@ RSpec.describe Osohq::Polar::Polar do
           [Widget.new(2), Widget.new(3)].to_enum
         end
       end)
-      subject.register_class(Widget)
       subject.register_class(Actor)
     end
 
     it 'converts Polar values into Ruby values' do
-      subject.load('f({x: [1, "two", true], y: {z: false}});')
+      subject.load_str('f({x: [1, "two", true], y: {z: false}});')
       expect(qvar(subject, 'f(x)', 'x', one: true)).to eq({ 'x' => [1, 'two', true], 'y' => { 'z' => false } })
     end
 
     it 'converts predicates in both directions' do
-      subject.load('f(x) := x = pred(1, 2);')
+      subject.load_str('f(x) := x = pred(1, 2);')
       expect(qvar(subject, 'f(x)', 'x')).to eq([Osohq::Polar::Predicate.new('pred', args: [1, 2])])
       expect(subject.query_pred('f', args: [Osohq::Polar::Predicate.new('pred', args: [1, 2])]).to_a).to eq([{}])
     end
 
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
-      polar_term = Osohq::Polar::Term.new(subject.to_polar_term(actor))
-      ruby_term = subject.to_ruby(polar_term)
-      expect(ruby_term).to eq(actor)
+      expect(subject.to_ruby(subject.to_polar_term(actor))).to eq(actor)
     end
 
     it 'returns Ruby instances from external calls' do
       actor = Actor.new('sam')
       widget = Widget.new(1)
-      subject.load('allow(actor, resource) := actor.widget.id = resource.id;')
+      subject.load_str('allow(actor, resource) := actor.widget.id = resource.id;')
       expect(subject.query_pred('allow', args: [actor, widget]).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
-      subject.load('widgets(actor, x) := x = actor.widgets.id;')
+      subject.load_str('widgets(actor, x) := x = actor.widgets.id;')
       expect(subject.query_pred('widgets', args: [actor, Osohq::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
   end
@@ -109,13 +105,15 @@ RSpec.describe Osohq::Polar::Polar do
 
   context '#register_class' do
     it 'registers a Ruby class with Polar' do
-      class Bar
+      pending 'Instance literal parsing updates'
+
+      stub_const('Bar', Class.new do
         def y
           'y'
         end
-      end
+      end)
 
-      class Foo
+      stub_const('Foo', Class.new do
         attr_reader :a
 
         def initialize(a)
@@ -159,8 +157,9 @@ RSpec.describe Osohq::Polar::Polar do
         def h
           true
         end
-      end
+      end)
 
+      subject.register_class(Bar)
       subject.register_class(Foo) { Foo.new('A') }
       expect(qvar(subject, 'Foo{}.a = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'Foo{}.a() = x', 'x', one: true)).to eq('A')
@@ -177,7 +176,7 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     it 'respects the Ruby inheritance hierarchy for class specialization' do
-      class A
+      stub_const('A', Class.new do
         def a
           'A'
         end
@@ -185,9 +184,9 @@ RSpec.describe Osohq::Polar::Polar do
         def x
           'A'
         end
-      end
+      end)
 
-      class B < A
+      stub_const('B', Class.new(A) do
         def b
           'B'
         end
@@ -195,9 +194,9 @@ RSpec.describe Osohq::Polar::Polar do
         def x
           'B'
         end
-      end
+      end)
 
-      class C < B
+      stub_const('C', Class.new(B) do
         def c
           'C'
         end
@@ -205,20 +204,20 @@ RSpec.describe Osohq::Polar::Polar do
         def x
           'C'
         end
-      end
+      end)
 
-      class X
+      stub_const('X', Class.new do
         def x
           'X'
         end
-      end
+      end)
 
       subject.register_class(A)
       subject.register_class(B)
       subject.register_class(C)
       subject.register_class(X)
 
-      subject.load <<~POLAR
+      subject.load_str <<~POLAR
         test(A{});
         test(B{});
 
@@ -248,25 +247,27 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     context 'animal tests' do
-      class Animal
-        attr_reader :family, :genus, :species
+      before do
+        stub_const('Animal', Class.new do
+          attr_reader :family, :genus, :species
 
-        def initialize(family: nil, genus: nil, species: nil)
-          @family = family
-          @genus = genus
-          @species = species
-        end
+          def initialize(family: nil, genus: nil, species: nil)
+            @family = family
+            @genus = genus
+            @species = species
+          end
+        end)
+        subject.register_class(Animal)
       end
+
       let(:wolf) { 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}' }
       let(:dog) { 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
       let(:canine) { 'Animal{genus: "canis", family: "canidae"}' }
       let(:canid) {  'Animal{family: "canidae"}' }
       let(:animal) { 'Animal{}' }
 
-      before(:example) { subject.register_class(Animal) }
-
       it 'can specialize on dict fields' do
-        subject.load <<~POLAR
+        subject.load_str <<~POLAR
           what_is(animal: {genus: "canis"}, r) := r = "canine";
           what_is(animal: {species: "canis lupus", genus: "canis"}, r) := r = "wolf";
           what_is(animal: {species: "canis familiaris", genus: "canis"}, r) := r = "dog";
@@ -277,7 +278,7 @@ RSpec.describe Osohq::Polar::Polar do
       end
 
       it 'can specialize on class fields' do
-        subject.load <<~POLAR
+        subject.load_str <<~POLAR
           what_is(animal: Animal{}, r) := r = "animal";
           what_is(animal: Animal{genus: "canis"}, r) := r = "canine";
           what_is(animal: Animal{family: "canidae"}, r) := r = "canid";
@@ -293,7 +294,7 @@ RSpec.describe Osohq::Polar::Polar do
       end
 
       it 'can specialize with a mix of class and dict fields' do
-        subject.load <<~POLAR
+        subject.load_str <<~POLAR
           what_is(animal: Animal{}, r) := r = "animal_class";
           what_is(animal: Animal{genus: "canis"}, r) := r = "canine_class";
           what_is(animal: {genus: "canis"}, r) := r = "canine_dict";
@@ -326,11 +327,11 @@ RSpec.describe Osohq::Polar::Polar do
   context 'when loading a Polar string' do
     context 'with inline queries' do
       it 'succeeds if all inline queries succeed' do
-        subject.load('f(1); f(2); ?= f(1); ?= !f(3);')
+        subject.load_str('f(1); f(2); ?= f(1); ?= !f(3);')
       end
 
       it 'fails if an inline query fails' do
-        expect { subject.load('g(1); ?= g(2);') }.to raise_error Osohq::Polar::InlineQueryFailedError
+        expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Osohq::Polar::InlineQueryFailedError
       end
     end
 
@@ -338,7 +339,7 @@ RSpec.describe Osohq::Polar::Polar do
       rule = <<~POLAR
         f(a) := a = "this is not allowed\0
       POLAR
-      expect { subject.load(rule) }.to raise_error Osohq::Polar::NullByteInPolarFileError
+      expect { subject.load_str(rule) }.to raise_error Osohq::Polar::NullByteInPolarFileError
     end
   end
 
@@ -348,7 +349,7 @@ RSpec.describe Osohq::Polar::Polar do
       rule = <<~POLAR
         f(a) := a = #{int};
       POLAR
-      expect { subject.load(rule) }.to raise_error do |e|
+      expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::IntegerOverflow
         expect(e.message).to eq(%({"token"=>"#{int}", "loc"=>12, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a) := a = #{int};\\n"}, "row"=>0, "column"=>12}}))
       end
@@ -359,7 +360,7 @@ RSpec.describe Osohq::Polar::Polar do
         f(a) := a = "this is not
         allowed";
       POLAR
-      expect { subject.load(rule) }.to raise_error do |e|
+      expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::InvalidTokenCharacter
         expect(e.message).to eq('{"token"=>"this is not", "c"=>"\n", "loc"=>24, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a) := a = \\"this is not\\nallowed\\";\n"}, "row"=>0, "column"=>24}}')
       end
@@ -372,7 +373,7 @@ RSpec.describe Osohq::Polar::Polar do
       rule = <<~POLAR
         f(a)
       POLAR
-      expect { subject.load(rule) }.to raise_error do |e|
+      expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedEOF
         expect(e.message).to eq('{"loc"=>4, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a)\n"}, "row"=>0, "column"=>4}}')
       end
@@ -382,7 +383,7 @@ RSpec.describe Osohq::Polar::Polar do
       rule = <<~POLAR
         1;
       POLAR
-      expect { subject.load(rule) }.to raise_error do |e|
+      expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedToken
         expect(e.message).to eq('{"token"=>"1", "loc"=>0, "context"=>{"source"=>{"filename"=>nil, "src"=>"1;\n"}, "row"=>0, "column"=>0}}')
       end
@@ -399,11 +400,11 @@ RSpec.describe Osohq::Polar::Polar do
           %w[engineering social admin]
         end
       end)
+      subject.register_class(Actor)
     end
 
     it 'can return a list' do
-      subject.register_class(Actor)
-      subject.load('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
+      subject.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
       expect(subject.query_pred('allow', args: [Actor.new, 'join', 'party']).to_a).to eq([{}])
     end
 
