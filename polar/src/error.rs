@@ -113,6 +113,11 @@ pub enum ParseError {
         loc: usize,
         context: Option<ErrorContext>,
     },
+    InvalidFloat {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -174,6 +179,14 @@ impl fmt::Display for ParseError {
                 write!(
                     f,
                     "{} is a reserved Polar word and cannot be used here",
+                    token.escape_debug()
+                )?;
+                context
+            }
+            Self::InvalidFloat { token, context, .. } => {
+                write!(
+                    f,
+                    "{} was parsed as a float, but is invalid",
                     token.escape_debug()
                 )?;
                 context

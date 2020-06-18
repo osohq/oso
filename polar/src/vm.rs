@@ -1014,36 +1014,45 @@ impl PolarVirtualMachine {
         let right = self.deref(&args[1]).value;
 
         let result: bool;
-        match (op, left, right) {
-            (Operator::Lt, Value::Integer(left), Value::Integer(right)) => {
-                result = left < right;
-            }
-            (Operator::Leq, Value::Integer(left), Value::Integer(right)) => {
-                result = left <= right;
-            }
-            (Operator::Gt, Value::Integer(left), Value::Integer(right)) => {
-                result = left > right;
-            }
-            (Operator::Geq, Value::Integer(left), Value::Integer(right)) => {
-                result = left >= right;
-            }
-            (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
-                result = left == right;
-            }
-            (Operator::Neq, Value::Integer(left), Value::Integer(right)) => {
-                result = left != right;
-            }
-            (op, left, right) => {
+
+        let (left, right) = match (left, right) {
+            (Value::Number(left), Value::Number(right)) => (left, right),
+            (left, right) => {
                 return Err(self.type_error(
                     term,
                     format!(
-                        "{} expects integers, got: {}, {}",
+                        "{} expects numbers, got: {}, {}",
                         op.to_polar(),
                         left.to_polar(),
                         right.to_polar()
                     ),
                 ));
             }
+        };
+
+        match op {
+            Operator::Lt => {
+                result = left < right;
+            }
+            Operator::Leq => {
+                result = left <= right;
+            }
+            Operator::Gt => {
+                result = left > right;
+            }
+            Operator::Geq => {
+                result = left >= right;
+            }
+            Operator::Eq => {
+                result = left == right;
+            }
+            Operator::Neq => {
+                result = left != right;
+            }
+            _ => unreachable!(
+                "operator: {:?} should not be handled by this method, this is a bug",
+                op
+            ),
         }
         if !result {
             self.push_goal(Goal::Backtrack)?;
@@ -1185,7 +1194,7 @@ impl PolarVirtualMachine {
             }
 
             // Unify integers by value.
-            (Value::Integer(left), Value::Integer(right)) => {
+            (Value::Number(left), Value::Number(right)) => {
                 if left != right {
                     self.push_goal(Goal::Backtrack)?;
                 }
@@ -1681,12 +1690,11 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_lists() {
         let mut vm = PolarVirtualMachine::default();
-        let one = Term::new(Value::Integer(1));
-        let two = Term::new(Value::Integer(2));
-        let one_list = Term::new(Value::List(vec![one.clone()]));
-        let one_two_list = Term::new(Value::List(vec![one.clone(), two.clone()]));
-        let two_one_list = Term::new(Value::List(vec![two, one.clone()]));
-        let empty_list = Term::new(Value::List(vec![]));
+        let one = term!(1);
+        let one_list = term!([1]);
+        let one_two_list = term!([1, 2]);
+        let two_one_list = term!([2, 1]);
+        let empty_list = term!([]);
 
         // [] isa []
         vm.push_goal(Goal::Isa {
@@ -2067,7 +2075,7 @@ mod tests {
             body: Term::new(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![
-                    Term::new(Value::Integer(1)),
+                    term!(1),
                     Term::new(Value::Symbol(Symbol("x".to_string()))),
                     Term::new(Value::Symbol(Symbol("x".to_string()))),
                     Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(

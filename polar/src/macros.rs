@@ -141,7 +141,13 @@ macro_rules! op {
 
 impl From<i64> for TestHelper<Value> {
     fn from(other: i64) -> Self {
-        Self(Value::Integer(other))
+        Self(Value::Number(other.into()))
+    }
+}
+
+impl From<f64> for TestHelper<Value> {
+    fn from(other: f64) -> Self {
+        Self(Value::Number(other.into()))
     }
 }
 
@@ -190,7 +196,7 @@ impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
 
 #[macro_export]
 macro_rules! value {
-    ([$($args:expr),+]) => {
+    ([$($args:expr),*]) => {
         $crate::types::Value::List(vec![
             $(term!(value!($args))),*
         ])
