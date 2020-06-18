@@ -19,7 +19,7 @@ module Osohq
 
             yielder << result
           end
-        end
+        end.lazy
       end
 
       private

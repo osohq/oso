@@ -19,6 +19,9 @@ module Osohq
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
+      # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
+      # @raise [InlineQueryFailedError] on the first failed inline query.
+      # @raise [Error] if any of the FFI calls raise one.
       def load_str(str)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
@@ -35,8 +38,11 @@ module Osohq
         end
       end
 
+      # Query for a predicate.
+      #
       # @param name [String]
       # @param args [Array<Object>]
+      # @raise [Error] if the FFI call raises one.
       def query_pred(name, args:)
         clear_query_state
         load_queued_files
@@ -45,6 +51,9 @@ module Osohq
         Query.new(query_ffi_instance, polar: self).results
       end
 
+      # Start a REPL session.
+      #
+      # @raise [Error] if the FFI call raises one.
       def repl
         clear_query_state
         load_queued_files
@@ -61,29 +70,44 @@ module Osohq
         end
       end
 
+      # Register a Ruby class with Polar.
+      #
       # @param cls [Class]
-      # @param from_polar [Object]
+      # @param from_polar [Proc]
       def register_class(cls, &from_polar)
+        # TODO(gj): should this take 3 args: cls (Class), constructor_cls
+        # (Option<Class>) that defaults to cls, and constructor_method
+        # (Option<Symbol>) that defaults to :new?
         classes[cls.name] = cls
         from_polar = :new if from_polar.nil?
         constructors[cls.name] = from_polar
       end
 
+      # Get a unique ID from Polar.
+      #
       # @return [Integer]
+      # @raise [Error] if the FFI call raises one.
       def new_id
         ffi_instance.new_id
       end
 
+      # Check if an instance has been cached.
+      #
       # @param id [Integer]
       # @return [Boolean]
       def instance?(id)
         instances.key? id
       end
 
+      # Register a Ruby method call, wrapping the call result in a generator if
+      # it isn't already one.
+      #
       # @param method [#to_sym]
       # @param args [Array<Hash>]
       # @param call_id [Integer]
       # @param instance_id [Integer]
+      # @raise [InvalidCallError] if the method doesn't exist on the instance or
+      #   the args passed to the method are invalid.
       def register_call(method, args:, call_id:, instance_id:)
         return if calls.key?(call_id)
 
@@ -96,9 +120,12 @@ module Osohq
         raise InvalidCallError
       end
 
+      # Construct and cache a Ruby instance.
+      #
       # @param cls_name [String]
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
+      # @raise [PolarRuntimeError] if instance construction fails.
       def make_instance(cls_name, fields:, id:)
         constructor = get_constructor(cls_name)
         fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(v)] }]
@@ -112,7 +139,8 @@ module Osohq
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
       end
 
-      # Clear the KB but retain all registered classes and constructors.
+      # Replace the current Polar instance but retain all registered classes and
+      # constructors.
       def clear
         @ffi_instance = FFI::Polar.create
       end
@@ -129,6 +157,9 @@ module Osohq
         load_queue << name
       end
 
+      # Check if the left class is more specific than the right class for the
+      # given instance.
+      #
       # @param instance_id [Integer]
       # @param left_tag [String]
       # @param right_tag [String]
@@ -140,6 +171,8 @@ module Osohq
         false
       end
 
+      # Check if instance is an instance of class.
+      #
       # @param instance_id [Integer]
       # @param class_tag [String]
       # @return [Boolean]
@@ -151,7 +184,9 @@ module Osohq
         false
       end
 
-      # Turn a Ruby value into a Polar term.
+      # Turn a Ruby value into a Polar term that's ready to be sent across the
+      # FFI boundary.
+      #
       # @param x [Object]
       # @return [Hash<String, Object>]
       def to_polar_term(x)
@@ -177,6 +212,8 @@ module Osohq
         { 'id' => 0, 'offset' => 0, 'value' => val }
       end
 
+      # Retrieve the next result from a registered call and pass it to {#to_polar_term}.
+      #
       # @param id [Integer]
       # @return [Hash]
       # @raise [StopIteration] if the call has been exhausted.
@@ -184,6 +221,8 @@ module Osohq
         to_polar_term(calls[id].next)
       end
 
+      # Turn a Polar term passed across the FFI boundary into a Ruby value.
+      #
       # @param data [Hash<String, Object>]
       # @option data [Integer] :id
       # @option data [Integer] :offset Character offset of the term in its source string.
@@ -212,14 +251,29 @@ module Osohq
 
       private
 
-      attr_reader :calls, :classes, :constructors, :ffi_instance, :instances, :load_queue
+      # @return [Hash<Integer, Enumerator::Lazy>]
+      attr_reader :calls
+      # @return [Hash<String, Class>]
+      attr_reader :classes
+      # @return [Hash<String, Object>]
+      attr_reader :constructors
+      # @return [FFI::Polar]
+      attr_reader :ffi_instance
+      # @return [Hash<Integer, Object>]
+      attr_reader :instances
+      # @return [Array<String>]
+      attr_reader :load_queue
 
-      # Clear the instance and call caches
+      # Clear the instance and call caches.
       def clear_query_state
         calls.clear
         instances.clear
       end
 
+      # Query for a Polar string.
+      #
+      # @param str [String]
+      # @return [Enumerator::Lazy]
       def query_str(str)
         clear_query_state
         load_queued_files
@@ -227,6 +281,8 @@ module Osohq
         Query.new(query_ffi_instance, polar: self).results
       end
 
+      # Cache a Ruby instance, fetching a {#new_id} if one isn't provided.
+      #
       # @param instance [Object]
       # @param id [Integer]
       # @return [Integer]
@@ -236,6 +292,8 @@ module Osohq
         id
       end
 
+      # Fetch a Ruby instance from the {#instances} cache.
+      #
       # @param id [Integer]
       # @return [Object]
       # @raise [UnregisteredInstanceError] if the ID has not been registered.
@@ -245,6 +303,7 @@ module Osohq
         instances[id]
       end
 
+      # Load all queued files, flushing the {#load_queue}.
       def load_queued_files
         load_queue.reject! do |file|
           File.open(file) { |f| load_str(f.read) }
@@ -252,6 +311,8 @@ module Osohq
         end
       end
 
+      # Fetch a Ruby class from the {#classes} cache.
+      #
       # @param name [String]
       # @return [Class]
       # @raise [UnregisteredClassError] if the class has not been registered.
@@ -261,6 +322,8 @@ module Osohq
         classes[name]
       end
 
+      # Fetch a constructor from the {#constructors} cache.
+      #
       # @param name [String]
       # @return [Symbol] if constructor is the default of `:new`.
       # @return [Proc] if a custom constructor was registered.
@@ -277,16 +340,19 @@ module Osohq
       attr_reader :name, :args
 
       # @param name [String]
-      # @param args [Array]
+      # @param args [Array<Object>]
       def initialize(name, args:)
         @name = name
         @args = args
       end
 
+      # @param other [Predicate]
+      # @return [Boolean]
       def ==(other)
         name == other.name && args == other.args
       end
 
+      # @see #==
       alias eql? ==
     end
 
@@ -299,6 +365,7 @@ module Osohq
         @name = name
       end
 
+      # @return [String]
       def to_s
         name
       end
