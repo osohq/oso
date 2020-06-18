@@ -192,14 +192,14 @@ impl InstanceLiteral {
         }
     }
 
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Term),
+        F: FnMut(&mut Term) -> bool,
     {
         self.fields
             .fields
             .iter_mut()
-            .for_each(|(_, v)| v.map_in_place(f));
+            .for_each(|(_, v)| v.walk_mut(f));
     }
 
     /// Convert all terms in this instance literal to patterns.
@@ -481,38 +481,38 @@ impl Term {
         }
     }
 
-    /// Apply `f` to self.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    /// Does a preorder walk of the term tree, calling F on itself and then walking its children.
+    /// If F returns true walk the children, otherwise stop.
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Self),
+        F: FnMut(&mut Self) -> bool,
     {
-        f(self);
-        // the match does the recursive calling of map
-        match self.value {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_in_place(f)),
-            Value::Call(ref mut predicate) => {
-                predicate.args.iter_mut().for_each(|a| a.map_in_place(f))
-            }
-            Value::Expression(Operation { ref mut args, .. }) => {
-                args.iter_mut().for_each(|term| term.map_in_place(f))
-            }
-            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => fields
-                .fields
-                .iter_mut()
-                .for_each(|(_, v)| v.map_in_place(f)),
-            Value::ExternalInstance(_) => {}
-            Value::Dictionary(Dictionary { ref mut fields }) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
-            }
-            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
-            }
-            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => fields
-                .fields
-                .iter_mut()
-                .for_each(|(_, v)| v.map_in_place(f)),
-        };
+        let walk_children = f(self);
+        if walk_children {
+            match self.value {
+                Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+                Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.walk_mut(f)),
+                Value::Call(ref mut predicate) => {
+                    predicate.args.iter_mut().for_each(|a| a.walk_mut(f))
+                }
+                Value::Expression(Operation { ref mut args, .. }) => {
+                    args.iter_mut().for_each(|term| term.walk_mut(f))
+                }
+                Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
+                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+                Value::ExternalInstance(_) => {}
+                Value::Dictionary(Dictionary { ref mut fields }) => {
+                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+                Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
+                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+                Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
+                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+            };
+        }
     }
 }
 
@@ -553,11 +553,14 @@ impl Parameter {
         }
     }
 
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    /// Does a preorder walk of the parameter terms.
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Term),
+        F: FnMut(&mut Term) -> bool,
     {
-        self.specializer.iter_mut().for_each(|mut a| f(&mut a));
+        self.specializer.iter_mut().for_each(|mut a| {
+            f(&mut a);
+        });
     }
 }
 
@@ -580,15 +583,13 @@ impl Rule {
         }
     }
 
-    /// Apply `f` to value and return a new term.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    /// Does a preorder walk of the rule parameters and body.
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Term),
+        F: FnMut(&mut Term) -> bool,
     {
-        self.params
-            .iter_mut()
-            .for_each(|param| param.map_in_place(f));
-        self.body.map_in_place(f);
+        self.params.iter_mut().for_each(|param| param.walk_mut(f));
+        self.body.walk_mut(f);
     }
 }
 
