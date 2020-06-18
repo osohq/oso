@@ -521,8 +521,14 @@ impl PolarVirtualMachine {
         // rule(foo) :=
         //    x = {a: 1},
         //    foo isa x
-        assert!(!matches!(&right.value, Value::InstanceLiteral(_)), "Called isa with bare instance lit!");
-        assert!(!matches!(&right.value, Value::Dictionary(_)), "Called isa with bare dictionary!");
+        assert!(
+            !matches!(&right.value, Value::InstanceLiteral(_)),
+            "Called isa with bare instance lit!"
+        );
+        assert!(
+            !matches!(&right.value, Value::Dictionary(_)),
+            "Called isa with bare dictionary!"
+        );
 
         match (&left.value, &right.value) {
             (Value::List(left), Value::List(right)) => {

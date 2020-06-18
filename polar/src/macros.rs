@@ -58,7 +58,7 @@ impl From<Value> for TestHelper<Parameter> {
     fn from(name: Value) -> Self {
         Self(Parameter {
             parameter: Some(Term::new(name)),
-            specializer: None
+            specializer: None,
         })
     }
 }

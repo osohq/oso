@@ -11,7 +11,6 @@ pub struct MockExternal {
     calls: HashSet<u64>,
 }
 
-
 impl MockExternal {
     pub fn new() -> Self {
         MockExternal::default()

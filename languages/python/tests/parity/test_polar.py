@@ -208,7 +208,9 @@ def test_external_classes(tell, qeval, qvar, externals):
     assert qeval('new Bar{}.foo = "Bar!"')
 
 
-@pytest.mark.xfail(reason="Doesn't work right now since we don't implement external instance unification.")
+@pytest.mark.xfail(
+    reason="Doesn't work right now since we don't implement external instance unification."
+)
 def test_unify_class_fields(tell, qeval, qvar, externals):
     tell("check(name, new Foo{name: name})")
 

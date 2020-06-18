@@ -63,7 +63,10 @@ where
                 instance_id,
             } => {
                 query
-                    .call_result(call_id, external_call_handler(attribute, args, call_id, instance_id))
+                    .call_result(
+                        call_id,
+                        external_call_handler(attribute, args, call_id, instance_id),
+                    )
                     .unwrap();
             }
             QueryEvent::MakeExternal {
@@ -74,10 +77,7 @@ where
                 call_id,
                 instance_id,
                 class_tag,
-            } => query.question_result(
-                call_id,
-                external_isa_handler(instance_id, class_tag),
-            ),
+            } => query.question_result(call_id, external_isa_handler(instance_id, class_tag)),
             QueryEvent::ExternalIsSubSpecializer {
                 call_id,
                 instance_id,
