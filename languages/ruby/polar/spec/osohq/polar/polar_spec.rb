@@ -105,6 +105,8 @@ RSpec.describe Osohq::Polar::Polar do
 
   context '#register_class' do
     it 'registers a Ruby class with Polar' do
+      pending 'Instance literal parsing updates'
+
       stub_const('Bar', Class.new do
         def y
           'y'
