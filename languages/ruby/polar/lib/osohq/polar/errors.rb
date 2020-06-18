@@ -5,17 +5,21 @@ module Osohq
     # Base error type for the Osohq::Polar library.
     class Error < ::RuntimeError; end
 
-    # Expected to find an FFI error to convert into a Ruby exception, but none was found.
+    # Expected to find an FFI error to convert into a Ruby exception but found none.
     class FFIErrorNotFound < Error; end
 
     # Generic runtime exception.
     class PolarRuntimeError < Error; end
+
     # Errors from across the FFI boundary.
+
     class SerializationError < PolarRuntimeError; end
     class UnsupportedError < PolarRuntimeError; end
     class PolarTypeError < PolarRuntimeError; end
     class StackOverflowError < PolarRuntimeError; end
+
     # Errors originating from this side of the FFI boundary.
+
     class UnregisteredClassError < PolarRuntimeError; end
     class MissingConstructorError < PolarRuntimeError; end
     class UnregisteredInstanceError < PolarRuntimeError; end
