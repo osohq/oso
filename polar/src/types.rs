@@ -470,7 +470,7 @@ impl Term {
         }
     }
 
-    /// Does a preorder walk of the term tree, calling F on itself and then walking it's children.
+    /// Does a preorder walk of the term tree, calling F on itself and then walking its children.
     /// If F returns true walk the children, otherwise stop.
     pub fn walk_mut<F>(&mut self, f: &mut F)
     where
@@ -478,7 +478,6 @@ impl Term {
     {
         let walk_children = f(self);
         if walk_children {
-            // the match does the recursive calling of walk_mut
             match self.value {
                 Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
                 Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.walk_mut(f)),
