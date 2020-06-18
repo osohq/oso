@@ -17,3 +17,7 @@ python-test: python-build
 
 docs-test: python-build
 	$(MAKE) -C languages/python/docs test
+
+fmt:
+	cargo fmt
+	$(MAKE) -C languages/python fmt

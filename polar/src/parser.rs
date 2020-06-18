@@ -106,15 +106,15 @@ mod tests {
         let l = polar::ExpParser::new()
             .parse(Lexer::new(r#"[foo, bar, baz]"#))
             .unwrap();
-        assert_eq!(l.to_polar(), r#"[foo,bar,baz]"#);
+        assert_eq!(l.to_polar(), r#"[foo, bar, baz]"#);
         let exp = polar::ExpParser::new()
             .parse(Lexer::new(r#"foo(a, b(c), "d")"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"foo(a,b(c),"d")"#);
+        assert_eq!(exp.to_polar(), r#"foo(a, b(c), "d")"#);
         let exp2 = polar::ExpParser::new()
-            .parse(Lexer::new(r#"foo.bar(a, b(c.d(e,[f,g])))"#))
+            .parse(Lexer::new(r#"foo.bar(a, b(c.d(e, [f, g])))"#))
             .unwrap();
-        assert_eq!(exp2.to_polar(), r#"foo.bar(a,b(c.d(e,[f,g])))"#);
+        assert_eq!(exp2.to_polar(), r#"foo.bar(a, b(c.d(e, [f, g])))"#);
         let rule = polar::RuleParser::new()
             .parse(Lexer::new(r#"f(x) := g(x);"#))
             .unwrap();
@@ -138,9 +138,9 @@ mod tests {
             .unwrap();
         assert_eq!(exp.to_polar(), r#"!foo"#);
         let exp = polar::ExpParser::new()
-            .parse(Lexer::new(r#"!a,b|c=d==(e+f)/g.h(i)"#))
+            .parse(Lexer::new(r#"!a, b | c = d == (e + f) / g.h(i)"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!a,b|c=d==(e+f)/g.h(i)"#);
+        assert_eq!(exp.to_polar(), r#"!a, b | c = d == (e + f) / g.h(i)"#);
     }
 
     #[test]
@@ -287,6 +287,6 @@ mod tests {
         a(x) := x = new Foo{a: 1};
         "#;
         let results = parse_rules(f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) := x=new Foo{a: 1};"#);
+        assert_eq!(results[0].to_polar(), r#"a(x) := x = new Foo{a: 1};"#);
     }
 }
