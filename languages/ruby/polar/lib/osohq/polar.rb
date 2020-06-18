@@ -97,13 +97,12 @@ module Osohq
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
       def make_instance(cls_name, fields:, id: nil)
-        raise MissingConstructorError, cls_name unless constructors.key?(cls_name)
-
+        constructor = get_constructor(cls_name)
         fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(Term.new(v))] }]
-        instance = if constructors[cls_name] == :new
+        instance = if constructor == :new
                      get_class(cls_name).__send__(:new, **fields)
                    else
-                     constructors[cls_name].call(**fields)
+                     constructor.call(**fields)
                    end
         cache_instance(instance, id: id)
       rescue StandardError => e
@@ -219,6 +218,14 @@ module Osohq
         instances[id]
       end
 
+      def load_queued_files
+        clear
+        load_queue.reject! do |file|
+          File.open(file) { |f| load(f.read) }
+          true
+        end
+      end
+
       # @param name [String]
       # @return [Class]
       # @raise [UnregisteredClassError] if the class has not been registered.
@@ -228,12 +235,14 @@ module Osohq
         classes[name]
       end
 
-      def load_queued_files
-        instances.clear
-        load_queue.reject! do |file|
-          File.open(file) { |f| load(f.read) }
-          true
-        end
+      # @param name [String]
+      # @return [Symbol] if constructor is the default of `:new`.
+      # @return [Proc] if a custom constructor was registered.
+      # @raise [UnregisteredConstructorError] if the constructor has not been registered.
+      def get_constructor(name)
+        raise MissingConstructorError, name unless constructors.key? name
+
+        constructors[name]
       end
     end
 
