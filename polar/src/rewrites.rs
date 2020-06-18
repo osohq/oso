@@ -84,8 +84,10 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Value>
                         and_wrap(arg, rewrite);
                     }
                 }
+                return false;
             }
         }
+        true
     });
 }
 

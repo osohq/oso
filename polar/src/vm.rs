@@ -924,7 +924,10 @@ impl PolarVirtualMachine {
 
                 self.bind(&result, &literal_term);
 
-                literal_value.map_in_place(&mut |t| *t = self.deref(t));
+                literal_value.map_in_place(&mut |t| {
+                    *t = self.deref(t);
+                    true
+                });
                 return Ok(self.make_external(literal_value, instance_id));
             }
             Operator::Cut => self.push_goal(Goal::Cut {
