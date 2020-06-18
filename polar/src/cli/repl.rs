@@ -98,7 +98,7 @@ pub fn main() -> anyhow::Result<()> {
         };
         let mut query = match polar.new_query(&input) {
             Err(e) => {
-                println!("Error: {}", e);
+                println!("{}", e);
                 continue;
             }
             Ok(q) => q,
@@ -126,7 +126,7 @@ pub fn main() -> anyhow::Result<()> {
                     query.debug_command(input).unwrap();
                 }
                 Ok(e) => println!("Unsupported event: {:?}", e),
-                Err(e) => println!("Error: {:?}", e),
+                Err(e) => println!("{}", e),
             }
         }
     }

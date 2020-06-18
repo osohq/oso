@@ -3,10 +3,11 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
+use super::error;
 use super::formatting::draw;
 use super::lexer::make_context;
 use super::types::*;
-use super::ToPolarString;
+use super::{PolarResult, ToPolarString};
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
@@ -268,13 +269,13 @@ impl PolarVirtualMachine {
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
         if self.goals.len() >= MAX_GOALS {
-            return Err(RuntimeError::StackOverflow {
+            return Err(error::RuntimeError::StackOverflow {
                 msg: format!("Goal stack overflow! MAX_GOALS = {}", MAX_GOALS),
             }
             .into());
         }
         if self.goal_counter >= MAX_EXECUTED_GOALS {
-            return Err(RuntimeError::StackOverflow {
+            return Err(error::RuntimeError::StackOverflow {
                 msg: format!(
                     "Goal count exceeded! MAX_EXECUTED_GOALS = {}",
                     MAX_EXECUTED_GOALS
@@ -881,10 +882,7 @@ impl PolarVirtualMachine {
                 } else {
                     return Err(self.type_error(
                         item,
-                        format!(
-                            "can only perform lookups on dicts and instances, this is {:?}",
-                            item.value
-                        ),
+                        format!("can only use `in` on a list, this is {:?}", item.value),
                     ));
                 }
                 self.choose(alternatives);
@@ -924,7 +922,10 @@ impl PolarVirtualMachine {
 
                 self.bind(&result, &literal_term);
 
-                literal_value.map_in_place(&mut |t| *t = self.deref(t));
+                literal_value.walk_mut(&mut |t| {
+                    *t = self.deref(t);
+                    true
+                });
                 return Ok(self.make_external(literal_value, instance_id));
             }
             Operator::Cut => self.push_goal(Goal::Cut {
@@ -1490,14 +1491,14 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn type_error(&self, term: &Term, msg: String) -> PolarError {
+    fn type_error(&self, term: &Term, msg: String) -> error::PolarError {
         let source = { self.kb.read().unwrap().sources.get_source(&term) };
         let context = if let Some(source) = source {
             make_context(&source, term.offset)
         } else {
             None
         };
-        RuntimeError::TypeError {
+        error::RuntimeError::TypeError {
             msg,
             loc: term.offset,
             context,

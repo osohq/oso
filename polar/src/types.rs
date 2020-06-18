@@ -4,133 +4,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ToPolarString;
 use std::collections::{BTreeMap, HashMap};
-use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub type SrcPos = (usize, usize);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ErrorContext {
-    pub source: Source,
-    pub row: usize,
-    pub column: usize,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ParseError {
-    IntegerOverflow {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    InvalidTokenCharacter {
-        token: String,
-        c: char,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    InvalidToken {
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    UnrecognizedEOF {
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    UnrecognizedToken {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    ExtraToken {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    ReservedWord {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-}
-
-// @TODO: Information about the context of the error.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RuntimeError {
-    Serialization {
-        msg: String,
-    },
-    Unsupported {
-        msg: String,
-    },
-    TypeError {
-        msg: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    UnboundVariable {
-        sym: Symbol,
-    },
-    StackOverflow {
-        msg: String,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum OperationalError {
-    Unimplemented(String),
-    Unknown,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Parameter passed to FFI lib function is invalid.
-pub struct ParameterError(pub String);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum PolarError {
-    Parse(ParseError),
-    Runtime(RuntimeError),
-    Operational(OperationalError),
-    Parameter(ParameterError),
-}
-
-impl From<ParseError> for PolarError {
-    fn from(err: ParseError) -> PolarError {
-        PolarError::Parse(err)
-    }
-}
-
-impl From<RuntimeError> for PolarError {
-    fn from(err: RuntimeError) -> PolarError {
-        PolarError::Runtime(err)
-    }
-}
-
-impl From<OperationalError> for PolarError {
-    fn from(err: OperationalError) -> PolarError {
-        PolarError::Operational(err)
-    }
-}
-
-impl From<ParameterError> for PolarError {
-    fn from(err: ParameterError) -> PolarError {
-        PolarError::Parameter(err)
-    }
-}
-
-pub type PolarResult<T> = std::result::Result<T, PolarError>;
-
-impl std::error::Error for PolarError {}
-
-impl fmt::Display for PolarError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = serde_json::to_string(&self).unwrap_or_else(|_| "Unknown".to_string());
-        write!(f, "{}", s)
-    }
-}
+use crate::{error, ToPolarString};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
 pub struct Dictionary {
@@ -192,14 +70,14 @@ impl InstanceLiteral {
         }
     }
 
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Term),
+        F: FnMut(&mut Term) -> bool,
     {
         self.fields
             .fields
             .iter_mut()
-            .for_each(|(_, v)| v.map_in_place(f));
+            .for_each(|(_, v)| v.walk_mut(f));
     }
 
     /// Convert all terms in this instance literal to patterns.
@@ -384,10 +262,10 @@ impl Value {
         f(&mapped)
     }
 
-    pub fn symbol(self) -> Result<Symbol, RuntimeError> {
+    pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
         match self {
             Value::Symbol(name) => Ok(name),
-            _ => Err(RuntimeError::TypeError {
+            _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
                 loc: 0,
                 context: None, // @TODO
@@ -395,10 +273,10 @@ impl Value {
         }
     }
 
-    pub fn instance_literal(self) -> Result<InstanceLiteral, RuntimeError> {
+    pub fn instance_literal(self) -> Result<InstanceLiteral, error::RuntimeError> {
         match self {
             Value::InstanceLiteral(literal) => Ok(literal),
-            _ => Err(RuntimeError::TypeError {
+            _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
                 context: None, // @TODO
@@ -406,10 +284,10 @@ impl Value {
         }
     }
 
-    pub fn expression(self) -> Result<Operation, RuntimeError> {
+    pub fn expression(self) -> Result<Operation, error::RuntimeError> {
         match self {
             Value::Expression(op) => Ok(op),
-            _ => Err(RuntimeError::TypeError {
+            _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
                 context: None, // @TODO
@@ -417,10 +295,10 @@ impl Value {
         }
     }
 
-    pub fn call(self) -> Result<Predicate, RuntimeError> {
+    pub fn call(self) -> Result<Predicate, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
-            _ => Err(RuntimeError::TypeError {
+            _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
                 context: None, // @TODO
@@ -481,38 +359,38 @@ impl Term {
         }
     }
 
-    /// Apply `f` to self.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    /// Does a preorder walk of the term tree, calling F on itself and then walking its children.
+    /// If F returns true walk the children, otherwise stop.
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Self),
+        F: FnMut(&mut Self) -> bool,
     {
-        f(self);
-        // the match does the recursive calling of map
-        match self.value {
-            Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_in_place(f)),
-            Value::Call(ref mut predicate) => {
-                predicate.args.iter_mut().for_each(|a| a.map_in_place(f))
-            }
-            Value::Expression(Operation { ref mut args, .. }) => {
-                args.iter_mut().for_each(|term| term.map_in_place(f))
-            }
-            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => fields
-                .fields
-                .iter_mut()
-                .for_each(|(_, v)| v.map_in_place(f)),
-            Value::ExternalInstance(_) => {}
-            Value::Dictionary(Dictionary { ref mut fields }) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
-            }
-            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
-            }
-            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => fields
-                .fields
-                .iter_mut()
-                .for_each(|(_, v)| v.map_in_place(f)),
-        };
+        let walk_children = f(self);
+        if walk_children {
+            match self.value {
+                Value::Integer(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+                Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.walk_mut(f)),
+                Value::Call(ref mut predicate) => {
+                    predicate.args.iter_mut().for_each(|a| a.walk_mut(f))
+                }
+                Value::Expression(Operation { ref mut args, .. }) => {
+                    args.iter_mut().for_each(|term| term.walk_mut(f))
+                }
+                Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
+                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+                Value::ExternalInstance(_) => {}
+                Value::Dictionary(Dictionary { ref mut fields }) => {
+                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+                Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
+                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+                Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
+                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
+                }
+            };
+        }
     }
 }
 
@@ -553,11 +431,14 @@ impl Parameter {
         }
     }
 
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    /// Does a preorder walk of the parameter terms.
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Term),
+        F: FnMut(&mut Term) -> bool,
     {
-        self.specializer.iter_mut().for_each(|mut a| f(&mut a));
+        self.specializer.iter_mut().for_each(|mut a| {
+            f(&mut a);
+        });
     }
 }
 
@@ -580,15 +461,13 @@ impl Rule {
         }
     }
 
-    /// Apply `f` to value and return a new term.
-    pub fn map_in_place<F>(&mut self, f: &mut F)
+    /// Does a preorder walk of the rule parameters and body.
+    pub fn walk_mut<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Term),
+        F: FnMut(&mut Term) -> bool,
     {
-        self.params
-            .iter_mut()
-            .for_each(|param| param.map_in_place(f));
-        self.body.map_in_place(f);
+        self.params.iter_mut().for_each(|param| param.walk_mut(f));
+        self.body.walk_mut(f);
     }
 }
 
@@ -815,13 +694,13 @@ mod tests {
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
-        let e = ParseError::InvalidTokenCharacter {
+        let e = error::ParseError::InvalidTokenCharacter {
             token: "Integer".to_owned(),
             c: 'x',
             loc: 99,
             context: None,
         };
-        let er: PolarError = e.into();
-        eprintln!("{}", serde_json::to_string(&er).unwrap());
+        let err: crate::PolarError = e.into();
+        eprintln!("{}", serde_json::to_string(&err).unwrap());
     }
 }

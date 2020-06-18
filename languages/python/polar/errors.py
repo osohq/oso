@@ -3,15 +3,17 @@ import json
 from _polar_lib import ffi, lib
 
 from .exceptions import (
-    ExtraToken,
-    IntegerOverflow,
-    InvalidToken,
-    InvalidTokenCharacter,
     ParserException,
+    PolarApiException,
+    PolarException,
+    PolarOperationalException,
     PolarRuntimeException,
-    Unknown,
+    IntegerOverflow,
+    InvalidTokenCharacter,
+    InvalidToken,
     UnrecognizedEOF,
     UnrecognizedToken,
+    ExtraToken,
 )
 
 
@@ -25,38 +27,33 @@ def get_error():
         err_s = lib.polar_get_error()
         err_json = ffi.string(err_s).decode()
         err = json.loads(err_json)
-        kind = [*err][0]
-        data = err[kind]
+
+        kind = [*err["kind"]][0]
+        data = err["kind"][kind]
+        message = err["formatted"]
 
         if kind == "Parse":
-            subkind = [*data][0]
-            return _parse_error(subkind, data)
-        elif kind == "Runtime":  # @TODO: Runtime exception types.
-            return PolarRuntimeException(json.dumps(data))
+            return _parse_error(message, data)
+        elif kind == "Runtime":
+            return PolarRuntimeException(message, data)
         elif kind == "Operational":
-            subkind = [*data][0]
-            if subkind == "Unknown":  # Rust panic.
-                return Unknown("Unknown Internal Error: See console.")
-        # All errors should be mapped to python exceptions.
-        # Raise Unknown if we haven't mapped the error.
-        return Unknown(f"Unknown Internal Error: {err_json}")
+            return PolarOperationalException(message, data)
+        elif kind == "Parameter":
+            return PolarApiException(message, data)
     finally:
         lib.string_free(err_s)
 
 
-def _parse_error(kind, data):
+def _parse_error(message, data):
     """Map parsing errors."""
-    token = data[kind].get("token")
-    context = data[kind].get("context")
-    c = data[kind].get("c")
+    kind = [*data][0]
+    data = data[kind]
     parse_errors = {
-        "ExtraToken": ExtraToken(token, context),
-        "IntegerOverflow": IntegerOverflow(token, context),
-        "InvalidToken": InvalidToken(context),
-        "InvalidTokenCharacter": InvalidTokenCharacter(token, c, context),
-        "UnrecognizedEOF": UnrecognizedEOF(context),
-        "UnrecognizedToken": UnrecognizedToken(token, context),
+        "ExtraToken": ExtraToken(message, data),
+        "IntegerOverflow": IntegerOverflow(message, data),
+        "InvalidToken": InvalidToken(message, data),
+        "InvalidTokenCharacter": InvalidTokenCharacter(message, data),
+        "UnrecognizedEOF": UnrecognizedEOF(message, data),
+        "UnrecognizedToken": UnrecognizedToken(message, data),
     }
-    return parse_errors.get(
-        kind, ParserException(f"Parser Exception: {json.dumps(data)}")
-    )
+    return parse_errors.get(kind, ParserException(message, data))
