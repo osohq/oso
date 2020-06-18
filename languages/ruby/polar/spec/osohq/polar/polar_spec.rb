@@ -23,6 +23,7 @@ RSpec.describe Osohq::Polar::Polar do
           @id = id
         end
       end)
+      subject.register_class(Widget)
 
       stub_const('Actor', Class.new do
         def initialize(n)
@@ -37,7 +38,6 @@ RSpec.describe Osohq::Polar::Polar do
           [Widget.new(2), Widget.new(3)].to_enum
         end
       end)
-      subject.register_class(Widget)
       subject.register_class(Actor)
     end
 
@@ -105,13 +105,13 @@ RSpec.describe Osohq::Polar::Polar do
 
   context '#register_class' do
     it 'registers a Ruby class with Polar' do
-      class Bar
+      stub_const('Bar', Class.new do
         def y
           'y'
         end
-      end
+      end)
 
-      class Foo
+      stub_const('Foo', Class.new do
         attr_reader :a
 
         def initialize(a)
@@ -155,8 +155,9 @@ RSpec.describe Osohq::Polar::Polar do
         def h
           true
         end
-      end
+      end)
 
+      subject.register_class(Bar)
       subject.register_class(Foo) { Foo.new('A') }
       expect(qvar(subject, 'Foo{}.a = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'Foo{}.a() = x', 'x', one: true)).to eq('A')
@@ -173,7 +174,7 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     it 'respects the Ruby inheritance hierarchy for class specialization' do
-      class A
+      stub_const('A', Class.new do
         def a
           'A'
         end
@@ -181,9 +182,9 @@ RSpec.describe Osohq::Polar::Polar do
         def x
           'A'
         end
-      end
+      end)
 
-      class B < A
+      stub_const('B', Class.new(A) do
         def b
           'B'
         end
@@ -191,9 +192,9 @@ RSpec.describe Osohq::Polar::Polar do
         def x
           'B'
         end
-      end
+      end)
 
-      class C < B
+      stub_const('C', Class.new(B) do
         def c
           'C'
         end
@@ -201,13 +202,13 @@ RSpec.describe Osohq::Polar::Polar do
         def x
           'C'
         end
-      end
+      end)
 
-      class X
+      stub_const('X', Class.new do
         def x
           'X'
         end
-      end
+      end)
 
       subject.register_class(A)
       subject.register_class(B)
@@ -244,22 +245,24 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     context 'animal tests' do
-      class Animal
-        attr_reader :family, :genus, :species
+      before do
+        stub_const('Animal', Class.new do
+          attr_reader :family, :genus, :species
 
-        def initialize(family: nil, genus: nil, species: nil)
-          @family = family
-          @genus = genus
-          @species = species
-        end
+          def initialize(family: nil, genus: nil, species: nil)
+            @family = family
+            @genus = genus
+            @species = species
+          end
+        end)
+        subject.register_class(Animal)
       end
+
       let(:wolf) { 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}' }
       let(:dog) { 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
       let(:canine) { 'Animal{genus: "canis", family: "canidae"}' }
       let(:canid) {  'Animal{family: "canidae"}' }
       let(:animal) { 'Animal{}' }
-
-      before(:example) { subject.register_class(Animal) }
 
       it 'can specialize on dict fields' do
         subject.load_str <<~POLAR
