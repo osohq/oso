@@ -368,64 +368,12 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
-    fn find_or_make_instance(
-        &mut self,
-        instance_literal: &InstanceLiteral,
-    ) -> (bool, ExternalInstance) {
-        let new_external_id = self.new_id();
-        let new_external_instance = ExternalInstance {
-            instance_id: new_external_id,
-            literal: Some(instance_literal.clone()),
-        };
-        (false, new_external_instance)
-    }
-
     /// Recursively dereference a variable.
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value {
             Value::Symbol(symbol) => self.value(&symbol).map_or(term.clone(), |t| self.deref(t)),
             _ => term.clone(),
         }
-    }
-
-    /// Takes a term and makes sure it is instantiated by recursively:
-    /// - Derefing all symbols
-    /// - Converting literals into externals, and pushing goals if needed
-    ///
-    /// ## Returns
-    ///
-    /// The newly instantiated term (i.e. with external instances instead of literals)
-    /// and some goals which actually do the instance creation (if any are needed).
-    /// The goals must be met before the term is used.
-    fn instantiate_externals(&mut self, term: &Term) -> (Term, Goals) {
-        let mut goals = Vec::new();
-        // this is the recursive mapping function
-        fn instantiate_map(vm: &mut PolarVirtualMachine, term: &Term, goals: &mut Goals) -> Term {
-            term.map(&mut |v| match v {
-                Value::InstanceLiteral(instance_literal) => {
-                    let (exists, external_instance) = vm.find_or_make_instance(instance_literal);
-                    if !exists {
-                        goals.push(Goal::MakeExternal {
-                            literal: instance_literal.clone(),
-                            instance_id: external_instance.instance_id,
-                        });
-                    }
-                    Value::ExternalInstance(external_instance)
-                }
-                Value::Symbol(s) => {
-                    // need to clone since `value` otherwise borrows `vm`.
-                    if let Some(t) = vm.value(s).cloned() {
-                        instantiate_map(vm, &t, goals).value
-                    } else {
-                        v.clone()
-                    }
-                }
-                _ => v.clone(),
-            })
-        }
-
-        let new_term = instantiate_map(self, term, &mut goals);
-        (new_term, goals)
     }
 
     /// Return `true` if `var` is a temporary.
@@ -571,17 +519,7 @@ impl PolarVirtualMachine {
             }
 
             (Value::InstanceLiteral(_), _) => {
-                // COMMENT (leina): do we ALWAYS want to convert an instance literal to an external instance here?
-                // Any compelling use case for unifying an instance literal with another instance literal?
-                // I can't think of any...
-
-                // Convert instance literal to an external instance
-                let (left, mut goals) = self.instantiate_externals(&left);
-                goals.push(Goal::Isa {
-                    left,
-                    right: right.clone(),
-                });
-                self.append_goals(goals);
+                panic!("How did an instance literal get here???");
             }
 
             (Value::ExternalInstance(left), Value::Pattern(Pattern::Dictionary(right))) => {
@@ -695,11 +633,6 @@ impl PolarVirtualMachine {
     /// Return an external call event to look up a field's value
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
-    ///
-    /// ## Invariants
-    ///
-    /// The `field` term _must_ have been instantiated with
-    /// `instantiate_externals` before this method is called.
     pub fn lookup_external(
         &mut self,
         call_id: u64,
@@ -972,32 +905,18 @@ impl PolarVirtualMachine {
             })?,
             // Instantiate InstanceLiterals then push a new `Dot` query with the instantiated instance
             Value::InstanceLiteral(_) => {
-                // instantiate the instance and the predicate lookup
-                let (object, obj_goals) = self.instantiate_externals(&object);
-                let (field, field_goals) = self.instantiate_externals(field);
-                args[0] = object;
-                args[1] = field;
-                self.push_goal(Goal::Query {
-                    term: Term::new(Value::Expression(Operation {
-                        operator: Operator::Dot,
-                        args,
-                    })),
-                })?;
-                self.append_goals(field_goals);
-                self.append_goals(obj_goals);
+                panic!("Tried to do a lookup on an instance literal! How did it get here????");
             }
             // Push an `ExternalLookup` goal for external instances
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
                 let value = value.clone().value.symbol().expect("Bad lookup value.");
                 let call_id = self.new_call_id(&value);
-                let (field, mut goals) = self.instantiate_externals(field);
 
-                goals.push(Goal::LookupExternal {
+                self.push_goal(Goal::LookupExternal {
                     call_id,
                     instance_id,
-                    field,
-                });
-                self.append_goals(goals);
+                    field: field.clone(),
+                })?;
             }
             _ => {
                 return Err(self.type_error(
@@ -1443,19 +1362,7 @@ impl PolarVirtualMachine {
         right: Term,
         arg: Term,
     ) -> PolarResult<QueryEvent> {
-        // If the arg is an instance literal, convert it to an external instance
-        let (arg, mut goals) = self.instantiate_externals(&arg);
-        if !goals.is_empty() {
-            goals.push(Goal::IsSubspecializer {
-                answer,
-                left,
-                right,
-                arg,
-            });
-            self.append_goals(goals);
-            return Ok(QueryEvent::None);
-        }
-
+        let arg = self.deref(&arg);
         match (arg.value, left.value, right.value) {
             (
                 Value::ExternalInstance(instance),
@@ -2142,11 +2049,16 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_generic_rule(bar_rule);
 
+        let external_instance = Value::ExternalInstance(ExternalInstance {
+            literal: None,
+            instance_id: 1
+        });
+
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(kb)),
             vec![query!(pred!(
                 "bar",
-                [instance!("doesn't"), instance!("matter"), sym!("z")]
+                [external_instance.clone(), external_instance, sym!("z")]
             ))],
         );
 
