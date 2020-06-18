@@ -63,4 +63,4 @@ allow(actor: Actor, "keep", resource: Widget) :=
 
 # for testing iter
 allow(actor: Actor, "can_have", Widget {name: "stapler"}) :=
-    isa(actor.companies_iter, Company {id: "Initech"});
+    actor.companies_iter isa Company {id: "Initech"};

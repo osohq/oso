@@ -1,4 +1,4 @@
-use super::types::{ParseError, SrcPos, Symbol};
+use super::types::{ErrorContext, ParseError, Source, SrcPos, Symbol};
 use std::str::{CharIndices, FromStr};
 
 // Take a location in a string and return the row and column.
@@ -20,8 +20,16 @@ pub fn loc_to_pos(src: &str, loc: usize) -> SrcPos {
     (row, col)
 }
 
+pub fn make_context(source: &Source, loc: usize) -> Option<ErrorContext> {
+    let (row, column) = loc_to_pos(&source.src, loc);
+    Some(ErrorContext {
+        source: source.clone(),
+        row,
+        column,
+    })
+}
+
 pub struct Lexer<'input> {
-    src: String,
     c: Option<(usize, char)>,
     chars: CharIndices<'input>,
     buf: String,
@@ -29,11 +37,10 @@ pub struct Lexer<'input> {
 
 impl<'input> Lexer<'input> {
     pub fn new(input: &'input str) -> Self {
-        let src = input.to_owned();
         let mut chars = input.char_indices();
         let c = chars.next();
         let buf = String::new();
-        Lexer { src, c, chars, buf }
+        Lexer { c, chars, buf }
     }
 }
 
@@ -54,7 +61,7 @@ pub enum Token {
     LCB,       // {
     RCB,       // }
     Dot,       // .
-    Make,      // make
+    New,       // new
     Not,       // !
     Mul,       // *
     Div,       // /
@@ -72,6 +79,9 @@ pub enum Token {
     Define,    // :=
     Query,     // ?=
     In,        // in
+    Cut,       // cut()
+    Debug,     // debug()
+    Isa,       // isa
 }
 
 impl ToString for Token {
@@ -90,7 +100,7 @@ impl ToString for Token {
             Token::LCB => "{".to_owned(),       // {
             Token::RCB => "}".to_owned(),       // }
             Token::Dot => ".".to_owned(),       // .
-            Token::Make => "make".to_owned(),   // make
+            Token::New => "new".to_owned(),     // new
             Token::Not => "!".to_owned(),       // !
             Token::Mul => "*".to_owned(),       // *
             Token::Div => "/".to_owned(),       // /
@@ -108,6 +118,9 @@ impl ToString for Token {
             Token::Define => ":=".to_owned(),   // :=
             Token::Query => "?=".to_owned(),    // ?=
             Token::In => "in".to_owned(),       // in
+            Token::Cut => "cut".to_owned(),     // cut
+            Token::Debug => "debug".to_owned(),
+            Token::Isa => "isa".to_owned(), // isa
         }
     }
 }
@@ -160,10 +173,16 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Boolean(true), last + 1)))
         } else if &self.buf == "false" {
             Some(Ok((start, Token::Boolean(false), last + 1)))
-        } else if &self.buf == "make" {
-            Some(Ok((start, Token::Make, last + 1)))
+        } else if &self.buf == "new" {
+            Some(Ok((start, Token::New, last + 1)))
         } else if &self.buf == "in" {
             Some(Ok((start, Token::In, last + 1)))
+        } else if &self.buf == "cut" {
+            Some(Ok((start, Token::Cut, last + 1)))
+        } else if &self.buf == "debug" {
+            Some(Ok((start, Token::Debug, last + 1)))
+        } else if &self.buf == "isa" {
+            Some(Ok((start, Token::Isa, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }
@@ -182,7 +201,8 @@ impl<'input> Lexer<'input> {
                         return Some(Err(ParseError::InvalidTokenCharacter {
                             token: self.buf.clone(),
                             c: char,
-                            pos: loc_to_pos(&self.src, i),
+                            loc: i,
+                            context: None,
                         }))
                     }
                     '"' => {
@@ -205,7 +225,8 @@ impl<'input> Lexer<'input> {
                             return Some(Err(ParseError::InvalidTokenCharacter {
                                 token: self.buf.clone(),
                                 c: '\0',
-                                pos: loc_to_pos(&self.src, i),
+                                loc: i,
+                                context: None,
                             }));
                         }
                         self.c = self.chars.next();
@@ -219,7 +240,8 @@ impl<'input> Lexer<'input> {
                 return Some(Err(ParseError::InvalidTokenCharacter {
                     token: self.buf.clone(),
                     c: '\0',
-                    pos: loc_to_pos(&self.src, i),
+                    loc: i,
+                    context: None,
                 }));
             }
         }
@@ -248,7 +270,8 @@ impl<'input> Lexer<'input> {
         } else {
             Some(Err(ParseError::IntegerOverflow {
                 token: self.buf.clone(),
-                pos: loc_to_pos(&self.src, start),
+                loc: start,
+                context: None,
             }))
         }
     }
@@ -278,12 +301,14 @@ impl<'input> Lexer<'input> {
             Some((i, chr)) => Some(Err(ParseError::InvalidTokenCharacter {
                 token: token.to_string(),
                 c: chr,
-                pos: loc_to_pos(&self.src, i),
+                loc: i,
+                context: None,
             })),
             _ => Some(Err(ParseError::InvalidTokenCharacter {
                 token: token.to_string(),
                 c: '\0',
-                pos: loc_to_pos(&self.src, start + 1),
+                loc: start + 1,
+                context: None,
             })),
         }
     }
@@ -343,7 +368,8 @@ impl<'input> Iterator for Lexer<'input> {
                 _ => Some(Err(ParseError::InvalidTokenCharacter {
                     token: "".to_owned(),
                     c: char,
-                    pos: loc_to_pos(&self.src, i),
+                    loc: i,
+                    context: None,
                 })),
             },
         }

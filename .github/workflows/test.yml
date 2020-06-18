@@ -1,5 +1,6 @@
 name: Development
-on: [push]
+on:
+  push:
 
 jobs:
   test:
@@ -37,15 +38,3 @@ jobs:
       - run: make test
       - name: Doc test
         run: make -C languages/python/docs test
-  compat_test:
-    runs-on: "ubuntu-latest"
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Install Python 3.6
-      uses: actions/setup-python@v1
-      with:
-        python-version: "3.6"
-    - name: Run compatibility test against python Polar implementation
-      run: make test_compat

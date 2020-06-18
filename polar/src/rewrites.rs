@@ -11,7 +11,7 @@ fn and_wrap(a: &mut Term, b: Value) {
 }
 
 /// Checks if the expression needs to be rewritten.
-/// If so, replaces the value in place with the symbol, and returns the lookup needed
+/// If so, replaces the value in place with the symbol, and returns the rewritten expression.
 fn rewrite(value: &mut Value, kb: &KnowledgeBase) -> Option<Value> {
     match value {
         Value::Expression(Operation {
@@ -29,6 +29,26 @@ fn rewrite(value: &mut Value, kb: &KnowledgeBase) -> Option<Value> {
             });
             *value = var;
             Some(lookup)
+        }
+        Value::Expression(Operation {
+            operator: Operator::New,
+            args,
+        }) if args.len() == 1 => {
+            let literal = args[0].clone().value.instance_literal().unwrap();
+            let symbol = kb.gensym("instance");
+            let var = Value::Symbol(symbol);
+
+            let args = vec![
+                Term::new(Value::InstanceLiteral(literal)),
+                Term::new(var.clone()),
+            ];
+            let new_op = Value::Expression(Operation {
+                operator: Operator::New,
+                args,
+            });
+
+            *value = var;
+            Some(new_op)
         }
         _ => None,
     }
@@ -130,7 +150,7 @@ mod tests {
 
         // First rewrite
         rewrite_rule(&mut rule, &mut kb, 0);
-        assert_eq!(rule.to_polar(), "f(_value_3) := .(a,b,_value_3);");
+        assert_eq!(rule.to_polar(), "f(_value_1) := .(a,b,_value_1);");
 
         // Check we can parse the rules back again
         let again = parse_rules(&rule.to_polar()).unwrap();
@@ -149,7 +169,7 @@ mod tests {
         rewrite_rule(&mut rule, &mut kb, 0);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_8) := .(a,b,_value_9),.(_value_9,c,_value_8);"
+            "f(_value_2) := .(a,b,_value_3),.(_value_3,c,_value_2);"
         );
     }
 
@@ -162,7 +182,7 @@ mod tests {
         let mut rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "f(a,c) := a.b(c);");
         rewrite_rule(&mut rule, &mut kb, 0);
-        assert_eq!(rule.to_polar(), "f(a,c) := .(a,b(c),_value_3),_value_3;");
+        assert_eq!(rule.to_polar(), "f(a,c) := .(a,b(c),_value_1),_value_1;");
 
         // Nested lookups
         let rules = parse_rules("f(a,c,e) := a.b(c.d(e.f));").unwrap();
@@ -171,7 +191,7 @@ mod tests {
         rewrite_rule(&mut rule, &mut kb, 0);
         assert_eq!(
             rule.to_polar(),
-            "f(a,c,e) := .(e,f,_value_9),.(c,d(_value_9),_value_7),.(a,b(_value_7),_value_6),_value_6;"
+            "f(a,c,e) := .(e,f,_value_4),.(c,d(_value_4),_value_3),.(a,b(_value_3),_value_2),_value_2;"
         );
     }
 
@@ -181,23 +201,23 @@ mod tests {
         let mut term = parse_query("x,a.b").unwrap();
         assert_eq!(term.to_polar(), "x,a.b");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), "x,.(a,b,_value_4),_value_4");
+        assert_eq!(term.to_polar(), "x,.(a,b,_value_1),_value_1");
 
         let mut query = parse_query("f(a.b.c)").unwrap();
         assert_eq!(query.to_polar(), "f(a.b.c)");
         rewrite_term(&mut query, &mut kb, 0);
         assert_eq!(
             query.to_polar(),
-            ".(a,b,_value_8),.(_value_8,c,_value_6),f(_value_6)"
+            ".(a,b,_value_3),.(_value_3,c,_value_2),f(_value_2)"
         );
 
         let mut term = parse_query("a.b = 1").unwrap();
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(a,b,_value_11),_value_11=1");
+        assert_eq!(term.to_polar(), ".(a,b,_value_4),_value_4=1");
         let mut term = parse_query("{x: 1}.x = 1").unwrap();
         assert_eq!(term.to_polar(), "{x: 1}.x=1");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".({x: 1},x,_value_14),_value_14=1");
+        assert_eq!(term.to_polar(), ".({x: 1},x,_value_5),_value_5=1");
     }
 
     #[test]
@@ -206,11 +226,52 @@ mod tests {
         let mut term = parse_query("Foo { x: bar.y }").unwrap();
         assert_eq!(term.to_polar(), "Foo{x: bar.y}");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar,y,_value_2),Foo{x: _value_2}");
+        assert_eq!(term.to_polar(), ".(bar,y,_value_1),Foo{x: _value_1}");
 
         let mut term = parse_query("f(Foo { x: bar.y })").unwrap();
         assert_eq!(term.to_polar(), "f(Foo{x: bar.y})");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar,y,_value_5),f(Foo{x: _value_5})");
+        assert_eq!(term.to_polar(), ".(bar,y,_value_2),f(Foo{x: _value_2})");
+    }
+
+    #[test]
+    fn rewrite_class_constructor() {
+        let mut kb = KnowledgeBase::new();
+        let mut term = parse_query("new Foo{a: 1, b: 2}").unwrap();
+        assert_eq!(term.to_polar(), "new Foo{a: 1, b: 2}");
+
+        rewrite_term(&mut term, &mut kb, 0);
+        // @ means external constructor
+        assert_eq!(
+            term.to_polar(),
+            "new (Foo{a: 1, b: 2}, _instance_1),_instance_1"
+        );
+    }
+
+    #[test]
+    fn rewrite_nested_class_constructor() {
+        let mut kb = KnowledgeBase::new();
+        let mut term = parse_query("new Foo{a: 1, b: new Foo{a: 2, b: 3}}").unwrap();
+        assert_eq!(term.to_polar(), "new Foo{a: 1, b: new Foo{a: 2, b: 3}}");
+
+        rewrite_term(&mut term, &mut kb, 0);
+        // @ means external constructor
+        assert_eq!(
+            term.to_polar(),
+            "new (Foo{a: 2, b: 3}, _instance_2),new (Foo{a: 1, b: _instance_2}, _instance_1),_instance_1"
+        );
+    }
+
+    #[test]
+    fn rewrite_rules_constructor() {
+        let mut kb = KnowledgeBase::new();
+        let mut rules = parse_rules("rule_test(new Foo{a: 1, b: 2});").unwrap();
+        assert_eq!(rules[0].to_polar(), "rule_test(new Foo{a: 1, b: 2});");
+
+        rewrite_rule(&mut rules[0], &mut kb, 0);
+        assert_eq!(
+            rules[0].to_polar(),
+            "rule_test(_instance_1) := new (Foo{a: 1, b: 2}, _instance_1);"
+        )
     }
 }

@@ -13,23 +13,70 @@ use std::sync::atomic::{AtomicU64, Ordering};
 pub type SrcPos = (usize, usize);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorContext {
+    pub source: Source,
+    pub row: usize,
+    pub column: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
-    IntegerOverflow { token: String, pos: SrcPos },
-    InvalidTokenCharacter { token: String, c: char, pos: SrcPos }, //@TODO: Line and column instead of loc.
-    InvalidToken { pos: SrcPos },
-    UnrecognizedEOF { pos: SrcPos },
-    UnrecognizedToken { token: String, pos: SrcPos },
-    ExtraToken { token: String, pos: SrcPos },
+    IntegerOverflow {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    InvalidTokenCharacter {
+        token: String,
+        c: char,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    InvalidToken {
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    UnrecognizedEOF {
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    UnrecognizedToken {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    ExtraToken {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    ReservedWord {
+        token: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
 }
 
 // @TODO: Information about the context of the error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
-    Serialization { msg: String },
-    Unsupported { msg: String },
-    TypeError { msg: String },
-    UnboundVariable { sym: Symbol },
-    StackOverflow { msg: String },
+    Serialization {
+        msg: String,
+    },
+    Unsupported {
+        msg: String,
+    },
+    TypeError {
+        msg: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+    },
+    UnboundVariable {
+        sym: Symbol,
+    },
+    StackOverflow {
+        msg: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,7 +86,7 @@ pub enum OperationalError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-/// Parameter passed to function is invalid.
+/// Parameter passed to FFI lib function is invalid.
 pub struct ParameterError(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,6 +160,11 @@ impl Dictionary {
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
     }
+
+    /// Convert all terms in this dictionary to patterns.
+    pub fn as_pattern(&self) -> Pattern {
+        Pattern::Dictionary(self.map(&mut Pattern::value_as_pattern))
+    }
 }
 
 pub fn field_name(field: &Term) -> Symbol {
@@ -127,6 +179,33 @@ pub fn field_name(field: &Term) -> Symbol {
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
+}
+
+impl InstanceLiteral {
+    pub fn map<F>(&self, f: &mut F) -> InstanceLiteral
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        InstanceLiteral {
+            tag: self.tag.clone(),
+            fields: self.fields.map(f),
+        }
+    }
+
+    pub fn map_in_place<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Term),
+    {
+        self.fields
+            .fields
+            .iter_mut()
+            .for_each(|(_, v)| v.map_in_place(f));
+    }
+
+    /// Convert all terms in this instance literal to patterns.
+    pub fn as_pattern(&self) -> Pattern {
+        Pattern::Instance(self.map(&mut Pattern::value_as_pattern))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -178,8 +257,11 @@ impl Predicate {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
+    Debug,
+    Cut,
     In,
-    Make,
+    Isa,
+    New,
     Dot,
     Not,
     Mul,
@@ -200,9 +282,12 @@ pub enum Operator {
 impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
-            Operator::Make => 10,
+            Operator::Debug => 11,
+            Operator::New => 10,
+            Operator::Cut => 10,
             Operator::Dot => 9,
             Operator::In => 8,
+            Operator::Isa => 8,
             Operator::Not => 7,
             Operator::Mul => 6,
             Operator::Div => 6,
@@ -227,6 +312,37 @@ pub struct Operation {
     pub args: TermList,
 }
 
+/// Represents a pattern in a specializer or after isa.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub enum Pattern {
+    Dictionary(Dictionary),
+    Instance(InstanceLiteral),
+}
+
+impl Pattern {
+    pub fn value_as_pattern(value: &Value) -> Value {
+        value.map(&mut |v| match v {
+            Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
+            Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
+            _ => v.clone(),
+        })
+    }
+
+    pub fn term_as_pattern(term: &Term) -> Term {
+        term.map(&mut Pattern::value_as_pattern)
+    }
+
+    pub fn map<F>(&self, f: &mut F) -> Pattern
+    where
+        F: FnMut(&Value) -> Value,
+    {
+        match self {
+            Pattern::Instance(lit) => Pattern::Instance(lit.map(f)),
+            Pattern::Dictionary(dict) => Pattern::Dictionary(dict.map(f)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Value {
     Integer(i64),
@@ -235,6 +351,7 @@ pub enum Value {
     ExternalInstance(ExternalInstance),
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
+    Pattern(Pattern),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
     Symbol(Symbol),
@@ -257,14 +374,10 @@ impl Value {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
             }),
-            Value::InstanceLiteral(InstanceLiteral { tag, fields }) => {
-                Value::InstanceLiteral(InstanceLiteral {
-                    tag: tag.clone(),
-                    fields: fields.map(f),
-                })
-            }
+            Value::InstanceLiteral(literal) => Value::InstanceLiteral(literal.map(f)),
             Value::ExternalInstance(_) => self.clone(),
             Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
+            Value::Pattern(pat) => Value::Pattern(pat.map(f)),
         };
         // actually does the mapping of nodes: applies to all nodes, both leaves and
         // intermediate nodes
@@ -276,6 +389,30 @@ impl Value {
             Value::Symbol(name) => Ok(name),
             _ => Err(RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn instance_literal(self) -> Result<InstanceLiteral, RuntimeError> {
+        match self {
+            Value::InstanceLiteral(literal) => Ok(literal),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn expression(self) -> Result<Operation, RuntimeError> {
+        match self {
+            Value::Expression(op) => Ok(op),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
             }),
         }
     }
@@ -317,6 +454,10 @@ impl Term {
         }
     }
 
+    pub fn replace_value(&mut self, value: Value) -> Value {
+        std::mem::replace(&mut self.value, value)
+    }
+
     /// Apply `f` to value and return a new term.
     pub fn map<F>(&self, f: &mut F) -> Term
     where
@@ -353,6 +494,13 @@ impl Term {
             Value::Dictionary(Dictionary { ref mut fields }) => {
                 fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
             }
+            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
+                fields.iter_mut().for_each(|(_, v)| v.map_in_place(f))
+            }
+            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => fields
+                .fields
+                .iter_mut()
+                .for_each(|(_, v)| v.map_in_place(f)),
         };
     }
 }
@@ -448,17 +596,11 @@ impl GenericRule {
 }
 
 #[derive(Clone)]
-pub struct Class {
-    pub name: Symbol,
-}
-
-#[derive(Clone)]
 pub enum Type {
-    Class { class: Class },
-    Group { members: Vec<Type> },
+    Class { name: Symbol },
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,
@@ -487,13 +629,28 @@ impl Sources {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum Node {
+    Rule(Rule),
+    Term(Term),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Trace {
+    pub node: Node,
+    pub children: Vec<Trace>,
+}
+
 #[derive(Default)]
 pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
-    // For temporary variable names, call IDs, instance IDs, symbols, etc.
-    counter: AtomicU64,
+    // For symbols returned from gensym
+    gensym_counter: AtomicU64,
+    // For call IDs, instance IDs, symbols, etc.
+    id_counter: AtomicU64,
+    pub inline_queries: Vec<Term>,
 }
 
 impl KnowledgeBase {
@@ -502,21 +659,24 @@ impl KnowledgeBase {
             types: HashMap::new(),
             rules: HashMap::new(),
             sources: Sources::default(),
-            counter: AtomicU64::new(1),
+            id_counter: AtomicU64::new(1),
+            gensym_counter: AtomicU64::new(1),
+            inline_queries: vec![],
         }
     }
 
     /// Return a monotonically increasing integer ID.
     pub fn new_id(&self) -> u64 {
-        self.counter.fetch_add(1, Ordering::SeqCst)
+        self.id_counter.fetch_add(1, Ordering::SeqCst)
     }
 
     /// Generate a new symbol.
     pub fn gensym(&self, prefix: &str) -> Symbol {
+        let next = self.gensym_counter.fetch_add(1, Ordering::SeqCst);
         if prefix.starts_with('_') {
-            Symbol(format!("{}_{}", prefix, self.new_id()))
+            Symbol(format!("{}_{}", prefix, next))
         } else {
-            Symbol(format!("_{}_{}", prefix, self.new_id()))
+            Symbol(format!("_{}_{}", prefix, next))
         }
     }
 
@@ -529,6 +689,7 @@ impl KnowledgeBase {
 
 pub type Bindings = HashMap<Symbol, Term>;
 
+#[allow(clippy::large_enum_variant)]
 #[must_use]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
@@ -547,9 +708,10 @@ pub enum QueryEvent {
     ExternalCall {
         /// Persistent id across all requests for results from the same external call.
         call_id: u64,
-        /// Id of the external instance to make this call on.
+        /// Id of the external instance to make this call on. None for functions or constructors.
         instance_id: u64,
-        /// Field name to lookup or function name to call.
+        /// Field name to lookup or function name to call. A class name indicates a constructor
+        /// should be called.
         attribute: Symbol,
         /// List of arguments to use if this is a method call.
         args: Vec<Term>,
@@ -572,6 +734,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
+        trace: Option<Trace>,
     },
 }
 
@@ -644,7 +807,8 @@ mod tests {
         let e = ParseError::InvalidTokenCharacter {
             token: "Integer".to_owned(),
             c: 'x',
-            pos: (99, 99),
+            loc: 99,
+            context: None,
         };
         let er: PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&er).unwrap());

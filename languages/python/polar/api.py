@@ -55,8 +55,6 @@ class Polar:
         self.instances = {}
         self.calls = {}
 
-        # Load built-in `isa()` rule.
-        self._load_str("isa(x, y, _: (y)); isa(x, y) := isa(x, y, x);")
         # Register built-in classes.
         self.register_class(Http)
         self.register_class(PathMapper)
@@ -205,7 +203,7 @@ class Polar:
         """Method which performs the query loop over an already constructed query"""
         with manage_query(q) as query:
             while True:
-                event_s = lib.polar_query(self.polar, query)
+                event_s = lib.polar_next_query_event(query)
                 event = ffi_deserialize(event_s)
                 if event == "Done":
                     break
@@ -337,4 +335,4 @@ class Polar:
             print(data["message"])
         command = input("> ")
         stringified = ffi_serialize(self._to_polar_term(command))
-        check_result(lib.polar_debug_command(self.polar, query, stringified))
+        check_result(lib.polar_debug_command(query, stringified))

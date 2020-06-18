@@ -16,8 +16,8 @@ mod rewrites;
 pub mod types;
 mod vm;
 
-pub use self::polar::{Load, Polar, Query};
-pub use formatting::ToPolarString;
+pub use self::polar::{Polar, Query};
+pub use formatting::{draw, ToPolarString};
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
@@ -96,60 +96,30 @@ pub extern "C" fn polar_new() -> *mut Polar {
     ffi_try!({ box_ptr!(Polar::new()) })
 }
 
-/// Create a new Load struct from a load string.
-///
-/// Returns: A null ptr on error, otherwise a Load struct (must be freed by caller).
 #[no_mangle]
-pub extern "C" fn polar_new_load(polar_ptr: *mut Polar, src: *const c_char) -> *mut Load {
+pub extern "C" fn polar_load(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
-        let query_str = unsafe { ffi_string!(src) };
-        match polar.new_load(&query_str) {
+        let src = unsafe { ffi_string!(src) };
+        match polar.load(&src) {
             Err(err) => {
                 set_error(err);
-                null_mut()
+                POLAR_FAILURE
             }
-            Ok(load) => box_ptr!(load),
+            Ok(_) => POLAR_SUCCESS,
         }
     })
 }
 
 #[no_mangle]
-pub extern "C" fn polar_load(
-    polar_ptr: *mut Polar,
-    load: *mut Load,
-    query: *mut *mut Query,
-) -> i32 {
-    let mut query = if let Some(not_null) = std::ptr::NonNull::new(query) {
-        not_null
-    } else {
-        set_error(
-            types::ParameterError(String::from("Query out parameter cannot be null.")).into(),
-        );
-        return POLAR_FAILURE;
-    };
-
-    let result = catch_unwind(|| {
+pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
+    ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
-        let load = unsafe { ffi_ref!(load) };
-        match polar.load(load) {
-            Err(err) => {
-                set_error(err);
-                (null_mut(), POLAR_FAILURE)
-            }
-            Ok(Some(query)) => (box_ptr!(query), POLAR_SUCCESS),
-            Ok(None) => (null_mut(), POLAR_SUCCESS),
+        match polar.next_inline_query() {
+            Some(query) => box_ptr!(query),
+            None => null_mut(),
         }
-    });
-
-    if let Ok((ret_query, ret_code)) = result {
-        unsafe { *query.as_mut() = ret_query };
-        ret_code
-    } else {
-        set_error(types::OperationalError::Unknown.into());
-        unsafe { *query.as_mut() = null_mut() };
-        POLAR_FAILURE
-    }
+    })
 }
 
 #[no_mangle]
@@ -162,21 +132,6 @@ pub extern "C" fn polar_query_from_repl(polar_ptr: *mut Polar) -> *mut Query {
                 set_error(types::RuntimeError::Serialization { msg: e.to_string() }.into());
                 null_mut()
             }
-        }
-    })
-}
-
-#[no_mangle]
-/// Bools aren't portable, 0 means error 1 means success.
-pub extern "C" fn polar_load_str(polar_ptr: *mut Polar, src: *const c_char) -> i32 {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        let s = unsafe { ffi_string!(src) };
-        if let Err(e) = polar.load_str(&s) {
-            set_error(e);
-            POLAR_FAILURE
-        } else {
-            POLAR_SUCCESS
         }
     })
 }
@@ -217,11 +172,10 @@ pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_cha
 }
 
 #[no_mangle]
-pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *const c_char {
+pub extern "C" fn polar_next_query_event(query_ptr: *mut Query) -> *const c_char {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
-        let event = polar.query(query);
+        let event = query.next_event();
         match event {
             Ok(event) => {
                 let event_json = serde_json::to_string(&event).unwrap();
@@ -247,16 +201,11 @@ pub extern "C" fn polar_query(polar_ptr: *mut Polar, query_ptr: *mut Query) -> *
 /// - Provided value is NULL.
 /// - Provided value contains malformed JSON.
 /// - Provided value cannot be parsed to a Term wrapping a Value::String.
-/// - Polar.debug_command returns an error.
+/// - Query.debug_command returns an error.
 /// - Anything panics during the parsing/execution of the provided command.
 #[no_mangle]
-pub extern "C" fn polar_debug_command(
-    polar_ptr: *mut Polar,
-    query_ptr: *mut Query,
-    value: *const c_char,
-) -> i32 {
+pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_char) -> i32 {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
         if !value.is_null() {
             let s = unsafe { ffi_string!(value) };
@@ -265,7 +214,7 @@ pub extern "C" fn polar_debug_command(
                 Ok(types::Term {
                     value: types::Value::String(command),
                     ..
-                }) => match polar.debug_command(query, command) {
+                }) => match query.debug_command(command) {
                     Ok(_) => POLAR_SUCCESS,
                     Err(e) => {
                         set_error(e);
@@ -293,14 +242,12 @@ pub extern "C" fn polar_debug_command(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_external_call_result(
-    polar_ptr: *mut Polar,
+pub extern "C" fn polar_call_result(
     query_ptr: *mut Query,
     call_id: u64,
     value: *const c_char,
 ) -> i32 {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
         let mut term = None;
         if !value.is_null() {
@@ -314,7 +261,7 @@ pub extern "C" fn polar_external_call_result(
                 }
             }
         }
-        match polar.external_call_result(query, call_id, term) {
+        match query.call_result(call_id, term) {
             Ok(_) => POLAR_SUCCESS,
             Err(e) => {
                 set_error(e);
@@ -325,17 +272,11 @@ pub extern "C" fn polar_external_call_result(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_external_question_result(
-    polar_ptr: *mut Polar,
-    query_ptr: *mut Query,
-    call_id: u64,
-    result: i32,
-) -> i32 {
+pub extern "C" fn polar_question_result(query_ptr: *mut Query, call_id: u64, result: i32) -> i32 {
     ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
         let query = unsafe { ffi_ref!(query_ptr) };
         let result = result != POLAR_FAILURE;
-        polar.external_question_result(query, call_id, result);
+        query.question_result(call_id, result);
         POLAR_SUCCESS
     })
 }
@@ -379,26 +320,3 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
         POLAR_SUCCESS
     })
 }
-
-/// Free `load` created by `polar_new_load`.
-#[no_mangle]
-pub extern "C" fn load_free(load: *mut Load) -> i32 {
-    ffi_try!({
-        std::mem::drop(unsafe { Box::from_raw(load) });
-        POLAR_SUCCESS
-    })
-}
-
-//
-// #[no_mangle]
-// pub extern "C" fn polar_external_result(
-//     polar_ptr: *mut Polar,
-//     query_ptr: *mut Query,
-//     result: *const c_char,
-// ) {
-//     let polar = unsafe { &mut *polar_ptr };
-//     let mut query = unsafe { &mut *query_ptr };
-//     let cs = unsafe { CStr::from_ptr(result) };
-//     let s = cs.to_str().expect("to_str() failed");
-//     polar.external_result(&mut query, s.to_owned());
-// }

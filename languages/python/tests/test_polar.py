@@ -101,7 +101,7 @@ def test_external(polar, qvar):
     assert qvar("Foo{}.c() = x", "x", one=True) == "c"
     assert qvar("Foo{} = f, f.a() = x", "x", one=True) == "A"
     assert qvar("Foo{}.bar().y() = x", "x", one=True) == "y"
-    assert qvar("Foo{}.e = x", "x") == [[1, 2, 3]]
+    assert qvar("Foo{}.e = x", "x", one=True) == [1, 2, 3]  # returns an actual list
     assert qvar("Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
     assert qvar("Foo{}.g.hello = x", "x", one=True) == "world"
     assert qvar("Foo{}.h = x", "x", one=True) is True
@@ -271,8 +271,6 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
     canine = 'Animal{genus: "canis", family: "canidae"}'
-    canid = 'Animal{family: "canidae"}'
-    animal = "Animal{}"
 
     wolf_dict = '{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog_dict = '{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -331,7 +329,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.IntegerOverflow) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('18446744073709551616', [1, 16])"
+    assert (
+        str(e.value)
+        == "('18446744073709551616', {'source': {'filename': None, 'src': '\\n    f(a) := a = 18446744073709551616;\\n    '}, 'row': 1, 'column': 16})"
+    )
 
     # InvalidTokenCharacter
     rules = """
@@ -340,7 +341,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('this is not', '\\n', [1, 28])"
+    assert (
+        str(e.value)
+        == "('this is not', '\\n', {'source': {'filename': None, 'src': '\\n    f(a) := a = \"this is not\\n    allowed\";\\n    '}, 'row': 1, 'column': 28})"
+    )
 
     rules = """
     f(a) := a = "this is not allowed\0
@@ -348,7 +352,10 @@ def test_parser_errors(polar):
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('this is not allowed', '\\x00', [1, 16])"
+    assert (
+        str(e.value)
+        == "('this is not allowed', '\\x00', {'source': {'filename': None, 'src': '\\n    f(a) := a = \"this is not allowed'}, 'row': 1, 'column': 16})"
+    )
 
     # InvalidToken -- not sure what causes this
 
@@ -358,7 +365,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedEOF) as e:
         polar._load_str(rules)
-    assert str(e.value) == "[1, 8]"
+    assert (
+        str(e.value)
+        == "{'source': {'filename': None, 'src': '\\n    f(a)\\n    '}, 'row': 1, 'column': 8}"
+    )
 
     # UnrecognizedToken
     rules = """
@@ -366,7 +376,10 @@ def test_parser_errors(polar):
     """
     with pytest.raises(exceptions.UnrecognizedToken) as e:
         polar._load_str(rules)
-    assert str(e.value) == "('1', [1, 4])"
+    assert (
+        str(e.value)
+        == "('1', {'source': {'filename': None, 'src': '\\n    1;\\n    '}, 'row': 1, 'column': 4})"
+    )
 
     # ExtraToken -- not sure what causes this
 
@@ -407,3 +420,52 @@ def test_query(load_file, polar):
         {"a": 2},
         {"a": 3},
     ]
+
+
+def test_constructor(polar, qvar):
+    """Test that class constructor is called correctly with constructor syntax."""
+
+    class TestConstructor:
+        def __init__(self, x):
+            self.x = x
+
+    polar.register_class(TestConstructor)
+
+    assert (
+        qvar("instance = new TestConstructor{x: 1}, y = instance.x", "y", one=True) == 1
+    )
+    assert (
+        qvar("instance = new TestConstructor{x: 2}, y = instance.x", "y", one=True) == 2
+    )
+    assert (
+        qvar(
+            "instance = new TestConstructor{x: new TestConstructor{x: 3}}, y = instance.x.x",
+            "y",
+            one=True,
+        )
+        == 3
+    )
+
+    class TestConstructorTwo:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+    polar.register_class(TestConstructorTwo)
+
+    assert (
+        qvar(
+            "instance = new TestConstructorTwo{x: 1, y: 2}, x = instance.x, y = instance.y",
+            "y",
+            one=True,
+        )
+        == 2
+    )
+
+
+def test_in(polar, qeval):
+    polar._load_str("g(x, y) := !x in y;")
+    polar._load_str("f(x) := !(x=1 | x=2);")
+    assert not qeval("f(1)")
+    assert qeval("g(4, [1,2,3])")
+    assert not qeval("g(1, [1,1,1])")

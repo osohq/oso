@@ -11,6 +11,29 @@ pub use display::*;
 
 pub use to_polar::*;
 
+use crate::types::{Node, Trace};
+use std::fmt::Write;
+
+pub fn draw(trace: &Trace, nest: usize) -> String {
+    let mut res = String::new();
+    for _ in 0..nest {
+        res.push_str("  ");
+    }
+    match &trace.node {
+        Node::Term(t) => write!(&mut res, "{}", t.to_polar()).unwrap(),
+        Node::Rule(r) => write!(&mut res, "{}", r.to_polar()).unwrap(),
+    }
+    res.push_str(" [\n");
+    for c in &trace.children {
+        res.push_str(&draw(c, nest + 1));
+    }
+    for _ in 0..nest {
+        res.push_str("  ");
+    }
+    res.push_str("]\n");
+    res
+}
+
 pub mod display {
     use std::fmt;
 
@@ -204,10 +227,13 @@ pub mod to_polar {
                 Lt => "<",
                 Or => "|",
                 And => ",",
-                Make => "make",
+                New => "new",
                 Dot => ".",
                 Unify => "=",
                 In => "in",
+                Cut => "cut",
+                Debug => "debug",
+                Isa => "isa",
             }
             .to_string()
         }
@@ -219,8 +245,19 @@ pub mod to_polar {
             // Adds parentheses when sub expressions have lower precedence (which is what you would have had to have during initial parse)
             // Lets us spit out strings that would reparse to the same ast.
             match self.operator {
-                // `Make` formats as a predicate
-                Make => format!("make({})", format_args(self.operator, &self.args, ",")),
+                Debug => "debug()".to_owned(),
+                Cut => "cut()".to_owned(),
+                New => {
+                    if self.args.len() == 1 {
+                        format!("new {}", to_polar_parens(self.operator, &self.args[0]))
+                    } else {
+                        format!(
+                            "new ({}, {})",
+                            to_polar_parens(self.operator, &self.args[0]),
+                            self.args[1].to_polar()
+                        )
+                    }
+                }
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {
@@ -236,19 +273,16 @@ pub mod to_polar {
                     to_polar_parens(self.operator, &self.args[0])
                 ),
                 // Binary operators
-                Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify => format!(
-                    "{}{}{}",
-                    to_polar_parens(self.operator, &self.args[0]),
-                    self.operator.to_polar(),
-                    to_polar_parens(self.operator, &self.args[1])
-                ),
+                Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa | In => {
+                    format!(
+                        "{}{}{}",
+                        to_polar_parens(self.operator, &self.args[0]),
+                        self.operator.to_polar(),
+                        to_polar_parens(self.operator, &self.args[1])
+                    )
+                }
                 // n-ary operators
                 Or | And => format_args(self.operator, &self.args, &self.operator.to_polar()),
-                In => format!(
-                    "{} in {}",
-                    &self.args[0].to_polar(),
-                    &self.args[1].to_polar()
-                ),
             }
         }
     }
@@ -323,6 +357,15 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for Pattern {
+        fn to_polar(&self) -> String {
+            match self {
+                Pattern::Dictionary(d) => d.to_polar(),
+                Pattern::Instance(i) => i.to_polar(),
+            }
+        }
+    }
+
     impl ToPolarString for Value {
         fn to_polar(&self) -> String {
             match self {
@@ -337,6 +380,7 @@ pub mod to_polar {
                 }
                 Value::InstanceLiteral(i) => i.to_polar(),
                 Value::Dictionary(i) => i.to_polar(),
+                Value::Pattern(i) => i.to_polar(),
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ","),),

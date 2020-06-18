@@ -31,7 +31,7 @@ extern {
         "{" => lexer::Token::LCB,       // {
         "}" => lexer::Token::RCB,       // }
         "." => lexer::Token::Dot,       // .
-        "make" => lexer::Token::Make,   // make
+        "new" => lexer::Token::New,     // new
         "!" => lexer::Token::Not,       // !
         "*" => lexer::Token::Mul,       // *
         "/" => lexer::Token::Div,       // /
@@ -48,7 +48,10 @@ extern {
         ";" => lexer::Token::SemiColon, // ;
         ":=" => lexer::Token::Define,   // :=
         "?=" => lexer::Token::Query,    // ?=
-        "in" => lexer::Token::In,
+        "cut" => lexer::Token::Cut,
+        "debug" => lexer::Token::Debug,
+        "in" => lexer::Token::In,       // in
+        "isa" => lexer::Token::Isa,     // isa
     }
 }
 
@@ -119,8 +122,9 @@ pub Term: Term = {
 
 RewritableOperator: Operator = {
     "." => Operator::Dot,
-    "make" => Operator::Make,
-    "in" => Operator::In
+    "new" => Operator::New,
+    "in" => Operator::In,
+    "debug" => Operator::Debug,
 };
 
 pub RewrittenOperation: Operation = {
@@ -141,7 +145,7 @@ pub Predicate: Predicate = {
     }
 };
 
-Exp10: Term = {
+Exp11: Term = {
     <term:Term> => term,
     "(" <exp:Exp> ")" => exp // seems sorta impossible to support parrens for expressions and list literals.
 }
@@ -177,27 +181,53 @@ DotOp: Term = {
     }
 }
 
+Exp10: Term = {
+    <start:@L> "cut" "(" ")" => {
+        let args = vec![];
+        let op = Operation{operator: Operator::Cut, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <start:@L> "cut" => {
+        let args = vec![];
+        let op = Operation{operator: Operator::Cut, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    <exp11:Exp11> => exp11
+}
+
 // .
 Exp9: Term = {
     <dot_op:DotOp> => dot_op,
     <exp10:Exp10> => exp10
 };
 
-// in
+// in isa
 Exp8: Term = {
     <start:@L> <left:Exp9> "in" <right:Exp9> => {
         let args = vec![left, right];
         let op = Operation{operator: Operator::In, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
+    <start:@L> <left:Exp9> "isa" <right:Exp9> => {
+        let right = Pattern::term_as_pattern(&right);
+        let args = vec![left, right];
+        let op = Operation{operator: Operator::Isa, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
     <exp9:Exp9> => exp9
 }
 
-// !
+// ! new
 Exp7: Term = {
     <start:@L> "!" <exp8:Exp8> => {
         let args = vec![exp8];
         let op = Operation{operator: Operator::Not, args};
+        Term{id: 0, offset: start, value: Value::Expression(op)}
+    },
+    // TODO (dhatch): Maybe a different type here
+    <start:@L> "new" <literal:InstanceLiteral> => {
+        let args = vec![literal];
+        let op = Operation{operator: Operator::New, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     <exp8:Exp8> => exp8

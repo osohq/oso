@@ -84,7 +84,7 @@ starting point if you are new to **oso**.
 
    application-library/index
 
-
+   faq
 
 
 Language & API Reference
