@@ -13,10 +13,10 @@ module Osohq
     class Polar
       def initialize
         @ffi_instance = FFI::Polar.create
+        @calls = {}
         @classes = {}
         @constructors = {}
         @instances = {}
-        @calls = {}
         @load_queue = Set.new
       end
 
@@ -122,7 +122,8 @@ module Osohq
 
       # Clear the KB but retain all registered classes and constructors.
       def clear
-        # TODO(gj): Should we clear out instance + call caches as well?
+        calls = {}
+        instances = {}
         @ffi_instance = FFI::Polar.create
       end
 
