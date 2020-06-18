@@ -39,15 +39,10 @@ module Osohq
         end
       end
 
-      def query_str(str)
-        load_queued_files
-        query_ffi_instance = ffi_instance.new_query_from_str(str)
-        Query.new(query_ffi_instance, polar: self).results
-      end
-
       # @param name [String]
       # @param args [Array<Object>]
       def query_pred(name, args:)
+        clear_query_state
         load_queued_files
         pred = Predicate.new(name, args: args)
         query_ffi_instance = ffi_instance.new_query_from_term(to_polar_term(pred))
@@ -55,6 +50,7 @@ module Osohq
       end
 
       def repl
+        clear_query_state
         load_queued_files
         loop do
           query = Query.new(ffi_instance.new_query_from_repl, polar: self)
@@ -122,8 +118,6 @@ module Osohq
 
       # Clear the KB but retain all registered classes and constructors.
       def clear
-        calls = {}
-        instances = {}
         @ffi_instance = FFI::Polar.create
       end
 
@@ -223,6 +217,19 @@ module Osohq
 
       attr_reader :calls, :classes, :constructors, :ffi_instance, :instances, :load_queue
 
+      # Clear the instance and call caches
+      def clear_query_state
+        calls.clear
+        instances.clear
+      end
+
+      def query_str(str)
+        clear_query_state
+        load_queued_files
+        query_ffi_instance = ffi_instance.new_query_from_str(str)
+        Query.new(query_ffi_instance, polar: self).results
+      end
+
       # @param instance [Object]
       # @param id [Integer]
       # @return [Integer]
@@ -242,7 +249,6 @@ module Osohq
       end
 
       def load_queued_files
-        clear
         load_queue.reject! do |file|
           File.open(file) { |f| load_str(f.read) }
           true
