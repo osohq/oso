@@ -167,6 +167,11 @@ impl From<Predicate> for TestHelper<Value> {
         Self(Value::Call(other))
     }
 }
+impl From<Pattern> for TestHelper<Value> {
+    fn from(other: Pattern) -> Self {
+        Self(Value::Pattern(other))
+    }
+}
 impl From<Operation> for TestHelper<Value> {
     fn from(other: Operation) -> Self {
         Self(Value::Expression(other))

@@ -1362,14 +1362,12 @@ impl PolarVirtualMachine {
         right: Term,
         arg: Term,
     ) -> PolarResult<QueryEvent> {
+        assert!(!matches!(left.value, Value::InstanceLiteral(_)));
+        assert!(!matches!(right.value, Value::InstanceLiteral(_)));
+
         let arg = self.deref(&arg);
         match (arg.value, left.value, right.value) {
             (
-                Value::ExternalInstance(instance),
-                Value::InstanceLiteral(left),
-                Value::InstanceLiteral(right),
-            )
-            | (
                 Value::ExternalInstance(instance),
                 Value::Pattern(Pattern::Instance(left)),
                 Value::Pattern(Pattern::Instance(right)),
@@ -1380,8 +1378,8 @@ impl PolarVirtualMachine {
                 {
                     self.push_goal(Goal::IsSubspecializer {
                         answer,
-                        left: Term::new(Value::Dictionary(left.fields)),
-                        right: Term::new(Value::Dictionary(right.fields)),
+                        left: Term::new(Value::Pattern(Pattern::Dictionary(left.fields))),
+                        right: Term::new(Value::Pattern(Pattern::Dictionary(right.fields))),
                         arg: Term::new(Value::ExternalInstance(instance.clone())),
                     })?;
                 }
@@ -1393,8 +1391,7 @@ impl PolarVirtualMachine {
                     right_class_tag: right.tag,
                 })
             }
-            (_, Value::Dictionary(left), Value::Dictionary(right))
-            | (
+            (
                 _,
                 Value::Pattern(Pattern::Dictionary(left)),
                 Value::Pattern(Pattern::Dictionary(right)),
@@ -1416,8 +1413,7 @@ impl PolarVirtualMachine {
                 }
                 Ok(QueryEvent::None)
             }
-            (_, Value::InstanceLiteral(_), Value::Dictionary(_))
-            | (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
+            (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
                 self.bind(&answer, &Term::new(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
@@ -2109,15 +2105,15 @@ mod tests {
             instance_id: 1,
             literal: None,
         }));
-        let left = term!(value!(InstanceLiteral {
+        let left = term!(value!(Pattern::Instance(InstanceLiteral {
             tag: sym!("Any"),
             fields: Dictionary {
                 fields: btreemap! {}
             }
-        }));
-        let right = term!(Value::Dictionary(Dictionary {
+        })));
+        let right = term!(Value::Pattern(Pattern::Dictionary(Dictionary {
             fields: btreemap! {sym!("a") => term!("a")},
-        }));
+        })));
 
         let answer = vm.kb.read().unwrap().gensym("is_subspecializer");
 
