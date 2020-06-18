@@ -56,7 +56,7 @@ class Oso(api.Polar):
         # actor + resource are python classes
         pred = Predicate(name="allow", args=[actor, action, resource])
         result = self._query_pred(pred, debug=debug, single=True,)
-        audit.log(pred, result)
+        audit.log(actor, action, resource, result)
         return result.success
 
 

@@ -6,6 +6,7 @@ import json
 from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from sqlite3 import Connection, IntegrityError
+from polar import Predicate
 
 from typing import Any, Dict
 
@@ -117,18 +118,14 @@ class AuditLog:
             cur.execute("DELETE from events")
 
 
-def log(pred, result):
+def log(actor, action, resource, result):
     if ENABLE_AUDIT:
         try:
-            assert pred.name == "allow"
             timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            actor, action, resource = pred.args
-            # @TODO: Probably want a json version of these, these are user classes though
-            # So can't really. Even this isn't exactly safe.
             actor = pickle.dumps(actor)
             action = pickle.dumps(action)
             resource = pickle.dumps(resource)
-            query = str(pred)
+            query = str(Predicate("allow", [actor, action, resource]))
             success = 1 if result.success else 0
             trace = None
             if success:
@@ -137,7 +134,7 @@ def log(pred, result):
             AuditLog().write(
                 (timestamp, actor, action, resource, query, success, trace)
             )
-        except ValueError as e:
+        except ValueError:
             logger.debug("no audit DB configured; cannot log event")
         except Exception as e:
             logger.exception(e)
