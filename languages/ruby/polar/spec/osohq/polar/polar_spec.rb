@@ -351,7 +351,7 @@ RSpec.describe Osohq::Polar::Polar do
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::IntegerOverflow
-        expect(e.message).to eq(%({"token"=>"#{int}", "loc"=>12, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a) := a = #{int};\\n"}, "row"=>0, "column"=>12}}))
+        expect(e.message).to eq("'18446744073709551616' caused an integer overflow at line 1, column 13")
       end
     end
 
@@ -362,7 +362,7 @@ RSpec.describe Osohq::Polar::Polar do
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::InvalidTokenCharacter
-        expect(e.message).to eq('{"token"=>"this is not", "c"=>"\n", "loc"=>24, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a) := a = \\"this is not\\nallowed\\";\n"}, "row"=>0, "column"=>24}}')
+        expect(e.message).to eq("'\\n' is not a valid character. Found in this is not at line 1, column 25")
       end
     end
 
@@ -375,7 +375,7 @@ RSpec.describe Osohq::Polar::Polar do
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedEOF
-        expect(e.message).to eq('{"loc"=>4, "context"=>{"source"=>{"filename"=>nil, "src"=>"f(a)\n"}, "row"=>0, "column"=>4}}')
+        expect(e.message).to eq('hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 5')
       end
     end
 
@@ -385,7 +385,7 @@ RSpec.describe Osohq::Polar::Polar do
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedToken
-        expect(e.message).to eq('{"token"=>"1", "loc"=>0, "context"=>{"source"=>{"filename"=>nil, "src"=>"1;\n"}, "row"=>0, "column"=>0}}')
+        expect(e.message).to eq("did not expect to find the token '1' at line 1, column 1")
       end
     end
 

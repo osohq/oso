@@ -26,75 +26,95 @@ module Osohq
           error = Rust.get
           return Osohq::Polar::FFIErrorNotFound if error.null?
 
-          kind, body = JSON.parse(error.to_s).first
+          error = JSON.parse(error.to_s)
+          msg = error['formatted']
+          kind, body = error['kind'].first
           subkind, details = body.first
           case kind
           when 'Parse'
-            parse_error(subkind, details: details)
+            parse_error(subkind, msg: msg, details: details)
           when 'Runtime'
-            runtime_error(subkind, details: details)
+            runtime_error(subkind, msg: msg, details: details)
           when 'Operational'
-            operational_error(subkind, details: details)
+            operational_error(subkind, msg: msg, details: details)
+          when 'Parameter'
+            api_error(subkind, msg: msg, details: details)
           end
         end
 
         # Map FFI parse errors into Ruby exceptions.
         #
         # @param kind [String]
+        # @param msg [String]
         # @param details [Hash<String, Object>]
         # @return [Osohq::Polar::ParseError] the object converted into the expected format.
-        private_class_method def self.parse_error(kind, details:) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/MethodLength
+        private_class_method def self.parse_error(kind, msg:, details:) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/MethodLength
           case kind
           when 'ExtraToken'
-            Osohq::Polar::ParseError::ExtraToken.new(details)
+            Osohq::Polar::ParseError::ExtraToken.new(msg, details: details)
           when 'IntegerOverflow'
-            Osohq::Polar::ParseError::IntegerOverflow.new(details)
+            Osohq::Polar::ParseError::IntegerOverflow.new(msg, details: details)
           when 'InvalidToken'
-            Osohq::Polar::ParseError::InvalidToken.new(details)
+            Osohq::Polar::ParseError::InvalidToken.new(msg, details: details)
           when 'InvalidTokenCharacter'
-            Osohq::Polar::ParseError::InvalidTokenCharacter.new(details)
+            Osohq::Polar::ParseError::InvalidTokenCharacter.new(msg, details: details)
           when 'UnrecognizedEOF'
-            Osohq::Polar::ParseError::UnrecognizedEOF.new(details)
+            Osohq::Polar::ParseError::UnrecognizedEOF.new(msg, details: details)
           when 'UnrecognizedToken'
-            Osohq::Polar::ParseError::UnrecognizedToken.new(details)
+            Osohq::Polar::ParseError::UnrecognizedToken.new(msg, details: details)
           else
-            Osohq::Polar::ParseError.new(details)
+            Osohq::Polar::ParseError.new(msg, details: details)
           end
         end
 
         # Map FFI runtime errors into Ruby exceptions.
         #
         # @param kind [String]
+        # @param msg [String]
         # @param details [Hash<String, Object>]
         # @return [Osohq::Polar::PolarRuntimeError] the object converted into the expected format.
-        private_class_method def self.runtime_error(kind, details:) # rubocop:disable Metrics/MethodLength
-          msg = details['msg']
+        private_class_method def self.runtime_error(kind, msg:, details:) # rubocop:disable Metrics/MethodLength
           case kind
           when 'Serialization'
-            Osohq::Polar::SerializationError.new(msg)
+            Osohq::Polar::SerializationError.new(msg, details: details)
           when 'Unsupported'
-            Osohq::Polar::UnsupportedError.new(msg)
+            Osohq::Polar::UnsupportedError.new(msg, details: details)
           when 'TypeError'
-            Osohq::Polar::PolarTypeError.new(msg)
+            Osohq::Polar::PolarTypeError.new(msg, details: details)
           when 'StackOverflow'
-            Osohq::Polar::StackOverflowError.new(msg)
+            Osohq::Polar::StackOverflowError.new(msg, details: details)
           else
-            Osohq::Polar::PolarRuntimeError.new(msg)
+            Osohq::Polar::PolarRuntimeError.new(msg, details: details)
           end
         end
 
         # Map FFI operational errors into Ruby exceptions.
         #
         # @param kind [String]
+        # @param msg [String]
         # @param details [Hash<String, Object>]
         # @return [Osohq::Polar::OperationalError] the object converted into the expected format.
-        private_class_method def self.operational_error(kind, details:)
-          msg = details['msg']
+        private_class_method def self.operational_error(kind, msg:, details:)
           case kind
           when 'Unknown' # Rust panics.
-            Osohq::Polar::UnknownError.new(msg)
+            Osohq::Polar::UnknownError.new(msg, details: details)
           else
-            Osohq::Polar::OperationalError.new(msg)
+            Osohq::Polar::OperationalError.new(msg, details: details)
+          end
+        end
+
+        # Map FFI API errors into Ruby exceptions.
+        #
+        # @param kind [String]
+        # @param msg [String]
+        # @param details [Hash<String, Object>]
+        # @return [Osohq::Polar::ApiError] the object converted into the expected format.
+        private_class_method def self.api_error(kind, msg:, details:)
+          case kind
+          when 'Parameter'
+            Osohq::Polar::ParameterError.new(msg, details: details)
+          else
+            Osohq::Polar::ApiError.new(msg, details: details)
           end
         end
       end

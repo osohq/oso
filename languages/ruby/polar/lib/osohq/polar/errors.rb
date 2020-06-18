@@ -3,7 +3,12 @@
 module Osohq
   module Polar
     # Base error type for the Osohq::Polar library.
-    class Error < ::RuntimeError; end
+    class Error < ::RuntimeError
+      def initialize(message = nil, details: nil)
+        @details = details
+        super(message)
+      end
+    end
 
     # Expected to find an FFI error to convert into a Ruby exception but found none.
     class FFIErrorNotFound < Error; end
@@ -39,6 +44,7 @@ module Osohq
       end
     end
 
+    # Generic operational exception.
     class OperationalError < Error; end
     class UnknownError < OperationalError; end
 
@@ -51,5 +57,9 @@ module Osohq
       class UnrecognizedEOF < ParseError; end
       class UnrecognizedToken < ParseError; end
     end
+
+    # Generic Polar API exception.
+    class ApiError < Error; end
+    class ParameterError < ApiError; end
   end
 end
