@@ -68,11 +68,16 @@ macro_rules! query_results {
         query_results($query, no_results, no_externals, no_debug)
     };
     ($query:expr, $external_call_handler:expr, $make_external_handler:expr, $debug_handler:expr) => {
-        query_results($query, $external_call_handler, $make_external_handler, $debug_handler)
+        query_results(
+            $query,
+            $external_call_handler,
+            $make_external_handler,
+            $debug_handler,
+        )
     };
     ($query:expr, $external_call_handler:expr) => {
         query_results($query, $external_call_handler, no_externals, no_debug)
-    }
+    };
 }
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
@@ -560,10 +565,7 @@ fn test_load_with_query() {
     polar.load(src).expect("load failed");
 
     while let Some(query) = polar.next_inline_query() {
-        assert_eq!(
-            query_results!(query).len(),
-            1
-        );
+        assert_eq!(query_results!(query).len(), 1);
     }
 }
 
