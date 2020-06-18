@@ -22,7 +22,7 @@ module Osohq
       def load_str(str)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
-        ffi_instance.load(str)
+        ffi_instance.load_str(str)
         loop do
           next_query = ffi_instance.next_inline_query
           break if next_query.nil?

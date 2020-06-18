@@ -10,7 +10,7 @@ module Osohq
           ffi_lib FFI::LIB_PATH
 
           attach_function :new, :polar_new, [], Polar
-          attach_function :load, :polar_load, [Polar, :string], :int32
+          attach_function :load_str, :polar_load, [Polar, :string], :int32
           attach_function :next_inline_query, :polar_next_inline_query, [Polar], FFI::Query
           attach_function :new_id, :polar_get_external_id, [Polar], :uint64
           attach_function :new_query_from_str, :polar_new_query, [Polar, :string], FFI::Query
@@ -31,8 +31,8 @@ module Osohq
 
         # @param src [String]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def load(src)
-          raise FFI::Error.get if Rust.load(self, src).zero?
+        def load_str(src)
+          raise FFI::Error.get if Rust.load_str(self, src).zero?
         end
 
         # @return [FFI::Query] if there are remaining inline queries.
