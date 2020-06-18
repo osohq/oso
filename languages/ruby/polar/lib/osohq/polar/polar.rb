@@ -99,7 +99,7 @@ module Osohq
       # @param cls_name [String]
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
-      def make_instance(cls_name, fields:, id: nil)
+      def make_instance(cls_name, fields:, id:)
         constructor = get_constructor(cls_name)
         fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(v)] }]
         instance = if constructor == :new
