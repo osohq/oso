@@ -28,6 +28,16 @@ module Osohq
     class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end
+    class PolarFileExtensionError < PolarRuntimeError
+      def initialize
+        super('Polar files must have .pol or .polar extension.')
+      end
+    end
+    class PolarFileNotFoundError < PolarRuntimeError
+      def initialize(file)
+        super("Could not find file: #{file}")
+      end
+    end
 
     class OperationalError < Error; end
     class UnknownError < OperationalError; end
