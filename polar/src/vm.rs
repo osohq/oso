@@ -65,9 +65,14 @@ pub enum Goal {
     PopQuery {
         term: Term,
     },
-    SortRules {
-        rules: Rules,
+    FilterRules {
         args: TermList,
+        applicable_rules: Rules,
+        unfiltered_rules: Rules,
+    },
+    SortRules {
+        args: TermList,
+        rules: Rules,
         outer: usize,
         inner: usize,
     },
@@ -197,6 +202,11 @@ impl PolarVirtualMachine {
                 return result;
             }
             Goal::PopQuery { .. } => self.pop_query(),
+            Goal::FilterRules {
+                applicable_rules,
+                unfiltered_rules,
+                args,
+            } => self.filter_rules(applicable_rules, unfiltered_rules, args)?,
             Goal::SortRules {
                 rules,
                 outer,
@@ -381,9 +391,31 @@ impl PolarVirtualMachine {
         name.0.starts_with('_')
     }
 
-    /// Generate a fresh set of variables for a rule
-    /// by renaming them to temporaries.
-    fn rename_vars(&self, rule: &Rule) -> Rule {
+    /// Generate a fresh set of variables for an argument list.
+    fn rename_vars(&self, mut terms: TermList) -> TermList {
+        let mut renames = HashMap::<Symbol, Symbol>::new();
+        let mut new_terms = vec![];
+        for term in terms.iter_mut() {
+            new_terms.push(term.map(&mut |term| {
+                term.map(&mut |value| match value {
+                    Value::Symbol(sym) => {
+                        if let Some(new) = renames.get(sym) {
+                            Value::Symbol(new.clone())
+                        } else {
+                            let new = self.kb.read().unwrap().gensym(&sym.0);
+                            renames.insert(sym.clone(), new.clone());
+                            Value::Symbol(new)
+                        }
+                    }
+                    _ => value.clone(),
+                })
+            }));
+        }
+        new_terms
+    }
+
+    /// Generate a fresh set of variables for a rule.
+    fn rename_rule_vars(&self, rule: &Rule) -> Rule {
         let mut renames = HashMap::<Symbol, Symbol>::new();
         rule.map(&mut move |value| match value {
             Value::Symbol(sym) => {
@@ -729,18 +761,15 @@ impl PolarVirtualMachine {
             None => self.push_goal(Goal::Backtrack)?,
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
-                self.push_goal(Goal::TracePop)?;
-                self.push_goal(Goal::SortRules {
-                    rules: generic_rule
-                        .rules
-                        .into_iter()
-                        .filter(|r| r.params.len() == predicate.args.len())
-                        .collect(),
-                    args: predicate.args,
-                    outer: 1,
-                    inner: 1,
-                })?;
-                self.push_goal(Goal::TracePush)?;
+                self.append_goals(vec![
+                    Goal::TracePush,
+                    Goal::FilterRules {
+                        applicable_rules: vec![],
+                        unfiltered_rules: generic_rule.rules,
+                        args: predicate.args,
+                    },
+                    Goal::TracePop,
+                ]);
             }
         }
 
@@ -1242,6 +1271,71 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
+    /// Filter rules to just those applicable to a list of arguments,
+    /// then sort them by specificity.
+    fn filter_rules(
+        &mut self,
+        mut applicable_rules: Rules,
+        mut unfiltered_rules: Rules,
+        args: TermList,
+    ) -> PolarResult<()> {
+        if unfiltered_rules.is_empty() {
+            // The rules have been filtered. Sort them.
+            applicable_rules.reverse();
+            self.push_goal(Goal::SortRules {
+                rules: applicable_rules,
+                args,
+                outer: 1,
+                inner: 1,
+            })
+        } else {
+            // Check one rule for applicability.
+            let rule = unfiltered_rules.pop().unwrap();
+            let inapplicable = Goal::FilterRules {
+                args: args.clone(),
+                applicable_rules: applicable_rules.clone(),
+                unfiltered_rules: unfiltered_rules.clone(),
+            };
+            if rule.params.len() != args.len() {
+                return self.push_goal(inapplicable); // wrong arity
+            }
+
+            applicable_rules.push(rule.clone());
+            let applicable = Goal::FilterRules {
+                args: args.clone(),
+                applicable_rules,
+                unfiltered_rules,
+            };
+
+            // Try to unify the arguments with renamed parameters.
+            // TODO: Think about using backtrack so that we don't
+            // leave temporary bindings around.
+            let args = self.rename_vars(args);
+            let Rule { params, .. } = self.rename_rule_vars(&rule);
+            let mut check_applicability = vec![];
+            for (arg, param) in args.iter().zip(params.iter()) {
+                if let Some(parameter) = &param.parameter {
+                    check_applicability.push(Goal::Unify {
+                        left: arg.clone(),
+                        right: parameter.clone(),
+                    });
+                }
+                if let Some(specializer) = &param.specializer {
+                    check_applicability.push(Goal::Isa {
+                        left: arg.clone(),
+                        right: specializer.clone(),
+                    });
+                }
+            }
+            check_applicability.push(Goal::Cut {
+                choice_index: self.choices.len(),
+            });
+            check_applicability.push(applicable);
+            self.choose(vec![check_applicability, vec![inapplicable]]);
+            Ok(())
+        }
+    }
+
     /// Sort a list of rules with respect to a list of arguments
     /// using an explicit-state insertion sort.
     ///
@@ -1317,7 +1411,7 @@ impl PolarVirtualMachine {
                     },
                 });
                 goals.push(Goal::TracePush);
-                let Rule { body, params, .. } = self.rename_vars(rule);
+                let Rule { body, params, .. } = self.rename_rule_vars(rule);
 
                 // Unify the arguments with the formal parameters.
                 for (arg, param) in args.iter().zip(params.iter()) {
@@ -1438,11 +1532,8 @@ impl PolarVirtualMachine {
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
 
                 // The dictionary with more fields is taken as more specific.
-                // Assumption here that the rules have already been filtered for applicability,
-                // and all fields are applicable.
-                // This is a safe assumption because though rules are not currently pre-filtered,
-                // inapplicable rules simply don't execute, and therefore their ordering is
-                // irrelevant. Thus, the behavior is the same as if the rules were pre-filtered.
+                // The assumption here is that rules have already been filtered
+                // for applicability.
                 if left_fields.len() != right_fields.len() {
                     self.bind(
                         &answer,
@@ -2047,8 +2138,7 @@ mod tests {
             })),
         };
 
-        let renamed_rule = vm.rename_vars(&rule);
-
+        let renamed_rule = vm.rename_rule_vars(&rule);
         let renamed_terms = unwrap_and(renamed_rule.body);
         assert_eq!(renamed_terms[1].value, renamed_terms[2].value);
         let x_value = match &renamed_terms[1].value {
@@ -2123,10 +2213,10 @@ mod tests {
         assert_eq!(
             results,
             vec![
-                hashmap! { sym!("z") => term!(1) },
-                hashmap! { sym!("z") => term!(2) },
-                hashmap! { sym!("z") => term!(3) },
-                hashmap! { sym!("z") => term!(4) },
+                hashmap! {sym!("z") => term!(1)},
+                hashmap! {sym!("z") => term!(2)},
+                hashmap! {sym!("z") => term!(3)},
+                hashmap! {sym!("z") => term!(4)},
             ]
         );
     }
