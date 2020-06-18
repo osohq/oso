@@ -295,10 +295,10 @@ impl Value {
         }
     }
 
-    pub fn call(self) -> Result<Predicate, RuntimeError> {
+    pub fn call(self) -> Result<Predicate, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
-            _ => Err(RuntimeError::TypeError {
+            _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
                 context: None, // @TODO
