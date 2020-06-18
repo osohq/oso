@@ -1855,7 +1855,7 @@ mod tests {
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
             left: term!(btreemap! {}),
-            right: Pattern::term_as_pattern(&left.clone()),
+            right: Pattern::term_as_pattern(&left),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done]);
