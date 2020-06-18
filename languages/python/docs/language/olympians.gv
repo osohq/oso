@@ -1,0 +1,45 @@
+graph olympians {
+  node [shape=box]
+  rankdir=BT
+  splines=ortho;
+
+  subgraph {
+    rank=same
+    Kids [shape=point]
+    Zeus -- Kids -- Leto
+  }
+
+  subgraph {
+    rank=same
+    Parents [shape=point]
+    ArtemisParents [shape=point]
+    ApolloParents [shape=point]
+    ArtemisParents -- Parents -- ApolloParents
+  }
+  Parents -- Kids
+
+  subgraph {
+    rank=same
+    Artemis
+    Apollo
+  }
+  Artemis -- ArtemisParents
+  Apollo -- ApolloParents
+
+  subgraph {
+    rank=same
+    ApolloKids [shape=point]
+    AsclepiusFather [shape=point]
+    AeacusFather [shape=point]
+    AsclepiusFather -- ApolloKids -- AeacusFather
+  }
+  ApolloKids -- Apollo
+
+  subgraph {
+    rank=same
+    Asclepius
+    Aeacus
+  }
+  Asclepius -- AsclepiusFather
+  Aeacus -- AeacusFather
+}

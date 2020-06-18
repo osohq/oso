@@ -12,5 +12,4 @@ Contents:
     :maxdepth: 2
 
     python
-
-
+    application-types

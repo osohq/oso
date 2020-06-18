@@ -31,7 +31,7 @@ throughout:
 
 Polar policy files are loaded using :py:meth:`oso.Oso.load`.
 Once a policy is loaded, the :py:meth:`oso.Oso.allow` method can be used to make
-authorization :ref:`requests <requests>`.
+:ref:`authorization queries <queries>`.
 
 Add ``oso.allow()`` calls anywhere in your application where an authorization needs to
 be made.

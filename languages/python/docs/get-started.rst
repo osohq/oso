@@ -183,4 +183,4 @@ To continue, either:
 
 1. Explore :doc:`RBAC </auth-models/rbac>` or :doc:`ABAC </auth-models/abac>` authorization models.
 2. Learn more about :doc:`authorization fundementals </auth-fundamentals>` with oso.
-3. Dive deeper into the Polar language :doc:`syntax </language/polar-syntax>` & :doc:`evaluation </language/polar-queries>`.
+3. Dive deeper into the :doc:`Polar language </language/index>`.
