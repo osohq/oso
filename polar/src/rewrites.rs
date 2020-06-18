@@ -150,7 +150,7 @@ mod tests {
 
         // First rewrite
         rewrite_rule(&mut rule, &mut kb, 0);
-        assert_eq!(rule.to_polar(), "f(_value_1) := .(a,b,_value_1);");
+        assert_eq!(rule.to_polar(), "f(_value_1) := .(a, b(), _value_1);");
 
         // Check we can parse the rules back again
         let again = parse_rules(&rule.to_polar()).unwrap();
@@ -169,7 +169,7 @@ mod tests {
         rewrite_rule(&mut rule, &mut kb, 0);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_2) := .(a,b,_value_3),.(_value_3,c,_value_2);"
+            "f(_value_2) := .(a, b(), _value_3), .(_value_3, c(), _value_2);"
         );
     }
 
@@ -180,44 +180,47 @@ mod tests {
         // Lookups with args
         let rules = parse_rules("f(a, c) := a.b(c);").unwrap();
         let mut rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a,c) := a.b(c);");
-        rewrite_rule(&mut rule, &mut kb, 0);
-        assert_eq!(rule.to_polar(), "f(a,c) := .(a,b(c),_value_1),_value_1;");
-
-        // Nested lookups
-        let rules = parse_rules("f(a,c,e) := a.b(c.d(e.f));").unwrap();
-        let mut rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a,c,e) := a.b(c.d(e.f));");
+        assert_eq!(rule.to_polar(), "f(a, c) := a.b(c);");
         rewrite_rule(&mut rule, &mut kb, 0);
         assert_eq!(
             rule.to_polar(),
-            "f(a,c,e) := .(e,f,_value_4),.(c,d(_value_4),_value_3),.(a,b(_value_3),_value_2),_value_2;"
+            "f(a, c) := .(a, b(c), _value_1), _value_1;"
+        );
+
+        // Nested lookups
+        let rules = parse_rules("f(a, c, e) := a.b(c.d(e.f));").unwrap();
+        let mut rule = rules[0].clone();
+        assert_eq!(rule.to_polar(), "f(a, c, e) := a.b(c.d(e.f));");
+        rewrite_rule(&mut rule, &mut kb, 0);
+        assert_eq!(
+            rule.to_polar(),
+            "f(a, c, e) := .(e, f(), _value_4), .(c, d(_value_4), _value_3), .(a, b(_value_3), _value_2), _value_2;"
         );
     }
 
     #[test]
     fn rewrite_terms() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("x,a.b").unwrap();
-        assert_eq!(term.to_polar(), "x,a.b");
+        let mut term = parse_query("x, a.b").unwrap();
+        assert_eq!(term.to_polar(), "x, a.b");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), "x,.(a,b,_value_1),_value_1");
+        assert_eq!(term.to_polar(), "x, .(a, b(), _value_1), _value_1");
 
         let mut query = parse_query("f(a.b.c)").unwrap();
         assert_eq!(query.to_polar(), "f(a.b.c)");
         rewrite_term(&mut query, &mut kb, 0);
         assert_eq!(
             query.to_polar(),
-            ".(a,b,_value_3),.(_value_3,c,_value_2),f(_value_2)"
+            ".(a, b(), _value_3), .(_value_3, c(), _value_2), f(_value_2)"
         );
 
         let mut term = parse_query("a.b = 1").unwrap();
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(a,b,_value_4),_value_4=1");
+        assert_eq!(term.to_polar(), ".(a, b(), _value_4), _value_4 = 1");
         let mut term = parse_query("{x: 1}.x = 1").unwrap();
-        assert_eq!(term.to_polar(), "{x: 1}.x=1");
+        assert_eq!(term.to_polar(), "{x: 1}.x = 1");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".({x: 1},x,_value_5),_value_5=1");
+        assert_eq!(term.to_polar(), ".({x: 1}, x(), _value_5), _value_5 = 1");
     }
 
     #[test]
@@ -226,12 +229,15 @@ mod tests {
         let mut term = parse_query("Foo { x: bar.y }").unwrap();
         assert_eq!(term.to_polar(), "Foo{x: bar.y}");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar,y,_value_1),Foo{x: _value_1}");
+        assert_eq!(term.to_polar(), ".(bar, y(), _value_1), Foo{x: _value_1}");
 
         let mut term = parse_query("f(Foo { x: bar.y })").unwrap();
         assert_eq!(term.to_polar(), "f(Foo{x: bar.y})");
         rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar,y,_value_2),f(Foo{x: _value_2})");
+        assert_eq!(
+            term.to_polar(),
+            ".(bar, y(), _value_2), f(Foo{x: _value_2})"
+        );
     }
 
     #[test]
@@ -244,7 +250,7 @@ mod tests {
         // @ means external constructor
         assert_eq!(
             term.to_polar(),
-            "new (Foo{a: 1, b: 2}, _instance_1),_instance_1"
+            "new (Foo{a: 1, b: 2}, _instance_1), _instance_1"
         );
     }
 
@@ -258,7 +264,7 @@ mod tests {
         // @ means external constructor
         assert_eq!(
             term.to_polar(),
-            "new (Foo{a: 2, b: 3}, _instance_2),new (Foo{a: 1, b: _instance_2}, _instance_1),_instance_1"
+            "new (Foo{a: 2, b: 3}, _instance_2), new (Foo{a: 1, b: _instance_2}, _instance_1), _instance_1"
         );
     }
 

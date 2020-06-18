@@ -416,6 +416,17 @@ impl Value {
             }),
         }
     }
+
+    pub fn call(self) -> Result<Predicate, RuntimeError> {
+        match self {
+            Value::Call(pred) => Ok(pred),
+            _ => Err(RuntimeError::TypeError {
+                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
+            }),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
