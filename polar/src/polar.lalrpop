@@ -107,17 +107,17 @@ Dictionary<T>: Term = <start:@L> <fields:Object<T>> => {
     Term{id: 0, offset: start, value: Value::Dictionary(dict)}
 };
 
-DictionaryTerm: Term = <Dictionary<Exp5<Term>>> => <>;
+DictionaryTerm: Term = <Dictionary<Exp5<"Term">>> => <>;
 // Pattern dictionaries cannot contain any operators.
-DictionaryPattern: Term = <Dictionary<Pattern>> => <>;
+DictionaryPattern: Term = <Dictionary<Exp9<"Pattern">>> => <>;
 
 InstanceLiteral<T>: Term = <start:@L> <tag:Name> <fields:Object<T>> => {
     let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
     Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
 };
 
-pub InstanceLiteralTerm: Term = <InstanceLiteral<Exp5<Term>>> => <>;
-pub InstanceLiteralPattern: Term = <InstanceLiteral<Pattern>> => <>;
+pub InstanceLiteralTerm: Term = <InstanceLiteral<Exp5<"Term">>> => <>;
+pub InstanceLiteralPattern: Term = <InstanceLiteral<Exp9<"Pattern">>> => <>;
 
 pub Pattern: Term = {
     <term:InstanceLiteralPattern> => Pattern::term_as_pattern(&term),
@@ -178,12 +178,14 @@ pub Predicate: Predicate = {
 };
 
 Exp11<T>: Term = {
-    <term:T> => term,
+    <term:Term> if T == "Term" => term,
+    <term:Pattern> if T == "Pattern" => term,
     "(" <exp:Exp<T>> ")" => exp // seems sorta impossible to support parrens for expressions and list literals.
 }
 
 Exp10<T>: Term = {
-    <new:New> => new,
+    // A pattern cannot contain a new operator
+    <new:New> if T == "Term" => new,
     <start:@L> "cut" "(" ")" => {
         let args = vec![];
         let op = Operation{operator: Operator::Cut, args};
@@ -203,29 +205,30 @@ New: Term = <start:@L> "new" <literal:InstanceLiteralTerm> => {
     Term{id: 0, offset: start, value: Value::Expression(op)}
 };
 
-// @TODO: Think about this.
-Callable: Term = {
-    <DictionaryTerm> => <>,
+Callable<T>: Term = {
+    <DictionaryTerm> if T == "Term" => <>,
+    <DictionaryPattern> if T == "Pattern" => <>,
     <Symbol> => <>,
-    <DotOp> => <>,
-    <New> => <>,
+    <DotOp<T>> => <>,
+    // A pattern cannot contain a new operator.
+    <New> if T == "Term" => <>,
 };
 
-DotOp: Term = {
-    <start:@L> <head:Callable> "." <call_loc:@L> <mut call:Predicate> => {
+DotOp<T>: Term = {
+    <start:@L> <head:Callable<T>> "." <call_loc:@L> <mut call:Predicate> => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <start:@L> <head:Callable> "." <call_loc:@L> <name:Name> => {
+    <start:@L> <head:Callable<T>> "." <call_loc:@L> <name:Name> => {
         let call = Predicate{name, args: vec![]};
         let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <start:@L> <head:Callable> "." <call_loc:@L> "(" <name:Name> ")" => {
+    <start:@L> <head:Callable<T>> "." <call_loc:@L> "(" <name:Name> ")" => {
         let call_term = Term{id: 0, offset: call_loc, value: Value::Symbol(name)};
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
@@ -235,7 +238,7 @@ DotOp: Term = {
 
 // .
 Exp9<T>: Term = {
-    <dot_op:DotOp> => dot_op,
+    <dot_op:DotOp<T>> => dot_op,
     <exp10:Exp10<T>> => exp10
 };
 
@@ -387,12 +390,18 @@ Exp1<T>: Term = {
     <exp2:Exp2<T>> => exp2
 }
 
+// All ExpN & Exp productions are macros with one parameter. The parameter is the
+// *string* "Term" or "Pattern" which controls whether the expression is over terms
+// or patterns.  (It is a string since we need to conditionally
+// change the expression precedence allowed in patterns versus terms depending
+// on the parameter type, and LALRPOP does not allow conditional macros on anything
+// other than a string.
 Exp<T>: Term = {
     <exp1:Exp1<T>> => exp1
 }
 
 Parameter: Parameter = {
-    <param:Exp5<Term>> => {
+    <param:Exp5<"Term">> => {
         Parameter{parameter: Some(param), specializer: None}
     },
     // parenthesized specializers do not have symbol translation to class names applied
@@ -426,7 +435,11 @@ Parameter: Parameter = {
 };
 
 pub TermExp: Term = {
-    <Exp<Term>> => <>
+    <Exp<"Term">> => <>
+};
+
+pub PatternExp: Term = {
+    <Exp9<"Pattern">> => <>
 };
 
 ParameterList: Vec<Parameter> = {
