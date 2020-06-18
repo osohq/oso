@@ -23,7 +23,7 @@ module Osohq
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
-      def load(str)
+      def load_str(str)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         ffi_instance.load(str)
@@ -244,7 +244,7 @@ module Osohq
       def load_queued_files
         clear
         load_queue.reject! do |file|
-          File.open(file) { |f| load(f.read) }
+          File.open(file) { |f| load_str(f.read) }
           true
         end
       end
