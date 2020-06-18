@@ -38,7 +38,7 @@ pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Term};
+    use crate::types::{Numeric, Rule, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -80,6 +80,14 @@ pub mod display {
 
     impl fmt::Display for Goal {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn fmt_rules(rules: &[Rule]) -> String {
+                rules
+                    .iter()
+                    .map(|rule| rule.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            }
+
             match self {
                 Goal::Isa { left, right } => {
                     write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
@@ -115,6 +123,16 @@ pub mod display {
                 } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+                Goal::FilterRules {
+                    applicable_rules,
+                    unfiltered_rules,
+                    ..
+                } => write!(
+                    fmt,
+                    "FilterRules([{}], [{}])",
+                    fmt_rules(applicable_rules),
+                    fmt_rules(unfiltered_rules),
+                ),
                 Goal::SortRules {
                     rules,
                     outer,
@@ -123,11 +141,7 @@ pub mod display {
                 } => write!(
                     fmt,
                     "SortRules([{}], outer={}, inner={})",
-                    rules
-                        .iter()
-                        .map(|rule| rule.to_polar())
-                        .collect::<Vec<String>>()
-                        .join(" "),
+                    fmt_rules(rules),
                     outer,
                     inner,
                 ),
