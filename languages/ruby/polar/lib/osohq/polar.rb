@@ -95,7 +95,7 @@ module Osohq
       def register_call(method, args:, call_id:, instance_id:)
         return if calls.key?(call_id)
 
-        args = args.map { |a| to_ruby(Term.new(a)) }
+        args = args.map { |a| to_ruby(a) }
         instance = get_instance(instance_id)
         result = instance.__send__(method, *args)
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
@@ -109,7 +109,7 @@ module Osohq
       # @param id [Integer]
       def make_instance(cls_name, fields:, id: nil)
         constructor = get_constructor(cls_name)
-        fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(Term.new(v))] }]
+        fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(v)] }]
         instance = if constructor == :new
                      get_class(cls_name).__send__(:new, **fields)
                    else
@@ -193,23 +193,27 @@ module Osohq
         to_polar_term(calls[id].next)
       end
 
-      # @param term [Term]
+      # @param data [Hash<String, Object>]
+      # @option data [Integer] :id
+      # @option data [Integer] :offset Character offset of the term in its source string.
+      # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(term)
-        tag = term.tag
-        value = term.value
+      def to_ruby(data)
+        id = data['id']
+        offset = data['offset']
+        tag, value = data['value'].first
         case tag
         when 'Integer', 'String', 'Boolean'
           value
         when 'List'
-          value.map { |el| to_ruby(Term.new(el)) }
+          value.map { |el| to_ruby(el) }
         when 'Dictionary'
-          value['fields'].transform_values { |v| to_ruby(Term.new(v)) }
+          value['fields'].transform_values { |v| to_ruby(v) }
         when 'ExternalInstance'
           get_instance(value['instance_id'])
         when 'Call'
-          Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(Term.new(a)) })
+          Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(a) })
         else
           raise UnexpectedPolarTypeError, tag
         end
@@ -324,7 +328,7 @@ module Osohq
             when 'Done'
               break
             when 'Result'
-              Fiber.yield(event.data['bindings'].transform_values { |v| polar.to_ruby(Term.new(v)) })
+              Fiber.yield(event.data['bindings'].transform_values { |v| polar.to_ruby(v) })
             when 'MakeExternal'
               id = event.data['instance_id']
               raise DuplicateInstanceRegistrationError, id if polar.instance? id
@@ -370,21 +374,6 @@ module Osohq
       def initialize(event_data)
         event_data = { event_data => nil } if event_data == 'Done'
         @kind, @data = event_data.first
-      end
-    end
-
-    # Polar term.
-    class Term
-      attr_reader :value, :tag
-
-      # @param data [Hash<String, Object>]
-      # @option data [Integer] :id
-      # @option data [Integer] :offset Character offset of the term in its source string.
-      # @option data [Hash<String, Object>] :value
-      def initialize(data)
-        @id = data['id']
-        @offset = data['offset']
-        @tag, @value = data['value'].first
       end
     end
 
