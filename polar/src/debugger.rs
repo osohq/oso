@@ -1,6 +1,6 @@
 use super::types::*;
 use super::vm::*;
-use super::ToPolarString;
+use super::{PolarResult, ToPolarString};
 
 impl PolarVirtualMachine {
     /// Drive debugger.
