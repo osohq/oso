@@ -151,9 +151,10 @@ module Osohq
 
       # @param instance_id [Integer]
       # @param class_tag [String]
+      # @return [Boolean]
       def isa?(instance_id, class_tag:)
-        cls = get_class(class_tag)
         instance = get_instance(instance_id)
+        cls = get_class(class_tag)
         instance.is_a? cls
       rescue PolarRuntimeError
         false
@@ -161,26 +162,27 @@ module Osohq
 
       # Turn a Ruby value into a Polar term.
       # @param x [Object]
+      # @return [Hash<String, Object>]
       def to_polar_term(x)
-        case true
-        when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
-          val = { 'Boolean' => x }
-        when x.instance_of?(Integer)
-          val = { 'Integer' => x }
-        when x.instance_of?(String)
-          val = { 'String' => x }
-        when x.instance_of?(Array)
-          val = { 'List' => x.map { |el| to_polar_term(el) } }
-        when x.instance_of?(Hash)
-          val = { 'Dictionary' => { 'fields' => x.transform_values { |v| to_polar_term(v) } } }
-        when x.instance_of?(Predicate)
-          val = { 'Call' => { 'name' => x.name, 'args' => x.args.map { |el| to_polar_term(el) } } }
-        when x.instance_of?(Variable)
-          # This is supported so that we can query for unbound variables
-          val = { 'Symbol' => x }
-        else
-          val = { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
-        end
+        val = case true
+              when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
+                { 'Boolean' => x }
+              when x.instance_of?(Integer)
+                { 'Integer' => x }
+              when x.instance_of?(String)
+                { 'String' => x }
+              when x.instance_of?(Array)
+                { 'List' => x.map { |el| to_polar_term(el) } }
+              when x.instance_of?(Hash)
+                { 'Dictionary' => { 'fields' => x.transform_values { |v| to_polar_term(v) } } }
+              when x.instance_of?(Predicate)
+                { 'Call' => { 'name' => x.name, 'args' => x.args.map { |el| to_polar_term(el) } } }
+              when x.instance_of?(Variable)
+                # This is supported so that we can query for unbound variables
+                { 'Symbol' => x }
+              else
+                { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
+              end
         { 'id' => 0, 'offset' => 0, 'value' => val }
       end
 
