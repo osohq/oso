@@ -422,6 +422,8 @@ impl Value {
             Value::Call(pred) => Ok(pred),
             _ => Err(RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                loc: 0,
+                context: None, // @TODO
             }),
         }
     }

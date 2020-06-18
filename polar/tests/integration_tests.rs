@@ -145,11 +145,11 @@ fn test_trace() {
     let results = query_results(query, no_results, no_debug);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
-  f(x) := x=1,x=1; [
-    _x_1=1,_x_1=1 [
-      _x_1=1 [
+  f(x) := x = 1, x = 1; [
+    _x_1 = 1, _x_1 = 1 [
+      _x_1 = 1 [
       ]
-      _x_1=1 [
+      _x_1 = 1 [
       ]
     ]
   ]
