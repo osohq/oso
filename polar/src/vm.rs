@@ -2051,7 +2051,7 @@ mod tests {
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
             literal: None,
-            instance_id: 1
+            instance_id: 1,
         });
 
         let mut vm = PolarVirtualMachine::new(
