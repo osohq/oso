@@ -84,10 +84,12 @@ module Osohq
       # @param call_id [Integer]
       # @param instance_id [Integer]
       def register_call(method, args:, call_id:, instance_id:)
+        return if calls.key?(call_id)
+
         args = args.map { |a| to_ruby(Term.new(a)) }
         instance = get_instance(instance_id)
         result = instance.__send__(method, *args)
-        result = [result].to_enum unless result.instance_of? Enumerator # Call must be a generator.
+        result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
       rescue ArgumentError, NoMethodError
         raise InvalidCallError
@@ -170,6 +172,13 @@ module Osohq
           val = { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
         end
         { 'id' => 0, 'offset' => 0, 'value' => val }
+      end
+
+      # @param id [Integer]
+      # @return [Hash]
+      # @raise [StopIteration] if the call has been exhausted.
+      def next_call_result(id)
+        to_polar_term(calls[id].next)
       end
 
       # @param term [Term]
@@ -280,15 +289,10 @@ module Osohq
       # @param call_id [Integer]
       # @param instance_id [Integer]
       def handle_call(method, args:, call_id:, instance_id:)
-        unless polar.calls.key?(call_id)
-          polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
-        end
-
-        # Return the next result of the call.
-        begin
-          value = polar.calls[call_id].next
-          stringified = JSON.dump(polar.to_polar_term(value))
-          call_result(stringified, call_id: call_id)
+        polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
+        begin # Return the next result of the call.
+          result = JSON.dump(polar.next_call_result(call_id))
+          call_result(result, call_id: call_id)
         rescue StopIteration
           call_result(nil, call_id: call_id)
         end
