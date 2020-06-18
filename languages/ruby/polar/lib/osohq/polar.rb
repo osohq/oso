@@ -79,6 +79,17 @@ module Osohq
         constructors[cls.name] = from_polar
       end
 
+      # @return [Integer]
+      def new_id
+        ffi_instance.new_id
+      end
+
+      # @param id [Integer]
+      # @return [Boolean]
+      def instance?(id)
+        instances.key? id
+      end
+
       # @param method [#to_sym]
       # @param args [Array<Hash>]
       # @param call_id [Integer]
@@ -213,7 +224,7 @@ module Osohq
       # @param id [Integer]
       # @return [Integer]
       def cache_instance(instance, id: nil)
-        id = ffi_instance.new_id if id.nil?
+        id = new_id if id.nil?
         instances[id] = instance
         id
       end
@@ -222,7 +233,7 @@ module Osohq
       # @return [Object]
       # @raise [UnregisteredInstanceError] if the ID has not been registered.
       def get_instance(id)
-        raise UnregisteredInstanceError, id unless instances.key? id
+        raise UnregisteredInstanceError, id unless instance? id
 
         instances[id]
       end
@@ -317,7 +328,7 @@ module Osohq
               Fiber.yield(event.data['bindings'].transform_values { |v| polar.to_ruby(Term.new(v)) })
             when 'MakeExternal'
               id = event.data['instance_id']
-              raise DuplicateInstanceRegistrationError, id if polar.instances.key?(id)
+              raise DuplicateInstanceRegistrationError, id if polar.instance? id
 
               cls_name = event.data['instance']['tag']
               fields = event.data['instance']['fields']['fields']
