@@ -58,7 +58,8 @@ What it's like to use oso
 - Express your policy as code using the declarative :doc:`Polar language </language/index>`.
 - Maintain authorization across a variety of languages and environments with a cross-language
   :doc:`authorization library </application-library/index>`.
-- :ref:`Use native application objects & data <application-types>` directly in Polar policy.
+- :doc:`Use native application objects & data </application-library/application-types>`
+  directly in Polar policy.
 - Understand why policy decisions are made using the :doc:`Policy debugger </dev-tools/debugger>`.
 - :ref:`Write tests <testing>` over your policy to ensure correct behavior.
 

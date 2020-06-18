@@ -1,9 +1,12 @@
+.. _repl:
+
 ==============
 The Polar REPL
 ==============
 
-Developers can query Polar knowledge bases from the command line using the Polar REPL.
-To run the REPL, first make sure you have :ref:`installed oso <install>`.
+Developers can query Polar knowledge bases from the command line using the
+Polar REPL (Read, Evaluate, Print, Loop). To run the REPL, first make sure
+you have :ref:`installed oso <install>`.
 
 Once oso is installed, we can launch the REPL from the terminal::
 
@@ -31,23 +34,28 @@ From the terminal, run::
     python3 -m polar.parser --interactive policy.polar
 
 We can now interactively query the Polar knowledge base.
-
 For example, the query::
 
-    ?= allow(actor, action, resource)
+    >> allow(actor, action, resource)
 
-will display the bindings for the ``actor``, ``action``, and ``resource`` variables that make
-the query ``True``::
+will display the bindings for the ``actor``, ``action``, and ``resource``
+variables that make the query ``True``::
 
     resource = "bar"
     actor = "foo"
     action = "read"
 
 .. highlight:: polar
+.. _inline-queries:
 
-Queries can also be added to Polar files and will run when the file is loaded. Failed/false queries will
-prevent the REPL from launching. To add a query to a Polar file, use the ``?=`` operator::
+Inline queries
+--------------
+Queries can also be added to Polar files and will run when the file is loaded.
+Failed/false queries will prevent the REPL from launching, or the file from
+loading, but nothing is printed for successful queries. To add an inline query
+to a Polar file, use the ``?=`` operator::
 
     # policy.polar
     ?= allow("foo", "read", "bar")
 
+Inline queries are particularly useful for testing policies.
