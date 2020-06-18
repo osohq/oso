@@ -21,9 +21,10 @@ module Osohq
     # Map from a template string with capture groups of the form
     # `{name}` to a dictionary of the form `{name: captured_value}`
     class PathMapper
-      def initialize(template)
+      def initialize(template:)
         capture_group = /({([^}]+)})/
 
+        template = template.dup
         template.scan(capture_group).each do |outer, inner|
           template = if inner == '*'
                        template.gsub! outer, '.*'
@@ -35,10 +36,8 @@ module Osohq
       end
 
       def map(string)
-        Enumerator.new do |y|
-          match = string.match(pattern)
-          y.yield match.hash unless match.nil?
-        end
+        match = string.match(pattern)
+        match&.names&.zip(match.captures).to_h
       end
 
       private

@@ -1,8 +1,15 @@
 # frozen_string_literal: true
 
 RSpec.describe Osohq::Oso::Oso do
-  it 'handles allow queries' do
-    expect(false).to eq(true)
+  xit 'handles allow queries' do
+  end
+
+  context 'PathMapper' do
+    it 'properly maps paths' do
+      mapper = Osohq::Oso::PathMapper.new(template: '/widget/{id}')
+      path = '/widget/12'
+      expect(mapper.map(path)).to eq({ 'id' => '12' })
+    end
   end
 
   context 'when mapping resources' do
@@ -23,6 +30,12 @@ RSpec.describe Osohq::Oso::Oso do
       subject.register_class(Actor)
     end
 
+    it 'maps resources in Polar' do
+      subject.load_str('test_map(path, id) := PathMapper{template: "/widget/{id}"}.map(path) = {id: id};')
+
+      expect(subject.send(:query_pred, 'test_map', { args: ['/widget/12', '12'] }).to_a.length).to eq 1
+    end
+
     it 'maps resources' do
       subject.load_str('
         allow(actor, "get", Http{path: path}) :=
@@ -30,7 +43,7 @@ RSpec.describe Osohq::Oso::Oso do
           PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
           allow(actor, "get", Widget{id: id});
       ')
-      subject.load_str('allow(actor, "get", widget) := widget.id = 12;')
+      subject.load_str('allow(actor, "get", widget) := widget.id = "12";')
 
       expect(subject.allow(actor: Actor.new('sam'), action: 'get', resource: Osohq::Oso::Http.new(path: '/widget/12'))).to eq true
       expect(subject.allow(actor: Actor.new('sam'), action: 'get', resource: Osohq::Oso::Http.new(path: '/widget/13'))).to eq false

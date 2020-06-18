@@ -9,8 +9,8 @@ module Osohq
     class Oso
       def initialize
         @polar = Osohq::Polar::Polar.new
-        polar.register_class(Http)
-        polar.register_class(PathMapper)
+        register_class(Http)
+        register_class(PathMapper)
       end
 
       def allow(actor:, action:, resource:)
@@ -25,7 +25,11 @@ module Osohq
       end
 
       def register_class(cls, &from_polar)
-        polar.register_class(cls) { from_polar }
+        if from_polar.nil?
+          polar.register_class(cls)
+        else
+          polar.register_class(cls, from_polar)
+        end
       end
 
       def load_str(str)
@@ -33,6 +37,10 @@ module Osohq
       end
 
       private
+
+      def query_pred(name, args:)
+        polar.query_pred(name, args: args)
+      end
 
       attr_reader :polar
     end
