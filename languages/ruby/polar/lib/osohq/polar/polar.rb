@@ -195,7 +195,9 @@ module Osohq
               when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
                 { 'Boolean' => x }
               when x.instance_of?(Integer)
-                { 'Integer' => x }
+                { 'Number' => { 'Integer' => x } }
+              when x.instance_of?(Float)
+                { 'Number' => { 'Float' => x } }
               when x.instance_of?(String)
                 { 'String' => x }
               when x.instance_of?(Array)
@@ -235,7 +237,10 @@ module Osohq
         offset = data['offset']
         tag, value = data['value'].first
         case tag
-        when 'Integer', 'String', 'Boolean'
+        when 'String', 'Boolean'
+          value
+        when 'Number'
+          tag, value = value.first
           value
         when 'List'
           value.map { |el| to_ruby(el) }
