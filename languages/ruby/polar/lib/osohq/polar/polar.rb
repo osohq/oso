@@ -6,7 +6,7 @@ require 'set'
 module Osohq
   module Polar
     # Create and manage an instance of the Polar runtime.
-    class Polar
+    class Polar # rubocop:disable Metrics/ClassLength
       def initialize
         @ffi_instance = FFI::Polar.create
         @calls = {}
@@ -35,7 +35,7 @@ module Osohq
       # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
-      def load_str(str, filename: nil)
+      def load_str(str, filename: nil) # rubocop:disable Metrics/MethodLength
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         ffi_instance.load_str(str, filename: filename)
@@ -73,7 +73,7 @@ module Osohq
       # Start a REPL session.
       #
       # @raise [Error] if the FFI call raises one.
-      def repl
+      def repl # rubocop:disable Metrics/MethodLength
         clear_query_state
         load_queued_files
         loop do
@@ -208,29 +208,29 @@ module Osohq
       # Turn a Ruby value into a Polar term that's ready to be sent across the
       # FFI boundary.
       #
-      # @param x [Object]
+      # @param value [Object]
       # @return [Hash<String, Object>]
-      def to_polar_term(x)
-        val = case true
-              when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
-                { 'Boolean' => x }
-              when x.instance_of?(Integer)
-                { 'Integer' => x }
-              when x.instance_of?(String)
-                { 'String' => x }
-              when x.instance_of?(Array)
-                { 'List' => x.map { |el| to_polar_term(el) } }
-              when x.instance_of?(Hash)
-                { 'Dictionary' => { 'fields' => x.transform_values { |v| to_polar_term(v) } } }
-              when x.instance_of?(Predicate)
-                { 'Call' => { 'name' => x.name, 'args' => x.args.map { |el| to_polar_term(el) } } }
-              when x.instance_of?(Variable)
-                # This is supported so that we can query for unbound variables
-                { 'Symbol' => x }
-              else
-                { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
-              end
-        { 'id' => 0, 'offset' => 0, 'value' => val }
+      def to_polar_term(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+        value = case true # rubocop:disable Lint/LiteralAsCondition
+                when value.instance_of?(TrueClass) || value.instance_of?(FalseClass)
+                  { 'Boolean' => value }
+                when value.instance_of?(Integer)
+                  { 'Integer' => value }
+                when value.instance_of?(String)
+                  { 'String' => value }
+                when value.instance_of?(Array)
+                  { 'List' => value.map { |el| to_polar_term(el) } }
+                when value.instance_of?(Hash)
+                  { 'Dictionary' => { 'fields' => value.transform_values { |v| to_polar_term(v) } } }
+                when value.instance_of?(Predicate)
+                  { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el| to_polar_term(el) } } }
+                when value.instance_of?(Variable)
+                  # This is supported so that we can query for unbound variables
+                  { 'Symbol' => value }
+                else
+                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
+                end
+        { 'id' => 0, 'offset' => 0, 'value' => value }
       end
 
       # Turn a Polar term passed across the FFI boundary into a Ruby value.
