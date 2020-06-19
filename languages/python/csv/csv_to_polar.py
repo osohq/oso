@@ -1,6 +1,7 @@
-import csv
 import os
 import pandas as pd
+
+from polar import Polar, Predicate
 
 
 ## PARAMETERS
@@ -72,17 +73,17 @@ for role in roles:
         models = list(map(lambda x: f'"{x}"', radf["model_id:id"]))
         if not models:
             continue
+        elif len(models) == 1:
+            rule_body = f"resource = {models[0]}"
+        else:
+            models = (",\n\t\t").join(models)
+            rule_body = f"resource in [\n\t\t{models}\n\t]"
 
-        models = (",\n\t\t").join(list(models))
-        rule_body = f"resource in [\n\t\t{models}\n\t]"
         rule_str = f'allow_{prefix}_by_role("{role}", "{action_map[action]}", resource) := \n\t{rule_body};\n'
-
         ofile.write(rule_str)
 
 ifile.close()
 ofile.close()
-
-from polar import Polar, Predicate
 
 
 class Group:
@@ -102,6 +103,7 @@ receptionist = User([Group("user_access.dhi_group_receptionist")])
 
 p = Polar()
 p.load(ofilename)
+
 
 assert p._query_pred(
     Predicate(name="allow_model", args=[hr, "unlink", "model_dhi_insurance_card"])

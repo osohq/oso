@@ -51,9 +51,7 @@ allow_dhi_billing_by_role("user_access.dhi_group_receptionist", "RWCU", resource
 		"model_dhi_legacy_employee"
 	];
 allow_dhi_billing_by_role("user_access.dhi_group_receptionist", "RWC", resource) := 
-	resource in [
-		"model_dhi_generate_invoice"
-	];
+	resource = "model_dhi_generate_invoice";
 allow_dhi_billing_by_role("user_access.dhi_group_receptionist", "RW", resource) := 
 	resource in [
 		"model_dhi_payment_adjust_config",
@@ -317,9 +315,7 @@ allow_dhi_billing_by_role("user_access.dhi_group_hr", "RWCU", resource) :=
 		"model_dhi_legacy_employee"
 	];
 allow_dhi_billing_by_role("user_access.dhi_group_hr", "RWC", resource) := 
-	resource in [
-		"model_dhi_payment"
-	];
+	resource = "model_dhi_payment";
 allow_dhi_billing_by_role("user_access.dhi_group_hr", "R", resource) := 
 	resource in [
 		"model_dhi_fee_schedule",
