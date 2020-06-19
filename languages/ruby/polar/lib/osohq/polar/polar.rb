@@ -16,6 +16,18 @@ module Osohq
         @load_queue = Set.new
       end
 
+      # Enqueue a Polar policy file for loading into the KB.
+      #
+      # @param name [String]
+      # @raise [PolarFileExtensionError] if provided filename has invalid extension.
+      # @raise [PolarFileNotFoundError] if provided filename does not exist.
+      def load_file(name)
+        raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
+        raise PolarFileNotFoundError, name unless File.file?(name)
+
+        load_queue << name
+      end
+
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
@@ -37,6 +49,12 @@ module Osohq
             raise InlineQueryFailedError
           end
         end
+      end
+
+      # Replace the current Polar instance but retain all registered classes and
+      # constructors.
+      def clear
+        @ffi_instance = FFI::Polar.create
       end
 
       # Query for a predicate.
@@ -71,6 +89,14 @@ module Osohq
         end
       end
 
+      # Get a unique ID from Polar.
+      #
+      # @return [Integer]
+      # @raise [Error] if the FFI call raises one.
+      def new_id
+        ffi_instance.new_id
+      end
+
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
@@ -82,22 +108,6 @@ module Osohq
         classes[cls.name] = cls
         from_polar = :new if from_polar.nil?
         constructors[cls.name] = from_polar
-      end
-
-      # Get a unique ID from Polar.
-      #
-      # @return [Integer]
-      # @raise [Error] if the FFI call raises one.
-      def new_id
-        ffi_instance.new_id
-      end
-
-      # Check if an instance has been cached.
-      #
-      # @param id [Integer]
-      # @return [Boolean]
-      def instance?(id)
-        instances.key? id
       end
 
       # Register a Ruby method call, wrapping the call result in a generator if
@@ -121,6 +131,15 @@ module Osohq
         raise InvalidCallError
       end
 
+      # Retrieve the next result from a registered call and pass it to {#to_polar_term}.
+      #
+      # @param id [Integer]
+      # @return [Hash]
+      # @raise [StopIteration] if the call has been exhausted.
+      def next_call_result(id)
+        to_polar_term(calls[id].next)
+      end
+
       # Construct and cache a Ruby instance.
       #
       # @param cls_name [String]
@@ -140,6 +159,14 @@ module Osohq
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
       end
 
+      # Check if an instance has been cached.
+      #
+      # @param id [Integer]
+      # @return [Boolean]
+      def instance?(id)
+        instances.key? id
+      end
+
       # Fetch a Ruby instance from the {#instances} cache.
       #
       # @param id [Integer]
@@ -149,24 +176,6 @@ module Osohq
         raise UnregisteredInstanceError, id unless instance? id
 
         instances[id]
-      end
-
-      # Replace the current Polar instance but retain all registered classes and
-      # constructors.
-      def clear
-        @ffi_instance = FFI::Polar.create
-      end
-
-      # Enqueue a Polar policy file for loading into the KB.
-      #
-      # @param name [String]
-      # @raise [PolarFileExtensionError] if provided filename has invalid extension.
-      # @raise [PolarFileNotFoundError] if provided filename does not exist.
-      def load_file(name)
-        raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
-        raise PolarFileNotFoundError, name unless File.file?(name)
-
-        load_queue << name
       end
 
       # Check if the left class is more specific than the right class for the
@@ -222,15 +231,6 @@ module Osohq
                 { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
               end
         { 'id' => 0, 'offset' => 0, 'value' => val }
-      end
-
-      # Retrieve the next result from a registered call and pass it to {#to_polar_term}.
-      #
-      # @param id [Integer]
-      # @return [Hash]
-      # @raise [StopIteration] if the call has been exhausted.
-      def next_call_result(id)
-        to_polar_term(calls[id].next)
       end
 
       # Turn a Polar term passed across the FFI boundary into a Ruby value.
