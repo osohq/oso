@@ -140,6 +140,17 @@ module Osohq
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
       end
 
+      # Fetch a Ruby instance from the {#instances} cache.
+      #
+      # @param id [Integer]
+      # @return [Object]
+      # @raise [UnregisteredInstanceError] if the ID has not been registered.
+      def get_instance(id)
+        raise UnregisteredInstanceError, id unless instance? id
+
+        instances[id]
+      end
+
       # Replace the current Polar instance but retain all registered classes and
       # constructors.
       def clear
@@ -289,17 +300,6 @@ module Osohq
         id = new_id if id.nil?
         instances[id] = instance
         id
-      end
-
-      # Fetch a Ruby instance from the {#instances} cache.
-      #
-      # @param id [Integer]
-      # @return [Object]
-      # @raise [UnregisteredInstanceError] if the ID has not been registered.
-      def get_instance(id)
-        raise UnregisteredInstanceError, id unless instance? id
-
-        instances[id]
       end
 
       # Load all queued files, flushing the {#load_queue}.

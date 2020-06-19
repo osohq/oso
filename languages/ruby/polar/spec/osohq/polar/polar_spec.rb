@@ -118,6 +118,27 @@ RSpec.describe Osohq::Polar::Polar do
     end
   end
 
+  context '#make_instance' do
+    context 'when using the default constructor' do
+      it 'handles keyword args' do
+        stub_const('Foo', Class.new do
+          attr_reader :bar, :baz
+          def initialize(bar:, baz:)
+            @bar = bar
+            @baz = baz
+          end
+        end)
+        subject.register_class(Foo)
+        one = subject.to_polar_term(1)
+        two = subject.to_polar_term(2)
+        id = subject.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
+        instance = subject.get_instance(id)
+        expect(instance.bar).to eq(1)
+        expect(instance.baz).to eq(2)
+      end
+    end
+  end
+
   context '#register_class' do
     it 'registers a Ruby class with Polar' do
       pending 'Instance literal parsing updates'
