@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'tempfile'
+
 require_relative './helpers'
 
 RSpec.configure do |c|
@@ -75,6 +77,19 @@ RSpec.describe Osohq::Polar::Polar do
     it 'loads a Polar file' do
       subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
+    end
+
+    it 'passes the filename across the FFI boundary' do
+      file = Tempfile.new(['invalid', '.polar']).tap do |f|
+        f.write(';')
+        f.rewind
+        f.close
+      end
+      subject.load_file(file.path)
+      expect { query(subject, 'f(x)') }.to raise_error do |e|
+        expect(e).to be_an Osohq::Polar::ParseError::UnrecognizedToken
+        expect(e.message).to eq("did not expect to find the token ';' at line 1, column 1 in file #{file.path}")
+      end
     end
 
     it 'raises if given a non-Polar file' do

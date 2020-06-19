@@ -19,13 +19,14 @@ module Osohq
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
+      # @param filename [String] Name of Polar source file.
       # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
-      def load_str(str)
+      def load_str(str, filename: nil)
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
-        ffi_instance.load_str(str)
+        ffi_instance.load_str(str, filename: filename)
         loop do
           next_query = ffi_instance.next_inline_query
           break if next_query.nil?
@@ -305,8 +306,8 @@ module Osohq
 
       # Load all queued files, flushing the {#load_queue}.
       def load_queued_files
-        load_queue.reject! do |file|
-          File.open(file) { |f| load_str(f.read) }
+        load_queue.reject! do |filename|
+          File.open(filename) { |file| load_str(file.read, filename: filename) }
           true
         end
       end
