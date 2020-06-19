@@ -1,9 +1,6 @@
 import os
 import pandas as pd
 
-from polar import Polar, Predicate
-
-
 ## PARAMETERS
 prefix = "dhi_billing"
 
@@ -17,7 +14,18 @@ ifile = open(ifilename, newline="")
 ofile = open(ofilename, "w")
 
 # Add base rules
-base_str = f"""# Assume actions are hierarchical: R < RW < RWC < RWCU
+base_str = f"""
+# Top-level rules
+allow(actor, action, resource) := allow_model(actor, action, resource);
+
+allow_model(actor, action, resource) :=
+    allow_{prefix}(actor, action, resource);
+
+allow_{prefix}(actor, action, resource) :=
+    role(actor, role),
+    allow_{prefix}_by_role(role, action, resource);
+
+# Assume actions are hierarchical: R < RW < RWC < RWCU
 allow_model(actor, "read", resource) :=
     allow_model(actor, "R", resource)
 	| allow_model(actor, "RW", resource)
@@ -39,13 +47,6 @@ allow_model(actor, "unlink", resource) :=
 # Lookup role for user
 role(user, role) := group in user.groups, group.id = role;
 
-# Top-level rules
-allow_model(actor, action, resource) :=
-    allow_{prefix}(actor, action, resource);
-
-allow_{prefix}(actor, action, resource) :=
-    role(actor, role),
-    allow_{prefix}_by_role(role, action, resource);
 
 ## {prefix} Rules
 """
@@ -86,6 +87,10 @@ ifile.close()
 ofile.close()
 
 
+### TESTING
+from oso import Oso, Predicate
+
+
 class Group:
     def __init__(self, id):
         self.id = id
@@ -101,32 +106,39 @@ nurse = User([Group("user_access.dhi_group_nurse")])
 billing = User([Group("user_access.dhi_group_billing")])
 receptionist = User([Group("user_access.dhi_group_receptionist")])
 
-p = Polar()
-p.load(ofilename)
+policy = Oso()
+policy.load(ofilename)
 
 
-assert p._query_pred(
-    Predicate(name="allow_model", args=[hr, "unlink", "model_dhi_insurance_card"])
-).success
+assert policy.allow(hr, "unlink", "model_dhi_insurance_card")
+assert policy.allow(nurse, "create", "model_dhi_bill")
+assert not policy.allow(nurse, "write", "model_dhi_fee_schedule")
+assert policy.allow(receptionist, "create", "model_dhi_payment_details_line")
+assert not policy.allow(receptionist, "create", "model_dhi_fee_schedule")
 
-assert p._query_pred(
-    Predicate(name="allow_model", args=[nurse, "create", "model_dhi_bill"])
-).success
 
-assert not p._query_pred(
-    Predicate(name="allow_model", args=[nurse, "write", "model_dhi_fee_schedule"])
-).success
+### TIMING
+import timeit
 
-assert p._query_pred(
-    Predicate(
-        name="allow_model",
-        args=[receptionist, "create", "model_dhi_payment_details_line"],
+
+setup = """
+from oso import Oso, Predicate
+class Group:
+    def __init__(self, id):
+        self.id = id
+class User:
+    def __init__(self, groups):
+        self.groups = groups
+hr = User([Group("user_access.dhi_group_hr")])
+nurse = User([Group("user_access.dhi_group_nurse")])
+billing = User([Group("user_access.dhi_group_billing")])
+receptionist = User([Group("user_access.dhi_group_receptionist")])
+policy = Oso()
+policy.load("dhi_billing.polar")
+"""
+
+print(
+    timeit.timeit(
+        'policy.allow(hr, "unlink", "model_dhi_insurance_card")', setup=setup, number=1,
     )
-).success
-
-assert not p._query_pred(
-    Predicate(
-        name="allow_model", args=[receptionist, "create", "model_dhi_fee_schedule"],
-    )
-).success
-
+)

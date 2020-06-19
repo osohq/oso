@@ -1,3 +1,14 @@
+
+# Top-level rules
+allow(actor, action, resource) := allow_model(actor, action, resource);
+
+allow_model(actor, action, resource) :=
+    allow_dhi_billing(actor, action, resource);
+
+allow_dhi_billing(actor, action, resource) :=
+    role(actor, role),
+    allow_dhi_billing_by_role(role, action, resource);
+
 # Assume actions are hierarchical: R < RW < RWC < RWCU
 allow_model(actor, "read", resource) :=
     allow_model(actor, "R", resource)
@@ -20,13 +31,6 @@ allow_model(actor, "unlink", resource) :=
 # Lookup role for user
 role(user, role) := group in user.groups, group.id = role;
 
-# Top-level rules
-allow_model(actor, action, resource) :=
-    allow_dhi_billing(actor, action, resource);
-
-allow_dhi_billing(actor, action, resource) :=
-    role(actor, role),
-    allow_dhi_billing_by_role(role, action, resource);
 
 ## dhi_billing Rules
 
