@@ -32,7 +32,7 @@ def tell(polar):
         if not f.endswith(";"):
             f += ";"
 
-        polar._load_str(f)
+        polar.load_str(f)
 
     return _tell
 
@@ -42,7 +42,7 @@ def load_file(polar):
     """ Load a source file """
 
     def _load_file(f):
-        polar.load(f)
+        polar.load_file(f)
 
     return _load_file
 
