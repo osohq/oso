@@ -105,4 +105,3 @@ def write_base_rules(ofile, prefix):
     """
 
     ofile.write(base_str)
-
