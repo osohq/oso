@@ -223,7 +223,9 @@ module Osohq
                 when value.instance_of?(TrueClass) || value.instance_of?(FalseClass)
                   { 'Boolean' => value }
                 when value.instance_of?(Integer)
-                  { 'Integer' => value }
+                  { 'Number' => { 'Integer' => value } }
+                when value.instance_of?(Float)
+                  { 'Number' => { 'Float' => value } }
                 when value.instance_of?(String)
                   { 'String' => value }
                 when value.instance_of?(Array)
@@ -252,8 +254,10 @@ module Osohq
       def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         tag, value = data['value'].first
         case tag
-        when 'Integer', 'String', 'Boolean'
+        when 'String', 'Boolean'
           value
+        when 'Number'
+          value.values.first
         when 'List'
           value.map { |el| to_ruby(el) }
         when 'Dictionary'
