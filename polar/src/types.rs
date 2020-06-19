@@ -6,12 +6,11 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
-use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{error, ToPolarString};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
 pub struct Dictionary {
     pub fields: BTreeMap<Symbol, Term>,
 }
@@ -54,7 +53,7 @@ pub fn field_name(field: &Term) -> Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
@@ -87,7 +86,7 @@ impl InstanceLiteral {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ExternalInstance {
     pub instance_id: u64,
     pub literal: Option<InstanceLiteral>,
@@ -107,7 +106,7 @@ pub struct Context {
 
 pub type TermList = Vec<Term>;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Symbol(pub String);
 
 impl Symbol {
@@ -116,7 +115,7 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Predicate {
     pub name: Symbol,
     pub args: TermList,
@@ -134,7 +133,7 @@ impl Predicate {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Operator {
     Debug,
     Cut,
@@ -185,14 +184,14 @@ impl Operator {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Operation {
     pub operator: Operator,
     pub args: TermList,
 }
 
 /// Represents a pattern in a specializer or after isa.
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Pattern {
     Dictionary(Dictionary),
     Instance(InstanceLiteral),
@@ -224,7 +223,7 @@ impl Pattern {
 
 pub type Float = ordered_float::OrderedFloat<f64>;
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq)]
 pub enum Numeric {
     Integer(i64),
     Float(Float),
@@ -274,7 +273,7 @@ impl From<f64> for Numeric {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Value {
     Number(Numeric),
     String(String),
@@ -370,12 +369,6 @@ pub struct Term {
 impl PartialEq for Term {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
-    }
-}
-
-impl Hash for Term {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.value.hash(state);
     }
 }
 
