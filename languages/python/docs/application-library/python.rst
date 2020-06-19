@@ -29,7 +29,8 @@ throughout:
 .. testoutput::
    :hide:
 
-Polar policy files are loaded using :py:meth:`oso.Oso.load`.
+Polar policy files are loaded using :py:meth:`oso.Oso.load_file`, or strings
+can be loaded directly with `oso.Oso.load_str`.
 Once a policy is loaded, the :py:meth:`oso.Oso.allow` method can be used to make
 :ref:`authorization queries <queries>`.
 

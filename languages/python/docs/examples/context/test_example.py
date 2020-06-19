@@ -15,7 +15,7 @@ def oso():
 @pytest.fixture
 def load(oso):
     def load(policy):
-        oso.load(Path(__file__).parent / policy)
+        oso.load_file(Path(__file__).parent / policy)
 
     return load
 
