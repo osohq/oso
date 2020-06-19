@@ -79,7 +79,7 @@ def test_oso():
     _oso = Oso()
     _oso.register_class(Jwt)
     # import the test policy
-    _oso.load(Path(__file__).parent / "test_oso.polar")
+    _oso.load_file(Path(__file__).parent / "test_oso.polar")
 
     return _oso
 

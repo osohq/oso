@@ -10,7 +10,7 @@ def test_policy():
     oso = Oso()
     fname = Path(__file__).parent / "company.polar"
 
-    oso.load(fname)
+    oso.load_file(fname)
 
     # Test Company resources
     assert oso.allow("leina", "read", Company(id=2))
@@ -35,8 +35,8 @@ def test_policy():
 
 def test_policy_with_cut():
     oso = Oso()
-    oso.load(Path(__file__).parent / "company.polar")
-    oso.load(Path(__file__).parent / "company_cut.polar")
+    oso.load_file(Path(__file__).parent / "company.polar")
+    oso.load_file(Path(__file__).parent / "company_cut.polar")
 
     # Test Company resources
     assert oso.allow("leina", "read", Company(id=2))

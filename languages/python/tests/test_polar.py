@@ -9,7 +9,7 @@ import pytest
 
 def test_anything_works():
     p = Polar()
-    p._load_str("f(1);")
+    p.load_str("f(1);")
     results = list(p._query_str("f(x)"))
     assert results[0]["x"] == 1
     results = list(p._query_str("f(y)"))
@@ -24,7 +24,7 @@ def test_helpers(polar, load_file, query, qeval, qvar):
 
 
 def test_data_conversions(polar, qvar):
-    polar._load_str('a(1);b("two");c(true);d([1,"two",true]);')
+    polar.load_str('a(1);b("two");c(true);d([1,"two",true]);')
     assert qvar("a(x)", "x", one=True) == 1
     assert qvar("b(x)", "x", one=True) == "two"
     assert qvar("c(x)", "x", one=True)
@@ -34,14 +34,14 @@ def test_data_conversions(polar, qvar):
 def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
     # Loading the same file twice doesn't mess stuff up.
-    polar.load(Path(__file__).parent / "test_file.polar")
-    polar.load(Path(__file__).parent / "test_file.polar")
+    polar.load_file(Path(__file__).parent / "test_file.polar")
+    polar.load_file(Path(__file__).parent / "test_file.polar")
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
     polar.clear()
-    polar.load(Path(__file__).parent / "test_file.polar")
-    polar.load(Path(__file__).parent / "test_file_gx.polar")
+    polar.load_file(Path(__file__).parent / "test_file.polar")
+    polar.load_file(Path(__file__).parent / "test_file_gx.polar")
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
@@ -138,7 +138,7 @@ def test_class_specializers(polar, qvar, qeval, query):
     try(v: C{}, res) := res = 3;
     try(v: A{}, res) := res = 1;
     """
-    polar._load_str(rules)
+    polar.load_str(rules)
 
     assert qvar("A{}.a = x", "x", one=True) == "A"
     assert qvar("A{}.x = x", "x", one=True) == "A"
@@ -173,7 +173,7 @@ def test_dict_specializers(polar, qvar, qeval, query):
     what_is(animal: {species: "canis lupus", genus: "canis"}, res) := res = "wolf";
     what_is(animal: {species: "canis familiaris", genus: "canis"}, res) := res = "dog";
     """
-    polar._load_str(rules)
+    polar.load_str(rules)
 
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -205,7 +205,7 @@ def test_class_field_specializers(polar, qvar, qeval, query):
     what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog";
     what_is(animal: Animal{species: s, genus: "canis"}, res) := res = s;
     """
-    polar._load_str(rules)
+    polar.load_str(rules)
 
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -258,7 +258,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) := res = "wolf_class";
     what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog_class";
     """
-    polar._load_str(rules)
+    polar.load_str(rules)
 
     wolf = 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog = 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -308,10 +308,10 @@ def test_specializers_mixed(polar, qvar, qeval, query):
 
 def test_load_and_query():
     p = Polar()
-    p._load_str("f(1); f(2); ?= f(1); ?= !f(3);")
+    p.load_str("f(1); f(2); ?= f(1); ?= !f(3);")
 
     with pytest.raises(exceptions.PolarException):
-        p._load_str("g(1); ?= g(2);")
+        p.load_str("g(1); ?= g(2);")
 
 
 def test_parser_errors(polar):
@@ -320,7 +320,7 @@ def test_parser_errors(polar):
     f(a) := a = 18446744073709551616;
     """
     with pytest.raises(exceptions.IntegerOverflow) as e:
-        polar._load_str(rules)
+        polar.load_str(rules)
     assert (
         str(e.value)
         == "'18446744073709551616' caused an integer overflow at line 2, column 17"
@@ -332,7 +332,7 @@ def test_parser_errors(polar):
     allowed";
     """
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
-        polar._load_str(rules)
+        polar.load_str(rules)
     assert (
         str(e.value)
         == "'\\n' is not a valid character. Found in this is not at line 2, column 29"
@@ -343,7 +343,7 @@ def test_parser_errors(polar):
     """
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
-        polar._load_str(rules)
+        polar.load_str(rules)
     assert (
         str(e.value)
         == "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
@@ -356,7 +356,7 @@ def test_parser_errors(polar):
     f(a)
     """
     with pytest.raises(exceptions.UnrecognizedEOF) as e:
-        polar._load_str(rules)
+        polar.load_str(rules)
     assert (
         str(e.value)
         == "hit the end of the file unexpectedly. Did you forget a semi-colon at line 2, column 9"
@@ -367,7 +367,7 @@ def test_parser_errors(polar):
     1;
     """
     with pytest.raises(exceptions.UnrecognizedToken) as e:
-        polar._load_str(rules)
+        polar.load_str(rules)
     assert str(e.value) == "did not expect to find the token '1' at line 2, column 5"
 
     # ExtraToken -- not sure what causes this
@@ -375,7 +375,7 @@ def test_parser_errors(polar):
 
 def test_predicate(polar, qvar):
     """Test that predicates can be converted to and from python."""
-    polar._load_str("f(x) := x = pred(1, 2);")
+    polar.load_str("f(x) := x = pred(1, 2);")
     assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
 
     assert polar._query_pred(
@@ -391,7 +391,7 @@ def test_return_list(polar):
     polar.register_class(Actor)
 
     # for testing lists
-    polar._load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
+    polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
 
     assert polar._query_pred(
         Predicate(name="allow", args=[Actor(), "join", "party"])
@@ -453,8 +453,8 @@ def test_constructor(polar, qvar):
 
 
 def test_in(polar, qeval):
-    polar._load_str("g(x, y) := !x in y;")
-    polar._load_str("f(x) := !(x=1 | x=2);")
+    polar.load_str("g(x, y) := !x in y;")
+    polar.load_str("f(x) := !(x=1 | x=2);")
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")
