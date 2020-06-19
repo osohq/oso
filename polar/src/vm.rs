@@ -120,8 +120,6 @@ pub struct PolarVirtualMachine {
     /// Rules and types.
     pub kb: Arc<RwLock<KnowledgeBase>>,
 
-    /// Instance Literal -> External Instance table.
-    instances: HashMap<InstanceLiteral, ExternalInstance>,
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
 }
@@ -142,7 +140,6 @@ impl PolarVirtualMachine {
             trace: vec![],
             debugger: Debugger::default(),
             kb,
-            instances: HashMap::new(),
             call_id_symbols: HashMap::new(),
         }
     }
@@ -375,18 +372,12 @@ impl PolarVirtualMachine {
         &mut self,
         instance_literal: &InstanceLiteral,
     ) -> (bool, ExternalInstance) {
-        if let Some(external_instance) = self.instances.get(instance_literal) {
-            (true, external_instance.clone())
-        } else {
-            let new_external_id = self.new_id();
-            let new_external_instance = ExternalInstance {
-                instance_id: new_external_id,
-                literal: Some(instance_literal.clone()),
-            };
-            self.instances
-                .insert(instance_literal.clone(), new_external_instance.clone());
-            (false, new_external_instance)
-        }
+        let new_external_id = self.new_id();
+        let new_external_instance = ExternalInstance {
+            instance_id: new_external_id,
+            literal: Some(instance_literal.clone()),
+        };
+        (false, new_external_instance)
     }
 
     /// Recursively dereference a variable.
