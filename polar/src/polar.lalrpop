@@ -132,6 +132,9 @@ pub RewrittenOperation: Operation = {
     <op:RewritableOperator> "(" <args:Exp> ")" => {
         let args = unwrap_and(args);
         Operation{operator: op, args: args}
+    },
+    <op:RewritableOperator> "(" ")" => {
+        Operation{operator: op, args: vec![]}
     }
 };
 
