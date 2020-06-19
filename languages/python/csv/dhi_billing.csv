@@ -1,0 +1,301 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+
+access_dhi_bill Receptionist,dhi.bill Receptionist,model_dhi_bill,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_bill_line Receptionist,dhi.bill.line Receptionist,model_dhi_bill_line,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_bill_products_line Receptionist,dhi.bill.products.line Receptionist,model_dhi_bill_products_line,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_bill_extra_charges Receptionist,dhi.bill.extra.charges Receptionist,model_dhi_bill_extra_charges,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_payment_adjust_config Receptionist,dhi.payment.adjust.config Receptionist,model_dhi_payment_adjust_config,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_opd_config Receptionist,dhi.opd.config Receptionist,model_dhi_opd_config,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_opd_config_line Receptionist,dhi.opd.config.line Receptionist,model_dhi_opd_config_line,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_invoice Receptionist,dhi.invoice Receptionist,model_dhi_invoice,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_invoice_line Receptionist,dhi.invoice.line Receptionist,model_dhi_invoice_line,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_invoice_payment Receptionist,dhi.invoice.payment Receptionist,model_dhi_invoice_payment,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_insurance_bill Receptionist,dhi.insurance.bill Receptionist,model_dhi_insurance_bill,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_insurance_bill_line Receptionist,dhi.insurance.bill.line Receptionist,model_dhi_insurance_bill_line,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_fee_schedule Receptionist,dhi.fee.schedule Receptionist,model_dhi_fee_schedule,user_access.dhi_group_receptionist,1,0,0,0           
+access_dhi_fee_schedule_line Receptionist,dhi.fee.schedule.line Receptionist,model_dhi_fee_schedule_line,user_access.dhi_group_receptionist,1,0,0,0
+access_dhi_fee_schedule_line_variants Receptionist,dhi.fee.schedule.line.variants Receptionist,model_dhi_fee_schedule_line_variants,user_access.dhi_group_receptionist,1,0,0,0
+access_dhi_extra_charge Receptionist,dhi.extra.charge Receptionist,model_dhi_extra_charge,user_access.dhi_group_receptionist,1,0,0,0
+access_dhi_insurance_card Receptionist,dhi.insurance.card Receptionist,model_dhi_insurance_card,user_access.dhi_group_receptionist,1,0,0,0
+access_dhi_create_payment Receptionist,dhi.payment Receptionist,model_dhi_payment,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_create_payment_invoice_line Receptionist,dhi.payment.invoice.line Receptionist,model_dhi_payment_invoice_line,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_create_payment_details_line Receptionist,dhi.payment.details.line Receptionist,model_dhi_payment_details_line,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_create_payment_deposit_line Receptionist,dhi.payment.deposit.line Receptionist,model_dhi_payment_deposit_line,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_create_payment_other_payee Receptionist,dhi.payment.other.payee Receptionist,model_dhi_payment_other_payee,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_payment_adjustment Receptionist,dhi.payment.adjustment Receptionist,model_dhi_payment_adjustment,user_access.dhi_group_receptionist,1,1,1,1
+access_dhi_generate_invoice Receptionist,dhi.generate.invoice Receptionist,model_dhi_generate_invoice,user_access.dhi_group_receptionist,1,1,1,0
+access_dhi_bill_master Receptionist,dhi.bill.master Receptionist,model_dhi_bill_master,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_bill_detail Receptionist,dhi.bill.detail Receptionist,model_dhi_bill_detail,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_payment_detail Receptionist,dhi.payment.detail Receptionist,model_dhi_payment_detail,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_payment_fraction Receptionist,dhi.payment.fraction Receptionist,model_dhi_payment_fraction,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_payment_multiple_bill Receptionist,dhi.payment.multiple.bill Receptionist,model_dhi_payment_multiple_bill,user_access.dhi_group_receptionist,1,1,0,0
+access_dhi_legacy_employee Receptionist,dhi.legacy.employee Receptionist,model_dhi_legacy_employee,user_access.dhi_group_receptionist,1,1,1,1
+
+access_dhi_bill Billing,dhi.bill Billing,model_dhi_bill,user_access.dhi_group_billing,1,1,1,1
+access_dhi_bill_line Billing,dhi.bill.line Billing,model_dhi_bill_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_bill_products_line Billing,dhi.bill.products.line Billing,model_dhi_bill_products_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_bill_extra_charges Billing,dhi.bill.extra.charges Billing,model_dhi_bill_extra_charges,user_access.dhi_group_billing,1,1,1,1
+access_dhi_payment_adjust_config Billing,dhi.payment.adjust.config Billing,model_dhi_payment_adjust_config,user_access.dhi_group_billing,1,1,1,1
+access_dhi_opd_config Billing,dhi.opd.config Billing,model_dhi_opd_config,user_access.dhi_group_billing,1,1,1,1
+access_dhi_opd_config_line Billing,dhi.opd.config.line Billing,model_dhi_opd_config_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_invoice Billing,dhi.invoice Billing,model_dhi_invoice,user_access.dhi_group_billing,1,1,1,1
+access_dhi_invoice_line Billing,dhi.invoice.line Billing,model_dhi_invoice_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_invoice_payment Billing,dhi.invoice.payment Billing,model_dhi_invoice_payment,user_access.dhi_group_billing,1,1,1,1
+access_dhi_insurance_bill Billing,dhi.insurance.bill Billing,model_dhi_insurance_bill,user_access.dhi_group_billing,1,1,1,1
+access_dhi_insurance_bill_line Billing,dhi.insurance.bill.line Billing,model_dhi_insurance_bill_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_fee_schedule Billing,dhi.fee.schedule Billing,model_dhi_fee_schedule,user_access.dhi_group_billing,1,0,0,0           
+access_dhi_fee_schedule_line Billing,dhi.fee.schedule.line Billing,model_dhi_fee_schedule_line,user_access.dhi_group_billing,1,0,0,0
+access_dhi_fee_schedule_line_variants Billing,dhi.fee.schedule.line.variants Billing,model_dhi_fee_schedule_line_variants,user_access.dhi_group_billing,1,0,0,0
+access_dhi_extra_charge Billing,dhi.extra.charge Billing,model_dhi_extra_charge,user_access.dhi_group_billing,1,1,1,1
+access_dhi_insurance_card Billing,dhi.insurance.card Billing,model_dhi_insurance_card,user_access.dhi_group_billing,1,1,1,0
+access_dhi_create_payment Billing,dhi.payment Billing,model_dhi_payment,user_access.dhi_group_billing,1,1,1,1
+access_dhi_create_payment_invoice_line Billing,dhi.payment.invoice.line Billing,model_dhi_payment_invoice_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_create_payment_details_line Billing,dhi.payment.details.line Billing,model_dhi_payment_details_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_create_payment_deposit_line Billing,dhi.payment.deposit.line Billing,model_dhi_payment_deposit_line,user_access.dhi_group_billing,1,1,1,1
+access_dhi_create_payment_other_payee Billing,dhi.payment.other.payee Billing,model_dhi_payment_other_payee,user_access.dhi_group_billing,1,1,1,1
+access_dhi_payment_adjustment Billing,dhi.payment.adjustment Billing,model_dhi_payment_adjustment,user_access.dhi_group_billing,1,1,1,1
+access_dhi_generate_invoice Billing,dhi.generate.invoice Billing,model_dhi_generate_invoice,user_access.dhi_group_billing,1,1,1,0
+access_dhi_bill_master Billing,dhi.bill.master Billing,model_dhi_bill_master,user_access.dhi_group_billing,1,1,1,1
+access_dhi_bill_detail Billing,dhi.bill.detail Billing,model_dhi_bill_detail,user_access.dhi_group_billing,1,1,1,1
+access_dhi_payment_detail Billing,dhi.payment.detail Billing,model_dhi_payment_detail,user_access.dhi_group_billing,1,1,1,1
+access_dhi_payment_fraction Billing,dhi.payment.fraction Billing,model_dhi_payment_fraction,user_access.dhi_group_billing,1,1,1,1
+access_dhi_payment_multiple_bill Billing,dhi.payment.multiple.bill Billing,model_dhi_payment_multiple_bill,user_access.dhi_group_billing,1,1,1,1
+access_dhi_legacy_employee Billing,dhi.legacy.employee Billing,model_dhi_legacy_employee,user_access.dhi_group_billing,1,1,1,1
+
+access_dhi_bill Nurse,dhi.bill Nurse,model_dhi_bill,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_bill_line Nurse,dhi.bill.line Nurse,model_dhi_bill_line,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_bill_products_line Nurse,dhi.bill.products.line Nurse,model_dhi_bill_products_line,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_bill_extra_charges Nurse,dhi.bill.extra.charges Nurse,model_dhi_bill_extra_charges,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_invoice Nurse,dhi.invoice Nurse,model_dhi_invoice,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_invoice_line Nurse,dhi.invoice.line Nurse,model_dhi_invoice_line,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_invoice_payment Nurse,dhi.invoice.payment Nurse,model_dhi_invoice_payment,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_insurance_bill Nurse,dhi.insurance.bill Nurse,model_dhi_insurance_bill,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_insurance_bill_line Nurse,dhi.insurance.bill.line Nurse,model_dhi_insurance_bill_line,user_access.dhi_group_nurse,1,1,1,0
+access_dhi_fee_schedule Nurse,dhi.fee.schedule Nurse,model_dhi_fee_schedule,user_access.dhi_group_nurse,1,0,0,0           
+access_dhi_fee_schedule_line Nurse,dhi.fee.schedule.line Nurse,model_dhi_fee_schedule_line,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_fee_schedule_line_variants Nurse,dhi.fee.schedule.line.variants Nurse,model_dhi_fee_schedule_line_variants,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_extra_charge Nurse,dhi.extra.charge Nurse,model_dhi_extra_charge,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_insurance_card Nurse,dhi.insurance.card Nurse,model_dhi_insurance_card,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_create_payment Nurse,dhi.payment Nurse,model_dhi_payment,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_create_payment_invoice_line Nurse,dhi.payment.invoice.line Nurse,model_dhi_payment_invoice_line,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_create_payment_details_line Nurse,dhi.payment.details.line Nurse,model_dhi_payment_details_line,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_create_payment_deposit_line Nurse,dhi.payment.deposit.line Nurse,model_dhi_payment_deposit_line,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_create_payment_other_payee Nurse,dhi.payment.other.payee Nurse,model_dhi_payment_other_payee,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_payment_adjustment Nurse,dhi.payment.adjustment Nurse,model_dhi_payment_adjustment,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_bill_master Nurse,dhi.bill.master Nurse,model_dhi_bill_master,user_access.dhi_group_nurse,1,1,0,0
+access_dhi_bill_detail Nurse,dhi.bill.detail Nurse,model_dhi_bill_detail,user_access.dhi_group_nurse,1,1,0,0
+access_dhi_payment_fraction Nurse,dhi.payment.fraction Nurse,model_dhi_payment_fraction,user_access.dhi_group_nurse,1,1,0,0
+access_dhi_payment_multiple_bill Nurse,dhi.payment.multiple.bill Nurse,model_dhi_payment_multiple_bill,user_access.dhi_group_nurse,1,1,0,0
+access_dhi_opd_config Nurse,dhi.opd.config Nurse,model_dhi_opd_config,user_access.dhi_group_nurse,1,0,0,0
+access_dhi_opd_config_line Nurse,dhi.opd.config.line Nurse,model_dhi_opd_config_line,user_access.dhi_group_nurse,1,0,0,0
+
+
+access_dhi_bill Doctor,dhi.bill Doctor,model_dhi_bill,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_bill_line Doctor,dhi.bill.line Doctor,model_dhi_bill_line,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_bill_products_line Doctor,dhi.bill.products.line Doctor,model_dhi_bill_products_line,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_bill_extra_charges Doctor,dhi.bill.extra.charges Doctor,model_dhi_bill_extra_charges,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_invoice Doctor,dhi.invoice Doctor,model_dhi_invoice,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_invoice_line Doctor,dhi.invoice.line Doctor,model_dhi_invoice_line,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_invoice_payment Doctor,dhi.invoice.payment Doctor,model_dhi_invoice_payment,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_insurance_bill Doctor,dhi.insurance.bill Doctor,model_dhi_insurance_bill,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_insurance_bill_line Doctor,dhi.insurance.bill.line Doctor,model_dhi_insurance_bill_line,user_access.dhi_group_doctor,1,1,1,0
+access_dhi_fee_schedule Doctor,dhi.fee.schedule Doctor,model_dhi_fee_schedule,user_access.dhi_group_doctor,1,0,0,0           
+access_dhi_fee_schedule_line Doctor,dhi.fee.schedule.line Doctor,model_dhi_fee_schedule_line,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_fee_schedule_line_variants Doctor,dhi.fee.schedule.line.variants Doctor,model_dhi_fee_schedule_line_variants,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_extra_charge Doctor,dhi.extra.charge Doctor,model_dhi_extra_charge,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_insurance_card Doctor,dhi.insurance.card Doctor,model_dhi_insurance_card,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_create_payment Doctor,dhi.payment Doctor,model_dhi_payment,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_create_payment_invoice_line Doctor,dhi.payment.invoice.line Doctor,model_dhi_payment_invoice_line,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_create_payment_details_line Doctor,dhi.payment.details.line Doctor,model_dhi_payment_details_line,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_create_payment_deposit_line Doctor,dhi.payment.deposit.line Doctor,model_dhi_payment_deposit_line,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_create_payment_other_payee Doctor,dhi.payment.other.payee Doctor,model_dhi_payment_other_payee,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_payment_adjustment Doctor,dhi.payment.adjustment Doctor,model_dhi_payment_adjustment,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_bill_master Doctor,dhi.bill.master Doctor,model_dhi_bill_master,user_access.dhi_group_doctor,1,1,0,0
+access_dhi_bill_detail Doctor,dhi.bill.detail Doctor,model_dhi_bill_detail,user_access.dhi_group_doctor,1,1,0,0
+access_dhi_payment_fraction Doctor,dhi.payment.fraction Doctor,model_dhi_payment_fraction,user_access.dhi_group_doctor,1,1,0,0
+access_dhi_payment_multiple_bill Doctor,dhi.payment.multiple.bill Doctor,model_dhi_payment_multiple_bill,user_access.dhi_group_doctor,1,1,0,0
+access_dhi_opd_config Doctor,dhi.opd.config Doctor,model_dhi_opd_config,user_access.dhi_group_doctor,1,0,0,0
+access_dhi_opd_config_line Doctor,dhi.opd.config.line Doctor,model_dhi_opd_config_line,user_access.dhi_group_doctor,1,0,0,0
+
+
+access_dhi_bill Inventory Staff,dhi.bill Inventory Staff,model_dhi_bill,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_bill_line Inventory Staff,dhi.bill.line Inventory Staff,model_dhi_bill_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_bill_products_line Inventory Staff,dhi.bill.products.line Inventory Staff,model_dhi_bill_products_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_bill_extra_charges Inventory Staff,dhi.bill.extra.charges Inventory Staff,model_dhi_bill_extra_charges,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_invoice Inventory Staff,dhi.invoice Inventory Staff,model_dhi_invoice,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_invoice_line Inventory Staff,dhi.invoice.line Inventory Staff,model_dhi_invoice_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_invoice_payment Inventory Staff,dhi.invoice.payment Inventory Staff,model_dhi_invoice_payment,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_insurance_bill Inventory Staff,dhi.insurance.bill Inventory Staff,model_dhi_insurance_bill,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_insurance_bill_line Doctor,dhi.insurance.bill.line Inventory Staff,model_dhi_insurance_bill_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_fee_schedule Inventory Staff,dhi.fee.schedule Inventory Staff,model_dhi_fee_schedule,user_access.dhi_group_inventory,1,0,0,0          
+access_dhi_fee_schedule_line Inventory Staff,dhi.fee.schedule.line Inventory Staff,model_dhi_fee_schedule_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_fee_schedule_line_variants Inventory Staff,dhi.fee.schedule.line.variants Inventory Staff,model_dhi_fee_schedule_line_variants,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_extra_charge Inventory Staff,dhi.extra.charge Inventory Staff,model_dhi_extra_charge,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_insurance_card Inventory Staff,dhi.insurance.card Inventory Staff,model_dhi_insurance_card,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_create_payment Inventory Staff,dhi.payment Inventory Staff,model_dhi_payment,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_create_payment_invoice_line Inventory Staff,dhi.payment.invoice.line Inventory Staff,model_dhi_payment_invoice_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_create_payment_details_line Inventory Staff,dhi.payment.details.line Inventory Staff,model_dhi_payment_details_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_create_payment_deposit_line Inventory Staff,dhi.payment.deposit.line Inventory Staff,model_dhi_payment_deposit_line,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_create_payment_other_payee Inventory Staff,dhi.payment.other.payee Inventory Staff,model_dhi_payment_other_payee,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_payment_adjustment Inventory Staff,dhi.payment.adjustment Inventory Staff,model_dhi_payment_adjustment,user_access.dhi_group_inventory,1,0,0,0
+access_dhi_bill_master Inventory Staff,dhi.bill.master Inventory Staff,model_dhi_bill_master,user_access.dhi_group_inventory,1,1,0,0
+access_dhi_bill_detail Inventory Staff,dhi.bill.detail Inventory Staff,model_dhi_bill_detail,user_access.dhi_group_inventory,1,1,0,0
+access_dhi_payment_fraction Inventory Staff,dhi.payment.fraction Inventory Staff,model_dhi_payment_fraction,user_access.dhi_group_inventory,1,1,0,0
+access_dhi_payment_multiple_bill Inventory Staff,dhi.payment.multiple.bill Inventory Staff,model_dhi_payment_multiple_bill,user_access.dhi_group_inventory,1,1,0,0
+
+access_dhi_bill Lab Staff,dhi.bill Lab Staff,model_dhi_bill,user_access.dhi_group_lab,1,1,1,0
+access_dhi_bill_line Lab Staff,dhi.bill.line Lab Staff,model_dhi_bill_line,user_access.dhi_group_lab,1,1,1,0
+access_dhi_bill_products_line Lab Staff,dhi.bill.products.line Lab Staff,model_dhi_bill_products_line,user_access.dhi_group_lab,1,1,1,0
+access_dhi_bill_extra_charges Lab Staff,dhi.bill.extra.charges Lab Staff,model_dhi_bill_extra_charges,user_access.dhi_group_lab,1,1,1,0
+access_dhi_invoice Lab Staff,dhi.invoice Lab Staff,model_dhi_invoice,user_access.dhi_group_lab,1,0,0,0
+access_dhi_invoice_line Lab Staff,dhi.invoice.line Lab Staff,model_dhi_invoice_line,user_access.dhi_group_lab,1,0,0,0
+access_dhi_invoice_payment Lab Staff,dhi.invoice.payment Lab Staff,model_dhi_invoice_payment,user_access.dhi_group_lab,1,0,0,0
+access_dhi_insurance_bill Lab Staff,dhi.insurance.bill Lab Staff,model_dhi_insurance_bill,user_access.dhi_group_lab,1,0,0,0
+access_dhi_insurance_bill_line Lab Staff,dhi.insurance.bill.line Lab Staff,model_dhi_insurance_bill_line,user_access.dhi_group_lab,1,0,0,0
+access_dhi_fee_schedule Lab Staff,dhi.fee.schedule Lab Staff,model_dhi_fee_schedule,user_access.dhi_group_lab,1,0,0,0           
+access_dhi_fee_schedule_line Lab Staff,dhi.fee.schedule.line Lab Staff,model_dhi_fee_schedule_line,user_access.dhi_group_lab,1,0,0,0
+access_dhi_fee_schedule_line_variants Lab Staff,dhi.fee.schedule.line.variants Lab Staff,model_dhi_fee_schedule_line_variants,user_access.dhi_group_lab,1,0,0,0
+access_dhi_extra_charge Lab Staff,dhi.extra.charge Lab Staff,model_dhi_extra_charge,user_access.dhi_group_lab,1,0,0,0
+access_dhi_insurance_card Lab Staff,dhi.insurance.card Lab Staff,model_dhi_insurance_card,user_access.dhi_group_lab,1,0,0,0
+access_dhi_create_payment Lab Staff,dhi.payment Lab Staff,model_dhi_payment,user_access.dhi_group_lab,1,0,0,0
+access_dhi_create_payment_invoice_line Lab Staff,dhi.payment.invoice.line Lab Staff,model_dhi_payment_invoice_line,user_access.dhi_group_lab,1,0,0,0
+access_dhi_create_payment_details_line Lab Staff,dhi.payment.details.line Lab Staff,model_dhi_payment_details_line,user_access.dhi_group_lab,1,0,0,0
+access_dhi_create_payment_deposit_line Lab Staff,dhi.payment.deposit.line Lab Staff,model_dhi_payment_deposit_line,user_access.dhi_group_lab,1,0,0,0
+access_dhi_create_payment_other_payee Lab Staff,dhi.payment.other.payee Lab Staff,model_dhi_payment_other_payee,user_access.dhi_group_lab,1,0,0,0
+access_dhi_payment_adjustment Lab Staff,dhi.payment.adjustment Lab Staff,model_dhi_payment_adjustment,user_access.dhi_group_lab,1,0,0,0
+access_dhi_bill_master Lab Staff,dhi.bill.master Lab Staff,model_dhi_bill_master,user_access.dhi_group_lab,1,1,0,0
+access_dhi_bill_detail Lab Staff,dhi.bill.detail Lab Staff,model_dhi_bill_detail,user_access.dhi_group_lab,1,1,0,0
+access_dhi_payment_fraction Lab Staff,dhi.payment.fraction Lab Staff,model_dhi_payment_fraction,user_access.dhi_group_lab,1,1,0,0
+access_dhi_payment_multiple_bill Lab Staff,dhi.payment.multiple.bill Lab Staff,model_dhi_payment_multiple_bill,user_access.dhi_group_lab,1,1,0,0
+access_dhi_opd_config Lab Staff,dhi.opd.config Lab Staff,model_dhi_opd_config,user_access.dhi_group_lab,1,0,0,0
+access_dhi_opd_config_line Lab Staff,dhi.opd.config.line Lab Staff,model_dhi_opd_config_line,user_access.dhi_group_lab,1,0,0,0
+
+
+access_dhi_bill Imaging Staff,dhi.bill Imaging Staff,model_dhi_bill,user_access.dhi_group_imaging,1,1,1,0
+access_dhi_bill_line Imaging Staff,dhi.bill.line Imaging Staff,model_dhi_bill_line,user_access.dhi_group_imaging,1,1,1,0
+access_dhi_bill_products_line Imaging Staff,dhi.bill.products.line Imaging Staff,model_dhi_bill_products_line,user_access.dhi_group_imaging,1,1,1,0
+access_dhi_bill_extra_charges Imaging Staff,dhi.bill.extra.charges Imaging Staff,model_dhi_bill_extra_charges,user_access.dhi_group_imaging,1,1,1,0
+access_dhi_invoice Imaging Staff,dhi.invoice Imaging Staff,model_dhi_invoice,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_invoice_line Imaging Staff,dhi.invoice.line Imaging Staff,model_dhi_invoice_line,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_invoice_payment Imaging Staff,dhi.invoice.payment Imaging Staff,model_dhi_invoice_payment,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_insurance_bill Imaging Staff,dhi.insurance.bill Imaging Staff,model_dhi_insurance_bill,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_insurance_bill_line Imaging Staff,dhi.insurance.bill.line Imaging Staff,model_dhi_insurance_bill_line,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_fee_schedule Imaging Staff,dhi.fee.schedule Imaging Staff,model_dhi_fee_schedule,user_access.dhi_group_imaging,1,0,0,0           
+access_dhi_fee_schedule_line Imaging Staff,dhi.fee.schedule.line Imaging Staff,model_dhi_fee_schedule_line,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_fee_schedule_line_variants Imaging Staff,dhi.fee.schedule.line.variants Imaging Staff,model_dhi_fee_schedule_line_variants,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_extra_charge Imaging Staff,dhi.extra.charge Imaging Staff,model_dhi_extra_charge,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_insurance_card Imaging Staff,dhi.insurance.card Imaging Staff,model_dhi_insurance_card,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_create_payment Imaging Staff,dhi.payment Imaging Staff,model_dhi_payment,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_create_payment_invoice_line Imaging Staff,dhi.payment.invoice.line Imaging Staff,model_dhi_payment_invoice_line,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_create_payment_details_line Imaging Staff,dhi.payment.details.line Imaging Staff,model_dhi_payment_details_line,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_create_payment_deposit_line Imaging Staff,dhi.payment.deposit.line Imaging Staff,model_dhi_payment_deposit_line,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_create_payment_other_payee Imaging Staff,dhi.payment.other.payee Imaging Staff,model_dhi_payment_other_payee,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_payment_adjustment Imaging Staff,dhi.payment.adjustment Imaging Staff,model_dhi_payment_adjustment,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_bill_master Imaging Staff,dhi.bill.master Imaging Staff,model_dhi_bill_master,user_access.dhi_group_imaging,1,1,0,0
+access_dhi_bill_detail Imaging Staff,dhi.bill.detail Imaging Staff,model_dhi_bill_detail,user_access.dhi_group_imaging,1,1,0,0
+access_dhi_payment_fraction Imaging Staff,dhi.payment.fraction Imaging Staff,model_dhi_payment_fraction,user_access.dhi_group_imaging,1,1,0,0
+access_dhi_payment_multiple_bill Imaging Staff,dhi.payment.multiple.bill Imaging Staff,model_dhi_payment_multiple_bill,user_access.dhi_group_imaging,1,1,0,0
+access_dhi_opd_config Imaging Staff,dhi.opd.config Imaging Staff,model_dhi_opd_config,user_access.dhi_group_imaging,1,0,0,0
+access_dhi_opd_config_line Imaging Staff,dhi.opd.config.line Imaging Staff,model_dhi_opd_config_line,user_access.dhi_group_imaging,1,0,0,0
+
+access_dhi_bill HR,dhi.bill HR,model_dhi_bill,user_access.dhi_group_hr,1,1,1,1
+access_dhi_bill_line HR,dhi.bill.line HR,model_dhi_bill_line,user_access.dhi_group_hr,1,1,1,1
+access_dhi_bill_products_line HR,dhi.bill.products.line HR,model_dhi_bill_products_line,user_access.dhi_group_hr,1,1,1,1
+access_dhi_bill_extra_charges HR,dhi.bill.extra.charges HR,model_dhi_bill_extra_charges,user_access.dhi_group_hr,1,1,1,1
+access_dhi_invoice HR,dhi.invoice HR,model_dhi_invoice,user_access.dhi_group_hr,1,1,1,1
+access_dhi_invoice_line HR,dhi.invoice.line HR,model_dhi_invoice_line,user_access.dhi_group_hr,1,1,1,1
+access_dhi_invoice_payment HR,dhi.invoice.payment HR,model_dhi_invoice_payment,user_access.dhi_group_hr,1,1,1,1
+access_dhi_fee_schedule HR,dhi.fee.schedule HR,model_dhi_fee_schedule,user_access.dhi_group_hr,1,0,0,0               
+access_dhi_fee_schedule_line HR,dhi.fee.schedule.line HR,model_dhi_fee_schedule_line,user_access.dhi_group_hr,1,0,0,0
+access_dhi_fee_schedule_line_variants HR,dhi.fee.schedule.line.variants HR,model_dhi_fee_schedule_line_variants,user_access.dhi_group_hr,1,0,0,0
+access_dhi_extra_charge HR,dhi.extra.charge HR,model_dhi_extra_charge,user_access.dhi_group_hr,1,1,1,1
+access_dhi_insurance_bill HR,dhi.insurance.bill HR,model_dhi_insurance_bill,user_access.dhi_group_hr,1,1,1,1
+access_dhi_insurance_bill_line HR,dhi.insurance.bill.line HR,model_dhi_insurance_bill_line,user_access.dhi_group_hr,1,1,1,1
+access_dhi_insurance_card HR,dhi.insurance.card HR,model_dhi_insurance_card,user_access.dhi_group_hr,1,1,1,1
+access_dhi_create_payment HR,dhi.payment HR,model_dhi_payment,user_access.dhi_group_hr,1,1,1,0
+access_dhi_create_payment_invoice_line HR,dhi.payment.invoice.line HR,model_dhi_payment_invoice_line,user_access.dhi_group_hr,1,1,1,1
+access_dhi_create_payment_details_line HR,dhi.payment.details.line HR,model_dhi_payment_details_line,user_access.dhi_group_hr,1,1,1,1
+access_dhi_create_payment_deposit_line HR,dhi.payment.deposit.line HR,model_dhi_payment_deposit_line,user_access.dhi_group_hr,1,1,1,1
+access_dhi_create_payment_other_payee HR,dhi.payment.other.payee HR,model_dhi_payment_other_payee,user_access.dhi_group_hr,1,1,1,1
+access_dhi_payment_adjustment HR,dhi.payment.adjustment HR,model_dhi_payment_adjustment,user_access.dhi_group_hr,1,1,1,1
+access_dhi_create_payment HR Staff,dhi.payment HR Staff,model_dhi_payment,user_access.dhi_group_hr,1,0,0,0
+access_dhi_create_payment_other_payee  HR Staff,dhi.payment.other.payee HR Staff,model_dhi_payment_other_payee,user_access.dhi_group_hr,1,0,0,0
+access_dhi_bill_master HR Staff,dhi.bill.master HR Staff,model_dhi_bill_master,user_access.dhi_group_hr,1,0,0,0
+access_dhi_bill_detail HR Staff,dhi.bill.detail HR Staff,model_dhi_bill_detail,user_access.dhi_group_hr,1,0,0,0
+access_dhi_payment_detail HR Staff,dhi.payment.detail HR Staff,model_dhi_payment_detail,user_access.dhi_group_hr,1,0,0,0
+access_dhi_payment_fraction HR Staff,dhi.payment.fraction HR Staff,model_dhi_payment_fraction,user_access.dhi_group_hr,1,0,0,0
+access_dhi_payment_multiple_bill HR Staff,dhi.payment.multiple.bill HR Staff,model_dhi_payment_multiple_bill,user_access.dhi_group_hr,1,0,0,0
+access_dhi_legacy_employee HR Staff,dhi.legacy.employee HR Staff,model_dhi_legacy_employee,user_access.dhi_group_hr,1,1,1,1
+
+access_dhi_bill Administration,dhi.bill Administration,model_dhi_bill,user_access.dhi_group_administration,1,1,1,1
+access_dhi_bill_line Administration,dhi.bill.line Administration,model_dhi_bill_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_bill_products_line Administration,dhi.bill.products.line Administration,model_dhi_bill_products_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_bill_extra_charges Administration,dhi.bill.extra.charges Administration,model_dhi_bill_extra_charges,user_access.dhi_group_administration,1,1,1,1
+access_dhi_payment_adjust_config Administration,dhi.payment.adjust.config Administration,model_dhi_payment_adjust_config,user_access.dhi_group_administration,1,1,1,1
+access_dhi_opd_config Administration,dhi.opd.config Administration,model_dhi_opd_config,user_access.dhi_group_administration,1,1,1,1
+access_dhi_opd_config_line Administration,dhi.opd.config.line Administration,model_dhi_opd_config_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_invoice Administration,dhi.invoice Administration,model_dhi_invoice,user_access.dhi_group_administration,1,1,1,1
+access_dhi_invoice_line Administration,dhi.invoice.line Administration,model_dhi_invoice_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_invoice_payment Administration,dhi.invoice.payment Administration,model_dhi_invoice_payment,user_access.dhi_group_administration,1,1,1,1
+access_dhi_insurance_bill Administration,dhi.insurance.bill Administration,model_dhi_insurance_bill,user_access.dhi_group_administration,1,1,1,1
+access_dhi_insurance_bill_line Administration,dhi.insurance.bill.line Administration,model_dhi_insurance_bill_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_fee_schedule Administration,dhi.fee.schedule Administration,model_dhi_fee_schedule,user_access.dhi_group_administration,1,1,1,1               
+access_dhi_fee_schedule_line Administration,dhi.fee.schedule.line Administration,model_dhi_fee_schedule_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_fee_schedule_line_variants Administration,dhi.fee.schedule.line.variants Administration,model_dhi_fee_schedule_line_variants,user_access.dhi_group_administration,1,1,1,1
+access_dhi_extra_charge Administration,dhi.extra.charge Administration,model_dhi_extra_charge,user_access.dhi_group_administration,1,1,1,1
+access_dhi_insurance_card Administration,dhi.insurance.card Administration,model_dhi_insurance_card,user_access.dhi_group_administration,1,1,1,1
+access_dhi_create_payment Administration,dhi.payment Administration,model_dhi_payment,user_access.dhi_group_administration,1,1,1,1
+access_dhi_create_payment_invoice_line Administration,dhi.payment.invoice.line Administration,model_dhi_payment_invoice_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_create_payment_details_line Administration,dhi.payment.details.line Administration,model_dhi_payment_details_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_create_payment_deposit_line Administration,dhi.payment.deposit.line Administration,model_dhi_payment_deposit_line,user_access.dhi_group_administration,1,1,1,1
+access_dhi_create_payment_other_payee Administration,dhi.payment.other.payee Administration,model_dhi_payment_other_payee,user_access.dhi_group_administration,1,1,1,1
+access_dhi_payment_adjustment Administration,dhi.payment.adjustment Administration,model_dhi_payment_adjustment,user_access.dhi_group_administration,1,1,1,1
+access_dhi_bill_master Administration,dhi.bill.master Administration,model_dhi_bill_master,user_access.dhi_group_administration,1,1,1,1
+access_dhi_bill_detail Administration,dhi.bill.detail Administration,model_dhi_bill_detail,user_access.dhi_group_administration,1,1,1,1
+access_dhi_payment_detail Administration,dhi.payment.detail Administration,model_dhi_payment_detail,user_access.dhi_group_administration,1,1,1,1
+access_dhi_payment_fraction Administration,dhi.payment.fraction Administration,model_dhi_payment_fraction,user_access.dhi_group_administration,1,1,1,1
+access_dhi_payment_multiple_bill Administration,dhi.payment.multiple.bill Administration,model_dhi_payment_multiple_bill,user_access.dhi_group_administration,1,1,1,1
+access_dhi_generate_invoice Administration,dhi.generate.invoice Administration,model_dhi_generate_invoice,user_access.dhi_group_administration,1,1,1,1
+access_dhi_legacy_employee Administration,dhi.legacy.employee Administration,model_dhi_legacy_employee,user_access.dhi_group_administration,1,1,1,1
+access_dhi_billing_discount_config Super Administration,dhi.billing.discount.config Administration,model_dhi_billing_discount_config,user_access.dhi_group_administration,1,1,1,1
+access_dhi_billing_discount_config_line Super Administration,dhi.billing.discount.config.line Administration,model_dhi_billing_discount_config_line,user_access.dhi_group_administration,1,1,1,1
+
+access_dhi_bill Super Administration,dhi.bill Super Administration,model_dhi_bill,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_bill_line Super Administration,dhi.bill.line Super Administration,model_dhi_bill_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_bill_products_line Super Administration,dhi.bill.products.line Super Administration,model_dhi_bill_products_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_bill_extra_charges Super Administration,dhi.bill.extra.charges Super Administration,model_dhi_bill_extra_charges,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_payment_adjust_config Super Administration,dhi.payment.adjust.config Super Administration,model_dhi_payment_adjust_config,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_opd_config Super Administration,dhi.opd.config Super Administration,model_dhi_opd_config,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_opd_config_line Super Administration,dhi.opd.config.line Super Administration,model_dhi_opd_config_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_invoice Super Administration,dhi.invoice Super Administration,model_dhi_invoice,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_invoice_line Super Administration,dhi.invoice.line Super Administration,model_dhi_invoice_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_invoice_payment Super Administration,dhi.invoice.payment Super Administration,model_dhi_invoice_payment,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_insurance_bill Super Administration,dhi.insurance.bill Super Administration,model_dhi_insurance_bill,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_insurance_bill_line Super Administration,dhi.insurance.bill.line Super Administration,model_dhi_insurance_bill_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_fee_schedule Super Administration,dhi.fee.schedule Super Administration,model_dhi_fee_schedule,user_access.dhi_group_super_admin,1,1,1,1               
+access_dhi_fee_schedule_line Super Administration,dhi.fee.schedule.line Super Administration,model_dhi_fee_schedule_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_fee_schedule_line_variants Super Administration,dhi.fee.schedule.line.variants Super Administration,model_dhi_fee_schedule_line_variants,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_extra_charge Super Administration,dhi.extra.charge Super Administration,model_dhi_extra_charge,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_insurance_card Super Administration,dhi.insurance.card Super Administration,model_dhi_insurance_card,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_create_payment Super Administration,dhi.payment Super Administration,model_dhi_payment,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_create_payment_invoice_line Super Administration,dhi.payment.invoice.line Super Administration,model_dhi_payment_invoice_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_create_payment_details_line Super Administration,dhi.payment.details.line Super Administration,model_dhi_payment_details_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_create_payment_deposit_line Super Administration,dhi.payment.deposit.line Super Administration,model_dhi_payment_deposit_line,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_create_payment_other_payee Super Administration,dhi.payment.other.payee Super Administration,model_dhi_payment_other_payee,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_payment_adjustment Super Administration,dhi.payment.adjustment Super Administration,model_dhi_payment_adjustment,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_bill_master Super Administration,dhi.bill.master Super Administration,model_dhi_bill_master,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_bill_detail Super Administration,dhi.bill.detail Super Administration,model_dhi_bill_detail,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_payment_detail Super Administration,dhi.payment.detail Super Administration,model_dhi_payment_detail,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_payment_fraction Super Administration,dhi.payment.fraction Super Administration,model_dhi_payment_fraction,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_payment_multiple_bill Super Administration,dhi.payment.multiple.bill Super Administration,model_dhi_payment_multiple_bill,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_generate_invoice Super Administration,dhi.generate.invoice Super Administration,model_dhi_generate_invoice,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_legacy_employee Super Administration,dhi.legacy.employee Super Administration,model_dhi_legacy_employee,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_billing_discount_config Super Administration,dhi.billing.discount.config Super Administration,model_dhi_billing_discount_config,user_access.dhi_group_super_admin,1,1,1,1
+access_dhi_billing_discount_config_line Super Administration,dhi.billing.discount.config.line Super Administration,model_dhi_billing_discount_config_line,user_access.dhi_group_super_admin,1,1,1,1
+
+
+acccess_dhi_fee_schedule_plan,dhi.fee.schedule.plan,model_dhi_fee_schedule_plan,,1,1,1,1
+acccess_dhi_fee_schedule_plan_line,dhi.fee.schedule.plan.line,model_dhi_fee_schedule_plan_line,,1,1,1,1
+acccess_dhi_fee_schedule_category,dhi.fee.schedule.category,model_dhi_fee_schedule_category,,1,1,1,1
+acccess_dhi_fee_schedule_plan_category_line,dhi.fee.schedule.plan.category.line,model_dhi_fee_schedule_plan_category_line,,1,1,1,1
+acccess_dhi_plan_balance_limit,dhi.plan.balance.limit,model_dhi_plan_balance_limit,,1,1,1,1
