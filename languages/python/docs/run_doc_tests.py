@@ -28,7 +28,7 @@ def load_python(filename, polar):
 
 
 def load(filename, polar):
-    polar.load(filename)
+    polar.load_file(filename)
 
 
 def main():
