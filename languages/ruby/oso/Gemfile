@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+gemspec
+
+gem 'osohq-polar', github: 'osohq/oso', branch: 'gana/add-oso-gem'
