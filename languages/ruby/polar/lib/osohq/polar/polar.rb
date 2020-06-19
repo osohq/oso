@@ -6,7 +6,7 @@ require 'set'
 module Osohq
   module Polar
     # Create and manage an instance of the Polar runtime.
-    class Polar
+    class Polar # rubocop:disable Metrics/ClassLength
       def initialize
         @ffi_instance = FFI::Polar.create
         @calls = {}
@@ -16,6 +16,18 @@ module Osohq
         @load_queue = Set.new
       end
 
+      # Enqueue a Polar policy file for loading into the KB.
+      #
+      # @param name [String]
+      # @raise [PolarFileExtensionError] if provided filename has invalid extension.
+      # @raise [PolarFileNotFoundError] if provided filename does not exist.
+      def load_file(name)
+        raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
+        raise PolarFileNotFoundError, name unless File.file?(name)
+
+        load_queue << name
+      end
+
       # Load a Polar string into the KB.
       #
       # @param str [String] Polar string to load.
@@ -23,7 +35,7 @@ module Osohq
       # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
-      def load_str(str, filename: nil)
+      def load_str(str, filename: nil) # rubocop:disable Metrics/MethodLength
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
         ffi_instance.load_str(str, filename: filename)
@@ -37,6 +49,12 @@ module Osohq
             raise InlineQueryFailedError
           end
         end
+      end
+
+      # Replace the current Polar instance but retain all registered classes and
+      # constructors.
+      def clear
+        @ffi_instance = FFI::Polar.create
       end
 
       # Query for a predicate.
@@ -55,7 +73,7 @@ module Osohq
       # Start a REPL session.
       #
       # @raise [Error] if the FFI call raises one.
-      def repl
+      def repl # rubocop:disable Metrics/MethodLength
         clear_query_state
         load_queued_files
         loop do
@@ -71,6 +89,14 @@ module Osohq
         end
       end
 
+      # Get a unique ID from Polar.
+      #
+      # @return [Integer]
+      # @raise [Error] if the FFI call raises one.
+      def new_id
+        ffi_instance.new_id
+      end
+
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
@@ -82,22 +108,6 @@ module Osohq
         classes[cls.name] = cls
         from_polar = :new if from_polar.nil?
         constructors[cls.name] = from_polar
-      end
-
-      # Get a unique ID from Polar.
-      #
-      # @return [Integer]
-      # @raise [Error] if the FFI call raises one.
-      def new_id
-        ffi_instance.new_id
-      end
-
-      # Check if an instance has been cached.
-      #
-      # @param id [Integer]
-      # @return [Boolean]
-      def instance?(id)
-        instances.key? id
       end
 
       # Register a Ruby method call, wrapping the call result in a generator if
@@ -121,41 +131,59 @@ module Osohq
         raise InvalidCallError
       end
 
+      # Retrieve the next result from a registered call and pass it to {#to_polar_term}.
+      #
+      # @param id [Integer]
+      # @return [Hash]
+      # @raise [StopIteration] if the call has been exhausted.
+      def next_call_result(id)
+        to_polar_term(calls[id].next)
+      end
+
       # Construct and cache a Ruby instance.
       #
       # @param cls_name [String]
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
-      def make_instance(cls_name, fields:, id:)
+      def make_instance(cls_name, fields:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity
         constructor = get_constructor(cls_name)
         fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(v)] }]
         instance = if constructor == :new
-                     get_class(cls_name).__send__(:new, **fields)
+                     if fields.empty?
+                       get_class(cls_name).__send__(:new)
+                     else
+                       get_class(cls_name).__send__(:new, **fields)
+                     end
                    else
-                     constructor.call(**fields)
+                     if fields.empty?
+                       constructor.call
+                     else
+                       constructor.call(**fields)
+                     end
                    end
         cache_instance(instance, id: id)
       rescue StandardError => e
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
       end
 
-      # Replace the current Polar instance but retain all registered classes and
-      # constructors.
-      def clear
-        @ffi_instance = FFI::Polar.create
+      # Check if an instance has been cached.
+      #
+      # @param id [Integer]
+      # @return [Boolean]
+      def instance?(id)
+        instances.key? id
       end
 
-      # Enqueue a Polar policy file for loading into the KB.
+      # Fetch a Ruby instance from the {#instances} cache.
       #
-      # @param name [String]
-      # @raise [PolarFileExtensionError] if provided filename has invalid extension.
-      # @raise [PolarFileNotFoundError] if provided filename does not exist.
-      def load_file(name)
-        raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
-        raise PolarFileNotFoundError, name unless File.file?(name)
+      # @param id [Integer]
+      # @return [Object]
+      # @raise [UnregisteredInstanceError] if the ID has not been registered.
+      def get_instance(id)
+        raise UnregisteredInstanceError, id unless instance? id
 
-        load_queue << name
+        instances[id]
       end
 
       # Check if the left class is more specific than the right class for the
@@ -188,38 +216,29 @@ module Osohq
       # Turn a Ruby value into a Polar term that's ready to be sent across the
       # FFI boundary.
       #
-      # @param x [Object]
+      # @param value [Object]
       # @return [Hash<String, Object>]
-      def to_polar_term(x)
-        val = case true
-              when x.instance_of?(TrueClass) || x.instance_of?(FalseClass)
-                { 'Boolean' => x }
-              when x.instance_of?(Integer)
-                { 'Integer' => x }
-              when x.instance_of?(String)
-                { 'String' => x }
-              when x.instance_of?(Array)
-                { 'List' => x.map { |el| to_polar_term(el) } }
-              when x.instance_of?(Hash)
-                { 'Dictionary' => { 'fields' => x.transform_values { |v| to_polar_term(v) } } }
-              when x.instance_of?(Predicate)
-                { 'Call' => { 'name' => x.name, 'args' => x.args.map { |el| to_polar_term(el) } } }
-              when x.instance_of?(Variable)
-                # This is supported so that we can query for unbound variables
-                { 'Symbol' => x }
-              else
-                { 'ExternalInstance' => { 'instance_id' => cache_instance(x) } }
-              end
-        { 'id' => 0, 'offset' => 0, 'value' => val }
-      end
-
-      # Retrieve the next result from a registered call and pass it to {#to_polar_term}.
-      #
-      # @param id [Integer]
-      # @return [Hash]
-      # @raise [StopIteration] if the call has been exhausted.
-      def next_call_result(id)
-        to_polar_term(calls[id].next)
+      def to_polar_term(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+        value = case true # rubocop:disable Lint/LiteralAsCondition
+                when value.instance_of?(TrueClass) || value.instance_of?(FalseClass)
+                  { 'Boolean' => value }
+                when value.instance_of?(Integer)
+                  { 'Integer' => value }
+                when value.instance_of?(String)
+                  { 'String' => value }
+                when value.instance_of?(Array)
+                  { 'List' => value.map { |el| to_polar_term(el) } }
+                when value.instance_of?(Hash)
+                  { 'Dictionary' => { 'fields' => value.transform_values { |v| to_polar_term(v) } } }
+                when value.instance_of?(Predicate)
+                  { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el| to_polar_term(el) } } }
+                when value.instance_of?(Variable)
+                  # This is supported so that we can query for unbound variables
+                  { 'Symbol' => value }
+                else
+                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
+                end
+        { 'id' => 0, 'offset' => 0, 'value' => value }
       end
 
       # Turn a Polar term passed across the FFI boundary into a Ruby value.
@@ -230,9 +249,7 @@ module Osohq
       # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(data)
-        id = data['id']
-        offset = data['offset']
+      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         tag, value = data['value'].first
         case tag
         when 'Integer', 'String', 'Boolean'
@@ -291,17 +308,6 @@ module Osohq
         id = new_id if id.nil?
         instances[id] = instance
         id
-      end
-
-      # Fetch a Ruby instance from the {#instances} cache.
-      #
-      # @param id [Integer]
-      # @return [Object]
-      # @raise [UnregisteredInstanceError] if the ID has not been registered.
-      def get_instance(id)
-        raise UnregisteredInstanceError, id unless instance? id
-
-        instances[id]
       end
 
       # Load all queued files, flushing the {#load_queue}.
