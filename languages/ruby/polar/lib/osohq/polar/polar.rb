@@ -230,9 +230,7 @@ module Osohq
       # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(data)
-        id = data['id']
-        offset = data['offset']
+      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         tag, value = data['value'].first
         case tag
         when 'Integer', 'String', 'Boolean'
