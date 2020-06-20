@@ -30,6 +30,7 @@ module Osohq
     class UnregisteredInstanceError < PolarRuntimeError; end
     class DuplicateInstanceRegistrationError < PolarRuntimeError; end
     class InvalidCallError < PolarRuntimeError; end
+    class InvalidConstructorError < PolarRuntimeError; end
     class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end

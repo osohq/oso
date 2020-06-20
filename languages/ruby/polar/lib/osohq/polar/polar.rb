@@ -101,13 +101,19 @@ module Osohq
       #
       # @param cls [Class]
       # @param from_polar [Proc]
-      def register_class(cls, &from_polar)
+      # @raise [InvalidConstructorError] if provided an invalid {from_polar} constructor.
+      def register_class(cls, from_polar: nil)
         # TODO(gj): should this take 3 args: cls (Class), constructor_cls
         # (Option<Class>) that defaults to cls, and constructor_method
         # (Option<Symbol>) that defaults to :new?
         classes[cls.name] = cls
-        from_polar = :new if from_polar.nil?
-        constructors[cls.name] = from_polar
+        if from_polar.nil?
+          constructors[cls.name] = :new
+        elsif from_polar.respond_to? :call
+          constructors[cls.name] = from_polar
+        else
+          raise InvalidConstructorError
+        end
       end
 
       # Register a Ruby method call, wrapping the call result in a generator if

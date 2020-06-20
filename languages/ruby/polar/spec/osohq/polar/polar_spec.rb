@@ -150,6 +150,11 @@ RSpec.describe Osohq::Polar::Polar do
     end
 
     context 'when using a custom constructor' do
+      it 'errors when provided an invalid constructor' do
+        stub_const('Foo', Class.new)
+        expect { subject.register_class(Foo, from_polar: 5) }.to raise_error Osohq::Polar::InvalidConstructorError
+      end
+
       it 'handles keyword args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
@@ -158,7 +163,8 @@ RSpec.describe Osohq::Polar::Polar do
             @baz = baz
           end
         end)
-        subject.register_class(Foo) { |**args| Foo.new(**args) }
+        constructor = ->(**args) { Foo.new(**args) }
+        subject.register_class(Foo, from_polar: constructor)
         one = subject.to_polar_term(1)
         two = subject.to_polar_term(2)
         id = subject.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
@@ -169,10 +175,8 @@ RSpec.describe Osohq::Polar::Polar do
       end
 
       it 'handles no args' do
-        stub_const('Foo', Class.new do
-          def initialize; end
-        end)
-        subject.register_class(Foo) { Foo.new }
+        stub_const('Foo', Class.new)
+        subject.register_class(Foo, from_polar: -> { Foo.new })
         id = subject.make_instance('Foo', fields: {}, id: 1)
         instance = subject.get_instance(id)
         expect(instance.class).to eq(Foo)
@@ -235,7 +239,7 @@ RSpec.describe Osohq::Polar::Polar do
       end)
 
       subject.register_class(Bar)
-      subject.register_class(Foo) { Foo.new('A') }
+      subject.register_class(Foo, from_polar: -> { Foo.new('A') })
       expect(qvar(subject, 'new Foo{}.a = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'new Foo{}.a() = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'new Foo{}.b = x', 'x', one: true)).to eq('b')
