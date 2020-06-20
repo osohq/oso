@@ -2,6 +2,7 @@
 
 module Osohq
   module Polar
+    # A single Polar query.
     class Query
       # @param ffi_instance [Osohq::Polar::FFI::Query]
       # @param polar [Osohq::Polar::Polar]
@@ -24,20 +25,46 @@ module Osohq
 
       private
 
-      attr_reader :ffi_instance, :fiber, :polar
+      # @return [FFI::Query]
+      attr_reader :ffi_instance
+      # @return [Fiber]
+      attr_reader :fiber
+      # @return [Osohq::Polar::Polar]
+      attr_reader :polar
 
+      # Send next result of Ruby method call across FFI boundary.
+      #
+      # @overload call_result(result, call_id:)
+      #   Call succeeded and produced a value.
+      #   @param result [String]
+      #   @param call_id [Integer]
+      #   @raise [Error] if the FFI call raises one.
+      # @overload call_result(result, call_id:)
+      #   Call resulted in an error.
+      #   @param result [nil]
+      #   @param call_id [Integer]
+      #   @raise [Error] if the FFI call raises one.
       def call_result(result, call_id:)
         ffi_instance.call_result(result, call_id: call_id)
       end
 
+      # Send result of predicate check across FFI boundary.
+      #
+      # @param result [Boolean]
+      # @param call_id [Integer]
+      # @raise [Error] if the FFI call raises one.
       def question_result(result, call_id:)
         ffi_instance.question_result(result, call_id: call_id)
       end
 
+      # Fetch the next result from calling a Ruby method and prepare it for
+      # transmission across the FFI boundary.
+      #
       # @param method [#to_sym]
       # @param args [Array<Hash>]
       # @param call_id [Integer]
       # @param instance_id [Integer]
+      # @raise [Error] if the FFI call raises one.
       def handle_call(method, args:, call_id:, instance_id:)
         polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
         begin # Return the next result of the call.
@@ -52,9 +79,13 @@ module Osohq
         # raise PolarRuntimeError(f"Error calling {attribute}")
       end
 
-      def start
-        @fiber = Fiber.new do
-          loop do
+      # Create a generator that can be polled to advance the query loop.
+      #
+      # @yieldparam [Hash<String, Object>]
+      # @raise [Error] if any of the FFI calls raise one.
+      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+        @fiber = Fiber.new do # rubocop:disable Metrics/BlockLength
+          loop do # rubocop:disable Metrics/BlockLength
             event = ffi_instance.next_event
             case event.kind
             when 'Done'

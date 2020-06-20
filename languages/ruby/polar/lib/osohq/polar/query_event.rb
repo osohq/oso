@@ -2,8 +2,12 @@
 
 module Osohq
   module Polar
+    # A query event received across the FFI boundary.
     class QueryEvent
-      attr_reader :kind, :data
+      # @return [String]
+      attr_reader :kind
+      # @return [Hash<String, Object>]
+      attr_reader :data
 
       def initialize(event_data)
         event_data = { event_data => nil } if event_data == 'Done'
