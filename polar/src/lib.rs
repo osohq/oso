@@ -24,7 +24,7 @@ pub use formatting::{draw, ToPolarString};
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use std::panic::catch_unwind;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use std::ptr::{null, null_mut};
 
@@ -60,7 +60,7 @@ pub const POLAR_SUCCESS: i32 = 1;
 /// Unwrap the result term and return a zero/null pointer in the failure case
 macro_rules! ffi_try {
     ($body:block) => {
-        if let Ok(res) = catch_unwind(|| $body) {
+        if let Ok(res) = catch_unwind(AssertUnwindSafe(|| $body)) {
             res
         } else {
             set_error(error::OperationalError::Unknown.into());
