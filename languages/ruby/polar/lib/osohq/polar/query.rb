@@ -4,31 +4,20 @@ module Osohq
   module Polar
     # A single Polar query.
     class Query
+      attr_reader :results
+
       # @param ffi_instance [Osohq::Polar::FFI::Query]
       # @param polar [Osohq::Polar::Polar]
       def initialize(ffi_instance, polar:)
         @ffi_instance = ffi_instance
         @polar = polar
-        start
-      end
-
-      def results
-        Enumerator.new do |yielder|
-          loop do
-            result = fiber.resume
-            break if result.nil?
-
-            yielder << result
-          end
-        end.lazy
+        @results = start
       end
 
       private
 
       # @return [FFI::Query]
       attr_reader :ffi_instance
-      # @return [Fiber]
-      attr_reader :fiber
       # @return [Osohq::Polar::Polar]
       attr_reader :polar
 
@@ -78,16 +67,17 @@ module Osohq
       # Create a generator that can be polled to advance the query loop.
       #
       # @yieldparam [Hash<String, Object>]
+      # @return [Enumerator::Lazy]
       # @raise [Error] if any of the FFI calls raise one.
       def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
-        @fiber = Fiber.new do # rubocop:disable Metrics/BlockLength
+        Enumerator.new do |yielder| # rubocop:disable Metrics/BlockLength
           loop do # rubocop:disable Metrics/BlockLength
             event = ffi_instance.next_event
             case event.kind
             when 'Done'
               break
             when 'Result'
-              Fiber.yield(event.data['bindings'].transform_values { |v| polar.to_ruby(v) })
+              yielder << event.data['bindings'].transform_values { |v| polar.to_ruby(v) }
             when 'MakeExternal'
               id = event.data['instance_id']
               raise DuplicateInstanceRegistrationError, id if polar.instance? id
@@ -122,7 +112,7 @@ module Osohq
               raise "Unhandled event: #{JSON.dump(event.inspect)}"
             end
           end
-        end
+        end.lazy
       end
     end
   end
