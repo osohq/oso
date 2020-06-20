@@ -67,13 +67,9 @@ module Osohq
       # @raise [Error] if the FFI call raises one.
       def handle_call(method, args:, call_id:, instance_id:)
         polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
-        begin # Return the next result of the call.
-          result = JSON.dump(polar.next_call_result(call_id))
-          call_result(result, call_id: call_id)
-        rescue StopIteration
-          call_result(nil, call_id: call_id)
-        end
-      rescue InvalidCallError
+        result = JSON.dump(polar.next_call_result(call_id))
+        call_result(result, call_id: call_id)
+      rescue InvalidCallError, StopIteration
         call_result(nil, call_id: call_id)
         # @TODO: polar line numbers in errors once polar errors are better.
         # raise PolarRuntimeError(f"Error calling {attribute}")
