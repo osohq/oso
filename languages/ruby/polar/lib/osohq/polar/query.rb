@@ -23,16 +23,9 @@ module Osohq
 
       # Send next result of Ruby method call across FFI boundary.
       #
-      # @overload call_result(result, call_id:)
-      #   Call succeeded and produced a value.
-      #   @param result [String]
-      #   @param call_id [Integer]
-      #   @raise [Error] if the FFI call raises one.
-      # @overload call_result(result, call_id:)
-      #   Call resulted in an error.
-      #   @param result [nil]
-      #   @param call_id [Integer]
-      #   @raise [Error] if the FFI call raises one.
+      # @param result [String]
+      # @param call_id [Integer]
+      # @raise [Error] if the FFI call raises one.
       def call_result(result, call_id:)
         ffi_instance.call_result(result, call_id: call_id)
       end
@@ -67,7 +60,7 @@ module Osohq
       # Create a generator that can be polled to advance the query loop.
       #
       # @yieldparam [Hash<String, Object>]
-      # @return [Enumerator::Lazy]
+      # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
       def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
         Enumerator.new do |yielder| # rubocop:disable Metrics/BlockLength

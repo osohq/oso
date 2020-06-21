@@ -102,7 +102,7 @@ module Osohq
       # @param cls [Class]
       # @param as [String]
       # @param from_polar [Proc]
-      # @raise [InvalidConstructorError] if provided an invalid {from_polar} constructor.
+      # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
       def register_class(cls, as: nil, from_polar: nil) # rubocop:disable Naming/MethodParameterName
         as = cls.name if as.nil?
         # TODO(gj): should this take 3 args: cls (Class), constructor_cls
@@ -279,7 +279,7 @@ module Osohq
 
       private
 
-      # @return [Hash<Integer, Enumerator::Lazy>]
+      # @return [Hash<Integer, Enumerator>]
       attr_reader :calls
       # @return [Hash<String, Class>]
       attr_reader :classes
@@ -301,7 +301,7 @@ module Osohq
       # Query for a Polar string.
       #
       # @param str [String]
-      # @return [Enumerator::Lazy]
+      # @return [Enumerator]
       def query_str(str)
         clear_query_state
         load_queued_files
