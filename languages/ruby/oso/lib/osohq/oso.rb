@@ -24,11 +24,11 @@ module Osohq
         polar.load_file(file)
       end
 
-      def register_class(cls, &from_polar)
-        if from_polar.nil?
-          polar.register_class(cls)
+      def register_class(cls)
+        if block_given?
+          polar.register_class(cls, from_polar: Proc.new)
         else
-          polar.register_class(cls, from_polar)
+          polar.register_class(cls)
         end
       end
 

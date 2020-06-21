@@ -1,7 +1,36 @@
 # frozen_string_literal: true
 
 RSpec.describe Osohq::Oso::Oso do
-  xit 'handles allow queries' do
+  context '#register_class' do
+    before do
+      stub_const('User', Class.new do
+        attr_accessor :name, :special
+        def initialize(name:)
+          @name = name
+          @special = false
+        end
+      end)
+    end
+
+    context 'when no constructor is passed' do
+      it 'registers the class with the default constructor' do
+        subject.register_class(User)
+        subject.load_str('allow(u: User{}, 1, 2) := u.name = "alice";')
+        allowed = subject.allow(actor: User.new(name: 'alice'), action: 1, resource: 2)
+        expect(allowed).to be true
+      end
+    end
+
+    context 'when a custom constructor is passed' do
+      it 'registers the class with the custom constructor' do
+        subject.register_class(User) do |**args|
+          User.new(**args).tap { |u| u.special = true }
+        end
+        subject.load_str('allow(u: User{}, 1, 2) := x = new User{name: "alice"}, x.name = u.name, x.special = true;')
+        allowed = subject.allow(actor: User.new(name: 'alice'), action: 1, resource: 2)
+        expect(allowed).to be true
+      end
+    end
   end
 
   context 'PathMapper' do
