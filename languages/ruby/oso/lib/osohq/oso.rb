@@ -38,10 +38,6 @@ module Osohq
 
       private
 
-      def query_pred(name, args:)
-        polar.query_pred(name, args: args)
-      end
-
       attr_reader :polar
     end
   end

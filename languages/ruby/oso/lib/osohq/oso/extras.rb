@@ -4,18 +4,15 @@
 module Osohq
   module Oso
     class Http
-      def initialize(path: '', query: {}, hostname: '')
+      def initialize(hostname: nil, path: nil, query: nil)
+        @hostname = hostname
         @path = path
         @query = query
-        @hostname = hostname
       end
 
-      def to_str
-        host_str = hostname != '' ? "hostname=#{hostname}" : nil
-        path_str = path != '' ? "path=#{path}" : nil
-        query_str = query != {} ? "query=#{query}" : nil
-        field_str = [host_str, path_str, query_str].filter_map { |s| s unless s.nil? }.join(',')
-      end
+      private
+
+      attr_reader :hostname, :path, :query
     end
 
     # Map from a template string with capture groups of the form
