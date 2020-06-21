@@ -154,7 +154,7 @@ module Osohq
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
-      def make_instance(cls_name, fields:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity
+      def make_instance(cls_name, fields:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         constructor = get_constructor(cls_name)
         fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(v)] }]
         instance = if constructor == :new
@@ -163,12 +163,10 @@ module Osohq
                      else
                        get_class(cls_name).__send__(:new, **fields)
                      end
+                   elsif fields.empty?
+                     constructor.call
                    else
-                     if fields.empty?
-                       constructor.call
-                     else
-                       constructor.call(**fields)
-                     end
+                     constructor.call(**fields)
                    end
         cache_instance(instance, id: id)
       rescue StandardError => e
