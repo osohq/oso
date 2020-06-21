@@ -5,6 +5,7 @@ module Osohq
     module FFI
       # Wrapper class for QueryEvent FFI pointer + operations.
       class QueryEvent < ::FFI::AutoPointer
+        # @return [String]
         def to_s
           @to_s ||= read_string.force_encoding('UTF-8')
         end

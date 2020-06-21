@@ -20,7 +20,7 @@ module Osohq
         end
         private_constant :Rust
 
-        # @return [Polar]
+        # @return [FFI::Polar]
         # @raise [FFI::Error] if the FFI call returns an error.
         def self.create
           polar = Rust.new
@@ -38,6 +38,7 @@ module Osohq
 
         # @return [FFI::Query] if there are remaining inline queries.
         # @return [nil] if there are no remaining inline queries.
+        # @raise [FFI::Error] if the FFI call returns an error.
         def next_inline_query
           query = Rust.next_inline_query(self)
           query.null? ? nil : query
@@ -55,7 +56,7 @@ module Osohq
         end
 
         # @param str [String] Query string.
-        # @return [Osohq::Polar::Query]
+        # @return [FFI::Query]
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str)

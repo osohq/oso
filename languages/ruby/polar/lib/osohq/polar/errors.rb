@@ -4,6 +4,8 @@ module Osohq
   module Polar
     # Base error type for the Osohq::Polar library.
     class Error < ::RuntimeError
+      # @param message [String]
+      # @param details [Hash]
       def initialize(message = nil, details: nil)
         @details = details
         super(message)
@@ -40,6 +42,7 @@ module Osohq
       end
     end
     class PolarFileNotFoundError < PolarRuntimeError
+      # @param file [String]
       def initialize(file)
         super("Could not find file: #{file}")
       end
