@@ -36,8 +36,7 @@ module Osohq
       end
 
       def map(string)
-        match = string.match(pattern)
-        match&.names&.zip(match.captures).to_h
+        string.match(pattern)&.named_captures || {}
       end
 
       private
