@@ -100,17 +100,19 @@ module Osohq
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
+      # @param as [String]
       # @param from_polar [Proc]
       # @raise [InvalidConstructorError] if provided an invalid {from_polar} constructor.
-      def register_class(cls, from_polar: nil)
+      def register_class(cls, as: nil, from_polar: nil) # rubocop:disable Naming/MethodParameterName
+        as = cls.name if as.nil?
         # TODO(gj): should this take 3 args: cls (Class), constructor_cls
         # (Option<Class>) that defaults to cls, and constructor_method
         # (Option<Symbol>) that defaults to :new?
-        classes[cls.name] = cls
+        classes[as] = cls
         if from_polar.nil?
-          constructors[cls.name] = :new
+          constructors[as] = :new
         elsif from_polar.respond_to? :call
-          constructors[cls.name] = from_polar
+          constructors[as] = from_polar
         else
           raise InvalidConstructorError
         end

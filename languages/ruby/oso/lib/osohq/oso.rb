@@ -9,8 +9,8 @@ module Osohq
     class Oso
       def initialize
         @polar = Osohq::Polar::Polar.new
-        register_class(Http)
-        register_class(PathMapper)
+        register_class(Http, as: 'Http')
+        register_class(PathMapper, as: 'PathMapper')
       end
 
       def allow(actor:, action:, resource:)
@@ -24,11 +24,11 @@ module Osohq
         polar.load_file(file)
       end
 
-      def register_class(cls)
+      def register_class(cls, as: nil) # rubocop:disable Naming/MethodParameterName
         if block_given?
-          polar.register_class(cls, from_polar: Proc.new)
+          polar.register_class(cls, as: as, from_polar: Proc.new)
         else
-          polar.register_class(cls)
+          polar.register_class(cls, as: as)
         end
       end
 
