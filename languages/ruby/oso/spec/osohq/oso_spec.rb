@@ -33,6 +33,14 @@ RSpec.describe Osohq::Oso::Oso do
     end
   end
 
+  it 'handles allow queries' do
+    subject.load_str('allow(1, 2, 3);')
+    allowed = subject.allow(actor: 1, action: 2, resource: 3)
+    expect(allowed).to be true
+    allowed = subject.allow(actor: 3, action: 2, resource: 1)
+    expect(allowed).to be false
+  end
+
   context 'PathMapper' do
     it 'properly maps paths' do
       mapper = Osohq::Oso::PathMapper.new(template: '/widget/{id}')
