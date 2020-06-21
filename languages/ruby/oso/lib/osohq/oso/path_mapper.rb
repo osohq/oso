@@ -1,20 +1,7 @@
 # frozen_string_literal: true
 
-# A resource accessed via HTTP.
 module Osohq
   module Oso
-    class Http
-      def initialize(hostname: nil, path: nil, query: nil)
-        @hostname = hostname
-        @path = path
-        @query = query
-      end
-
-      private
-
-      attr_reader :hostname, :path, :query
-    end
-
     # Map from a template string with capture groups of the form
     # `{name}` to a dictionary of the form `{name: captured_value}`
     class PathMapper

@@ -33,42 +33,48 @@ RSpec.describe Osohq::Oso::Oso do
     end
   end
 
-  it 'handles allow queries' do
-    subject.load_str('allow(1, 2, 3);')
-    allowed = subject.allow(actor: 1, action: 2, resource: 3)
-    expect(allowed).to be true
-    allowed = subject.allow(actor: 3, action: 2, resource: 1)
-    expect(allowed).to be false
+  context '#allow' do
+    it 'controls access appropriately' do
+      subject.load_str('allow(1, 2, 3);')
+      allowed = subject.allow(actor: 1, action: 2, resource: 3)
+      expect(allowed).to be true
+      allowed = subject.allow(actor: 3, action: 2, resource: 1)
+      expect(allowed).to be false
+    end
   end
 
-  context 'PathMapper' do
-    context '#map' do
-      it 'extracts matches into a hash' do
-        mapper = Osohq::Oso::PathMapper.new(template: '/widget/{id}')
-        expect(mapper.map('/widget/12')).to eq({ 'id' => '12' })
-        expect(mapper.map('/widget/12/frob')).to eq({})
+  context 'Extras' do
+    context 'PathMapper' do
+      context '#map' do
+        it 'extracts matches into a hash' do
+          mapper = Osohq::Oso::PathMapper.new(template: '/widget/{id}')
+          expect(mapper.map('/widget/12')).to eq({ 'id' => '12' })
+          expect(mapper.map('/widget/12/frob')).to eq({})
+        end
       end
     end
 
-    it 'can map Http resources' do
-      stub_const('Widget', Class.new do
-        attr_reader :id
-        def initialize(id:)
-          @id = id
-        end
-      end)
-      subject.register_class(Widget)
-      subject.load_str <<~POLAR
-        allow(actor, "get", Http{path: path}) :=
-            PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
-            allow(actor, "get", Widget{id: id});
-        allow(actor, "get", widget) := widget.id = "12";
-      POLAR
-      widget12 = Osohq::Oso::Http.new(path: '/widget/12')
-      allowed = subject.allow(actor: 'sam', action: 'get', resource: widget12)
-      expect(allowed).to eq true
-      widget13 = Osohq::Oso::Http.new(path: '/widget/13')
-      expect(subject.allow(actor: 'sam', action: 'get', resource: widget13)).to eq false
+    context 'PathMapper + Http' do
+      it 'can map Http resources' do
+        stub_const('Widget', Class.new do
+          attr_reader :id
+          def initialize(id:)
+            @id = id
+          end
+        end)
+        subject.register_class(Widget)
+        subject.load_str <<~POLAR
+          allow(actor, "get", Http{path: path}) :=
+              PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+              allow(actor, "get", Widget{id: id});
+          allow(actor, "get", widget) := widget.id = "12";
+        POLAR
+        widget12 = Osohq::Oso::Http.new(path: '/widget/12')
+        allowed = subject.allow(actor: 'sam', action: 'get', resource: widget12)
+        expect(allowed).to eq true
+        widget13 = Osohq::Oso::Http.new(path: '/widget/13')
+        expect(subject.allow(actor: 'sam', action: 'get', resource: widget13)).to eq false
+      end
     end
   end
 end
