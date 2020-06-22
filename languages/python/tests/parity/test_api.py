@@ -220,7 +220,7 @@ def test_instance_round_trip(polar, query, qvar):
 def test_instance_initialization(polar, query, qvar):
     # test round trip through kb query
     user = Actor("sam")
-    env = query('Actor{name:"sam"} = returned_user')[0]
+    env = query('new Actor{name:"sam"} = returned_user')[0]
     # Note this is not API compatible. It seems like
     # _query_str on the python version will return uninstantiated
     # external instances so another _to_python call is needed.

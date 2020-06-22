@@ -6,20 +6,20 @@ actorInRole(actor, role, resource: Widget) :=
     role = resource.company.role(actor);
 
 allow(actor, "get", Http{path: path}) :=
-    PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
-    allow(actor, "get", Widget{id: id});
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+    allow(actor, "get", new Widget{id: id});
 
 allow(actor, "post", Http{path: path}) :=
-    PathMapper{template: "/widget/"}.map(path) = {},
-    allow(actor, "create", Widget{});
+    new PathMapper{template: "/widget/"}.map(path) = {},
+    allow(actor, "create", new Widget{});
 
 allow(actor, "what", Http{path: path}) :=
-    PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
-    allow(actor, "unparameterised_get", Widget{id: id});
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+    allow(actor, "unparameterised_get", new Widget{id: id});
 
 allow(actor, "what", Http{path: path, query: {param: "foo"}}) :=
-    PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
-    allow(actor, "parameterised_get", Widget{id: id});
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+    allow(actor, "parameterised_get", new Widget{id: id});
 
 allow(actor, "get", resource: Widget) := resource.frob("Widget") = x;
 allow(actor, "get", resource: DooDad) := resource.frob("DooDad") = x;
@@ -51,7 +51,7 @@ allow_two(actor, action, resource) := checkResource(_x, resource);
 checkResource(1, resource: Widget); # two slightly different specs so need to check
 checkResource("1", resource: Widget); # which to prioritise
 
-?= allow_two(_actor, _action, Widget{});
+?= allow_two(_actor, _action, new Widget{});
 
 # for testing lists
 allow(actor: Actor, "invite", resource: Widget) :=
@@ -62,5 +62,5 @@ allow(actor: Actor, "keep", resource: Widget) :=
     actor.widget.name = resource.name;
 
 # for testing iter
-allow(actor: Actor, "can_have", Widget {name: "stapler"}) :=
-    actor.companies_iter isa Company {id: "Initech"};
+allow(actor: Actor, "can_have", Widget{name: "stapler"}) :=
+    actor.companies_iter isa Company{id: "Initech"};

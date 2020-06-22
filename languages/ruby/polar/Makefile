@@ -2,7 +2,6 @@
 
 bundler:
 	$(MAKE) -C ../../.. rust-build
-	gem install bundler
 
 install: bundler
 	bundle install
