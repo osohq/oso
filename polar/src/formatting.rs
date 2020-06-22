@@ -241,6 +241,7 @@ pub mod to_polar {
                 Unify => "=",
                 In => "in",
                 Cut => "cut",
+                ForAll => "forall",
                 Debug => "debug",
                 Isa => "isa",
             }
@@ -256,6 +257,11 @@ pub mod to_polar {
             match self.operator {
                 Debug => "debug()".to_owned(),
                 Cut => "cut()".to_owned(),
+                ForAll => format!(
+                    "forall({}, {})",
+                    self.args[0].to_polar(),
+                    self.args[1].to_polar()
+                ),
                 New => {
                     if self.args.len() == 1 {
                         format!("new {}", to_polar_parens(self.operator, &self.args[0]))
