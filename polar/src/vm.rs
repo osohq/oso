@@ -871,9 +871,24 @@ impl PolarVirtualMachine {
                     },
                 ]);
             }
-            Operator::Cut => self.push_goal(Goal::Cut {
-                choice_index: self.choices.len() - 1,
-            })?,
+            Operator::Cut => {
+                // Remove all choices created before this cut that are in the
+                // current rule body.
+                let mut choice_index = self.choices.len();
+                for choice in self.choices.iter().rev() {
+                    // Comparison excludes the rule body & cut operator (the last two elements of self.queries)
+                    let prefix = &self.queries[..(self.queries.len() - 2)];
+                    if choice.queries.starts_with(prefix) {
+                        // If the choice has the same query stack as the current
+                        // query stack, remove it.
+                        choice_index -= 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                self.push_goal(Goal::Cut { choice_index })?;
+            }
             Operator::Isa => {
                 assert_eq!(args.len(), 2);
                 let right = args.pop().unwrap();
