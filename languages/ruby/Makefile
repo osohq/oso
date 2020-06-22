@@ -1,9 +1,9 @@
-.PHONY: bundler install test
+.PHONY: install rust test
 
-bundler:
+rust:
 	$(MAKE) -C ../.. rust-build
 
-install: bundler
+install: rust
 	bundle install
 
 test: install
