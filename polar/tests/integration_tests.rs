@@ -596,7 +596,7 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>| {
+    let mock_foo = |_, args: Vec<Term>, _, _| {
         assert!(matches!(args[0].value, Value::Number(_)));
         foo_lookups.pop()
     };
@@ -865,28 +865,28 @@ fn test_unify_rule_head() {
         polar
             .load("f(Foo{a: 1});")
             .expect_err("Must have a parser error"),
-        PolarError::Parse(_)
+        PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
         polar
             .load("f(new Foo{a: Foo{a: 1}});")
             .expect_err("Must have a parser error"),
-        PolarError::Parse(_)
+        PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
         polar
             .load("f(x: new Foo{a: 1});")
             .expect_err("Must have a parser error"),
-        PolarError::Parse(_)
+        PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
         polar
             .load("f(x: Foo{a: new Foo{a: 1}});")
             .expect_err("Must have a parser error"),
-        PolarError::Parse(_)
+        PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     polar.load("f(_: Foo{a: 1}, x) := x = 1;").unwrap();
