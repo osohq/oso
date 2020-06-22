@@ -1,5 +1,8 @@
-use super::types::{ErrorContext, ParseError, Source, SrcPos, Symbol};
+use super::error::{ErrorContext, ParseError};
+use super::types::{Source, Symbol};
 use std::str::{CharIndices, FromStr};
+
+pub type SrcPos = (usize, usize);
 
 // Take a location in a string and return the row and column.
 pub fn loc_to_pos(src: &str, loc: usize) -> SrcPos {
@@ -49,6 +52,7 @@ pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 #[derive(Clone, Debug)]
 pub enum Token {
     Integer(i64),
+    Float(f64),
     String(String),
     Boolean(bool),
     Symbol(Symbol),
@@ -88,6 +92,7 @@ impl ToString for Token {
     fn to_string(&self) -> String {
         match self {
             Token::Integer(i) => i.to_string(),
+            Token::Float(f) => f.to_string(),
             Token::String(s) => s.clone(),
             Token::Boolean(b) => b.to_string(),
             Token::Symbol(sym) => sym.0.clone(),
@@ -249,12 +254,13 @@ impl<'input> Lexer<'input> {
     }
 
     #[inline]
-    fn scan_integer(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
+    fn scan_number(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let mut last = i;
         self.buf.clear();
         self.buf.push(chr);
         self.c = self.chars.next();
+        let mut parse_as_float = false;
         while let Some((i, char)) = self.c {
             match char {
                 '0'..='9' => {
@@ -262,10 +268,26 @@ impl<'input> Lexer<'input> {
                     self.c = self.chars.next();
                     last = i;
                 }
+                '.' => {
+                    parse_as_float = true;
+                    self.buf.push(char);
+                    self.c = self.chars.next();
+                    last = i;
+                }
                 _ => break,
             }
         }
-        if let Ok(int) = i64::from_str(&self.buf) {
+        if parse_as_float {
+            if let Ok(f) = f64::from_str(&self.buf) {
+                Some(Ok((start, Token::Float(f), last + 1)))
+            } else {
+                Some(Err(ParseError::InvalidFloat {
+                    token: self.buf.clone(),
+                    loc: start,
+                    context: None,
+                }))
+            }
+        } else if let Ok(int) = i64::from_str(&self.buf) {
             Some(Ok((start, Token::Integer(int), last + 1)))
         } else {
             Some(Err(ParseError::IntegerOverflow {
@@ -344,7 +366,7 @@ impl<'input> Iterator for Lexer<'input> {
             Some((i, char)) => match char {
                 x if x.is_alphabetic() || x == '_' => self.scan_symbol(i, char),
                 '"' => self.scan_string(i),
-                '0'..='9' => self.scan_integer(i, char),
+                '0'..='9' => self.scan_number(i, char),
                 ':' => self.scan_1c_or_2c_op(i, Token::Colon, '=', Token::Define),
                 '=' => self.scan_1c_or_2c_op(i, Token::Unify, '=', Token::Eq),
                 '<' => self.scan_1c_or_2c_op(i, Token::Lt, '=', Token::Leq),

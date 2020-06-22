@@ -72,10 +72,11 @@ def manage_query(query):
         lib.query_free(query)
 
 
-def load_str(polar, string, do_query):
+def load_str(polar, string, filename, do_query):
     """Load a Polar string, checking that all inline queries succeed."""
     string = to_c_str(string)
-    check_result(lib.polar_load(polar, string))
+    filename = to_c_str(str(filename)) if filename else ffi.NULL
+    check_result(lib.polar_load(polar, string, filename))
 
     # check inline queries
     while True:

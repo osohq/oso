@@ -5,4 +5,4 @@
 
 allow(actor, action, resource) := role(actor, "admin");
 
-allow(actor, action, resource) := Env{}.var("ENV") = "development";
+allow(actor, action, resource) := new Env{}.var("ENV") = "development";

@@ -66,7 +66,7 @@ class Polar:
 
     ########## PUBLIC METHODS ##########
 
-    def load(self, policy_file):
+    def load_file(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
         until a query is made."""
         policy_file = Path(policy_file)
@@ -77,6 +77,10 @@ class Polar:
             raise PolarApiException(f"Could not find file: {policy_file}")
         if policy_file not in self.load_queue:
             self.load_queue.append(policy_file)
+
+    def load_str(self, string):
+        """Load a Polar string, checking that all inline queries succeed."""
+        load_str(self.polar, string, None, self.__run_query)
 
     def clear(self):
         """Clear all facts and internal Polar classes from the knowledge base."""
@@ -113,12 +117,9 @@ class Polar:
         """Load queued policy files into the knowledge base."""
         self.instances = {}
         while self.load_queue:
-            with open(self.load_queue.pop(0)) as file:
-                self._load_str(file.read())
-
-    def _load_str(self, string):
-        """Load a Polar string, checking that all inline queries succeed."""
-        load_str(self.polar, string, self.__run_query)
+            filename = self.load_queue.pop(0)
+            with open(filename) as file:
+                load_str(self.polar, file.read(), filename, self.__run_query)
 
     def _query_str(self, string):
         self._load_queued_files()
@@ -143,8 +144,10 @@ class Polar:
         """ Convert polar terms to python values """
         value = v["value"]
         tag = [*value][0]
-        if tag in ["Integer", "String", "Boolean"]:
+        if tag in ["String", "Boolean"]:
             return value[tag]
+        elif tag == "Number":
+            return [*value[tag].values()][0]
         elif tag == "List":
             return [self._to_python(e) for e in value[tag]]
         elif tag == "Dictionary":
@@ -173,7 +176,9 @@ class Polar:
         if type(v) == bool:
             val = {"Boolean": v}
         elif type(v) == int:
-            val = {"Integer": v}
+            val = {"Number": {"Integer": v}}
+        elif type(v) == float:
+            val = {"Number": {"Float": v}}
         elif type(v) == str:
             val = {"String": v}
         elif type(v) == list:

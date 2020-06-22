@@ -74,7 +74,7 @@ This simple policy contains a single **allow rule**.  It states that the actor
 ``"alice"`` can perform the action ``"read"`` on ``"budget"``.  Allow rules
 take three parameters, the actor, action and resource.
 
-Load this file in our setup, using :py:meth:`oso.Oso.load`:
+Load this file in our setup, using :py:meth:`oso.Oso.load_file`:
 
 .. code-block:: python
    :emphasize-lines: 5
@@ -83,7 +83,7 @@ Load this file in our setup, using :py:meth:`oso.Oso.load`:
 
    def setup_oso():
        oso = Oso()
-       oso.load("policy.polar")
+       oso.load_file("policy.polar")
        return oso
 
 

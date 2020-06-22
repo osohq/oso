@@ -11,6 +11,6 @@ role(actor: User, "accountant") :=
 role(actor: User, "admin") :=
     actor.role = "admin";
 
-?= role(User{name: "alice"}, "employee");
-?= role(User{name: "ebrahim"}, "employee");
-?= role(User{name: "ebrahim"}, "accountant");
+?= role(new User{name: "alice"}, "employee");
+?= role(new User{name: "ebrahim"}, "employee");
+?= role(new User{name: "ebrahim"}, "accountant");

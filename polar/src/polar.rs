@@ -1,7 +1,9 @@
+use super::error;
 use super::lexer::make_context;
 use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
+use super::{PolarError, PolarResult};
 
 use super::parser;
 
@@ -59,58 +61,62 @@ use super::parser;
 use std::sync::{Arc, RwLock};
 
 fn fill_context(e: PolarError, source: &Source) -> PolarError {
-    match e {
-        PolarError::Parse(parse_error) => {
+    match e.kind {
+        error::ErrorKind::Parse(parse_error) => {
             let parse_error = match parse_error {
-                ParseError::IntegerOverflow {
+                error::ParseError::IntegerOverflow {
                     token,
                     loc,
                     context: None,
-                } => ParseError::IntegerOverflow {
+                } => error::ParseError::IntegerOverflow {
                     token,
                     loc,
                     context: make_context(source, loc),
                 },
-                ParseError::InvalidTokenCharacter {
+                error::ParseError::InvalidTokenCharacter {
                     token,
                     c,
                     loc,
                     context: None,
-                } => ParseError::InvalidTokenCharacter {
+                } => error::ParseError::InvalidTokenCharacter {
                     token,
                     c,
                     loc,
                     context: make_context(source, loc),
                 },
-                ParseError::InvalidToken { loc, context: None } => ParseError::InvalidToken {
-                    loc,
-                    context: make_context(source, loc),
-                },
-                ParseError::UnrecognizedEOF { loc, context: None } => ParseError::UnrecognizedEOF {
-                    loc,
-                    context: make_context(source, loc),
-                },
-                ParseError::UnrecognizedToken {
+                error::ParseError::InvalidToken { loc, context: None } => {
+                    error::ParseError::InvalidToken {
+                        loc,
+                        context: make_context(source, loc),
+                    }
+                }
+                error::ParseError::UnrecognizedEOF { loc, context: None } => {
+                    error::ParseError::UnrecognizedEOF {
+                        loc,
+                        context: make_context(source, loc),
+                    }
+                }
+                error::ParseError::UnrecognizedToken {
                     token,
                     loc,
                     context: None,
-                } => ParseError::UnrecognizedToken {
+                } => error::ParseError::UnrecognizedToken {
                     token,
                     loc,
                     context: make_context(source, loc),
                 },
-                ParseError::ExtraToken {
+                error::ParseError::ExtraToken {
                     token,
                     loc,
                     context: None,
-                } => ParseError::ExtraToken {
+                } => error::ParseError::ExtraToken {
                     token,
                     loc,
                     context: make_context(source, loc),
                 },
                 _ => parse_error,
             };
-            PolarError::Parse(parse_error)
+            PolarError::from(parse_error)
         }
         _ => e,
     }
@@ -167,9 +173,9 @@ impl Polar {
         }
     }
 
-    pub fn load(&self, src: &str) -> PolarResult<()> {
+    pub fn load_file(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
         let source = Source {
-            filename: None,
+            filename,
             src: src.to_owned(),
         };
         let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
@@ -195,6 +201,10 @@ impl Polar {
         }
 
         Ok(())
+    }
+
+    pub fn load(&self, src: &str) -> PolarResult<()> {
+        self.load_file(src, None)
     }
 
     pub fn next_inline_query(&self) -> Option<Query> {
@@ -233,9 +243,10 @@ impl Polar {
 
     #[cfg(not(feature = "repl"))]
     pub fn new_query_from_repl(&self) -> PolarResult<Query> {
-        Err(PolarError::Runtime(RuntimeError::Unsupported {
+        Err(error::RuntimeError::Unsupported {
             msg: "The REPL is not supported in this build.".to_string(),
-        }))
+        }
+        .into())
     }
 
     #[cfg(feature = "repl")]
@@ -244,7 +255,7 @@ impl Polar {
         let s = repl.polar_input("Enter query:");
         match s {
             Ok(s) => self.new_query(&s),
-            Err(_) => Err(PolarError::Operational(OperationalError::Unknown)),
+            Err(_) => Err(error::OperationalError::Unknown.into()),
         }
     }
 

@@ -61,7 +61,7 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Value>
         term.id = kb.new_id();
         kb.sources.add_term_source(&term, src_id);
     }
-    term.map_in_place(&mut |term| {
+    term.walk_mut(&mut |term| {
         // First, rewrite this term in place, maybe returning a lookup
         // lookup gets added to rewrites list
         if let Some(lookup) = rewrite(&mut term.value, kb) {
@@ -84,8 +84,10 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Value>
                         and_wrap(arg, rewrite);
                     }
                 }
+                return false;
             }
         }
+        true
     });
 }
 
@@ -226,17 +228,20 @@ mod tests {
     #[test]
     fn rewrite_nested_literal() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("Foo { x: bar.y }").unwrap();
-        assert_eq!(term.to_polar(), "Foo{x: bar.y}");
-        rewrite_term(&mut term, &mut kb, 0);
-        assert_eq!(term.to_polar(), ".(bar, y(), _value_1), Foo{x: _value_1}");
-
-        let mut term = parse_query("f(Foo { x: bar.y })").unwrap();
-        assert_eq!(term.to_polar(), "f(Foo{x: bar.y})");
+        let mut term = parse_query("new Foo { x: bar.y }").unwrap();
+        assert_eq!(term.to_polar(), "new Foo{x: bar.y}");
         rewrite_term(&mut term, &mut kb, 0);
         assert_eq!(
             term.to_polar(),
-            ".(bar, y(), _value_2), f(Foo{x: _value_2})"
+            ".(bar, y(), _value_2), new (Foo{x: _value_2}, _instance_1), _instance_1"
+        );
+
+        let mut term = parse_query("f(new Foo { x: bar.y })").unwrap();
+        assert_eq!(term.to_polar(), "f(new Foo{x: bar.y})");
+        rewrite_term(&mut term, &mut kb, 0);
+        assert_eq!(
+            term.to_polar(),
+            ".(bar, y(), _value_4), new (Foo{x: _value_4}, _instance_3), f(_instance_3)"
         );
     }
 
@@ -261,7 +266,6 @@ mod tests {
         assert_eq!(term.to_polar(), "new Foo{a: 1, b: new Foo{a: 2, b: 3}}");
 
         rewrite_term(&mut term, &mut kb, 0);
-        // @ means external constructor
         assert_eq!(
             term.to_polar(),
             "new (Foo{a: 2, b: 3}, _instance_2), new (Foo{a: 1, b: _instance_2}, _instance_1), _instance_1"

@@ -46,7 +46,7 @@ def load_policy(polar):
     polar.register_class(Company)
 
     # import the test policy
-    polar.load(Path(__file__).parent / "policies" / "test_api.polar")
+    polar.load_file(Path(__file__).parent / "policies" / "test_api.polar")
 
 
 default_company = Company(id="1", default_role="admin")
@@ -220,7 +220,7 @@ def test_instance_round_trip(polar, query, qvar):
 def test_instance_initialization(polar, query, qvar):
     # test round trip through kb query
     user = Actor("sam")
-    env = query('Actor{name:"sam"} = returned_user')[0]
+    env = query('new Actor{name:"sam"} = returned_user')[0]
     # Note this is not API compatible. It seems like
     # _query_str on the python version will return uninstantiated
     # external instances so another _to_python call is needed.
@@ -243,15 +243,15 @@ def test_instance_from_external_call(polar, load_policy):
 
 def test_load_input_checking(polar):
     with pytest.raises(PolarApiException):
-        polar.load("unreal.py")
+        polar.load_file("unreal.py")
     with pytest.raises(PolarApiException):
-        polar.load(Path(__file__).parent / "unreal.py")
+        polar.load_file(Path(__file__).parent / "unreal.py")
     with pytest.raises(PolarApiException):
-        polar.load(Path(__file__).parent / "unreal.polar")
+        polar.load_file(Path(__file__).parent / "unreal.polar")
     with pytest.raises(PolarApiException):
-        polar.load(Path(__file__).parent / "unreal.pol")
+        polar.load_file(Path(__file__).parent / "unreal.pol")
 
-    polar.load(Path(__file__).parent / "policies" / "test_api.polar")
+    polar.load_file(Path(__file__).parent / "policies" / "test_api.polar")
 
 
 @pytest.mark.xfail(
@@ -290,7 +290,7 @@ def test_clear(polar, load_policy):
     new = Path(__file__).parent / "policies" / "reload.pol"
 
     polar.clear()
-    polar.load(old)
+    polar.load_file(old)
 
     actor = Actor(name="milton", id=1)
     resource = Widget(id=1, name="thingy")
@@ -311,11 +311,11 @@ def test_clear(polar, load_policy):
     # but not in the new file
     polar.clear()
     with pytest.raises(PolarRuntimeException):
-        polar.load(fails)
+        polar.load_file(fails)
         polar._load_queued_files()
 
     polar.clear()
-    polar.load(new)
+    polar.load_file(new)
     assert polar._query_pred(
         Predicate(name="allow", args=[actor, "make", resource])
     ).success

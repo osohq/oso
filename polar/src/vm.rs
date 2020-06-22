@@ -3,10 +3,11 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
+use super::error;
 use super::formatting::draw;
 use super::lexer::make_context;
 use super::types::*;
-use super::ToPolarString;
+use super::{PolarResult, ToPolarString};
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
@@ -119,8 +120,6 @@ pub struct PolarVirtualMachine {
     /// Rules and types.
     pub kb: Arc<RwLock<KnowledgeBase>>,
 
-    /// Instance Literal -> External Instance table.
-    instances: HashMap<InstanceLiteral, ExternalInstance>,
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
 }
@@ -141,7 +140,6 @@ impl PolarVirtualMachine {
             trace: vec![],
             debugger: Debugger::default(),
             kb,
-            instances: HashMap::new(),
             call_id_symbols: HashMap::new(),
         }
     }
@@ -268,13 +266,13 @@ impl PolarVirtualMachine {
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
         if self.goals.len() >= MAX_GOALS {
-            return Err(RuntimeError::StackOverflow {
+            return Err(error::RuntimeError::StackOverflow {
                 msg: format!("Goal stack overflow! MAX_GOALS = {}", MAX_GOALS),
             }
             .into());
         }
         if self.goal_counter >= MAX_EXECUTED_GOALS {
-            return Err(RuntimeError::StackOverflow {
+            return Err(error::RuntimeError::StackOverflow {
                 msg: format!(
                     "Goal count exceeded! MAX_EXECUTED_GOALS = {}",
                     MAX_EXECUTED_GOALS
@@ -374,18 +372,12 @@ impl PolarVirtualMachine {
         &mut self,
         instance_literal: &InstanceLiteral,
     ) -> (bool, ExternalInstance) {
-        if let Some(external_instance) = self.instances.get(instance_literal) {
-            (true, external_instance.clone())
-        } else {
-            let new_external_id = self.new_id();
-            let new_external_instance = ExternalInstance {
-                instance_id: new_external_id,
-                literal: Some(instance_literal.clone()),
-            };
-            self.instances
-                .insert(instance_literal.clone(), new_external_instance.clone());
-            (false, new_external_instance)
-        }
+        let new_external_id = self.new_id();
+        let new_external_instance = ExternalInstance {
+            instance_id: new_external_id,
+            literal: Some(instance_literal.clone()),
+        };
+        (false, new_external_instance)
     }
 
     /// Recursively dereference a variable.
@@ -882,10 +874,7 @@ impl PolarVirtualMachine {
                 } else {
                     return Err(self.type_error(
                         item,
-                        format!(
-                            "can only perform lookups on dicts and instances, this is {:?}",
-                            item.value
-                        ),
+                        format!("can only use `in` on a list, this is {:?}", item.value),
                     ));
                 }
                 self.choose(alternatives);
@@ -912,20 +901,24 @@ impl PolarVirtualMachine {
                     .symbol()
                     .expect("Must have result as second arg.");
                 let mut literal_term = args.pop().unwrap();
+                let mut literal_value = literal_term
+                    .value
+                    .clone()
+                    .instance_literal()
+                    .expect("Arg must be instance literal");
+                literal_value.walk_mut(&mut |t| {
+                    *t = self.deref(t);
+                    true
+                });
 
                 let instance_id = self.new_id();
-
-                let mut literal_value = literal_term
-                    .replace_value(Value::ExternalInstance(ExternalInstance {
-                        instance_id,
-                        literal: None,
-                    }))
-                    .instance_literal()
-                    .expect("Arg 0 must be instance literal");
+                literal_term.value = Value::ExternalInstance(ExternalInstance {
+                    instance_id,
+                    literal: Some(literal_value.clone()),
+                });
 
                 self.bind(&result, &literal_term);
 
-                literal_value.map_in_place(&mut |t| *t = self.deref(t));
                 return Ok(self.make_external(literal_value, instance_id));
             }
             Operator::Cut => self.push_goal(Goal::Cut {
@@ -1014,36 +1007,45 @@ impl PolarVirtualMachine {
         let right = self.deref(&args[1]).value;
 
         let result: bool;
-        match (op, left, right) {
-            (Operator::Lt, Value::Integer(left), Value::Integer(right)) => {
-                result = left < right;
-            }
-            (Operator::Leq, Value::Integer(left), Value::Integer(right)) => {
-                result = left <= right;
-            }
-            (Operator::Gt, Value::Integer(left), Value::Integer(right)) => {
-                result = left > right;
-            }
-            (Operator::Geq, Value::Integer(left), Value::Integer(right)) => {
-                result = left >= right;
-            }
-            (Operator::Eq, Value::Integer(left), Value::Integer(right)) => {
-                result = left == right;
-            }
-            (Operator::Neq, Value::Integer(left), Value::Integer(right)) => {
-                result = left != right;
-            }
-            (op, left, right) => {
+
+        let (left, right) = match (left, right) {
+            (Value::Number(left), Value::Number(right)) => (left, right),
+            (left, right) => {
                 return Err(self.type_error(
                     term,
                     format!(
-                        "{} expects integers, got: {}, {}",
+                        "{} expects numbers, got: {}, {}",
                         op.to_polar(),
                         left.to_polar(),
                         right.to_polar()
                     ),
                 ));
             }
+        };
+
+        match op {
+            Operator::Lt => {
+                result = left < right;
+            }
+            Operator::Leq => {
+                result = left <= right;
+            }
+            Operator::Gt => {
+                result = left > right;
+            }
+            Operator::Geq => {
+                result = left >= right;
+            }
+            Operator::Eq => {
+                result = left == right;
+            }
+            Operator::Neq => {
+                result = left != right;
+            }
+            _ => unreachable!(
+                "operator: {:?} should not be handled by this method, this is a bug",
+                op
+            ),
         }
         if !result {
             self.push_goal(Goal::Backtrack)?;
@@ -1185,7 +1187,7 @@ impl PolarVirtualMachine {
             }
 
             // Unify integers by value.
-            (Value::Integer(left), Value::Integer(right)) => {
+            (Value::Number(left), Value::Number(right)) => {
                 if left != right {
                     self.push_goal(Goal::Backtrack)?;
                 }
@@ -1443,6 +1445,11 @@ impl PolarVirtualMachine {
                 Value::ExternalInstance(instance),
                 Value::InstanceLiteral(left),
                 Value::InstanceLiteral(right),
+            )
+            | (
+                Value::ExternalInstance(instance),
+                Value::Pattern(Pattern::Instance(left)),
+                Value::Pattern(Pattern::Instance(right)),
             ) => {
                 let call_id = self.new_call_id(&answer);
                 if left.tag == right.tag
@@ -1463,7 +1470,12 @@ impl PolarVirtualMachine {
                     right_class_tag: right.tag,
                 })
             }
-            (_, Value::Dictionary(left), Value::Dictionary(right)) => {
+            (_, Value::Dictionary(left), Value::Dictionary(right))
+            | (
+                _,
+                Value::Pattern(Pattern::Dictionary(left)),
+                Value::Pattern(Pattern::Dictionary(right)),
+            ) => {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
 
@@ -1481,7 +1493,8 @@ impl PolarVirtualMachine {
                 }
                 Ok(QueryEvent::None)
             }
-            (_, Value::InstanceLiteral(_), Value::Dictionary(_)) => {
+            (_, Value::InstanceLiteral(_), Value::Dictionary(_))
+            | (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
                 self.bind(&answer, &Term::new(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
@@ -1492,14 +1505,14 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn type_error(&self, term: &Term, msg: String) -> PolarError {
+    fn type_error(&self, term: &Term, msg: String) -> error::PolarError {
         let source = { self.kb.read().unwrap().sources.get_source(&term) };
         let context = if let Some(source) = source {
             make_context(&source, term.offset)
         } else {
             None
         };
-        RuntimeError::TypeError {
+        error::RuntimeError::TypeError {
             msg,
             loc: term.offset,
             context,
@@ -1682,12 +1695,11 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_lists() {
         let mut vm = PolarVirtualMachine::default();
-        let one = Term::new(Value::Integer(1));
-        let two = Term::new(Value::Integer(2));
-        let one_list = Term::new(Value::List(vec![one.clone()]));
-        let one_two_list = Term::new(Value::List(vec![one.clone(), two.clone()]));
-        let two_one_list = Term::new(Value::List(vec![two, one.clone()]));
-        let empty_list = Term::new(Value::List(vec![]));
+        let one = term!(1);
+        let one_list = term!([1]);
+        let one_two_list = term!([1, 2]);
+        let two_one_list = term!([2, 1]);
+        let empty_list = term!([]);
 
         // [] isa []
         vm.push_goal(Goal::Isa {
@@ -2068,7 +2080,7 @@ mod tests {
             body: Term::new(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![
-                    Term::new(Value::Integer(1)),
+                    term!(1),
                     Term::new(Value::Symbol(Symbol("x".to_string()))),
                     Term::new(Value::Symbol(Symbol("x".to_string()))),
                     Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(

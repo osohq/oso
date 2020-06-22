@@ -18,6 +18,13 @@ jobs:
       - name: Check Python formatting
         run: black --check .
 
+      - name: Install Ruby + gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4
+          working-directory: 'languages/ruby/polar'
+
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:

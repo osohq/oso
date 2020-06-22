@@ -31,7 +31,7 @@ test: doctest
 	cd examples/inheritance && pytest . || test $$? -eq 1
 	cd examples/rbac && pytest .
 	cd examples/abac && pytest .
-
+	cd examples/context && pytest .
 
 deps:
 	pip3 install -r requirements-docs.txt
