@@ -47,6 +47,14 @@ module Oso
         super("Could not find file: #{file}")
       end
     end
+    class DuplicateClassAliasError < PolarRuntimeError # rubocop:disable Style/Documentation
+      # @param as [String]
+      # @param old [Class]
+      # @param new [Class]
+      def initialize(as:, old:, new:) # rubocop:disable Naming/MethodParameterName
+        super("Attempted to alias #{new} as '#{as}', but #{old} already has that alias.")
+      end
+    end
 
     # Generic operational exception.
     class OperationalError < Error; end

@@ -104,10 +104,12 @@ module Oso
       # @param from_polar [Proc]
       # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
       def register_class(cls, as: nil, from_polar: nil) # rubocop:disable Naming/MethodParameterName
-        as = cls.name if as.nil?
         # TODO(gj): should this take 3 args: cls (Class), constructor_cls
         # (Option<Class>) that defaults to cls, and constructor_method
         # (Option<Symbol>) that defaults to :new?
+        as = cls.name if as.nil?
+        raise DuplicateClassAliasError, as: as, old: get_class(as), new: cls if classes.key? as
+
         classes[as] = cls
         if from_polar.nil?
           constructors[as] = :new

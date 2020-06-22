@@ -185,6 +185,21 @@ RSpec.describe Oso::Polar::Polar do
   end
 
   context '#register_class' do
+    it 'errors when registering the same class twice' do
+      stub_const('Foo', Class.new)
+      expect { subject.register_class Foo }.not_to raise_error
+      expect { subject.register_class Foo }.to raise_error Oso::Polar::DuplicateClassAliasError
+    end
+
+    context 'when registering with an alias' do
+      it 'raises an error if the alias matches an existing registration' do
+        stub_const('Foo', Class.new)
+        stub_const('Bar', Class.new)
+        expect { subject.register_class Bar }.not_to raise_error
+        expect { subject.register_class Foo, as: 'Bar' }.to raise_error Oso::Polar::DuplicateClassAliasError
+      end
+    end
+
     it 'registers a Ruby class with Polar' do
       stub_const('Bar', Class.new do
         def y
