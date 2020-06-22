@@ -388,13 +388,13 @@ def test_numbers_from_external_call(polar, qeval, qvar, query):
 
     polar.register_class(Numberer)
 
-    result = qvar("Numberer{}.give_me_an_int() = var", "var", one=True)
+    result = qvar("new Numberer{}.give_me_an_int() = var", "var", one=True)
     assert result == 1
-    assert qeval("Numberer{}.give_me_an_int() = 1")
+    assert qeval("new Numberer{}.give_me_an_int() = 1")
 
-    result = qvar("Numberer{}.give_me_a_float() = var", "var", one=True)
+    result = qvar("new Numberer{}.give_me_a_float() = var", "var", one=True)
     assert result == 1.234
-    assert qeval("Numberer{}.give_me_a_float() = 1.234")
+    assert qeval("new Numberer{}.give_me_a_float() = 1.234")
 
 
 def test_arities(tell, qeval):

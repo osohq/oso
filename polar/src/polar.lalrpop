@@ -117,7 +117,7 @@ pub InstanceLiteralTerm: Term = <InstanceLiteral<Term>> => <>;
 pub Pattern: Term = {
     <term:InstanceLiteral<Pattern>> => Pattern::term_as_pattern(&term),
     <term:Dictionary<Pattern>> => Pattern::term_as_pattern(&term),
-    <term:Integer> => term,
+    <term:Number> => term,
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,

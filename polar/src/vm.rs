@@ -905,6 +905,10 @@ impl PolarVirtualMachine {
                     .clone()
                     .instance_literal()
                     .expect("Arg must be instance literal");
+                literal_value.walk_mut(&mut |t| {
+                    *t = self.deref(t);
+                    true
+                });
 
                 let instance_id = self.new_id();
                 literal_term.value = Value::ExternalInstance(ExternalInstance {
@@ -913,11 +917,6 @@ impl PolarVirtualMachine {
                 });
 
                 self.bind(&result, &literal_term);
-
-                literal_value.walk_mut(&mut |t| {
-                    *t = self.deref(t);
-                    true
-                });
 
                 return Ok(self.make_external(literal_value, instance_id));
             }
