@@ -2,13 +2,14 @@
 
 require 'tempfile'
 
+require_relative '../spec_helper'
 require_relative './helpers'
 
 RSpec.configure do |c|
   c.include Helpers
 end
 
-RSpec.describe Oso::Oso::Polar::Polar do
+RSpec.describe Oso::Polar do
   let(:test_file) { File.join(__dir__, 'test_file.polar') }
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
 
@@ -50,8 +51,8 @@ RSpec.describe Oso::Oso::Polar::Polar do
 
     it 'converts predicates in both directions' do
       subject.load_str('f(x) := x = pred(1, 2);')
-      expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Oso::Polar::Predicate.new('pred', args: [1, 2])])
-      expect(subject.query_pred('f', args: [Oso::Oso::Polar::Predicate.new('pred', args: [1, 2])]).to_a).to eq([{}])
+      expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Polar::Predicate.new('pred', args: [1, 2])])
+      expect(subject.query_pred('f', args: [Oso::Polar::Predicate.new('pred', args: [1, 2])]).to_a).to eq([{}])
     end
 
     it 'converts Ruby instances in both directions' do
@@ -69,7 +70,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
       subject.load_str('widgets(actor, x) := x = actor.widgets.id;')
-      expect(subject.query_pred('widgets', args: [actor, Oso::Oso::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
+      expect(subject.query_pred('widgets', args: [actor, Oso::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
   end
 
@@ -87,13 +88,13 @@ RSpec.describe Oso::Oso::Polar::Polar do
       end
       subject.load_file(file.path)
       expect { query(subject, 'f(x)') }.to raise_error do |e|
-        expect(e).to be_an Oso::Oso::Polar::ParseError::UnrecognizedToken
+        expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
         expect(e.message).to eq("did not expect to find the token ';' at line 1, column 1 in file #{file.path}")
       end
     end
 
     it 'raises if given a non-Polar file' do
-      expect { subject.load_file('other.ext') }.to raise_error Oso::Oso::Polar::PolarRuntimeError
+      expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarRuntimeError
     end
 
     it 'is idempotent' do
@@ -152,7 +153,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
     context 'when using a custom constructor' do
       it 'errors when provided an invalid constructor' do
         stub_const('Foo', Class.new)
-        expect { subject.register_class(Foo, from_polar: 5) }.to raise_error Oso::Oso::Polar::InvalidConstructorError
+        expect { subject.register_class(Foo, from_polar: 5) }.to raise_error Oso::Polar::InvalidConstructorError
       end
 
       it 'handles keyword args' do
@@ -410,7 +411,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
       end
 
       it 'fails if an inline query fails' do
-        expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Oso::Oso::Polar::InlineQueryFailedError
+        expect { subject.load_str('g(1); ?= g(2);') }.to raise_error Oso::Polar::InlineQueryFailedError
       end
     end
 
@@ -418,7 +419,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
       rule = <<~POLAR
         f(a) := a = "this is not allowed\0
       POLAR
-      expect { subject.load_str(rule) }.to raise_error Oso::Oso::Polar::NullByteInPolarFileError
+      expect { subject.load_str(rule) }.to raise_error Oso::Polar::NullByteInPolarFileError
     end
   end
 
@@ -429,7 +430,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
         f(a) := a = #{int};
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
-        expect(e).to be_an Oso::Oso::Polar::ParseError::IntegerOverflow
+        expect(e).to be_an Oso::Polar::ParseError::IntegerOverflow
         expect(e.message).to eq("'18446744073709551616' caused an integer overflow at line 1, column 13")
       end
     end
@@ -440,7 +441,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
         allowed";
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
-        expect(e).to be_an Oso::Oso::Polar::ParseError::InvalidTokenCharacter
+        expect(e).to be_an Oso::Polar::ParseError::InvalidTokenCharacter
         expect(e.message).to eq("'\\n' is not a valid character. Found in this is not at line 1, column 25")
       end
     end
@@ -453,7 +454,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
         f(a)
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
-        expect(e).to be_an Oso::Oso::Polar::ParseError::UnrecognizedEOF
+        expect(e).to be_an Oso::Polar::ParseError::UnrecognizedEOF
         expect(e.message).to eq('hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 5')
       end
     end
@@ -463,7 +464,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
         1;
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
-        expect(e).to be_an Oso::Oso::Polar::ParseError::UnrecognizedToken
+        expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
         expect(e.message).to eq("did not expect to find the token '1' at line 1, column 1")
       end
     end
@@ -489,7 +490,7 @@ RSpec.describe Oso::Oso::Polar::Polar do
 
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
-      expect(subject.query_pred('f', args: [Oso::Oso::Polar::Variable.new('a')]).to_a).to eq(
+      expect(subject.query_pred('f', args: [Oso::Polar::Variable.new('a')]).to_a).to eq(
         [{ 'a' => 1 }, { 'a' => 2 }, { 'a' => 3 }]
       )
     end

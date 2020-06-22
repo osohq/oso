@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative 'lib/oso/oso/version'
+require_relative 'lib/oso/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'oso-oso'
-  spec.version       = Oso::Oso::VERSION
+  spec.version       = Oso::VERSION
   spec.authors       = ['Oso Security']
   spec.email         = ['support@osohq.com']
 

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.describe Oso::Oso::Oso do
+require_relative './spec_helper'
+
+RSpec.describe Oso do
   context '#register_class' do
     before do
       stub_const('User', Class.new do
@@ -47,7 +49,7 @@ RSpec.describe Oso::Oso::Oso do
     context 'PathMapper' do
       context '#map' do
         it 'extracts matches into a hash' do
-          mapper = Oso::Oso::PathMapper.new(template: '/widget/{id}')
+          mapper = Oso::PathMapper.new(template: '/widget/{id}')
           expect(mapper.map('/widget/12')).to eq({ 'id' => '12' })
           expect(mapper.map('/widget/12/frob')).to eq({})
         end
@@ -69,10 +71,10 @@ RSpec.describe Oso::Oso::Oso do
               allow(actor, "get", new Widget{id: id});
           allow(actor, "get", widget) := widget.id = "12";
         POLAR
-        widget12 = Oso::Oso::Http.new(path: '/widget/12')
+        widget12 = Oso::Http.new(path: '/widget/12')
         allowed = subject.allow(actor: 'sam', action: 'get', resource: widget12)
         expect(allowed).to eq true
-        widget13 = Oso::Oso::Http.new(path: '/widget/13')
+        widget13 = Oso::Http.new(path: '/widget/13')
         expect(subject.allow(actor: 'sam', action: 'get', resource: widget13)).to eq false
       end
     end

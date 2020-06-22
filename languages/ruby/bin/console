@@ -2,9 +2,9 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'oso/oso'
+require 'oso'
 
-polar = Oso::Oso::Polar::Polar.new.tap do |p| # rubocop:disable Lint/UselessAssignment
+polar = Oso::Polar.new.tap do |p| # rubocop:disable Lint/UselessAssignment
   p.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
   puts 'f(x)', p.send(:query_str, 'f(x)').to_a
   puts 'k(x)', p.send(:query_str, 'k(x)').to_a
@@ -21,7 +21,7 @@ polar = Oso::Oso::Polar::Polar.new.tap do |p| # rubocop:disable Lint/UselessAssi
 
   p.register_class(TestClass)
 
-  p.load_str('external(x, 3) := x = TestClass{}.my_method;')
+  p.load_str('external(x, 3) := x = new TestClass{}.my_method;')
   results = p.send(:query_str, 'external(1, x)')
   p results.next
 
