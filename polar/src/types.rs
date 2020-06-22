@@ -279,6 +279,8 @@ pub enum Value {
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
+    // TODO (dhatch) Remove this type so that it is no longer possible to even make an
+    // instance literal value!
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Pattern(Pattern),
@@ -304,8 +306,6 @@ impl Value {
                 operator: *operator,
                 args: args.iter().map(|term| term.map(f)).collect(),
             }),
-            // TODO (dhatch) Remove this type so that it is no longer possible to even make an
-            // instance literal value!
             Value::InstanceLiteral(literal) => Value::InstanceLiteral(literal.map(f)),
             Value::ExternalInstance(_) => self.clone(),
             Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
