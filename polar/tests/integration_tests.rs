@@ -912,7 +912,9 @@ fn test_cut() {
     polar.load("c(a, b) := a(a), b(b), cut();").unwrap();
     polar.load("c_no_cut(a, b) := a(a), b(b);").unwrap();
     polar.load("c_partial_cut(a, b) := a(a), bcut(b);").unwrap();
-    polar.load("c_another_partial_cut(a, b) := a(a), cut(), b(b);").unwrap();
+    polar
+        .load("c_another_partial_cut(a, b) := a(a), cut(), b(b);")
+        .unwrap();
 
     // Ensure we return multiple results without a cut.
     assert!(qvars(&mut polar, "c_no_cut(a, b)", &["a", "b"]).len() > 1);
