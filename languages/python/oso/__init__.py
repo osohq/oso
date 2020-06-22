@@ -70,6 +70,7 @@ class Oso(api.Polar):
         pred = Predicate(name=name, args=args)
         return self._query_pred(pred, debug=debug)
 
+
 def polar_class(_cls=None, *, from_polar=None):
     """Decorator to register a Python class with Polar. An alternative to ``register_class()``.
 
