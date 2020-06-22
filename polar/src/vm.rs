@@ -764,6 +764,7 @@ impl PolarVirtualMachine {
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
         self.trace.push(Trace {
             node: Node::Term(term.clone()),
+            polar_str: term.to_polar(),
             children: vec![],
         });
 
@@ -1336,6 +1337,7 @@ impl PolarVirtualMachine {
                 goals.push(Goal::TraceRule {
                     trace: Trace {
                         node: Node::Rule(rule.clone()),
+                        polar_str: rule.to_polar(),
                         children: vec![],
                     },
                 });

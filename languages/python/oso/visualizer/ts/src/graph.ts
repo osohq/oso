@@ -93,8 +93,8 @@ function toHierarchy(links: Link[], nodes: Node[]): Hierarchy {
 
   function walk(h: Hierarchy) {
     const children = links
-      .filter(l => l.target === h.id)
-      .map(l => nodes.find(n => l.source === n.id))
+      .filter(l => l.source === h.id)
+      .map(l => nodes.find(n => l.target === n.id))
       .map(n => walk({ ...n }));
     return {
       ...h,

@@ -55,145 +55,45 @@ def db():
     return db
 
 
-###############################################################################
-################################### HELPERS ###################################
-###############################################################################
+def build_tree(trace):
+    if not trace:
+        return None
 
+    def sig(x):
+        """ Generate a new name for a node """
+        # @Note: This should just use term ids but we don't always have them.
+        # Need to make sure we generate new term ids for all arguments to a predicate created from python.
+        return str(abs(hash(str(x))))
 
-# def contains_var(x):
-#     if isinstance(x, Variable):
-#         return True
-#     elif isinstance(x, (list, tuple)):
-#         return any(contains_var(y) for y in x)
-#     else:
-#         return False
+    graph = {"nodes": set(), "edges": set()}
 
+    def walk(trace, parent):
+        root_node = parent is None
+        node_kind = [*trace["node"]][0]
+        if node_kind == "Term":
+            term = trace["node"]["Term"]
+            # @TODO: Put code context on traces directly.
+            graph["nodes"].add((sig(trace), trace["polar_str"], "{}", root_node))
+        elif node_kind == "Rule":
+            rule = trace["node"]["Rule"]
+            graph["nodes"].add((sig(trace), trace["polar_str"], "{}", root_node))
+        else:
+            print(f"Error: Unknown trace node kind {node_kind}")
 
-# assert contains_var(Variable("x"))
-# assert not contains_var("x")
-# assert contains_var(("x", Variable("x")))
-# assert contains_var(("x", ("x", Variable("x"))))
-# assert not contains_var(("x", ("x", ("x"))))
+        if parent:
+            if sig(parent) == sig(trace):
+                pass
+            elif (sig(parent), sig(trace)) in graph["edges"]:
+                pass
+            else:
+                graph["edges"].add((sig(parent), sig(trace)))
 
+        for child in trace["children"]:
+            walk(child, trace)
 
-###############################################################################
-#################################### AUDIT ####################################
-###############################################################################
+    walk(trace, None)
 
-
-# def build_tree(trace):
-#     if not trace:
-#         return None
-#     assert isinstance(trace[1], Rule)
-
-#     def sig(x):
-#         """Generate a name for a node."""
-#         return str(abs(hash(str(x))))
-
-#     graph = {
-#         "nodes": set(),
-#         "edges": set(),
-#     }
-
-#     def node(term, label):
-#         is_root_node = isinstance(term, Facts)
-#         code_context = getattr(term, "code_context", None)
-#         if code_context:
-#             code_context = {
-#                 "lineno": term.code_context.lineno,
-#                 "column": term.code_context.column,
-#                 "filename": str(term.code_context.filename),
-#             }
-#         graph["nodes"].add((sig(term), label, json.dumps(code_context), is_root_node))
-
-#     def edge(x, y):
-#         if sig(x) == sig(y):
-#             pass
-#         elif (sig(y), sig(x)) in graph["edges"]:
-#             pass
-#         else:
-#             graph["edges"].add((sig(x), sig(y)))
-
-#     def walk_tree(tree, parent):
-#         if isinstance(tree, Fact):
-#             # Make a node, an edge to the parent, and walk any args.
-#             (head, *args) = tree
-#             node(tree, str(tree))
-#             edge(tree, parent)
-#             if not contains_var(args):
-#                 walk_tree(args, tree)
-#         elif isinstance(tree, (tuple, list)):
-#             # Recursively walk.
-#             for x in tree:
-#                 walk_tree(x, parent)
-
-#     # Make a root (KB) node.
-#     kb = trace[0]
-#     assert isinstance(kb, Facts)
-#     node(kb, sig(kb))
-
-#     # Make nodes for each other element of the trace.
-#     # There should be a trace element for each conjunct
-#     # on the RHS of a rule. We need to track those manually,
-#     # because the trace doesn't have parent pointers.
-#     stack = deque([(kb, [])])  # parent, RHS
-
-#     def top():
-#         return stack[-1]
-
-#     def par():
-#         return top()[0]
-
-#     def rhs():
-#         return top()[1]
-
-#     def push(parent, rhs):
-#         stack.append([parent, deque(rhs)])
-
-#     def pop():
-#         try:
-#             return rhs().popleft()
-#         except IndexError:
-#             return stack.pop()
-
-#     # Walk the trace.
-#     for step in trace[1:]:
-#         if len(step) > 1:
-#             # A rule.
-#             parent = par()
-#             push(step[0], step[1:])
-#         else:
-#             # A fact.
-#             assert len(step) == 1
-#             pop()
-#             parent = par()
-#         walk_tree(step[0], parent)
-
-#     return graph
-
-
-# def to_dot(graph):
-#     if not graph:
-#         return None
-
-#     dot = Digraph(
-#         format="svg",
-#         graph_attr={"rankdir": "BT"},
-#         node_attr={"color": OSO_BLUE_LIGHTEST, "fontname": "arial", "style": "bold"},
-#     )
-
-#     for node in graph["nodes"]:
-#         attributes = {}
-#         if node[2]:
-#             attributes = {"href": node[2], "fontcolor": OSO_BLUE}
-
-#         dot.node(node[0], node[1], _attributes=attributes)
-
-#     for x, y in graph["edges"]:
-#         dot.edge(x, y)
-
-#     svg = dot.pipe().decode("utf-8")
-#     return svg
+    return graph
 
 
 @oso_viz.route("/events")
@@ -248,11 +148,11 @@ def event_json(id):
     trace = event.trace
 
     if trace:
-        # tree = build_tree(trace)
+        tree = build_tree(trace)
 
-        # if tree:
-        #     tree["nodes"] = list(tree["nodes"])
-        #     tree["edges"] = list(tree["edges"])
-        #     return jsonify(tree)
+        if tree:
+            tree["nodes"] = list(tree["nodes"])
+            tree["edges"] = list(tree["edges"])
+            return jsonify(tree)
         return trace
     return {}, 404
