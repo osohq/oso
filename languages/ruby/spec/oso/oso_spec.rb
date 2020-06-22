@@ -64,7 +64,7 @@ RSpec.describe Oso::Oso do
         end)
         subject.register_class(Widget)
         subject.load_str <<~POLAR
-          allow(actor, "get", Http{path: path}) :=
+          allow(actor, "get", _: Http{path: path}) :=
               new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
               allow(actor, "get", new Widget{id: id});
           allow(actor, "get", widget) := widget.id = "12";
