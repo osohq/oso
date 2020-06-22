@@ -266,7 +266,6 @@ mod tests {
         assert_eq!(term.to_polar(), "new Foo{a: 1, b: new Foo{a: 2, b: 3}}");
 
         rewrite_term(&mut term, &mut kb, 0);
-        // @ means external constructor
         assert_eq!(
             term.to_polar(),
             "new (Foo{a: 2, b: 3}, _instance_2), new (Foo{a: 1, b: _instance_2}, _instance_1), _instance_1"
