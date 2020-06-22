@@ -279,6 +279,8 @@ pub enum Value {
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
+    // TODO (dhatch) Remove this type so that it is no longer possible to even make an
+    // instance literal value!
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Pattern(Pattern),
