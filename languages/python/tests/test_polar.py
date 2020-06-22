@@ -131,8 +131,8 @@ def test_class_specializers(polar, qvar, qeval, query):
     polar.register_class(X)
 
     rules = """
-    test(A{});
-    test(B{});
+    test(_: A{});
+    test(_: B{});
 
     try(v: B{}, res) := res = 2;
     try(v: C{}, res) := res = 3;
