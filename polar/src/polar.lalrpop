@@ -20,6 +20,7 @@ extern {
 
     enum Token {
         "Integer" => lexer::Token::Integer(<i64>),
+        "Float" => lexer::Token::Float(<f64>),
         "String" => lexer::Token::String(<String>),
         "Boolean" => lexer::Token::Boolean(<bool>),
         "Symbol" => lexer::Token::Symbol(<Symbol>),
@@ -56,9 +57,15 @@ extern {
     }
 }
 
-pub Integer: Term = <start:@L> <i:"Integer"> => {
-    Term{id: 0, offset: start, value: Value::Integer(i)}
+pub Number: Term = {
+    <start:@L> <i:"Integer"> => {
+        Term{id: 0, offset: start, value: Value::Number(i.into())}
+    },
+    <start:@L> <f:"Float"> => {
+        Term{id: 0, offset: start, value: Value::Number(f.into())}
+    }
 };
+
 
 pub PolarString: Term = <start:@L> <s:"String"> => {
     Term{id: 0, offset: start, value: Value::String(s)}
@@ -106,7 +113,7 @@ pub InstanceLiteral: Term = <start:@L> <tag:Name> <fields:Object> => {
 };
 
 pub Term: Term = {
-    <term:Integer> => term,
+    <term:Number> => term,
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,

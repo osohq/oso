@@ -485,7 +485,7 @@ fn test_lookup_derefs() {
     let mut foo_lookups = vec![term!(1)];
     let mock_foo = |_, args: Vec<Term>| {
         // check the argument is bound to an integer
-        assert!(matches!(args[0].value, Value::Integer(_)));
+        assert!(matches!(args[0].value, Value::Number(_)));
         foo_lookups.pop()
     };
     let results = query_results(query, mock_foo, no_debug);
@@ -493,7 +493,7 @@ fn test_lookup_derefs() {
 
     let mut foo_lookups = vec![term!(1)];
     let mock_foo = |_, args: Vec<Term>| {
-        assert!(matches!(args[0].value, Value::Integer(_)));
+        assert!(matches!(args[0].value, Value::Number(_)));
         foo_lookups.pop()
     };
     let query = polar.new_query("f(2)").unwrap();
@@ -620,6 +620,13 @@ fn test_comparisons() {
     query
         .next_event()
         .expect_err("Comparison operators should not allow non-integer operands");
+
+    assert!(qeval(&mut polar, "1.0 == 1"));
+    assert!(qeval(&mut polar, "0.99 < 1"));
+    assert!(qeval(&mut polar, "1.0 <= 1"));
+    assert!(qeval(&mut polar, "1 == 1"));
+    assert!(qeval(&mut polar, "0.0 == 0"));
+    assert!(qeval(&mut polar, "0.000000000000000001 == 0"));
 }
 
 #[test]

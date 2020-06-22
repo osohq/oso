@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn try_it() {
-        let int = polar::IntegerParser::new()
+        let int = polar::NumberParser::new()
             .parse(Lexer::new(" 123"))
             .unwrap();
         assert_eq!(int.to_polar(), "123");
@@ -228,6 +228,12 @@ mod tests {
     fn parse_booleans() {
         assert_eq!(parse_query("true").unwrap(), term!(true));
         assert_eq!(parse_query("false").unwrap(), term!(false));
+    }
+
+    #[test]
+    fn parse_floats() {
+        assert_eq!(parse_query("0.123").unwrap(), term!(0.123));
+        assert_eq!(parse_query("1.234").unwrap(), term!(1.234));
     }
 
     #[test]
