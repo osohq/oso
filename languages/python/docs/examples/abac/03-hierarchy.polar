@@ -22,5 +22,5 @@ manages(manager: User, employee) :=
 
 
 # Now Cora can view the expense because Cora manages Bhavik who manages Alice
-?= allow(User { name: "cora"}, "view", Expense { id: 0 });
+?= allow(new User { name: "cora"}, "view", new Expense { id: 0 });
 # end-hierarchy-rule

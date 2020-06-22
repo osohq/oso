@@ -19,7 +19,7 @@ pub enum Line {
 
 lazy_static::lazy_static! {
     static ref LINES_PARSER: polar::LinesParser = polar::LinesParser::new();
-    static ref QUERY_PARSER: polar::ExpParser = polar::ExpParser::new();
+    static ref QUERY_PARSER: polar::TermExpParser = polar::TermExpParser::new();
     static ref RULES_PARSER: polar::RulesParser = polar::RulesParser::new();
     static ref TERM_PARSER: polar::TermParser = polar::TermParser::new();
 }
@@ -105,15 +105,15 @@ mod tests {
             .parse(Lexer::new(r#"foo_qwe"#))
             .unwrap();
         assert_eq!(sym.to_polar(), r#"foo_qwe"#);
-        let l = polar::ExpParser::new()
+        let l = polar::TermExpParser::new()
             .parse(Lexer::new(r#"[foo, bar, baz]"#))
             .unwrap();
         assert_eq!(l.to_polar(), r#"[foo, bar, baz]"#);
-        let exp = polar::ExpParser::new()
+        let exp = polar::TermExpParser::new()
             .parse(Lexer::new(r#"foo(a, b(c), "d")"#))
             .unwrap();
         assert_eq!(exp.to_polar(), r#"foo(a, b(c), "d")"#);
-        let exp2 = polar::ExpParser::new()
+        let exp2 = polar::TermExpParser::new()
             .parse(Lexer::new(r#"foo.bar(a, b(c.d(e, [f, g])))"#))
             .unwrap();
         assert_eq!(exp2.to_polar(), r#"foo.bar(a, b(c.d(e, [f, g])))"#);
@@ -125,21 +125,21 @@ mod tests {
             .parse(Lexer::new(r#"f(x);"#))
             .unwrap();
         assert_eq!(rule.to_polar(), r#"f(x);"#);
-        let _instance = polar::InstanceLiteralParser::new()
+        let _instance = polar::InstanceLiteralTermParser::new()
             .parse(Lexer::new(r#"Foo{bar: 1, baz: y, biz: "hi"}"#))
             .unwrap();
         // This won't work. There's no ordering to fields. Need to use sam macros.
         // println!("{}", instance.to_polar());
         // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
-        let exp = polar::ExpParser::new()
+        let exp = polar::TermExpParser::new()
             .parse(Lexer::new(r#"!foo"#))
             .unwrap();
         assert_eq!(exp.to_polar(), r#"!foo"#);
-        let exp = polar::ExpParser::new()
+        let exp = polar::TermExpParser::new()
             .parse(Lexer::new(r#"!foo"#))
             .unwrap();
         assert_eq!(exp.to_polar(), r#"!foo"#);
-        let exp = polar::ExpParser::new()
+        let exp = polar::TermExpParser::new()
             .parse(Lexer::new(r#"!a, b | c = d == (e + f) / g.h(i)"#))
             .unwrap();
         assert_eq!(exp.to_polar(), r#"!a, b | c = d == (e + f) / g.h(i)"#);
@@ -170,7 +170,7 @@ mod tests {
             .unwrap();
         assert_eq!(l, term!([sym!("foo"), sym!("bar"), sym!("baz")]));
 
-        let exp = polar::ExpParser::new()
+        let exp = polar::TermExpParser::new()
             .parse(Lexer::new(r#"foo(a, b(c), "d")"#))
             .unwrap();
         assert_eq!(
@@ -178,7 +178,7 @@ mod tests {
             term!(pred!("foo", [sym!("a"), pred!("b", [sym!("c")]), "d"]))
         );
 
-        let exp2 = polar::ExpParser::new()
+        let exp2 = polar::TermExpParser::new()
             .parse(Lexer::new(r#"foo.a(b)"#))
             .unwrap();
         assert_eq!(
@@ -188,7 +188,7 @@ mod tests {
             exp2.to_polar()
         );
 
-        let exp3 = polar::ExpParser::new()
+        let exp3 = polar::TermExpParser::new()
             .parse(Lexer::new(r#"foo.bar(a, b(c.d(e,[f,g])))"#))
             .unwrap();
         assert_eq!(
@@ -296,5 +296,12 @@ mod tests {
         "#;
         let results = parse_rules(f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(x) := x = new Foo{a: 1};"#);
+    }
+
+    #[test]
+    fn test_parse_isa() {
+        let term = parse_query("{} isa {}").unwrap();
+        assert_eq!(term.to_polar(), r#"{} isa {}"#);
+        let _term = parse_query("{x: 1} isa {}").unwrap();
     }
 }

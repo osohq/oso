@@ -182,8 +182,6 @@ RSpec.describe Osohq::Polar::Polar do
 
   context '#register_class' do
     it 'registers a Ruby class with Polar' do
-      pending 'Instance literal parsing updates'
-
       stub_const('Bar', Class.new do
         def y
           'y'
@@ -238,18 +236,18 @@ RSpec.describe Osohq::Polar::Polar do
 
       subject.register_class(Bar)
       subject.register_class(Foo) { Foo.new('A') }
-      expect(qvar(subject, 'Foo{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'Foo{}.a() = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'Foo{}.b = x', 'x', one: true)).to eq('b')
-      expect(qvar(subject, 'Foo{}.b() = x', 'x', one: true)).to eq('b')
-      expect(qvar(subject, 'Foo{}.c = x', 'x', one: true)).to eq('c')
-      expect(qvar(subject, 'Foo{}.c() = x', 'x', one: true)).to eq('c')
-      expect(qvar(subject, 'Foo{} = f, f.a() = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'Foo{}.bar().y() = x', 'x', one: true)).to eq('y')
-      expect(qvar(subject, 'Foo{}.e = x', 'x')).to eq([[1, 2, 3]])
-      expect(qvar(subject, 'Foo{}.f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
-      expect(qvar(subject, 'Foo{}.g.hello = x', 'x', one: true)).to eq('world')
-      expect(qvar(subject, 'Foo{}.h = x', 'x', one: true)).to be true
+      expect(qvar(subject, 'new Foo{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo{}.a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo{}.b = x', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'new Foo{}.b() = x', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'new Foo{}.c = x', 'x', one: true)).to eq('c')
+      expect(qvar(subject, 'new Foo{}.c() = x', 'x', one: true)).to eq('c')
+      expect(qvar(subject, 'new Foo{} = f, f.a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo{}.bar().y() = x', 'x', one: true)).to eq('y')
+      expect(qvar(subject, 'new Foo{}.e = x', 'x')).to eq([[1, 2, 3]])
+      expect(qvar(subject, 'new Foo{}.f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
+      expect(qvar(subject, 'new Foo{}.g.hello = x', 'x', one: true)).to eq('world')
+      expect(qvar(subject, 'new Foo{}.h = x', 'x', one: true)).to be true
     end
 
     it 'respects the Ruby inheritance hierarchy for class specialization' do
@@ -295,32 +293,32 @@ RSpec.describe Osohq::Polar::Polar do
       subject.register_class(X)
 
       subject.load_str <<~POLAR
-        test(A{});
-        test(B{});
+        test(_: A{});
+        test(_: B{});
 
         try(v: B{}, res) := res = 2;
         try(v: C{}, res) := res = 3;
         try(v: A{}, res) := res = 1;
       POLAR
 
-      expect(qvar(subject, 'A{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'A{}.x = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'B{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'B{}.b = x', 'x', one: true)).to eq('B')
-      expect(qvar(subject, 'B{}.x = x', 'x', one: true)).to eq('B')
-      expect(qvar(subject, 'C{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'C{}.b = x', 'x', one: true)).to eq('B')
-      expect(qvar(subject, 'C{}.c = x', 'x', one: true)).to eq('C')
-      expect(qvar(subject, 'C{}.x = x', 'x', one: true)).to eq('C')
-      expect(qvar(subject, 'X{}.x = x', 'x', one: true)).to eq('X')
+      expect(qvar(subject, 'new A{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new A{}.x = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new B{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new B{}.b = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'new B{}.x = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'new C{}.a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new C{}.b = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'new C{}.c = x', 'x', one: true)).to eq('C')
+      expect(qvar(subject, 'new C{}.x = x', 'x', one: true)).to eq('C')
+      expect(qvar(subject, 'new X{}.x = x', 'x', one: true)).to eq('X')
 
-      expect(query(subject, 'test(A{})').length).to be 1
-      expect(query(subject, 'test(B{})').length).to be 2
+      expect(query(subject, 'test(new A{})').length).to be 1
+      expect(query(subject, 'test(new B{})').length).to be 2
 
-      expect(qvar(subject, 'try(A{}, x)', 'x')).to eq([1])
-      expect(qvar(subject, 'try(B{}, x)', 'x')).to eq([2, 1])
-      expect(qvar(subject, 'try(C{}, x)', 'x')).to eq([3, 2, 1])
-      expect(qvar(subject, 'try(X{}, x)', 'x')).to eq([])
+      expect(qvar(subject, 'try(new A{}, x)', 'x')).to eq([1])
+      expect(qvar(subject, 'try(new B{}, x)', 'x')).to eq([2, 1])
+      expect(qvar(subject, 'try(new C{}, x)', 'x')).to eq([3, 2, 1])
+      expect(qvar(subject, 'try(new X{}, x)', 'x')).to eq([])
     end
 
     context 'animal tests' do
@@ -337,11 +335,11 @@ RSpec.describe Osohq::Polar::Polar do
         subject.register_class(Animal)
       end
 
-      let(:wolf) { 'Animal{species: "canis lupus", genus: "canis", family: "canidae"}' }
-      let(:dog) { 'Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
-      let(:canine) { 'Animal{genus: "canis", family: "canidae"}' }
-      let(:canid) {  'Animal{family: "canidae"}' }
-      let(:animal) { 'Animal{}' }
+      let(:wolf) { 'new Animal{species: "canis lupus", genus: "canis", family: "canidae"}' }
+      let(:dog) { 'new Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
+      let(:canine) { 'new Animal{genus: "canis", family: "canidae"}' }
+      let(:canid) {  'new Animal{family: "canidae"}' }
+      let(:animal) { 'new Animal{}' }
 
       it 'can specialize on dict fields' do
         subject.load_str <<~POLAR

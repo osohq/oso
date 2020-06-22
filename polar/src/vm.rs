@@ -900,23 +900,24 @@ impl PolarVirtualMachine {
                     .symbol()
                     .expect("Must have result as second arg.");
                 let mut literal_term = args.pop().unwrap();
-
-                let instance_id = self.new_id();
-
                 let mut literal_value = literal_term
-                    .replace_value(Value::ExternalInstance(ExternalInstance {
-                        instance_id,
-                        literal: None,
-                    }))
+                    .value
+                    .clone()
                     .instance_literal()
-                    .expect("Arg 0 must be instance literal");
-
-                self.bind(&result, &literal_term);
-
+                    .expect("Arg must be instance literal");
                 literal_value.walk_mut(&mut |t| {
                     *t = self.deref(t);
                     true
                 });
+
+                let instance_id = self.new_id();
+                literal_term.value = Value::ExternalInstance(ExternalInstance {
+                    instance_id,
+                    literal: Some(literal_value.clone()),
+                });
+
+                self.bind(&result, &literal_term);
+
                 return Ok(self.make_external(literal_value, instance_id));
             }
             Operator::Cut => self.push_goal(Goal::Cut {
@@ -1442,6 +1443,11 @@ impl PolarVirtualMachine {
                 Value::ExternalInstance(instance),
                 Value::InstanceLiteral(left),
                 Value::InstanceLiteral(right),
+            )
+            | (
+                Value::ExternalInstance(instance),
+                Value::Pattern(Pattern::Instance(left)),
+                Value::Pattern(Pattern::Instance(right)),
             ) => {
                 let call_id = self.new_call_id(&answer);
                 if left.tag == right.tag
@@ -1462,7 +1468,12 @@ impl PolarVirtualMachine {
                     right_class_tag: right.tag,
                 })
             }
-            (_, Value::Dictionary(left), Value::Dictionary(right)) => {
+            (_, Value::Dictionary(left), Value::Dictionary(right))
+            | (
+                _,
+                Value::Pattern(Pattern::Dictionary(left)),
+                Value::Pattern(Pattern::Dictionary(right)),
+            ) => {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
 
@@ -1480,7 +1491,8 @@ impl PolarVirtualMachine {
                 }
                 Ok(QueryEvent::None)
             }
-            (_, Value::InstanceLiteral(_), Value::Dictionary(_)) => {
+            (_, Value::InstanceLiteral(_), Value::Dictionary(_))
+            | (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
                 self.bind(&answer, &Term::new(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
