@@ -133,7 +133,7 @@ impl Query {
         self.vm.run()
     }
 
-    pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
+    pub fn call_result(&mut self, call_id: u64, value: Option<Rc<Term>>) -> PolarResult<()> {
         self.vm.external_call_result(call_id, value)
     }
 
@@ -196,7 +196,7 @@ impl Polar {
                     generic_rule.rules.push(rule);
                 }
                 parser::Line::Query(term) => {
-                    kb.inline_queries.push(term);
+                    kb.inline_queries.push(term.clone());
                 }
             }
         }
@@ -209,7 +209,7 @@ impl Polar {
     }
 
     pub fn next_inline_query(&self) -> Option<Query> {
-        let term = { self.kb.write().unwrap().inline_queries.pop() };
+        let term = self.kb.write().unwrap().inline_queries.pop();
         term.map(|t| self.new_query_from_term(t))
     }
 
@@ -223,7 +223,11 @@ impl Polar {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
             kb.sources.add_source(source, src_id);
-            rewrite_term(&mut term, &mut kb, src_id);
+            rewrite_term(
+                Rc::get_mut(&mut term).expect("unshared term"),
+                &mut kb,
+                src_id,
+            );
         }
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Rc::new(query)]);
@@ -232,10 +236,10 @@ impl Polar {
 
     // TODO(gj): Ensure we always pass the source along with the parsed Term for debugging / error
     // handling purposes.
-    pub fn new_query_from_term(&self, mut term: Term) -> Query {
+    pub fn new_query_from_term(&self, mut term: Rc<Term>) -> Query {
         {
             let mut kb = self.kb.write().unwrap();
-            rewrite_term(&mut term, &mut kb, 0);
+            rewrite_term(Rc::get_mut(&mut term).expect("unshared term"), &mut kb, 0);
         }
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Rc::new(query)]);

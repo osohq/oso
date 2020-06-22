@@ -6,13 +6,16 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{error, ToPolarString};
 
+pub type Fields = BTreeMap<Symbol, Rc<Term>>;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
 pub struct Dictionary {
-    pub fields: BTreeMap<Symbol, Term>,
+    pub fields: Fields,
 }
 
 impl Dictionary {
@@ -77,7 +80,7 @@ impl InstanceLiteral {
         self.fields
             .fields
             .iter_mut()
-            .for_each(|(_, v)| v.walk_mut(f));
+            .for_each(|(_, v)| Rc::make_mut(v).walk_mut(f));
     }
 
     /// Convert all terms in this instance literal to patterns.
@@ -104,7 +107,7 @@ pub struct Context {
     // maybe for ffi, you say the method on what python class you called or whatever.
 }
 
-pub type TermList = Vec<Term>;
+pub type TermList = Vec<Rc<Term>>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Symbol(pub String);
@@ -208,7 +211,7 @@ impl Pattern {
         })
     }
 
-    pub fn term_as_pattern(term: &Term) -> Term {
+    pub fn term_as_pattern(term: Rc<Term>) -> Rc<Term> {
         term.map(&mut Pattern::value_as_pattern)
     }
 
@@ -398,15 +401,15 @@ impl Term {
     }
 
     /// Apply `f` to value and return a new term.
-    pub fn map<F>(&self, f: &mut F) -> Term
+    pub fn map<F>(&self, f: &mut F) -> Rc<Term>
     where
         F: FnMut(&Value) -> Value,
     {
-        Term {
+        Rc::new(Term {
             id: self.id,
             offset: self.offset,
             value: self.value.map(f),
-        }
+        })
     }
 
     /// Does a preorder walk of the term tree, calling F on itself and then walking its children.
@@ -419,45 +422,50 @@ impl Term {
         if walk_children {
             match self.value {
                 Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-                Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.walk_mut(f)),
-                Value::Call(ref mut predicate) => {
-                    predicate.args.iter_mut().for_each(|a| a.walk_mut(f))
+                Value::List(ref mut terms) => {
+                    terms.iter_mut().for_each(|t| Rc::make_mut(t).walk_mut(f))
                 }
-                Value::Expression(Operation { ref mut args, .. }) => {
-                    args.iter_mut().for_each(|term| term.walk_mut(f))
-                }
-                Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
-                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
+                Value::Call(ref mut predicate) => predicate
+                    .args
+                    .iter_mut()
+                    .for_each(|a| Rc::make_mut(a).walk_mut(f)),
+                Value::Expression(Operation { ref mut args, .. }) => args
+                    .iter_mut()
+                    .for_each(|term| Rc::make_mut(term).walk_mut(f)),
+                Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => fields
+                    .fields
+                    .iter_mut()
+                    .for_each(|(_, v)| Rc::make_mut(v).walk_mut(f)),
                 Value::ExternalInstance(_) => {}
-                Value::Dictionary(Dictionary { ref mut fields }) => {
-                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
-                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
-                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
+                Value::Dictionary(Dictionary { ref mut fields }) => fields
+                    .iter_mut()
+                    .for_each(|(_, v)| Rc::make_mut(v).walk_mut(f)),
+                Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => fields
+                    .iter_mut()
+                    .for_each(|(_, v)| Rc::make_mut(v).walk_mut(f)),
+                Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => fields
+                    .fields
+                    .iter_mut()
+                    .for_each(|(_, v)| Rc::make_mut(v).walk_mut(f)),
             };
         }
     }
 }
 
-pub fn unwrap_and(term: Term) -> TermList {
-    match term.value {
+pub fn unwrap_and(term: Rc<Term>) -> TermList {
+    match &term.value {
         Value::Expression(Operation {
             operator: Operator::And,
             args,
-        }) => args,
+        }) => args.clone(),
         _ => vec![term],
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Parameter {
-    pub parameter: Option<Term>,
-    pub specializer: Option<Term>,
+    pub parameter: Option<Rc<Term>>,
+    pub specializer: Option<Rc<Term>>,
 }
 
 impl Parameter {
@@ -476,8 +484,8 @@ impl Parameter {
     where
         F: FnMut(&mut Term) -> bool,
     {
-        self.specializer.iter_mut().for_each(|mut a| {
-            f(&mut a);
+        self.specializer.iter_mut().for_each(|a| {
+            f(Rc::make_mut(a));
         });
     }
 }
@@ -486,7 +494,7 @@ impl Parameter {
 pub struct Rule {
     pub name: Symbol,
     pub params: Vec<Parameter>,
-    pub body: Term,
+    pub body: Rc<Term>,
 }
 
 impl Rule {
@@ -507,7 +515,7 @@ impl Rule {
         F: FnMut(&mut Term) -> bool,
     {
         self.params.iter_mut().for_each(|param| param.walk_mut(f));
-        self.body.walk_mut(f);
+        Rc::make_mut(&mut self.body).walk_mut(f);
     }
 }
 
@@ -562,7 +570,7 @@ impl Sources {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Node {
     Rule(Rule),
-    Term(Term),
+    Term(Rc<Term>),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -580,7 +588,7 @@ pub struct KnowledgeBase {
     gensym_counter: AtomicU64,
     // For call IDs, instance IDs, symbols, etc.
     id_counter: AtomicU64,
-    pub inline_queries: Vec<Term>,
+    pub inline_queries: Vec<Rc<Term>>,
 }
 
 impl KnowledgeBase {
@@ -617,7 +625,7 @@ impl KnowledgeBase {
     }
 }
 
-pub type Bindings = HashMap<Symbol, Term>;
+pub type Bindings = HashMap<Symbol, Rc<Term>>;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
@@ -644,7 +652,7 @@ pub enum QueryEvent {
         /// should be called.
         attribute: Symbol,
         /// List of arguments to use if this is a method call.
-        args: Vec<Term>,
+        args: TermList,
     },
 
     /// Checks if the instance is an instance of (or subclass of) the class_tag.
@@ -675,11 +683,11 @@ mod tests {
     fn serialize_test() {
         let pred = Predicate {
             name: Symbol("foo".to_owned()),
-            args: vec![Term {
+            args: vec![Rc::new(Term {
                 id: 2,
                 offset: 0,
                 value: value!(0),
-            }],
+            })],
         };
         assert_eq!(
             serde_json::to_string(&pred).unwrap(),
@@ -690,16 +698,16 @@ mod tests {
             instance_id: 3,
             attribute: Symbol::new("foo"),
             args: vec![
-                Term {
+                Rc::new(Term {
                     id: 2,
                     offset: 0,
                     value: value!(0),
-                },
-                Term {
+                }),
+                Rc::new(Term {
                     id: 3,
                     offset: 0,
                     value: Value::String("hello".to_string()),
-                },
+                }),
             ],
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
@@ -713,7 +721,7 @@ mod tests {
         fields.insert(Symbol::new("hello"), term!(1234));
         fields.insert(
             Symbol::new("world"),
-            Term::new(Value::String("something".to_owned())),
+            Rc::new(Term::new(Value::String("something".to_owned()))),
         );
         let literal = InstanceLiteral {
             tag: Symbol::new("Foo"),
@@ -728,10 +736,10 @@ mod tests {
             instance_id: 12345,
             literal: None,
         }));
-        let list_of = Term::new(Value::List(vec![external]));
+        let list_of = Term::new(Value::List(vec![Rc::new(external)]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());
         let mut fields = BTreeMap::new();
-        fields.insert(Symbol::new("foo"), list_of);
+        fields.insert(Symbol::new("foo"), Rc::new(list_of));
         let dict = Term::new(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
         let e = error::ParseError::InvalidTokenCharacter {

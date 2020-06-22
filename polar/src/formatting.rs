@@ -165,11 +165,12 @@ pub mod display {
 
 pub mod to_polar {
     use crate::types::*;
+    use std::rc::Rc;
 
     /// Formats a vector of terms as a string-separated list
     /// When providing an operator, parentheses are applied suitably
     /// (see: to_polar_parens)
-    fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
+    fn format_args(op: Operator, args: &[Rc<Term>], sep: &str) -> String {
         args.iter()
             .map(|t| to_polar_parens(op, t))
             .collect::<Vec<String>>()
@@ -355,7 +356,7 @@ pub mod to_polar {
 
     impl ToPolarString for Rule {
         fn to_polar(&self) -> String {
-            match &self.body {
+            match self.body.as_ref() {
                 Term {
                     value:
                         Value::Expression(Operation {

@@ -6,6 +6,7 @@
 /// Helper macros to create AST types
 ///
 use std::collections::BTreeMap;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::types::*;
@@ -24,29 +25,29 @@ impl<T> From<T> for TestHelper<T> {
     }
 }
 
-impl From<Value> for TestHelper<Term> {
+impl From<Value> for TestHelper<Rc<Term>> {
     fn from(other: Value) -> Self {
-        Self(Term {
+        Self(Rc::new(Term {
             id: 0, //NEXT_ID.fetch_add(1, ORD),
             offset: 0,
             value: other,
-        })
+        }))
     }
 }
 
 #[macro_export]
 macro_rules! term {
     ($($expr:tt)*) => {
-        $crate::macros::TestHelper::<Term>::from(value!($($expr)*)).0
+        $crate::macros::TestHelper::<Rc<Term>>::from(value!($($expr)*)).0
     };
 }
 
 // TODO change this
-impl From<(Symbol, Term)> for TestHelper<Parameter> {
-    fn from(arg: (Symbol, Term)) -> Self {
+impl From<(Symbol, Rc<Term>)> for TestHelper<Parameter> {
+    fn from(arg: (Symbol, Rc<Term>)) -> Self {
         Self(Parameter {
-            parameter: Some(Term::new(Value::Symbol(arg.0))),
-            specializer: Some(Pattern::term_as_pattern(&arg.1)),
+            parameter: Some(Rc::new(Term::new(Value::Symbol(arg.0)))),
+            specializer: Some(Pattern::term_as_pattern(arg.1)),
         })
     }
 }
@@ -57,7 +58,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Some(Term::new(name)),
+            parameter: Some(Rc::new(Term::new(name))),
             specializer: None,
         })
     }
@@ -92,8 +93,8 @@ impl<S: AsRef<str>> From<S> for TestHelper<Symbol> {
     }
 }
 
-impl From<BTreeMap<Symbol, Term>> for TestHelper<Dictionary> {
-    fn from(other: BTreeMap<Symbol, Term>) -> Self {
+impl From<BTreeMap<Symbol, Rc<Term>>> for TestHelper<Dictionary> {
+    fn from(other: BTreeMap<Symbol, Rc<Term>>) -> Self {
         Self(Dictionary { fields: other })
     }
 }
@@ -187,8 +188,8 @@ impl From<Symbol> for TestHelper<Value> {
         Self(Value::Symbol(other))
     }
 }
-impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
-    fn from(other: BTreeMap<Symbol, Term>) -> Self {
+impl From<BTreeMap<Symbol, Rc<Term>>> for TestHelper<Value> {
+    fn from(other: BTreeMap<Symbol, Rc<Term>>) -> Self {
         Self(Value::Dictionary(Dictionary { fields: other }))
     }
 }

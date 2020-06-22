@@ -3,6 +3,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use std::iter::{once, repeat};
+use std::rc::Rc;
 
 use polar::*;
 use polar::{types::*, Polar, Query};
@@ -144,7 +145,7 @@ criterion_main!(benches);
 struct Runner {
     polar: Polar,
     expected_result: Option<Bindings>,
-    external_calls: Vec<Option<Term>>,
+    external_calls: Vec<Option<Rc<Term>>>,
     query: Query,
     external_cost: Option<std::time::Duration>,
     calls_count: usize,
@@ -166,7 +167,7 @@ impl Runner {
         self.expected_result = Some(bindings);
     }
 
-    fn external_calls(&mut self, calls: Vec<Option<Term>>) {
+    fn external_calls(&mut self, calls: Vec<Option<Rc<Term>>>) {
         self.external_calls = calls;
         self.external_calls.reverse();
     }
@@ -205,7 +206,10 @@ impl Runner {
 
     fn handle_external_call(&mut self, call_id: u64) {
         let result = self.external_calls.pop().expect("more results");
-        if matches!(result, Some(Term { value: Value::ExternalInstance { .. }, ..}) | Some(Term { value: Value::List { .. }, ..}))
+        if result.is_some()
+            && matches!(*result.clone().unwrap(),
+                        Term { value: Value::ExternalInstance { .. }, ..} |
+                        Term { value: Value::List { .. }, ..})
         {
             self.calls_count += 1;
             if let Some(cost) = self.external_cost {
@@ -226,12 +230,12 @@ impl Runner {
         self.query.debug_command(input).unwrap();
     }
 
-    fn make_external(&mut self, literal: InstanceLiteral) -> Term {
+    fn make_external(&mut self, literal: InstanceLiteral) -> Rc<Term> {
         let instance_id = self.polar.get_external_id();
-        Term::new(Value::ExternalInstance(ExternalInstance {
+        Rc::new(Term::new(Value::ExternalInstance(ExternalInstance {
             instance_id,
             literal: Some(literal),
-        }))
+        })))
     }
 }
 

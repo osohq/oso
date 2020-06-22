@@ -11,10 +11,12 @@ use super::lexer::{self, Lexer};
 use super::types::*;
 use super::PolarResult;
 
+use std::rc::Rc;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
-    Query(Term),
+    Query(Rc<Term>),
 }
 
 lazy_static::lazy_static! {
@@ -55,7 +57,7 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
     }
 }
 
-pub fn parse_term(src: &str) -> PolarResult<Term> {
+pub fn parse_term(src: &str) -> PolarResult<Rc<Term>> {
     TERM_PARSER
         .parse(Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
@@ -67,7 +69,7 @@ pub fn parse_lines(src: &str) -> PolarResult<Vec<Line>> {
         .map_err(|e| to_parse_error(e).into())
 }
 
-pub fn parse_query(src: &str) -> PolarResult<Term> {
+pub fn parse_query(src: &str) -> PolarResult<Rc<Term>> {
     QUERY_PARSER
         .parse(Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())

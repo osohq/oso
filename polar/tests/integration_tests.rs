@@ -6,13 +6,14 @@ use permute::permute;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::rc::Rc;
 
 use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Trace>)>;
 use mock_externals::MockExternal;
 
-fn no_results(_: Symbol, _: Vec<Term>, _: u64, _: u64) -> Option<Term> {
+fn no_results(_: Symbol, _: TermList, _: u64, _: u64) -> Option<Rc<Term>> {
     None
 }
 
@@ -39,7 +40,7 @@ fn query_results<F, G, H, I, J>(
     mut debug_handler: G,
 ) -> QueryResults
 where
-    F: FnMut(Symbol, Vec<Term>, u64, u64) -> Option<Term>,
+    F: FnMut(Symbol, TermList, u64, u64) -> Option<Rc<Term>>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, InstanceLiteral),
     I: FnMut(u64, Symbol) -> bool,
@@ -52,7 +53,10 @@ where
             QueryEvent::Done => break,
             QueryEvent::Result { bindings, trace } => {
                 results.push((
-                    bindings.into_iter().map(|(k, v)| (k, v.value)).collect(),
+                    bindings
+                        .into_iter()
+                        .map(|(k, v)| (k, v.value.clone()))
+                        .collect(),
                     trace,
                 ));
             }
@@ -155,8 +159,12 @@ fn qnull(polar: &mut Polar, query_str: &str) -> bool {
 }
 
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
-    let mut external_results: Vec<Term> =
-        external_results.into_iter().map(Term::new).rev().collect();
+    let mut external_results: TermList = external_results
+        .into_iter()
+        .map(Term::new)
+        .map(Rc::new)
+        .rev()
+        .collect();
     let query = polar.new_query(query_str).unwrap();
     query_results!(query, |_, _, _, _| external_results.pop())
 }
@@ -586,7 +594,7 @@ fn test_lookup_derefs() {
         .unwrap();
     let query = polar.new_query("f(1)").unwrap();
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, args: TermList, _, _| {
         // check the argument is bound to an integer
         assert!(matches!(args[0].value, Value::Number(_)));
         foo_lookups.pop()
@@ -596,7 +604,7 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, args: TermList, _, _| {
         assert!(matches!(args[0].value, Value::Number(_)));
         foo_lookups.pop()
     };
@@ -650,7 +658,7 @@ fn test_externals_instantiated() {
         .unwrap();
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, args: TermList, _, _| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
         assert!(

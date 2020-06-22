@@ -274,7 +274,7 @@ impl Debugger {
                         .map(|var| {
                             let var = Symbol::new(var);
                             let value = vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
-                                Term::new(Value::Symbol(Symbol::new("<unbound>")))
+                                Rc::new(Term::new(Value::Symbol(Symbol::new("<unbound>"))))
                             });
                             Binding(var, value)
                         })

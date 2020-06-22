@@ -1,7 +1,8 @@
 /// Utils for mocking externals in tests.
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
-use polar::types::{InstanceLiteral, Symbol, Term};
+use polar::types::{InstanceLiteral, Symbol, Term, TermList};
 
 #[derive(Default)]
 /// Mock external that keeps track of instance literals and allows
@@ -19,10 +20,10 @@ impl MockExternal {
     pub fn external_call(
         &mut self,
         attribute: Symbol,
-        args: Vec<Term>,
+        args: TermList,
         call_id: u64,
         instance_id: u64,
-    ) -> Option<Term> {
+    ) -> Option<Rc<Term>> {
         assert_eq!(args.len(), 0, "Only support field lookups.");
 
         if self.calls.remove(&call_id) {
