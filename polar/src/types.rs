@@ -452,7 +452,7 @@ pub fn unwrap_and(term: Term) -> TermList {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Parameter {
-    pub name: Option<Symbol>,
+    pub parameter: Option<Term>,
     pub specializer: Option<Term>,
 }
 
@@ -461,18 +461,8 @@ impl Parameter {
     where
         F: FnMut(&Value) -> Value,
     {
-        let name = if let Some(name) = &self.name {
-            if let Value::Symbol(new_sym) = f(&Value::Symbol(name.clone())) {
-                Some(new_sym)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
         Parameter {
-            name,
+            parameter: self.parameter.clone().map(|t| t.map(f)),
             specializer: self.specializer.clone().map(|t| t.map(f)),
         }
     }

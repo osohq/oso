@@ -41,11 +41,12 @@ macro_rules! term {
     };
 }
 
+// TODO change this
 impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
         Self(Parameter {
-            name: Some(arg.0),
-            specializer: Some(arg.1),
+            parameter: Some(Term::new(Value::Symbol(arg.0))),
+            specializer: Some(Pattern::term_as_pattern(&arg.1)),
         })
     }
 }
@@ -55,17 +56,10 @@ impl From<Value> for TestHelper<Parameter> {
     /// it is used as the parameter name. Otherwise it is assumed to be
     /// a specializer.
     fn from(name: Value) -> Self {
-        if let Value::Symbol(symbol) = name {
-            Self(Parameter {
-                name: Some(symbol),
-                specializer: None,
-            })
-        } else {
-            Self(Parameter {
-                name: None,
-                specializer: Some(Term::new(name)),
-            })
-        }
+        Self(Parameter {
+            parameter: Some(Term::new(name)),
+            specializer: None,
+        })
     }
 }
 

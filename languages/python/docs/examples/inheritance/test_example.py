@@ -62,14 +62,14 @@ def load(oso):
         "02-nested-rule.polar",
         "03-specializer.polar",
         "04-one-specializer.polar",
-        "05-group.polar",
+        pytest.param("05-group.polar", marks=pytest.mark.xfail(reason="no groups")),
         "06-permissive-restrictive.polar",
         "07-common-cut.polar",
     ],
 )
 def test_loads(oso, policy, load):
     # Test that policy loads.
-    oso.load(Path(__file__).parent / policy)
+    oso.load_file(Path(__file__).parent / policy)
     oso._load_queued_files()
 
 
@@ -82,7 +82,7 @@ def test_loads(oso, policy, load):
         "04-one-specializer.polar",
         # Note this one isn't that meaningful because we use the same
         # externals that do have inheritance
-        "05-group.polar",
+        pytest.param("05-group.polar", marks=pytest.mark.xfail(reason="no groups")),
     ],
 )
 def test_rule_for_med_staff(oso, load, policy, med_staff, order, lab, test):
@@ -102,7 +102,7 @@ def test_rule_for_med_staff(oso, load, policy, med_staff, order, lab, test):
         "04-one-specializer.polar",
         # Note this one isn't that meaningful because we use the same
         # externals that do have inheritance
-        "05-group.polar",
+        pytest.param("05-group.polar", marks=pytest.mark.xfail(reason="no groups")),
     ],
 )
 def test_rule_for_med_staff_bad_patient(
@@ -125,7 +125,7 @@ def test_rule_for_med_staff_bad_patient(
         "04-one-specializer.polar",
         # Note this one isn't that meaningful because we use the same
         # externals that do have inheritance
-        "05-group.polar",
+        pytest.param("05-group.polar", marks=pytest.mark.xfail(reason="no groups")),
     ],
 )
 def test_rule_for_reg_staff(oso, load, policy, reg_staff, order, lab, test):

@@ -91,14 +91,14 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Value>
     });
 }
 
-/// Rewrite the spec term and return all new lookups as a vec
-pub fn rewrite_specializer(spec: &mut Term, kb: &mut KnowledgeBase, src_id: u64) -> Vec<Term> {
+/// Rewrite the parameter term and return all new lookups as a vec
+pub fn rewrite_parameter(parameter: &mut Term, kb: &mut KnowledgeBase, src_id: u64) -> Vec<Term> {
     let mut rewrites = vec![];
-    do_rewrite(spec, kb, &mut rewrites, src_id);
+    do_rewrite(parameter, kb, &mut rewrites, src_id);
 
     rewrites
         .into_iter()
-        .map(|value| spec.clone_with_value(value))
+        .map(|value| parameter.clone_with_value(value))
         .collect()
 }
 
@@ -121,8 +121,8 @@ pub fn rewrite_rule(rule: &mut Rule, kb: &mut KnowledgeBase, src_id: u64) {
     let mut new_terms = vec![];
 
     for param in &mut rule.params {
-        if let Some(specializer) = &mut param.specializer {
-            let mut rewrites = rewrite_specializer(specializer, kb, src_id);
+        if let Some(parameter) = &mut param.parameter {
+            let mut rewrites = rewrite_parameter(parameter, kb, src_id);
             new_terms.append(&mut rewrites);
         }
     }

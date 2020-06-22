@@ -1,14 +1,18 @@
+mod mock_externals;
+
 use maplit::btreemap;
 use permute::permute;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
 use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Trace>)>;
+use mock_externals::MockExternal;
 
-fn no_results(_: Symbol, _: Vec<Term>) -> Option<Term> {
+fn no_results(_: Symbol, _: Vec<Term>, _: u64, _: u64) -> Option<Term> {
     None
 }
 
@@ -18,16 +22,28 @@ fn no_debug(_: &str) -> String {
     "".to_string()
 }
 
-fn query_results<F, G, H>(
+fn no_isa(_: u64, _: Symbol) -> bool {
+    true
+}
+
+fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
+    false
+}
+
+fn query_results<F, G, H, I, J>(
     mut query: Query,
     mut external_call_handler: F,
     mut make_external_handler: H,
+    mut external_isa_handler: I,
+    mut external_is_subspecializer_handler: J,
     mut debug_handler: G,
 ) -> QueryResults
 where
-    F: FnMut(Symbol, Vec<Term>) -> Option<Term>,
+    F: FnMut(Symbol, Vec<Term>, u64, u64) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, InstanceLiteral),
+    I: FnMut(u64, Symbol) -> bool,
+    J: FnMut(u64, Symbol, Symbol) -> bool,
 {
     let mut results = vec![];
     loop {
@@ -44,16 +60,33 @@ where
                 call_id,
                 attribute,
                 args,
-                ..
+                instance_id,
             } => {
                 query
-                    .call_result(call_id, external_call_handler(attribute, args))
+                    .call_result(
+                        call_id,
+                        external_call_handler(attribute, args, call_id, instance_id),
+                    )
                     .unwrap();
             }
             QueryEvent::MakeExternal {
                 instance_id,
                 instance,
             } => make_external_handler(instance_id, instance),
+            QueryEvent::ExternalIsa {
+                call_id,
+                instance_id,
+                class_tag,
+            } => query.question_result(call_id, external_isa_handler(instance_id, class_tag)),
+            QueryEvent::ExternalIsSubSpecializer {
+                call_id,
+                instance_id,
+                left_class_tag,
+                right_class_tag,
+            } => query.question_result(
+                call_id,
+                external_is_subspecializer_handler(instance_id, left_class_tag, right_class_tag),
+            ),
             QueryEvent::Debug { message } => {
                 query.debug_command(debug_handler(&message)).unwrap();
             }
@@ -65,19 +98,50 @@ where
 
 macro_rules! query_results {
     ($query:expr) => {
-        query_results($query, no_results, no_externals, no_debug)
+        query_results(
+            $query,
+            no_results,
+            no_externals,
+            no_isa,
+            no_is_subspecializer,
+            no_debug,
+        )
     };
     ($query:expr, $external_call_handler:expr, $make_external_handler:expr, $debug_handler:expr) => {
         query_results(
             $query,
             $external_call_handler,
             $make_external_handler,
+            no_isa,
+            no_is_subspecializer,
             $debug_handler,
         )
     };
     ($query:expr, $external_call_handler:expr) => {
-        query_results($query, $external_call_handler, no_externals, no_debug)
+        query_results(
+            $query,
+            $external_call_handler,
+            no_externals,
+            no_isa,
+            no_is_subspecializer,
+            no_debug,
+        )
     };
+}
+
+fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
+    let mock = RefCell::new(MockExternal::new());
+    (
+        query_results(
+            query,
+            |a, b, c, d| mock.borrow_mut().external_call(a, b, c, d),
+            |a, b| mock.borrow_mut().make_external(a, b),
+            |a, b| mock.borrow_mut().external_isa(a, b),
+            |a, b, c| mock.borrow_mut().external_is_subspecializer(a, b, c),
+            no_debug,
+        ),
+        mock.into_inner(),
+    )
 }
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
@@ -94,7 +158,7 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
     let mut external_results: Vec<Term> =
         external_results.into_iter().map(Term::new).rev().collect();
     let query = polar.new_query(query_str).unwrap();
-    query_results!(query, |_, _| external_results.pop())
+    query_results!(query, |_, _, _, _| external_results.pop())
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
@@ -167,7 +231,7 @@ fn test_trace() {
     let polar = Polar::new();
     polar.load("f(x) := x = 1, x = 1; f(y) := y = 1;").unwrap();
     let query = polar.new_query("f(1)").unwrap();
-    let results = query_results(query, no_results, no_externals, no_debug);
+    let results = query_results!(query);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
   f(x) := x = 1, x = 1; [
@@ -462,22 +526,31 @@ fn test_or() {
 fn test_dict_head() {
     let mut polar = Polar::new();
     polar.load("f({x: 1});").unwrap();
+    polar.load("g(_: {x: 1});").unwrap();
 
-    // Test isa-ing dicts against our dict head.
+    // Test unifying dicts against our dict head.
     assert!(qeval(&mut polar, "f({x: 1})"));
-    assert!(qeval(&mut polar, "f({x: 1, y: 2})"));
+    assert!(qnull(&mut polar, "f({x: 1, y: 2})"));
     assert!(qnull(&mut polar, "f(1)"));
     assert!(qnull(&mut polar, "f({})"));
     assert!(qnull(&mut polar, "f({x: 2})"));
     assert!(qnull(&mut polar, "f({y: 1})"));
 
-    // Test isa-ing instances against our dict head.
-    assert_eq!(qext(&mut polar, "f(new a{x: 1})", vec![value!(1)]).len(), 1);
+    assert!(qeval(&mut polar, "g({x: 1})"));
+    assert!(qeval(&mut polar, "g({x: 1, y: 2})"));
+    assert!(qnull(&mut polar, "g(1)"));
+    assert!(qnull(&mut polar, "g({})"));
+    assert!(qnull(&mut polar, "g({x: 2})"));
+    assert!(qnull(&mut polar, "g({y: 1})"));
+
+    // Test unifying & isa-ing instances against our rules.
+    assert!(qnull(&mut polar, "f(new a{x: 1})"));
+    assert_eq!(qext(&mut polar, "g(new a{x: 1})", vec![value!(1)]).len(), 1);
     assert!(qnull(&mut polar, "f(new a{})"));
     assert!(qnull(&mut polar, "f(new a{x: {}})"));
-    assert!(qext(&mut polar, "f(new a{x: 2})", vec![value!(2)]).is_empty());
+    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2)]).is_empty());
     assert_eq!(
-        qext(&mut polar, "f(new a{y: 2, x: 1})", vec![value!(1)]).len(),
+        qext(&mut polar, "g(new a{y: 2, x: 1})", vec![value!(1)]).len(),
         1
     );
 }
@@ -513,7 +586,7 @@ fn test_lookup_derefs() {
         .unwrap();
     let query = polar.new_query("f(1)").unwrap();
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>| {
+    let mock_foo = |_, args: Vec<Term>, _, _| {
         // check the argument is bound to an integer
         assert!(matches!(args[0].value, Value::Number(_)));
         foo_lookups.pop()
@@ -523,7 +596,7 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>| {
+    let mock_foo = |_, args: Vec<Term>, _, _| {
         assert!(matches!(args[0].value, Value::Number(_)));
         foo_lookups.pop()
     };
@@ -577,7 +650,7 @@ fn test_externals_instantiated() {
         .unwrap();
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>| {
+    let mock_foo = |_, args: Vec<Term>, _, _| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
         assert!(
@@ -782,4 +855,48 @@ fn test_keyword_bug() {
         result.kind,
         ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
+}
+
+#[test]
+// Test that rule heads work correctly when unification or specializers are used.
+fn test_unify_rule_head() {
+    let polar = Polar::new();
+    assert!(matches!(
+        polar
+            .load("f(Foo{a: 1});")
+            .expect_err("Must have a parser error"),
+        PolarError { kind: ErrorKind::Parse(_), .. }
+    ));
+
+    assert!(matches!(
+        polar
+            .load("f(new Foo{a: Foo{a: 1}});")
+            .expect_err("Must have a parser error"),
+        PolarError { kind: ErrorKind::Parse(_), .. }
+    ));
+
+    assert!(matches!(
+        polar
+            .load("f(x: new Foo{a: 1});")
+            .expect_err("Must have a parser error"),
+        PolarError { kind: ErrorKind::Parse(_), .. }
+    ));
+
+    assert!(matches!(
+        polar
+            .load("f(x: Foo{a: new Foo{a: 1}});")
+            .expect_err("Must have a parser error"),
+        PolarError { kind: ErrorKind::Parse(_), .. }
+    ));
+
+    polar.load("f(_: Foo{a: 1}, x) := x = 1;").unwrap();
+    polar.load("g(_: Foo{a: Foo{a: 1}}, x) := x = 1;").unwrap();
+
+    let query = polar.new_query("f(new Foo{a: 1}, x)").unwrap();
+    let (results, _externals) = query_results_with_externals(query);
+    assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
+
+    let query = polar.new_query("g(new Foo{a: new Foo{a: 1}}, x)").unwrap();
+    let (results, _externals) = query_results_with_externals(query);
+    assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 }

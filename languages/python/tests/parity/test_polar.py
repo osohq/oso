@@ -208,8 +208,11 @@ def test_external_classes(tell, qeval, qvar, externals):
     assert qeval('new Bar{}.foo = "Bar!"')
 
 
+@pytest.mark.xfail(
+    reason="Doesn't work right now since we don't implement external instance unification."
+)
 def test_unify_class_fields(tell, qeval, qvar, externals):
-    tell("check(name, Foo{name: name})")
+    tell("check(name, new Foo{name: name})")
 
     assert qeval('check("sam", new Foo{name: "sam"})')
     assert not qeval('check("alex", new Foo{name: "sam"})')
@@ -406,8 +409,8 @@ def test_arities(tell, qeval):
 
 
 def test_rule_ordering(tell, qeval, externals):
-    tell("f(Foo{}) := cut(), 1 = 2;")
-    tell('f(Foo{name: "test"});')
+    tell("f(_: Foo{}) := cut(), 1 = 2;")
+    tell('f(_: Foo{name: "test"});')
 
     assert qeval('f(new Foo{ name: "test" }) ')
     assert qeval('x = new Foo{ name: "test" }, f(x) ')
