@@ -16,7 +16,7 @@ python-test: python-build
 	python examples/expenses-py/app.py
 
 ruby-test:
-	$(MAKE) -C languages/ruby/polar test
+	$(MAKE) -C languages/ruby test
 
 docs-test: python-build
 	$(MAKE) -C languages/python/docs test
