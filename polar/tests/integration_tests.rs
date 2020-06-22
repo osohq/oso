@@ -934,5 +934,8 @@ fn test_forall() {
     polar.load("allow(_: {y: 1}, y) := y = 2;").unwrap();
     polar.load("allow(_: {z: 1}, y) := y = 3;").unwrap();
 
-    assert!(qeval(&mut polar, "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])"));
+    assert!(qeval(
+        &mut polar,
+        "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])"
+    ));
 }
