@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-require_relative './spec_helper'
-
-RSpec.describe Oso do
+RSpec.describe Oso::Oso do
   context '#register_class' do
     before do
       stub_const('User', Class.new do

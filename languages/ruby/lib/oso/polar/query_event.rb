@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Oso
-  class Polar
+module Oso
+  module Polar
     # A query event received across the FFI boundary.
     class QueryEvent
       # @return [String]

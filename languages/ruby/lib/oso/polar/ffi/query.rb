@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Oso
-  class Polar
+module Oso
+  module Polar
     module FFI
       # Wrapper class for Query FFI pointer + operations.
       class Query < ::FFI::AutoPointer
@@ -41,13 +41,13 @@ class Oso
           raise FFI::Error.get if res.zero?
         end
 
-        # @return [Oso::Polar::QueryEvent]
+        # @return [::Oso::Polar::QueryEvent]
         # @raise [FFI::Error] if the FFI call returns an error.
         def next_event
           event = Rust.next_event(self)
           raise FFI::Error.get if event.null?
 
-          Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
+          ::Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
         end
       end
     end

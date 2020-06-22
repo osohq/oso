@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Oso
-  class Polar
+module Oso
+  module Polar
     # Base error type for Oso::Polar.
     class Error < ::RuntimeError
       # @param message [String]
@@ -36,12 +36,12 @@ class Oso
     class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end
-    class PolarFileExtensionError < PolarRuntimeError
+    class PolarFileExtensionError < PolarRuntimeError # rubocop:disable Style/Documentation
       def initialize
         super('Polar files must have .pol or .polar extension.')
       end
     end
-    class PolarFileNotFoundError < PolarRuntimeError
+    class PolarFileNotFoundError < PolarRuntimeError # rubocop:disable Style/Documentation
       # @param file [String]
       def initialize(file)
         super("Could not find file: #{file}")

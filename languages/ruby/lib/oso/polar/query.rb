@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Oso
-  class Polar
+module Oso
+  module Polar
     # A single Polar query.
     class Query
       attr_reader :results

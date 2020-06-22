@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class Oso
-  class Polar
+module Oso
+  module Polar
     module FFI
       # Wrapper class for QueryEvent FFI pointer + operations.
       class QueryEvent < ::FFI::AutoPointer

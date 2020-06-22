@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Oso
+module Oso
   # An HTTP resource.
   class Http
     def initialize(hostname: nil, path: nil, query: nil)

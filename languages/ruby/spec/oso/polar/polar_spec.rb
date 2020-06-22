@@ -2,14 +2,13 @@
 
 require 'tempfile'
 
-require_relative '../spec_helper'
 require_relative './helpers'
 
 RSpec.configure do |c|
   c.include Helpers
 end
 
-RSpec.describe Oso::Polar do
+RSpec.describe Oso::Polar::Polar do
   let(:test_file) { File.join(__dir__, 'test_file.polar') }
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
 

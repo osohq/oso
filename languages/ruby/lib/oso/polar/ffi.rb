@@ -2,8 +2,8 @@
 
 require 'ffi'
 
-class Oso
-  class Polar
+module Oso
+  module Polar
     module FFI
       LIB = ::FFI::Platform::LIBPREFIX + 'polar.' + ::FFI::Platform::LIBSUFFIX
       LIB_PATH = File.expand_path(File.join(__dir__, "../../../../../target/debug/#{LIB}"))
