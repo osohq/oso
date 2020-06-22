@@ -259,7 +259,7 @@ module Oso
       # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
         tag, value = data['value'].first
         case tag
         when 'String', 'Boolean'
