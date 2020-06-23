@@ -30,10 +30,6 @@ import json
 
 from oso.audit import AuditLog
 
-# from polar.parser import Fact, Rule, Variable
-# from polar.facts import Facts
-# from polar.classes import Class, Instance
-
 oso_viz = Blueprint(
     "oso_visualizer", __name__, static_folder="static", template_folder="templates"
 )

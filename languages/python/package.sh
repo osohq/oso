@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-cd io
 
-rm -rf build
-ENV=CI /opt/python/cp36-cp36m/bin/python setup.py build
-ENV=CI /opt/python/cp36-cp36m/bin/python setup.py sdist bdist_wheel
+# Skip Python 2.7 and Python 3.5
+export CIBW_SKIP="cp27-* cp35-* pp27-*"
+ # 64-bit builds only
+export CIBW_BUILD="*64"
+# Used in build.py to find right files
+export CIBW_ENVIRONMENT="ENV=CI"
 
-rm -rf build
-ENV=CI /opt/python/cp37-cp37m/bin/python setup.py build
-ENV=CI /opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
 
-rm -rf build
-ENV=CI /opt/python/cp38-cp38/bin/python setup.py build
-ENV=CI /opt/python/cp38-cp38/bin/python setup.py sdist bdist_wheel
+cargo build --target x86_64-unknown-linux-musl --release
+mkdir -p native
+cp ../../polar/polar.h native/
+cp ../../target/x86_64-unknown-linux-musl/release/libpolar.a native/
+python -m cibuildwheel --output-dir wheelhouse --platform linux
