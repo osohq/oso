@@ -32,6 +32,10 @@ module Oso
       false
     end
 
+    def query_predicate(name, *args)
+      polar.query_pred(name, args: args)
+    end
+
     private
 
     attr_reader :polar

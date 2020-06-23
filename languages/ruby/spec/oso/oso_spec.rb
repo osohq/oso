@@ -43,6 +43,14 @@ RSpec.describe Oso::Oso do
     end
   end
 
+  context '#query' do
+    it 'calls through to the allow rule' do
+      subject.load_str('allow(1, 2, 3);')
+      result = subject.query_predicate("allow", 1, 2, 3)
+      expect(result.next).to eq(Hash.new)
+    end
+  end
+
   context 'Extras' do
     context 'PathMapper' do
       context '#map' do
