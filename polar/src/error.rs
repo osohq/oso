@@ -243,6 +243,7 @@ impl fmt::Display for RuntimeError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
+    Invariant(String),
     Unimplemented(String),
     Unknown,
 }
@@ -250,6 +251,7 @@ pub enum OperationalError {
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Invariant(s) => write!(f, "an invariant was invalidated: {}", s),
             Self::Unimplemented(s) => write!(f, "{} is not yet implemented", s),
             Self::Unknown => write!(f, "we hit an error we do not know how to handle or did not expect. Please submit a bug"),
         }

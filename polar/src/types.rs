@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -223,7 +223,7 @@ impl Pattern {
 
 pub type Float = ordered_float::OrderedFloat<f64>;
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq, Hash)]
 pub enum Numeric {
     Integer(i64),
     Float(Float),
@@ -288,6 +288,35 @@ pub enum Value {
     List(TermList),
     Symbol(Symbol),
     Expression(Operation),
+}
+
+impl Value {
+    fn hashable(&self) -> bool {
+        match self {
+            Self::Number(_) | Self::String(_) | Self::Boolean(_) => true,
+            Self::Dictionary(d) => d.fields.iter().all(|(_, v)| v.value.hashable()),
+            Self::List(l) => l.iter().all(|t| t.value.hashable()),
+            _ => false,
+        }
+    }
+}
+
+impl std::hash::Hash for Value {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let disc = std::mem::discriminant(self);
+        disc.hash(state);
+        match self {
+            Self::Number(n) => n.hash(state),
+            Self::String(s) => s.hash(state),
+            Self::Boolean(b) => b.hash(state),
+            Self::Dictionary(d) => d.fields.iter().for_each(|(k, v)| {
+                k.hash(state);
+                v.value.hash(state);
+            }),
+            Self::List(l) => l.iter().for_each(|t| t.value.hash(state)),
+            v => unimplemented!("Hash is not implemented for variant: {:?}", v),
+        }
+    }
 }
 
 impl Value {
@@ -511,15 +540,29 @@ impl Rule {
 
 pub type Rules = Vec<Rule>;
 
-#[derive(Clone)]
-pub struct GenericRule {
-    pub name: Symbol,
-    pub rules: Rules,
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum RuleIndex {
+    Node(HashMap<Value, RuleIndex>),
+    Leaf(HashSet<Value>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum GenericRule {
+    List { rules: Rules },
+    Precomputed { index: HashMap<String, RuleIndex> },
 }
 
 impl GenericRule {
-    pub fn new(name: Symbol, rules: Rules) -> Self {
-        GenericRule { name, rules }
+    pub fn new(rules: Rules) -> Self {
+        GenericRule::List { rules }
+    }
+
+    pub fn insert(&mut self, rule: Rule) {
+        if let Self::List { rules } = self {
+            rules.push(rule)
+        } else {
+            debug_assert!(false, "cannot add rules to a sealed/precomputed predicate");
+        }
     }
 }
 
@@ -534,7 +577,7 @@ pub struct Source {
     pub src: String,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Sources {
     // Pair of maps to go from Term ID -> Source ID -> Source.
     sources: HashMap<u64, Source>,
@@ -581,6 +624,17 @@ pub struct KnowledgeBase {
     pub inline_queries: Vec<Term>,
 }
 
+impl Clone for KnowledgeBase {
+    fn clone(&self) -> Self {
+        Self {
+            types: self.types.clone(),
+            rules: self.rules.clone(),
+            sources: self.sources.clone(),
+            ..Self::default()
+        }
+    }
+}
+
 impl KnowledgeBase {
     pub fn new() -> Self {
         Self {
@@ -610,8 +664,107 @@ impl KnowledgeBase {
 
     /// Add a generic rule to the knowledge base.
     #[cfg(test)]
-    pub fn add_generic_rule(&mut self, rule: GenericRule) {
-        self.rules.insert(rule.name.clone(), rule);
+    pub fn add_generic_rule(&mut self, name: Symbol, rule: GenericRule) {
+        if let GenericRule::List { ref rules } = rule {
+            assert!(
+                rules.iter().all(|r| r.name == name),
+                "all variants of generic rule must match"
+            );
+        }
+        self.rules.insert(name.clone(), rule);
+    }
+
+    pub fn precompute_rules(&mut self) {
+        let polar = crate::Polar {
+            kb: std::sync::Arc::new(std::sync::RwLock::new(self.clone())),
+        };
+        let mut precomputed = Vec::new();
+        'rule_iter: for (name, rule) in &self.rules {
+            if let GenericRule::List { rules } = rule {
+                let arities: HashSet<usize> = rules.iter().map(|r| r.params.len()).collect();
+                let mut results = HashMap::new();
+                for arity in arities {
+                    let args: Vec<Symbol> = (0..arity)
+                        .into_iter()
+                        .map(|v| Symbol(format!("v{}", v)))
+                        .collect();
+                    let key = format!("{}/{}", name.0, arity);
+                    let query = Term::new(Value::Call(Predicate {
+                        name: name.clone(),
+                        args: args
+                            .clone()
+                            .into_iter()
+                            .map(Value::Symbol)
+                            .map(Term::new)
+                            .collect(),
+                    }));
+                    let mut query = polar.new_query_from_term(query);
+                    loop {
+                        let event = query.next_event();
+                        if event.is_err() {
+                            // skip any rule with errors
+                            continue 'rule_iter;
+                        }
+                        match event.unwrap() {
+                            QueryEvent::Done => break,
+                            QueryEvent::Result { bindings, .. } => {
+                                if !bindings.values().all(|t| t.value.hashable()) {
+                                    // don't store precomputed if not hashable
+                                    continue 'rule_iter;
+                                }
+
+                                // next node to visit is the entry for this key (pred/N).
+                                let node = results.entry(key.clone()).or_insert_with(|| {
+                                    if arity == 0 {
+                                        RuleIndex::Leaf(HashSet::new())
+                                    } else {
+                                        RuleIndex::Node(HashMap::new())
+                                    }
+                                });
+                                let _ = args
+                                    .iter()
+                                    .map(|s| bindings.get(&s).cloned().unwrap())
+                                    .enumerate()
+                                    .fold(node, |node, (index, arg)| match node {
+                                        RuleIndex::Node(map) => {
+                                            map.entry(arg.value.clone()).or_insert_with(|| {
+                                                if index + 2 == arity {
+                                                    RuleIndex::Leaf(HashSet::new())
+                                                } else {
+                                                    RuleIndex::Node(HashMap::new())
+                                                }
+                                            })
+                                        }
+                                        RuleIndex::Leaf(set) => {
+                                            assert_eq!(index + 1, arity);
+                                            set.insert(arg.value);
+                                            node
+                                        }
+                                    });
+                            }
+                            // QueryEvent::ExternalCall { call_id, .. } => {
+                            //     let _ = query.call_result(call_id, None);
+                            // }
+                            // QueryEvent::ExternalIsa { call_id, .. } => {
+                            //     query.question_result(call_id, false)
+                            // }
+                            // QueryEvent::ExternalIsSubSpecializer { call_id, .. } => {
+                            //     query.question_result(call_id, false)
+                            // }
+                            _ => {
+                                // skip any rule which requires any other information
+                                // from FFI
+                                continue 'rule_iter;
+                            }
+                        }
+                    }
+                }
+                precomputed.push((name.clone(), results));
+            }
+        }
+        for (name, index) in precomputed {
+            self.rules.insert(name, GenericRule::Precomputed { index });
+        }
     }
 }
 

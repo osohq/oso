@@ -100,6 +100,9 @@ impl From<BTreeMap<Symbol, Term>> for TestHelper<Dictionary> {
 
 #[macro_export]
 macro_rules! sym {
+    ($arg:ident) => {
+        $crate::macros::TestHelper::<Symbol>::from(stringify!($arg)).0
+    };
     ($arg:expr) => {
         $crate::macros::TestHelper::<Symbol>::from($arg).0
     };
@@ -203,12 +206,6 @@ macro_rules! value {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Value>::from($arg).0
     };
-    ("true") => {
-        $crate::types::Value::Boolean(true)
-    };
-    ("false") => {
-        $crate::types::Value::Boolean(false)
-    };
 }
 
 /// Builds a list of arguments in reverse order
@@ -235,7 +232,7 @@ macro_rules! args {
 
 #[macro_export]
 macro_rules! rule {
-    ($name:expr, [$($args:tt)*] => $($body:expr),+) => {{
+    ($name:ident, [$($args:tt)*] => $($body:expr),+) => {{
         let mut params = args!($($args)*);
         params.reverse();
         Rule {
@@ -244,7 +241,7 @@ macro_rules! rule {
             body: term!(op!(And, $(term!($body)),+)),
         }}
     };
-    ($name:expr, [$($args:tt)*]) => {{
+    ($name:ident, [$($args:tt)*]) => {{
         let mut params = args!($($args)*);
         params.reverse();
         Rule {

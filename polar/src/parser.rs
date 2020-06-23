@@ -217,11 +217,11 @@ mod tests {
         let rule = polar::RuleParser::new()
             .parse(Lexer::new(r#"f(x) := g(x);"#))
             .unwrap();
-        assert_eq!(rule, rule!("f", [sym!("x")] => pred!("g", [sym!("x")])));
+        assert_eq!(rule, rule!(f, [sym!("x")] => pred!("g", [sym!("x")])));
         let rule = polar::RuleParser::new()
             .parse(Lexer::new(r#"f(x);"#))
             .unwrap();
-        assert_eq!(rule, rule!("f", [sym!("x")]));
+        assert_eq!(rule, rule!(f, [sym!("x")]));
     }
 
     #[test]
@@ -241,27 +241,27 @@ mod tests {
         let rule = polar::RuleParser::new()
             .parse(Lexer::new(r#"f(x: 1);"#))
             .unwrap();
-        assert_eq!(rule, rule!("f", ["x"; 1]));
+        assert_eq!(rule, rule!(f, ["x"; 1]));
 
         let rule = polar::RuleParser::new()
             .parse(Lexer::new(r#"f(x: 1, y: [x]) := y = 2;"#))
             .unwrap();
         assert_eq!(
             rule,
-            rule!("f", ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
+            rule!(f, ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
         );
 
         // parenthesized => parse as a symbol
         let rule = polar::RuleParser::new()
             .parse(Lexer::new(r#"f(x: (y));"#))
             .unwrap();
-        assert_eq!(rule, rule!("f", ["x"; value!(sym!("y"))]));
+        assert_eq!(rule, rule!(f, ["x"; value!(sym!("y"))]));
 
         // not parenthesized => parse as a type
         let rule = polar::RuleParser::new()
             .parse(Lexer::new(r#"f(x: y);"#))
             .unwrap();
-        assert_eq!(rule, rule!("f", ["x"; value!(instance!("y"))]));
+        assert_eq!(rule, rule!(f, ["x"; value!(instance!("y"))]));
     }
 
     #[test]
@@ -281,7 +281,7 @@ mod tests {
         let line = parse_lines(&kb).unwrap();
         assert_eq!(
             line[0],
-            Line::Rule(rule!("f", [sym!("x")] => op!(Unify, term!(sym!("x")), term!(1))))
+            Line::Rule(rule!(f, [sym!("x")] => op!(Unify, term!(sym!("x")), term!(1))))
         );
         let f = r#"?= f(1);"#;
         let line = parse_lines(&f).unwrap();

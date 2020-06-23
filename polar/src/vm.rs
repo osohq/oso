@@ -727,12 +727,11 @@ impl PolarVirtualMachine {
         };
         match generic_rule {
             None => self.push_goal(Goal::Backtrack)?,
-            Some(generic_rule) => {
-                assert_eq!(generic_rule.name, predicate.name);
+            Some(GenericRule::Precomputed { .. }) => {}
+            Some(GenericRule::List { rules }) => {
                 self.push_goal(Goal::TracePop)?;
                 self.push_goal(Goal::SortRules {
-                    rules: generic_rule
-                        .rules
+                    rules: rules
                         .into_iter()
                         .filter(|r| r.params.len() == predicate.args.len())
                         .collect(),
@@ -891,7 +890,12 @@ impl PolarVirtualMachine {
 
     /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
-        assert_eq!(args.len(), 3);
+        if args.len() != 3 {
+            return Err(error::OperationalError::Invariant(
+                "lookup should have three arguments".to_string(),
+            )
+            .into());
+        }
         let object = self.deref(&args[0]);
         let field = &args[1];
         let value = &args[2];
@@ -1535,16 +1539,13 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn and_expression() {
-        let f1 = rule!("f", [1]);
-        let f2 = rule!("f", [2]);
+        let f1 = rule!(f, [1]);
+        let f2 = rule!(f, [2]);
 
-        let rule = GenericRule {
-            name: sym!("f"),
-            rules: vec![f1, f2],
-        };
+        let rule = GenericRule::new(vec![f1, f2]);
 
         let mut kb = KnowledgeBase::new();
-        kb.rules.insert(rule.name.clone(), rule);
+        kb.add_generic_rule(sym!("f"), rule);
 
         let goal = query!(op!(And));
 
@@ -2032,18 +2033,15 @@ mod tests {
     #[test]
     fn test_sort_rules() {
         // Test sort rule by mocking ExternalIsSubSpecializer and ExternalIsa.
-        let bar_rule = GenericRule::new(
-            sym!("bar"),
-            vec![
-                rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)]),
-                rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)]),
-                rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)]),
-                rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)]),
-            ],
-        );
+        let bar_rule = GenericRule::new(vec![
+            rule!(bar, ["_"; instance!("b"), "__"; instance!("a"), value!(3)]),
+            rule!(bar, ["_"; instance!("a"), "__"; instance!("a"), value!(1)]),
+            rule!(bar, ["_"; instance!("a"), "__"; instance!("b"), value!(2)]),
+            rule!(bar, ["_"; instance!("b"), "__"; instance!("b"), value!(4)]),
+        ]);
 
         let mut kb = KnowledgeBase::new();
-        kb.add_generic_rule(bar_rule);
+        kb.add_generic_rule(sym!("bar"), bar_rule);
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
             literal: None,
@@ -2085,10 +2083,10 @@ mod tests {
         assert_eq!(
             results,
             vec![
-                hashmap! { sym!("z") => term!(1) },
-                hashmap! { sym!("z") => term!(2) },
-                hashmap! { sym!("z") => term!(3) },
-                hashmap! { sym!("z") => term!(4) },
+                hashmap! { sym!(z) => term!(1) },
+                hashmap! { sym!(z) => term!(2) },
+                hashmap! { sym!(z) => term!(3) },
+                hashmap! { sym!(z) => term!(4) },
             ]
         );
     }
@@ -2126,5 +2124,76 @@ mod tests {
         }
 
         assert_eq!(vm.deref(&term!(Value::Symbol(answer))), term!(value!(true)));
+    }
+
+    #[test]
+    fn test_precomputed_rules() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_generic_rule(
+            sym!("f"),
+            GenericRule::new(vec![
+                rule!(f, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(1)), op!(Unify, term!(sym!(y)), term!(1))),
+                rule!(f, [1, sym!(y)] => op!(Unify, term!(sym!(y)), term!(2))),
+                rule!(f, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(2)), op!(Unify, term!(sym!(y)), term!(1))),
+                rule!(f, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(2)), op!(Unify, term!(sym!(y)), term!(2))),
+                rule!(f, [sym!(x), 3] => op!(Unify, term!(sym!(x)), term!(2))),
+            ]),
+        );
+        kb.precompute_rules();
+        pretty_assertions::assert_eq!(
+            kb.rules,
+            hashmap! {
+                sym!(f) => GenericRule::Precomputed { index: hashmap!{
+                    "f/2".to_string() => RuleIndex::Node(hashmap! {
+                        value!(1) => RuleIndex::Leaf(hashset!{ value!(1), value!(2)}),
+                        value!(2) => RuleIndex::Leaf(hashset!{ value!(1), value!(2), value!(3)}),
+                    })
+                }
+            }}
+        );
+    }
+
+    #[test]
+    fn test_not_precomputed_rules() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_generic_rule(
+            sym!(f),
+            GenericRule::new(vec![
+                // f(x: Foo, y) := y = 1
+                // shouldn't precompute, relies on Foo
+                rule!(f, [sym!(x); instance!("Foo"), sym!(y)] => op!(Unify, term!(sym!(y)), term!(1))),
+            ]),
+        );
+        kb.add_generic_rule(
+            sym!(g),
+            GenericRule::new(vec![
+                // g(x) := .(x, lookup(), result)
+                // shouldn't precompute, lookup fails
+                rule!(g, [sym!(x)] => op!(Dot, term!(sym!(x)), term!(pred!("lookup", [])), term!(sym!(result)))),
+            ]),
+        );
+        kb.add_generic_rule(
+            sym!(h),
+            GenericRule::new(vec![
+                // h(x, y) := x=1
+                // h(x, y) := x=1, y=1
+                // shouldn't precompute, one of the branches has unbound variables
+                rule!(h, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(1))),
+                rule!(h, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(1)), op!(Unify, term!(sym!(y)), term!(1))),
+            ]),
+        );
+        kb.precompute_rules();
+        assert!(matches!(
+            kb.rules.get(&sym!(f)),
+            Some(GenericRule::List { .. })
+        ));
+        assert!(matches!(
+            kb.rules.get(&sym!(g)),
+            Some(GenericRule::List { .. })
+        ));
+        assert!(matches!(
+            kb.rules.get(&sym!(h)),
+            Some(GenericRule::List { .. })
+        ));
     }
 }
