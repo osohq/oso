@@ -265,6 +265,14 @@ impl Polar {
     pub fn get_external_id(&self) -> u64 {
         self.kb.read().unwrap().new_id()
     }
+
+    pub fn optimise_kb(&self) -> PolarResult<()> {
+        self.kb
+            .write()
+            .map_err(|_| error::OperationalError::Unknown)?
+            .precompute_rules();
+        Ok(())
+    }
 }
 
 #[cfg(test)]

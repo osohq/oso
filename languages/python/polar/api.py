@@ -10,15 +10,16 @@ from .errors import get_error
 from .exceptions import PolarApiException, PolarRuntimeException
 from .extras import Http, PathMapper
 from .ffi import (
+    check_result,
     external_answer,
     external_call,
     ffi_deserialize,
     ffi_serialize,
-    load_str,
-    check_result,
     is_null,
-    new_id,
+    load_str,
     manage_query,
+    new_id,
+    optimise_kb,
     Predicate,
     to_c_str,
     Variable,
@@ -120,6 +121,9 @@ class Polar:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
                 load_str(self.polar, file.read(), filename, self.__run_query)
+
+        # do optimisations once files are loaded
+        optimise_kb(self.polar)
 
     def _query_str(self, string):
         self._load_queued_files()

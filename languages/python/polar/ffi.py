@@ -105,3 +105,7 @@ def external_call(polar, query, call_id, value):
 def external_answer(polar, query, call_id, answer):
     answer = 1 if answer else 0
     check_result(lib.polar_question_result(query, call_id, answer))
+
+
+def optimise_kb(polar):
+    check_result(lib.polar_optimise_kb(polar))
