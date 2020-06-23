@@ -59,7 +59,7 @@ class Oso(api.Polar):
         audit.log(actor, action, resource, result)
         return result.success
 
-    def query(self, name, *args, debug=False) -> QueryResult:
+    def query_predicate(self, name, *args, debug=False) -> QueryResult:
         """Query for predicate with name ``name`` and args ``args``.
 
         :param name: The name of the predicate to query.

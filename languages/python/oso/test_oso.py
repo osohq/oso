@@ -132,11 +132,11 @@ def test_allow(test_oso):
     assert test_oso.allow(token("president"), action, resource)
 
 
-def test_query(test_oso):
+def test_query_predicate(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert test_oso.query("allow", actor, action, resource).success
+    assert test_oso.query_predicate("allow", actor, action, resource).success
 
 
 def test_fail(test_oso):
