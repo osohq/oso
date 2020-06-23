@@ -43,7 +43,7 @@ RSpec.describe Oso::Oso do
     end
   end
 
-  context '#query' do
+  context '#query_predicate' do
     it 'calls through to the allow rule' do
       subject.load_str('allow(1, 2, 3);')
       result = subject.query_predicate("allow", 1, 2, 3)
