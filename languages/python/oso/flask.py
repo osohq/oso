@@ -1,5 +1,5 @@
 from typing import Any, Callable, List
-from . import Oso
+from . import Oso, audit
 from polar.api import Http, Predicate
 
 
@@ -48,5 +48,7 @@ class OsoFlask(Oso):
             credentials = {}
         action = request.method.lower()
         resource = Http(path=request.path, hostname=hostname)
-        query = Predicate(name="allow", args=(credentials, action, resource))
-        return self._query_pred(query, single=True).success
+        pred = Predicate(name="allow", args=(credentials, action, resource))
+        result = self._query_pred(pred, single=True,)
+        audit.log(credentials, action, resource, result)
+        return result.success
