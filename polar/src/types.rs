@@ -223,6 +223,8 @@ impl Pattern {
 
 pub type Float = ordered_float::OrderedFloat<f64>;
 
+// This is not correct
+#[allow(clippy::derive_hash_xor_eq)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq, Hash)]
 pub enum Numeric {
     Integer(i64),

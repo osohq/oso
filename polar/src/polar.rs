@@ -191,7 +191,7 @@ impl Polar {
                     let generic_rule = kb
                         .rules
                         .entry(name.clone())
-                        .or_insert(GenericRule::new(vec![]));
+                        .or_insert_with(|| GenericRule::new(vec![]));
                     generic_rule.insert(rule);
                 }
                 parser::Line::Query(term) => {
