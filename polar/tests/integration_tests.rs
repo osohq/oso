@@ -900,3 +900,15 @@ fn test_unify_rule_head() {
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 }
+
+#[test]
+fn test_precomputed_two() {
+    let mut polar = Polar::new();
+    polar.load("f(0);").unwrap();
+    for i in 1..=10 {
+        polar.load(&format!("f({}) := f({});", i, i - 1)).unwrap();
+    }
+    assert!(qeval(&mut polar, "f(10)"));
+    let _ = polar.optimise_kb();
+    assert!(qeval(&mut polar, "f(10)"));
+}

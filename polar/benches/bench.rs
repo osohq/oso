@@ -43,6 +43,7 @@ pub fn too_many_predicates(c: &mut Criterion) {
             runner.load(&format!("f({}) := f({});", i, i - 1)).unwrap();
         }
         runner.expected_result(Bindings::new());
+        runner.optimise_kb().unwrap();
         runner
     }
 

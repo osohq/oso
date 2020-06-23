@@ -548,6 +548,20 @@ pub enum RuleIndex {
     Leaf(HashSet<Value>),
 }
 
+impl RuleIndex {
+    pub fn contains(&self, args: &[Term]) -> bool {
+        match self {
+            Self::Node(map) if args.len() > 1 => map
+                .get(&args[0].value)
+                .map(|index| index.contains(&args[1..]))
+                .unwrap_or(false),
+            Self::Leaf(set) if args.len() == 1 => set.contains(&args[0].value),
+            Self::Leaf(_) if args.len() == 0 => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum GenericRule {
     List { rules: Rules },
@@ -717,7 +731,7 @@ impl KnowledgeBase {
 
                                 // next node to visit is the entry for this key (pred/N).
                                 let node = results.entry(key.clone()).or_insert_with(|| {
-                                    if arity == 0 {
+                                    if arity <= 1 {
                                         RuleIndex::Leaf(HashSet::new())
                                     } else {
                                         RuleIndex::Node(HashMap::new())

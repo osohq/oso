@@ -727,7 +727,16 @@ impl PolarVirtualMachine {
         };
         match generic_rule {
             None => self.push_goal(Goal::Backtrack)?,
-            Some(GenericRule::Precomputed { .. }) => {}
+            Some(GenericRule::Precomputed { index }) => {
+                let key = format!("{}/{}", predicate.name.0, predicate.args.len());
+                if !index
+                    .get(&key)
+                    .map(|node| node.contains(&predicate.args[..]))
+                    .unwrap_or(false)
+                {
+                    self.push_goal(Goal::Backtrack)?;
+                }
+            }
             Some(GenericRule::List { rules }) => {
                 self.push_goal(Goal::TracePop)?;
                 self.push_goal(Goal::SortRules {
@@ -2130,13 +2139,21 @@ mod tests {
     fn test_precomputed_rules() {
         let mut kb = KnowledgeBase::new();
         kb.add_generic_rule(
-            sym!("f"),
+            sym!(f),
             GenericRule::new(vec![
                 rule!(f, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(1)), op!(Unify, term!(sym!(y)), term!(1))),
                 rule!(f, [1, sym!(y)] => op!(Unify, term!(sym!(y)), term!(2))),
                 rule!(f, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(2)), op!(Unify, term!(sym!(y)), term!(1))),
                 rule!(f, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(2)), op!(Unify, term!(sym!(y)), term!(2))),
                 rule!(f, [sym!(x), 3] => op!(Unify, term!(sym!(x)), term!(2))),
+            ]),
+        );
+        kb.add_generic_rule(
+            sym!(g),
+            GenericRule::new(vec![
+                rule!(g, [value!(2)] => pred!("g", [value!(1)])),
+                rule!(g, [value!(1)] => pred!("g", [value!(0)])),
+                rule!(g, [value!(0)]),
             ]),
         );
         kb.precompute_rules();
@@ -2148,9 +2165,24 @@ mod tests {
                         value!(1) => RuleIndex::Leaf(hashset!{ value!(1), value!(2)}),
                         value!(2) => RuleIndex::Leaf(hashset!{ value!(1), value!(2), value!(3)}),
                     })
-                }
-            }}
+                }},
+                sym!(g) => GenericRule::Precomputed { index: hashmap!{
+                    "g/1".to_string() => RuleIndex::Leaf(hashset! {
+                        value!(0),value!(1),value!(2),
+                    })
+                }},
+            }
         );
+
+        let mut vm = PolarVirtualMachine::new(
+            Arc::new(RwLock::new(kb)),
+            vec![query!(pred!("f", [value!(1), value!(2)]))],
+        );
+
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!()},
+            QueryEvent::Done
+        ]);
     }
 
     #[test]
