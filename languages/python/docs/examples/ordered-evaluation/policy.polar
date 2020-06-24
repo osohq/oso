@@ -17,4 +17,4 @@ ordered(actor, action, resource: ComplicatedResource, result) :=
 allow(actor, action, resource) :=
     # Use the ordered rule to find an allow result.
     # cut causes eval to stop on first allow result
-    ordered(actor, action, resource, "allow"), cut();
+    ordered(actor, action, resource, result), cut(), result = "allow";

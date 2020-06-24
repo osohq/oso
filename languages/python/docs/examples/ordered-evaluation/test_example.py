@@ -19,6 +19,7 @@ def test_ordered_eval(oso):
 
     # Blocked
     assert not oso.allow(actor('Mallory', 'normal'), "a", ComplicatedResource())
+    assert not oso.allow(actor('Mallory', 'superuser'), "a", ComplicatedResource())
     assert not oso.allow(actor('Wallace', 'normal'), "a", ComplicatedResource())
 
     # Allowed because superuser
