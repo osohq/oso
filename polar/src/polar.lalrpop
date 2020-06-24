@@ -54,6 +54,7 @@ extern {
         "debug" => lexer::Token::Debug,
         "in" => lexer::Token::In,       // in
         "isa" => lexer::Token::Isa,     // isa
+        "forall" => lexer::Token::ForAll,     // forall
     }
 }
 
@@ -186,14 +187,14 @@ Exp11<T>: Term = {
 Exp10<T>: Term = {
     // A pattern cannot contain a new operator
     <new:New> if T == "Term" => new,
-    <start:@L> "cut" "(" ")" => {
+    <start:@L> "cut" ( "(" ")" )? => {
         let args = vec![];
         let op = Operation{operator: Operator::Cut, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
-    <start:@L> "cut" => {
-        let args = vec![];
-        let op = Operation{operator: Operator::Cut, args};
+    <start:@L> "forall" "(" <arg1:Exp2<"Term">> "," <arg2:Exp2<"Term">> ")" => {
+        let args = vec![arg1, arg2];
+        let op = Operation{operator: Operator::ForAll, args};
         Term{id: 0, offset: start, value: Value::Expression(op)}
     },
     <exp11:Exp11<T>> => exp11,
