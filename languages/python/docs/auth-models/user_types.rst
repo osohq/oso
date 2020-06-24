@@ -2,117 +2,168 @@
 Multiple Actor Types
 ====================
 
-Recall that in oso, :ref:`actors` represent request-makers, the "who" of an authorization request.
-Actors are commonly human users, but might also be machines, servers, or other applications.
-Many applications support multiple types of Actors, and often different Actor types require different
-authorization logic.
+.. container:: left-col
 
-In this guide, we'll walk through a policy for an application with two Actor types: **Customers** and
-**Internal Users**.
+    Recall that in oso, :ref:`actors` represent request-makers, the "who" of an authorization request.
+    Actors are commonly human users, but might also be machines, servers, or other applications.
+    Many applications support multiple types of Actors, and often different Actor types require different
+    authorization logic.
 
-.. note:: This guide is written using the :doc:`/application-library/python`
-    and assumes you are familiar with oso's :doc:`/auth-fundamentals`.
+    In this guide, we'll walk through a policy for an application with two Actor types: **Customers** and
+    **Internal Users**.
+
+    .. note:: This guide is written using the :doc:`/application-library/python`
+        and assumes you are familiar with oso's :doc:`/auth-fundamentals`.
 
 
 A Tale of Two Actors
 =====================
-Our example application has customers and internal users. Customers are allowed to access the customer dashboard,
-and internal users are allowed to access the customer dashboard as well as an internal dashboard. We can write a simple
-Polar policy to express this logic.
 
-Let's start by defining Python classes to represent customers and internal users:
+.. container:: left-col
 
-.. literalinclude:: /examples/user_types/01-user_classes.py
-    :start-after: classes-start
-    :end-before: classes-end
+    Our example application has customers and internal users. Customers are allowed to access the customer dashboard,
+    and internal users are allowed to access the customer dashboard as well as an internal dashboard. We can write a simple
+    Polar policy to express this logic.
 
-Note that if we already had classes in our application that represented customers and internal users,
-we could have simply decorated them with :py:func:`oso.polar_class`.
+.. container:: content-tabs right-col
 
-We can now write a simple Polar policy over these Actor types:
+    .. tab-container:: python
+        :title: Python
 
-.. literalinclude:: /examples/user_types/user_policy.polar
-    :language: polar
-    :start-after: simple-start
-    :end-before: simple-end
+        Let's start by defining Python classes to represent customers and internal users:
 
-This policy uses :ref:`specialized rules <inheritance>` to control rules execution based on
-the Actor types that is passed into the authorization request.
+        .. literalinclude:: /examples/user_types/01-user_classes.py
+            :start-after: classes-start
+            :end-before: classes-end
 
-To finish securing our dashboards, we need to **enforce** our policy by
-adding authorization requests to our application.
-Where and how authorization requests are used is up to the application developer.
-For our example, making a request might look like this:
+.. container:: left-col
 
-.. literalinclude:: /examples/user_types/01-user_classes.py
-    :start-after: app-start
-    :end-before: app-end
+    Note that if we already had classes in our application that represented customers and internal users,
+    we could have simply decorated them with :py:func:`oso.polar_class`.
 
-Hooray, our customer and internal dashboards are now secure!
+    We can now write a simple Polar policy over these Actor types:
+
+    .. literalinclude:: /examples/user_types/user_policy.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
+
+    This policy uses :ref:`specialized rules <inheritance>` to control rules execution based on
+    the Actor types that is passed into the authorization request.
+
+.. container:: left-col
+
+    To finish securing our dashboards, we need to **enforce** our policy by
+    adding authorization requests to our application.
+    Where and how authorization requests are used is up to the application developer.
+    For our example, making a request might look like this:
+
+.. container:: content-tabs right-col
+
+    .. tab-container:: python
+        :title: Python
+
+        .. literalinclude:: /examples/user_types/01-user_classes.py
+            :start-after: app-start
+            :end-before: app-end
+
+.. container:: left-col
+
+    Hooray, our customer and internal dashboards are now secure!
 
 Adding Actor Attributes
 =======================
 
-Since we saved so much time on authorization, we've decided to add another dashboard to our application,
-an **accounts dashboard**. The accounts dashboard should only be accessed by **account managers** (a type of internal user).
-Since we're experts at securing dashboards, we should be able to add this authorization logic to our policy in no time.
+.. container:: left-col
 
-A simple way to solve this problem is with RBAC. We can add a ``role`` attribute to our ``InternalUser`` class:
+    Since we saved so much time on authorization, we've decided to add another dashboard to our application,
+    an **accounts dashboard**. The accounts dashboard should only be accessed by **account managers** (a type of internal user).
+    Since we're experts at securing dashboards, we should be able to add this authorization logic to our policy in no time.
 
-.. literalinclude:: /examples/user_types/02-user_classes.py
-    :start-after: internal-start
-    :end-before: internal-end
+    A simple way to solve this problem is with RBAC. We can add a ``role`` attribute to our ``InternalUser`` class:
 
-Then add the following rule to our policy:
+.. container:: content-tabs right-col
 
-.. literalinclude:: /examples/user_types/user_policy.polar
-    :language: polar
-    :start-after: rbac-start
-    :end-before: rbac-end
+    .. tab-container:: python
+        :title: Python
 
-This example shows a clear benefit of using different classes to represent different Actor types: the ability
-to add custom attributes. We can add attributes specific to internal users, like roles, to the ``InternalUser`` class
-without adding them to all application users.
+        .. literalinclude:: /examples/user_types/02-user_classes.py
+            :start-after: internal-start
+            :end-before: internal-end
 
-We've been able to secure the accounts dashboard with a few lines of code, but we're not done yet!
+.. container:: left-col
 
-Account managers are also allowed to access **account data**, but only for accounts that they manage.
-In order to implement this logic, we need to know the accounts of each account manager.
-This is a compelling case for creating a new Actor type for account managers that has its own
-attributes:
+    Then add the following rule to our policy:
 
-.. literalinclude:: /examples/user_types/02-user_classes.py
-    :start-after: account-start
-    :end-before: account-end
+    .. literalinclude:: /examples/user_types/user_policy.polar
+        :language: polar
+        :start-after: rbac-start
+        :end-before: rbac-end
 
-Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
-This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :ref:`inheritance`).
+    This example shows a clear benefit of using different classes to represent different Actor types: the ability
+    to add custom attributes. We can add attributes specific to internal users, like roles, to the ``InternalUser`` class
+    without adding them to all application users.
 
-Let's add the following lines to our policy:
+    We've been able to secure the accounts dashboard with a few lines of code, but we're not done yet!
 
-.. literalinclude:: /examples/user_types/user_policy.polar
-    :language: polar
-    :start-after: manager-start
-    :end-before: manager-end
+.. container:: left-col
 
-The first rule replaces the RBAC rule we previously used to control access to the accounts dashboard.
-The second rule controls access to account data. For the purposes of this example, let's assume that ``AccountData`` is a resource that has an ``account_id``
-attribute.
+    Account managers are also allowed to access **account data**, but only for accounts that they manage.
+    In order to implement this logic, we need to know the accounts of each account manager.
+    This is a compelling case for creating a new Actor type for account managers that has its own
+    attributes:
 
-We can update our application code slightly to generate ``AccountManager`` users:
+.. container:: content-tabs right-col
 
-.. literalinclude:: /examples/user_types/02-user_classes.py
-    :lines: 21-30
-    :emphasize-lines: 5-6
+    .. tab-container:: python
+        :title: Python
 
-We've now successfully secured all three dashboards and customer account data.
+        .. literalinclude:: /examples/user_types/02-user_classes.py
+            :start-after: account-start
+            :end-before: account-end
+
+.. container:: left-col
+
+    Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
+    This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :ref:`inheritance`).
+
+    Let's add the following lines to our policy:
+
+    .. literalinclude:: /examples/user_types/user_policy.polar
+        :language: polar
+        :start-after: manager-start
+        :end-before: manager-end
+
+    The first rule replaces the RBAC rule we previously used to control access to the accounts dashboard.
+    The second rule controls access to account data. For the purposes of this example, let's assume that ``AccountData`` is a resource that has an ``account_id``
+    attribute.
+
+.. container:: left-col
+
+    We can update our application code slightly to generate ``AccountManager`` users:
+
+.. container:: content-tabs right-col
+
+    .. tab-container:: python
+        :title: Python
+
+        .. literalinclude:: /examples/user_types/02-user_classes.py
+            :lines: 21-30
+            :emphasize-lines: 5-6
+
+.. container:: left-col
+
+    We've now successfully secured all three dashboards and customer account data.
 
 Summary
 =======
-It is common to require different authorization logic for different types of application users. In this example,
-we showed how to use different Actor types to represent different users in oso. We wrote Polar policies with rules
-that specialized on the type of Actor, and even added attributes to some actor types that we used in the policy.
-We also demonstrated how inheritance can be used to match rules to multiple types of Actors.
+
+.. container:: left-col
+
+    It is common to require different authorization logic for different types of application users. In this example,
+    we showed how to use different Actor types to represent different users in oso. We wrote Polar policies with rules
+    that specialized on the type of Actor, and even added attributes to some actor types that we used in the policy.
+    We also demonstrated how inheritance can be used to match rules to multiple types of Actors.
 
 
 

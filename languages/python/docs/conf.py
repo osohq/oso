@@ -37,6 +37,7 @@ extensions = [
     "recommonmark",
     "sphinx.ext.todo",
     "sphinx.ext.githubpages",
+    "sphinxcontrib.contentui"
 ]
 
 # Add any paths that contain templates here, relative to this directory.

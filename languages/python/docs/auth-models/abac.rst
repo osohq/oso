@@ -5,121 +5,158 @@ ABAC
 .. role:: polar(code)
    :language: prolog
 
-Whereas RBAC allows you to group users and permissions into pre-defined buckets,
-you may also want to represent fine-grained or dynamic permissions based on *who* the user is and her relation to
-the resource she wants to access. This is known as `attribute-based access
-control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
+.. container:: left-col
+
+    Whereas RBAC allows you to group users and permissions into pre-defined buckets,
+    you may also want to represent fine-grained or dynamic permissions based on *who* the user is and her relation to
+    the resource she wants to access. This is known as `attribute-based access
+    control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
 
 
 ABAC basics
 -----------
 
-Continuing from the RBAC examples, suppose we want to allow employees
-to view *their own* expenses. Recall that we had previously set up our
-users as classes in Polar:
+.. container:: left-col
 
-.. literalinclude:: /examples/abac/01-simple.py
-   :language: python
-   :start-after: user-class-start
-   :end-before: user-class-end
+    Continuing from the RBAC examples, suppose we want to allow employees
+    to view *their own* expenses. Recall that we had previously set up our
+    users as classes in Polar:
 
-We can do the same with the resources being requested:
+.. container:: content-tabs right-col
 
-.. literalinclude:: /examples/abac/01-simple.py
-   :language: python
-   :start-after: expense-class-start
-   :end-before: expense-class-end
+    .. tab-container:: python
+        :title: Python
 
-An ``allow()`` rule that checks that the user reading the
-expense is the same person who submitted the expense, would look like:
+        .. literalinclude:: /examples/abac/01-simple.py
+           :language: python
+           :start-after: user-class-start
+           :end-before: user-class-end
 
-.. literalinclude:: /examples/abac/01-simple.polar
-   :language: polar
-   :start-after: rule-start
-   :end-before: rule-end
+    .. tab-container:: ruby
+        :title: Ruby
 
-This simple example shows the potential for ABAC: we took an intuitive concept
-of "can see their own expenses" and represented it as a single comparison.
+        .. code-block:: ruby
 
-The power of ABAC comes from being able to express these kind of permissions
-based on who you are and how you are related to the data.
+            fake ruby
 
+.. container:: left-col
+
+    We can do the same with the resources being requested:
+
+.. container:: content-tabs right-col
+
+    .. tab-container:: python
+        :title: Python
+
+        .. literalinclude:: /examples/abac/01-simple.py
+           :language: python
+           :start-after: expense-class-start
+           :end-before: expense-class-end
+
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. code-block:: ruby
+
+            fake ruby
+
+.. container:: left-col
+
+    An ``allow()`` rule that checks that the user reading the
+    expense is the same person who submitted the expense, would look like:
+
+    .. literalinclude:: /examples/abac/01-simple.polar
+       :language: polar
+       :start-after: rule-start
+       :end-before: rule-end
+
+.. container:: left-col
+
+    This simple example shows the potential for ABAC: we took an intuitive concept
+    of "can see their own expenses" and represented it as a single comparison.
+
+    The power of ABAC comes from being able to express these kind of permissions
+    based on who you are and how you are related to the data.
 
 ABAC ❤️ RBAC
 ------------
 
-As alluded to in the summary on RBAC, provisioning access based on checking whether
-a user has a particular role is technically a simple variant of ABAC. Putting aside
-whether this is a relevant distinction, the two are closely related.
+.. container:: left-col
 
-The power of RBAC comes from: adding some form of organization to the limitless
-distinct permissions that a person might have, and exposing those in an intuitive,
-human-understandable way.
+    As alluded to in the summary on RBAC, provisioning access based on checking whether
+    a user has a particular role is technically a simple variant of ABAC. Putting aside
+    whether this is a relevant distinction, the two are closely related.
 
-Combine this with what ABAC does best: representing relations between a user and the
-data, and you get intuitive, but fine-grained permissions. For example, suppose our
-company has taken off and now spans multiple locations, and now accountants can
-only view expenses from their own locations. We can combine our previous roles
-with some simple ABAC conditions to achieve this:
+    The power of RBAC comes from: adding some form of organization to the limitless
+    distinct permissions that a person might have, and exposing those in an intuitive,
+    human-understandable way.
 
-.. literalinclude:: /examples/abac/02-rbac.polar
-   :language: polar
-   :start-after: simple-rule-start
-   :end-before: simple-rule-end
+    Combine this with what ABAC does best: representing relations between a user and the
+    data, and you get intuitive, but fine-grained permissions. For example, suppose our
+    company has taken off and now spans multiple locations, and now accountants can
+    only view expenses from their own locations. We can combine our previous roles
+    with some simple ABAC conditions to achieve this:
 
-This is great when what we need is an intersection of models, and you want to
-apply both RBAC and ABAC policies simultaneously. However, the ABAC model
-can be even more powerful when composed with roles. And having the roles themselves
-include attributes.
+    .. literalinclude:: /examples/abac/02-rbac.polar
+       :language: polar
+       :start-after: simple-rule-start
+       :end-before: simple-rule-end
 
-For example, an employee might be an administrator of a *project*,
-and therefore is allowed to see all expenses related to that project.
+    This is great when what we need is an intersection of models, and you want to
+    apply both RBAC and ABAC policies simultaneously. However, the ABAC model
+    can be even more powerful when composed with roles. And having the roles themselves
+    include attributes.
 
-.. literalinclude:: /examples/abac/02-rbac.polar
-   :language: polar
-   :start-after: project-rule-start
-   :end-before: project-rule-end
+    For example, an employee might be an administrator of a *project*,
+    and therefore is allowed to see all expenses related to that project.
 
-What we can see is happening here, is that we are associated roles not just
-globally to a user, but to a user for some specific resource. Other examples
-might be team-, or organization- specific roles.
+    .. literalinclude:: /examples/abac/02-rbac.polar
+       :language: polar
+       :start-after: project-rule-start
+       :end-before: project-rule-end
 
-And these can also follow inheritance patterns like we saw with regular roles.
+    What we can see is happening here, is that we are associated roles not just
+    globally to a user, but to a user for some specific resource. Other examples
+    might be team-, or organization- specific roles.
 
-.. literalinclude:: /examples/abac/02-rbac.polar
-   :language: polar
-   :start-after: role-inherit-start
-   :end-before: role-inherit-end
+    And these can also follow inheritance patterns like we saw with regular roles.
+
+    .. literalinclude:: /examples/abac/02-rbac.polar
+       :language: polar
+       :start-after: role-inherit-start
+       :end-before: role-inherit-end
 
 Hierachies
 -----------
 
-Up to this point, we've made a big deal about ABAC being able to represent relations
-between users and resources. In the previous example, we even showed how relations
-between resources permits creating inheritance logic. To expand on that idea,
-here we look at representing organizational hierarchies and how these might look in
-Polar.
+.. container:: left-col
 
-Starting out with a simple example, suppose managers can view employees' expenses:
+    Up to this point, we've made a big deal about ABAC being able to represent relations
+    between users and resources. In the previous example, we even showed how relations
+    between resources permits creating inheritance logic. To expand on that idea,
+    here we look at representing organizational hierarchies and how these might look in
+    Polar.
 
-.. literalinclude:: /examples/abac/03-hierarchy.polar
-   :language: polar
-   :lines: 7-9
-   :emphasize-lines: 2-3
+    Starting out with a simple example, suppose managers can view employees' expenses:
 
-First thing we can do, is extract out the logic for checking whether the user manages someone:
+    .. literalinclude:: /examples/abac/03-hierarchy.polar
+       :language: polar
+       :lines: 7-9
+       :emphasize-lines: 2-3
 
-.. literalinclude:: /examples/abac/03-hierarchy.polar
-   :language: polar
-   :start-after: start-manages-rule
-   :end-before: end-manages-rule
+    First thing we can do, is extract out the logic for checking whether the user manages someone:
 
-Now if we want this logic to apply for managers, and managers' managers, and so on...
-then we need to make sure this logic is evaluated recursively:
+    .. literalinclude:: /examples/abac/03-hierarchy.polar
+       :language: polar
+       :start-after: start-manages-rule
+       :end-before: end-manages-rule
 
-.. literalinclude:: /examples/abac/03-hierarchy.polar
-   :language: polar
-   :start-after: start-hierarchy-rule
-   :end-before: end-hierarchy-rule
+    Now if we want this logic to apply for managers, and managers' managers, and so on...
+    then we need to make sure this logic is evaluated recursively:
+
+    .. literalinclude:: /examples/abac/03-hierarchy.polar
+       :language: polar
+       :start-after: start-hierarchy-rule
+       :end-before: end-hierarchy-rule
 
 .. TODO: Summary
