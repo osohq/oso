@@ -166,9 +166,12 @@ class Polar:
                 args=[self._to_python(v) for v in value[tag]["args"]],
             )
         elif tag == "Symbol":
-            raise PolarRuntimeException(
-                f"variable: {value} is unbound. make sure the value is set before using it in a method call"
-            )
+            # TODO (dhatch): Temp change so I can return unbound values to Python (this should be
+            # allowed but maybe the API needs to be different)
+            return Variable(value[tag])
+            # raise PolarRuntimeException(
+            #     f"variable: {value} is unbound. make sure the value is set before using it in a method call"
+            # )
         raise PolarRuntimeException(f"cannot convert: {value} to Python")
 
     def _to_polar_term(self, v):
