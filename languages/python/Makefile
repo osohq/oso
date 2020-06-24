@@ -1,6 +1,5 @@
 .PHONY: build test test-requirements fmt
-build:
-	rm -rf build
+build: clean
 	python setup.py build
 	python setup.py develop
 
@@ -22,3 +21,7 @@ fmt:
 
 package:
 	python setup.py sdist bdist_wheel
+
+clean:
+	rm -f _polar_lib.abi3.so
+	rm -rf build

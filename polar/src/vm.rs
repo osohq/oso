@@ -11,7 +11,7 @@ use super::{PolarResult, ToPolarString};
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
-pub const MAX_EXECUTED_GOALS: usize = 10_000;
+pub const MAX_EXECUTED_GOALS: usize = 1_000_000;
 
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
@@ -729,11 +729,69 @@ impl PolarVirtualMachine {
             None => self.push_goal(Goal::Backtrack)?,
             Some(GenericRule::Precomputed { index }) => {
                 let key = format!("{}/{}", predicate.name.0, predicate.args.len());
-                if !index
-                    .get(&key)
-                    .map(|node| node.contains(&predicate.args[..]))
-                    .unwrap_or(false)
-                {
+                if let Some(index) = index.get(&key) {
+                    // we'll reassign to this reference to traverse the nodes
+                    let mut index = index;
+                    for arg in &predicate.args {
+                        let arg = self.deref(&arg);
+                        if arg.value.hashable() {
+                            index = match index {
+                                RuleIndex::Node(map) => {
+                                    if let Some(next) = map.get(&arg) {
+                                        next
+                                    } else {
+                                        return self.push_goal(Goal::Backtrack);
+                                    }
+                                }
+                                RuleIndex::Leaf(set) => {
+                                    if !set.contains(&arg) {
+                                        self.push_goal(Goal::Backtrack)?;
+                                    }
+                                    if std::env::var("RUST_LOG").is_ok() {
+                                        eprintln!(
+                                            "Returning precomputed result for: {}",
+                                            predicate.to_polar()
+                                        );
+                                    }
+                                    // leaf node, we are done
+                                    return Ok(());
+                                }
+                            }
+                        } else {
+                            match index {
+                                RuleIndex::Node(map) => {
+                                    self.push_goal(Goal::Query {
+                                        term: Term::new(Value::Call(predicate.clone())),
+                                    })?;
+                                    return self.push_goal(Goal::Query {
+                                        term: Term::new(Value::Expression(Operation {
+                                            operator: Operator::In,
+                                            args: vec![
+                                                arg,
+                                                Term::new(Value::List(
+                                                    map.keys().cloned().collect(),
+                                                )),
+                                            ],
+                                        })),
+                                    });
+                                }
+                                RuleIndex::Leaf(set) => {
+                                    return self.push_goal(Goal::Query {
+                                        term: Term::new(Value::Expression(Operation {
+                                            operator: Operator::In,
+                                            args: vec![
+                                                arg,
+                                                Term::new(Value::List(
+                                                    set.clone().into_iter().collect(),
+                                                )),
+                                            ],
+                                        })),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } else {
                     self.push_goal(Goal::Backtrack)?;
                 }
             }
@@ -1456,6 +1514,7 @@ impl PolarVirtualMachine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use indexmap::{indexmap, indexset};
     use permute::permute;
 
     /// Shorthand for constructing Goal::Query.
@@ -2151,9 +2210,9 @@ mod tests {
         kb.add_generic_rule(
             sym!(g),
             GenericRule::new(vec![
-                rule!(g, [value!(2)] => pred!("g", [value!(1)])),
-                rule!(g, [value!(1)] => pred!("g", [value!(0)])),
                 rule!(g, [value!(0)]),
+                rule!(g, [value!(1)] => pred!("g", [value!(0)])),
+                rule!(g, [value!(2)] => pred!("g", [value!(1)])),
             ]),
         );
         kb.precompute_rules();
@@ -2161,14 +2220,14 @@ mod tests {
             kb.rules,
             hashmap! {
                 sym!(f) => GenericRule::Precomputed { index: hashmap!{
-                    "f/2".to_string() => RuleIndex::Node(hashmap! {
-                        value!(1) => RuleIndex::Leaf(hashset!{ value!(1), value!(2)}),
-                        value!(2) => RuleIndex::Leaf(hashset!{ value!(1), value!(2), value!(3)}),
+                    "f/2".to_string() => RuleIndex::Node(indexmap! {
+                        term!(1) => RuleIndex::Leaf(indexset!{ term!(1), term!(2)}),
+                        term!(2) => RuleIndex::Leaf(indexset!{ term!(1), term!(2), term!(3)}),
                     })
                 }},
                 sym!(g) => GenericRule::Precomputed { index: hashmap!{
-                    "g/1".to_string() => RuleIndex::Leaf(hashset! {
-                        value!(0),value!(1),value!(2),
+                    "g/1".to_string() => RuleIndex::Leaf(indexset! {
+                        term!(0),term!(1),term!(2),
                     })
                 }},
             }
@@ -2176,11 +2235,14 @@ mod tests {
 
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(kb)),
-            vec![query!(pred!("f", [value!(1), value!(2)]))],
+            vec![query!(pred!("g", [value!(sym!(x))]))],
         );
 
+        // should match x = 0, x = 1, x = 2
         assert_query_events!(vm, [
-            QueryEvent::Result{hashmap!()},
+            QueryEvent::Result { hashmap!{ sym!(x) => term!(0) } },
+            QueryEvent::Result { hashmap!{ sym!(x) => term!(1) } },
+            QueryEvent::Result { hashmap!{ sym!(x) => term!(2) } },
             QueryEvent::Done
         ]);
     }
@@ -2214,6 +2276,16 @@ mod tests {
                 rule!(h, [sym!(x), sym!(y)] => op!(Unify, term!(sym!(x)), term!(1)), op!(Unify, term!(sym!(y)), term!(1))),
             ]),
         );
+        kb.add_generic_rule(
+            sym!(k),
+            GenericRule::new(vec![
+                // k(x) := x = 2 | h(x);
+                // k(x) := x = 1;
+                // shouldn't precompute, relies on another non-precomputed rule
+                rule!(k, [sym!(x)] => op!(Or, term!(op!(Unify, term!(sym!(x)), term!(2))), term!(pred!("h", [value!(sym!(x))])))),
+                rule!(k, [sym!(x)] => op!(Unify, term!(sym!(x)), term!(1))),
+            ]),
+        );
         kb.precompute_rules();
         assert!(matches!(
             kb.rules.get(&sym!(f)),
@@ -2225,6 +2297,10 @@ mod tests {
         ));
         assert!(matches!(
             kb.rules.get(&sym!(h)),
+            Some(GenericRule::List { .. })
+        ));
+        assert!(matches!(
+            kb.rules.get(&sym!(k)),
             Some(GenericRule::List { .. })
         ));
     }

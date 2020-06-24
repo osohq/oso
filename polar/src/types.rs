@@ -2,9 +2,10 @@
 //!
 //! Polar types
 
+use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -293,7 +294,7 @@ pub enum Value {
 }
 
 impl Value {
-    fn hashable(&self) -> bool {
+    pub fn hashable(&self) -> bool {
         match self {
             Self::Number(_) | Self::String(_) | Self::Boolean(_) => true,
             Self::Dictionary(d) => d.fields.iter().all(|(_, v)| v.value.hashable()),
@@ -402,6 +403,12 @@ pub struct Term {
 impl PartialEq for Term {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
+    }
+}
+
+impl std::hash::Hash for Term {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state)
     }
 }
 
@@ -542,27 +549,40 @@ impl Rule {
 
 pub type Rules = Vec<Rule>;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RuleIndex {
-    Node(HashMap<Value, RuleIndex>),
-    Leaf(HashSet<Value>),
+    Node(IndexMap<Term, RuleIndex>),
+    Leaf(IndexSet<Term>),
 }
 
 impl RuleIndex {
-    pub fn contains(&self, args: &[Term]) -> bool {
-        match self {
-            Self::Node(map) if args.len() > 1 => map
-                .get(&args[0].value)
-                .map(|index| index.contains(&args[1..]))
-                .unwrap_or(false),
-            Self::Leaf(set) if args.len() == 1 => set.contains(&args[0].value),
-            Self::Leaf(_) if args.len() == 0 => true,
-            _ => false,
-        }
+    pub fn new_node() -> Self {
+        Self::Node(IndexMap::new())
+    }
+
+    pub fn new_leaf() -> Self {
+        Self::Leaf(IndexSet::new())
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+// impl RuleIndex {
+//     pub fn contains_all(&self, args: &[Term]) -> bool {
+//         if !args[0].value.hashable() {
+//             return false;
+//         }
+//         match self {
+//             Self::Node(map) if args.len() > 1 => map
+//                 .get(&args[0].value)
+//                 .map(|index| index.contains(&args[1..]))
+//                 .unwrap_or(false),
+//             Self::Leaf(set) if args.len() == 1 => set.contains(&args[0]),
+//             Self::Leaf(_) if args.len() == 0 => true,
+//             _ => false,
+//         }
+//     }
+// }
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum GenericRule {
     List { rules: Rules },
     Precomputed { index: HashMap<String, RuleIndex> },
@@ -625,6 +645,7 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Trace {
     pub node: Node,
+    pub polar_str: String,
     pub children: Vec<Trace>,
 }
 
@@ -694,92 +715,133 @@ impl KnowledgeBase {
         let polar = crate::Polar {
             kb: std::sync::Arc::new(std::sync::RwLock::new(self.clone())),
         };
-        let mut precomputed = Vec::new();
-        'rule_iter: for (name, rule) in &self.rules {
-            if let GenericRule::List { rules } = rule {
-                let arities: HashSet<usize> = rules.iter().map(|r| r.params.len()).collect();
-                let mut results = HashMap::new();
-                for arity in arities {
-                    let args: Vec<Symbol> = (0..arity)
-                        .into_iter()
-                        .map(|v| Symbol(format!("v{}", v)))
-                        .collect();
-                    let key = format!("{}/{}", name.0, arity);
-                    let query = Term::new(Value::Call(Predicate {
-                        name: name.clone(),
-                        args: args
-                            .clone()
-                            .into_iter()
-                            .map(Value::Symbol)
-                            .map(Term::new)
-                            .collect(),
-                    }));
-                    let mut query = polar.new_query_from_term(query);
-                    loop {
-                        let event = query.next_event();
-                        if event.is_err() {
-                            // skip any rule with errors
-                            continue 'rule_iter;
-                        }
-                        match event.unwrap() {
-                            QueryEvent::Done => break,
-                            QueryEvent::Result { bindings, .. } => {
-                                if !bindings.values().all(|t| t.value.hashable()) {
-                                    // don't store precomputed if not hashable
-                                    continue 'rule_iter;
-                                }
-
-                                // next node to visit is the entry for this key (pred/N).
-                                let node = results.entry(key.clone()).or_insert_with(|| {
-                                    if arity <= 1 {
-                                        RuleIndex::Leaf(HashSet::new())
-                                    } else {
-                                        RuleIndex::Node(HashMap::new())
+        loop {
+            let mut precomputed = Vec::new();
+            'rule_iter: for (rule_name, rule) in &self.rules {
+                if let GenericRule::List { rules } = rule {
+                    if !rules.clone().iter_mut().all(|r| {
+                        let mut only_precomp = true;
+                        r.body.walk_mut(&mut |t| {
+                            match &t.value {
+                                Value::Call(Predicate { name, .. }) if name != rule_name => {
+                                    if let Some(GenericRule::List { .. }) = self.rules.get(&name) {
+                                        // this rule references a non-precomputed rule
+                                        only_precomp = false;
                                     }
-                                });
-                                let _ = args
-                                    .iter()
-                                    .map(|s| bindings.get(&s).cloned().unwrap())
-                                    .enumerate()
-                                    .fold(node, |node, (index, arg)| match node {
-                                        RuleIndex::Node(map) => {
-                                            map.entry(arg.value.clone()).or_insert_with(|| {
-                                                if index + 2 == arity {
-                                                    RuleIndex::Leaf(HashSet::new())
-                                                } else {
-                                                    RuleIndex::Node(HashMap::new())
-                                                }
-                                            })
+                                }
+                                _ => {}
+                            }
+                            true
+                        });
+                        let has_no_specializer = r.params.iter().all(|p| p.specializer.is_none());
+                        has_no_specializer && only_precomp
+                    }) {
+                        if std::env::var("RUST_LOG").is_ok() {
+                            eprintln!("Rule {} is is ineligible for precomputing. (Contains specializers or depends on other non-precomputable rules)", rule_name.0);
+                        }
+                        // don't attempt to handle rules with specializers
+                        continue 'rule_iter;
+                    }
+                    let arities: IndexSet<usize> = rules.iter().map(|r| r.params.len()).collect();
+                    let mut results = HashMap::new();
+                    for arity in arities {
+                        let args: Vec<Symbol> = (0..arity)
+                            .into_iter()
+                            .map(|v| Symbol(format!("v{}", v)))
+                            .collect();
+                        let key = format!("{}/{}", rule_name.0, arity);
+                        let query = Term::new(Value::Call(Predicate {
+                            name: rule_name.clone(),
+                            args: args
+                                .clone()
+                                .into_iter()
+                                .map(Value::Symbol)
+                                .map(Term::new)
+                                .collect(),
+                        }));
+                        let mut query = polar.new_query_from_term(query);
+                        loop {
+                            let event = query.next_event();
+                            if event.is_err() {
+                                if std::env::var("RUST_LOG").is_ok() {
+                                    eprintln!("Rule {} is is ineligible for precomputing. (Returned an error)", rule_name.0);
+                                }
+                                // skip any rule with errors
+                                continue 'rule_iter;
+                            }
+                            match event.unwrap() {
+                                QueryEvent::Done => break,
+                                QueryEvent::Result { bindings, .. } => {
+                                    if !bindings.values().all(|t| t.value.hashable()) {
+                                        if std::env::var("RUST_LOG").is_ok() {
+                                            eprintln!("Rule {} is is ineligible for precomputing. (Returned a non-hashable result)", rule_name.0);
                                         }
-                                        RuleIndex::Leaf(set) => {
-                                            assert_eq!(index + 1, arity);
-                                            set.insert(arg.value);
-                                            node
+                                        // don't store precomputed if not hashable
+                                        continue 'rule_iter;
+                                    }
+
+                                    // next node to visit is the entry for this key (pred/N).
+                                    let node = results.entry(key.clone()).or_insert_with(|| {
+                                        if arity <= 1 {
+                                            RuleIndex::new_leaf()
+                                        } else {
+                                            RuleIndex::new_node()
                                         }
                                     });
-                            }
-                            // QueryEvent::ExternalCall { call_id, .. } => {
-                            //     let _ = query.call_result(call_id, None);
-                            // }
-                            // QueryEvent::ExternalIsa { call_id, .. } => {
-                            //     query.question_result(call_id, false)
-                            // }
-                            // QueryEvent::ExternalIsSubSpecializer { call_id, .. } => {
-                            //     query.question_result(call_id, false)
-                            // }
-                            _ => {
-                                // skip any rule which requires any other information
-                                // from FFI
-                                continue 'rule_iter;
+                                    let _ = args
+                                        .iter()
+                                        .map(|s| bindings.get(&s).cloned().unwrap())
+                                        .enumerate()
+                                        .fold(node, |node, (index, arg)| match node {
+                                            RuleIndex::Node(map) => {
+                                                map.entry(arg.clone()).or_insert_with(|| {
+                                                    if index + 2 == arity {
+                                                        RuleIndex::new_leaf()
+                                                    } else {
+                                                        RuleIndex::new_node()
+                                                    }
+                                                })
+                                            }
+                                            RuleIndex::Leaf(set) => {
+                                                assert_eq!(index + 1, arity);
+                                                set.insert(arg.clone());
+                                                node
+                                            }
+                                        });
+                                }
+                                // QueryEvent::ExternalCall { call_id, .. } => {
+                                //     let _ = query.call_result(call_id, None);
+                                // }
+                                // QueryEvent::ExternalIsa { call_id, .. } => {
+                                //     query.question_result(call_id, false)
+                                // }
+                                // QueryEvent::ExternalIsSubSpecializer { call_id, .. } => {
+                                //     query.question_result(call_id, false)
+                                // }
+                                _ => {
+                                    // skip any rule which requires any other information
+                                    // from FFI
+                                    if std::env::var("RUST_LOG").is_ok() {
+                                        eprintln!("Rule {} is is ineligible for precomputing. (Attempted to make a FFI call)", rule_name.0);
+                                    }
+                                    continue 'rule_iter;
+                                }
                             }
                         }
                     }
+                    precomputed.push((rule_name.clone(), results));
                 }
-                precomputed.push((name.clone(), results));
             }
-        }
-        for (name, index) in precomputed {
-            self.rules.insert(name, GenericRule::Precomputed { index });
+            if precomputed.is_empty() {
+                // no more precomputed this iteration, then break
+                break;
+            }
+            for (name, index) in precomputed {
+                if std::env::var("RUST_LOG").is_ok() {
+                    eprintln!("Inserting precomputation for {}: {:?}", name.0, index);
+                }
+                self.rules.insert(name, GenericRule::Precomputed { index });
+            }
         }
     }
 }
