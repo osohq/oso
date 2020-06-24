@@ -18,3 +18,21 @@ allow(actor, action, resource) :=
     # Use the ordered rule to find an allow result.
     # cut causes eval to stop on first allow result
     ordered(actor, action, resource, result), cut(), result = "allow";
+
+ordered2(actor, action, resource: ComplicatedResource) :=
+    !blocked(actor),
+    # Allow if actor is superuser
+    (actor.role = "superuser") |
+    (allowed(actor)) |
+    (resource.unrestricted = true);
+
+
+allow(actor, action, resource) :=
+    # Use the ordered rule to find an allow result.
+    # cut causes eval to stop on first allow result
+    ordered(actor, action, resource, result), cut(), result = "allow";
+
+allow2(actor, action, resource) :=
+    # Use the ordered rule to find an allow result.
+    # cut causes eval to stop on first allow result
+    ordered2(actor, action, resource);

@@ -29,3 +29,30 @@ def test_ordered_eval(oso):
     # Resource is unrestricted
     assert oso.allow(actor('Anybody', 'normal'), 'a', ComplicatedResource(True))
     assert not oso.allow(actor('Anybody', 'normal'), 'a', ComplicatedResource())
+
+def test_ordered_eval_other(oso):
+    actor = lambda name, role: {'name': name, 'role': role}
+
+    # Allowed
+    assert oso.query_predicate("allow2", actor('Alice', 'normal'), "a",
+                               ComplicatedResource()).success
+
+    # Blocked
+    assert not oso.query_predicate("allow2", actor('Mallory', 'normal'), "a",
+                                   ComplicatedResource()).success
+    assert not oso.query_predicate("allow2", actor('Mallory', 'superuser'), "a",
+                                   ComplicatedResource()).success
+    assert not oso.query_predicate("allow2", actor('Wallace', 'normal'), "a",
+                                   ComplicatedResource()).success
+
+    # Allowed because superuser
+    assert oso.query_predicate("allow2", actor('Jim', 'superuser'), "a",
+                               ComplicatedResource()).success
+    assert not oso.query_predicate("allow2", actor('Jim', 'normal'), "a",
+                                   ComplicatedResource()).success
+
+    # Resource is unrestricted
+    assert oso.query_predicate("allow2", actor('Anybody', 'normal'), 'a',
+                               ComplicatedResource(True)).success
+    assert not oso.query_predicate("allow2", actor('Anybody', 'normal'), 'a',
+                                   ComplicatedResource()).success
