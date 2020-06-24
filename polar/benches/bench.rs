@@ -112,7 +112,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                     b.iter_batched(
                         || {
                             let mut runner =
-                                runner_from_query("has_grandchild_called(Person{}, \"bert\")");
+                                runner_from_query("has_grandchild_called(new Person{}, \"bert\")");
                             runner.load(policy).unwrap();
                             n_results(&mut runner, *n);
                             runner.external_cost = Some(std::time::Duration::new(0, *delay));
