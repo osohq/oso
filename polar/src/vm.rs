@@ -880,6 +880,29 @@ impl PolarVirtualMachine {
                 let left = args.pop().unwrap();
                 self.push_goal(Goal::Isa { left, right })?
             }
+            Operator::ForAll => {
+                assert_eq!(args.len(), 2);
+                let action = args.pop().unwrap();
+                let condition = args.pop().unwrap();
+                // For all is implemented as !(condition, !action).
+                let op = Operation {
+                    operator: Operator::Not,
+                    args: vec![term.clone_with_value(Value::Expression(Operation {
+                        operator: Operator::And,
+                        args: vec![
+                            condition,
+                            term.clone_with_value(Value::Expression(Operation {
+                                operator: Operator::Not,
+                                args: vec![action],
+                            })),
+                        ],
+                    }))],
+                };
+                let double_negation = term.clone_with_value(Value::Expression(op));
+                self.push_goal(Goal::Query {
+                    term: double_negation,
+                })?;
+            }
             _ => {
                 return Err(
                     self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))
