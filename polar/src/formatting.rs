@@ -173,7 +173,7 @@ pub mod to_polar {
     /// Helper method: uses the operator precedence to determine if `t`
     /// has a lower precedence than `op`.
     fn has_lower_pred(op: Operator, t: &Term) -> bool {
-        match t.value {
+        match t.value() {
             Value::Expression(Operation {
                 operator: other, ..
             }) => op.precedence() > other.precedence(),
@@ -276,7 +276,7 @@ pub mod to_polar {
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {
-                        let call = self.args[1].value.clone().call().unwrap();
+                        let call = self.args[1].value().clone().call().unwrap();
                         if call.args.is_empty() {
                             format!("{}.{}", self.args[0].to_polar(), call.name.to_polar())
                         } else {
@@ -341,15 +341,11 @@ pub mod to_polar {
 
     impl ToPolarString for Rule {
         fn to_polar(&self) -> String {
-            match &self.body {
-                Term {
-                    value:
-                        Value::Expression(Operation {
-                            operator: Operator::And,
-                            args,
-                        }),
-                    ..
-                } => {
+            match &self.body.value() {
+                Value::Expression(Operation {
+                    operator: Operator::And,
+                    args,
+                }) => {
                     if args.is_empty() {
                         format!(
                             "{}({});",
@@ -378,7 +374,7 @@ pub mod to_polar {
 
     impl ToPolarString for Term {
         fn to_polar(&self) -> String {
-            self.value.to_polar()
+            self.value().to_polar()
         }
     }
 
