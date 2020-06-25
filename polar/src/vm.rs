@@ -128,6 +128,9 @@ pub struct PolarVirtualMachine {
 
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
+
+    /// Logging flag.
+    log: bool,
 }
 
 // Methods which aren't goals/instructions.
@@ -147,6 +150,7 @@ impl PolarVirtualMachine {
             debugger: Debugger::default(),
             kb,
             call_id_symbols: HashMap::new(),
+            log: std::env::var("RUST_LOG").is_ok(),
         }
     }
 
@@ -163,7 +167,7 @@ impl PolarVirtualMachine {
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
-        if std::env::var("RUST_LOG").is_ok() {
+        if self.log {
             eprintln!("{}", goal);
         }
         self.goal_counter += 1;
@@ -255,7 +259,7 @@ impl PolarVirtualMachine {
             self.maybe_break(DebugEvent::Goal(goal.clone()))?;
         }
 
-        if std::env::var("RUST_LOG").is_ok() {
+        if self.log {
             eprintln!("⇒ result");
             for t in &self.trace {
                 eprintln!("trace\n{}", draw(t, 0));
@@ -344,11 +348,11 @@ impl PolarVirtualMachine {
     }
 
     /// Push a binding onto the binding stack.
-    fn bind(&mut self, var: &Symbol, value: &Term) {
-        if std::env::var("RUST_LOG").is_ok() {
+    fn bind(&mut self, var: &Symbol, value: Term) {
+        if self.log {
             eprintln!("⇒ bind: {} ← {}", var.to_polar(), value.to_polar());
         }
-        self.bindings.push(Binding(var.clone(), value.clone()));
+        self.bindings.push(Binding(var.clone(), value));
     }
 
     /// Retrieve the current bindings and return them as a hash map.
@@ -439,7 +443,7 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> PolarResult<()> {
-        if std::env::var("RUST_LOG").is_ok() {
+        if self.log {
             eprintln!("⇒ backtrack");
         }
         loop {
@@ -1081,7 +1085,7 @@ impl PolarVirtualMachine {
                     .get(&call_id)
                     .expect("unregistered external call ID")
                     .clone(),
-                &value,
+                value,
             );
         } else {
             // No more results. Clean up, cut out the retry alternative,
@@ -1098,7 +1102,7 @@ impl PolarVirtualMachine {
     /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
     pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
-        self.bind(&var, &Term::new_temporary(Value::Boolean(answer)));
+        self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
     }
 
     /// Unify `left` and `right` terms.
@@ -1132,12 +1136,12 @@ impl PolarVirtualMachine {
                 (None, Some(value)) => {
                     // Left is unbound, right is bound;
                     // bind left to the value of right.
-                    self.bind(left, &value);
+                    self.bind(left, value);
                 }
                 (None, None) => {
                     // Neither is bound, so bind them together.
                     // TODO: should theoretically bind the earliest one here?
-                    self.bind(left, right);
+                    self.bind(left, right.clone());
                 }
             }
             Ok(())
@@ -1472,7 +1476,7 @@ impl PolarVirtualMachine {
                     // This is done here for safety to avoid a bug where `answer` is unbound by
                     // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
                     // of checking that is is equal to `true`.
-                    self.bind(&answer, &Term::new_temporary(Value::Boolean(false)));
+                    self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
 
                     self.append_goals(vec![
                         Rc::new(Goal::IsSubspecializer {
@@ -1551,19 +1555,17 @@ impl PolarVirtualMachine {
                 if left_fields.len() != right_fields.len() {
                     self.bind(
                         &answer,
-                        &Term::new_temporary(Value::Boolean(
-                            right_fields.len() < left.fields.len(),
-                        )),
+                        Term::new_temporary(Value::Boolean(right_fields.len() < left.fields.len())),
                     );
                 }
                 Ok(QueryEvent::None)
             }
             (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
-                self.bind(&answer, &Term::new_temporary(Value::Boolean(true)));
+                self.bind(&answer, Term::new_temporary(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
             _ => {
-                self.bind(&answer, &Term::new_temporary(Value::Boolean(false)));
+                self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
                 Ok(QueryEvent::None)
             }
         }
@@ -1661,19 +1663,19 @@ mod tests {
         assert_eq!(vm.deref(&term_x), term_x);
 
         // unbound var -> unbound var
-        vm.bind(&x, &term_y);
+        vm.bind(&x, term_y.clone());
         assert_eq!(vm.deref(&term_x), term_y);
 
         // value
         assert_eq!(vm.deref(&value), value.clone());
 
         // unbound var -> value
-        vm.bind(&x, &value);
+        vm.bind(&x, value.clone());
         assert_eq!(vm.deref(&term_x), value);
 
         // unbound var -> unbound var -> value
-        vm.bind(&x, &term_y);
-        vm.bind(&y, &value);
+        vm.bind(&x, term_y.clone());
+        vm.bind(&y, value.clone());
         assert_eq!(vm.deref(&term_x), value);
     }
 
@@ -2045,7 +2047,7 @@ mod tests {
         let y = sym!("y");
         let zero = term!(0);
         let mut vm = PolarVirtualMachine::default();
-        vm.bind(&x, &zero);
+        vm.bind(&x, zero.clone());
         assert_eq!(vm.value(&x), Some(&zero));
         assert_eq!(vm.value(&y), None);
     }
@@ -2106,7 +2108,7 @@ mod tests {
         let mut vm = PolarVirtualMachine::default();
 
         // Left variable bound to bound right variable.
-        vm.bind(&y, &one);
+        vm.bind(&y, one.clone());
         vm.append_goals(vec![Rc::new(Goal::Unify {
             left: term!(x),
             right: term!(y),
@@ -2116,7 +2118,7 @@ mod tests {
         vm.backtrack().unwrap();
 
         // Left variable bound to value.
-        vm.bind(&z, &one);
+        vm.bind(&z, one.clone());
         vm.append_goals(vec![Rc::new(Goal::Unify {
             left: term!(z.clone()),
             right: one.clone(),
@@ -2125,7 +2127,7 @@ mod tests {
         assert_eq!(vm.value(&z), Some(&one));
 
         // Left variable bound to value
-        vm.bind(&z, &one);
+        vm.bind(&z, one.clone());
         vm.append_goals(vec![Rc::new(Goal::Unify {
             left: term!(z.clone()),
             right: two,

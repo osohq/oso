@@ -6,6 +6,7 @@ use permute::permute;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::rc::Rc;
 
 use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 
