@@ -141,8 +141,8 @@ impl Query {
         self.vm.external_question_result(call_id, result)
     }
 
-    pub fn debug_command(&mut self, command: String) -> PolarResult<()> {
-        self.vm.debug_command(&command)
+    pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
+        self.vm.debug_command(command)
     }
 }
 
@@ -179,16 +179,16 @@ impl Polar {
             filename,
             src: src.to_owned(),
         };
-        let mut lines = parser::parse_lines(src).map_err(|e| fill_context(e, &source))?;
-        lines.reverse();
         let mut kb = self.kb.write().unwrap();
         let src_id = kb.new_id();
+        let mut lines = parser::parse_lines(src_id, src).map_err(|e| fill_context(e, &source))?;
+        lines.reverse();
         kb.sources.add_source(source, src_id);
         while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(mut rule) => {
                     let name = rule.name.clone();
-                    rewrite_rule(&mut rule, &mut kb, src_id);
+                    rewrite_rule(&mut rule, &mut kb);
                     let generic_rule = kb.rules.entry(name.clone()).or_insert(GenericRule {
                         name,
                         rules: vec![],
@@ -218,13 +218,11 @@ impl Polar {
             filename: None,
             src: src.to_owned(),
         };
-        let mut term = parser::parse_query(src).map_err(|e| fill_context(e, &source))?;
-        {
-            let mut kb = self.kb.write().unwrap();
-            let src_id = kb.new_id();
-            kb.sources.add_source(source, src_id);
-            rewrite_term(&mut term, &mut kb, src_id);
-        }
+        let mut kb = self.kb.write().unwrap();
+        let src_id = kb.new_id();
+        let mut term = parser::parse_query(src_id, src).map_err(|e| fill_context(e, &source))?;
+        kb.sources.add_source(source, src_id);
+        rewrite_term(&mut term, &mut kb);
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Rc::new(query)]);
         Ok(Query { done: false, vm })
@@ -235,7 +233,7 @@ impl Polar {
     pub fn new_query_from_term(&self, mut term: Term) -> Query {
         {
             let mut kb = self.kb.write().unwrap();
-            rewrite_term(&mut term, &mut kb, 0);
+            rewrite_term(&mut term, &mut kb);
         }
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Rc::new(query)]);

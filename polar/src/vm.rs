@@ -381,7 +381,7 @@ impl PolarVirtualMachine {
 
     /// Recursively dereference a variable.
     pub fn deref(&self, term: &Term) -> Term {
-        match &term.value {
+        match &term.value() {
             Value::Symbol(symbol) => self.value(&symbol).map_or(term.clone(), |t| self.deref(t)),
             _ => term.clone(),
         }
@@ -503,15 +503,15 @@ impl PolarVirtualMachine {
         //    x = {a: 1},
         //    foo isa x
         assert!(
-            !matches!(&right.value, Value::InstanceLiteral(_)),
+            !matches!(&right.value(), Value::InstanceLiteral(_)),
             "Called isa with bare instance lit!"
         );
         assert!(
-            !matches!(&right.value, Value::Dictionary(_)),
+            !matches!(&right.value(), Value::Dictionary(_)),
             "Called isa with bare dictionary!"
         );
 
-        match (&left.value, &right.value) {
+        match (&left.value(), &right.value()) {
             (Value::List(left), Value::List(right)) => {
                 if left.len() == right.len() {
                     self.append_goals(
@@ -566,13 +566,13 @@ impl PolarVirtualMachine {
                     let lookup = Goal::LookupExternal {
                         instance_id: left.instance_id,
                         call_id,
-                        field: Term::new(Value::Call(Predicate {
+                        field: Term::new_from_unknown(Value::Call(Predicate {
                             name: field.clone(),
                             args: vec![],
                         })),
                     };
                     let isa = Goal::Isa {
-                        left: Term::new(Value::Symbol(left_value)),
+                        left: Term::new_from_unknown(Value::Symbol(left_value)),
                         right: right_value.clone(),
                     };
                     self.append_goals(vec![Rc::new(lookup), Rc::new(isa)]);
@@ -610,8 +610,10 @@ impl PolarVirtualMachine {
             (Value::ExternalInstance(left), Value::Pattern(Pattern::Instance(right))) => {
                 // Check fields
                 self.push_goal(Goal::Isa {
-                    left: Term::new(Value::ExternalInstance(left.clone())),
-                    right: Term::new(Value::Pattern(Pattern::Dictionary(right.clone().fields))),
+                    left: Term::new_from_unknown(Value::ExternalInstance(left.clone())),
+                    right: Term::new_from_unknown(Value::Pattern(Pattern::Dictionary(
+                        right.clone().fields,
+                    ))),
                 })?;
                 // Check class
                 self.push_goal(Goal::IsaExternal {
@@ -630,7 +632,7 @@ impl PolarVirtualMachine {
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
         // check if field is a variable
-        match &field.value {
+        match &field.value() {
             Value::Symbol(_) => {
                 let mut alternatives: Alternatives = vec![];
                 for (k, v) in &dict.fields {
@@ -639,7 +641,7 @@ impl PolarVirtualMachine {
                     // if `field` is bound, unification will only succeed for the matching key
                     // if `field` is unbound, unification will succeed for all keys
                     goals.push(Rc::new(Goal::Unify {
-                        left: Term::new(Value::String(k.clone().0)),
+                        left: Term::new_from_unknown(Value::String(k.clone().0)),
                         right: field.clone(),
                     }));
                     // attempt to unify dict value with result
@@ -674,7 +676,7 @@ impl PolarVirtualMachine {
         instance_id: u64,
         field: &Term,
     ) -> PolarResult<QueryEvent> {
-        let (field_name, args) = match &field.value {
+        let (field_name, args) = match &field.value() {
             Value::Call(Predicate { name, args }) => (
                 name.clone(),
                 args.iter().map(|arg| self.deref(arg)).collect(),
@@ -704,8 +706,8 @@ impl PolarVirtualMachine {
         let call_id = self.new_call_id(&result);
 
         self.push_goal(Goal::Unify {
-            left: Term::new(Value::Symbol(result)),
-            right: Term::new(Value::Boolean(true)),
+            left: Term::new_from_unknown(Value::Symbol(result)),
+            right: Term::new_from_unknown(Value::Boolean(true)),
         })?;
 
         Ok(QueryEvent::ExternalIsa {
@@ -736,17 +738,15 @@ impl PolarVirtualMachine {
             children: vec![],
         });
 
-        match &term.value {
+        match &term.value() {
             Value::Call(predicate) => {
                 self.query_for_predicate(predicate.clone())?;
             }
             Value::Expression(Operation { operator, args }) => {
                 return self.query_for_operation(&term, *operator, args.clone());
             }
-            _ => {
-                return Err(
-                    self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))
-                );
+            v => {
+                return Err(self.type_error(&term, format!("can't query for: {}", v.to_polar())));
             }
         }
         Ok(QueryEvent::None)
@@ -841,17 +841,17 @@ impl PolarVirtualMachine {
                 let item = &args[0];
                 let list = self.deref(&args[1]);
                 let mut alternatives = vec![];
-                if let Value::List(list) = list.value {
+                if let Value::List(list) = list.value() {
                     for term in list {
                         alternatives.push(vec![Rc::new(Goal::Unify {
                             left: item.clone(),
-                            right: term,
+                            right: term.clone(),
                         })])
                     }
                 } else {
                     return Err(self.type_error(
                         item,
-                        format!("can only use `in` on a list, this is {:?}", item.value),
+                        format!("can only use `in` on a list, this is {:?}", item.value()),
                     ));
                 }
                 self.choose(alternatives);
@@ -871,15 +871,14 @@ impl PolarVirtualMachine {
             }
             Operator::New => {
                 assert_eq!(args.len(), 2);
-                let result = args
-                    .pop()
-                    .unwrap()
-                    .value
-                    .symbol()
-                    .expect("Must have result as second arg.");
+                let result = args.pop().unwrap();
+                assert!(
+                    matches!(result.value(), Value::Symbol(_)),
+                    "Must have result as second arg."
+                );
                 let mut literal_term = args.pop().unwrap();
                 let mut literal_value = literal_term
-                    .value
+                    .value()
                     .clone()
                     .instance_literal()
                     .expect("Arg must be instance literal");
@@ -889,16 +888,16 @@ impl PolarVirtualMachine {
                 });
 
                 let instance_id = self.new_id();
-                literal_term.value = Value::ExternalInstance(ExternalInstance {
+                literal_term.replace_value(Value::ExternalInstance(ExternalInstance {
                     instance_id,
                     literal: Some(literal_value.clone()),
-                });
+                }));
 
                 // A goal is used here in case the result is already bound to some external
                 // instance.
                 self.append_goals(vec![
                     Rc::new(Goal::Unify {
-                        left: Term::new(Value::Symbol(result)),
+                        left: result,
                         right: literal_term,
                     }),
                     Rc::new(Goal::MakeExternal {
@@ -955,9 +954,10 @@ impl PolarVirtualMachine {
                 })?;
             }
             _ => {
-                return Err(
-                    self.type_error(&term, format!("can't query for: {}", term.value.to_polar()))
-                );
+                return Err(self.type_error(
+                    &term,
+                    format!("can't query for: {}", term.value().to_polar()),
+                ));
             }
         }
         Ok(QueryEvent::None)
@@ -970,10 +970,10 @@ impl PolarVirtualMachine {
         let field = &args[1];
         let value = &args[2];
 
-        match object.value {
+        match object.value() {
             // Push a `Lookup` goal for dictionaries
             Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
-                dict,
+                dict: dict.clone(),
                 field: field.clone(),
                 value: args.remove(2),
             })?,
@@ -983,11 +983,11 @@ impl PolarVirtualMachine {
             }
             // Push an `ExternalLookup` goal for external instances
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                let value = value.clone().value.symbol().expect("Bad lookup value.");
+                let value = value.value().clone().symbol().expect("Bad lookup value.");
                 let call_id = self.new_call_id(&value);
                 self.push_goal(Goal::LookupExternal {
                     call_id,
-                    instance_id,
+                    instance_id: *instance_id,
                     field: field.clone(),
                 })?;
             }
@@ -996,7 +996,7 @@ impl PolarVirtualMachine {
                     &object,
                     format!(
                         "can only perform lookups on dicts and instances, this is {:?}",
-                        object.value
+                        object.value()
                     ),
                 ))
             }
@@ -1012,12 +1012,12 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<()> {
         assert_eq!(args.len(), 2);
-        let left = self.deref(&args[0]).value;
-        let right = self.deref(&args[1]).value;
+        let left = self.deref(&args[0]);
+        let right = self.deref(&args[1]);
 
         let result: bool;
 
-        let (left, right) = match (left, right) {
+        let (left, right) = match (left.value(), right.value()) {
             (Value::Number(left), Value::Number(right)) => (left, right),
             (left, right) => {
                 return Err(self.type_error(
@@ -1102,7 +1102,7 @@ impl PolarVirtualMachine {
                 .get(&call_id)
                 .expect("unregistered external call ID")
                 .clone(),
-            &Term::new(Value::Boolean(answer)),
+            &Term::new_from_unknown(Value::Boolean(answer)),
         );
         self.call_id_symbols.remove(&call_id).expect("bad call id");
     }
@@ -1119,7 +1119,7 @@ impl PolarVirtualMachine {
         let mut unify_var = |left: &Symbol, right: &Term| -> PolarResult<()> {
             let left_value = self.value(&left).cloned();
             let mut right_value = None;
-            if let Value::Symbol(ref right_sym) = right.value {
+            if let Value::Symbol(ref right_sym) = right.value() {
                 right_value = self.value(right_sym).cloned();
             }
 
@@ -1150,7 +1150,7 @@ impl PolarVirtualMachine {
         };
 
         // Unify generic terms.
-        match (&left.value, &right.value) {
+        match (&left.value(), &right.value()) {
             // Unify symbols as variables.
             (Value::Symbol(var), _) => unify_var(var, right)?,
             (_, Value::Symbol(var)) => unify_var(var, left)?,
@@ -1478,7 +1478,7 @@ impl PolarVirtualMachine {
                     // This is done here for safety to avoid a bug where `answer` is unbound by
                     // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
                     // of checking that is is equal to `true`.
-                    self.bind(&answer, &Term::new(Value::Boolean(false)));
+                    self.bind(&answer, &Term::new_from_unknown(Value::Boolean(false)));
 
                     self.append_goals(vec![
                         Rc::new(Goal::IsSubspecializer {
@@ -1488,8 +1488,8 @@ impl PolarVirtualMachine {
                             arg: arg.clone(),
                         }),
                         Rc::new(Goal::Unify {
-                            left: Term::new(Value::Symbol(answer)),
-                            right: Term::new(Value::Boolean(true)),
+                            left: Term::new_from_unknown(Value::Symbol(answer)),
+                            right: Term::new_from_unknown(Value::Boolean(true)),
                         }),
                     ]);
                     return Ok(());
@@ -1509,11 +1509,11 @@ impl PolarVirtualMachine {
         right: &Term,
         arg: &Term,
     ) -> PolarResult<QueryEvent> {
-        assert!(!matches!(left.value, Value::InstanceLiteral(_)));
-        assert!(!matches!(right.value, Value::InstanceLiteral(_)));
+        assert!(!matches!(left.value(), Value::InstanceLiteral(_)));
+        assert!(!matches!(right.value(), Value::InstanceLiteral(_)));
 
         let arg = self.deref(&arg);
-        match (&arg.value, &left.value, &right.value) {
+        match (arg.value(), left.value(), right.value()) {
             (
                 Value::ExternalInstance(instance),
                 Value::Pattern(Pattern::Instance(left)),
@@ -1525,9 +1525,13 @@ impl PolarVirtualMachine {
                 {
                     self.push_goal(Goal::IsSubspecializer {
                         answer: answer.clone(),
-                        left: Term::new(Value::Dictionary(left.fields.clone())),
-                        right: Term::new(Value::Dictionary(right.fields.clone())),
-                        arg: Term::new(Value::ExternalInstance(instance.clone())),
+                        left: Term::new_from_unknown(Value::Pattern(Pattern::Dictionary(
+                            left.fields.clone(),
+                        ))),
+                        right: Term::new_from_unknown(Value::Pattern(Pattern::Dictionary(
+                            right.fields.clone(),
+                        ))),
+                        arg: Term::new_from_unknown(Value::ExternalInstance(instance.clone())),
                     })?;
                 }
                 // check ordering based on the classes
@@ -1552,17 +1556,19 @@ impl PolarVirtualMachine {
                 if left_fields.len() != right_fields.len() {
                     self.bind(
                         &answer,
-                        &Term::new(Value::Boolean(right_fields.len() < left.fields.len())),
+                        &Term::new_from_unknown(Value::Boolean(
+                            right_fields.len() < left.fields.len(),
+                        )),
                     );
                 }
                 Ok(QueryEvent::None)
             }
             (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
-                self.bind(&answer, &Term::new(Value::Boolean(true)));
+                self.bind(&answer, &Term::new_from_unknown(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
             _ => {
-                self.bind(&answer, &Term::new(Value::Boolean(false)));
+                self.bind(&answer, &Term::new_from_unknown(Value::Boolean(false)));
                 Ok(QueryEvent::None)
             }
         }
@@ -1571,13 +1577,13 @@ impl PolarVirtualMachine {
     fn type_error(&self, term: &Term, msg: String) -> error::PolarError {
         let source = { self.kb.read().unwrap().sources.get_source(&term) };
         let context = if let Some(source) = source {
-            make_context(&source, term.offset)
+            make_context(&source, term.offset())
         } else {
             None
         };
         error::RuntimeError::TypeError {
             msg,
-            loc: term.offset,
+            loc: term.offset(),
             context,
         }
         .into()
@@ -1727,7 +1733,7 @@ mod tests {
         let parts = vec![f1, f2, f3];
         for permutation in permute(parts) {
             vm.push_goal(Goal::Query {
-                term: Term::new(Value::Expression(Operation {
+                term: Term::new_from_unknown(Value::Expression(Operation {
                     operator: Operator::And,
                     args: permutation,
                 })),
@@ -2090,8 +2096,8 @@ mod tests {
             })],
         );
         let _ = vm.run().unwrap();
-        assert_eq!(vm.value(&x), Some(&Term::new(zero)));
-        assert_eq!(vm.value(&y), Some(&Term::new(one)));
+        assert_eq!(vm.value(&x), Some(&Term::new_from_unknown(zero)));
+        assert_eq!(vm.value(&y), Some(&Term::new_from_unknown(one)));
     }
 
     #[test]
@@ -2140,30 +2146,30 @@ mod tests {
         let rule = Rule {
             name: Symbol::new("foo"),
             params: vec![],
-            body: Term::new(Value::Expression(Operation {
+            body: Term::new_from_unknown(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![
                     term!(1),
-                    Term::new(Value::Symbol(Symbol("x".to_string()))),
-                    Term::new(Value::Symbol(Symbol("x".to_string()))),
-                    Term::new(Value::List(vec![Term::new(Value::Symbol(Symbol(
-                        "y".to_string(),
-                    )))])),
+                    Term::new_from_unknown(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new_from_unknown(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new_from_unknown(Value::List(vec![Term::new_from_unknown(
+                        Value::Symbol(Symbol("y".to_string())),
+                    )])),
                 ],
             })),
         };
 
         let renamed_rule = vm.rename_rule_vars(&rule);
         let renamed_terms = unwrap_and(renamed_rule.body);
-        assert_eq!(renamed_terms[1].value, renamed_terms[2].value);
-        let x_value = match &renamed_terms[1].value {
+        assert_eq!(renamed_terms[1].value(), renamed_terms[2].value());
+        let x_value = match &renamed_terms[1].value() {
             Value::Symbol(sym) => Some(sym.0.clone()),
             _ => None,
         };
         assert_eq!(x_value.unwrap(), "_x_0");
 
-        let y_value = match &renamed_terms[3].value {
-            Value::List(terms) => match &terms[0].value {
+        let y_value = match &renamed_terms[3].value() {
+            Value::List(terms) => match &terms[0].value() {
                 Value::Symbol(sym) => Some(sym.0.clone()),
                 _ => None,
             },

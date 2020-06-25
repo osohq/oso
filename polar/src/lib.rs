@@ -25,7 +25,6 @@ use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-
 use std::ptr::{null, null_mut};
 
 /// Get a reference to an object from a pointer
@@ -222,11 +221,8 @@ pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_cha
         if !value.is_null() {
             let s = unsafe { ffi_string!(value) };
             let t = serde_json::from_str(&s);
-            match t {
-                Ok(types::Term {
-                    value: types::Value::String(command),
-                    ..
-                }) => match query.debug_command(command) {
+            match t.as_ref().map(types::Term::value) {
+                Ok(types::Value::String(command)) => match query.debug_command(command) {
                     Ok(_) => POLAR_SUCCESS,
                     Err(e) => {
                         set_error(e);
