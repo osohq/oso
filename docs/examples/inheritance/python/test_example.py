@@ -4,7 +4,7 @@ import pytest
 
 from oso import Oso
 
-import inheritance_external
+from . import inheritance_external
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ def test(patient):
 @pytest.fixture
 def load(oso):
     def load(policy):
-        oso.load_file(Path(__file__).parent / policy)
+        oso.load_file(Path(__file__).parent.parent / policy)
 
     return load
 
@@ -69,7 +69,7 @@ def load(oso):
 )
 def test_loads(oso, policy, load):
     # Test that policy loads.
-    oso.load_file(Path(__file__).parent / policy)
+    oso.load_file(Path(__file__).parent.parent / policy)
     oso._load_queued_files()
 
 
