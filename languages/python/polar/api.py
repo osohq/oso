@@ -335,6 +335,12 @@ class Polar:
                 answer = args[0] > args[1]
             elif op == "Eq":
                 answer = args[0] == args[1]
+            elif op == "Leq":
+                answer = args[0] <= args[1]
+            elif op == "Geq":
+                answer = args[0] >= args[1]
+            elif op == "Neq":
+                answer = args[0] != args[1]
             else:
                 raise PolarRuntimeException(
                     f"Unsupported external operation '{type(args[0])} {op} {type(args[1])}'"

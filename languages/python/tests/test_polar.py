@@ -476,7 +476,7 @@ def test_unify(polar, qeval):
     assert qeval("foo()")
 
 
-def test_external_op(polar, qeval):
+def test_external_op(polar):
     class A:
         def __init__(self, a):
             self.a = a
@@ -505,5 +505,18 @@ def test_external_op(polar, qeval):
     a2 = A(2)
 
     polar.load_str("lt(a, b) := a < b;")
+    polar.load_str("gt(a, b) := a > b;")
     assert polar._query_pred(Predicate("lt", [a1, a2])).success
     assert not polar._query_pred(Predicate("lt", [a2, a1])).success
+    assert polar._query_pred(Predicate("gt", [a2, a1])).success
+
+
+def test_datetime_compare(polar):
+    from datetime import datetime
+
+    t1 = datetime(2020, 5, 25)
+    t2 = datetime.now()
+
+    polar.load_str("lt(a, b) := a < b;")
+    assert polar._query_pred(Predicate("lt", [t1, t2])).success
+    assert not polar._query_pred(Predicate("lt", [t2, t1])).success
