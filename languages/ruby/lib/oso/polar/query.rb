@@ -98,7 +98,7 @@ module Oso
             when 'Debug'
               puts event.data['message'] if event.data['message']
               print '> '
-              input = gets.chomp!
+              input = $stdin.gets.chomp!
               command = JSON.dump(polar.to_polar_term(input))
               ffi_instance.debug_command(command)
             else
