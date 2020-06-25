@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{error, ToPolarString};
@@ -375,7 +376,7 @@ pub struct Term {
     offset: usize,
 
     /// The actual underlying value
-    value: Value,
+    value: Rc<Value>,
 }
 
 impl PartialEq for Term {
@@ -390,7 +391,7 @@ impl Term {
         Self {
             src_id: 0,
             offset: 0,
-            value,
+            value: Rc::new(value),
         }
     }
 
@@ -399,7 +400,7 @@ impl Term {
         Self {
             src_id,
             offset,
-            value,
+            value: Rc::new(value),
         }
     }
 
@@ -408,7 +409,7 @@ impl Term {
         Self {
             src_id,
             offset: 0,
-            value,
+            value: Rc::new(value),
         }
     }
 
@@ -416,12 +417,12 @@ impl Term {
         Self {
             src_id: self.src_id,
             offset: self.offset,
-            value,
+            value: Rc::new(value),
         }
     }
 
     pub fn replace_value(&mut self, value: Value) {
-        self.value = value;
+        self.value = Rc::new(value);
     }
 
     /// Apply `f` to value and return a new term.
@@ -475,7 +476,7 @@ impl Term {
     }
 
     pub fn value_mut(&mut self) -> &mut Value {
-        &mut self.value
+        Rc::make_mut(&mut self.value)
     }
 }
 
