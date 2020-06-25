@@ -511,12 +511,23 @@ def test_external_op(polar):
     assert polar._query_pred(Predicate("gt", [a2, a1])).success
 
 
-def test_datetime_compare(polar):
+def test_datetime(polar):
     from datetime import datetime
 
+    # test datetime comparison
     t1 = datetime(2020, 5, 25)
     t2 = datetime.now()
+    t3 = datetime(2030, 5, 25)
 
     polar.load_str("lt(a, b) := a < b;")
     assert polar._query_pred(Predicate("lt", [t1, t2])).success
     assert not polar._query_pred(Predicate("lt", [t2, t1])).success
+
+    # test creating datetime from polar
+    polar.load_str("dt(x) := x = new Datetime{year: 2020, month: 5, day: 25};")
+    assert polar._query_pred(Predicate("dt", [Variable("x")])).results == [
+        {"x": datetime(2020, 5, 25)}
+    ]
+    polar.load_str("ltnow(x) := x < new Datetime{}.now();")
+    assert polar._query_pred(Predicate("ltnow", [t1])).success
+    assert not polar._query_pred(Predicate("ltnow", [t3])).success

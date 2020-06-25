@@ -8,7 +8,7 @@ from _polar_lib import lib
 
 from .errors import get_error
 from .exceptions import PolarApiException, PolarRuntimeException
-from .extras import Http, PathMapper
+from .extras import Http, PathMapper, Datetime
 from .ffi import (
     external_answer,
     external_call,
@@ -59,6 +59,7 @@ class Polar:
         # Register built-in classes.
         self.register_class(Http)
         self.register_class(PathMapper)
+        self.register_class(Datetime)
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.

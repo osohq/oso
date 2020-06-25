@@ -1,6 +1,7 @@
 import re
 
 from typing import List
+from datetime import datetime
 
 
 class Http:
@@ -43,3 +44,13 @@ class PathMapper:
         match = self.pattern.match(string)
         if match:
             yield match.groupdict()
+
+
+class Datetime(datetime):
+    def __new__(
+        cls, year=1970, month=1, day=1, hour=0, minute=0, second=0, microsecond=0
+    ):
+        return super().__new__(cls, year, month, day, hour, minute, second, microsecond)
+
+    def now(self):
+        return datetime.now()
