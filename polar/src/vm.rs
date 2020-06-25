@@ -905,7 +905,7 @@ impl PolarVirtualMachine {
             | op @ Operator::Geq
             | op @ Operator::Eq
             | op @ Operator::Neq => {
-                self.comparison_op_helper(term, op, args)?;
+                return self.comparison_op_helper(term, op, args);
             }
             Operator::In => {
                 assert_eq!(args.len(), 2);
@@ -1078,7 +1078,7 @@ impl PolarVirtualMachine {
         term: &Term,
         op: Operator,
         args: Vec<Term>,
-    ) -> PolarResult<()> {
+    ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 2);
         let left = self.deref(&args[0]);
         let right = self.deref(&args[1]);
@@ -1087,6 +1087,26 @@ impl PolarVirtualMachine {
 
         let (left, right) = match (left.value(), right.value()) {
             (Value::Number(left), Value::Number(right)) => (left, right),
+            (Value::ExternalInstance(left), Value::ExternalInstance(right)) => {
+                // Generate symbol for external op result and bind to `false` (default)
+                let answer = self.kb.read().unwrap().gensym("external_op_result");
+                self.bind(&answer, &Term::new(Value::Boolean(false)));
+
+                // append unify goal to be evaluated after external op result is returned & bound
+                self.append_goals(vec![Goal::Unify {
+                    left: Term::new(Value::Symbol(answer.clone())),
+                    right: Term::new(Value::Boolean(true)),
+                }]);
+                let call_id = self.new_call_id(&answer);
+                return Ok(QueryEvent::ExternalOp {
+                    call_id,
+                    operator: op,
+                    args: vec![
+                        Term::new(Value::ExternalInstance(left)),
+                        Term::new(Value::ExternalInstance(right)),
+                    ],
+                });
+            }
             (left, right) => {
                 return Err(self.type_error(
                     term,
@@ -1128,7 +1148,7 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::Backtrack)?;
         }
 
-        Ok(())
+        Ok(QueryEvent::None)
     }
 
     /// Handle an external result provided by the application.

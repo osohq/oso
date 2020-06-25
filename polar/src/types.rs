@@ -673,6 +673,12 @@ pub enum QueryEvent {
         bindings: Bindings,
         trace: Option<Rc<Trace>>,
     },
+
+    ExternalOp {
+        call_id: u64,
+        operator: Operator,
+        args: TermList,
+    },
 }
 
 #[cfg(test)]

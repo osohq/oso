@@ -221,6 +221,8 @@ class Polar:
                     self.__handle_make_external(data)
                 if kind == "ExternalCall":
                     self.__handle_external_call(query, data)
+                if kind == "ExternalOp":
+                    self.__handle_external_op(query, data)
                 if kind == "ExternalIsa":
                     self.__handle_external_isa(query, data)
                 if kind == "ExternalUnify":
@@ -321,6 +323,27 @@ class Polar:
             external_call(self.polar, query, call_id, stringified)
         except StopIteration:
             external_call(self.polar, query, call_id, None)
+
+    def __handle_external_op(self, query, data):
+        op = data["operator"]
+        args = [self._to_python(arg) for arg in data["args"]]
+        answer: bool
+        try:
+            if op == "Lt":
+                answer = args[0] < args[1]
+            elif op == "Gt":
+                answer = args[0] > args[1]
+            elif op == "Eq":
+                answer = args[0] == args[1]
+            else:
+                raise PolarRuntimeException(
+                    f"Unsupported external operation '{type(args[0])} {op} {type(args[1])}'"
+                )
+            external_answer(self.polar, query, data["call_id"], answer)
+        except TypeError:
+            raise PolarRuntimeException(
+                f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
+            )
 
     def __handle_external_isa(self, query, data):
         cls_name = data["class_tag"]
