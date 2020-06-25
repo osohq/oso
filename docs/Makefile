@@ -27,10 +27,9 @@ test: doctest
 	python3 run_doc_tests.py externals-example/company.py externals-example/company.polar
 	cd externals-example && python3 -m pytest
 
-	cd examples/inheritance && pytest .
-	cd examples/rbac && pytest .
-	cd examples/abac && pytest .
-	cd examples/context && pytest .
+	cd examples/inheritance/python && pytest .
+	cd examples/rbac/python && pytest .
+	cd examples/context/python && pytest .
 
 deps:
 	pip3 install -r requirements-docs.txt
