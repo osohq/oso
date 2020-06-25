@@ -86,6 +86,7 @@ pub enum Token {
     Cut,       // cut()
     Debug,     // debug()
     Isa,       // isa
+    ForAll,    // forall
 }
 
 impl ToString for Token {
@@ -125,7 +126,8 @@ impl ToString for Token {
             Token::In => "in".to_owned(),       // in
             Token::Cut => "cut".to_owned(),     // cut
             Token::Debug => "debug".to_owned(),
-            Token::Isa => "isa".to_owned(), // isa
+            Token::Isa => "isa".to_owned(),       // isa
+            Token::ForAll => "forall".to_owned(), // forall
         }
     }
 }
@@ -188,6 +190,8 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Debug, last + 1)))
         } else if &self.buf == "isa" {
             Some(Ok((start, Token::Isa, last + 1)))
+        } else if &self.buf == "forall" {
+            Some(Ok((start, Token::ForAll, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }

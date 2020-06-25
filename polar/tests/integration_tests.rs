@@ -943,3 +943,42 @@ fn test_cut() {
     assert!(qeval(&mut polar, "f(1)"));
     assert!(qeval(&mut polar, "f(2)"));
 }
+
+#[test]
+fn test_forall() {
+    let mut polar = Polar::new();
+    polar
+        .load("all_ones(l) := forall(item in l, item = 1);")
+        .unwrap();
+
+    assert!(qeval(&mut polar, "all_ones([1])"));
+    assert!(qeval(&mut polar, "all_ones([1, 1, 1])"));
+    assert!(qnull(&mut polar, "all_ones([1, 2, 1])"));
+
+    polar
+        .load("not_ones(l) := forall(item in l, item != 1);")
+        .unwrap();
+    assert!(qnull(&mut polar, "not_ones([1])"));
+    assert!(qeval(&mut polar, "not_ones([2, 3, 4])"));
+
+    assert!(qnull(&mut polar, "forall(x = 2 | x = 3, x != 2)"));
+    assert!(qnull(&mut polar, "forall(x = 2 | x = 3, x != 3)"));
+    assert!(qeval(&mut polar, "forall(x = 2 | x = 3, x = 2 | x = 3)"));
+    assert!(qeval(&mut polar, "forall(x = 1, x = 1)"));
+    assert!(qeval(&mut polar, "forall(x in [2, 3, 4], x > 1)"));
+
+    polar.load("g(1);").unwrap();
+    polar.load("g(2);").unwrap();
+    polar.load("g(3);").unwrap();
+
+    assert!(qeval(&mut polar, "forall(g(x), x in [1, 2, 3])"));
+
+    polar.load("allow(_: {x: 1}, y) := y = 1;").unwrap();
+    polar.load("allow(_: {y: 1}, y) := y = 2;").unwrap();
+    polar.load("allow(_: {z: 1}, y) := y = 3;").unwrap();
+
+    assert!(qeval(
+        &mut polar,
+        "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])"
+    ));
+}

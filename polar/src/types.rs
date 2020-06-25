@@ -155,6 +155,7 @@ pub enum Operator {
     Unify,
     Or,
     And,
+    ForAll,
 }
 
 impl Operator {
@@ -163,6 +164,7 @@ impl Operator {
             Operator::Debug => 11,
             Operator::New => 10,
             Operator::Cut => 10,
+            Operator::ForAll => 10,
             Operator::Dot => 9,
             Operator::In => 8,
             Operator::Isa => 8,
