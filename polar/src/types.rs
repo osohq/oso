@@ -568,7 +568,7 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Trace {
     pub node: Node,
-    pub children: Vec<Trace>,
+    pub children: Vec<Rc<Trace>>,
 }
 
 #[derive(Default)]
@@ -664,7 +664,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
-        trace: Option<Trace>,
+        trace: Option<Rc<Trace>>,
     },
 }
 
