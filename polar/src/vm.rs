@@ -128,6 +128,9 @@ pub struct PolarVirtualMachine {
 
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
+
+    /// Logging flag.
+    log: bool,
 }
 
 // Methods which aren't goals/instructions.
@@ -147,6 +150,7 @@ impl PolarVirtualMachine {
             debugger: Debugger::default(),
             kb,
             call_id_symbols: HashMap::new(),
+            log: std::env::var("RUST_LOG").is_ok(),
         }
     }
 
@@ -163,7 +167,7 @@ impl PolarVirtualMachine {
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
-        if std::env::var("RUST_LOG").is_ok() {
+        if self.log {
             eprintln!("{}", goal);
         }
         self.goal_counter += 1;
@@ -264,7 +268,7 @@ impl PolarVirtualMachine {
             self.maybe_break(DebugEvent::Goal(goal.clone()))?;
         }
 
-        if std::env::var("RUST_LOG").is_ok() {
+        if self.log {
             eprintln!("⇒ result");
             for t in &self.trace {
                 eprintln!("trace\n{}", draw(t, 0));
@@ -354,7 +358,7 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: Rc<Term>) {
-        if std::env::var("RUST_LOG").is_ok() {
+        if self.log {
             eprintln!("⇒ bind: {} ← {}", var.to_polar(), value.to_polar());
         }
         self.bindings.push(Binding(var.clone(), value));
@@ -446,7 +450,7 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> PolarResult<()> {
-        if std::env::var("RUST_LOG").is_ok() {
+        if self.log {
             eprintln!("⇒ backtrack");
         }
         loop {
