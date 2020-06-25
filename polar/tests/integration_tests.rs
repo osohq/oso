@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 
-type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Trace>)>;
+type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Rc<Trace>>)>;
 use mock_externals::MockExternal;
 
 fn no_results(_: Symbol, _: TermList, _: u64, _: u64) -> Option<Rc<Term>> {

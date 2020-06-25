@@ -78,7 +78,7 @@ pub enum Goal {
         inner: usize,
     },
     TraceRule {
-        trace: Trace,
+        trace: Rc<Trace>,
     },
     TracePush,
     TracePop,
@@ -94,11 +94,11 @@ pub struct Binding(pub Symbol, pub Rc<Term>);
 #[derive(Clone, Debug)]
 pub struct Choice {
     pub alternatives: Alternatives,
-    bsp: usize,        // binding stack pointer
-    pub goals: Goals,  // goal stack snapshot
-    queries: Queries,  // query stack snapshot
-    trace: Vec<Trace>, // trace snapshot
-    trace_stack: Vec<Vec<Trace>>,
+    bsp: usize,            // binding stack pointer
+    pub goals: Goals,      // goal stack snapshot
+    queries: Queries,      // query stack snapshot
+    trace: Vec<Rc<Trace>>, // trace snapshot
+    trace_stack: Vec<Vec<Rc<Trace>>>,
 }
 
 pub type Alternatives = Vec<Goals>;
@@ -115,8 +115,8 @@ pub struct PolarVirtualMachine {
     choices: Choices,
     pub queries: Queries,
 
-    pub trace_stack: Vec<Vec<Trace>>, // Stack of traces higher up the tree.
-    pub trace: Vec<Trace>,            // Traces for the current level of the trace tree.
+    pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
+    pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
     /// Count executed goals
     goal_counter: usize,
@@ -230,11 +230,10 @@ impl PolarVirtualMachine {
             Goal::TracePop => {
                 let mut children = self.trace.clone();
                 self.trace = self.trace_stack.pop().unwrap();
-                self.trace
-                    .last_mut()
-                    .unwrap()
-                    .children
-                    .append(&mut children);
+                let mut trace = self.trace.pop().unwrap();
+                let trace = Rc::make_mut(&mut trace);
+                trace.children.append(&mut children);
+                self.trace.push(Rc::new(trace.clone()));
             }
             Goal::TraceRule { trace } => {
                 self.trace.push(trace.clone());
@@ -747,10 +746,10 @@ impl PolarVirtualMachine {
     fn query(&mut self, term: Rc<Term>) -> PolarResult<QueryEvent> {
         self.queries.push(term.clone());
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
-        self.trace.push(Trace {
+        self.trace.push(Rc::new(Trace {
             node: Node::Term(term.clone()),
             children: vec![],
-        });
+        }));
 
         match &term.value {
             Value::Call(predicate) => {
@@ -1433,10 +1432,10 @@ impl PolarVirtualMachine {
             for rule in rules.iter() {
                 let mut goals = vec![];
                 goals.push(Goal::TraceRule {
-                    trace: Trace {
+                    trace: Rc::new(Trace {
                         node: Node::Rule(rule.clone()),
                         children: vec![],
-                    },
+                    }),
                 });
                 goals.push(Goal::TracePush);
                 let Rule { body, params, .. } = self.rename_rule_vars(rule);
