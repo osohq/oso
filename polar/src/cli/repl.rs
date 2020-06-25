@@ -123,7 +123,7 @@ pub fn main() -> anyhow::Result<()> {
                 Ok(QueryEvent::Debug { message }) => {
                     println!("{}", message);
                     let input = repl.plain_input("> ").unwrap();
-                    query.debug_command(input).unwrap();
+                    query.debug_command(&input).unwrap();
                 }
                 Ok(e) => println!("Unsupported event: {:?}", e),
                 Err(e) => println!("{}", e),

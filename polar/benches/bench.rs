@@ -223,7 +223,7 @@ impl Runner {
         let mut repl = crate::cli::repl::Repl::new();
         println!("{}", message);
         let input = repl.plain_input("> ").unwrap();
-        self.query.debug_command(input).unwrap();
+        self.query.debug_command(&input).unwrap();
     }
 
     fn make_external(&mut self, literal: InstanceLiteral) -> Term {
