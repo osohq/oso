@@ -1,7 +1,7 @@
 import re
 
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Http:
@@ -52,5 +52,35 @@ class Datetime(datetime):
     ):
         return super().__new__(cls, year, month, day, hour, minute, second, microsecond)
 
+    def from_datetime(dt):
+        return Datetime(
+            year=dt.year,
+            month=dt.month,
+            day=dt.day,
+            hour=dt.hour,
+            minute=dt.minute,
+            second=dt.second,
+            microsecond=dt.microsecond,
+        )
+
     def now(self):
-        return datetime.now()
+        return Datetime.from_datetime(datetime.now())
+
+    def sub(self, other):
+        return self.__sub__(other)
+
+
+class Timedelta(timedelta):
+    def __new__(
+        cls,
+        days=0,
+        seconds=0,
+        microseconds=0,
+        milliseconds=0,
+        minutes=0,
+        hours=0,
+        weeks=0,
+    ):
+        return super().__new__(
+            cls, days, seconds, microseconds, milliseconds, minutes, hours, weeks
+        )

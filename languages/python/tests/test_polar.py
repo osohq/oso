@@ -1,5 +1,7 @@
 from pathlib import Path
+from datetime import datetime, timedelta
 
+from polar.extras import Datetime, Timedelta
 from polar import exceptions, Polar, Predicate, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
@@ -512,12 +514,12 @@ def test_external_op(polar):
 
 
 def test_datetime(polar):
-    from datetime import datetime
 
     # test datetime comparison
-    t1 = datetime(2020, 5, 25)
-    t2 = datetime.now()
-    t3 = datetime(2030, 5, 25)
+    t1 = Datetime(2020, 5, 25)
+    t2 = Datetime().now()
+    t3 = Datetime(2030, 5, 25)
+    t4 = Datetime(2020, 5, 26)
 
     polar.load_str("lt(a, b) := a < b;")
     assert polar._query_pred(Predicate("lt", [t1, t2])).success
@@ -531,3 +533,8 @@ def test_datetime(polar):
     polar.load_str("ltnow(x) := x < new Datetime{}.now();")
     assert polar._query_pred(Predicate("ltnow", [t1])).success
     assert not polar._query_pred(Predicate("ltnow", [t3])).success
+
+    polar.load_str(
+        "timedelta(a: Datetime, b: Datetime) := a.sub(b) == new Timedelta{days: 1};"
+    )
+    assert polar._query_pred(Predicate("timedelta", [t4, t1])).success
