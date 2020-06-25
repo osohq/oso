@@ -937,4 +937,9 @@ fn test_cut() {
         qvars(&mut polar, "c_another_partial_cut(a, b)", &["a", "b"]),
         vec![vec![value!(1), value!(3)], vec![value!(1), value!(4)]]
     );
+
+    polar.load("f(x) := (x = 1, cut()) | x = 2;").unwrap();
+    assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+    assert!(qeval(&mut polar, "f(1)"));
+    assert!(qeval(&mut polar, "f(2)"));
 }
