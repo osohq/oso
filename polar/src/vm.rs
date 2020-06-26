@@ -456,7 +456,7 @@ impl PolarVirtualMachine {
                         } else {
                             let new = self.kb.read().unwrap().gensym(&sym.0);
                             renames.insert(sym.clone(), new.clone());
-                            t.clone_with_value(Value::Symbol(new.clone()))
+                            t.clone_with_value(Value::Symbol(new))
                         }
                     }
                     _ => t.clone(),
@@ -1303,6 +1303,7 @@ impl PolarVirtualMachine {
 
     /// Filter rules to just those applicable to a list of arguments,
     /// then sort them by specificity.
+    #[allow(clippy::ptr_arg)]
     fn filter_rules(
         &mut self,
         applicable_rules: &Rules,
@@ -1335,7 +1336,7 @@ impl PolarVirtualMachine {
             let applicable = Goal::FilterRules {
                 args: args.clone(),
                 applicable_rules,
-                unfiltered_rules: unfiltered_rules.clone(),
+                unfiltered_rules,
             };
 
             // Try to unify the arguments with renamed parameters.
@@ -1375,6 +1376,7 @@ impl PolarVirtualMachine {
     /// unsorted. The `inner` index tracks our search through the sorted sublist for the correct
     /// position of the candidate rule (the rule at the head of the unsorted portion of the
     /// list).
+    #[allow(clippy::ptr_arg)]
     fn sort_rules(
         &mut self,
         rules: &Rules,
@@ -1475,6 +1477,7 @@ impl PolarVirtualMachine {
     }
 
     /// Succeed if `left` is more specific than `right` with respect to `args`.
+    #[allow(clippy::ptr_arg)]
     fn is_more_specific(&mut self, left: &Rule, right: &Rule, args: &TermList) -> PolarResult<()> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
@@ -1692,7 +1695,7 @@ mod tests {
         assert_eq!(vm.deref(&term_x), value);
 
         // unbound var -> unbound var -> value
-        vm.bind(&x, term_y.clone());
+        vm.bind(&x, term_y);
         vm.bind(&y, value.clone());
         assert_eq!(vm.deref(&term_x), value);
     }
