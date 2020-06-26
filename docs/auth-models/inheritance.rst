@@ -99,13 +99,20 @@ One rule to rule them all
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/inheritance/inheritance_external.py
+        .. literalinclude:: /examples/inheritance/python/inheritance_external.py
            :language: python
+           :start-after: ## START MARKER ##
+
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/inheritance/ruby/inheritance_external.rb
+           :language: ruby
            :start-after: ## START MARKER ##
 
 .. container:: left-col
 
-    Since this is Python, we used inheritance to capture some of the common
+    We used inheritance to capture some of the common
     functionality needed (storing the patient).  In a real application these
     would probably be ORM models.
 
@@ -115,7 +122,7 @@ One rule to rule them all
        :language: polar
 
     Now, this ``allow`` rule will be evaluated for any instance that is a subclass
-    of ``PatientData``.  Polar's Python integration understands the class
+    of ``PatientData``.  Polar's language integration understands the class
     inheritance structure when selecting rules to evalute!
 
 .. TODO: include when groups are back

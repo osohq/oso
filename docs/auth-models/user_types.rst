@@ -32,7 +32,7 @@ A Tale of Two Actors
 
         Let's start by defining Python classes to represent customers and internal users:
 
-        .. literalinclude:: /examples/user_types/01-user_classes.py
+        .. literalinclude:: /examples/user_types/python/01-user_classes.py
             :start-after: classes-start
             :end-before: classes-end
 
@@ -63,7 +63,7 @@ A Tale of Two Actors
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/user_types/01-user_classes.py
+        .. literalinclude:: /examples/user_types/python/01-user_classes.py
             :start-after: app-start
             :end-before: app-end
 
@@ -87,7 +87,7 @@ Adding Actor Attributes
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/user_types/02-user_classes.py
+        .. literalinclude:: /examples/user_types/python/02-user_classes.py
             :start-after: internal-start
             :end-before: internal-end
 
@@ -118,7 +118,7 @@ Adding Actor Attributes
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/user_types/02-user_classes.py
+        .. literalinclude:: /examples/user_types/python/02-user_classes.py
             :start-after: account-start
             :end-before: account-end
 
@@ -147,7 +147,7 @@ Adding Actor Attributes
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/user_types/02-user_classes.py
+        .. literalinclude:: /examples/user_types/python/02-user_classes.py
             :lines: 21-30
             :emphasize-lines: 5-6
 
