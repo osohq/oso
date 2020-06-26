@@ -12,7 +12,7 @@ use crate::types::*;
 
 use lalrpop_util::ParseError;
 
-grammar;
+grammar(src_id: u64);
 
 extern {
     type Location = usize;
@@ -60,26 +60,26 @@ extern {
 
 pub Number: Term = {
     <start:@L> <i:"Integer"> => {
-        Term{id: 0, offset: start, value: Value::Number(i.into())}
+        Term::new_from_parser(src_id, start, Value::Number(i.into()))
     },
     <start:@L> <f:"Float"> => {
-        Term{id: 0, offset: start, value: Value::Number(f.into())}
+        Term::new_from_parser(src_id, start, Value::Number(f.into()))
     }
 };
 
 
 pub PolarString: Term = <start:@L> <s:"String"> => {
-    Term{id: 0, offset: start, value: Value::String(s)}
+    Term::new_from_parser(src_id, start, Value::String(s))
 };
 
 pub Boolean: Term = <start:@L> <b:"Boolean"> => {
-    Term{id: 0, offset: start, value: Value::Boolean(b)}
+    Term::new_from_parser(src_id, start, Value::Boolean(b))
 };
 
 Name: Symbol = <s:"Symbol"> => s;
 
 pub Symbol: Term  = <start:@L> <n:Name> => {
-    Term{id: 0, offset: start, value: Value::Symbol(n)}
+    Term::new_from_parser(src_id, start, Value::Symbol(n))
 };
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -105,7 +105,7 @@ Object<T>: BTreeMap<Symbol, Term> = {
 
 Dictionary<T>: Term = <start:@L> <fields:Object<T>> => {
     let dict = Dictionary{fields};
-    Term{id: 0, offset: start, value: Value::Dictionary(dict)}
+    Term::new_from_parser(src_id, start, Value::Dictionary(dict))
 };
 
 DictionaryTerm: Term = <Dictionary<Exp5<"Term">>> => <>;
@@ -114,7 +114,7 @@ DictionaryPattern: Term = <Dictionary<Exp9<"Pattern">>> => <>;
 
 InstanceLiteral<T>: Term = <start:@L> <tag:Name> <fields:Object<T>> => {
     let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
-    Term{id: 0, offset: start, value: Value::InstanceLiteral(instance)}
+    Term::new_from_parser(src_id, start, Value::InstanceLiteral(instance))
 };
 
 pub InstanceLiteralTerm: Term = <InstanceLiteral<Exp5<"Term">>> => <>;
@@ -129,8 +129,8 @@ pub Pattern: Term = {
     <term:Symbol> => term,
     <start:@L> "[" <terms:(<Pattern> ",")*> <term:Pattern?> "]" => {
         match term {
-            Some(term) => Term{id:0, offset: start, value: Value::List(vec![term])},
-            None => Term{id: 0, offset: start, value: Value::List(terms)}
+            Some(term) => Term::new_from_parser(src_id, start, Value::List(vec![term])),
+            None => Term::new_from_parser(src_id, start, Value::List(terms))
         }
     }
 };
@@ -141,12 +141,12 @@ pub Term: Term = {
     <term:Boolean> => term,
     <term:Symbol> => term,
     <term:DictionaryTerm> => term,
-    <start:@L> <op:RewrittenOperation> => Term{id: 0, offset: start, value: Value::Expression(op)},
-    <start:@L> <pred:Predicate> => Term{id: 0, offset: start, value: Value::Call(pred)},
-    <start:@L> "[" "]" => Term{id: 0, offset: start, value: Value::List(vec![])},
+    <start:@L> <op:RewrittenOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
+    <start:@L> <pred:Predicate> => Term::new_from_parser(src_id, start, Value::Call(pred)),
+    <start:@L> "[" "]" => Term::new_from_parser(src_id, start, Value::List(vec![])),
     <start:@L> "[" <exp:TermExp> "]" => {
         let terms = unwrap_and(exp);
-        Term{id:0, offset: start, value: Value::List(terms)}
+        Term::new_from_parser(src_id, start, Value::List(terms))
     }
 };
 
@@ -190,12 +190,12 @@ Exp10<T>: Term = {
     <start:@L> "cut" ( "(" ")" )? => {
         let args = vec![];
         let op = Operation{operator: Operator::Cut, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> "forall" "(" <arg1:Exp2<"Term">> "," <arg2:Exp2<"Term">> ")" => {
         let args = vec![arg1, arg2];
         let op = Operation{operator: Operator::ForAll, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp11:Exp11<T>> => exp11,
 }
@@ -203,7 +203,7 @@ Exp10<T>: Term = {
 New: Term = <start:@L> "new" <literal:InstanceLiteralTerm> => {
     let args = vec![literal];
     let op = Operation{operator: Operator::New, args};
-    Term{id: 0, offset: start, value: Value::Expression(op)}
+    Term::new_from_parser(src_id, start, Value::Expression(op))
 };
 
 Callable<T>: Term = {
@@ -217,23 +217,23 @@ Callable<T>: Term = {
 
 DotOp<T>: Term = {
     <start:@L> <head:Callable<T>> "." <call_loc:@L> <mut call:Predicate> => {
-        let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
+        let call_term = Term::new_from_parser(src_id, call_loc, Value::Call(call));
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <head:Callable<T>> "." <call_loc:@L> <name:Name> => {
         let call = Predicate{name, args: vec![]};
-        let call_term = Term{id: 0, offset: call_loc, value: Value::Call(call)};
+        let call_term = Term::new_from_parser(src_id, call_loc, Value::Call(call));
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <head:Callable<T>> "." <call_loc:@L> "(" <name:Name> ")" => {
-        let call_term = Term{id: 0, offset: call_loc, value: Value::Symbol(name)};
+        let call_term = Term::new_from_parser(src_id, call_loc, Value::Symbol(name));
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     }
 }
 
@@ -248,11 +248,11 @@ Exp8<T>: Term = {
     <start:@L> <left:Exp8<T>> "in" <right:Exp9<T>> => {
         let args = vec![left, right];
         let op = Operation{operator: Operator::In, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     // Symbols on the RHS are treated as class names, just like in a specializers
     <start:@L> <left:Exp8<T>> "isa" <right:Pattern> => {
-        let right = if let Value::Symbol(ref sym) = right.value {
+        let right = if let Value::Symbol(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
                 fields: Dictionary::new()
@@ -262,7 +262,7 @@ Exp8<T>: Term = {
         };
         let args = vec![left, right];
         let op = Operation{operator: Operator::Isa, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp9:Exp9<T>> => exp9
 }
@@ -272,7 +272,7 @@ Exp7<T>: Term = {
     <start:@L> "!" <exp8:Exp8<T>> => {
         let args = vec![exp8];
         let op = Operation{operator: Operator::Not, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     // TODO (dhatch): Maybe a different type here
     <exp8:Exp8<T>> => exp8
@@ -283,12 +283,12 @@ Exp6<T>: Term = {
     <start:@L> <exp6:Exp6<T>> "*" <exp7:Exp7<T>> => {
         let args = vec![exp6, exp7];
         let op = Operation{operator: Operator::Mul, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <exp6:Exp6<T>> "/" <exp7:Exp7<T>> => {
         let args = vec![exp6, exp7];
         let op = Operation{operator: Operator::Div, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp7:Exp7<T>> => exp7
 }
@@ -298,12 +298,12 @@ Exp5<T>: Term = {
     <start:@L> <exp5:Exp5<T>> "+" <exp6:Exp6<T>> => {
         let args = vec![exp5, exp6];
         let op = Operation{operator: Operator::Add, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <exp5:Exp5<T>> "-" <exp6:Exp6<T>> => {
         let args = vec![exp5, exp6];
         let op = Operation{operator: Operator::Sub, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp6:Exp6<T>> => exp6
 }
@@ -313,32 +313,32 @@ Exp4<T>: Term = {
     <start:@L> <exp4:Exp4<T>> "==" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Eq, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <exp4:Exp4<T>> "!=" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Neq, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <exp4:Exp4<T>> "<=" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Leq, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <exp4:Exp4<T>> ">=" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Geq, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <exp4:Exp4<T>> "<" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Lt, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <exp4:Exp4<T>> ">" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Gt, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp5:Exp5<T>> => exp5
 }
@@ -348,7 +348,7 @@ Exp3<T>: Term = {
     <start:@L> <exp3:Exp3<T>> "=" <exp4:Exp4<T>> => {
         let args = vec![exp3, exp4];
         let op = Operation{operator: Operator::Unify, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
      <exp4:Exp4<T>> => exp4
  }
@@ -356,10 +356,10 @@ Exp3<T>: Term = {
 // |
 Exp2<T>: Term = {
     <start:@L> <head:Exp3<T>> "|" <mut tail:Exp2<T>> => {
-        let args = match &mut tail {
-            Term{value: Value::Expression(Operation{operator: Operator::Or, args: tail_args}), ..} => {
+        let args = match &mut tail.value() {
+            Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
                 let mut args = vec![head];
-                args.append(tail_args);
+                args.append(&mut tail_args.clone());
                 args
             }
             _ => {
@@ -367,7 +367,7 @@ Exp2<T>: Term = {
             }
         };
         let op = Operation{operator: Operator::Or, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp3:Exp3<T>> => exp3
 }
@@ -375,10 +375,10 @@ Exp2<T>: Term = {
 // ,
 Exp1<T>: Term = {
     <start:@L> <head:Exp2<T>> "," <mut tail:Exp1<T>> => {
-        let args = match &mut tail {
-            Term{value: Value::Expression(Operation{operator: Operator::And, args: tail_args}), ..} => {
+        let args = match &mut tail.value() {
+            Value::Expression(Operation{operator: Operator::And, args: tail_args}) => {
                 let mut args = vec![head];
-                args.append(tail_args);
+                args.append(&mut tail_args.clone());
                 args
             }
             _ => {
@@ -386,7 +386,7 @@ Exp1<T>: Term = {
             }
         };
         let op = Operation{operator: Operator::And, args};
-        Term{id: 0, offset: start, value: Value::Expression(op)}
+        Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp2:Exp2<T>> => exp2
 }
@@ -407,27 +407,21 @@ Parameter: Parameter = {
     },
     // parenthesized specializers do not have symbol translation to class names applied
     <start:@L> <name:Name> ":" "(" <specializer:Pattern> ")" => {
-        let mut name = Term::new(Value::Symbol(name));
-        name.offset = start;
+        let mut name = Term::new_from_parser(src_id, start, Value::Symbol(name));
         Parameter {
             parameter: Some(name),
             specializer: Some(specializer),
         }
     },
     <start:@L> <name:Name> ":" <specializer:Pattern> => {
-        let mut name = Term::new(Value::Symbol(name));
-        name.offset = start;
-        let offset = specializer.offset;
-        if let Term{value: Value::Symbol(class_name), ..} = specializer {
+        let mut name = Term::new_from_parser(src_id, start, Value::Symbol(name));
+        let offset = specializer.offset();
+        if let Value::Symbol(class_name) = specializer.value() {
             let fields = BTreeMap::new();
-            let instance_literal = InstanceLiteral{tag: class_name, fields: Dictionary{fields}};
+            let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
             Parameter {
                 parameter: Some(name),
-                specializer: Some(Term {
-                    id: 0,
-                    offset,
-                    value: Value::Pattern(Pattern::Instance(instance_literal))
-                })
+                specializer: Some(Term::new_from_parser(src_id, offset, Value::Pattern(Pattern::Instance(instance_literal)))),
             }
         } else {
             Parameter{parameter: Some(name), specializer: Some(specializer)}
@@ -464,19 +458,19 @@ pub Rule: Rule = {
     <head:RuleHead> <start:@L> ";" => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
-        let body = Term{id: 0, offset: start, value: Value::Expression(op)};
+        let body = Term::new_from_parser(src_id, start, Value::Expression(op));
         Rule{name, params, body}
     },
     <head:RuleHead> ":=" <body:TermExp> ";" => {
         let (name, params) = head;
-        let body = match body {
-            Term{value: Value::Expression(Operation{operator: Operator::And, ..}), ..} => {
+        let body = match body.value() {
+            Value::Expression(Operation{operator: Operator::And, ..}) => {
                 body
             },
             _ => {
-                let offset = body.offset.clone();
+                let offset = body.offset();
                 let op = Operation{operator: Operator::And, args: vec![body]};
-                Term{id: 0, offset, value: Value::Expression(op)}
+                Term::new_from_parser(src_id, offset, Value::Expression(op))
             }
         };
         Rule{name, params, body}

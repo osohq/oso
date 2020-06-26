@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::types::*;
 use super::vm::*;
 use super::{PolarResult, ToPolarString};
@@ -19,7 +21,7 @@ impl PolarVirtualMachine {
     pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<()> {
         let maybe_goal = self.debugger.maybe_break(event, self);
         if let Some(goal) = maybe_goal {
-            self.push_goal(goal)?;
+            self.push_goal((*goal).clone())?;
         }
         Ok(())
     }
@@ -156,7 +158,7 @@ enum Step {
 /// field to determine how evaluation should proceed.
 #[derive(Clone, Debug)]
 pub enum DebugEvent {
-    Goal(String),
+    Goal(Rc<Goal>),
     Query,
 }
 
@@ -177,7 +179,7 @@ impl Debugger {
     fn query_source(&self, query: &Term, sources: &Sources, num_lines: usize) -> String {
         sources.get_source(query).map_or_else(
             || "".to_string(),
-            |source| source_lines(&source, query.offset, num_lines),
+            |source| source_lines(&source, query.offset(), num_lines),
         )
     }
 
@@ -195,19 +197,21 @@ impl Debugger {
     ///
     /// - `Some(Goal::Debug { message })` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
-    fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Goal> {
+    fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
         self.step.as_ref().and_then(|step| match (step, event) {
-            (Step::Goal, DebugEvent::Goal(goal)) => Some(Goal::Debug { message: goal }),
+            (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
+                message: goal.to_string(),
+            })),
             (Step::Over { snapshot }, DebugEvent::Query)
             | (Step::Out { snapshot }, DebugEvent::Query)
                 if vm.queries[..vm.queries.len() - 1] == snapshot[..] =>
             {
-                Some(Goal::Debug {
+                Some(Rc::new(Goal::Debug {
                     message: vm.queries.last().map_or_else(
                         || "".to_string(),
                         |query| self.query_source(&query, &vm.kb.read().unwrap().sources, 0),
                     ),
-                })
+                }))
             }
             _ => None,
         })
@@ -270,7 +274,7 @@ impl Debugger {
                         .map(|var| {
                             let var = Symbol::new(var);
                             let value = vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
-                                Term::new(Value::Symbol(Symbol::new("<unbound>")))
+                                Term::new_temporary(Value::Symbol(Symbol::new("<unbound>")))
                             });
                             Binding(var, value)
                         })

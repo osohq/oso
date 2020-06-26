@@ -248,7 +248,7 @@ module Oso
                 else
                   { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
                 end
-        { 'id' => 0, 'offset' => 0, 'value' => value }
+        { 'value' => value }
       end
 
       # Turn a Polar term passed across the FFI boundary into a Ruby value.
