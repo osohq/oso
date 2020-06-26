@@ -34,14 +34,11 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
             operator: Operator::New,
             args,
         }) if args.len() == 1 => {
-            let literal = args[0].value().clone().instance_literal().unwrap();
+            assert!(matches!(args[0].value(), Value::InstanceLiteral { .. }));
             let symbol = kb.gensym("instance");
             let var = Value::Symbol(symbol);
-
-            let args = vec![
-                Term::new_from_unknown(Value::InstanceLiteral(literal)),
-                Term::new_from_unknown(var.clone()),
-            ];
+            let result_term = args[0].clone_with_value(var.clone());
+            let args = vec![args[0].clone(), result_term];
             let new_op = Value::Expression(Operation {
                 operator: Operator::New,
                 args,
@@ -68,7 +65,6 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>)
         } else if let Value::Expression(op) = term.value() {
             // Next, if this is an expression, we want to immediately
             // do the recursive rewrite in place
-
             if matches!(op.operator, Operator::And | Operator::Or | Operator::Not) {
                 let args = op
                     .args

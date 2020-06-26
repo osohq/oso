@@ -311,16 +311,39 @@ impl Value {
     }
 }
 
-/// Represents a concrete instance of a Polar value
-#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
-pub struct Term {
-    /// Index into the source map stored in the knowledge base
-    #[serde(skip)]
-    src_id: u64,
+#[derive(Debug, Clone)]
+enum SourceInfo {
+    // From the parser
+    Parser {
+        /// Index into the source map stored in the knowledge base
+        src_id: u64,
 
-    /// Location of the term within the source map
-    #[serde(skip)]
-    offset: usize,
+        /// Location of the term within the source map
+        offset: usize,
+    },
+
+    /// Created as a temporary variable
+    TemporaryVariable,
+
+    /// From an FFI call
+    Ffi,
+
+    /// Created for a test
+    Test,
+}
+
+impl SourceInfo {
+    fn ffi() -> Self {
+        Self::Ffi
+    }
+}
+
+/// Represents a concrete instance of a Polar value
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Term {
+    /// Information about where the term was created from
+    #[serde(skip, default = "SourceInfo::ffi")]
+    source_info: SourceInfo,
 
     /// The actual underlying value
     value: Rc<Value>,
@@ -332,12 +355,13 @@ impl PartialEq for Term {
     }
 }
 
+impl Eq for Term {}
+
 impl Term {
-    /// Creates a new term from an unknown source
-    pub fn new_from_unknown(value: Value) -> Self {
+    /// Creates a new term for a temporary variable
+    pub fn new_temporary(value: Value) -> Self {
         Self {
-            src_id: 0,
-            offset: 0,
+            source_info: SourceInfo::TemporaryVariable,
             value: Rc::new(value),
         }
     }
@@ -345,29 +369,29 @@ impl Term {
     /// Creates a new term from the parser
     pub fn new_from_parser(src_id: u64, offset: usize, value: Value) -> Self {
         Self {
-            src_id,
-            offset,
+            source_info: SourceInfo::Parser { src_id, offset },
             value: Rc::new(value),
         }
     }
 
-    #[cfg(test)]
-    pub fn new_helper(src_id: u64, value: Value) -> Self {
+    /// Creates a new term from a test value
+    pub fn new_from_test(value: Value) -> Self {
         Self {
-            src_id,
-            offset: 0,
+            source_info: SourceInfo::Test,
             value: Rc::new(value),
         }
     }
 
+    /// Create a new Term, cloning the source info of `self`
+    /// but with the new `value`
     pub fn clone_with_value(&self, value: Value) -> Self {
         Self {
-            src_id: self.src_id,
-            offset: self.offset,
+            source_info: self.source_info.clone(),
             value: Rc::new(value),
         }
     }
 
+    /// Replace the `value` of self
     pub fn replace_value(&mut self, value: Value) {
         self.value = Rc::new(value);
     }
@@ -420,9 +444,14 @@ impl Term {
     }
 
     pub fn offset(&self) -> usize {
-        self.offset
+        if let SourceInfo::Parser { offset, .. } = self.source_info {
+            offset
+        } else {
+            0
+        }
     }
 
+    /// Get a reference to the underlying data of this term
     pub fn value(&self) -> &Value {
         &self.value
     }
@@ -521,12 +550,12 @@ impl Sources {
         self.sources.insert(id, source);
     }
 
-    // pub fn add_term_source(&mut self, term: &Term, src_id: u64) {
-    //     self.term_sources.insert(term.id, src_id);
-    // }
-
     pub fn get_source(&self, term: &Term) -> Option<Source> {
-        self.sources.get(&term.src_id).cloned()
+        if let SourceInfo::Parser { src_id, .. } = term.source_info {
+            self.sources.get(&src_id).cloned()
+        } else {
+            None
+        }
     }
 }
 
@@ -646,7 +675,7 @@ mod tests {
     fn serialize_test() {
         let pred = Predicate {
             name: Symbol("foo".to_owned()),
-            args: vec![Term::new_helper(2, value!(0))],
+            args: vec![Term::new_from_test(value!(0))],
         };
         assert_eq!(
             serde_json::to_string(&pred).unwrap(),
@@ -657,18 +686,18 @@ mod tests {
             instance_id: 3,
             attribute: Symbol::new("foo"),
             args: vec![
-                Term::new_helper(2, value!(0)),
-                Term::new_helper(3, value!("hello")),
+                Term::new_from_test(value!(0)),
+                Term::new_from_test(value!("hello")),
             ],
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
-        let term = Term::new_helper(0, value!(1));
+        let term = Term::new_from_test(value!(1));
         eprintln!("{}", serde_json::to_string(&term).unwrap());
         let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("hello"), term!(1234));
         fields.insert(
             Symbol::new("world"),
-            Term::new_from_unknown(Value::String("something".to_owned())),
+            Term::new_from_test(Value::String("something".to_owned())),
         );
         let literal = InstanceLiteral {
             tag: Symbol::new("Foo"),
@@ -679,15 +708,15 @@ mod tests {
             instance: literal,
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
-        let external = Term::new_from_unknown(Value::ExternalInstance(ExternalInstance {
+        let external = Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
             literal: None,
         }));
-        let list_of = Term::new_from_unknown(Value::List(vec![external]));
+        let list_of = Term::new_from_test(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());
         let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("foo"), list_of);
-        let dict = Term::new_from_unknown(Value::Dictionary(Dictionary { fields }));
+        let dict = Term::new_from_test(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
         let e = error::ParseError::InvalidTokenCharacter {
             token: "Integer".to_owned(),

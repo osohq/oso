@@ -393,26 +393,26 @@ impl PolarVirtualMachine {
     }
 
     /// Generate a fresh set of variables for an argument list.
-    fn rename_vars(&self, mut terms: TermList) -> TermList {
+    fn rename_vars(&self, terms: TermList) -> TermList {
         let mut renames = HashMap::<Symbol, Symbol>::new();
-        let mut new_terms = vec![];
-        for term in terms.iter_mut() {
-            new_terms.push(term.map(&mut |term| {
-                term.map(&mut |value| match value {
+
+        terms
+            .iter()
+            .map(|t| {
+                t.cloned_map_replace(&mut |t| match t.value() {
                     Value::Symbol(sym) => {
                         if let Some(new) = renames.get(sym) {
-                            Value::Symbol(new.clone())
+                            t.clone_with_value(Value::Symbol(new.clone()))
                         } else {
                             let new = self.kb.read().unwrap().gensym(&sym.0);
                             renames.insert(sym.clone(), new.clone());
-                            Value::Symbol(new)
+                            t.clone_with_value(Value::Symbol(new.clone()))
                         }
                     }
-                    _ => value.clone(),
+                    _ => t.clone(),
                 })
-            }));
-        }
-        new_terms
+            })
+            .collect()
     }
 
     /// Generate a fresh set of variables for a rule.
@@ -559,22 +559,22 @@ impl PolarVirtualMachine {
                 panic!("How did an instance literal get here???");
             }
 
-            (Value::ExternalInstance(left), Value::Pattern(Pattern::Dictionary(right))) => {
+            (Value::ExternalInstance(instance), Value::Pattern(Pattern::Dictionary(right))) => {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
                 for (field, right_value) in right.fields.iter() {
                     let left_value = self.kb.read().unwrap().gensym("isa_value");
                     let call_id = self.new_call_id(&left_value);
                     let lookup = Goal::LookupExternal {
-                        instance_id: left.instance_id,
+                        instance_id: instance.instance_id,
                         call_id,
-                        field: Term::new_from_unknown(Value::Call(Predicate {
+                        field: right_value.clone_with_value(Value::Call(Predicate {
                             name: field.clone(),
                             args: vec![],
                         })),
                     };
                     let isa = Goal::Isa {
-                        left: Term::new_from_unknown(Value::Symbol(left_value)),
+                        left: left.clone_with_value(Value::Symbol(left_value)),
                         right: right_value.clone(),
                     };
                     self.append_goals(vec![Rc::new(lookup), Rc::new(isa)]);
@@ -609,18 +609,21 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (Value::ExternalInstance(left), Value::Pattern(Pattern::Instance(right))) => {
+            (
+                Value::ExternalInstance(left_instance),
+                Value::Pattern(Pattern::Instance(right_literal)),
+            ) => {
                 // Check fields
                 self.push_goal(Goal::Isa {
-                    left: Term::new_from_unknown(Value::ExternalInstance(left.clone())),
-                    right: Term::new_from_unknown(Value::Pattern(Pattern::Dictionary(
-                        right.clone().fields,
+                    left: left.clone_with_value(Value::ExternalInstance(left_instance.clone())),
+                    right: right.clone_with_value(Value::Pattern(Pattern::Dictionary(
+                        right_literal.fields.clone(),
                     ))),
                 })?;
                 // Check class
                 self.push_goal(Goal::IsaExternal {
-                    instance_id: left.instance_id,
-                    literal: right.clone(),
+                    instance_id: left_instance.instance_id,
+                    literal: right_literal.clone(),
                 })?;
             }
 
@@ -643,7 +646,7 @@ impl PolarVirtualMachine {
                     // if `field` is bound, unification will only succeed for the matching key
                     // if `field` is unbound, unification will succeed for all keys
                     goals.push(Rc::new(Goal::Unify {
-                        left: Term::new_from_unknown(Value::String(k.clone().0)),
+                        left: field.clone_with_value(Value::String(k.clone().0)),
                         right: field.clone(),
                     }));
                     // attempt to unify dict value with result
@@ -708,8 +711,8 @@ impl PolarVirtualMachine {
         let call_id = self.new_call_id(&result);
 
         self.push_goal(Goal::Unify {
-            left: Term::new_from_unknown(Value::Symbol(result)),
-            right: Term::new_from_unknown(Value::Boolean(true)),
+            left: Term::new_temporary(Value::Symbol(result)),
+            right: Term::new_temporary(Value::Boolean(true)),
         })?;
 
         Ok(QueryEvent::ExternalIsa {
@@ -1095,15 +1098,8 @@ impl PolarVirtualMachine {
 
     /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
     pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
-        self.bind(
-            &self
-                .call_id_symbols
-                .get(&call_id)
-                .expect("unregistered external call ID")
-                .clone(),
-            &Term::new_from_unknown(Value::Boolean(answer)),
-        );
-        self.call_id_symbols.remove(&call_id).expect("bad call id");
+        let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
+        self.bind(&var, &Term::new_temporary(Value::Boolean(answer)));
     }
 
     /// Unify `left` and `right` terms.
@@ -1477,7 +1473,7 @@ impl PolarVirtualMachine {
                     // This is done here for safety to avoid a bug where `answer` is unbound by
                     // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
                     // of checking that is is equal to `true`.
-                    self.bind(&answer, &Term::new_from_unknown(Value::Boolean(false)));
+                    self.bind(&answer, &Term::new_temporary(Value::Boolean(false)));
 
                     self.append_goals(vec![
                         Rc::new(Goal::IsSubspecializer {
@@ -1487,8 +1483,8 @@ impl PolarVirtualMachine {
                             arg: arg.clone(),
                         }),
                         Rc::new(Goal::Unify {
-                            left: Term::new_from_unknown(Value::Symbol(answer)),
-                            right: Term::new_from_unknown(Value::Boolean(true)),
+                            left: Term::new_temporary(Value::Symbol(answer)),
+                            right: Term::new_temporary(Value::Boolean(true)),
                         }),
                     ]);
                     return Ok(());
@@ -1515,30 +1511,31 @@ impl PolarVirtualMachine {
         match (arg.value(), left.value(), right.value()) {
             (
                 Value::ExternalInstance(instance),
-                Value::Pattern(Pattern::Instance(left)),
-                Value::Pattern(Pattern::Instance(right)),
+                Value::Pattern(Pattern::Instance(left_lit)),
+                Value::Pattern(Pattern::Instance(right_lit)),
             ) => {
-                let call_id = self.new_call_id(answer);
-                if left.tag == right.tag
-                    && !(left.fields.fields.is_empty() && right.fields.fields.is_empty())
+                let call_id = self.new_call_id(&answer);
+                let instance_id = instance.instance_id;
+                if left_lit.tag == right_lit.tag
+                    && !(left_lit.fields.fields.is_empty() && right_lit.fields.fields.is_empty())
                 {
                     self.push_goal(Goal::IsSubspecializer {
                         answer: answer.clone(),
-                        left: Term::new_from_unknown(Value::Pattern(Pattern::Dictionary(
-                            left.fields.clone(),
+                        left: left.clone_with_value(Value::Pattern(Pattern::Dictionary(
+                            left_lit.fields.clone(),
                         ))),
-                        right: Term::new_from_unknown(Value::Pattern(Pattern::Dictionary(
-                            right.fields.clone(),
+                        right: right.clone_with_value(Value::Pattern(Pattern::Dictionary(
+                            right_lit.fields.clone(),
                         ))),
-                        arg: Term::new_from_unknown(Value::ExternalInstance(instance.clone())),
+                        arg,
                     })?;
                 }
                 // check ordering based on the classes
                 Ok(QueryEvent::ExternalIsSubSpecializer {
                     call_id,
-                    instance_id: instance.instance_id,
-                    left_class_tag: left.tag.clone(),
-                    right_class_tag: right.tag.clone(),
+                    instance_id,
+                    left_class_tag: left_lit.tag.clone(),
+                    right_class_tag: right_lit.tag.clone(),
                 })
             }
             (
@@ -1555,7 +1552,7 @@ impl PolarVirtualMachine {
                 if left_fields.len() != right_fields.len() {
                     self.bind(
                         &answer,
-                        &Term::new_from_unknown(Value::Boolean(
+                        &Term::new_temporary(Value::Boolean(
                             right_fields.len() < left.fields.len(),
                         )),
                     );
@@ -1563,11 +1560,11 @@ impl PolarVirtualMachine {
                 Ok(QueryEvent::None)
             }
             (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
-                self.bind(&answer, &Term::new_from_unknown(Value::Boolean(true)));
+                self.bind(&answer, &Term::new_temporary(Value::Boolean(true)));
                 Ok(QueryEvent::None)
             }
             _ => {
-                self.bind(&answer, &Term::new_from_unknown(Value::Boolean(false)));
+                self.bind(&answer, &Term::new_temporary(Value::Boolean(false)));
                 Ok(QueryEvent::None)
             }
         }
@@ -1732,7 +1729,7 @@ mod tests {
         let parts = vec![f1, f2, f3];
         for permutation in permute(parts) {
             vm.push_goal(Goal::Query {
-                term: Term::new_from_unknown(Value::Expression(Operation {
+                term: Term::new_from_test(Value::Expression(Operation {
                     operator: Operator::And,
                     args: permutation,
                 })),
@@ -2095,8 +2092,8 @@ mod tests {
             })],
         );
         let _ = vm.run().unwrap();
-        assert_eq!(vm.value(&x), Some(&Term::new_from_unknown(zero)));
-        assert_eq!(vm.value(&y), Some(&Term::new_from_unknown(one)));
+        assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
+        assert_eq!(vm.value(&y), Some(&Term::new_from_test(one)));
     }
 
     #[test]
@@ -2145,15 +2142,15 @@ mod tests {
         let rule = Rule {
             name: Symbol::new("foo"),
             params: vec![],
-            body: Term::new_from_unknown(Value::Expression(Operation {
+            body: Term::new_from_test(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![
                     term!(1),
-                    Term::new_from_unknown(Value::Symbol(Symbol("x".to_string()))),
-                    Term::new_from_unknown(Value::Symbol(Symbol("x".to_string()))),
-                    Term::new_from_unknown(Value::List(vec![Term::new_from_unknown(
-                        Value::Symbol(Symbol("y".to_string())),
-                    )])),
+                    Term::new_from_test(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new_from_test(Value::Symbol(Symbol("x".to_string()))),
+                    Term::new_from_test(Value::List(vec![Term::new_from_test(Value::Symbol(
+                        Symbol("y".to_string()),
+                    ))])),
                 ],
             })),
         };
