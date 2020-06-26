@@ -58,7 +58,6 @@ use super::parser;
 
 // @TODO: Once the external constructor stuff and instance ids are worked out explain them.
 
-use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 fn fill_context(e: PolarError, source: &Source) -> PolarError {
@@ -224,7 +223,7 @@ impl Polar {
         kb.sources.add_source(source, src_id);
         rewrite_term(&mut term, &mut kb);
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Rc::new(query)]);
+        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Ok(Query { done: false, vm })
     }
 
@@ -236,7 +235,7 @@ impl Polar {
             rewrite_term(&mut term, &mut kb);
         }
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![Rc::new(query)]);
+        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Query { done: false, vm }
     }
 

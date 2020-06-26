@@ -93,24 +93,53 @@ pub struct Binding(pub Symbol, pub Term);
 
 #[derive(Clone, Debug)]
 pub struct Choice {
-    pub alternatives: Alternatives,
+    pub alternatives: Vec<GoalStack>,
     bsp: usize,            // binding stack pointer
-    pub goals: Goals,      // goal stack snapshot
+    pub goals: GoalStack,  // goal stack snapshot
     queries: Queries,      // query stack snapshot
     trace: Vec<Rc<Trace>>, // trace snapshot
     trace_stack: Vec<Vec<Rc<Trace>>>,
 }
 
-pub type Alternatives = Vec<Goals>;
 pub type Bindings = Vec<Binding>;
 pub type Choices = Vec<Choice>;
-pub type Goals = Vec<Rc<Goal>>;
+/// Shortcut type alias for a list of goals
+pub type Goals = Vec<Goal>;
+#[derive(Clone, Debug, Default)]
+pub struct GoalStack(Vec<Rc<Goal>>);
+
+impl GoalStack {
+    fn new_reversed(goals: Goals) -> Self {
+        Self(goals.into_iter().rev().map(Rc::new).collect())
+    }
+}
+
+// impl From<Vec<Goal>> for GoalStack {
+//     fn from(other: Vec<Goal>) -> Self {
+//         Self(other.into_iter().map(Rc::new).collect())
+//     }
+// }
+
+impl std::ops::Deref for GoalStack {
+    type Target = Vec<Rc<Goal>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for GoalStack {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 pub type Queries = TermList;
 
 #[derive(Default)]
 pub struct PolarVirtualMachine {
     /// Stacks.
-    pub goals: Goals,
+    pub goals: GoalStack,
     pub bindings: Bindings,
     choices: Choices,
     pub queries: Queries,
@@ -137,10 +166,9 @@ pub struct PolarVirtualMachine {
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
     /// Reverse the goal list for the sanity of callers.
-    pub fn new(kb: Arc<RwLock<KnowledgeBase>>, mut goals: Goals) -> Self {
-        goals.reverse();
+    pub fn new(kb: Arc<RwLock<KnowledgeBase>>, goals: Goals) -> Self {
         Self {
-            goals,
+            goals: GoalStack::new_reversed(goals),
             bindings: vec![],
             choices: vec![],
             goal_counter: 0,
@@ -312,9 +340,17 @@ impl PolarVirtualMachine {
     /// ~~Do nothing if there are no alternatives; this saves every caller a
     /// conditional, and maintains the invariant that only choice points with
     /// alternatives are on the choice stack.~~ TODO: this comment is not true any more
-    fn push_choice(&mut self, mut alternatives: Alternatives) {
+    fn push_choice<I>(&mut self, alternatives: I)
+    where
+        I: IntoIterator<Item = Goals>,
+        I::IntoIter: std::iter::DoubleEndedIterator,
+    {
         // Make sure that alternatives are executed in order of first to last.
-        alternatives.reverse();
+        let alternatives = alternatives
+            .into_iter()
+            .rev()
+            .map(GoalStack::new_reversed)
+            .collect();
         assert!(self.choices.len() < MAX_CHOICES, "too many choices");
         self.choices.push(Choice {
             alternatives,
@@ -333,18 +369,29 @@ impl PolarVirtualMachine {
     ///
     /// - `alternatives`: an ordered list of alternatives to try in the choice.
     ///   The first element is the first alternative to try.
-    fn choose(&mut self, mut alternatives: Alternatives) {
-        if !alternatives.is_empty() {
-            let alternative = alternatives.remove(0);
-            self.push_choice(alternatives);
-            self.append_goals(alternative);
+    fn choose<I>(&mut self, alternatives: I) -> PolarResult<()>
+    where
+        I: IntoIterator<Item = Goals>,
+        I::IntoIter: std::iter::DoubleEndedIterator,
+    {
+        let mut alternatives_iter = alternatives.into_iter();
+        if let Some(alternative) = alternatives_iter.next() {
+            self.push_choice(alternatives_iter);
+            self.append_goals(alternative)?;
         }
+        Ok(())
     }
 
     /// Push multiple goals onto the stack in reverse order.
-    fn append_goals(&mut self, mut goals: Goals) {
-        goals.reverse();
-        self.goals.append(&mut goals);
+    fn append_goals<I>(&mut self, goals: I) -> PolarResult<()>
+    where
+        I: IntoIterator<Item = Goal>,
+        I::IntoIter: std::iter::DoubleEndedIterator,
+    {
+        goals
+            .into_iter()
+            .rev()
+            .try_for_each(|goal| self.push_goal(goal))
     }
 
     /// Push a binding onto the binding stack.
@@ -458,12 +505,15 @@ impl PolarVirtualMachine {
                     trace_stack,
                 }) => {
                     self.bindings.drain(*bsp..);
-                    if let Some(alternative) = alternatives.pop() {
+                    if let Some(mut alternative) = alternatives.pop() {
                         self.goals = goals.clone();
                         self.queries = queries.clone();
                         self.trace = trace.clone();
                         self.trace_stack = trace_stack.clone();
-                        self.append_goals(alternative);
+                        // Note: here we are directly modifying the
+                        // VM goal stack, since what we have is already
+                        // a "stored goal stack"
+                        self.goals.append(&mut alternative);
 
                         break; // we have our alternative, end the loop
                     }
@@ -519,17 +569,10 @@ impl PolarVirtualMachine {
         match (&left.value(), &right.value()) {
             (Value::List(left), Value::List(right)) => {
                 if left.len() == right.len() {
-                    self.append_goals(
-                        left.iter()
-                            .zip(right)
-                            .map(|(left, right)| {
-                                Rc::new(Goal::Isa {
-                                    left: left.clone(),
-                                    right: right.clone(),
-                                })
-                            })
-                            .collect(),
-                    )
+                    self.append_goals(left.iter().zip(right).map(|(left, right)| Goal::Isa {
+                        left: left.clone(),
+                        right: right.clone(),
+                    }))?;
                 } else {
                     self.push_goal(Goal::Backtrack)?;
                 }
@@ -580,7 +623,7 @@ impl PolarVirtualMachine {
                         left: left.clone_with_value(Value::Symbol(left_value)),
                         right: right_value.clone(),
                     };
-                    self.append_goals(vec![Rc::new(lookup), Rc::new(isa)]);
+                    self.append_goals(vec![lookup, isa])?;
                 }
             }
 
@@ -642,24 +685,24 @@ impl PolarVirtualMachine {
         // check if field is a variable
         match &field.value() {
             Value::Symbol(_) => {
-                let mut alternatives: Alternatives = vec![];
+                let mut alternatives = vec![];
                 for (k, v) in &dict.fields {
                     let mut goals: Goals = vec![];
                     // attempt to unify dict key with field
                     // if `field` is bound, unification will only succeed for the matching key
                     // if `field` is unbound, unification will succeed for all keys
-                    goals.push(Rc::new(Goal::Unify {
+                    goals.push(Goal::Unify {
                         left: field.clone_with_value(Value::String(k.clone().0)),
                         right: field.clone(),
-                    }));
+                    });
                     // attempt to unify dict value with result
-                    goals.push(Rc::new(Goal::Unify {
+                    goals.push(Goal::Unify {
                         left: v.clone(),
                         right: value.clone(),
-                    }));
+                    });
                     alternatives.push(goals);
                 }
-                self.choose(alternatives);
+                self.choose(alternatives)?;
             }
             _ => {
                 if let Some(retrieved) = dict.fields.get(&field_name(&field)) {
@@ -691,11 +734,11 @@ impl PolarVirtualMachine {
             ),
             _ => unreachable!("call must be a predicate"),
         };
-        self.push_choice(vec![vec![Rc::new(Goal::LookupExternal {
+        self.push_choice(vec![vec![Goal::LookupExternal {
             call_id,
             instance_id,
             field: field.clone(),
-        })]]);
+        }]]);
 
         Ok(QueryEvent::ExternalCall {
             call_id,
@@ -773,14 +816,14 @@ impl PolarVirtualMachine {
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
                 self.append_goals(vec![
-                    Rc::new(Goal::TracePush),
-                    Rc::new(Goal::FilterRules {
+                    Goal::TracePush,
+                    Goal::FilterRules {
                         applicable_rules: vec![],
                         unfiltered_rules: generic_rule.rules,
                         args: predicate.args,
-                    }),
-                    Rc::new(Goal::TracePop),
-                ]);
+                    },
+                    Goal::TracePop,
+                ])?;
             }
         }
 
@@ -797,20 +840,12 @@ impl PolarVirtualMachine {
             Operator::And => {
                 // Append a `Query` goal for each term in the args list
                 self.push_goal(Goal::TracePop)?;
-                self.append_goals(
-                    args.into_iter()
-                        .map(|term| Rc::new(Goal::Query { term }))
-                        .collect(),
-                );
+                self.append_goals(args.into_iter().map(|term| Goal::Query { term }))?;
                 self.push_goal(Goal::TracePush)?;
             }
             Operator::Or => {
                 // Create a choice point with alternatives to query for each arg, and start on the first alternative
-                self.choose(
-                    args.into_iter()
-                        .map(|term| vec![Rc::new(Goal::Query { term })])
-                        .collect(),
-                )
+                self.choose(args.into_iter().map(|term| vec![Goal::Query { term }]))?;
             }
             Operator::Not => {
                 // Push a choice point that queries for the term; if the query succeeds cut and backtrack
@@ -818,15 +853,15 @@ impl PolarVirtualMachine {
                 let term = args.pop().unwrap();
                 let alternatives = vec![
                     vec![
-                        Rc::new(Goal::Query { term }),
-                        Rc::new(Goal::Cut {
+                        Goal::Query { term },
+                        Goal::Cut {
                             choice_index: self.choices.len(),
-                        }),
-                        Rc::new(Goal::Backtrack),
+                        },
+                        Goal::Backtrack,
                     ],
-                    vec![Rc::new(Goal::Noop)],
+                    vec![Goal::Noop],
                 ];
-                self.choose(alternatives);
+                self.choose(alternatives)?;
             }
             Operator::Unify => {
                 // Push a `Unify` goal
@@ -851,10 +886,10 @@ impl PolarVirtualMachine {
                 let mut alternatives = vec![];
                 if let Value::List(list) = list.value() {
                     for term in list {
-                        alternatives.push(vec![Rc::new(Goal::Unify {
+                        alternatives.push(vec![Goal::Unify {
                             left: item.clone(),
                             right: term.clone(),
-                        })])
+                        }])
                     }
                 } else {
                     return Err(self.type_error(
@@ -862,7 +897,7 @@ impl PolarVirtualMachine {
                         format!("can only use `in` on a list, this is {:?}", item.value()),
                     ));
                 }
-                self.choose(alternatives);
+                self.choose(alternatives)?;
             }
             Operator::Debug => {
                 let mut message = "Welcome to the debugger!".to_string();
@@ -901,15 +936,15 @@ impl PolarVirtualMachine {
                 // A goal is used here in case the result is already bound to some external
                 // instance.
                 self.append_goals(vec![
-                    Rc::new(Goal::Unify {
+                    Goal::Unify {
                         left: result,
                         right: literal_term,
-                    }),
-                    Rc::new(Goal::MakeExternal {
+                    },
+                    Goal::MakeExternal {
                         instance_id,
                         literal: literal_value,
-                    }),
-                ]);
+                    },
+                ])?;
             }
             Operator::Cut => {
                 // Remove all choices created before this cut that are in the
@@ -1156,17 +1191,10 @@ impl PolarVirtualMachine {
             // Unify lists by recursively unifying the elements.
             (Value::List(left), Value::List(right)) => {
                 if left.len() == right.len() {
-                    self.append_goals(
-                        left.iter()
-                            .zip(right)
-                            .map(|(left, right)| {
-                                Rc::new(Goal::Unify {
-                                    left: left.clone(),
-                                    right: right.clone(),
-                                })
-                            })
-                            .collect(),
-                    )
+                    self.append_goals(left.iter().zip(right).map(|(left, right)| Goal::Unify {
+                        left: left.clone(),
+                        right: right.clone(),
+                    }))?;
                 } else {
                     self.push_goal(Goal::Backtrack)?;
                 }
@@ -1219,18 +1247,12 @@ impl PolarVirtualMachine {
             // Unify predicates like unifying heads
             (Value::Call(left), Value::Call(right)) => {
                 if left.name == right.name && left.args.len() == right.args.len() {
-                    self.append_goals(
-                        left.args
-                            .iter()
-                            .zip(right.args.iter())
-                            .map(|(left, right)| {
-                                Rc::new(Goal::Unify {
-                                    left: left.clone(),
-                                    right: right.clone(),
-                                })
-                            })
-                            .collect(),
-                    )
+                    self.append_goals(left.args.iter().zip(right.args.iter()).map(
+                        |(left, right)| Goal::Unify {
+                            left: left.clone(),
+                            right: right.clone(),
+                        },
+                    ))?;
                 } else {
                     self.push_goal(Goal::Backtrack)?
                 }
@@ -1340,10 +1362,7 @@ impl PolarVirtualMachine {
                 choice_index: self.choices.len(),
             });
             check_applicability.push(applicable);
-            self.choose(vec![
-                check_applicability.into_iter().map(Rc::new).collect(),
-                vec![Rc::new(inapplicable)],
-            ]);
+            self.choose(vec![check_applicability, vec![inapplicable]])?;
             Ok(())
         }
     }
@@ -1399,14 +1418,14 @@ impl PolarVirtualMachine {
                 // If the comparison succeeds, continue the inner loop with the swapped rules.
                 self.choose(vec![
                     vec![
-                        Rc::new(compare),
-                        Rc::new(Goal::Cut {
+                        compare,
+                        Goal::Cut {
                             choice_index: self.choices.len(),
-                        }),
-                        Rc::new(next_inner),
+                        },
+                        next_inner,
                     ],
-                    vec![Rc::new(next_outer)],
-                ]);
+                    vec![next_outer],
+                ])?;
             } else {
                 assert_eq!(inner, 0);
                 self.push_goal(next_outer)?;
@@ -1446,11 +1465,11 @@ impl PolarVirtualMachine {
                 goals.push(Goal::Query { term: body.clone() });
                 goals.push(Goal::TracePop);
 
-                alternatives.push(goals.into_iter().map(Rc::new).collect())
+                alternatives.push(goals)
             }
 
             // Choose the first alternative, and push a choice for the rest.
-            self.choose(alternatives);
+            self.choose(alternatives)?;
         }
         Ok(())
     }
@@ -1478,19 +1497,18 @@ impl PolarVirtualMachine {
                     // of checking that is is equal to `true`.
                     self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
 
-                    self.append_goals(vec![
-                        Rc::new(Goal::IsSubspecializer {
+                    return self.append_goals(vec![
+                        Goal::IsSubspecializer {
                             answer: answer.clone(),
                             left: left_spec.clone(),
                             right: right_spec.clone(),
                             arg: arg.clone(),
-                        }),
-                        Rc::new(Goal::Unify {
+                        },
+                        Goal::Unify {
                             left: Term::new_temporary(Value::Symbol(answer)),
                             right: Term::new_temporary(Value::Boolean(true)),
-                        }),
+                        },
                     ]);
-                    return Ok(());
                 }
             }
         }
@@ -1695,7 +1713,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), vec![Rc::new(goal)]);
+        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), vec![goal]);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -2056,9 +2074,9 @@ mod tests {
     fn debug() {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
-            vec![Rc::new(Goal::Debug {
+            vec![Goal::Debug {
                 message: "Hello".to_string(),
-            })],
+            }],
         );
         assert!(matches!(
             vm.run().unwrap(),
@@ -2070,7 +2088,7 @@ mod tests {
     fn halt() {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
-            vec![Rc::new(Goal::Halt)],
+            vec![Goal::Halt],
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.goals.len(), 0);
@@ -2087,10 +2105,10 @@ mod tests {
         let vals = term!([zero.clone(), one.clone()]);
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
-            vec![Rc::new(Goal::Unify {
+            vec![Goal::Unify {
                 left: vars,
                 right: vals,
-            })],
+            }],
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
@@ -2109,29 +2127,32 @@ mod tests {
 
         // Left variable bound to bound right variable.
         vm.bind(&y, one.clone());
-        vm.append_goals(vec![Rc::new(Goal::Unify {
+        vm.append_goals(vec![Goal::Unify {
             left: term!(x),
             right: term!(y),
-        })]);
+        }])
+        .unwrap();
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&sym!("x")), Some(&one));
         vm.backtrack().unwrap();
 
         // Left variable bound to value.
         vm.bind(&z, one.clone());
-        vm.append_goals(vec![Rc::new(Goal::Unify {
+        vm.append_goals(vec![Goal::Unify {
             left: term!(z.clone()),
             right: one.clone(),
-        })]);
+        }])
+        .unwrap();
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&z), Some(&one));
 
         // Left variable bound to value
         vm.bind(&z, one.clone());
-        vm.append_goals(vec![Rc::new(Goal::Unify {
+        vm.append_goals(vec![Goal::Unify {
             left: term!(z.clone()),
             right: two,
-        })]);
+        }])
+        .unwrap();
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&z), Some(&one));
     }
@@ -2198,10 +2219,10 @@ mod tests {
 
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(kb)),
-            vec![Rc::new(query!(pred!(
+            vec![query!(pred!(
                 "bar",
                 [external_instance.clone(), external_instance, sym!("z")]
-            )))],
+            ))],
         );
 
         let mut results = Vec::new();
