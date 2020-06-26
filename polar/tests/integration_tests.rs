@@ -160,7 +160,7 @@ fn qnull(polar: &mut Polar, query_str: &str) -> bool {
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
     let mut external_results: Vec<Term> = external_results
         .into_iter()
-        .map(Term::new_from_unknown)
+        .map(Term::new_from_test)
         .rev()
         .collect();
     let query = polar.new_query(query_str).unwrap();
