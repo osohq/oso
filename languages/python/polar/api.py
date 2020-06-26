@@ -199,7 +199,7 @@ class Polar:
             val = {"Symbol": v}
         else:
             val = {"ExternalInstance": {"instance_id": self.__cache_instance(v)}}
-        term = {"id": 0, "offset": 0, "value": val}
+        term = {"value": val}
         return term
 
     ########## PRIVATE METHODS ##########

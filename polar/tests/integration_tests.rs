@@ -6,10 +6,11 @@ use permute::permute;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::rc::Rc;
 
 use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 
-type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Trace>)>;
+type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Rc<Trace>>)>;
 use mock_externals::MockExternal;
 
 fn no_results(_: Symbol, _: Vec<Term>, _: u64, _: u64) -> Option<Term> {
@@ -52,7 +53,10 @@ where
             QueryEvent::Done => break,
             QueryEvent::Result { bindings, trace } => {
                 results.push((
-                    bindings.into_iter().map(|(k, v)| (k, v.value)).collect(),
+                    bindings
+                        .into_iter()
+                        .map(|(k, v)| (k, v.value().clone()))
+                        .collect(),
                     trace,
                 ));
             }
@@ -87,8 +91,8 @@ where
                 call_id,
                 external_is_subspecializer_handler(instance_id, left_class_tag, right_class_tag),
             ),
-            QueryEvent::Debug { message } => {
-                query.debug_command(debug_handler(&message)).unwrap();
+            QueryEvent::Debug { ref message } => {
+                query.debug_command(&debug_handler(message)).unwrap();
             }
             _ => {}
         }
@@ -155,8 +159,11 @@ fn qnull(polar: &mut Polar, query_str: &str) -> bool {
 }
 
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
-    let mut external_results: Vec<Term> =
-        external_results.into_iter().map(Term::new).rev().collect();
+    let mut external_results: Vec<Term> = external_results
+        .into_iter()
+        .map(Term::new_from_test)
+        .rev()
+        .collect();
     let query = polar.new_query(query_str).unwrap();
     query_results!(query, |_, _, _, _| external_results.pop())
 }
@@ -235,16 +242,16 @@ fn test_trace() {
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
   f(x) := x = 1, x = 1; [
-    _x_1 = 1, _x_1 = 1 [
-      _x_1 = 1 [
+    _x_3 = 1, _x_3 = 1 [
+      _x_3 = 1 [
       ]
-      _x_1 = 1 [
+      _x_3 = 1 [
       ]
     ]
   ]
 ]
 "#;
-    assert!(trace == expected);
+    assert_eq!(trace, expected);
 }
 
 #[test]
@@ -588,7 +595,7 @@ fn test_lookup_derefs() {
     let mut foo_lookups = vec![term!(1)];
     let mock_foo = |_, args: Vec<Term>, _, _| {
         // check the argument is bound to an integer
-        assert!(matches!(args[0].value, Value::Number(_)));
+        assert!(matches!(args[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
 
@@ -597,7 +604,7 @@ fn test_lookup_derefs() {
 
     let mut foo_lookups = vec![term!(1)];
     let mock_foo = |_, args: Vec<Term>, _, _| {
-        assert!(matches!(args[0].value, Value::Number(_)));
+        assert!(matches!(args[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
     let query = polar.new_query("f(2)").unwrap();
@@ -654,7 +661,7 @@ fn test_externals_instantiated() {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
         assert!(
-            matches!(&args[0].value,
+            matches!(&args[0].value(),
                 Value::ExternalInstance(ExternalInstance {
                     literal: Some(InstanceLiteral {
                         ref tag, ref fields
@@ -662,7 +669,7 @@ fn test_externals_instantiated() {
                     ..
                 }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
             "expected external instance Bar {{ x: 1 }}, found: {:?}",
-            args[0].value
+            args[0].value()
         );
         foo_lookups.pop()
     };
