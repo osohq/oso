@@ -727,5 +727,14 @@ mod tests {
         };
         let err: crate::PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());
+        let rule = Rule {
+            name: Symbol::new("foo"),
+            params: vec![],
+            body: Term::new_temporary(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![dict.clone(), dict.clone(), dict.clone()],
+            })),
+        };
+        eprintln!("{}", rule);
     }
 }
