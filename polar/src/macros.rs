@@ -26,11 +26,7 @@ impl<T> From<T> for TestHelper<T> {
 
 impl From<Value> for TestHelper<Term> {
     fn from(other: Value) -> Self {
-        Self(Term {
-            id: 0, //NEXT_ID.fetch_add(1, ORD),
-            offset: 0,
-            value: other,
-        })
+        Self(Term::new_from_test(other))
     }
 }
 
@@ -45,7 +41,7 @@ macro_rules! term {
 impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
         Self(Parameter {
-            parameter: Some(Term::new(Value::Symbol(arg.0))),
+            parameter: Some(arg.1.clone_with_value(Value::Symbol(arg.0))),
             specializer: Some(Pattern::term_as_pattern(&arg.1)),
         })
     }
@@ -57,7 +53,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Some(Term::new(name)),
+            parameter: Some(Term::new_from_test(name)),
             specializer: None,
         })
     }
