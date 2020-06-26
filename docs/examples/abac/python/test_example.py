@@ -33,7 +33,7 @@ def oso():
 @pytest.fixture
 def load(oso):
     def load(policy):
-        oso.load_file(Path(__file__).parent / policy)
+        oso.load_file(Path(__file__).parent.parent / policy)
         oso._load_queued_files()
 
     return load

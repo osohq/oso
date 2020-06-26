@@ -8,6 +8,8 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
 
+export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
+
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
@@ -28,8 +30,11 @@ test: doctest
 	cd externals-example && python3 -m pytest
 
 	cd examples/inheritance/python && pytest .
+	cd examples/abac/python && pytest .
 	cd examples/rbac/python && pytest .
 	cd examples/context/python && pytest .
+
+	cd examples/abac/ruby && bundle exec rspec test_spec.rb
 
 deps:
 	pip3 install -r requirements-docs.txt
