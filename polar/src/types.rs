@@ -23,17 +23,11 @@ impl Dictionary {
         }
     }
 
-    fn map<F>(&self, f: &mut F) -> Dictionary
+    fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        Dictionary {
-            fields: self
-                .fields
-                .iter()
-                .map(|(k, v)| (k.clone(), v.map(f)))
-                .collect(),
-        }
+        self.fields.iter_mut().for_each(|(_k, v)| v.map_replace(f));
     }
 
     pub fn is_empty(&self) -> bool {
@@ -42,7 +36,12 @@ impl Dictionary {
 
     /// Convert all terms in this dictionary to patterns.
     pub fn as_pattern(&self) -> Pattern {
-        Pattern::Dictionary(self.map(&mut Pattern::value_as_pattern))
+        let mut pattern = self.clone();
+        pattern.map_replace(&mut |t| {
+            let v = Pattern::value_as_pattern(t.value());
+            t.clone_with_value(v)
+        });
+        Pattern::Dictionary(pattern)
     }
 }
 
@@ -61,29 +60,24 @@ pub struct InstanceLiteral {
 }
 
 impl InstanceLiteral {
-    pub fn map<F>(&self, f: &mut F) -> InstanceLiteral
+    pub fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
-    {
-        InstanceLiteral {
-            tag: self.tag.clone(),
-            fields: self.fields.map(f),
-        }
-    }
-
-    pub fn walk_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Term) -> bool,
+        F: FnMut(&Term) -> Term,
     {
         self.fields
             .fields
             .iter_mut()
-            .for_each(|(_, v)| v.walk_mut(f));
+            .for_each(|(_, v)| v.map_replace(f));
     }
 
     /// Convert all terms in this instance literal to patterns.
     pub fn as_pattern(&self) -> Pattern {
-        Pattern::Instance(self.map(&mut Pattern::value_as_pattern))
+        let mut pattern = self.clone();
+        pattern.map_replace(&mut |t| {
+            let v = Pattern::value_as_pattern(t.value());
+            t.clone_with_value(v)
+        });
+        Pattern::Instance(pattern)
     }
 }
 
@@ -120,18 +114,6 @@ impl Symbol {
 pub struct Predicate {
     pub name: Symbol,
     pub args: TermList,
-}
-
-impl Predicate {
-    fn map<F>(&self, f: &mut F) -> Predicate
-    where
-        F: FnMut(&Value) -> Value,
-    {
-        Predicate {
-            name: self.name.clone(),
-            args: self.args.iter().map(|term| term.map(f)).collect(),
-        }
-    }
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -202,25 +184,15 @@ pub enum Pattern {
 
 impl Pattern {
     pub fn value_as_pattern(value: &Value) -> Value {
-        value.map(&mut |v| match v {
+        match value.clone() {
             Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
             Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
-            _ => v.clone(),
-        })
+            v => v,
+        }
     }
 
     pub fn term_as_pattern(term: &Term) -> Term {
-        term.map(&mut Pattern::value_as_pattern)
-    }
-
-    pub fn map<F>(&self, f: &mut F) -> Pattern
-    where
-        F: FnMut(&Value) -> Value,
-    {
-        match self {
-            Pattern::Instance(lit) => Pattern::Instance(lit.map(f)),
-            Pattern::Dictionary(dict) => Pattern::Dictionary(dict.map(f)),
-        }
+        term.clone_with_value(Self::value_as_pattern(term.value()))
     }
 }
 
@@ -294,31 +266,6 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn map<F>(&self, f: &mut F) -> Value
-    where
-        F: FnMut(&Value) -> Value,
-    {
-        // the match does the recursive calling of map
-        let mapped = match self {
-            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {
-                self.clone()
-            }
-            Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
-            Value::Call(predicate) => Value::Call(predicate.map(f)),
-            Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
-                operator: *operator,
-                args: args.iter().map(|term| term.map(f)).collect(),
-            }),
-            Value::InstanceLiteral(literal) => Value::InstanceLiteral(literal.map(f)),
-            Value::ExternalInstance(_) => self.clone(),
-            Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
-            Value::Pattern(pat) => Value::Pattern(pat.map(f)),
-        };
-        // actually does the mapping of nodes: applies to all nodes, both leaves and
-        // intermediate nodes
-        f(&mapped)
-    }
-
     pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
         match self {
             Value::Symbol(name) => Ok(name),
@@ -425,46 +372,51 @@ impl Term {
         self.value = Rc::new(value);
     }
 
-    /// Apply `f` to value and return a new term.
-    pub fn map<F>(&self, f: &mut F) -> Term
+    /// Convenience wrapper around map_replace that clones the
+    /// term before running `map_replace`, to return the new value
+    pub fn cloned_map_replace<F>(&self, f: &mut F) -> Self
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        self.clone_with_value(self.value.map(f))
+        let mut term = self.clone();
+        term.map_replace(f);
+        term
     }
 
-    /// Does a preorder walk of the term tree, calling F on itself and then walking its children.
-    /// If F returns true walk the children, otherwise stop.
-    pub fn walk_mut<F>(&mut self, f: &mut F)
+    /// Visits every term in the tree, replaces the node with the evaluation of `f` on the node
+    /// and then recurses to the children
+    ///
+    /// Warning: this does _a lot_ of cloning.
+    pub fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Self) -> bool,
+        F: FnMut(&Term) -> Term,
     {
-        let walk_children = f(self);
-        if walk_children {
-            match self.value_mut() {
-                Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-                Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.walk_mut(f)),
-                Value::Call(ref mut predicate) => {
-                    predicate.args.iter_mut().for_each(|a| a.walk_mut(f))
-                }
-                Value::Expression(Operation { ref mut args, .. }) => {
-                    args.iter_mut().for_each(|term| term.walk_mut(f))
-                }
-                Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
-                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::ExternalInstance(_) => {}
-                Value::Dictionary(Dictionary { ref mut fields }) => {
-                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
-                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
-                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-            };
-        }
+        *self = f(self);
+        let mut value = self.value().clone();
+        match value {
+            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_replace(f)),
+            Value::Call(ref mut predicate) => {
+                predicate.args.iter_mut().for_each(|a| a.map_replace(f))
+            }
+            Value::Expression(Operation { ref mut args, .. }) => {
+                args.iter_mut().for_each(|term| term.map_replace(f))
+            }
+            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
+                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+            Value::ExternalInstance(_) => {}
+            Value::Dictionary(Dictionary { ref mut fields }) => {
+                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
+                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
+                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+        };
+        self.replace_value(value);
     }
 
     pub fn offset(&self) -> usize {
@@ -473,10 +425,6 @@ impl Term {
 
     pub fn value(&self) -> &Value {
         &self.value
-    }
-
-    pub fn value_mut(&mut self) -> &mut Value {
-        Rc::make_mut(&mut self.value)
     }
 }
 
@@ -497,24 +445,12 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    pub fn map<F>(&self, f: &mut F) -> Parameter
+    pub fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        Parameter {
-            parameter: self.parameter.clone().map(|t| t.map(f)),
-            specializer: self.specializer.clone().map(|t| t.map(f)),
-        }
-    }
-
-    /// Does a preorder walk of the parameter terms.
-    pub fn walk_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Term) -> bool,
-    {
-        self.specializer.iter_mut().for_each(|mut a| {
-            f(&mut a);
-        });
+        self.parameter.iter_mut().for_each(|p| p.map_replace(f));
+        self.specializer.iter_mut().for_each(|p| p.map_replace(f));
     }
 }
 
@@ -526,24 +462,12 @@ pub struct Rule {
 }
 
 impl Rule {
-    pub fn map<F>(&self, f: &mut F) -> Rule
+    pub fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        Rule {
-            name: self.name.clone(),
-            params: self.params.iter().map(|param| param.map(f)).collect(),
-            body: self.body.map(f),
-        }
-    }
-
-    /// Does a preorder walk of the rule parameters and body.
-    pub fn walk_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Term) -> bool,
-    {
-        self.params.iter_mut().for_each(|param| param.walk_mut(f));
-        self.body.walk_mut(f);
+        self.params.iter_mut().for_each(|p| p.map_replace(f));
+        self.body.map_replace(f);
     }
 }
 
