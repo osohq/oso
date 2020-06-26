@@ -82,7 +82,7 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>)
                     })
                     .collect();
                 return term.clone_with_value(Value::Expression(Operation {
-                    operator: op.operator.clone(),
+                    operator: op.operator,
                     args,
                 }));
             }
