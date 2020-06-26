@@ -16,7 +16,7 @@ jobs:
       - name: Install Python formatter
         run: pip install black
       - name: Check Python formatting
-        run: black --check .
+        run: black --check languages/python
 
       - name: Install Ruby + gems
         uses: ruby/setup-ruby@v1
@@ -44,4 +44,4 @@ jobs:
           args: --all-features --all-targets -- -D warnings
       - run: make test
       - name: Doc test
-        run: make -C languages/python/docs test
+        run: make -C docs test
