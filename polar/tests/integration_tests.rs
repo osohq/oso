@@ -902,6 +902,49 @@ fn test_unify_rule_head() {
 }
 
 #[test]
+/// Test that cut commits to all choice points before the cut, not just the last.
+fn test_cut() {
+    let mut polar = Polar::new();
+    polar.load("a(x) := x = 1 | x = 2;").unwrap();
+    polar.load("b(x) := x = 3 | x = 4;").unwrap();
+    polar.load("bcut(x) := x = 3 | x = 4, cut();").unwrap();
+
+    polar.load("c(a, b) := a(a), b(b), cut();").unwrap();
+    polar.load("c_no_cut(a, b) := a(a), b(b);").unwrap();
+    polar.load("c_partial_cut(a, b) := a(a), bcut(b);").unwrap();
+    polar
+        .load("c_another_partial_cut(a, b) := a(a), cut(), b(b);")
+        .unwrap();
+
+    // Ensure we return multiple results without a cut.
+    assert!(qvars(&mut polar, "c_no_cut(a, b)", &["a", "b"]).len() > 1);
+
+    // Ensure that only one result is returned when cut is at the end.
+    assert_eq!(
+        qvars(&mut polar, "c(a, b)", &["a", "b"]),
+        vec![vec![value!(1), value!(3)]]
+    );
+
+    // Make sure that cut in `bcut` does not affect `c_partial_cut`.
+    // If it did, only one result would be returned, [1, 3].
+    assert_eq!(
+        qvars(&mut polar, "c_partial_cut(a, b)", &["a", "b"]),
+        vec![vec![value!(1), value!(3)], vec![value!(2), value!(3)]]
+    );
+
+    // Make sure cut only affects choice points before it.
+    assert_eq!(
+        qvars(&mut polar, "c_another_partial_cut(a, b)", &["a", "b"]),
+        vec![vec![value!(1), value!(3)], vec![value!(1), value!(4)]]
+    );
+
+    polar.load("f(x) := (x = 1, cut()) | x = 2;").unwrap();
+    assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+    assert!(qeval(&mut polar, "f(1)"));
+    assert!(qeval(&mut polar, "f(2)"));
+}
+
+#[test]
 fn test_forall() {
     let mut polar = Polar::new();
     polar
