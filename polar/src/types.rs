@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{error, ToPolarString};
@@ -22,17 +23,11 @@ impl Dictionary {
         }
     }
 
-    fn map<F>(&self, f: &mut F) -> Dictionary
+    fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        Dictionary {
-            fields: self
-                .fields
-                .iter()
-                .map(|(k, v)| (k.clone(), v.map(f)))
-                .collect(),
-        }
+        self.fields.iter_mut().for_each(|(_k, v)| v.map_replace(f));
     }
 
     pub fn is_empty(&self) -> bool {
@@ -41,12 +36,17 @@ impl Dictionary {
 
     /// Convert all terms in this dictionary to patterns.
     pub fn as_pattern(&self) -> Pattern {
-        Pattern::Dictionary(self.map(&mut Pattern::value_as_pattern))
+        let mut pattern = self.clone();
+        pattern.map_replace(&mut |t| {
+            let v = Pattern::value_as_pattern(t.value());
+            t.clone_with_value(v)
+        });
+        Pattern::Dictionary(pattern)
     }
 }
 
 pub fn field_name(field: &Term) -> Symbol {
-    if let Value::Call(Predicate { name, .. }) = &field.value {
+    if let Value::Call(Predicate { name, .. }) = &field.value() {
         name.clone()
     } else {
         panic!("keys must be symbols; received: {:?}", field.value)
@@ -60,29 +60,24 @@ pub struct InstanceLiteral {
 }
 
 impl InstanceLiteral {
-    pub fn map<F>(&self, f: &mut F) -> InstanceLiteral
+    pub fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
-    {
-        InstanceLiteral {
-            tag: self.tag.clone(),
-            fields: self.fields.map(f),
-        }
-    }
-
-    pub fn walk_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Term) -> bool,
+        F: FnMut(&Term) -> Term,
     {
         self.fields
             .fields
             .iter_mut()
-            .for_each(|(_, v)| v.walk_mut(f));
+            .for_each(|(_, v)| v.map_replace(f));
     }
 
     /// Convert all terms in this instance literal to patterns.
     pub fn as_pattern(&self) -> Pattern {
-        Pattern::Instance(self.map(&mut Pattern::value_as_pattern))
+        let mut pattern = self.clone();
+        pattern.map_replace(&mut |t| {
+            let v = Pattern::value_as_pattern(t.value());
+            t.clone_with_value(v)
+        });
+        Pattern::Instance(pattern)
     }
 }
 
@@ -121,18 +116,6 @@ pub struct Predicate {
     pub args: TermList,
 }
 
-impl Predicate {
-    fn map<F>(&self, f: &mut F) -> Predicate
-    where
-        F: FnMut(&Value) -> Value,
-    {
-        Predicate {
-            name: self.name.clone(),
-            args: self.args.iter().map(|term| term.map(f)).collect(),
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Operator {
     Debug,
@@ -155,6 +138,7 @@ pub enum Operator {
     Unify,
     Or,
     And,
+    ForAll,
 }
 
 impl Operator {
@@ -163,6 +147,7 @@ impl Operator {
             Operator::Debug => 11,
             Operator::New => 10,
             Operator::Cut => 10,
+            Operator::ForAll => 10,
             Operator::Dot => 9,
             Operator::In => 8,
             Operator::Isa => 8,
@@ -199,25 +184,15 @@ pub enum Pattern {
 
 impl Pattern {
     pub fn value_as_pattern(value: &Value) -> Value {
-        value.map(&mut |v| match v {
+        match value.clone() {
             Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
             Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
-            _ => v.clone(),
-        })
+            v => v,
+        }
     }
 
     pub fn term_as_pattern(term: &Term) -> Term {
-        term.map(&mut Pattern::value_as_pattern)
-    }
-
-    pub fn map<F>(&self, f: &mut F) -> Pattern
-    where
-        F: FnMut(&Value) -> Value,
-    {
-        match self {
-            Pattern::Instance(lit) => Pattern::Instance(lit.map(f)),
-            Pattern::Dictionary(dict) => Pattern::Dictionary(dict.map(f)),
-        }
+        term.clone_with_value(Self::value_as_pattern(term.value()))
     }
 }
 
@@ -279,6 +254,8 @@ pub enum Value {
     String(String),
     Boolean(bool),
     ExternalInstance(ExternalInstance),
+    // TODO (dhatch) Remove this type so that it is no longer possible to even make an
+    // instance literal value!
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Pattern(Pattern),
@@ -289,31 +266,6 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn map<F>(&self, f: &mut F) -> Value
-    where
-        F: FnMut(&Value) -> Value,
-    {
-        // the match does the recursive calling of map
-        let mapped = match self {
-            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {
-                self.clone()
-            }
-            Value::List(terms) => Value::List(terms.iter().map(|term| term.map(f)).collect()),
-            Value::Call(predicate) => Value::Call(predicate.map(f)),
-            Value::Expression(Operation { operator, args }) => Value::Expression(Operation {
-                operator: *operator,
-                args: args.iter().map(|term| term.map(f)).collect(),
-            }),
-            Value::InstanceLiteral(literal) => Value::InstanceLiteral(literal.map(f)),
-            Value::ExternalInstance(_) => self.clone(),
-            Value::Dictionary(dict) => Value::Dictionary(dict.map(f)),
-            Value::Pattern(pat) => Value::Pattern(pat.map(f)),
-        };
-        // actually does the mapping of nodes: applies to all nodes, both leaves and
-        // intermediate nodes
-        f(&mapped)
-    }
-
     pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
         match self {
             Value::Symbol(name) => Ok(name),
@@ -359,11 +311,42 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
+#[derive(Debug, Clone)]
+enum SourceInfo {
+    // From the parser
+    Parser {
+        /// Index into the source map stored in the knowledge base
+        src_id: u64,
+
+        /// Location of the term within the source map
+        offset: usize,
+    },
+
+    /// Created as a temporary variable
+    TemporaryVariable,
+
+    /// From an FFI call
+    Ffi,
+
+    /// Created for a test
+    Test,
+}
+
+impl SourceInfo {
+    fn ffi() -> Self {
+        Self::Ffi
+    }
+}
+
+/// Represents a concrete instance of a Polar value
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Term {
-    pub id: u64,
-    pub offset: usize,
-    pub value: Value,
+    /// Information about where the term was created from
+    #[serde(skip, default = "SourceInfo::ffi")]
+    source_info: SourceInfo,
+
+    /// The actual underlying value
+    value: Rc<Value>,
 }
 
 impl PartialEq for Term {
@@ -372,119 +355,131 @@ impl PartialEq for Term {
     }
 }
 
+impl Eq for Term {}
+
 impl Term {
-    pub fn new(value: Value) -> Self {
+    /// Creates a new term for a temporary variable
+    pub fn new_temporary(value: Value) -> Self {
         Self {
-            id: 0,
-            offset: 0,
-            value,
+            source_info: SourceInfo::TemporaryVariable,
+            value: Rc::new(value),
         }
     }
 
+    /// Creates a new term from the parser
+    pub fn new_from_parser(src_id: u64, offset: usize, value: Value) -> Self {
+        Self {
+            source_info: SourceInfo::Parser { src_id, offset },
+            value: Rc::new(value),
+        }
+    }
+
+    /// Creates a new term from a test value
+    pub fn new_from_test(value: Value) -> Self {
+        Self {
+            source_info: SourceInfo::Test,
+            value: Rc::new(value),
+        }
+    }
+
+    /// Create a new Term, cloning the source info of `self`
+    /// but with the new `value`
     pub fn clone_with_value(&self, value: Value) -> Self {
         Self {
-            id: self.id,
-            offset: self.offset,
-            value,
+            source_info: self.source_info.clone(),
+            value: Rc::new(value),
         }
     }
 
-    pub fn replace_value(&mut self, value: Value) -> Value {
-        std::mem::replace(&mut self.value, value)
+    /// Replace the `value` of self
+    pub fn replace_value(&mut self, value: Value) {
+        self.value = Rc::new(value);
     }
 
-    /// Apply `f` to value and return a new term.
-    pub fn map<F>(&self, f: &mut F) -> Term
+    /// Convenience wrapper around map_replace that clones the
+    /// term before running `map_replace`, to return the new value
+    pub fn cloned_map_replace<F>(&self, f: &mut F) -> Self
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        Term {
-            id: self.id,
-            offset: self.offset,
-            value: self.value.map(f),
+        let mut term = self.clone();
+        term.map_replace(f);
+        term
+    }
+
+    /// Visits every term in the tree, replaces the node with the evaluation of `f` on the node
+    /// and then recurses to the children
+    ///
+    /// Warning: this does _a lot_ of cloning.
+    pub fn map_replace<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&Term) -> Term,
+    {
+        *self = f(self);
+        let mut value = self.value().clone();
+        match value {
+            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_replace(f)),
+            Value::Call(ref mut predicate) => {
+                predicate.args.iter_mut().for_each(|a| a.map_replace(f))
+            }
+            Value::Expression(Operation { ref mut args, .. }) => {
+                args.iter_mut().for_each(|term| term.map_replace(f))
+            }
+            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
+                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+            Value::ExternalInstance(_) => {}
+            Value::Dictionary(Dictionary { ref mut fields }) => {
+                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
+                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
+                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+        };
+        self.replace_value(value);
+    }
+
+    pub fn offset(&self) -> usize {
+        if let SourceInfo::Parser { offset, .. } = self.source_info {
+            offset
+        } else {
+            0
         }
     }
 
-    /// Does a preorder walk of the term tree, calling F on itself and then walking its children.
-    /// If F returns true walk the children, otherwise stop.
-    pub fn walk_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Self) -> bool,
-    {
-        let walk_children = f(self);
-        if walk_children {
-            match self.value {
-                Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
-                Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.walk_mut(f)),
-                Value::Call(ref mut predicate) => {
-                    predicate.args.iter_mut().for_each(|a| a.walk_mut(f))
-                }
-                Value::Expression(Operation { ref mut args, .. }) => {
-                    args.iter_mut().for_each(|term| term.walk_mut(f))
-                }
-                Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
-                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::ExternalInstance(_) => {}
-                Value::Dictionary(Dictionary { ref mut fields }) => {
-                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
-                    fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-                Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
-                    fields.fields.iter_mut().for_each(|(_, v)| v.walk_mut(f))
-                }
-            };
-        }
+    /// Get a reference to the underlying data of this term
+    pub fn value(&self) -> &Value {
+        &self.value
     }
 }
 
 pub fn unwrap_and(term: Term) -> TermList {
-    match term.value {
+    match term.value() {
         Value::Expression(Operation {
             operator: Operator::And,
             args,
-        }) => args,
-        _ => vec![term],
+        }) => args.clone(),
+        _ => vec![term.clone()],
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Parameter {
-    pub name: Option<Symbol>,
+    pub parameter: Option<Term>,
     pub specializer: Option<Term>,
 }
 
 impl Parameter {
-    pub fn map<F>(&self, f: &mut F) -> Parameter
+    pub fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        let name = if let Some(name) = &self.name {
-            if let Value::Symbol(new_sym) = f(&Value::Symbol(name.clone())) {
-                Some(new_sym)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        Parameter {
-            name,
-            specializer: self.specializer.clone().map(|t| t.map(f)),
-        }
-    }
-
-    /// Does a preorder walk of the parameter terms.
-    pub fn walk_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Term) -> bool,
-    {
-        self.specializer.iter_mut().for_each(|mut a| {
-            f(&mut a);
-        });
+        self.parameter.iter_mut().for_each(|p| p.map_replace(f));
+        self.specializer.iter_mut().for_each(|p| p.map_replace(f));
     }
 }
 
@@ -496,24 +491,12 @@ pub struct Rule {
 }
 
 impl Rule {
-    pub fn map<F>(&self, f: &mut F) -> Rule
+    pub fn map_replace<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&Value) -> Value,
+        F: FnMut(&Term) -> Term,
     {
-        Rule {
-            name: self.name.clone(),
-            params: self.params.iter().map(|param| param.map(f)).collect(),
-            body: self.body.map(f),
-        }
-    }
-
-    /// Does a preorder walk of the rule parameters and body.
-    pub fn walk_mut<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Term) -> bool,
-    {
-        self.params.iter_mut().for_each(|param| param.walk_mut(f));
-        self.body.walk_mut(f);
+        self.params.iter_mut().for_each(|p| p.map_replace(f));
+        self.body.map_replace(f);
     }
 }
 
@@ -542,11 +525,24 @@ pub struct Source {
     pub src: String,
 }
 
-#[derive(Default)]
 pub struct Sources {
     // Pair of maps to go from Term ID -> Source ID -> Source.
     sources: HashMap<u64, Source>,
-    term_sources: HashMap<u64, u64>,
+    // term_sources: HashMap<u64, u64>,
+}
+
+impl Default for Sources {
+    fn default() -> Self {
+        let mut sources = HashMap::new();
+        sources.insert(
+            0,
+            Source {
+                filename: None,
+                src: "<Unknown>".to_string(),
+            },
+        );
+        Self { sources }
+    }
 }
 
 impl Sources {
@@ -554,14 +550,12 @@ impl Sources {
         self.sources.insert(id, source);
     }
 
-    pub fn add_term_source(&mut self, term: &Term, src_id: u64) {
-        self.term_sources.insert(term.id, src_id);
-    }
-
     pub fn get_source(&self, term: &Term) -> Option<Source> {
-        self.term_sources
-            .get(&term.id)
-            .and_then(|term_source| self.sources.get(&term_source).cloned())
+        if let SourceInfo::Parser { src_id, .. } = term.source_info {
+            self.sources.get(&src_id).cloned()
+        } else {
+            None
+        }
     }
 }
 
@@ -575,7 +569,7 @@ pub enum Node {
 pub struct Trace {
     pub node: Node,
     pub polar_str: String,
-    pub children: Vec<Trace>,
+    pub children: Vec<Rc<Trace>>,
 }
 
 #[derive(Default)]
@@ -671,7 +665,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
-        trace: Option<Trace>,
+        trace: Option<Rc<Trace>>,
     },
 }
 
@@ -682,45 +676,29 @@ mod tests {
     fn serialize_test() {
         let pred = Predicate {
             name: Symbol("foo".to_owned()),
-            args: vec![Term {
-                id: 2,
-                offset: 0,
-                value: value!(0),
-            }],
+            args: vec![Term::new_from_test(value!(0))],
         };
         assert_eq!(
             serde_json::to_string(&pred).unwrap(),
-            r#"{"name":"foo","args":[{"id":2,"offset":0,"value":{"Number":{"Integer":0}}}]}"#
+            r#"{"name":"foo","args":[{"value":{"Number":{"Integer":0}}}]}"#
         );
         let event = QueryEvent::ExternalCall {
             call_id: 2,
             instance_id: 3,
             attribute: Symbol::new("foo"),
             args: vec![
-                Term {
-                    id: 2,
-                    offset: 0,
-                    value: value!(0),
-                },
-                Term {
-                    id: 3,
-                    offset: 0,
-                    value: Value::String("hello".to_string()),
-                },
+                Term::new_from_test(value!(0)),
+                Term::new_from_test(value!("hello")),
             ],
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
-        let term = Term {
-            id: 0,
-            offset: 0,
-            value: value!(1),
-        };
+        let term = Term::new_from_test(value!(1));
         eprintln!("{}", serde_json::to_string(&term).unwrap());
         let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("hello"), term!(1234));
         fields.insert(
             Symbol::new("world"),
-            Term::new(Value::String("something".to_owned())),
+            Term::new_from_test(Value::String("something".to_owned())),
         );
         let literal = InstanceLiteral {
             tag: Symbol::new("Foo"),
@@ -731,15 +709,15 @@ mod tests {
             instance: literal,
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
-        let external = Term::new(Value::ExternalInstance(ExternalInstance {
+        let external = Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
             literal: None,
         }));
-        let list_of = Term::new(Value::List(vec![external]));
+        let list_of = Term::new_from_test(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());
         let mut fields = BTreeMap::new();
         fields.insert(Symbol::new("foo"), list_of);
-        let dict = Term::new(Value::Dictionary(Dictionary { fields }));
+        let dict = Term::new_from_test(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
         let e = error::ParseError::InvalidTokenCharacter {
             token: "Integer".to_owned(),

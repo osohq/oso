@@ -38,7 +38,7 @@ pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Term};
+    use crate::types::{Numeric, Rule, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -80,6 +80,14 @@ pub mod display {
 
     impl fmt::Display for Goal {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn fmt_rules(rules: &[Rule]) -> String {
+                rules
+                    .iter()
+                    .map(|rule| rule.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            }
+
             match self {
                 Goal::Isa { left, right } => {
                     write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
@@ -115,6 +123,16 @@ pub mod display {
                 } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+                Goal::FilterRules {
+                    applicable_rules,
+                    unfiltered_rules,
+                    ..
+                } => write!(
+                    fmt,
+                    "FilterRules([{}], [{}])",
+                    fmt_rules(applicable_rules),
+                    fmt_rules(unfiltered_rules),
+                ),
                 Goal::SortRules {
                     rules,
                     outer,
@@ -123,11 +141,7 @@ pub mod display {
                 } => write!(
                     fmt,
                     "SortRules([{}], outer={}, inner={})",
-                    rules
-                        .iter()
-                        .map(|rule| rule.to_polar())
-                        .collect::<Vec<String>>()
-                        .join(" "),
+                    fmt_rules(rules),
                     outer,
                     inner,
                 ),
@@ -173,7 +187,7 @@ pub mod to_polar {
     /// Helper method: uses the operator precedence to determine if `t`
     /// has a lower precedence than `op`.
     fn has_lower_pred(op: Operator, t: &Term) -> bool {
-        match t.value {
+        match t.value() {
             Value::Expression(Operation {
                 operator: other, ..
             }) => op.precedence() > other.precedence(),
@@ -241,6 +255,7 @@ pub mod to_polar {
                 Unify => "=",
                 In => "in",
                 Cut => "cut",
+                ForAll => "forall",
                 Debug => "debug",
                 Isa => "isa",
             }
@@ -256,6 +271,11 @@ pub mod to_polar {
             match self.operator {
                 Debug => "debug()".to_owned(),
                 Cut => "cut()".to_owned(),
+                ForAll => format!(
+                    "forall({}, {})",
+                    self.args[0].to_polar(),
+                    self.args[1].to_polar()
+                ),
                 New => {
                     if self.args.len() == 1 {
                         format!("new {}", to_polar_parens(self.operator, &self.args[0]))
@@ -270,7 +290,7 @@ pub mod to_polar {
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {
-                        let call = self.args[1].value.clone().call().unwrap();
+                        let call = self.args[1].value().clone().call().unwrap();
                         if call.args.is_empty() {
                             format!("{}.{}", self.args[0].to_polar(), call.name.to_polar())
                         } else {
@@ -312,12 +332,12 @@ pub mod to_polar {
 
     impl ToPolarString for Parameter {
         fn to_polar(&self) -> String {
-            match (&self.name, &self.specializer) {
-                (Some(name), Some(specializer)) => {
-                    format!("{}: {}", name.to_polar(), specializer.to_polar())
+            match (&self.parameter, &self.specializer) {
+                (Some(parameter), Some(specializer)) => {
+                    format!("{}: {}", parameter.to_polar(), specializer.to_polar())
                 }
                 (None, Some(specializer)) => specializer.to_polar(),
-                (Some(name), None) => name.to_polar(),
+                (Some(parameter), None) => parameter.to_polar(),
                 (None, None) => panic!("Invalid specializer"),
             }
         }
@@ -335,15 +355,11 @@ pub mod to_polar {
 
     impl ToPolarString for Rule {
         fn to_polar(&self) -> String {
-            match &self.body {
-                Term {
-                    value:
-                        Value::Expression(Operation {
-                            operator: Operator::And,
-                            args,
-                        }),
-                    ..
-                } => {
+            match &self.body.value() {
+                Value::Expression(Operation {
+                    operator: Operator::And,
+                    args,
+                }) => {
                     if args.is_empty() {
                         format!(
                             "{}({});",
@@ -372,7 +388,7 @@ pub mod to_polar {
 
     impl ToPolarString for Term {
         fn to_polar(&self) -> String {
-            self.value.to_polar()
+            self.value().to_polar()
         }
     }
 

@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'oso'
+
+polar = Oso::Polar.new.tap do |p| # rubocop:disable Lint/UselessAssignment
+  p.load_str('f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);')
+  puts 'f(x)', p.send(:query_str, 'f(x)').to_a
+  puts 'k(x)', p.send(:query_str, 'k(x)').to_a
+
+  p.load_str('foo(1, 2); foo(3, 4); foo(5, 6);')
+  expected = [{ 'x' => 1, 'y' => 2 }, { 'x' => 3, 'y' => 4 }, { 'x' => 5, 'y' => 6 }]
+  raise 'AssertionError' if p.send(:query_str, 'foo(x, y)').to_a != expected
+
+  class TestClass # rubocop:disable Style/Documentation
+    def my_method
+      1
+    end
+  end
+
+  p.register_class(TestClass)
+
+  p.load_str('external(x, 3) := x = new TestClass{}.my_method;')
+  results = p.send(:query_str, 'external(1, x)')
+  p results.next
+
+  # p.load_str('testDebug() := debug(), foo(x, y), k(y);')
+  # p.send(:query_str, 'testDebug()').next
+end
+
+require 'pry'
+Pry.start

@@ -35,7 +35,7 @@ role(actor: User, role, team: Team) :=
 # Management hierarchies
 allow(actor: User, "view", resource: Expense) :=
     manages(actor, employee),
-    employee isa User { name: resource.submitted_by };
+    employee isa User{ name: resource.submitted_by };
 
 manages(manager: User, employee) :=
     employee = manager.employees() |

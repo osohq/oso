@@ -23,7 +23,7 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: 2.4
-          working-directory: 'languages/ruby/polar'
+          working-directory: 'languages/ruby'
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1

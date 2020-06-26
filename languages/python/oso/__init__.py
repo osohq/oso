@@ -59,6 +59,17 @@ class Oso(api.Polar):
         audit.log(actor, action, resource, result)
         return result.success
 
+    def query_predicate(self, name, *args, debug=False) -> QueryResult:
+        """Query for predicate with name ``name`` and args ``args``.
+
+        :param name: The name of the predicate to query.
+        :param args: Arguments for the predicate.
+
+        :return: The result of the query.
+        """
+        pred = Predicate(name=name, args=args)
+        return self._query_pred(pred, debug=debug)
+
 
 def polar_class(_cls=None, *, from_polar=None):
     """Decorator to register a Python class with Polar. An alternative to ``register_class()``.
