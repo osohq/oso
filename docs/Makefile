@@ -35,6 +35,7 @@ test: doctest
 	cd examples/context/python && pytest .
 
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb
+	cd examples/rbac/ruby && bundle exec rspec test_spec.rb
 
 deps:
 	pip3 install -r requirements-docs.txt

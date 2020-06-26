@@ -93,10 +93,18 @@ RBAC with existing roles
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/rbac/03-external.py
+        .. literalinclude:: /examples/rbac/python/03-external.py
            :language: python
 
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/rbac/ruby/03-external.rb
+           :language: ruby
+
 .. container:: left-col
+
+    .. todo:: dhatch wrong
 
     By adding the :py:func:`oso.polar_class` decorator, we can begin leveraging
     our existing application class from within our Polar policy:
@@ -106,8 +114,15 @@ RBAC with existing roles
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/rbac/04-external.py
+        .. literalinclude:: /examples/rbac/python/04-external.py
            :language: python
+           :emphasize-lines: 1
+
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/rbac/ruby/04-external.rb
+           :language: ruby
            :emphasize-lines: 1
 
 .. container:: left-col

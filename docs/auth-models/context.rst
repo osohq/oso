@@ -36,9 +36,15 @@ Context
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/context/02-context.py
+        .. literalinclude:: /examples/context/python/02-context.py
            :language: python
            :lines: 1-7
+
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/context/ruby/02-context.rb
+           :language: ruby
 
 .. container:: left-col
 
