@@ -11,7 +11,7 @@ pub use display::*;
 
 pub use to_polar::*;
 
-use crate::types::{Node, Trace};
+use crate::types::{Node, Operation, Operator, Parameter, Term, Trace, Value};
 use std::fmt::Write;
 
 pub fn draw(trace: &Trace, nest: usize) -> String {
@@ -34,11 +34,49 @@ pub fn draw(trace: &Trace, nest: usize) -> String {
     res
 }
 
+/// Formats a vector of terms as a string-separated list
+/// When providing an operator, parentheses are applied suitably
+/// (see: to_polar_parens)
+pub fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
+    args.iter()
+        .map(|t| to_polar_parens(op, t))
+        .collect::<Vec<String>>()
+        .join(sep)
+}
+
+/// Formats a vector of parameters
+pub fn format_params(args: &[Parameter], sep: &str) -> String {
+    args.iter()
+        .map(|parameter| parameter.to_polar())
+        .collect::<Vec<String>>()
+        .join(sep)
+}
+
+/// Helper method: uses the operator precedence to determine if `t`
+/// has a lower precedence than `op`.
+fn has_lower_pred(op: Operator, t: &Term) -> bool {
+    match t.value() {
+        Value::Expression(Operation {
+            operator: other, ..
+        }) => op.precedence() > other.precedence(),
+        _ => false,
+    }
+}
+
+pub fn to_polar_parens(op: Operator, t: &Term) -> String {
+    if has_lower_pred(op, t) {
+        format!("({})", t.to_polar())
+    } else {
+        t.to_polar()
+    }
+}
+
 pub mod display {
+    use crate::formatting::{format_args, format_params};
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Rule, Term};
+    use crate::types::{Numeric, Operation, Operator, Rule, Term, Value};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -153,6 +191,35 @@ pub mod display {
         }
     }
 
+    impl fmt::Display for Rule {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match &self.body.value() {
+                Value::Expression(Operation {
+                    operator: Operator::And,
+                    args,
+                }) => {
+                    if args.is_empty() {
+                        write!(
+                            fmt,
+                            "{}({});",
+                            self.name.to_polar(),
+                            format_params(&self.params, ", ")
+                        )
+                    } else {
+                        write!(
+                            fmt,
+                            "{}({}) := {};",
+                            self.name.to_polar(),
+                            format_params(&self.params, ", "),
+                            format_args(Operator::And, &args, ",\n  "),
+                        )
+                    }
+                }
+                _ => panic!("Not any sorta rule I parsed"),
+            }
+        }
+    }
+
     impl fmt::Display for Numeric {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
@@ -164,44 +231,8 @@ pub mod display {
 }
 
 pub mod to_polar {
+    use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::types::*;
-
-    /// Formats a vector of terms as a string-separated list
-    /// When providing an operator, parentheses are applied suitably
-    /// (see: to_polar_parens)
-    fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
-        args.iter()
-            .map(|t| to_polar_parens(op, t))
-            .collect::<Vec<String>>()
-            .join(sep)
-    }
-
-    /// Formats a vector of parameters
-    fn format_params(args: &[Parameter], sep: &str) -> String {
-        args.iter()
-            .map(|parameter| parameter.to_polar())
-            .collect::<Vec<String>>()
-            .join(sep)
-    }
-
-    /// Helper method: uses the operator precedence to determine if `t`
-    /// has a lower precedence than `op`.
-    fn has_lower_pred(op: Operator, t: &Term) -> bool {
-        match t.value() {
-            Value::Expression(Operation {
-                operator: other, ..
-            }) => op.precedence() > other.precedence(),
-            _ => false,
-        }
-    }
-
-    fn to_polar_parens(op: Operator, t: &Term) -> String {
-        if has_lower_pred(op, t) {
-            format!("({})", t.to_polar())
-        } else {
-            t.to_polar()
-        }
-    }
 
     /// Effectively works as a reverse-parser. Allows types to be turned
     /// back into polar-parseable strings.
