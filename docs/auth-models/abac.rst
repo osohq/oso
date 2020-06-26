@@ -27,7 +27,7 @@ ABAC basics
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/abac/01-simple.py
+        .. literalinclude:: /examples/abac/python/01-simple.py
            :language: python
            :start-after: user-class-start
            :end-before: user-class-end
@@ -35,9 +35,11 @@ ABAC basics
     .. tab-container:: ruby
         :title: Ruby
 
-        .. code-block:: ruby
+        .. literalinclude:: /examples/abac/ruby/01-simple.rb
+           :language: ruby
+           :start-after: user-class-start
+           :end-before: user-class-end
 
-            fake ruby
 
 .. container:: left-col
 
@@ -48,7 +50,7 @@ ABAC basics
     .. tab-container:: python
         :title: Python
 
-        .. literalinclude:: /examples/abac/01-simple.py
+        .. literalinclude:: /examples/abac/python/01-simple.py
            :language: python
            :start-after: expense-class-start
            :end-before: expense-class-end
@@ -56,9 +58,10 @@ ABAC basics
     .. tab-container:: ruby
         :title: Ruby
 
-        .. code-block:: ruby
-
-            fake ruby
+        .. literalinclude:: /examples/abac/ruby/01-simple.rb
+           :language: ruby
+           :start-after: expense-class-start
+           :end-before: expense-class-end
 
 .. container:: left-col
 

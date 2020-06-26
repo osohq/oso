@@ -1,11 +1,10 @@
-require 'pry'
-
 EXPENSES = [
   { :submitted_by => "alice", :amount => 500, :location => "NYC", :project_id => 2 }
 ]
 
 # expense-class-start
 class Expense
+  # expense-class-end
   attr_accessor :amount, :submitted_by, :location, :project_id
   def initialize(amount:, submitted_by:, location:, project_id:)
     @amount = amount
