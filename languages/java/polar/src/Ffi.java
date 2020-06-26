@@ -1,6 +1,5 @@
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
-import com.google.gson.JsonParser;
 
 public class Ffi {
     private PolarLib polar_lib;
