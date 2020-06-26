@@ -57,32 +57,41 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
 /// Walks the term and does an in-place rewrite
 /// Uses `rewrites` as a buffer of new lookup terms
 fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>) {
-    term.walk_mut(&mut |term| {
-        // First, rewrite this term in place, maybe returning a lookup
+    term.map_replace(&mut |term| {
+        // First, rewrite this term, maybe returning a lookup
         // lookup gets added to rewrites list
-        if let Some(mut lookup) = rewrite(term, kb) {
+        let mut term = term.clone();
+        if let Some(mut lookup) = rewrite(&mut term, kb) {
             // recursively rewrite the lookup term if necesary
             do_rewrite(&mut lookup, kb, rewrites);
             rewrites.push(lookup);
-        }
+        } else if let Value::Expression(op) = term.value() {
+            // Next, if this is an expression, we want to immediately
+            // do the recursive rewrite in place
 
-        // Next, if this is an expression, we want to immediately
-        // do the recursive rewrite in place
-        if let Value::Expression(op) = term.value_mut() {
             if matches!(op.operator, Operator::And | Operator::Or | Operator::Not) {
-                for arg in op.args.iter_mut() {
-                    let mut arg_rewrites = Vec::new();
-                    // gather all rewrites
-                    do_rewrite(arg, kb, &mut arg_rewrites);
-                    // immediately rewrite the arg in place
-                    for rewrite in arg_rewrites.drain(..).rev() {
-                        and_wrap(arg, rewrite);
-                    }
-                }
-                return false;
+                let args = op
+                    .args
+                    .iter()
+                    .map(|arg| {
+                        let mut arg = arg.clone();
+                        let mut arg_rewrites = Vec::new();
+                        // gather all rewrites
+                        do_rewrite(&mut arg, kb, &mut arg_rewrites);
+                        // immediately rewrite the arg in place
+                        for rewrite in arg_rewrites.drain(..).rev() {
+                            and_wrap(&mut arg, rewrite);
+                        }
+                        arg
+                    })
+                    .collect();
+                return term.clone_with_value(Value::Expression(Operation {
+                    operator: op.operator.clone(),
+                    args,
+                }));
             }
         }
-        true
+        term
     });
 }
 

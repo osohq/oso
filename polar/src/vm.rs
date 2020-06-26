@@ -385,18 +385,20 @@ impl PolarVirtualMachine {
     /// by renaming them to temporaries.
     fn rename_vars(&self, rule: &Rule) -> Rule {
         let mut renames = HashMap::<Symbol, Symbol>::new();
-        rule.map(&mut move |value| match value {
+        let mut rule = rule.clone();
+        rule.map_replace(&mut move |term| match term.value() {
             Value::Symbol(sym) => {
                 if let Some(new) = renames.get(sym) {
-                    Value::Symbol(new.clone())
+                    term.clone_with_value(Value::Symbol(new.clone()))
                 } else {
                     let new = self.kb.read().unwrap().gensym(&sym.0);
                     renames.insert(sym.clone(), new.clone());
-                    Value::Symbol(new)
+                    term.clone_with_value(Value::Symbol(new))
                 }
             }
-            _ => value.clone(),
-        })
+            _ => term.clone(),
+        });
+        rule
     }
 }
 
@@ -841,15 +843,12 @@ impl PolarVirtualMachine {
                     "Must have result as second arg."
                 );
                 let mut literal_term = args.pop().unwrap();
-                let mut literal_value = literal_term
+                literal_term.map_replace(&mut |t| self.deref(t));
+                let literal_value = literal_term
                     .value()
                     .clone()
                     .instance_literal()
                     .expect("Arg must be instance literal");
-                literal_value.walk_mut(&mut |t| {
-                    *t = self.deref(t);
-                    true
-                });
 
                 let instance_id = self.new_id();
                 literal_term.replace_value(Value::ExternalInstance(ExternalInstance {
