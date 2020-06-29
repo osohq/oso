@@ -285,7 +285,7 @@ In (List Membership)
 ^^^^^^^^^^^^^^^^^^^^
 
 The `in` operator can be used to evaluate conditions over all elements in
-a list.  If the second argument passed to ``in`` is not a list (or symbol bound
+a list.  If the second operand to ``in`` is not a list (or symbol bound
 to a list), the operation will fail.
 
 For example::
