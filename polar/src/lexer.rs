@@ -499,7 +499,7 @@ mod tests {
         "#;
         let mut lexer = Lexer::new(&in_string);
         assert!(
-            matches!(lexer.next(), Some(Ok((13, Token::String(hunnid), 19))) if hunnid == "💯".to_string())
+            matches!(lexer.next(), Some(Ok((13, Token::String(hunnid), 19))) if hunnid == "💯")
         );
         assert!(
             matches!(lexer.next(), Some(Ok((20, Token::Symbol(hunnid), 21))) if hunnid == Symbol::new("💯"))
