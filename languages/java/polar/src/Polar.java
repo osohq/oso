@@ -43,7 +43,7 @@ public class Polar {
     }
 
     // Turn a Polar term passed across the FFI boundary into a Ruby value.
-    public Object to_java(JSONObject data) {
+    public Object toJava(JSONObject data) {
         JSONObject value = data.getJSONObject("value");
         String tag = value.keys().next();
         switch (tag) {
@@ -52,19 +52,25 @@ public class Polar {
             case "Boolean":
                 return value.getBoolean(tag);
             case "Number":
-                return value.getJSONObject(tag).getInt("Integer");
+                JSONObject num = value.getJSONObject(tag);
+                switch (num.keys().next()) {
+                    case "Integer":
+                        return num.getInt("Integer");
+                    case "Float":
+                        return num.getFloat("Float");
+                }
             case "List":
                 JSONArray jArray = value.getJSONArray(tag);
                 ArrayList<Object> resArray = new ArrayList<Object>();
                 for (int i = 0; i < jArray.length(); i++) {
-                    resArray.add(to_java(jArray.getJSONObject(i)));
+                    resArray.add(toJava(jArray.getJSONObject(i)));
                 }
                 return resArray;
             case "Dictionary":
                 JSONObject jMap = value.getJSONObject(tag).getJSONObject("fields");
                 HashMap<String, Object> resMap = new HashMap<String, Object>();
                 for (String key : jMap.keySet()) {
-                    resMap.put(key, to_java(jMap.getJSONObject(key)));
+                    resMap.put(key, toJava(jMap.getJSONObject(key)));
 
                 }
                 return resMap;
@@ -131,7 +137,7 @@ public class Polar {
                             JSONObject bindings = data.getJSONObject("bindings");
 
                             for (String key : bindings.keySet()) {
-                                Object val = to_java(bindings.getJSONObject(key));
+                                Object val = toJava(bindings.getJSONObject(key));
                                 results.put(key, val);
                             }
                             return results;
