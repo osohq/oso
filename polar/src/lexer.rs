@@ -181,6 +181,20 @@ impl<'input> Lexer<'input> {
                     last = i;
                     self.c = self.chars.next();
                 }
+                ':' => {
+                    if let Some((i, ':')) = self.chars.next() {
+                        self.buf.push_str("::");
+                        last = i;
+                        self.c = self.chars.next();
+                    } else {
+                        return Some(Err(ParseError::InvalidTokenCharacter {
+                            token: self.buf.clone(),
+                            c: ':',
+                            loc: i,
+                            context: None,
+                        }));
+                    }
+                }
                 _ => break,
             }
         }
@@ -472,11 +486,12 @@ mod tests {
             matches!(tok, Some(Ok((_, Token::String(s), _))) if &s == r#"this is a "sub" string"#)
         );
     }
+
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_lexer() {
         let f = r#"hello "world" 12345 < + <= { ] =99 #comment
-            more; in"#;
+            more; in; Ruby::Namespace"#;
         let mut lexer = Lexer::new(&f);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(hello), 5))) if hello == Symbol::new("hello"))
@@ -503,6 +518,10 @@ mod tests {
         );
         assert!(matches!(lexer.next(), Some(Ok((60, Token::SemiColon, 61)))));
         assert!(matches!(lexer.next(), Some(Ok((62, Token::In, 64)))));
+        assert!(matches!(lexer.next(), Some(Ok((64, Token::SemiColon, 65)))));
+        assert!(
+            matches!(lexer.next(), Some(Ok((66, Token::Symbol(ruby_namespace), 81))) if ruby_namespace == Symbol::new("Ruby::Namespace"))
+        );
         assert!(matches!(lexer.next(), None));
     }
 }
