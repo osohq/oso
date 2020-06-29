@@ -318,4 +318,4 @@ list (the first alternative of condition).
 succeeds because the ``action`` holds for all values in the list.
 
 ``forall`` can also be used with application data to check all elements returned
-by a class method.
+by an application method.
