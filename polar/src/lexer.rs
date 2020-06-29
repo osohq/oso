@@ -201,6 +201,17 @@ impl<'input> Lexer<'input> {
                 _ => break,
             }
         }
+        if let Some((i, _)) = &self.buf.char_indices().rev().nth(1) {
+            if &self.buf[*i..] == "::" {
+                return Some(Err(ParseError::InvalidTokenCharacter {
+                    token: self.buf.clone(),
+                    c: ':',
+                    loc: last,
+                    context: None,
+                }));
+            }
+        }
+
         if &self.buf == "true" {
             Some(Ok((start, Token::Boolean(true), last + 1)))
         } else if &self.buf == "false" {
@@ -494,10 +505,10 @@ mod tests {
 
     #[test]
     fn test_emoji() {
-        let in_string = r#"
+        let s = r#"
             "💯" 💯
         "#;
-        let mut lexer = Lexer::new(&in_string);
+        let mut lexer = Lexer::new(&s);
         assert!(
             matches!(lexer.next(), Some(Ok((13, Token::String(hunnid), 19))) if hunnid == "💯")
         );
@@ -525,6 +536,57 @@ mod tests {
                 loc: 5,
                 context: None
             })) if &t == "?="
+        ));
+    }
+
+    #[test]
+    fn test_symbol_colons() {
+        let s = "foo:bar";
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 3))) if x == Symbol::new("foo"))
+        );
+        assert!(matches!(lexer.next(), Some(Ok((3, Token::Colon, 4)))));
+        assert!(
+            matches!(lexer.next(), Some(Ok((4, Token::Symbol(x), 7))) if x == Symbol::new("bar"))
+        );
+        assert!(matches!(lexer.next(), None));
+
+        let s = "foo::bar";
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 8))) if x == Symbol::new("foo::bar"))
+        );
+        assert!(matches!(lexer.next(), None));
+
+        let s = "foo:::bar";
+        let mut lexer = Lexer::new(&s);
+        assert!(matches!(
+            lexer.next(),
+            Some(Err(ParseError::InvalidTokenCharacter {
+                token: x,
+                c: ':',
+                loc: 4,
+                context: None
+            })) if &x == "foo::"
+        ));
+    }
+
+    #[test]
+    fn test_symbol_question_marks() {
+        let s = "foo??";
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 4))) if x == Symbol::new("foo?"))
+        );
+        assert!(matches!(
+            lexer.next(),
+            Some(Err(ParseError::InvalidTokenCharacter {
+                token: x,
+                c: '\u{0}',
+                loc: 5,
+                context: None
+            })) if &x == "?="
         ));
     }
 
