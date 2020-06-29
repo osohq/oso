@@ -40,20 +40,27 @@ public class Polar {
             results = new Result();
         }
 
-        private class Result implements Enumeration<String> {
-            private boolean has_next;
+        // Query Results are Enumerations of Strings
+        public class Result implements Enumeration<HashMap<String, Object>> {
+            private HashMap<String, Object> next;
 
             public Result() {
-                has_next = true;
+                next = nextResult();
             }
 
             @Override
             public boolean hasMoreElements() {
-                return has_next;
+                return next != null;
             }
 
             @Override
-            public String nextElement() {
+            public HashMap<String, Object> nextElement() {
+                HashMap<String, Object> ret = next;
+                next = nextResult();
+                return ret;
+            }
+
+            private HashMap<String, Object> nextResult() {
                 while (true) {
                     String event_str = ffi_instance.polar_next_query_event(query_ptr);
                     String kind;
@@ -70,27 +77,33 @@ public class Polar {
 
                     switch (kind) {
                         case "Done":
-                            has_next = false;
                             return null;
                         case "Result":
-                            return data.getJSONObject("bindings").toString();
+                            HashMap<String, Object> results = new HashMap<String, Object>();
+                            JSONObject bindings = data.getJSONObject("bindings");
+
+                            for (String key : bindings.keySet()) {
+                                Object val = to_java(bindings.getJSONObject(key));
+                                results.put(key, val);
+                            }
+                            return results;
                         default:
                             throw new Error("Unimplemented event type: " + kind);
                     }
                 }
+
             }
         }
+
     }
 
     public static void main(String[] args) {
         Polar p = new Polar();
         p.load_str("f(1);");
-        Enumeration<String> results = p.query_str("f(x)");
-        String bindings = results.nextElement();
-        do {
-            System.out.println(bindings);
-            bindings = results.nextElement();
-        } while (bindings != null);
+        Enumeration<HashMap<String, Object>> results = p.query_str("f(x)");
+        while (results.hasMoreElements()) {
+            System.out.println(results.nextElement());
+        }
         p.free();
     }
 
