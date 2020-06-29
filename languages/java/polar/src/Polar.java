@@ -85,6 +85,59 @@ public class Polar {
         }
     }
 
+    public JSONObject toPolarTerm(Object value) {
+        // Build Polar value
+        JSONObject jVal = new JSONObject();
+        if (value.getClass() == Boolean.class) {
+            jVal.put("Boolean", value);
+
+        } else if (value.getClass() == Integer.class) {
+            jVal.put("Number", Map.of("Integer", value));
+
+        } else if (value.getClass() == Float.class) {
+            jVal.put("Number", Map.of("Float", value));
+
+        } else if (value.getClass() == String.class) {
+            jVal.put("String", value);
+
+        } else if (value instanceof List) {
+            ArrayList<JSONObject> list = new ArrayList<JSONObject>();
+            for (Object el : (List<Object>) value) {
+                list.add(toPolarTerm(el));
+            }
+            jVal.put("List", list);
+
+        } else if (value instanceof Map) {
+            Map<Object, Object> map = (Map<Object, Object>) value;
+            HashMap<String, JSONObject> jMap = new HashMap<String, JSONObject>();
+            for (Object key : map.keySet()) {
+                JSONObject val = toPolarTerm(map.get(key));
+                jMap.put(key.toString(), val);
+            }
+            jVal.put("Dictionary", new JSONObject().put("fields", jMap));
+
+        } else {
+            throw new Error("Cannot convert type " + value.getClass().toString() + " to Polar.");
+        }
+        // when value.instance_of?(Predicate)
+        // { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el|
+        // to_polar_term(el) } } }
+        // when value.instance_of?(Variable)
+        // # This is supported so that we can query for unbound variables
+        // { 'Symbol' => value }
+        // else
+        // { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
+        // end
+        // { 'id' => 0, 'offset' => 0, 'value' => value }
+
+        // Build Polar term
+        JSONObject term = new JSONObject();
+        term.put("id", 0);
+        term.put("offset", 0);
+        term.put("value", jVal);
+        return term;
+    }
+
     public class Query {
         private Pointer query_ptr;
         public Result results;
