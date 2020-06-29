@@ -273,16 +273,17 @@ impl Debugger {
                         .iter()
                         .map(|var| {
                             let var = Symbol::new(var);
-                            let value = vm.bindings(true).get(&var).cloned().unwrap_or_else(|| {
-                                Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))
-                            });
+                            let value =
+                                vm.to_bindings(true).get(&var).cloned().unwrap_or_else(|| {
+                                    Term::new_temporary(Value::Variable(Symbol::new("<unbound>")))
+                                });
                             Binding(var, value)
                         })
                         .collect();
                     return Some(show(&vars));
                 } else {
                     let mut vars = vm
-                        .bindings(true)
+                        .to_bindings(true)
                         .keys()
                         .map(|k| k.to_polar())
                         .collect::<Vec<_>>()

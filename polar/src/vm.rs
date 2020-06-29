@@ -105,7 +105,7 @@ pub struct Choice {
     trace_stack: Vec<Vec<Rc<Trace>>>,
 }
 
-pub type Bindings = Vec<Binding>;
+pub type BindingStack = Vec<Binding>;
 pub type Choices = Vec<Choice>;
 /// Shortcut type alias for a list of goals
 pub type Goals = Vec<Goal>;
@@ -144,16 +144,20 @@ pub type Queries = TermList;
 pub struct PolarVirtualMachine {
     /// Stacks.
     pub goals: GoalStack,
-    pub bindings: Bindings,
+    pub bindings: BindingStack,
     choices: Choices,
     pub queries: Queries,
 
     pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
-    /// Count executed goals
+    /// Binding stack constant below here.
+    csp: usize,
+
+    /// Executed goal counter.
     goal_counter: usize,
 
+    /// Interactive debugger.
     pub debugger: Debugger,
 
     /// Rules and types.
@@ -171,9 +175,15 @@ impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
     /// Reverse the goal list for the sanity of callers.
     pub fn new(kb: Arc<RwLock<KnowledgeBase>>, goals: Goals) -> Self {
-        Self {
+        let constants = kb
+            .read()
+            .expect("cannot acquire KB read lock")
+            .constants
+            .clone();
+        let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             bindings: vec![],
+            csp: 0,
             choices: vec![],
             goal_counter: 0,
             queries: vec![],
@@ -183,11 +193,16 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
-        }
+        };
+        vm.from_bindings(constants);
+        vm
     }
 
     pub fn new_id(&self) -> u64 {
-        self.kb.read().expect("Couldn't acquire lock.").new_id()
+        self.kb
+            .read()
+            .expect("cannot acquire KB read lock")
+            .new_id()
     }
 
     fn new_call_id(&mut self, symbol: &Symbol) -> u64 {
@@ -303,7 +318,7 @@ impl PolarVirtualMachine {
         }
 
         Ok(QueryEvent::Result {
-            bindings: self.bindings(false),
+            bindings: self.to_bindings(false),
             trace: self.trace.first().cloned(),
         })
     }
@@ -410,10 +425,20 @@ impl PolarVirtualMachine {
         self.bindings.push(Binding(var.clone(), value));
     }
 
-    /// Retrieve the current bindings and return them as a hash map.
-    pub fn bindings(&self, include_temps: bool) -> super::types::Bindings {
+    /// Augment the bindings stack with constants from a hash map.
+    /// There must be no temporaries bound yet.
+    pub fn from_bindings(&mut self, bindings: Bindings) {
+        assert_eq!(self.bsp(), self.csp);
+        for (var, value) in bindings.iter() {
+            self.bind(var, value.clone());
+            self.csp += 1;
+        }
+    }
+
+    /// Retrieve the current non-constant bindings as a hash map.
+    pub fn to_bindings(&self, include_temps: bool) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings {
+        for Binding(var, value) in &self.bindings[self.csp..] {
             if !include_temps && self.is_temporary_var(&var) {
                 continue;
             }
@@ -445,20 +470,27 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Return `true` if `var` is a temporary.
+    /// Return `true` if `var` is a temporary variable.
     fn is_temporary_var(&self, name: &Symbol) -> bool {
         name.0.starts_with('_')
+    }
+
+    /// Return `true` if `var` is a constant variable.
+    fn is_constant_var(&self, name: &Symbol) -> bool {
+        self.bindings
+            .iter()
+            .take(self.csp)
+            .any(|binding| binding.0 == *name)
     }
 
     /// Generate a fresh set of variables for an argument list.
     fn rename_vars(&self, terms: TermList) -> TermList {
         let mut renames = HashMap::<Symbol, Symbol>::new();
-
         terms
             .iter()
             .map(|t| {
                 t.cloned_map_replace(&mut |t| match t.value() {
-                    Value::Variable(sym) => {
+                    Value::Variable(sym) if !self.is_constant_var(sym) => {
                         if let Some(new) = renames.get(sym) {
                             t.clone_with_value(Value::Variable(new.clone()))
                         } else {
@@ -478,7 +510,7 @@ impl PolarVirtualMachine {
         let mut renames = HashMap::<Symbol, Symbol>::new();
         let mut rule = rule.clone();
         rule.map_replace(&mut move |term| match term.value() {
-            Value::Variable(sym) => {
+            Value::Variable(sym) if !self.is_constant_var(sym) => {
                 if let Some(new) = renames.get(sym) {
                     term.clone_with_value(Value::Variable(new.clone()))
                 } else {

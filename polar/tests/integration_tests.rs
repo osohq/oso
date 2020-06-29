@@ -394,6 +394,29 @@ fn test_ait_kaci_34() {
 }
 
 #[test]
+fn test_constants() {
+    let mut polar = Polar::new();
+    {
+        let mut kb = polar.kb.write().unwrap();
+        kb.constant(sym!("one"), term!(1));
+        kb.constant(sym!("two"), term!(2));
+        kb.constant(sym!("three"), term!(3));
+    }
+    polar
+        .load(
+            r#"one(x) := one = one, one = x, x < two;
+               two(x) := one < x, two = two, two = x, two < three;
+               three(x) := three = three, three = x;"#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, "one(1)"));
+    assert!(qnull(&mut polar, "two(1)"));
+    assert!(qeval(&mut polar, "two(2)"));
+    assert!(qnull(&mut polar, "three(2)"));
+    assert!(qeval(&mut polar, "three(3)"));
+}
+
+#[test]
 fn test_not() {
     let mut polar = Polar::new();
     polar.load("odd(1); even(2);").unwrap();
