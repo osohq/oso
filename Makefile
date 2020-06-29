@@ -11,6 +11,12 @@ rust-build:
 python-build: rust-build
 	$(MAKE) -C languages/python build
 
+js-build:
+	wasm-pack build --dev --target nodejs polar
+	rm polar/pkg/.gitignore polar/pkg/package.json
+	cp --recursive polar/pkg/. languages/js/lib
+	rm -rf polar/pkg
+
 python-test: python-build
 	$(MAKE) -C languages/python test
 	python examples/expenses-py/app.py

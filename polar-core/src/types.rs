@@ -3,6 +3,8 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -311,6 +313,7 @@ impl SourceInfo {
 }
 
 /// Represents a concrete instance of a Polar value
+#[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Term {
     /// Information about where the term was created from

@@ -1,3 +1,5 @@
+use wasm_bindgen::prelude::*;
+
 use super::error::{self, PolarError, PolarResult};
 use super::formatting::source_lines;
 use super::lexer::make_context;
@@ -72,6 +74,7 @@ fn fill_context(e: PolarError, source: &Source) -> PolarError {
     }
 }
 
+#[wasm_bindgen]
 pub struct Query {
     vm: PolarVirtualMachine,
     done: bool,
