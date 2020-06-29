@@ -1,7 +1,6 @@
 import jnr.ffi.Pointer;
-import java.util.Enumeration;
-import org.json.JSONObject;
-import org.json.JSONException;
+import org.json.*;
+import java.util.*;
 
 public class Polar {
     private Pointer polar_ptr;
@@ -22,16 +21,59 @@ public class Polar {
         ffi_instance.polar_load(polar_ptr, str, null);
     }
 
-    public Enumeration<String> query_str(String query_str) {
+    // Query for a Polar string
+    public Enumeration<HashMap<String, Object>> query_str(String query_str) {
         Query query = new Query(ffi_instance.polar_new_query(polar_ptr, query_str));
         return query.results;
     }
 
+    // Free the Polar FFI object
     public void free() {
         ffi_instance.polar_free(polar_ptr);
     }
 
-    private class Query {
+    // Start the Polar REPL
+    public void repl() {
+    }
+
+    // Turn a Polar term passed across the FFI boundary into a Ruby value.
+    public Object to_java(JSONObject data) {
+        JSONObject value = data.getJSONObject("value");
+        String tag = value.keys().next();
+        switch (tag) {
+            case "String":
+                return value.getString(tag);
+            case "Boolean":
+                return value.getBoolean(tag);
+            case "Number":
+                return value.getJSONObject(tag).getInt("Integer");
+            case "List":
+                JSONArray jArray = value.getJSONArray(tag);
+                ArrayList<Object> resArray = new ArrayList<Object>();
+                for (int i = 0; i < jArray.length(); i++) {
+                    resArray.add(to_java(jArray.getJSONObject(i)));
+                }
+                return resArray;
+            case "Dictionary":
+                JSONObject jMap = value.getJSONObject(tag).getJSONObject("fields");
+                HashMap<String, Object> resMap = new HashMap<String, Object>();
+                for (String key : jMap.keySet()) {
+                    resMap.put(key, to_java(jMap.getJSONObject(key)));
+
+                }
+                return resMap;
+            case "ExternalInstance":
+                // get_instance(value['instance_id'])
+                throw new Error("Unimplemented Polar Type");
+            case "Call":
+                // Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(a) })
+                throw new Error("Unimplemented Polar Type");
+            default:
+                throw new Error("Unexpected Polar Type");
+        }
+    }
+
+    public class Query {
         private Pointer query_ptr;
         public Result results;
 
