@@ -28,13 +28,14 @@ Installing oso
     .. tab-container:: python
         :title: Python
 
-        Download and install the ``oso`` Python wheel using ``pip install``.
-        The ``oso`` module requires Python version > 3.6.
+        Download and install the ``oso`` `Python wheel <https://pypi.org/project/oso/>`_
+        using ``pip install``.  The ``oso`` module requires Python version > 3.6.
 
     .. tab-container:: ruby
         :title: Ruby
 
-        Download and install the ``oso`` Ruby gem SOMEHOW.
+        Download and install the ``oso`` `Ruby gem <https://rubygems.org/gems/oso-oso>`_ using
+        ``gem install oso-oso`` or ``bundle install oso-oso``.
 
 Make authorization decisions
 ----------------------------
@@ -91,6 +92,46 @@ Make authorization decisions
     .. tab-container:: ruby
         :title: Ruby
 
+        The primary entrypoint of ``oso`` is the ``Oso::Oso`` class.  This class
+        should be initialized in application setup, and typically will be shared
+        throughout:
+
+        .. code-block:: ruby
+
+          require "oso"
+
+          def setup_oso()
+              Oso::Oso.new
+          end
+
+          OSO = setup_oso()
+
+        The ``Oso#allow`` method can be used to make authorization decisions.
+        With oso, an authorization decision takes an **actor**, **resource** and **action**.
+
+        Add ``Oso#allow`` calls anywhere in your application where an authorization needs to
+        be made. For example:
+
+        .. code-block:: ruby
+
+           def authorize_request(request)
+               allowed = OSO.allow(
+                   actor: request.username,
+                   action: "read",
+                   resource: "budget")
+
+               if !allowed
+                   response.not_authorized()
+               end
+
+               # Handle request
+               ...
+            end
+
+        ``authorize_request`` represents the route handler in your web framework of
+        choice.  Here, we are asking **oso** whether a ``read`` action for a resource
+        called ``budget`` is allowed.
+
 Write policies
 --------------
 
@@ -130,6 +171,20 @@ Write policies
     .. tab-container:: ruby
         :title: Ruby
 
+        Load this file in our setup, using ``Oso#load_file``:
+
+        .. code-block:: ruby
+           :emphasize-lines: 5
+
+           require "oso"
+
+           def setup_oso()
+               oso = Oso::Oso.new
+               oso.load_file("policy.polar")
+               oso
+           end
+
+           OSO = setup_oso()
         .. todo
 
 
@@ -153,14 +208,14 @@ Suppose our app has a user, defined as:
 .. container:: right-col content-tabs
 
     .. tab-container:: python
-        :title: Python
+        :title: python
 
         .. testcode::
 
           import oso
 
           @oso.polar_class
-          class User:
+          class user:
               def __init__(self, username: str, is_superuser: bool):
                   self.username = username
                   self.is_superuser = is_superuser
@@ -168,10 +223,10 @@ Suppose our app has a user, defined as:
         .. testoutput::
            :hide:
 
-        The :py:func:`oso.polar_class` function allows Polar to access the
-        ``username`` and ``is_superuser`` fields on our application's ``User`` object.
+        the :py:func:`oso.polar_class` function allows polar to access the
+        ``username`` and ``is_superuser`` fields on our application's ``user`` object.
 
-        Instead of passing the username to ``allow`` as a string, we can pass now our ``User`` object
+        instead of passing the username to ``allow`` as a string, we can pass now our ``user`` object
         directly:
 
         .. code-block:: python
@@ -194,7 +249,40 @@ Suppose our app has a user, defined as:
     .. tab-container:: ruby
         :title: Ruby
 
-        ???
+        .. code-block:: ruby
+
+          require "oso"
+
+          class User
+              attr_accessor :username, :is_superuser
+              def initialize(self, username:, is_superuser:)
+                  @username = username
+                  @is_superuser = is_superuser
+              end
+          end
+
+          OSO.register_class(User)
+
+        The ``Oso#register_class`` method allows polar to access the ``username`` and
+        ``is_superuser`` fields on our application's ``User`` object.
+
+        Instead of passing the username to ``allow`` as a string, we can pass now our ``User`` object
+        directly:
+
+        .. code-block:: ruby
+           :emphasize-lines: 7
+
+           def authorize_request(request)
+               allowed = OSO.allow(
+                   actor: request.user,
+                   action: "read",
+                   resource: "budget")
+
+               if !allowed
+                   response.not_authorized()
+               end
+               ...
+           end
 
 .. container:: left-col
 
@@ -239,7 +327,21 @@ Suppose our app has a user, defined as:
     .. tab-container:: ruby
         :title: Ruby
 
-        ???
+        .. code-block:: ruby
+
+          require "oso"
+
+          class User
+              attr_accessor :username, :is_superuser
+              def initialize(self, username:, is_superuser:)
+                  @username = username
+                  @is_superuser = is_superuser
+              end
+
+              def role(self)
+                  return users.get_role(self)
+              end
+          end
 
 .. container:: left-col
 
