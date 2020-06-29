@@ -988,16 +988,19 @@ fn test_forall() {
         &mut polar,
         "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])"
     ));
+}
 
-    #[test]
-    fn test_emoji_policy() {
-        let mut polar = Polar::new();
-        polar
-            .load(
-                r#"
-                    allow(steve, write, emojis);
+#[test]
+fn test_emoji_policy() {
+    let mut polar = Polar::new();
+    polar
+        .load(
+            r#"
+                    👩‍🔧("👩‍🦰");
+                    allow(👩, "🛠", "🚙") := 👩‍🔧(👩);
                 "#,
-            )
-            .unwrap();
-    }
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, r#"allow("👩‍🦰","🛠","🚙")"#));
+    assert!(qnull(&mut polar, r#"allow("🧟","🛠","🚙")"#));
 }
