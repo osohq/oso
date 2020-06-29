@@ -11,6 +11,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{error, ToPolarString};
 
+/// A map of bindings: variable name → value. The VM uses a stack internally,
+/// but can translate to and from this type.
+pub type Bindings = HashMap<Symbol, Term>;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
 pub struct Dictionary {
     pub fields: BTreeMap<Symbol, Term>,
@@ -573,6 +577,7 @@ pub struct Trace {
 
 #[derive(Default)]
 pub struct KnowledgeBase {
+    pub constants: Bindings,
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
@@ -586,6 +591,7 @@ pub struct KnowledgeBase {
 impl KnowledgeBase {
     pub fn new() -> Self {
         Self {
+            constants: HashMap::new(),
             types: HashMap::new(),
             rules: HashMap::new(),
             sources: Sources::default(),
@@ -615,9 +621,12 @@ impl KnowledgeBase {
     pub fn add_generic_rule(&mut self, rule: GenericRule) {
         self.rules.insert(rule.name.clone(), rule);
     }
-}
 
-pub type Bindings = HashMap<Symbol, Term>;
+    /// Define a constant variable.
+    pub fn constant(&mut self, name: Symbol, value: Term) {
+        self.constants.insert(name, value);
+    }
+}
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
