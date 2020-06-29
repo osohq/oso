@@ -293,7 +293,7 @@ For example::
     x in [1, 2, 3], x = 1
 
 Will bind ``x`` to ``1``, ``2``, ``3``, in turn, and check that ``x = 1`` for each. This
-expression will only suceed for the first item (``1``).
+expression will only succeed for the first item (``1``).
 
 The ``in`` operator generates *alternatives* for each element of the list.
 
