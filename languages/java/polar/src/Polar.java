@@ -11,6 +11,12 @@ public class Polar {
         polar_ptr = ffi_instance.polar_new();
     }
 
+    @Override
+    protected void finalize() {
+        // Free the Polar FFI object
+        ffi_instance.polar_free(polar_ptr);
+    }
+
     // Load a Polar string into the KB (with filename).
     public void load_str(String str, String filename) {
         ffi_instance.polar_load(polar_ptr, str, filename);
@@ -28,9 +34,9 @@ public class Polar {
     }
 
     // Free the Polar FFI object
-    public void free() {
-        ffi_instance.polar_free(polar_ptr);
-    }
+    // public void free() {
+    // ffi_instance.polar_free(polar_ptr);
+    // }
 
     // Start the Polar REPL
     public void repl() {
@@ -146,7 +152,6 @@ public class Polar {
         while (results.hasMoreElements()) {
             System.out.println(results.nextElement());
         }
-        p.free();
     }
 
 }

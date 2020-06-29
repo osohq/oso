@@ -139,6 +139,7 @@ public class Ffi {
         Ffi ffi = new Ffi();
         try {
             Pointer p = ffi.polar_new();
+            ffi.polar_free(p);
         } catch (Exception e) {
             System.out.println(e);
         }
