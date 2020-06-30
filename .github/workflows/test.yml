@@ -43,5 +43,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -- -D warnings
       - run: make test
+      - name: Install yard (for doc build)
+        run: gem install yard
       - name: Doc test
         run: make -C docs test
