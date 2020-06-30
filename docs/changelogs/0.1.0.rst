@@ -1,72 +1,82 @@
-=====
+======
 v0.1.0
-=====
+======
 
 **Release date:** 2020-06-30
-
 
 Major news
 ==========
 
-oso now written in Rust
-------------------------
+The oso core is now written in Rust
+-----------------------------------
 
-This release has mostly internal changes. The core implementation
-of the Polar language is now written in Rust.
+This release consists of mostly internal changes. The core implementation of
+the Polar language is now written in Rust.
 
-Python + Ruby support
-----------------------
+New Python package
+------------------
 
-Currently Python >=3.6 and Ruby >= 2.4 are supported:
+Precompiled wheels supporting Python >= 3.6 are now distributed through
+`pypi.org <https://pypi.org/project/oso/>`_. with ``pip install oso``.
 
-- Precompiled wheels for python are now distributed through `pypi.org <https://pypi.org/project/oso/>`_. with ``pip install oso``
-- Ruby gems with precompiled native extensions are available from `rubygems.org <https://rubygems.org/gems/oso-oso>`_ with ``gem install oso-oso``.
+Ruby support
+------------
 
-
+The ``oso-oso`` gem supporting Ruby >= 2.4 is now available on `RubyGems
+<https://rubygems.org/gems/oso-oso>`_. Try it out with ``gem install oso-oso``.
 
 Breaking changes
 ================
 
 .. warning:: This release contains breaking changes.
 
-Explicit class instantiation
-----------------------------
+Polar language changes
+----------------------
 
-This release introduces the ``new`` operator. Previously, the literal value ``Foo{x: 1}`` would be implicitly converted
-to a instantiated ``Foo`` instance in some places. This is now explicit.
-``Foo{x: 1}`` is only valid as a specializer, e.g.
+Explicit class instantiation with the ``new`` operator
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This release introduces the ``new`` operator. Previously, the literal value
+``Foo{x: 1}`` would be implicitly constructed as a ``Foo`` instance in some
+cases. Instantiation is now explicit, and ``Foo{x: 1}`` is only valid as a
+specializer:
 
 .. code-block:: polar
 
   check_this(foo: Foo{x: 1})
 
-whereas to construct a new instance of `Foo` from Polar, you use the syntax
+Constructing a new instance of ``Foo`` from Polar requires an explicit ``new``
+operator:
 
 .. code-block:: polar
 
   new Foo{x: 1}
 
-
 API changes
 -----------
 
-Disambiguated load functions. `load` is no longer valid:
-- Load files using `oso.Oso.load_file`
-- Load strings using `oso.Oso.load_str`
+Python
+^^^^^^
 
+Disambiguated load functions. :py:func:`oso.Oso.load` is no longer valid:
+
+* Load files with :py:func:`oso.Oso.load_file`.
+* Load strings with :py:func:`oso.Oso.load_str`.
 
 New features
 ==============
 
-New operators: ``in``, ``forall``, ``isa``
-------------------------------------------
+New operators: ``in`` and ``forall``
+------------------------------------
 
-<Insert link to docs pages>
+Documentation:
 
-
-
+* :ref:`in <operator-in>`
+* :ref:`forall <operator-forall>`
 
 Other bugs & improvements
 =========================
 
-- Formatted error messages
+- More consistent formatting for error messages.
+- Performance improvements to the Polar virtual machine that are especially
+  impactful for policies with many rules.
