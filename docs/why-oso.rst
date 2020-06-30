@@ -71,18 +71,20 @@ combination of **searching** and **inferences**.
 Searching
 ---------
 
-The execution of an oso query consists of searching through the rules you have
+The execution of a polar query consists of searching through the rules you have
 provided to find the right combination of rules and inputs to answer the
 query.
 
-Using the two simple rules defined above, the search
-algorithm needs to:
+Using the two simple rules defined above, to answer the above
+query the search algorith may need to perform some number of steps like:
 
-- Find which rules are relevant (the rule name is "allow", and it has three inputs)
-- Check whether the input types match (I have action="reader", what does this rule expect?)
-- Determine which order to apply those rules
-- Check the conditions of the rule to see if it's applied
-- And possibly starts all over again with new queries required by the rule conditions
+- Find all rules with name ``allow`` which expects three inputs
+- Determine which order to apply those rules - both have the same type of inputs, so order as they were defined
+- For each input, check that the input types match, e.g. if the input is ``action="write"``, this matches the second, not the first rule
+- For each condition in the body, evaluate if they are true: check whether the user is indeed a superuser
+- And possibly recurses with any new queries required by the rule: make a new query to determine if the actor is a guest with ``role(actor, "guest")``
+- Any of these above steps may have produced multiple options. If so, go back and try
+  the next possibility
 
 In imperative programming, the equivalent to the search algorithm will typically
 be the manual unrolling of the search algorithm AKA nested if statements:
@@ -125,7 +127,7 @@ Every rule that you add gives oso more possible options and combinations
 of things to try. Your work scales linearly, but the logic you can express
 grows exponentionally -- this is what the search algorithm is doing.
 
-To learn more about how polar works, and logic programming, head over to
+To learn more about how polar and logic programming works head over to
 :doc:`/language/polar-fundamentals`
 
 oso in your application
