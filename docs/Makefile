@@ -20,6 +20,7 @@ help:
 .PHONY: help Makefile api-docs
 
 _api_docs/ruby: $(RUBY_FILES)
+	mkdir -p _api_docs
 	cd "$(RUBY_DIR)" && yard doc
 	rm -rf _api_docs/ruby
 	cp -R $(RUBY_DIR)/doc _api_docs/ruby
