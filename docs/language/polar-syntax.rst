@@ -326,6 +326,7 @@ succeeds because the ``action`` holds for all values in the list.
 by an application method.
 
 ::
+
     forall(role = user.roles(), role = "admin")
 
 
