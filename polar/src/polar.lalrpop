@@ -55,6 +55,10 @@ extern {
         "in" => lexer::Token::In,       // in
         "isa" => lexer::Token::Isa,     // isa
         "forall" => lexer::Token::ForAll,     // forall
+        "if" => lexer::Token::If,       // if
+        "and" => lexer::Token::And,     // and
+        "or" => lexer::Token::Or,       // or
+        "matches" => lexer::Token::Matches,   // matches
     }
 }
 
@@ -243,6 +247,8 @@ Exp9<T>: Term = {
     <exp10:Exp10<T>> => exp10
 };
 
+Matches = {"isa", "matches"};
+
 // in isa
 Exp8<T>: Term = {
     <start:@L> <left:Exp8<T>> "in" <right:Exp9<T>> => {
@@ -251,7 +257,7 @@ Exp8<T>: Term = {
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     // Symbols on the RHS are treated as class names, just like in a specializers
-    <start:@L> <left:Exp8<T>> "isa" <right:Pattern> => {
+    <start:@L> <left:Exp8<T>> Matches <right:Pattern> => {
         let right = if let Value::Symbol(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
@@ -353,9 +359,11 @@ Exp3<T>: Term = {
      <exp4:Exp4<T>> => exp4
  }
 
-// |
+
+
+Or = {"|", "or"};
 Exp2<T>: Term = {
-    <start:@L> <head:Exp3<T>> "|" <mut tail:Exp2<T>> => {
+    <start:@L> <head:Exp3<T>> Or <mut tail:Exp2<T>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
                 let mut args = vec![head];
@@ -372,9 +380,9 @@ Exp2<T>: Term = {
     <exp3:Exp3<T>> => exp3
 }
 
-// ,
+And = {",", "and"};
 Exp1<T>: Term = {
-    <start:@L> <head:Exp2<T>> "," <mut tail:Exp1<T>> => {
+    <start:@L> <head:Exp2<T>> And <mut tail:Exp1<T>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::And, args: tail_args}) => {
                 let mut args = vec![head];
@@ -454,6 +462,8 @@ RuleHead: (Symbol, Vec<Parameter>) = {
     }
 };
 
+Define = {":=", "if"};
+
 pub Rule: Rule = {
     <head:RuleHead> <start:@L> ";" => {
         let (name, params) = head;
@@ -461,7 +471,7 @@ pub Rule: Rule = {
         let body = Term::new_from_parser(src_id, start, Value::Expression(op));
         Rule{name, params, body}
     },
-    <head:RuleHead> ":=" <body:TermExp> ";" => {
+    <head:RuleHead> Define <body:TermExp> ";" => {
         let (name, params) = head;
         let body = match body.value() {
             Value::Expression(Operation{operator: Operator::And, ..}) => {
