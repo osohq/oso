@@ -8,7 +8,7 @@ Having gone through the `getting started <get-started>`_ guide, you may be
 wondering what all the fuss is about. Why are we introducing a new language just
 for the sake of replacing a few `if` statements in your code?
 
-Or, you've been burnt before by the promises of policy languages, and want to
+Or, you've been burned before by the promises of policy languages, and want to
 know how oso is different.
 
 In short, oso is `unique` because it is:
@@ -18,7 +18,7 @@ In short, oso is `unique` because it is:
 
 Putting the two together: oso works as a natural extension of your application,
 meaning you never have to write authorization logic sprinkled throughout your
-application ever again
+application ever again.
 
 Core concepts
 -------------
@@ -29,7 +29,7 @@ things like what order to run things in, and how to achieve the desired end
 goal.
 
 Other examples of declarative languages include SQL, and regular expressions. In
-a SQL query, you don't dictate _how_ the database should index, filter, and
+a SQL query, you don't dictate *how* the database should index, filter, and
 aggregate the data, you ask it to return data fulfilling certain criteria. In
 oso, it is the same.
 
@@ -47,16 +47,13 @@ Take a very simple example from the getting started guide. We ended up with two
     allow(actor, "read", "budget") := role(actor, "guest");
     allow(actor, "write", "budget") := actor.is_superuser = true;
 
-We are asserting that the `allow` condition is true, for an actor, with action
-"read", and the resource is a "budget", if the actor is a superuser, and
-similarly for writing if the actor is an admin.
+We are asserting that an actor who is a superuser is allowed to "read" a "budget" resource, and that an admin actor is allowed to "write" a "budget".  
 
-But when we ask it a question like "is Alice allowed to read the budget?", we
+But when we ask a question like "is Alice allowed to read the budget?", we
 don't impose how oso determines this. Instead oso **searches** through the
 information it knows in order to **infer** whether the statement is true.
 
-And we can actually ask oso much broader questions. We can ask of it anything
-that can be expressed in the syntax. In the previous query, we specified all
+And we can actually ask oso much broader questions. In the previous query, we specified all
 inputs to ask a specific question. But we can also ask questions like "what is
 Alice allowed to do?". In oso, this query would be written as ``alice = new User
 { name: "alice" }, allow(alice, action, resource)``.
@@ -64,11 +61,9 @@ Alice allowed to do?". In oso, this query would be written as ``alice = new User
 .. TODO: if we're going to do this would need examples of how this actually
     works. This is the "Explain why logic programming is powerful" task
 
-Because `action` and `resource` are both "unbound variables", meaning they do
+Because ``action`` and ``resource`` are both "unbound variables", meaning they do
 not have a value assigned, oso will search for any values that make this true.
-So it might return the set of results ``{action: "read", resource: "budget"},
-{action: "write", resource: "budget"}``, (supposing Alice were a superuser and
-admin for example).
+If Alice were a superuser and an admin, the query would return the set of results ``{action: "read", resource: "budget"}, {action: "write", resource: "budget"}``.
 
 There are a couple of extremely powerful things happening here, with this
 combination of **searching** and **inferences**.
@@ -76,14 +71,14 @@ combination of **searching** and **inferences**.
 Searching
 ---------
 
-The execution of a oso query consists of searching through the rule you have
-provided, looking for the right combination of rules and inputs to answer the
+The execution of an oso query consists of searching through the rules you have
+provided to find the right combination of rules and inputs to answer the
 query.
 
-Continuing from the above example, with just two simple rules, the search
+Using the two simple rules defined above, the search
 algorithm needs to:
 
-- Find which rules are relevant (the rule name is "allow", it has three inputs)
+- Find which rules are relevant (the rule name is "allow", and it has three inputs)
 - Check whether the input types match (I have action="reader", what does this rule expect?)
 - Determine which order to apply those rules
 - Check the conditions of the rule to see if it's applied
@@ -121,8 +116,8 @@ We might want admins to do anything that guests can do, so we write:
     role(actor, "guest") := role(actor, "admin");
 
 This says that you can have the "guest" role if you already have the "admin" role.
-With this in place the combination of this rule plus the earlier rule stating
-that guests can read budgets, means that oso infers that admins can also read
+With this rule, combined with the earlier rule stating
+that guests can read budgets, oso infers that admins can also read
 budgets.
 
 A way to think of inferences is "you get out more than what you put in".
@@ -178,7 +173,7 @@ We can add the follow lines of Python:
 
     oso = Oso()
 
-    oso.load_str("owner(user: User, expense: Expense) := user.name = expense.submitted_by")
+    oso.load_str("owner(user: User, expense: Expense) := expense.submitted_by = user.name;")
 
     user = User.by_id(1)
 
@@ -190,7 +185,7 @@ We can add the follow lines of Python:
     expense = Expense.by_id(2)
     assert oso.query("owner", user, expense)
     
-    oso.load_str("allow(user: User, action, expense: Expense) := owner(user, expense))
+    oso.load_str("allow(user: User, action, expense: Expense) := owner(user, expense);")
 
     # user can read their own expense
     assert oso.allow(user, "read", expense)
