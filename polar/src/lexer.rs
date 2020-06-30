@@ -1,5 +1,6 @@
 use super::error::{ErrorContext, ParseError};
 use super::types::{Source, Symbol};
+use std::iter::Peekable;
 use std::str::{CharIndices, FromStr};
 
 pub type SrcPos = (usize, usize);
@@ -34,13 +35,13 @@ pub fn make_context(source: &Source, loc: usize) -> Option<ErrorContext> {
 
 pub struct Lexer<'input> {
     c: Option<(usize, char)>,
-    chars: CharIndices<'input>,
+    chars: Peekable<CharIndices<'input>>,
     buf: String,
 }
 
 impl<'input> Lexer<'input> {
     pub fn new(input: &'input str) -> Self {
-        let mut chars = input.char_indices();
+        let mut chars = input.char_indices().peekable();
         let c = chars.next();
         let buf = String::new();
         Lexer { c, chars, buf }
@@ -176,14 +177,41 @@ impl<'input> Lexer<'input> {
 
         while let Some((i, char)) = self.c {
             match char {
-                x if x.is_alphanumeric() || x == '_' => {
+                x if x == '_' || (!x.is_ascii_punctuation() && !x.is_ascii_whitespace()) => {
                     self.buf.push(char);
                     last = i;
                     self.c = self.chars.next();
                 }
+                ':' => {
+                    if let Some((i, ':')) = self.chars.peek() {
+                        self.buf.push_str("::");
+                        last = *i;
+                        self.chars.next();
+                        self.c = self.chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                '?' => {
+                    self.buf.push(char);
+                    last = i;
+                    self.c = self.chars.next();
+                    break; // ? is only valid as the last char in a symbol.
+                }
                 _ => break,
             }
         }
+        if let Some((i, _)) = &self.buf.char_indices().rev().nth(1) {
+            if &self.buf[*i..] == "::" {
+                return Some(Err(ParseError::InvalidTokenCharacter {
+                    token: self.buf.clone(),
+                    c: ':',
+                    loc: last,
+                    context: None,
+                }));
+            }
+        }
+
         if &self.buf == "true" {
             Some(Ok((start, Token::Boolean(true), last + 1)))
         } else if &self.buf == "false" {
@@ -384,7 +412,9 @@ impl<'input> Iterator for Lexer<'input> {
         match self.c {
             None => None,
             Some((i, char)) => match char {
-                x if x.is_alphabetic() || x == '_' => self.scan_symbol(i, char),
+                x if x == '_' || (!x.is_ascii_punctuation() && !x.is_ascii_digit()) => {
+                    self.scan_symbol(i, char)
+                }
                 '"' => self.scan_string(i),
                 '0'..='9' => self.scan_number(i, char),
                 ':' => self.scan_1c_or_2c_op(i, Token::Colon, '=', Token::Define),
@@ -472,11 +502,99 @@ mod tests {
             matches!(tok, Some(Ok((_, Token::String(s), _))) if &s == r#"this is a "sub" string"#)
         );
     }
+
+    #[test]
+    fn test_emoji() {
+        let s = r#"
+            "💯" 💯
+        "#;
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((13, Token::String(hunnid), 19))) if hunnid == "💯")
+        );
+        assert!(
+            matches!(lexer.next(), Some(Ok((20, Token::Symbol(hunnid), 21))) if hunnid == Symbol::new("💯"))
+        );
+    }
+
+    #[test]
+    fn test_symbol_with_trailing_question_mark() {
+        let s = "foo?";
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((0, Token::Symbol(question), 4))) if question == Symbol::new("foo?"))
+        );
+
+        let s = "foo??";
+        let mut lexer = Lexer::new(&s);
+        lexer.next();
+        assert!(matches!(
+            lexer.next(),
+            Some(Err(ParseError::InvalidTokenCharacter {
+                token: t,
+                c: '\u{0}',
+                loc: 5,
+                context: None
+            })) if &t == "?="
+        ));
+    }
+
+    #[test]
+    fn test_symbol_colons() {
+        let s = "foo:bar";
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 3))) if x == Symbol::new("foo"))
+        );
+        assert!(matches!(lexer.next(), Some(Ok((3, Token::Colon, 4)))));
+        assert!(
+            matches!(lexer.next(), Some(Ok((4, Token::Symbol(x), 7))) if x == Symbol::new("bar"))
+        );
+        assert!(matches!(lexer.next(), None));
+
+        let s = "foo::bar";
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 8))) if x == Symbol::new("foo::bar"))
+        );
+        assert!(matches!(lexer.next(), None));
+
+        let s = "foo:::bar";
+        let mut lexer = Lexer::new(&s);
+        assert!(matches!(
+            lexer.next(),
+            Some(Err(ParseError::InvalidTokenCharacter {
+                token: x,
+                c: ':',
+                loc: 4,
+                context: None
+            })) if &x == "foo::"
+        ));
+    }
+
+    #[test]
+    fn test_symbol_question_marks() {
+        let s = "foo??";
+        let mut lexer = Lexer::new(&s);
+        assert!(
+            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 4))) if x == Symbol::new("foo?"))
+        );
+        assert!(matches!(
+            lexer.next(),
+            Some(Err(ParseError::InvalidTokenCharacter {
+                token: x,
+                c: '\u{0}',
+                loc: 5,
+                context: None
+            })) if &x == "?="
+        ));
+    }
+
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_lexer() {
         let f = r#"hello "world" 12345 < + <= { ] =99 #comment
-            more; in"#;
+            more; in; Ruby::Namespace"#;
         let mut lexer = Lexer::new(&f);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(hello), 5))) if hello == Symbol::new("hello"))
@@ -503,6 +621,10 @@ mod tests {
         );
         assert!(matches!(lexer.next(), Some(Ok((60, Token::SemiColon, 61)))));
         assert!(matches!(lexer.next(), Some(Ok((62, Token::In, 64)))));
+        assert!(matches!(lexer.next(), Some(Ok((64, Token::SemiColon, 65)))));
+        assert!(
+            matches!(lexer.next(), Some(Ok((66, Token::Symbol(ruby_namespace), 81))) if ruby_namespace == Symbol::new("Ruby::Namespace"))
+        );
         assert!(matches!(lexer.next(), None));
     }
 }
