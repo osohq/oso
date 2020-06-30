@@ -281,6 +281,8 @@ frequently appears at the end of the body: **if** so-and-so is true,
 then **cut** out all other alternatives.  ``cut()`` should be
 used sparingly.
 
+.. _operator-in:
+
 In (List Membership)
 ^^^^^^^^^^^^^^^^^^^^
 
