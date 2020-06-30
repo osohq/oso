@@ -47,6 +47,11 @@ class PathMapper:
 
 
 class Datetime(datetime):
+    """ Polar wrapper for Python `datetime`. Allows Datetime to be created with no arguments by providing
+    an arbitrary default. This is a workaround for lack of class method support, allowing `now()` to be
+    called on a default Datetime instance, e.g. `x = Datetime{}.now`. Also improves the syntax for
+    subtraction. """
+
     def __new__(
         cls, year=1970, month=1, day=1, hour=0, minute=0, second=0, microsecond=0
     ):
@@ -71,6 +76,9 @@ class Datetime(datetime):
 
 
 class Timedelta(timedelta):
+    """ Polar wrapper for Python `timedelta`. Not really a purpose to this other than consistency
+    with the Polar class naming convention given that the Polar `Datetime` class is capitalized. """
+
     def __new__(
         cls,
         days=0,
