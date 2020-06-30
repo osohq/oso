@@ -196,7 +196,7 @@ impl<'input> Lexer<'input> {
                     self.buf.push(char);
                     last = i;
                     self.c = self.chars.next();
-                    break;
+                    break; // ? is only valid as the last char in a symbol.
                 }
                 _ => break,
             }
