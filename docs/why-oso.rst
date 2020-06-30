@@ -14,7 +14,7 @@ know how oso is different.
 In short, oso is `unique` because it is:
 
 - a logic programming language (polar), which -- as we will see in this section and in `authorization models <auth-models>`_  -- makes it a great fit for writing policy as code
-- embedded right in your application, and can express complex authorization directly over your existing application data
+- embedded in your application, and can express authorization directly over your existing application data
 
 Putting the two together: oso works as a natural extension of your application,
 meaning you never have to write authorization logic sprinkled throughout your
@@ -23,7 +23,7 @@ application ever again.
 Core concepts
 -------------
 
-polar is a **declarative language**, as opposed to imperative. This means that
+polar is a **declarative language**. This means that
 you write what you want the outcome to be, and the oso interpreter worries about
 things like what order to run things in, and how to achieve the desired end
 goal.
@@ -125,7 +125,7 @@ budgets.
 A way to think of inferences is "you get out more than what you put in".
 Every rule that you add gives oso more possible options and combinations
 of things to try. Your work scales linearly, but the logic you can express
-grows exponentionally -- this is what the search algorithm is doing.
+grows exponentionally -- this is some of the value added by the oso search algorithm.
 
 To learn more about how polar and logic programming works head over to
 :doc:`/language/polar-fundamentals`
