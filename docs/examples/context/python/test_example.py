@@ -4,9 +4,7 @@ import pytest
 
 from oso import Oso
 import os
-import importlib
-
-importlib.import_module("python.02-context")
+import imp
 
 
 @pytest.fixture
@@ -24,8 +22,7 @@ def load(oso):
 
 def test_policy(oso, load):
     load("01-context.polar")
-    # importlib.
-    # //imp.load_source("context", "02-context.py")
+    imp.load_source("context", "02-context.py")
     oso._load_queued_files()
 
     os.environ["ENV"] = "production"
