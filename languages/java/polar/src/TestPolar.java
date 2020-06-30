@@ -89,6 +89,22 @@ public class TestPolar {
 
     }
 
+    public class TestClass {
+        private String name;
+
+        public TestClass(String name) {
+            this.name = name;
+        }
+    }
+
+    public static void testRegisterClass() {
+        Polar p = new Polar();
+        p.registerClass(TestClass.class);
+
+        printResults(true, null, "testRegisterClass");
+
+    }
+
     private static void printResults(Boolean passed, List<String> failures, String name) {
         if (!passed) {
             System.out.println(name + " FAILED:");
@@ -105,6 +121,7 @@ public class TestPolar {
         System.out.println("\nRunning tests...");
         testToJava();
         testToPolarTerm();
+        testRegisterClass();
     }
 
 }

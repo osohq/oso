@@ -5,10 +5,12 @@ import java.util.*;
 public class Polar {
     private Pointer polar_ptr;
     private Ffi ffi_instance;
+    private List<Class<Object>> classes;
 
     public Polar() {
         ffi_instance = new Ffi();
         polar_ptr = ffi_instance.polar_new();
+        classes = new ArrayList<Class<Object>>();
     }
 
     @Override
@@ -49,6 +51,10 @@ public class Polar {
             }
 
         }
+    }
+
+    public void registerClass(Class cls) {
+        classes.add(cls);
     }
 
     // Turn a Polar term passed across the FFI boundary into a Ruby value.
