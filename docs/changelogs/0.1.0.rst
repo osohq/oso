@@ -1,0 +1,82 @@
+======
+v0.1.0
+======
+
+**Release date:** 2020-06-30
+
+Major news
+==========
+
+The oso core is now written in Rust
+-----------------------------------
+
+This release consists of mostly internal changes. The core implementation of
+the Polar language is now written in Rust.
+
+New Python package
+------------------
+
+Precompiled wheels supporting Python >= 3.6 are now distributed through
+`pypi.org <https://pypi.org/project/oso/>`_. with ``pip install oso``.
+
+Ruby support
+------------
+
+The ``oso-oso`` gem supporting Ruby >= 2.4 is now available on `RubyGems
+<https://rubygems.org/gems/oso-oso>`_. Try it out with ``gem install oso-oso``.
+
+Breaking changes
+================
+
+.. warning:: This release contains breaking changes.
+
+Polar language changes
+----------------------
+
+Explicit class instantiation with the ``new`` operator
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This release introduces the ``new`` operator. Previously, the literal value
+``Foo{x: 1}`` would be implicitly constructed as a ``Foo`` instance in some
+cases. Instantiation is now explicit, and ``Foo{x: 1}`` is only valid as a
+specializer:
+
+.. code-block:: polar
+
+  check_this(foo: Foo{x: 1})
+
+Constructing a new instance of ``Foo`` from Polar requires an explicit ``new``
+operator:
+
+.. code-block:: polar
+
+  new Foo{x: 1}
+
+API changes
+-----------
+
+Python
+^^^^^^
+
+Disambiguated load functions. :py:func:`oso.Oso.load` is no longer valid:
+
+* Load files with :py:func:`oso.Oso.load_file`.
+* Load strings with :py:func:`oso.Oso.load_str`.
+
+New features
+==============
+
+New operators: ``in`` and ``forall``
+------------------------------------
+
+Documentation:
+
+* :ref:`in <operator-in>`
+* :ref:`forall <operator-forall>`
+
+Other bugs & improvements
+=========================
+
+- More consistent formatting for error messages.
+- Performance improvements to the Polar virtual machine that are especially
+  impactful for policies with many rules.
