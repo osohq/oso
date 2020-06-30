@@ -97,7 +97,7 @@ One rule to rule them all
 
 .. container:: content-tabs right-col
 
-    Here's our application classes might be implemented:
+    Here's how our application classes might be implemented:
 
     .. tab-container:: python
         :title: Python
