@@ -300,6 +300,8 @@ for each. This expression will only succeed for the first item (``1``).
 
 The ``in`` operator generates *alternatives* for each element of the list.
 
+.. _operator-forall:
+
 For all
 ^^^^^^^
 
@@ -324,6 +326,7 @@ succeeds because the ``action`` holds for all values in the list.
 by an application method.
 
 ::
+
     forall(role = user.roles(), role = "admin")
 
 
