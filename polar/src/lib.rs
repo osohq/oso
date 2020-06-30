@@ -123,6 +123,35 @@ pub extern "C" fn polar_load(
 }
 
 #[no_mangle]
+pub extern "C" fn polar_constant(
+    polar_ptr: *mut Polar,
+    name: *const c_char,
+    value: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let name = unsafe { ffi_string!(name) };
+        let value = unsafe { ffi_string!(value) };
+        let name = serde_json::from_str(&name);
+        let value = serde_json::from_str(&value);
+        match (
+            name.as_ref().map(types::Term::value),
+            value.as_ref().map(types::Term::value),
+        ) {
+            (Ok(types::Value::String(name)), Ok(_)) => {
+                polar.constant(types::Symbol::new(&name), value.unwrap());
+                POLAR_SUCCESS
+            }
+            (_, Err(e)) => {
+                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
+                POLAR_FAILURE
+            }
+            _ => POLAR_FAILURE,
+        }
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };

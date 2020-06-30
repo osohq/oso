@@ -268,6 +268,10 @@ impl Polar {
     pub fn get_external_id(&self) -> u64 {
         self.kb.read().unwrap().new_id()
     }
+
+    pub fn constant(&mut self, name: Symbol, value: Term) {
+        self.kb.write().unwrap().constant(name, value)
+    }
 }
 
 #[cfg(test)]
