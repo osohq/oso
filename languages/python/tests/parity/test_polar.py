@@ -288,15 +288,10 @@ def test_field_unification(qeval):
 
 
 def test_field_unification_external(qeval, externals):
-    # test instance field unification (not allowed for external instances)
-    with pytest.raises(PolarRuntimeException):
-        assert qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2, x: 1}")
-    # with pytest.raises(PolarRuntimeException):
+    # test instance field unification
+    assert qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2, x: 1}")
     assert not qeval("new MyClass{x: 1, y: 2} = {y: 2, x: 1}")
-    with pytest.raises(PolarRuntimeException):
-        assert not qeval("new MyClass{x: 1, y: 2} = new OurClass{y: 2, x: 1}")
-    with pytest.raises(PolarRuntimeException):
-        assert not qeval("new MyClass{x: 1, y: 2} = new YourClass{y: 2, x: 1}")
+    assert qeval("new MyClass{x: 1, y: 2} = new OurClass{y: 2, x: 1}")
 
 
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Internal classes not implemented yet.")

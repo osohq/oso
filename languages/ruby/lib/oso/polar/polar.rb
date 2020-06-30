@@ -221,6 +221,19 @@ module Oso
         false
       end
 
+      # Check if two instances unify
+      #
+      # @param left_instance_id [Integer]
+      # @param right_instance_id [Integer]
+      # @return [Boolean]
+      def unify?(left_instance_id, right_instance_id)
+        left_instance = get_instance(left_instance_id)
+        right_instance = get_instance(right_instance_id)
+        left_instance == right_instance
+      rescue PolarRuntimeError
+        false
+      end
+
       # Turn a Ruby value into a Polar term that's ready to be sent across the
       # FFI boundary.
       #

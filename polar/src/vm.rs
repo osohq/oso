@@ -59,6 +59,10 @@ pub enum Goal {
         instance_id: u64,
         literal: InstanceLiteral,
     },
+    UnifyExternal {
+        left_instance_id: u64,
+        right_instance_id: u64,
+    },
     Noop,
     Query {
         term: Term,
@@ -224,6 +228,10 @@ impl PolarVirtualMachine {
                 instance_id,
                 literal,
             } => return self.isa_external(*instance_id, literal),
+            Goal::UnifyExternal {
+                left_instance_id,
+                right_instance_id,
+            } => return self.unify_external(*left_instance_id, *right_instance_id),
             Goal::MakeExternal {
                 literal,
                 instance_id,
@@ -768,6 +776,26 @@ impl PolarVirtualMachine {
         })
     }
 
+    pub fn unify_external(
+        &mut self,
+        left_instance_id: u64,
+        right_instance_id: u64,
+    ) -> PolarResult<QueryEvent> {
+        let result = self.kb.read().unwrap().gensym("unify");
+        let call_id = self.new_call_id(&result);
+
+        self.push_goal(Goal::Unify {
+            left: Term::new_temporary(Value::Symbol(result)),
+            right: Term::new_temporary(Value::Boolean(true)),
+        })?;
+
+        Ok(QueryEvent::ExternalUnify {
+            call_id,
+            left_instance_id,
+            right_instance_id,
+        })
+    }
+
     pub fn make_external(&self, literal: &InstanceLiteral, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
             instance_id,
@@ -1275,9 +1303,10 @@ impl PolarVirtualMachine {
                     ..
                 }),
             ) if left_instance != right_instance => {
-                return Err(
-                    self.type_error(&left, String::from("Cannot unify two external instances."))
-                );
+                self.push_goal(Goal::UnifyExternal {
+                    left_instance_id: *left_instance,
+                    right_instance_id: *right_instance,
+                })?;
             }
 
             (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {

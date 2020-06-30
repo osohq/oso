@@ -314,4 +314,15 @@ mod tests {
         assert_eq!(term.to_polar(), r#"{} isa {}"#);
         let _term = parse_query("{x: 1} isa {}");
     }
+
+    #[test]
+    fn test_parse_alternate_syntax() {
+        let f = r#"
+            a(x) if b(x) and (c(x) or d(x));
+            b(x) if x matches {a: 1};
+            "#;
+        let results = parse_rules(f).unwrap();
+        assert_eq!(results[0].to_polar(), r#"a(x) := b(x), c(x) | d(x);"#);
+        assert_eq!(results[1].to_polar(), r#"b(x) := x isa {a: 1};"#);
+    }
 }
