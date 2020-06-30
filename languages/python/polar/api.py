@@ -55,12 +55,11 @@ class Polar:
         self.class_constructors = CLASS_CONSTRUCTORS
         self.instances = {}
         self.calls = {}
+        self.built_ins = [Http, PathMapper, Datetime, Timedelta]
 
         # Register built-in classes.
-        self.register_class(Http)
-        self.register_class(PathMapper)
-        self.register_class(Datetime)
-        self.register_class(Timedelta)
+        for cls in self.built_ins:
+            self.register_class(cls)
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
