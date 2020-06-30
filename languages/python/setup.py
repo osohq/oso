@@ -75,14 +75,21 @@ setup(
     #
     # Similar to `install_requires` above, these must be valid existing
     # projects.
-    extras_require={"flask": ["flask", "authlib"], "django": [], "jwt": ["authlib"],},
+    extras_require={
+        "flask": ["flask", "authlib"],
+        "django": [],
+        "jwt": ["authlib"],
+        "visualizer": ["flask_bootstrap", "graphviz"],
+    },
     # If there are data files included in your packages that need to be
     # installed, specify them here.
     #
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     # package_data={"polar": ["policies/*.polar", "policies/*.pol"]},  # Optional
-    package_data={"oso": ["visualizer/static/*", "visualizer/templates/*"]},  # Optional
+    package_data={
+        "oso[visualizer]": ["visualizer/static/*", "visualizer/templates/*"]
+    },  # Optional
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files
