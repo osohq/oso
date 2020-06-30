@@ -86,8 +86,8 @@ query the search algorith may need to perform some number of steps like:
 - Any of the above steps may have produced multiple outcomes. If so, go back and try
   the next alternative.
 
-In imperative programming, the equivalent to the search algorithm will typically
-be the manual unrolling of the search algorithm AKA nested if statements:
+In imperative programming, the programmer will be performing the equivalent
+of these steps manually, typically with nested if statements:
 
 .. code-block:: python
 
@@ -98,10 +98,12 @@ be the manual unrolling of the search algorithm AKA nested if statements:
         if user.role() != "admin":
             return Unauthorized()
 
-If this logic needs to change, then you may find yourself on the hook for making
-multiple changes throughout the codebase.
+Even in this simple case this logic is quite hard to follow. We would
+need to repeat this throughout the application wherever we want to apply it,
+and so small changes might leave you on the hook for making large refactors
+throughout the codebase.
 
-On the other hand, you can make simple changes to the polar policy without
+On the other hand, with oso you can make simple changes to the policy without
 needing to touch your application code.
 
 Inferences
@@ -133,7 +135,11 @@ To learn more about how polar and logic programming works head over to
 oso in your application
 -------------------------
 
-Logic programming is cool and everything, but has been around for decades.
+So far we've seen what makes logic programming powerful. However until now logic
+programming has only been available in the form of standalone languages, and
+where they support some form of FFI, these are usually deeply entertwined with
+the internals of the language.
+
 What makes oso truly unique, is that it is embeddable in your application
 as a simple library, and integrates directly with your application data.
 
