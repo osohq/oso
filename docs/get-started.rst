@@ -100,7 +100,7 @@ Make authorization decisions
 
           require "oso"
 
-          def setup_oso()
+          def setup_oso
               Oso::Oso.new
           end
 
