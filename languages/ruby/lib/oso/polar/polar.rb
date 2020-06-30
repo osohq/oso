@@ -292,6 +292,14 @@ module Oso
         end
       end
 
+      # Load all queued files, flushing the {#load_queue}.
+      def load_queued_files
+        load_queue.reject! do |filename|
+          File.open(filename) { |file| load_str(file.read, filename: filename) }
+          true
+        end
+      end
+
       private
 
       # @return [Hash<Integer, Enumerator>]
@@ -333,14 +341,6 @@ module Oso
         id = new_id if id.nil?
         instances[id] = instance
         id
-      end
-
-      # Load all queued files, flushing the {#load_queue}.
-      def load_queued_files
-        load_queue.reject! do |filename|
-          File.open(filename) { |file| load_str(file.read, filename: filename) }
-          true
-        end
       end
 
       # Fetch a Ruby class from the {#classes} cache.

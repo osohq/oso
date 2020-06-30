@@ -36,6 +36,10 @@ module Oso
       polar.query_pred(name, args: args)
     end
 
+    def load_queued_files
+      polar.load_queued_files
+    end
+
     private
 
     attr_reader :polar
