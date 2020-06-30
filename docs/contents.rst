@@ -10,7 +10,7 @@ Overview
 Welcome to the home of the oso documentation.
 
 If this is your first time here, we recommend you head
-over to :doc:`introduction`.
+over to :doc:`index`.
 
 Introduction to oso
 ===================
