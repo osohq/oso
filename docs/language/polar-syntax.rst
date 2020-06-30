@@ -284,9 +284,9 @@ used sparingly.
 In (List Membership)
 ^^^^^^^^^^^^^^^^^^^^
 
-The ``in`` operator can be used to iterate over a list.  The first operand will
-be unified with each element in the list provided by the second operator. If the
-second operand to ``in`` is not a list (or symbol bound to a list),
+The ``in`` operator can be used to iterate over a list. If the second operand is a list, the first operand will
+be unified with each element of the list. If the
+second operand is not a list (or variable bound to a list),
 the operation will fail.
 
 For example::
