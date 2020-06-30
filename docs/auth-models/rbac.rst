@@ -129,6 +129,8 @@ RBAC with existing roles
            :caption: rbac.rb
            :language: ruby
            :emphasize-lines: 7
+           :start-after: user-start
+           :end-before: user-end
 
 .. container:: left-col
 
