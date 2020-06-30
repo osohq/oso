@@ -261,14 +261,14 @@ pub enum Value {
     Pattern(Pattern),
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
-    Symbol(Symbol),
+    Variable(Symbol),
     Expression(Operation),
 }
 
 impl Value {
     pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
         match self {
-            Value::Symbol(name) => Ok(name),
+            Value::Variable(name) => Ok(name),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
                 loc: 0,
@@ -418,7 +418,7 @@ impl Term {
         *self = f(self);
         let mut value = self.value().clone();
         match value {
-            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Symbol(_) => {}
+            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Variable(_) => {}
             Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_replace(f)),
             Value::Call(ref mut predicate) => {
                 predicate.args.iter_mut().for_each(|a| a.map_replace(f))
