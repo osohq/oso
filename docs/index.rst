@@ -1,10 +1,6 @@
-.. oso documentation master file, created by
-   sphinx-quickstart on Fri Mar 20 10:34:51 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
 
-oso
-===
+Introduction to oso
+===================
 **oso** is an authorization system designed to make it easy for developers to express
 complex authorization logic naturally and concisely throughout an application.
 
@@ -65,55 +61,3 @@ What it's like to use oso
 
 .. we don't support this yet:
 .. - Integrations with common web frameworks and ORMs.
-
-
-User Guide
-==========
-
-These guides contain narrative documentation and examples.  This is a great
-starting point if you are new to **oso**.
-
-.. toctree::
-   :maxdepth: 2
-
-   get-started
-
-   auth-fundamentals
-
-   auth-models/index
-
-   application-library/index
-
-   faq
-
-
-Language & API Reference
-=============
-
-Reference material for more experienced oso users, or those looking to dive deep
-on a particular concept.
-
-.. toctree::
-   :maxdepth: 2
-
-   language/index
-   dev-tools/index
-   api/index
-
-Changelog
-=========
-
-Release history of the oso project.
-
-.. toctree::
-   :maxdepth: 2
-
-   changelogs/index
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
