@@ -78,13 +78,13 @@ query.
 Using the two simple rules defined above, to answer the above
 query the search algorith may need to perform some number of steps like:
 
-- Find all rules with name ``allow`` which expects three inputs
-- Determine which order to apply those rules - both have the same type of inputs, so order as they were defined
+- Find all rules with name ``allow`` that expect three inputs
+- Determine which order to apply those rules. The two rules above have the same types of inputs, so they are evaluated in the order in which they were defined.
 - For each input, check that the input types match, e.g. if the input is ``action="write"``, this matches the second, not the first rule
-- For each condition in the body, evaluate if they are true: check whether the user is indeed a superuser
-- And possibly recurses with any new queries required by the rule: make a new query to determine if the actor is a guest with ``role(actor, "guest")``
-- Any of these above steps may have produced multiple options. If so, go back and try
-  the next possibility
+- For each condition in the body, evaluate if they are true, e.g. check whether the user is indeed a superuser
+- Evaluate any new queries nested within the rule, e.g. make a new query to determine if the actor is a guest with ``role(actor, "guest")``
+- Any of the above steps may have produced multiple outcomes. If so, go back and try
+  the next alternative.
 
 In imperative programming, the equivalent to the search algorithm will typically
 be the manual unrolling of the search algorithm AKA nested if statements:
