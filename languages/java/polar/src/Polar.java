@@ -33,13 +33,22 @@ public class Polar {
         return query.results;
     }
 
-    // Free the Polar FFI object
-    // public void free() {
-    // ffi_instance.polar_free(polar_ptr);
-    // }
-
     // Start the Polar REPL
     public void repl() {
+        // clear_query_state
+        // load_queued_files
+        while (true) {
+            Query query = new Query(ffi_instance.polar_query_from_repl(polar_ptr));
+            Enumeration<HashMap<String, Object>> results = query.results;
+            if (!results.hasMoreElements()) {
+                System.out.println("False");
+            } else {
+                do {
+                    System.out.println(results.nextElement());
+                } while (results.hasMoreElements());
+            }
+
+        }
     }
 
     // Turn a Polar term passed across the FFI boundary into a Ruby value.
@@ -207,10 +216,7 @@ public class Polar {
     public static void main(String[] args) {
         Polar p = new Polar();
         p.load_str("f(1);");
-        Enumeration<HashMap<String, Object>> results = p.query_str("f(x)");
-        while (results.hasMoreElements()) {
-            System.out.println(results.nextElement());
-        }
+        p.repl();
     }
 
 }
