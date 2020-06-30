@@ -28,6 +28,8 @@ author = "oso"
 
 # -- General configuration ---------------------------------------------------
 
+master_doc = "contents"
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -37,8 +39,10 @@ extensions = [
     "recommonmark",
     "sphinx.ext.todo",
     "sphinx.ext.githubpages",
-    "sphinxcontrib.contentui"
+    "sphinxcontrib.contentui",
 ]
+
+html_static_path = ["_static"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -53,7 +57,7 @@ html_copy_source = False
 html_show_sourcelink = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = "sphinx"
+pygments_style = "borland"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -70,6 +74,9 @@ html_extra_path = ["_api_docs"]
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {"logo_only": True}
 html_logo = "oso_logo_resized.png"
+html_css_files = [
+    "css/custom.css",
+]
 
 # --- doctest options ----
 
