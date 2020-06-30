@@ -662,6 +662,13 @@ pub enum QueryEvent {
         right_class_tag: Symbol,
     },
 
+    /// Unifies two external instances.
+    ExternalUnify {
+        call_id: u64,
+        left_instance_id: u64,
+        right_instance_id: u64,
+    },
+
     Result {
         bindings: Bindings,
         trace: Option<Rc<Trace>>,

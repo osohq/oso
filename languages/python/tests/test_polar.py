@@ -458,3 +458,19 @@ def test_in(polar, qeval):
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")
+
+
+def test_unify(polar, qeval):
+    class Foo:
+        def __init__(self, foo):
+            self.foo = foo
+
+        def __eq__(self, other):
+            if isinstance(other, Foo):
+                return self.foo == other.foo
+            return False
+
+    polar.register_class(Foo)
+
+    polar.load_str("foo() := new Foo{foo: 1} = new Foo{foo: 1};")
+    assert qeval("foo()")
