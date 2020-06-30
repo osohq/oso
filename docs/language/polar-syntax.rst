@@ -324,9 +324,6 @@ by an application method.
 ::
     forall(role = user.roles(), role = "admin")
 
-If ``roles()`` produces multiple results, this ``forall`` will check that all of
-the results are ``admin`` without producing additional alternatives in the context
-it is written in (usually a rule body).
 
 Any bindings made inside a ``forall`` (``role`` or ``x`` in the example above)
 cannot be accessed after the ``forall`` predicate.
