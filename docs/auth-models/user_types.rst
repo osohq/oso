@@ -37,6 +37,17 @@ A Tale of Two Actors
             :start-after: classes-start
             :end-before: classes-end
 
+    .. tab-container:: ruby
+        :title: Ruby
+
+        Let's start by defining Ruby classes to represent customers and internal users:
+
+        .. literalinclude:: /examples/user_types/ruby/01-user_classes.rb
+            :caption: user_types.rb
+            :language: ruby
+            :start-after: classes-start
+            :end-before: classes-end
+
 .. container:: left-col
 
     Note that if we already had classes in our application that represented customers and internal users,
@@ -70,6 +81,15 @@ A Tale of Two Actors
             :start-after: app-start
             :end-before: app-end
 
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/user_types/ruby/01-user_classes.rb
+            :caption: user_types.rb
+            :language: ruby
+            :start-after: app-start
+            :end-before: app-end
+
 .. container:: left-col
 
     Hooray, our customer and internal dashboards are now secure!
@@ -92,6 +112,15 @@ Adding Actor Attributes
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
             :caption: user_types.py
+            :start-after: internal-start
+            :end-before: internal-end
+
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
+            :caption: user_types.rb
+            :language: ruby
             :start-after: internal-start
             :end-before: internal-end
 
@@ -128,6 +157,15 @@ Adding Actor Attributes
             :start-after: account-start
             :end-before: account-end
 
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
+            :caption: user_types.rb
+            :language: ruby
+            :start-after: account-start
+            :end-before: account-end
+
 .. container:: left-col
 
     Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
@@ -156,8 +194,17 @@ Adding Actor Attributes
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
             :caption: user_types.py
-            :lines: 21-30
+            :start-after: account-end
             :emphasize-lines: 5-6
+
+    .. tab-container:: ruby
+        :title: Ruby
+
+        .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
+            :caption: user_types.rb
+            :language: ruby
+            :start-after: account-end
+            :emphasize-lines: 5-7
 
 .. container:: left-col
 

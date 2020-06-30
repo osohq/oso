@@ -24,11 +24,11 @@ def customer_dashboard_handler(request):
 
 
 def user_from_id(id):
-    user_type = db.query("SELECT type FROM users WHERE id = ?", request.id)
+    user_type = db.query("SELECT type FROM users WHERE id = ?", id)
     if user_type == "internal":
-        return InternalUser(request.id)
+        return InternalUser(id)
     elif user_type == "customer":
-        return CustomerUser(request.id)
+        return CustomerUser(id)
 
 
 # app-end

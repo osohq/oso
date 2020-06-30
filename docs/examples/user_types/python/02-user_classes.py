@@ -23,8 +23,6 @@ class AccountManager(InternalUser):
 
 
 # account-end
-
-
 def user_from_id(id):
     user_type = db.query("SELECT type FROM users WHERE id = ?", request.id)
     if user_type == "internal":
