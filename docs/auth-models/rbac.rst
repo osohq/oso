@@ -25,6 +25,7 @@ RBAC basics
     ..           Polar.
 
     .. literalinclude:: /examples/rbac/01-simple.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 6-20
 
@@ -33,6 +34,7 @@ RBAC basics
     some :polar:`allow()` rules that leverage our new roles:
 
     .. literalinclude:: /examples/rbac/01-simple.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 21-32
 
@@ -40,6 +42,7 @@ RBAC basics
     in the same Polar file:
 
     .. literalinclude:: /examples/rbac/01-simple.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 33-39
 
@@ -53,6 +56,7 @@ RBAC basics
     :polar:`role(actor, "employee")` rule as follows:
 
     .. literalinclude:: /examples/rbac/02-simple.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 6-11
        :emphasize-lines: 6
@@ -61,6 +65,7 @@ RBAC basics
     and we can grant them those permissions through the same inheritance structure:
 
     .. literalinclude:: /examples/rbac/02-simple.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 13-19
        :emphasize-lines: 6
@@ -68,6 +73,7 @@ RBAC basics
     Now we can write a few more tests to ensure everything is hooked up correctly:
 
     .. literalinclude:: /examples/rbac/02-simple.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 36-
 
@@ -94,12 +100,14 @@ RBAC with existing roles
         :title: Python
 
         .. literalinclude:: /examples/rbac/python/03-external.py
+           :caption: rbac.py
            :language: python
 
     .. tab-container:: ruby
         :title: Ruby
 
         .. literalinclude:: /examples/rbac/ruby/03-external.rb
+           :caption: rbac.rb
            :language: ruby
 
 .. container:: left-col
@@ -113,6 +121,7 @@ RBAC with existing roles
         :title: Python
 
         .. literalinclude:: /examples/rbac/python/04-external.py
+           :caption: rbac.py
            :language: python
            :emphasize-lines: 1
 
@@ -120,6 +129,7 @@ RBAC with existing roles
         :title: Ruby
 
         .. literalinclude:: /examples/rbac/ruby/04-external.rb
+           :caption: rbac.rb
            :language: ruby
            :emphasize-lines: 5
 
@@ -130,6 +140,7 @@ RBAC with existing roles
     specializer <inheritance>` to our :polar:`role()` rules:
 
     .. literalinclude:: /examples/rbac/05-external.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 13-29
 
@@ -142,6 +153,7 @@ RBAC with existing roles
     existing mappings through the :py:meth:`User.role` method. Let's amend that:
 
     .. literalinclude:: /examples/rbac/06-external.polar
+       :caption: rbac.polar
        :language: polar
        :lines: 1-10
 

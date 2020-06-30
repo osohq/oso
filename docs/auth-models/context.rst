@@ -20,6 +20,7 @@ Context
     For example, let's say you have a policy like this:
 
     .. literalinclude:: /examples/context/01-context.polar
+       :caption: context.polar
        :language: polar
        :lines: 6-7
 
@@ -37,6 +38,7 @@ Context
         :title: Python
 
         .. literalinclude:: /examples/context/python/02-context.py
+           :caption: context.py
            :language: python
            :lines: 1-7
 
@@ -45,6 +47,7 @@ Context
 
         .. literalinclude:: /examples/context/ruby/02-context.rb
            :language: ruby
+           :caption: context.rb
 
 .. container:: left-col
 
@@ -54,6 +57,7 @@ Context
     We can add a new allow rule that allows an actor to access a resource if the application is in development mode.
 
     .. literalinclude:: /examples/context/01-context.polar
+       :caption: context.polar
        :language: polar
        :lines: 7-8
 

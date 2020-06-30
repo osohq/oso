@@ -33,6 +33,7 @@ A Tale of Two Actors
         Let's start by defining Python classes to represent customers and internal users:
 
         .. literalinclude:: /examples/user_types/python/01-user_classes.py
+            :caption: user_types.py
             :start-after: classes-start
             :end-before: classes-end
 
@@ -44,6 +45,7 @@ A Tale of Two Actors
     We can now write a simple Polar policy over these Actor types:
 
     .. literalinclude:: /examples/user_types/user_policy.polar
+        :caption: user_types.polar
         :language: polar
         :start-after: simple-start
         :end-before: simple-end
@@ -64,6 +66,7 @@ A Tale of Two Actors
         :title: Python
 
         .. literalinclude:: /examples/user_types/python/01-user_classes.py
+            :caption: user_types.py
             :start-after: app-start
             :end-before: app-end
 
@@ -88,6 +91,7 @@ Adding Actor Attributes
         :title: Python
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
+            :caption: user_types.py
             :start-after: internal-start
             :end-before: internal-end
 
@@ -96,6 +100,7 @@ Adding Actor Attributes
     Then add the following rule to our policy:
 
     .. literalinclude:: /examples/user_types/user_policy.polar
+        :caption: user_types.polar
         :language: polar
         :start-after: rbac-start
         :end-before: rbac-end
@@ -119,6 +124,7 @@ Adding Actor Attributes
         :title: Python
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
+            :caption: user_types.py
             :start-after: account-start
             :end-before: account-end
 
@@ -130,6 +136,7 @@ Adding Actor Attributes
     Let's add the following lines to our policy:
 
     .. literalinclude:: /examples/user_types/user_policy.polar
+        :caption: user_types.polar
         :language: polar
         :start-after: manager-start
         :end-before: manager-end
@@ -148,6 +155,7 @@ Adding Actor Attributes
         :title: Python
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
+            :caption: user_types.py
             :lines: 21-30
             :emphasize-lines: 5-6
 

@@ -34,6 +34,7 @@ Basic Policy
     resources:
 
     .. literalinclude:: /examples/inheritance/01-polar.polar
+       :caption: inheritance.polar
        :language: polar
 
     Let's take a look at the first rule in the policy. This ``allow`` rule permits
@@ -60,6 +61,7 @@ Using a rule to express common behavior
     rules we'd like, and compose them as needed to express our policy!
 
     .. literalinclude:: /examples/inheritance/02-nested-rule.polar
+       :caption: inheritance.polar
        :language: polar
 
     Now, we've taken the repeated logic and expressed it as the
@@ -79,6 +81,7 @@ Bringing back specializers
     patient data resources use the ``can_read_patient_data`` rule.
 
     .. literalinclude:: /examples/inheritance/03-specializer.polar
+       :caption: inheritance.polar
        :language: polar
        :start-after: ## START MARKER ##
 
@@ -100,6 +103,7 @@ One rule to rule them all
         :title: Python
 
         .. literalinclude:: /examples/inheritance/python/inheritance_external.py
+           :caption: inheritance.py
            :language: python
            :start-after: ## START MARKER ##
 
@@ -108,6 +112,7 @@ One rule to rule them all
 
         .. literalinclude:: /examples/inheritance/ruby/inheritance_external.rb
            :language: ruby
+           :caption: inheritance.rb
            :start-after: ## START MARKER ##
 
 .. container:: left-col
@@ -119,6 +124,7 @@ One rule to rule them all
     We can use the same idea to shorten our policy even further!
 
     .. literalinclude:: /examples/inheritance/04-one-specializer.polar
+       :caption: inheritance.polar
        :language: polar
 
     Now, this ``allow`` rule will be evaluated for any instance that is a subclass

@@ -28,6 +28,7 @@ ABAC basics
         :title: Python
 
         .. literalinclude:: /examples/abac/python/01-simple.py
+           :caption: abac.py
            :language: python
            :start-after: user-class-start
            :end-before: user-class-end
@@ -36,6 +37,7 @@ ABAC basics
         :title: Ruby
 
         .. literalinclude:: /examples/abac/ruby/01-simple.rb
+           :caption: abac.rb
            :language: ruby
            :start-after: user-class-start
            :end-before: user-class-end
@@ -51,6 +53,7 @@ ABAC basics
         :title: Python
 
         .. literalinclude:: /examples/abac/python/01-simple.py
+           :caption: abac.py
            :language: python
            :start-after: expense-class-start
            :end-before: expense-class-end
@@ -59,6 +62,7 @@ ABAC basics
         :title: Ruby
 
         .. literalinclude:: /examples/abac/ruby/01-simple.rb
+           :caption: abac.rb
            :language: ruby
            :start-after: expense-class-start
            :end-before: expense-class-end
@@ -69,6 +73,7 @@ ABAC basics
     expense is the same person who submitted the expense, would look like:
 
     .. literalinclude:: /examples/abac/01-simple.polar
+       :caption: abac.polar
        :language: polar
        :start-after: rule-start
        :end-before: rule-end
@@ -101,6 +106,7 @@ ABAC ❤️ RBAC
     with some simple ABAC conditions to achieve this:
 
     .. literalinclude:: /examples/abac/02-rbac.polar
+       :caption: abac.polar
        :language: polar
        :start-after: simple-rule-start
        :end-before: simple-rule-end
@@ -114,6 +120,7 @@ ABAC ❤️ RBAC
     and therefore is allowed to see all expenses related to that project.
 
     .. literalinclude:: /examples/abac/02-rbac.polar
+       :caption: abac.polar
        :language: polar
        :start-after: project-rule-start
        :end-before: project-rule-end
@@ -125,6 +132,7 @@ ABAC ❤️ RBAC
     And these can also follow inheritance patterns like we saw with regular roles.
 
     .. literalinclude:: /examples/abac/02-rbac.polar
+       :caption: abac.polar
        :language: polar
        :start-after: role-inherit-start
        :end-before: role-inherit-end
@@ -143,6 +151,7 @@ Hierachies
     Starting out with a simple example, suppose managers can view employees' expenses:
 
     .. literalinclude:: /examples/abac/03-hierarchy.polar
+       :caption: abac.polar
        :language: polar
        :lines: 7-9
        :emphasize-lines: 2-3
@@ -150,6 +159,7 @@ Hierachies
     First thing we can do, is extract out the logic for checking whether the user manages someone:
 
     .. literalinclude:: /examples/abac/03-hierarchy.polar
+       :caption: abac.polar
        :language: polar
        :start-after: start-manages-rule
        :end-before: end-manages-rule
@@ -158,6 +168,7 @@ Hierachies
     then we need to make sure this logic is evaluated recursively:
 
     .. literalinclude:: /examples/abac/03-hierarchy.polar
+       :caption: abac.polar
        :language: polar
        :start-after: start-hierarchy-rule
        :end-before: end-hierarchy-rule
