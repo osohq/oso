@@ -9,19 +9,29 @@ SOURCEDIR     = .
 BUILDDIR      = _build
 
 export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
+export RUBY_DIR := $(abspath ../languages/ruby)
+
+RUBY_FILES := $(wildcard ../languages/ruby/**/*.rb)
 
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile
+.PHONY: help Makefile api-docs
+
+_api_docs/ruby: $(RUBY_FILES)
+	cd "$(RUBY_DIR)" && yard doc
+	rm -rf _api_docs/ruby
+	cp -R $(RUBY_DIR)/doc _api_docs/ruby
+
+api-docs: _api_docs/ruby
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile deps
+html: Makefile deps api-docs
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-livehtml: deps
+livehtml: deps api-docs
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 test: doctest
