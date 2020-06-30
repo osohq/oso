@@ -280,3 +280,52 @@ proceed it must succeed in order for it to be reached, so it
 frequently appears at the end of the body: **if** so-and-so is true,
 then **cut** out all other alternatives.  ``cut()`` should be
 used sparingly.
+
+.. _operator-in:
+
+In (List Membership)
+^^^^^^^^^^^^^^^^^^^^
+
+The ``in`` operator can be used to iterate over a list. If the second operand is a list, the first operand will
+be unified with each element of the list. If the
+second operand is not a list (or variable bound to a list),
+the operation will fail.
+
+For example::
+
+    x in [1, 2, 3], x = 1
+
+Will bind ``x`` to ``1``, ``2``, ``3``, in turn, and check that ``x = 1``
+for each. This expression will only succeed for the first item (``1``).
+
+The ``in`` operator generates *alternatives* for each element of the list.
+
+For all
+^^^^^^^
+
+The ``forall`` predicate is often useful in conjunction with the ``in`` operator.
+``forall(condition, action)`` checks that ``action`` succeeds for every alternative
+produced by ``condition``.
+
+For example::
+
+    forall(x in [1, 2, 3], x = 1)
+
+Would fail because ``x`` only unifies with ``1`` for the first element in the
+list (the first alternative of condition).
+
+::
+
+    forall(x in [1, 1, 1], x = 1)
+
+succeeds because the ``action`` holds for all values in the list.
+
+``forall`` can also be used with application data to check all elements returned
+by an application method.
+
+::
+    forall(role = user.roles(), role = "admin")
+
+
+Any bindings made inside a ``forall`` (``role`` or ``x`` in the example above)
+cannot be accessed after the ``forall`` predicate.
