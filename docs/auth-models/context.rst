@@ -30,9 +30,11 @@ Context
 
 .. container:: left-col
 
-    How would we read that environment variable from polar though? We can use a custom application class that we expose to polar that lets us directly access the environment variables.
+    How would we read that environment variable from polar though?
 
 .. container:: content-tabs right-col
+
+    We can use a custom application class that we expose to polar that lets us directly access the environment variables.
 
     .. tab-container:: python
         :title: Python
