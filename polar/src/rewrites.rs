@@ -27,7 +27,7 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
                 operator: Operator::Dot,
                 args: lookup_args,
             });
-            let _ = term.replace_value(var);
+            term.replace_value(var);
             Some(term.clone_with_value(lookup))
         }
         Value::Expression(Operation {

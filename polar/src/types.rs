@@ -3,7 +3,6 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::rc::Rc;
@@ -732,7 +731,7 @@ mod tests {
             params: vec![],
             body: Term::new_temporary(Value::Expression(Operation {
                 operator: Operator::And,
-                args: vec![dict.clone(), dict.clone(), dict.clone()],
+                args: vec![dict.clone(), dict.clone(), dict],
             })),
         };
         eprintln!("{}", rule);
