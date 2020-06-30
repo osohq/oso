@@ -1,5 +1,7 @@
 from pathlib import Path
+from datetime import datetime, timedelta
 
+from polar.extras import Datetime, Timedelta
 from polar import exceptions, Polar, Predicate, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
@@ -474,3 +476,56 @@ def test_unify(polar, qeval):
 
     polar.load_str("foo() := new Foo{foo: 1} = new Foo{foo: 1};")
     assert qeval("foo()")
+
+
+def test_external_op(polar):
+    class A:
+        def __init__(self, a):
+            self.a = a
+
+        def __gt__(self, other):
+            return self.a > other.a
+
+        def __lt__(self, other):
+            return self.a < other.a
+
+        def __eq__(self, other):
+            return self.a == other.a
+
+    polar.register_class(A)
+
+    a1 = A(1)
+    a2 = A(2)
+
+    polar.load_str("lt(a, b) := a < b;")
+    polar.load_str("gt(a, b) := a > b;")
+    assert polar._query_pred(Predicate("lt", [a1, a2])).success
+    assert not polar._query_pred(Predicate("lt", [a2, a1])).success
+    assert polar._query_pred(Predicate("gt", [a2, a1])).success
+
+
+def test_datetime(polar):
+
+    # test datetime comparison
+    t1 = Datetime(2020, 5, 25)
+    t2 = Datetime().now()
+    t3 = Datetime(2030, 5, 25)
+    t4 = Datetime(2020, 5, 26)
+
+    polar.load_str("lt(a, b) := a < b;")
+    assert polar._query_pred(Predicate("lt", [t1, t2])).success
+    assert not polar._query_pred(Predicate("lt", [t2, t1])).success
+
+    # test creating datetime from polar
+    polar.load_str("dt(x) := x = new Datetime{year: 2020, month: 5, day: 25};")
+    assert polar._query_pred(Predicate("dt", [Variable("x")])).results == [
+        {"x": datetime(2020, 5, 25)}
+    ]
+    polar.load_str("ltnow(x) := x < new Datetime{}.now();")
+    assert polar._query_pred(Predicate("ltnow", [t1])).success
+    assert not polar._query_pred(Predicate("ltnow", [t3])).success
+
+    polar.load_str(
+        "timedelta(a: Datetime, b: Datetime) := a.sub(b) == new Timedelta{days: 1};"
+    )
+    assert polar._query_pred(Predicate("timedelta", [t4, t1])).success
