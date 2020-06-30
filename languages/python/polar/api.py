@@ -221,6 +221,8 @@ class Polar:
                     self.__handle_external_call(query, data)
                 if kind == "ExternalIsa":
                     self.__handle_external_isa(query, data)
+                if kind == "ExternalUnify":
+                    self.__handle_external_unify(query, data)
                 if kind == "ExternalIsSubSpecializer":
                     self.__handle_external_is_subspecializer(query, data)
                 if kind == "Debug":
@@ -323,6 +325,17 @@ class Polar:
         else:
             isa = False
         external_answer(self.polar, query, data["call_id"], isa)
+
+    def __handle_external_unify(self, query, data):
+        left_instance_id = data["left_instance_id"]
+        right_instance_id = data["right_instance_id"]
+        try:
+            left_instance = self.__get_instance(left_instance_id)
+            right_instance = self.__get_instance(right_instance_id)
+            eq = left_instance == right_instance
+            external_answer(self.polar, query, data["call_id"], eq)
+        except PolarRuntimeException:
+            external_answer(self.polar, query, data["call_id"], False)
 
     def __handle_external_is_subspecializer(self, query, data):
         mro = self.__get_instance(data["instance_id"]).__class__.__mro__
