@@ -92,7 +92,7 @@ Make authorization decisions
     .. tab-container:: ruby
         :title: Ruby
 
-        The primary entrypoint of ``oso`` is the ``Oso::Oso`` class.  This class
+        The primary entrypoint of ``oso`` is the ``Oso`` class.  This class
         should be initialized in application setup, and typically will be shared
         throughout:
 
