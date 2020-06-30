@@ -350,6 +350,13 @@ RSpec.describe Oso::Polar::Polar do
             @genus = genus
             @species = species
           end
+
+          def ==(other)
+            other.class == self.class &&
+              other.family == family &&
+              other.genus == genus &&
+              other.species == species
+          end
         end)
         subject.register_class(Animal)
       end
@@ -359,6 +366,15 @@ RSpec.describe Oso::Polar::Polar do
       let(:canine) { 'new Animal{genus: "canis", family: "canidae"}' }
       let(:canid) {  'new Animal{family: "canidae"}' }
       let(:animal) { 'new Animal{}' }
+
+      it 'can unify instances' do
+        subject.load_str <<~POLAR
+          yup() := new Animal{family: "steve"} = new Animal{family: "steve"};
+          nope() := new Animal{family: "steve"} = new Animal{family: "gabe"};
+        POLAR
+        expect(query(subject, "yup()")).to eq([{}])
+        expect(query(subject, "nope()")).to eq([])
+      end
 
       it 'can specialize on dict fields' do
         subject.load_str <<~POLAR
