@@ -487,10 +487,7 @@ def test_external_op(polar):
             return self.a > other.a
 
         def __lt__(self, other):
-            if self.a < other.a:
-                return True
-            else:
-                return False
+            return self.a < other.a
 
         def __eq__(self, other):
             if self.a == other.a:
