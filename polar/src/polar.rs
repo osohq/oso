@@ -203,6 +203,7 @@ impl Polar {
         Ok(())
     }
 
+    // Used in integration tests
     pub fn load(&self, src: &str) -> PolarResult<()> {
         self.load_file(src, None)
     }
@@ -248,7 +249,7 @@ impl Polar {
     }
 
     #[cfg(feature = "repl")]
-    pub fn new_query_from_repl(&mut self) -> PolarResult<Query> {
+    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
         let mut repl = crate::cli::repl::Repl::new();
         let s = repl.polar_input("Enter query:");
         match s {
