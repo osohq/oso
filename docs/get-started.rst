@@ -35,7 +35,7 @@ Installing oso
         :title: Ruby
 
         Download and install the ``oso`` `Ruby gem <https://rubygems.org/gems/oso-oso>`_ using
-        ``gem install oso-oso`` or ``bundle install oso-oso``.
+        ``gem install oso-oso`` or ``bundle add oso-oso`` (if using Bundler).
 
 Make authorization decisions
 ----------------------------
