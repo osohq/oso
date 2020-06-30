@@ -115,7 +115,7 @@ RBAC with existing roles
     .. tab-container:: ruby
         :title: Ruby
 
-        Our Ruby application has the following :ruby:`User` model that can
+        Our Ruby application has the following ``User`` model that can
         look up its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/ruby/03-external.rb
