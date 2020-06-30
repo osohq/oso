@@ -165,7 +165,7 @@ class Polar:
                 name=value[tag]["name"],
                 args=[self._to_python(v) for v in value[tag]["args"]],
             )
-        elif tag == "Symbol":
+        elif tag == "Variable":
             raise PolarRuntimeException(
                 f"variable: {value} is unbound. make sure the value is set before using it in a method call"
             )
@@ -198,7 +198,7 @@ class Polar:
             }
         elif isinstance(v, Variable):
             # This is supported so that we can query for unbound variables
-            val = {"Symbol": v}
+            val = {"Variable": v}
         else:
             val = {"ExternalInstance": {"instance_id": self.__cache_instance(v)}}
         term = {"value": val}

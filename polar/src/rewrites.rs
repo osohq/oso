@@ -20,7 +20,7 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
         }) if lookup_args.len() == 2 => {
             let mut lookup_args = lookup_args.clone();
             let symbol = kb.gensym("value");
-            let var = Value::Symbol(symbol);
+            let var = Value::Variable(symbol);
             // Take `id` and `offset` from `b` of lookup `a.b`.
             lookup_args.push(lookup_args[1].clone_with_value(var.clone()));
             let lookup = Value::Expression(Operation {
@@ -36,7 +36,7 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
         }) if args.len() == 1 => {
             assert!(matches!(args[0].value(), Value::InstanceLiteral { .. }));
             let symbol = kb.gensym("instance");
-            let var = Value::Symbol(symbol);
+            let var = Value::Variable(symbol);
             let result_term = args[0].clone_with_value(var.clone());
             let args = vec![args[0].clone(), result_term];
             let new_op = Value::Expression(Operation {

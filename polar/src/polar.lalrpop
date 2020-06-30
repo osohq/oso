@@ -79,7 +79,7 @@ pub Boolean: Term = <start:@L> <b:"Boolean"> => {
 Name: Symbol = <s:"Symbol"> => s;
 
 pub Symbol: Term  = <start:@L> <n:Name> => {
-    Term::new_from_parser(src_id, start, Value::Symbol(n))
+    Term::new_from_parser(src_id, start, Value::Variable(n))
 };
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -230,7 +230,7 @@ DotOp<T>: Term = {
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <head:Callable<T>> "." <call_loc:@L> "(" <name:Name> ")" => {
-        let call_term = Term::new_from_parser(src_id, call_loc, Value::Symbol(name));
+        let call_term = Term::new_from_parser(src_id, call_loc, Value::Variable(name));
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
@@ -252,7 +252,7 @@ Exp8<T>: Term = {
     },
     // Symbols on the RHS are treated as class names, just like in a specializers
     <start:@L> <left:Exp8<T>> "isa" <right:Pattern> => {
-        let right = if let Value::Symbol(ref sym) = right.value() {
+        let right = if let Value::Variable(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
                 fields: Dictionary::new()
@@ -407,16 +407,16 @@ Parameter: Parameter = {
     },
     // parenthesized specializers do not have symbol translation to class names applied
     <start:@L> <name:Name> ":" "(" <specializer:Pattern> ")" => {
-        let mut name = Term::new_from_parser(src_id, start, Value::Symbol(name));
+        let mut name = Term::new_from_parser(src_id, start, Value::Variable(name));
         Parameter {
             parameter: Some(name),
             specializer: Some(specializer),
         }
     },
     <start:@L> <name:Name> ":" <specializer:Pattern> => {
-        let mut name = Term::new_from_parser(src_id, start, Value::Symbol(name));
+        let mut name = Term::new_from_parser(src_id, start, Value::Variable(name));
         let offset = specializer.offset();
-        if let Value::Symbol(class_name) = specializer.value() {
+        if let Value::Variable(class_name) = specializer.value() {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
             Parameter {

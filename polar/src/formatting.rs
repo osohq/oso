@@ -419,7 +419,7 @@ pub mod to_polar {
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ", "),),
-                Value::Symbol(s) => s.to_polar(),
+                Value::Variable(s) => s.to_polar(),
                 Value::Expression(e) => e.to_polar(),
             }
         }

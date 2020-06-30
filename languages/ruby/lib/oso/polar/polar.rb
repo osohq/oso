@@ -244,7 +244,7 @@ module Oso
                   { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el| to_polar_term(el) } } }
                 when value.instance_of?(Variable)
                   # This is supported so that we can query for unbound variables
-                  { 'Symbol' => value }
+                  { 'Variable' => value }
                 else
                   { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
                 end
