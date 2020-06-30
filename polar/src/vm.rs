@@ -1100,7 +1100,7 @@ impl PolarVirtualMachine {
                 if !result {
                     self.push_goal(Goal::Backtrack)?;
                 }
-                return Ok(QueryEvent::None);
+                Ok(QueryEvent::None)
             }
             (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
                 // Generate symbol for external op result and bind to `false` (default)
@@ -1113,24 +1113,22 @@ impl PolarVirtualMachine {
                     right: Term::new_temporary(Value::Boolean(true)),
                 }])?;
                 let call_id = self.new_call_id(&answer);
-                return Ok(QueryEvent::ExternalOp {
+                Ok(QueryEvent::ExternalOp {
                     call_id,
                     operator: op,
                     args: vec![left_term, right_term],
-                });
+                })
             }
-            (left, right) => {
-                return Err(self.type_error(
-                    term,
-                    format!(
-                        "{} expects comparable arguments, got: {}, {}",
-                        op.to_polar(),
-                        left.to_polar(),
-                        right.to_polar()
-                    ),
-                ));
-            }
-        };
+            (left, right) => Err(self.type_error(
+                term,
+                format!(
+                    "{} expects comparable arguments, got: {}, {}",
+                    op.to_polar(),
+                    left.to_polar(),
+                    right.to_polar()
+                ),
+            )),
+        }
     }
 
     /// Handle an external result provided by the application.
