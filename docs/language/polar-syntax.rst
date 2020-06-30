@@ -284,16 +284,17 @@ used sparingly.
 In (List Membership)
 ^^^^^^^^^^^^^^^^^^^^
 
-The `in` operator can be used to evaluate conditions over all elements in
-a list.  If the second operand to ``in`` is not a list (or symbol bound
-to a list), the operation will fail.
+The ``in`` operator can be used to iterate over a list.  The first operand will
+be unified with each element in the list provided by the second operator. If the
+second operand to ``in`` is not a list (or symbol bound to a list),
+the operation will fail.
 
 For example::
 
     x in [1, 2, 3], x = 1
 
-Will bind ``x`` to ``1``, ``2``, ``3``, in turn, and check that ``x = 1`` for each. This
-expression will only succeed for the first item (``1``).
+Will bind ``x`` to ``1``, ``2``, ``3``, in turn, and check that ``x = 1``
+for each. This expression will only succeed for the first item (``1``).
 
 The ``in`` operator generates *alternatives* for each element of the list.
 
@@ -319,3 +320,13 @@ succeeds because the ``action`` holds for all values in the list.
 
 ``forall`` can also be used with application data to check all elements returned
 by an application method.
+
+::
+    forall(role = user.roles(), role = "admin")
+
+If ``roles()`` produces multiple results, this ``forall`` will check that all of
+the results are ``admin`` without producing additional alternatives in the context
+it is written in (usually a rule body).
+
+Any bindings made inside a ``forall`` (``role`` or ``x`` in the example above)
+cannot be accessed after the ``forall`` predicate.
