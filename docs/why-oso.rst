@@ -130,6 +130,9 @@ Every rule that you add gives oso more possible options and combinations
 of things to try. Your work scales linearly, but the logic you can express
 grows exponentionally -- this is what the search algorithm is doing.
 
+To learn more about how polar works, and logic programming, head over to
+:doc:`/language/polar-fundamentals`
+
 oso in your application
 -------------------------
 
