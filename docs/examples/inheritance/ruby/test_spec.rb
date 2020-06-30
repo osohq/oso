@@ -23,18 +23,15 @@ RSpec.describe do
   end
 
   def load_file(example_name)
-      oso = Oso::Oso.new
-
       file = File.join(File.dirname(__FILE__), '..', example_name)
-      oso.load_file(file)
-      oso
+      OSO.load_file(file)
+      OSO
   end
 
   FILES.each do |file|
     context "#{file}" do
       before do
         @oso = load_file(file)
-        setup(@oso)
       end
 
       it "parses" do

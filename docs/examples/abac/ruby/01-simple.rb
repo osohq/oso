@@ -2,6 +2,8 @@ EXPENSES = [
   { :submitted_by => "alice", :amount => 500, :location => "NYC", :project_id => 2 }
 ]
 
+OSO ||= Oso.new
+
 # expense-class-start
 class Expense
   # expense-class-end
@@ -20,6 +22,10 @@ class Expense
       Expense.new
     end
   end
+end
+
+OSO.register_class(Expense) do |**kwargs|
+  Expense.by_id(**kwargs)
 end
 
 MANAGERS = {
@@ -47,6 +53,9 @@ class User
   end
 end
 
+OSO.register_class(User)
+
+
 class Project
   attr_accessor :id, :team_id
   def initialize(id:, team_id:)
@@ -57,6 +66,10 @@ class Project
   def self.by_id(id:)
     Project.new(id: id, team_id: 0)
   end
+end
+
+OSO.register_class(Project) do |**kwargs|
+  Project.by_id(**kwargs)
 end
 
 class Team
@@ -70,6 +83,10 @@ class Team
   end
 end
 
+OSO.register_class(Team) do |**kwargs|
+  Team.by_id(**kwargs)
+end
+
 class Organization
   attr_accessor :name
   def initialize(name:)
@@ -81,18 +98,6 @@ class Organization
   end
 end
 
-def setup(oso)
-  oso.register_class(Expense) do |**kwargs|
-    Expense.by_id(**kwargs)
-  end
-  oso.register_class(User)
-  oso.register_class(Project) do |**kwargs|
-    Project.by_id(**kwargs)
-  end
-  oso.register_class(Team) do |**kwargs|
-    Team.by_id(**kwargs)
-  end
-  oso.register_class(Organization) do |**kwargs|
-    Organization.by_id(**kwargs)
-  end
+OSO.register_class(Organization) do |**kwargs|
+  Organization.by_id(**kwargs)
 end

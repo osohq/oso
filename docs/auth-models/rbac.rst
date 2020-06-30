@@ -104,10 +104,8 @@ RBAC with existing roles
 
 .. container:: left-col
 
-    .. todo:: dhatch wrong
-
-    By adding the :py:func:`oso.polar_class` decorator, we can begin leveraging
-    our existing application class from within our Polar policy:
+    By registering our application class with oso, we can begin leveraging
+    it from within our Polar policy:
 
 .. container:: content-tabs right-col
 
@@ -123,7 +121,7 @@ RBAC with existing roles
 
         .. literalinclude:: /examples/rbac/ruby/04-external.rb
            :language: ruby
-           :emphasize-lines: 1
+           :emphasize-lines: 5
 
 .. container:: left-col
 

@@ -3,17 +3,14 @@ require_relative "02-context.rb"
 
 RSpec.describe do
   def load_file(example_name)
-      oso = Oso::Oso.new
-
       file = File.join(File.dirname(__FILE__), '..', example_name)
-      oso.load_file(file)
-      oso
+      OSO.load_file(file)
+      OSO
   end
 
   context "01-context" do
     before do
       @oso = load_file("01-context.polar")
-      setup(@oso)
     end
 
     it "works" do

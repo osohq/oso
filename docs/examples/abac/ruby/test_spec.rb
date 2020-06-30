@@ -9,12 +9,9 @@ EXPENSES_DEFAULT = {
 
 RSpec.describe "example" do
   def load_file(example_name)
-      oso = Oso::Oso.new
-      setup(oso)
-
       file = File.join(File.dirname(__FILE__), '..', example_name)
-      oso.load_file(file)
-      oso
+      OSO.load_file(file)
+      OSO
   end
 
   context "01-simple" do

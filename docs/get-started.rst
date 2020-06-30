@@ -100,11 +100,7 @@ Make authorization decisions
 
           require "oso"
 
-          def setup_oso
-              Oso::Oso.new
-          end
-
-          OSO = setup_oso()
+          OSO ||= Oso.new
 
         The ``Oso#allow`` method can be used to make authorization decisions.
         With oso, an authorization decision takes an **actor**, **resource** and **action**.
@@ -174,17 +170,12 @@ Write policies
         Load this file in our setup, using ``Oso#load_file``:
 
         .. code-block:: ruby
-           :emphasize-lines: 5
+           :emphasize-lines: 4
 
            require "oso"
 
-           def setup_oso()
-               oso = Oso::Oso.new
-               oso.load_file("policy.polar")
-               oso
-           end
-
-           OSO = setup_oso()
+           OSO ||= Oso.new
+           OSO.load_file("policy.polar")
         .. todo
 
 
@@ -342,6 +333,8 @@ Suppose our app has a user, defined as:
                   return users.get_role(self)
               end
           end
+
+          OSO.register_class(User)
 
 .. container:: left-col
 

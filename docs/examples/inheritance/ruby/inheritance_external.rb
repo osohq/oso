@@ -1,3 +1,5 @@
+OSO ||= Oso.new
+
 class Actor
   attr_accessor :role
 
@@ -11,6 +13,8 @@ class Actor
   end
 end
 
+OSO.register_class(Actor)
+
 ## START MARKER ##
 class PatientData
   attr_accessor :patient
@@ -20,19 +24,19 @@ class PatientData
   end
 end
 
+OSO.register_class(PatientData)
+
 class Lab < PatientData
 end
+
+OSO.register_class(Lab)
 
 class Order < PatientData
 end
 
+OSO.register_class(Order)
+
 class Test < PatientData
 end
 
-def setup(oso)
-  oso.register_class(Actor)
-  oso.register_class(PatientData)
-  oso.register_class(Lab)
-  oso.register_class(Order)
-  oso.register_class(Test)
-end
+OSO.register_class(Test)
