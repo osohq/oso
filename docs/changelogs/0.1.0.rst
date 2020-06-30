@@ -32,7 +32,7 @@ Breaking changes
 Explicit class instantiation
 ----------------------------
 
-Previously, the literal value ``Foo{x: 1}`` would be implicitly be converted
+This release introduces the ``new`` operator. Previously, the literal value ``Foo{x: 1}`` would be implicitly be converted
 to a instantiated ``Foo`` instance in some places. This is now explicit.
 ``Foo{x: 1}`` is only valid as a specializer, e.g.
 
