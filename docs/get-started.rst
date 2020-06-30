@@ -298,6 +298,8 @@ Suppose our app has a user, defined as:
 
 .. container:: right-col content-tabs
 
+    We can add a ``role`` method to access the user's role.
+
     .. tab-container:: python
         :title: Python
 

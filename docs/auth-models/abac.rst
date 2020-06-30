@@ -19,10 +19,11 @@ ABAC basics
 .. container:: left-col
 
     Continuing from the RBAC examples, suppose we want to allow employees
-    to view *their own* expenses. Recall that we had previously set up our
-    users as classes in Polar:
+    to view *their own* expenses.
 
 .. container:: content-tabs right-col
+
+    Recall that we had previously set up our users as classes in Polar:
 
     .. tab-container:: python
         :title: Python
@@ -33,24 +34,7 @@ ABAC basics
            :start-after: user-class-start
            :end-before: user-class-end
 
-    .. tab-container:: ruby
-        :title: Ruby
-
-        .. literalinclude:: /examples/abac/ruby/01-simple.rb
-           :caption: abac.rb
-           :language: ruby
-           :start-after: user-class-start
-           :end-before: user-class-end
-
-
-.. container:: left-col
-
-    We can do the same with the resources being requested:
-
-.. container:: content-tabs right-col
-
-    .. tab-container:: python
-        :title: Python
+        We can do the same with the resources being requested:
 
         .. literalinclude:: /examples/abac/python/01-simple.py
            :caption: abac.py
@@ -64,8 +48,17 @@ ABAC basics
         .. literalinclude:: /examples/abac/ruby/01-simple.rb
            :caption: abac.rb
            :language: ruby
+           :start-after: user-class-start
+           :end-before: user-class-end
+
+        We can do the same with the resources being requested:
+
+        .. literalinclude:: /examples/abac/ruby/01-simple.rb
+           :caption: abac.rb
+           :language: ruby
            :start-after: expense-class-start
            :end-before: expense-class-end
+
 
 .. container:: left-col
 

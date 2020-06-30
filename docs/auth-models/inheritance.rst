@@ -93,11 +93,11 @@ One rule to rule them all
 .. container:: left-col
 
     We haven't talked about the application side of this yet.  So far, we've assumed
-    ``Order``, ``Lab``, and ``Test`` are :ref:`application classes`.  Here's how
-    they might be implemented:
-
+    ``Order``, ``Lab``, and ``Test`` are :ref:`application classes`.
 
 .. container:: content-tabs right-col
+
+    Here's our application classes might be implemented:
 
     .. tab-container:: python
         :title: Python

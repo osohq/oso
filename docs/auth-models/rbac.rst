@@ -90,35 +90,22 @@ RBAC with existing roles
 .. container:: left-col
 
     Imagine we have a ``user_roles`` database table that contains mappings
-    between users and the roles they've been assigned. Our Python application has
-    the following :py:class:`User` model that can look up its assigned roles from
-    the database:
+    between users and the roles they've been assigned.
 
 .. container:: content-tabs right-col
 
     .. tab-container:: python
         :title: Python
+
+        Our Python application has the following :py:class:`User` model that can
+        look up its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/python/03-external.py
            :caption: rbac.py
            :language: python
 
-    .. tab-container:: ruby
-        :title: Ruby
-
-        .. literalinclude:: /examples/rbac/ruby/03-external.rb
-           :caption: rbac.rb
-           :language: ruby
-
-.. container:: left-col
-
-    By registering our application class with oso, we can begin leveraging
-    it from within our Polar policy:
-
-.. container:: content-tabs right-col
-
-    .. tab-container:: python
-        :title: Python
+        By registering our application class with oso, we can begin leveraging
+        it from within our Polar policy:
 
         .. literalinclude:: /examples/rbac/python/04-external.py
            :caption: rbac.py
@@ -128,10 +115,20 @@ RBAC with existing roles
     .. tab-container:: ruby
         :title: Ruby
 
+        Our Ruby application has the following :ruby:`User` model that can
+        look up its assigned roles from the database:
+
+        .. literalinclude:: /examples/rbac/ruby/03-external.rb
+           :caption: rbac.rb
+           :language: ruby
+
+        By registering our application class with oso, we can begin leveraging
+        it from within our Polar policy:
+
         .. literalinclude:: /examples/rbac/ruby/04-external.rb
            :caption: rbac.rb
            :language: ruby
-           :emphasize-lines: 5
+           :emphasize-lines: 7
 
 .. container:: left-col
 

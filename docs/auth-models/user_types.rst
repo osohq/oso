@@ -69,12 +69,14 @@ A Tale of Two Actors
     To finish securing our dashboards, we need to **enforce** our policy by
     adding authorization requests to our application.
     Where and how authorization requests are used is up to the application developer.
-    For our example, making a request might look like this:
 
 .. container:: content-tabs right-col
 
+    For our example, making a request might look like this:
+
     .. tab-container:: python
         :title: Python
+
 
         .. literalinclude:: /examples/user_types/python/01-user_classes.py
             :caption: user_types.py
@@ -102,10 +104,12 @@ Adding Actor Attributes
     Since we saved so much time on authorization, we've decided to add another dashboard to our application,
     an **accounts dashboard**. The accounts dashboard should only be accessed by **account managers** (a type of internal user).
     Since we're experts at securing dashboards, we should be able to add this authorization logic to our policy in no time.
+    A simple way to solve this problem is with RBAC.
 
-    A simple way to solve this problem is with RBAC. We can add a ``role`` attribute to our ``InternalUser`` class:
 
 .. container:: content-tabs right-col
+
+    We can add a ``role`` attribute to our ``InternalUser`` class:
 
     .. tab-container:: python
         :title: Python
@@ -144,10 +148,11 @@ Adding Actor Attributes
 
     Account managers are also allowed to access **account data**, but only for accounts that they manage.
     In order to implement this logic, we need to know the accounts of each account manager.
-    This is a compelling case for creating a new Actor type for account managers that has its own
-    attributes:
 
 .. container:: content-tabs right-col
+
+    This is a compelling case for creating a new Actor type for account managers that has its own
+    attributes:
 
     .. tab-container:: python
         :title: Python
@@ -179,15 +184,16 @@ Adding Actor Attributes
         :start-after: manager-start
         :end-before: manager-end
 
+
+.. container:: left-col
+
     The first rule replaces the RBAC rule we previously used to control access to the accounts dashboard.
     The second rule controls access to account data. For the purposes of this example, let's assume that ``AccountData`` is a resource that has an ``account_id``
     attribute.
 
-.. container:: left-col
+.. container:: content-tabs right-col
 
     We can update our application code slightly to generate ``AccountManager`` users:
-
-.. container:: content-tabs right-col
 
     .. tab-container:: python
         :title: Python
