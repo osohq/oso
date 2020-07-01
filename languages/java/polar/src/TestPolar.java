@@ -1,3 +1,5 @@
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.*;
 import org.json.*;
 
@@ -29,7 +31,7 @@ public class TestPolar {
             }
         } catch (Exception e) {
             passed = false;
-            msg = e.toString();
+            msg = getExceptionStackTrace(e);
         } finally {
             printResults(passed, msg, name);
         }
@@ -51,7 +53,7 @@ public class TestPolar {
 
         } catch (Exception e) {
             passed = false;
-            msg = e.toString();
+            msg = getExceptionStackTrace(e);
         } finally {
             printResults(passed, msg, name);
         }
@@ -84,7 +86,7 @@ public class TestPolar {
             }
         } catch (Exception e) {
             passed = false;
-            msg = e.toString();
+            msg = getExceptionStackTrace(e);
         } finally {
             printResults(passed, msg, name);
 
@@ -149,7 +151,7 @@ public class TestPolar {
             }
         } catch (Exception e) {
             passed = false;
-            msg = e.toString();
+            msg = getExceptionStackTrace(e);
         } finally {
             printResults(passed, msg, name);
 
@@ -171,7 +173,7 @@ public class TestPolar {
             }
         } catch (Exception e) {
             passed = false;
-            msg = e.toString();
+            msg = getExceptionStackTrace(e);
         } finally {
             printResults(passed, msg, name);
 
@@ -186,6 +188,13 @@ public class TestPolar {
             if (message != null)
                 System.out.println("\t" + message + ANSI_RESET);
         }
+    }
+
+    private static String getExceptionStackTrace(Exception e) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        return sw.toString();
     }
 
     public static void main(String[] args) {
