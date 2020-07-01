@@ -60,8 +60,8 @@ class Polar:
         # Register built-in classes.
         self.register_class(Http)
         self.register_class(PathMapper)
-        self.register_class(datetime, "Datetime")
-        self.register_class(timedelta, "Timedelta")
+        self.register_class(datetime, name="Datetime")
+        self.register_class(timedelta, name="Timedelta")
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -106,12 +106,11 @@ class Polar:
             if not had_result:
                 print("False")
 
-    def register_class(self, cls, cls_name=None, from_polar=None):
+    def register_class(self, cls, *, name=None, from_polar=None):
         """Registers `cls` as a class accessible by Polar. `from_polar` can
         either be a method or a string. In the case of a string, Polar will
         look for the method using `getattr(cls, from_polar)`."""
-        if cls_name is None:
-            cls_name = cls.__name__
+        cls_name = cls.__name__ if name is None else name
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
 
