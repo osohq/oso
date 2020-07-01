@@ -2,7 +2,6 @@ import jnr.ffi.Pointer;
 import org.json.*;
 import java.util.*;
 import java.util.function.Function;
-import java.lang.reflect.Field;
 
 public class Polar {
     private Pointer polar_ptr;
@@ -258,11 +257,4 @@ public class Polar {
         }
 
     }
-
-    public static void main(String[] args) {
-        Polar p = new Polar();
-        p.load_str("f(1);");
-        p.repl();
-    }
-
 }
