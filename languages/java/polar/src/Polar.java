@@ -25,13 +25,13 @@ public class Polar {
     }
 
     // Load a Polar string into the KB (with filename).
-    public void load_str(String str, String filename) {
+    public void loadStr(String str, String filename) {
         ffi_instance.polar_load(polar_ptr, str, filename);
         checkInlineQueries();
     }
 
     // Load a Polar string into the KB (without filename).
-    public void load_str(String str) {
+    public void loadStr(String str) {
         ffi_instance.polar_load(polar_ptr, str, null);
         checkInlineQueries();
 

@@ -24,7 +24,7 @@ public class TestPolar {
         try {
             Polar p = new Polar();
 
-            p.load_str("f(1);");
+            p.loadStr("f(1);");
             Enumeration<HashMap<String, Object>> results = p.query_str("f(x)");
             if (!results.hasMoreElements() || results.nextElement().get("x") != Integer.valueOf(1)) {
                 throw new Exception();
@@ -43,9 +43,9 @@ public class TestPolar {
         String msg = null;
         try {
             Polar p = new Polar();
-            p.load_str("f(1); ?= f(1);");
+            p.loadStr("f(1); ?= f(1);");
             try {
-                p.load_str("?= f(2);");
+                p.loadStr("?= f(2);");
             } catch (Error e) {
                 return;
             }
@@ -67,19 +67,19 @@ public class TestPolar {
             Polar p = new Polar();
 
             // Test boolean
-            p.load_str("a(x) := x = true;");
+            p.loadStr("a(x) := x = true;");
             HashMap<String, Object> a = p.query_str("a(x)").nextElement();
             if (!a.equals(Map.of("x", true))) {
                 throw new Exception("Failed to convert boolean to java.");
             }
             // Test dictionary
-            p.load_str("b(x) := x = {a: 1};");
+            p.loadStr("b(x) := x = {a: 1};");
             HashMap<String, Object> b = p.query_str("b(x)").nextElement();
             if (!b.equals(Map.of("x", Map.of("a", 1)))) {
                 throw new Exception("Failed to convert dictionary to java.");
             }
             // Test list
-            p.load_str("c(x) := x = [\"a\", \"b\", \"c\"];");
+            p.loadStr("c(x) := x = [\"a\", \"b\", \"c\"];");
             HashMap<String, Object> c = p.query_str("c(x)").nextElement();
             if (!c.equals(Map.of("x", List.of("a", "b", "c")))) {
                 throw new Exception("Failed to convert list to java.");
