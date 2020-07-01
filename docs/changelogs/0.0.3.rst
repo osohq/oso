@@ -1,0 +1,66 @@
+======
+v0.0.3
+======
+
+**Release date:** 2020-05-11
+
+Breaking changes
+================
+
+.. warning:: This release contains breaking changes. Be sure
+   to follow migration steps before upgrading.
+
+Removed arguments to ``@polar_class`` decorator
+-----------------------------------------------
+
+The :py:func:`oso.polar_class` decorator no longer accepts ``fields`` or
+``methods`` arguments. Any field or method defined on the Application Class will be accessible
+from Polar by default.
+
+*Before:*
+
+.. code-block::
+
+  @polar_class(fields=("id", "name", "specialty"), methods=("department", "hospital"))
+  class Doctor:
+      ...
+
+*After:*
+
+.. code-block::
+
+  @polar_class
+  class Doctor:
+      ...
+
+Attempt to unify Python instances in Polar results in error
+----------------------------------------------------------
+Fix for undefined behavior of application instance unification.
+Now results in the following error message::
+
+    PolarRuntimeException: Invalid operation: cannot unify Python instance objects.
+
+*Before:*
+
+.. code-block:: polar
+
+  allow(actor: User, action, resource) :=
+    actor = resource.owner();
+
+Since ``actor`` is an instance of the ``User`` application class, any attempt to unify ``actor`` (using the ``=`` operator)
+will result in a ``PolarRuntimeException``.
+
+*After:*
+
+The appropriate way to compare application instance objects is to use field-by-field comparison.
+
+.. code-block:: polar
+
+  allow(actor: User, action, resource) :=
+    actor.id = resource.owner().id;
+
+
+Other bugs & improvements
+=========================
+
+- Bug fix: Nested logical operators now evaluate appropriately.

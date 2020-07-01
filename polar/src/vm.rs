@@ -906,7 +906,7 @@ impl PolarVirtualMachine {
             | op @ Operator::Geq
             | op @ Operator::Eq
             | op @ Operator::Neq => {
-                self.comparison_op_helper(term, op, args)?;
+                return self.comparison_op_helper(term, op, args);
             }
             Operator::In => {
                 assert_eq!(args.len(), 2);
@@ -1079,57 +1079,57 @@ impl PolarVirtualMachine {
         term: &Term,
         op: Operator,
         args: Vec<Term>,
-    ) -> PolarResult<()> {
+    ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 2);
-        let left = self.deref(&args[0]);
-        let right = self.deref(&args[1]);
+        let left_term = self.deref(&args[0]);
+        let right_term = self.deref(&args[1]);
 
-        let result: bool;
-
-        let (left, right) = match (left.value(), right.value()) {
-            (Value::Number(left), Value::Number(right)) => (left, right),
-            (left, right) => {
-                return Err(self.type_error(
-                    term,
-                    format!(
-                        "{} expects numbers, got: {}, {}",
-                        op.to_polar(),
-                        left.to_polar(),
-                        right.to_polar()
+        match (left_term.value(), right_term.value()) {
+            (Value::Number(left), Value::Number(right)) => {
+                let result = match op {
+                    Operator::Lt => left < right,
+                    Operator::Leq => left <= right,
+                    Operator::Gt => left > right,
+                    Operator::Geq => left >= right,
+                    Operator::Eq => left == right,
+                    Operator::Neq => left != right,
+                    _ => unreachable!(
+                        "operator: {:?} should not be handled by this method, this is a bug",
+                        op
                     ),
-                ));
+                };
+                if !result {
+                    self.push_goal(Goal::Backtrack)?;
+                }
+                Ok(QueryEvent::None)
             }
-        };
+            (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
+                // Generate symbol for external op result and bind to `false` (default)
+                let answer = self.kb.read().unwrap().gensym("external_op_result");
+                self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
 
-        match op {
-            Operator::Lt => {
-                result = left < right;
+                // append unify goal to be evaluated after external op result is returned & bound
+                self.append_goals(vec![Goal::Unify {
+                    left: Term::new_temporary(Value::Symbol(answer.clone())),
+                    right: Term::new_temporary(Value::Boolean(true)),
+                }])?;
+                let call_id = self.new_call_id(&answer);
+                Ok(QueryEvent::ExternalOp {
+                    call_id,
+                    operator: op,
+                    args: vec![left_term, right_term],
+                })
             }
-            Operator::Leq => {
-                result = left <= right;
-            }
-            Operator::Gt => {
-                result = left > right;
-            }
-            Operator::Geq => {
-                result = left >= right;
-            }
-            Operator::Eq => {
-                result = left == right;
-            }
-            Operator::Neq => {
-                result = left != right;
-            }
-            _ => unreachable!(
-                "operator: {:?} should not be handled by this method, this is a bug",
-                op
-            ),
+            (left, right) => Err(self.type_error(
+                term,
+                format!(
+                    "{} expects comparable arguments, got: {}, {}",
+                    op.to_polar(),
+                    left.to_polar(),
+                    right.to_polar()
+                ),
+            )),
         }
-        if !result {
-            self.push_goal(Goal::Backtrack)?;
-        }
-
-        Ok(())
     }
 
     /// Handle an external result provided by the application.

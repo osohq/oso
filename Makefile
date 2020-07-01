@@ -19,7 +19,7 @@ ruby-test:
 	$(MAKE) -C languages/ruby test
 
 docs-test: python-build
-	$(MAKE) -C languages/python/docs test
+	$(MAKE) -C docs test
 
 fmt:
 	cargo fmt
