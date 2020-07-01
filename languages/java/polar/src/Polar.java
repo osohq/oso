@@ -9,12 +9,14 @@ public class Polar {
     private Ffi ffi_instance;
     private Map<String, Class<Object>> classes;
     private Map<String, Function<Map, Object>> constructors;
+    private Map<Long, Object> instances;
 
     public Polar() {
         ffi_instance = new Ffi();
         polar_ptr = ffi_instance.polar_new();
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
+        instances = new HashMap<Long, Object>();
     }
 
     @Override
@@ -59,18 +61,30 @@ public class Polar {
 
     public void registerClass(Class cls, Function<Map, Object> fromPolar) {
         classes.put(cls.getName(), cls);
-        if (fromPolar != null) {
-            constructors.put(cls.getName(), fromPolar);
-        }
+        constructors.put(cls.getName(), fromPolar);
 
-        Map<String, String> testArg = Map.of("name", "testName");
-        Object res = constructors.get(cls.getName()).apply(testArg);
-        try {
-            Field field = cls.getField("name");
-            System.out.println(field.get(res));
-        } catch (Exception e) {
-            System.out.println(e);
+    }
+
+    public Object makeInstance(Class cls, Map fields, Long id) {
+        Function<Map, Object> constructor = constructors.get(cls.getName());
+        Object instance;
+        if (constructor != null) {
+            instance = constructors.get(cls.getName()).apply(fields);
+        } else {
+            // TODO: default constructor
+            throw new Error("unimplemented");
         }
+        cacheInstance(instance, id);
+        return instance;
+    }
+
+    public Long cacheInstance(Object instance, Long id) {
+        if (id == null) {
+            id = ffi_instance.polar_get_external_id(polar_ptr);
+        }
+        instances.put(id, instance);
+
+        return id;
     }
 
     // Turn a Polar term passed across the FFI boundary into a Ruby value.
@@ -106,8 +120,12 @@ public class Polar {
                 }
                 return resMap;
             case "ExternalInstance":
-                // get_instance(value['instance_id'])
-                throw new Error("Unimplemented Polar Type");
+                Long id = value.getJSONObject(tag).getLong("instance_id");
+                if (instances.containsKey(id)) {
+                    return instances.get(id);
+                } else {
+                    throw new Error("Unregistered instance");
+                }
             case "Call":
                 // Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(a) })
                 throw new Error("Unimplemented Polar Type");
@@ -148,18 +166,15 @@ public class Polar {
             jVal.put("Dictionary", new JSONObject().put("fields", jMap));
 
         } else {
-            throw new Error("Cannot convert type " + value.getClass().toString() + " to Polar.");
+            jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
         }
+        // TODO: Predicate, Variable, Symbol
         // when value.instance_of?(Predicate)
         // { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el|
         // to_polar_term(el) } } }
         // when value.instance_of?(Variable)
         // # This is supported so that we can query for unbound variables
         // { 'Symbol' => value }
-        // else
-        // { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
-        // end
-        // { 'id' => 0, 'offset' => 0, 'value' => value }
 
         // Build Polar term
         JSONObject term = new JSONObject();

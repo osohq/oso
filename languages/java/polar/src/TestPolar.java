@@ -2,6 +2,19 @@ import java.util.*;
 import org.json.*;
 
 public class TestPolar {
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_YELLOW = "\u001B[33m";
+
+    public static class MyClass {
+        public String name;
+
+        public MyClass(String name) {
+            this.name = name;
+        }
+    }
+
     public static void testToJava() {
         Boolean passed = true;
         List<String> failures = new ArrayList<String>();
@@ -82,46 +95,55 @@ public class TestPolar {
         java = p.toJava(polar);
         if (!(java instanceof Map) || !((Map<String, Object>) java).equals(m)) {
             passed = false;
-            failures.add("Failed to convert List to Polar.");
+            failures.add("Failed to convert Map to Polar.");
+        }
+        // Test ExternalInstance
+        MyClass instance = new MyClass("test");
+        polar = p.toPolarTerm(instance);
+        java = p.toJava(polar);
+        if (java.getClass() != MyClass.class || !((MyClass) java).equals(instance)) {
+            passed = false;
+            failures.add("Failed to convert ExternalInstance to Polar.");
         }
 
         printResults(passed, failures, "testToPolarTerm");
 
     }
 
-    public static class TestClass {
-        public String name;
-
-        public TestClass(String name) {
-            this.name = name;
-        }
-    }
-
-    public static void testRegisterClass() {
+    public static void testRegisterAndMakeClass() {
         Polar p = new Polar();
-        p.registerClass(TestClass.class, m -> new TestClass((String) m.get("name")));
+        Boolean passed = true;
+        ArrayList<String> failures = new ArrayList<String>();
+        p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name")));
 
-        printResults(true, null, "testRegisterClass");
+        Map<String, String> testArg = Map.of("name", "testName");
+        MyClass instance = (MyClass) p.makeInstance(MyClass.class, testArg, Long.valueOf(0));
+        if (instance.name != "testName") {
+            passed = false;
+        }
+
+        printResults(passed, failures, "testRegisterAndMakeClass");
 
     }
 
     private static void printResults(Boolean passed, List<String> failures, String name) {
         if (!passed) {
-            System.out.println(name + " FAILED:");
+            System.out.println(name + ANSI_RED + " FAILED:" + ANSI_YELLOW);
             for (String e : failures) {
                 System.out.println("\t" + e);
             }
+            System.out.print(ANSI_RESET);
         } else {
-            System.out.println(name + " PASSED.");
+            System.out.println(name + ANSI_GREEN + " PASSED." + ANSI_RESET);
         }
 
     }
 
     public static void main(String[] args) {
-        System.out.println("\nRunning tests...");
+        System.out.println("\nRunning tests...\n");
         testToJava();
         testToPolarTerm();
-        testRegisterClass();
+        testRegisterAndMakeClass();
     }
 
 }
