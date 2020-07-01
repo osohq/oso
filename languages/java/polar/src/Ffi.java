@@ -68,7 +68,9 @@ public class Ffi {
     }
 
     public Pointer polar_next_inline_query(Pointer polar_ptr) throws PolarRuntimeException {
-        return check_ptr_result(polar_lib.polar_next_inline_query(polar_ptr));
+        // Don't check result here because the returned Pointer is null to indicate
+        // termination
+        return polar_lib.polar_next_inline_query(polar_ptr);
     }
 
     public String polar_next_query_event(Pointer query_ptr) throws PolarRuntimeException {

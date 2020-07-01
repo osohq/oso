@@ -33,6 +33,15 @@ public class Polar {
     // Load a Polar string into the KB (without filename).
     public void load_str(String str) {
         ffi_instance.polar_load(polar_ptr, str, null);
+
+        // check inline queries
+        Pointer next_query = ffi_instance.polar_next_inline_query(polar_ptr);
+        while (next_query != null) {
+            if (!new Query(next_query).results.hasMoreElements()) {
+                throw new Error("Inline query failed");
+            }
+            next_query = ffi_instance.polar_next_inline_query(polar_ptr);
+        }
     }
 
     // Query for a Polar string
