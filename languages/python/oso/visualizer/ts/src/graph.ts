@@ -105,23 +105,36 @@ function toHierarchy(links: Link[], nodes: Node[]): Hierarchy {
   return walk(hierarchy);
 }
 
+function tspan_str(s: string) {
+  if (s.indexOf("\n") === -1) {
+    return s;
+  } else {
+    const spans = s.split("\n");
+    const head = `<tspan dy="1em">${spans[0]}</tspan>`;
+    const rest = spans
+      .slice(1)
+      .map((s) => `<tspan x="2em" dy="1em">${s}</tspan>`);
+    return head + rest.join("");
+  }
+}
+
 function display(node, truncate) {
   const { name } = node.data;
   if (!node._children || truncate === false) {
-    return name;
+    return tspan_str(name);
   }
 
   const result = /^(\w+)\((.*)\)$/.exec(name);
   if (!result || result.length !== 3) {
-    return name;
+    return tspan_str(name);
   }
   const [original, head, _body] = result;
 
   if (truncate === true || node.children) {
-    return `${head}(...)`;
+    return tspan_str(`${head}(...)`);
   }
 
-  return original;
+  return tspan_str(original);
 }
 
 function nodeWidth(node): number {
