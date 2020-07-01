@@ -45,19 +45,20 @@ ABAC basics
     .. tab-container:: ruby
         :title: Ruby
 
-        .. literalinclude:: /examples/abac/ruby/01-simple.rb
+        .. literalinclude:: /examples/rbac/ruby/04-external.rb
            :caption: abac.rb
            :language: ruby
-           :start-after: user-class-start
-           :end-before: user-class-end
+           :start-after: user-start
+           :end-before: user-end
 
         We can do the same with the resources being requested:
 
-        .. literalinclude:: /examples/abac/ruby/01-simple.rb
+        .. literalinclude:: /examples/rbac/ruby/04-external.rb
            :caption: abac.rb
            :language: ruby
-           :start-after: expense-class-start
-           :end-before: expense-class-end
+           :emphasize-lines: 5
+           :start-after: expense-start
+           :end-before: expense-end
 
 
 .. container:: left-col
