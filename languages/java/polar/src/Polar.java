@@ -1,16 +1,20 @@
 import jnr.ffi.Pointer;
 import org.json.*;
 import java.util.*;
+import java.util.function.Function;
+import java.lang.reflect.Field;
 
 public class Polar {
     private Pointer polar_ptr;
     private Ffi ffi_instance;
-    private List<Class<Object>> classes;
+    private Map<String, Class<Object>> classes;
+    private Map<String, Function<Map, Object>> constructors;
 
     public Polar() {
         ffi_instance = new Ffi();
         polar_ptr = ffi_instance.polar_new();
-        classes = new ArrayList<Class<Object>>();
+        classes = new HashMap<String, Class<Object>>();
+        constructors = new HashMap<String, Function<Map, Object>>();
     }
 
     @Override
@@ -53,8 +57,20 @@ public class Polar {
         }
     }
 
-    public void registerClass(Class cls) {
-        classes.add(cls);
+    public void registerClass(Class cls, Function<Map, Object> fromPolar) {
+        classes.put(cls.getName(), cls);
+        if (fromPolar != null) {
+            constructors.put(cls.getName(), fromPolar);
+        }
+
+        Map<String, String> testArg = Map.of("name", "testName");
+        Object res = constructors.get(cls.getName()).apply(testArg);
+        try {
+            Field field = cls.getField("name");
+            System.out.println(field.get(res));
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 
     // Turn a Polar term passed across the FFI boundary into a Ruby value.

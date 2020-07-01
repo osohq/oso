@@ -89,8 +89,8 @@ public class TestPolar {
 
     }
 
-    public class TestClass {
-        private String name;
+    public static class TestClass {
+        public String name;
 
         public TestClass(String name) {
             this.name = name;
@@ -99,7 +99,7 @@ public class TestPolar {
 
     public static void testRegisterClass() {
         Polar p = new Polar();
-        p.registerClass(TestClass.class);
+        p.registerClass(TestClass.class, m -> new TestClass((String) m.get("name")));
 
         printResults(true, null, "testRegisterClass");
 
