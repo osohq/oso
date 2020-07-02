@@ -123,7 +123,7 @@ pub extern "C" fn polar_load(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_constant(
+pub extern "C" fn polar_register_constant(
     polar_ptr: *mut Polar,
     name: *const c_char,
     value: *const c_char,
@@ -139,7 +139,7 @@ pub extern "C" fn polar_constant(
             value.as_ref().map(types::Term::value),
         ) {
             (Ok(types::Value::String(name)), Ok(_)) => {
-                polar.constant(types::Symbol::new(&name), value.unwrap());
+                polar.register_constant(types::Symbol::new(&name), value.unwrap());
                 POLAR_SUCCESS
             }
             (_, Err(e)) => {

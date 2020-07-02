@@ -117,7 +117,7 @@ class Polar:
         # Define the class as a constant.
         name = ffi_serialize(self._to_polar_term(cls_name))
         value = ffi_serialize(self._to_polar_term(cls))
-        lib.polar_constant(self.polar, name, value)
+        lib.polar_register_constant(self.polar, name, value)
 
     ########## HIDDEN METHODS ##########
 
