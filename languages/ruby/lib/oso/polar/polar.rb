@@ -100,24 +100,30 @@ module Oso
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
-      # @param as [String]
+      # @param name [String]
       # @param from_polar [Proc]
       # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
-      def register_class(cls, as: nil, from_polar: nil) # rubocop:disable Naming/MethodParameterName
+      def register_class(cls, name: nil, from_polar: nil) # rubocop:disable Naming/MethodParameterName
         # TODO(gj): should this take 3 args: cls (Class), constructor_cls
         # (Option<Class>) that defaults to cls, and constructor_method
         # (Option<Symbol>) that defaults to :new?
-        as = cls.name if as.nil?
-        raise DuplicateClassAliasError, as: as, old: get_class(as), new: cls if classes.key? as
+        name = cls.name if name.nil?
+        raise DuplicateClassAliasError, name: name, old: get_class(name), new: cls if classes.key? name
 
-        classes[as] = cls
+        classes[name] = cls
         if from_polar.nil?
-          constructors[as] = :new
+          constructors[name] = :new
         elsif from_polar.respond_to? :call
-          constructors[as] = from_polar
+          constructors[name] = from_polar
         else
           raise InvalidConstructorError
         end
+
+        register_constant(name, value: cls)
+      end
+
+      def register_constant(name, value:)
+        ffi_instance.register_constant(name, value: to_polar_term(value))
       end
 
       # Register a Ruby method call, wrapping the call result in a generator if
