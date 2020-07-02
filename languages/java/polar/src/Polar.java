@@ -12,7 +12,7 @@ public class Polar {
 
     public Polar() {
         ffi_instance = new Ffi();
-        polar_ptr = ffi_instance.polar_new();
+        polar_ptr = ffi_instance.polarNew();
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
@@ -21,36 +21,36 @@ public class Polar {
     @Override
     protected void finalize() {
         // Free the Polar FFI object
-        ffi_instance.polar_free(polar_ptr);
+        ffi_instance.polarFree(polar_ptr);
     }
 
     // Load a Polar string into the KB (with filename).
     public void loadStr(String str, String filename) {
-        ffi_instance.polar_load(polar_ptr, str, filename);
+        ffi_instance.polarLoad(polar_ptr, str, filename);
         checkInlineQueries();
     }
 
     // Load a Polar string into the KB (without filename).
     public void loadStr(String str) {
-        ffi_instance.polar_load(polar_ptr, str, null);
+        ffi_instance.polarLoad(polar_ptr, str, null);
         checkInlineQueries();
 
     }
 
     // Confirm that all queued inline queries succeed
     private void checkInlineQueries() {
-        Pointer next_query = ffi_instance.polar_next_inline_query(polar_ptr);
+        Pointer next_query = ffi_instance.polarNextInlineQuery(polar_ptr);
         while (next_query != null) {
             if (!new Query(next_query).results.hasMoreElements()) {
                 throw new Error("Inline query failed");
             }
-            next_query = ffi_instance.polar_next_inline_query(polar_ptr);
+            next_query = ffi_instance.polarNextInlineQuery(polar_ptr);
         }
     }
 
     // Query for a Polar string
     public Enumeration<HashMap<String, Object>> query_str(String query_str) {
-        Query query = new Query(ffi_instance.polar_new_query(polar_ptr, query_str));
+        Query query = new Query(ffi_instance.polarNewQuery(polar_ptr, query_str));
         return query.results;
     }
 
@@ -59,7 +59,7 @@ public class Polar {
         // clear_query_state
         // load_queued_files
         while (true) {
-            Query query = new Query(ffi_instance.polar_query_from_repl(polar_ptr));
+            Query query = new Query(ffi_instance.polarQueryFromRepl(polar_ptr));
             Enumeration<HashMap<String, Object>> results = query.results;
             if (!results.hasMoreElements()) {
                 System.out.println("False");
@@ -93,7 +93,7 @@ public class Polar {
 
     public Long cacheInstance(Object instance, Long id) {
         if (id == null) {
-            id = ffi_instance.polar_get_external_id(polar_ptr);
+            id = ffi_instance.polarGetExternalId(polar_ptr);
         }
         instances.put(id, instance);
 
@@ -228,7 +228,7 @@ public class Polar {
 
             private HashMap<String, Object> nextResult() {
                 while (true) {
-                    String event_str = ffi_instance.polar_next_query_event(query_ptr);
+                    String event_str = ffi_instance.polarNextQueryEvent(query_ptr);
                     String kind;
                     JSONObject data;
                     try {

@@ -39,57 +39,57 @@ public class Ffi {
         polar_lib = LibraryLoader.create(PolarLib.class).load("lib/libpolar.dylib");
     }
 
-    public int polar_free(Pointer polar_ptr) throws PolarRuntimeException {
+    public int polarFree(Pointer polar_ptr) throws PolarRuntimeException {
         return check_int_result(polar_lib.polar_free(polar_ptr));
     }
 
-    public int polar_debug_command(Pointer query_ptr, String value) throws PolarRuntimeException {
+    public int polarDebugCommand(Pointer query_ptr, String value) throws PolarRuntimeException {
         return check_int_result(polar_lib.polar_debug_command(query_ptr, value));
     }
 
-    public long polar_get_external_id(Pointer polar_ptr) throws PolarRuntimeException {
+    public long polarGetExternalId(Pointer polar_ptr) throws PolarRuntimeException {
         return check_long_result(polar_lib.polar_get_external_id(polar_ptr));
     }
 
-    public int polar_load(Pointer polar_ptr, String src, String filename) throws PolarRuntimeException {
+    public int polarLoad(Pointer polar_ptr, String src, String filename) throws PolarRuntimeException {
         return check_int_result(polar_lib.polar_load(polar_ptr, src, filename));
     }
 
-    public Pointer polar_new() throws PolarRuntimeException {
+    public Pointer polarNew() throws PolarRuntimeException {
         return check_ptr_result(polar_lib.polar_new());
     }
 
-    public Pointer polar_new_query(Pointer polar_ptr, String query_str) throws PolarRuntimeException {
+    public Pointer polarNewQuery(Pointer polar_ptr, String query_str) throws PolarRuntimeException {
         return check_ptr_result(polar_lib.polar_new_query(polar_ptr, query_str));
     }
 
-    public Pointer polar_new_query_from_term(Pointer polar_ptr, String query_term) throws PolarRuntimeException {
+    public Pointer polarNewQueryFromTerm(Pointer polar_ptr, String query_term) throws PolarRuntimeException {
         return check_ptr_result(polar_lib.polar_new_query_from_term(polar_ptr, query_term));
     }
 
-    public Pointer polar_next_inline_query(Pointer polar_ptr) throws PolarRuntimeException {
+    public Pointer polarNextInlineQuery(Pointer polar_ptr) throws PolarRuntimeException {
         // Don't check result here because the returned Pointer is null to indicate
         // termination
         return polar_lib.polar_next_inline_query(polar_ptr);
     }
 
-    public String polar_next_query_event(Pointer query_ptr) throws PolarRuntimeException {
+    public String polarNextQueryEvent(Pointer query_ptr) throws PolarRuntimeException {
         return check_str_result(polar_lib.polar_next_query_event(query_ptr));
     }
 
-    public Pointer polar_query_from_repl(Pointer polar_ptr) throws PolarRuntimeException {
+    public Pointer polarQueryFromRepl(Pointer polar_ptr) throws PolarRuntimeException {
         return check_ptr_result(polar_lib.polar_query_from_repl(polar_ptr));
     }
 
-    public int polar_question_result(Pointer query_ptr, long call_id, int result) throws PolarRuntimeException {
+    public int polarQuestionResult(Pointer query_ptr, long call_id, int result) throws PolarRuntimeException {
         return check_int_result(polar_lib.polar_question_result(query_ptr, call_id, result));
     }
 
-    public int query_free(Pointer query) throws PolarRuntimeException {
+    public int queryFree(Pointer query) throws PolarRuntimeException {
         return check_int_result(polar_lib.query_free(query));
     }
 
-    public int string_free(Pointer s) throws PolarRuntimeException {
+    public int stringFree(Pointer s) throws PolarRuntimeException {
         return check_int_result(polar_lib.string_free(s));
     }
 
@@ -140,8 +140,8 @@ public class Ffi {
     public static void main(String[] args) {
         Ffi ffi = new Ffi();
         try {
-            Pointer p = ffi.polar_new();
-            ffi.polar_free(p);
+            Pointer p = ffi.polarNew();
+            ffi.polarFree(p);
         } catch (Exception e) {
             System.out.println(e);
         }
