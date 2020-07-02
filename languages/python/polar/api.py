@@ -114,8 +114,8 @@ class Polar:
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
 
-        # Define the class as a constant.
-        name = ffi_serialize(self._to_polar_term(cls_name))
+        # Register the class as a constant.
+        name = to_c_str(cls_name)
         value = ffi_serialize(self._to_polar_term(cls))
         lib.polar_register_constant(self.polar, name, value)
 
