@@ -206,6 +206,11 @@ public class Polar {
             results = new Result();
         }
 
+        @Override
+        protected void finalize() {
+            ffi_instance.queryFree(query_ptr);
+        }
+
         // Query Results are Enumerations of Strings
         public class Result implements Enumeration<HashMap<String, Object>> {
             private HashMap<String, Object> next;
