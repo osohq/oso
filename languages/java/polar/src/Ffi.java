@@ -40,31 +40,31 @@ public class Ffi {
     }
 
     public int polarFree(Pointer polar_ptr) throws PolarRuntimeException {
-        return check_int_result(polar_lib.polar_free(polar_ptr));
+        return checkIntResult(polar_lib.polar_free(polar_ptr));
     }
 
     public int polarDebugCommand(Pointer query_ptr, String value) throws PolarRuntimeException {
-        return check_int_result(polar_lib.polar_debug_command(query_ptr, value));
+        return checkIntResult(polar_lib.polar_debug_command(query_ptr, value));
     }
 
     public long polarGetExternalId(Pointer polar_ptr) throws PolarRuntimeException {
-        return check_long_result(polar_lib.polar_get_external_id(polar_ptr));
+        return checkLongResult(polar_lib.polar_get_external_id(polar_ptr));
     }
 
     public int polarLoad(Pointer polar_ptr, String src, String filename) throws PolarRuntimeException {
-        return check_int_result(polar_lib.polar_load(polar_ptr, src, filename));
+        return checkIntResult(polar_lib.polar_load(polar_ptr, src, filename));
     }
 
     public Pointer polarNew() throws PolarRuntimeException {
-        return check_ptr_result(polar_lib.polar_new());
+        return checkPtrResult(polar_lib.polar_new());
     }
 
     public Pointer polarNewQuery(Pointer polar_ptr, String query_str) throws PolarRuntimeException {
-        return check_ptr_result(polar_lib.polar_new_query(polar_ptr, query_str));
+        return checkPtrResult(polar_lib.polar_new_query(polar_ptr, query_str));
     }
 
     public Pointer polarNewQueryFromTerm(Pointer polar_ptr, String query_term) throws PolarRuntimeException {
-        return check_ptr_result(polar_lib.polar_new_query_from_term(polar_ptr, query_term));
+        return checkPtrResult(polar_lib.polar_new_query_from_term(polar_ptr, query_term));
     }
 
     public Pointer polarNextInlineQuery(Pointer polar_ptr) throws PolarRuntimeException {
@@ -74,23 +74,23 @@ public class Ffi {
     }
 
     public String polarNextQueryEvent(Pointer query_ptr) throws PolarRuntimeException {
-        return check_str_result(polar_lib.polar_next_query_event(query_ptr));
+        return checkStrResult(polar_lib.polar_next_query_event(query_ptr));
     }
 
     public Pointer polarQueryFromRepl(Pointer polar_ptr) throws PolarRuntimeException {
-        return check_ptr_result(polar_lib.polar_query_from_repl(polar_ptr));
+        return checkPtrResult(polar_lib.polar_query_from_repl(polar_ptr));
     }
 
     public int polarQuestionResult(Pointer query_ptr, long call_id, int result) throws PolarRuntimeException {
-        return check_int_result(polar_lib.polar_question_result(query_ptr, call_id, result));
+        return checkIntResult(polar_lib.polar_question_result(query_ptr, call_id, result));
     }
 
     public int queryFree(Pointer query) throws PolarRuntimeException {
-        return check_int_result(polar_lib.query_free(query));
+        return checkIntResult(polar_lib.query_free(query));
     }
 
     public int stringFree(Pointer s) throws PolarRuntimeException {
-        return check_int_result(polar_lib.string_free(s));
+        return checkIntResult(polar_lib.string_free(s));
     }
 
     // Error handling
@@ -104,7 +104,7 @@ public class Ffi {
         return new PolarRuntimeException(polar_lib.polar_get_error());
     }
 
-    private int check_int_result(int i) throws PolarRuntimeException {
+    private int checkIntResult(int i) throws PolarRuntimeException {
         if (i == 0) {
             throw get_error();
         } else {
@@ -112,7 +112,7 @@ public class Ffi {
         }
     }
 
-    private long check_long_result(long i) throws PolarRuntimeException {
+    private long checkLongResult(long i) throws PolarRuntimeException {
         if (i == 0) {
             throw get_error();
         } else {
@@ -120,7 +120,7 @@ public class Ffi {
         }
     }
 
-    private Pointer check_ptr_result(Pointer p) throws PolarRuntimeException {
+    private Pointer checkPtrResult(Pointer p) throws PolarRuntimeException {
         if (p == null) {
             throw get_error();
         } else {
@@ -128,7 +128,7 @@ public class Ffi {
         }
     }
 
-    private String check_str_result(String s) throws PolarRuntimeException {
+    private String checkStrResult(String s) throws PolarRuntimeException {
         if (s == null) {
             throw get_error();
         } else {
