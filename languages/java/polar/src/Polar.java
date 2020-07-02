@@ -1,5 +1,7 @@
 import jnr.ffi.Pointer;
 import org.json.*;
+
+import java.io.File;
 import java.util.*;
 import java.util.function.Function;
 
@@ -9,6 +11,7 @@ public class Polar {
     private Map<String, Class<Object>> classes;
     private Map<String, Function<Map, Object>> constructors;
     private Map<Long, Object> instances;
+    private Set<String> load_queue;
 
     public Polar() {
         ffi_instance = new Ffi();
@@ -16,12 +19,28 @@ public class Polar {
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
+        load_queue = new HashSet<String>();
     }
 
     @Override
     protected void finalize() {
         // Free the Polar FFI object
         ffi_instance.polar_free(polar_ptr);
+    }
+
+    public void loadFile(String filename) {
+        Optional<String> ext = Optional.ofNullable(filename).filter(f -> f.contains("."))
+                .map(f -> f.substring(filename.lastIndexOf(".") + 1));
+
+        if (!ext.isPresent() || ext.get() != "polar") {
+            throw new Error("Incorrect Polar file extension");
+        }
+
+        File file = new File(filename);
+        if (!file.exists()) {
+            throw new Error("Polar file not found");
+        }
+
     }
 
     // Load a Polar string into the KB (with filename).

@@ -180,6 +180,10 @@ public class TestPolar {
         }
     }
 
+    public static void testLoadFile() {
+        // TODO
+    }
+
     private static void printResults(Boolean passed, String message, String name) {
         if (passed) {
             System.out.println(name + ANSI_GREEN + " PASSED." + ANSI_RESET);
