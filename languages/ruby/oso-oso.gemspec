@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Runtime dependencies
-  spec.add_runtime_dependency 'ffi', '~> 1.13'
+  spec.add_runtime_dependency 'ffi', '~> 1.0'
 
   # Development dependencies
   spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
