@@ -530,3 +530,9 @@ def test_datetime(polar):
         "timedelta(a: Datetime, b: Datetime) := a.__sub__(b) == new Timedelta{days: 1};"
     )
     assert polar._query_pred(Predicate("timedelta", [t4, t1])).success
+
+
+def test_other_constants(polar, qvar):
+    d = {"a": 1}
+    polar.register_constant("d", d)
+    assert qvar("x = d.a", "x") == [1]

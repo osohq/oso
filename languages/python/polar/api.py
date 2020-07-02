@@ -113,10 +113,12 @@ class Polar:
         cls_name = cls.__name__ if name is None else name
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
+        self.register_constant(cls_name, cls)
 
-        # Register the class as a constant.
-        name = to_c_str(cls_name)
-        value = ffi_serialize(self._to_polar_term(cls))
+    def register_constant(self, name, value):
+        """Registers `value` as a Polar constant variable called `name`."""
+        name = to_c_str(name)
+        value = ffi_serialize(self._to_polar_term(value))
         lib.polar_register_constant(self.polar, name, value)
 
     ########## HIDDEN METHODS ##########
