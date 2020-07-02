@@ -23,7 +23,14 @@ class ParserException(PolarException):
 class PolarRuntimeException(PolarException):
     """Exception occuring at runtime (during query tell or evaluation)."""
 
-    pass
+    def __init__(self, message, error=None):
+        super().__init__(message, error)
+        self.kind = [*error][0]
+        data = error[self.kind]
+        self.stack_trace = data["stack_trace"]
+
+    def __str__(self):
+        return super(PolarException, self).__str__()
 
 
 class PolarOperationalException(PolarException):

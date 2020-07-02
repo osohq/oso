@@ -375,6 +375,29 @@ def test_parser_errors(polar):
     # ExtraToken -- not sure what causes this
 
 
+def test_runtime_errors(polar):
+    rules = """
+    foo(a,b) := a in b;
+    """
+    polar.load_str(rules)
+    with pytest.raises(exceptions.PolarRuntimeException) as e:
+        list(polar._query_str("foo(1,2)"))
+    assert (
+        str(e.value)
+        == 'Type error: can only use `in` on a list, this is Symbol(Symbol("_a_3")) at line 2, column 17'
+    )
+    assert (
+        e.value.stack_trace
+        == """trace (most recent evaluation last):
+  in query at line 1, column 1
+    foo(1, 2)
+  in rule foo at line 2, column 17
+    _a_3 in _b_4
+  in rule foo at line 2, column 17
+    _a_3 in _b_4"""
+    )
+
+
 def test_predicate(polar, qvar):
     """Test that predicates can be converted to and from python."""
     polar.load_str("f(x) := x = pred(1, 2);")
