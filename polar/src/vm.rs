@@ -503,7 +503,7 @@ impl PolarVirtualMachine {
         let mut stack = vec![];
         while let Some(t) = trace.last() {
             stack.push(t.clone());
-            trace = trace_stack.pop().unwrap_or_else(|| vec![]);
+            trace = trace_stack.pop().unwrap_or_else(Vec::new);
         }
 
         stack.reverse();
