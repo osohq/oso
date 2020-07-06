@@ -17,7 +17,7 @@ public class Polar {
 
     public Polar() {
         ffi = new Ffi();
-        polarPtr = ffi.polar_new();
+        polarPtr = ffi.polarNew();
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
@@ -27,7 +27,7 @@ public class Polar {
     @Override
     protected void finalize() {
         // Free the Polar FFI object
-        ffi.polar_free(polarPtr);
+        ffi.polarFree(polarPtr);
     }
 
     /**
@@ -70,8 +70,8 @@ public class Polar {
         loadQueue.clear();
 
         // Replace Polar instance
-        ffi.polar_free(polarPtr);
-        polarPtr = ffi.polar_new();
+        ffi.polarFree(polarPtr);
+        polarPtr = ffi.polarNew();
     }
 
     private void clearQueryState() {
@@ -86,7 +86,7 @@ public class Polar {
      * @param filename Name of the source file.
      */
     public void loadStr(String str, String filename) {
-        ffi.polar_load(polarPtr, str, filename);
+        ffi.polarLoad(polarPtr, str, filename);
         checkInlineQueries();
     }
 
@@ -96,7 +96,7 @@ public class Polar {
      * @param str Polar string to be loaded.
      */
     public void loadStr(String str) {
-        ffi.polar_load(polarPtr, str, null);
+        ffi.polarLoad(polarPtr, str, null);
         checkInlineQueries();
 
     }
@@ -107,12 +107,12 @@ public class Polar {
      * @throws Error On inline query failure.
      */
     private void checkInlineQueries() {
-        Pointer nextQuery = ffi.polar_next_inline_query(polarPtr);
+        Pointer nextQuery = ffi.polarNextInlineQuery(polarPtr);
         while (nextQuery != null) {
             if (!new Query(nextQuery).hasMoreElements()) {
                 throw new Error("Inline query failed");
             }
-            nextQuery = ffi.polar_next_inline_query(polarPtr);
+            nextQuery = ffi.polarNextInlineQuery(polarPtr);
         }
     }
 
@@ -124,7 +124,7 @@ public class Polar {
      */
     public Query queryStr(String queryStr) {
         loadQueuedFiles();
-        return new Query(ffi.polar_new_query(polarPtr, queryStr));
+        return new Query(ffi.polarNewQuery(polarPtr, queryStr));
     }
 
     /**
@@ -134,7 +134,7 @@ public class Polar {
         // clear_query_state
         loadQueuedFiles();
         while (true) {
-            Query query = new Query(ffi.polar_query_from_repl(polarPtr));
+            Query query = new Query(ffi.polarQueryFromRepl(polarPtr));
             if (!query.hasMoreElements()) {
                 System.out.println("False");
             } else {
@@ -191,7 +191,7 @@ public class Polar {
      */
     private Long cacheInstance(Object instance, Long id) {
         if (id == null) {
-            id = ffi.polar_get_external_id(polarPtr);
+            id = ffi.polarGetExternalId(polarPtr);
         }
         instances.put(id, instance);
 
@@ -323,6 +323,11 @@ public class Polar {
         }
 
         @Override
+        protected void finalize() {
+            ffi.queryFree(queryPtr);
+        }
+
+        @Override
         public boolean hasMoreElements() {
             return next != null;
         }
@@ -345,7 +350,7 @@ public class Polar {
          */
         private HashMap<String, Object> nextResult() {
             while (true) {
-                String eventStr = ffi.polar_next_query_event(queryPtr);
+                String eventStr = ffi.polarNextQueryEvent(queryPtr);
                 String kind;
                 JSONObject data;
                 try {
