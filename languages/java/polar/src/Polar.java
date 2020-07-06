@@ -99,13 +99,15 @@ public class Polar {
      * Query for a Polar string.
      *
      * @param queryStr
-     * @return
+     * @return Query object.
      */
     public Query queryStr(String queryStr) {
         return new Query(ffi.polar_new_query(polarPtr, queryStr));
     }
 
-    // Start the Polar REPL
+    /**
+     * Start the Polar REPL.
+     */
     public void repl() {
         // clear_query_state
         // load_queued_files
@@ -122,12 +124,29 @@ public class Polar {
         }
     }
 
+    /**
+     * Register a Java class with oso.
+     *
+     * @param cls
+     * @param fromPolar lambda function to convert from a
+     *                  {@code Map<String, Object>} of parameters to an instance of
+     *                  the Java class.
+     */
     public void registerClass(Class cls, Function<Map, Object> fromPolar) {
         classes.put(cls.getName(), cls);
         constructors.put(cls.getName(), fromPolar);
 
     }
 
+    /**
+     * Make an instance of a Java class from a {@code Map<String, Object>} of
+     * fields.
+     *
+     * @param cls
+     * @param fields
+     * @param id
+     * @return Object
+     */
     public Object makeInstance(Class cls, Map fields, Long id) {
         Function<Map, Object> constructor = constructors.get(cls.getName());
         Object instance;
@@ -141,7 +160,14 @@ public class Polar {
         return instance;
     }
 
-    public Long cacheInstance(Object instance, Long id) {
+    /**
+     * Cache an instance of a Java class.
+     *
+     * @param instance
+     * @param id
+     * @return Long
+     */
+    private Long cacheInstance(Object instance, Long id) {
         if (id == null) {
             id = ffi.polar_get_external_id(polarPtr);
         }
@@ -150,9 +176,15 @@ public class Polar {
         return id;
     }
 
-    // Turn a Polar term passed across the FFI boundary into a Ruby value.
-    public Object toJava(JSONObject data) {
-        JSONObject value = data.getJSONObject("value");
+    /**
+     * Turn a Polar term passed across the FFI boundary into a Java Object.
+     *
+     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _,
+     *             "value": _}}
+     * @return Object
+     */
+    public Object toJava(JSONObject term) {
+        JSONObject value = term.getJSONObject("value");
         String tag = value.keys().next();
         switch (tag) {
             case "String":
@@ -197,6 +229,13 @@ public class Polar {
         }
     }
 
+    /**
+     * Convert Java Objects to Polar (JSON) terms.
+     *
+     * @param value Java Object to be converted to Polar.
+     * @return JSONObject Polar term of form: {@code {"id": _, "offset": _, "value":
+     *         _}}.
+     */
     public JSONObject toPolarTerm(Object value) {
         // Build Polar value
         JSONObject jVal = new JSONObject();
@@ -247,11 +286,15 @@ public class Polar {
         return term;
     }
 
-    // Query Results are Enumerations of Strings
     public class Query implements Enumeration<HashMap<String, Object>> {
         private HashMap<String, Object> next;
         private Pointer queryPtr;
 
+        /**
+         * Construct a new Query object.
+         *
+         * @param queryPtr Pointer to the FFI query instance.
+         */
         public Query(Pointer queryPtr) {
             this.queryPtr = queryPtr;
             next = nextResult();
@@ -269,6 +312,10 @@ public class Polar {
             return ret;
         }
 
+        /**
+         * Generate the next Query result.
+         * @return
+         */
         private HashMap<String, Object> nextResult() {
             while (true) {
                 String eventStr = ffi.polar_next_query_event(queryPtr);
