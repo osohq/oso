@@ -25,7 +25,7 @@ public class TestPolar {
             Polar p = new Polar();
 
             p.loadStr("f(1);");
-            Enumeration<HashMap<String, Object>> results = p.query_str("f(x)");
+            Enumeration<HashMap<String, Object>> results = p.queryStr("f(x)");
             if (!results.hasMoreElements() || results.nextElement().get("x") != Integer.valueOf(1)) {
                 throw new Exception();
             }
@@ -68,19 +68,19 @@ public class TestPolar {
 
             // Test boolean
             p.loadStr("a(x) := x = true;");
-            HashMap<String, Object> a = p.query_str("a(x)").nextElement();
+            HashMap<String, Object> a = p.queryStr("a(x)").nextElement();
             if (!a.equals(Map.of("x", true))) {
                 throw new Exception("Failed to convert boolean to java.");
             }
             // Test dictionary
             p.loadStr("b(x) := x = {a: 1};");
-            HashMap<String, Object> b = p.query_str("b(x)").nextElement();
+            HashMap<String, Object> b = p.queryStr("b(x)").nextElement();
             if (!b.equals(Map.of("x", Map.of("a", 1)))) {
                 throw new Exception("Failed to convert dictionary to java.");
             }
             // Test list
             p.loadStr("c(x) := x = [\"a\", \"b\", \"c\"];");
-            HashMap<String, Object> c = p.query_str("c(x)").nextElement();
+            HashMap<String, Object> c = p.queryStr("c(x)").nextElement();
             if (!c.equals(Map.of("x", List.of("a", "b", "c")))) {
                 throw new Exception("Failed to convert list to java.");
             }

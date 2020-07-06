@@ -86,23 +86,23 @@ public class Polar {
      * @throws Error On inline query failure.
      */
     private void checkInlineQueries() {
-        Pointer next_query = ffi.polar_next_inline_query(polarPtr);
-        while (next_query != null) {
-            if (!new Query(next_query).hasMoreElements()) {
+        Pointer nextQuery = ffi.polar_next_inline_query(polarPtr);
+        while (nextQuery != null) {
+            if (!new Query(nextQuery).hasMoreElements()) {
                 throw new Error("Inline query failed");
             }
-            next_query = ffi.polar_next_inline_query(polarPtr);
+            nextQuery = ffi.polar_next_inline_query(polarPtr);
         }
     }
 
     /**
      * Query for a Polar string.
      *
-     * @param query_str
+     * @param queryStr
      * @return
      */
-    public Enumeration<HashMap<String, Object>> query_str(String query_str) {
-        return new Query(ffi.polar_new_query(polarPtr, query_str));
+    public Enumeration<HashMap<String, Object>> queryStr(String queryStr) {
+        return new Query(ffi.polar_new_query(polarPtr, queryStr));
         // return query.results;
     }
 
@@ -252,10 +252,10 @@ public class Polar {
     // Query Results are Enumerations of Strings
     public class Query implements Enumeration<HashMap<String, Object>> {
         private HashMap<String, Object> next;
-        private Pointer query_ptr;
+        private Pointer queryPtr;
 
-        public Query(Pointer query_ptr) {
-            this.query_ptr = query_ptr;
+        public Query(Pointer queryPtr) {
+            this.queryPtr = queryPtr;
             next = nextResult();
         }
 
@@ -273,16 +273,16 @@ public class Polar {
 
         private HashMap<String, Object> nextResult() {
             while (true) {
-                String event_str = ffi.polar_next_query_event(query_ptr);
+                String eventStr = ffi.polar_next_query_event(queryPtr);
                 String kind;
                 JSONObject data;
                 try {
-                    JSONObject event = new JSONObject(event_str);
+                    JSONObject event = new JSONObject(eventStr);
                     kind = event.keys().next();
                     data = event.getJSONObject(kind);
                 } catch (JSONException e) {
                     // TODO: this sucks, we should have a consistent serialization format
-                    kind = event_str.replace("\"", "");
+                    kind = eventStr.replace("\"", "");
                     data = null;
                 }
 
