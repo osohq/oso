@@ -1,7 +1,6 @@
 import re
 
 from typing import List
-from datetime import datetime, timedelta
 
 
 class Http:
@@ -44,51 +43,3 @@ class PathMapper:
         match = self.pattern.match(string)
         if match:
             yield match.groupdict()
-
-
-class Datetime(datetime):
-    """ Polar wrapper for Python `datetime`. Allows Datetime to be created with no arguments by providing
-    an arbitrary default. This is a workaround for lack of class method support, allowing `now()` to be
-    called on a default Datetime instance, e.g. `x = Datetime{}.now`. Also improves the syntax for
-    subtraction. """
-
-    def __new__(
-        cls, year=1970, month=1, day=1, hour=0, minute=0, second=0, microsecond=0
-    ):
-        return super().__new__(cls, year, month, day, hour, minute, second, microsecond)
-
-    def from_datetime(dt):
-        return Datetime(
-            year=dt.year,
-            month=dt.month,
-            day=dt.day,
-            hour=dt.hour,
-            minute=dt.minute,
-            second=dt.second,
-            microsecond=dt.microsecond,
-        )
-
-    def now(self):
-        return Datetime.from_datetime(datetime.now())
-
-    def sub(self, other):
-        return self.__sub__(other)
-
-
-class Timedelta(timedelta):
-    """ Polar wrapper for Python `timedelta`. Not really a purpose to this other than consistency
-    with the Polar class naming convention given that the Polar `Datetime` class is capitalized. """
-
-    def __new__(
-        cls,
-        days=0,
-        seconds=0,
-        microseconds=0,
-        milliseconds=0,
-        minutes=0,
-        hours=0,
-        weeks=0,
-    ):
-        return super().__new__(
-            cls, days, seconds, microseconds, milliseconds, minutes, hours, weeks
-        )

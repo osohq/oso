@@ -184,6 +184,14 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
+  context '#register_constant' do
+    it 'works' do
+      d = {"a" => 1}
+      subject.register_constant("d", value: d)
+      expect(qvar(subject, 'd.a = x', 'x')).to eq([1])
+    end
+  end
+
   context '#register_class' do
     it 'errors when registering the same class twice' do
       stub_const('Foo', Class.new)
@@ -196,7 +204,7 @@ RSpec.describe Oso::Polar::Polar do
         stub_const('Foo', Class.new)
         stub_const('Bar', Class.new)
         expect { subject.register_class Bar }.not_to raise_error
-        expect { subject.register_class Foo, as: 'Bar' }.to raise_error Oso::Polar::DuplicateClassAliasError
+        expect { subject.register_class Foo, name: 'Bar' }.to raise_error Oso::Polar::DuplicateClassAliasError
       end
     end
 

@@ -123,6 +123,30 @@ pub extern "C" fn polar_load(
 }
 
 #[no_mangle]
+pub extern "C" fn polar_register_constant(
+    polar_ptr: *mut Polar,
+    name: *const c_char,
+    value: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let name = unsafe { ffi_string!(name) };
+        let value = unsafe { ffi_string!(value) };
+        let value = serde_json::from_str(&value);
+        match value {
+            Ok(value) => {
+                polar.register_constant(types::Symbol::new(name.as_ref()), value);
+                POLAR_SUCCESS
+            }
+            Err(e) => {
+                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
+                POLAR_FAILURE
+            }
+        }
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };

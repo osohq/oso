@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterable
+from datetime import datetime, timedelta
 from pathlib import Path
 from types import GeneratorType
 from typing import Any, Sequence, List
@@ -8,7 +9,7 @@ from _polar_lib import lib
 
 from .errors import get_error
 from .exceptions import PolarApiException, PolarRuntimeException
-from .extras import Http, PathMapper, Datetime, Timedelta
+from .extras import Http, PathMapper
 from .ffi import (
     external_answer,
     external_call,
@@ -55,11 +56,12 @@ class Polar:
         self.class_constructors = CLASS_CONSTRUCTORS
         self.instances = {}
         self.calls = {}
-        self.built_ins = [Http, PathMapper, Datetime, Timedelta]
 
         # Register built-in classes.
-        for cls in self.built_ins:
-            self.register_class(cls)
+        self.register_class(Http)
+        self.register_class(PathMapper)
+        self.register_class(datetime, name="Datetime")
+        self.register_class(timedelta, name="Timedelta")
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -104,19 +106,25 @@ class Polar:
             if not had_result:
                 print("False")
 
-    def register_class(self, cls, from_polar=None):
+    def register_class(self, cls, *, name=None, from_polar=None):
         """Registers `cls` as a class accessible by Polar. `from_polar` can
         either be a method or a string. In the case of a string, Polar will
         look for the method using `getattr(cls, from_polar)`."""
-        cls_name = cls.__name__
+        cls_name = cls.__name__ if name is None else name
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
+        self.register_constant(cls_name, cls)
+
+    def register_constant(self, name, value):
+        """Registers `value` as a Polar constant variable called `name`."""
+        name = to_c_str(name)
+        value = ffi_serialize(self._to_polar_term(value))
+        lib.polar_register_constant(self.polar, name, value)
 
     ########## HIDDEN METHODS ##########
 
     def _load_queued_files(self):
         """Load queued policy files into the knowledge base."""
-        self.instances = {}
         while self.load_queue:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
@@ -166,7 +174,7 @@ class Polar:
                 name=value[tag]["name"],
                 args=[self._to_python(v) for v in value[tag]["args"]],
             )
-        elif tag == "Symbol":
+        elif tag == "Variable":
             raise PolarRuntimeException(
                 f"variable: {value} is unbound. make sure the value is set before using it in a method call"
             )
@@ -199,7 +207,7 @@ class Polar:
             }
         elif isinstance(v, Variable):
             # This is supported so that we can query for unbound variables
-            val = {"Symbol": v}
+            val = {"Variable": v}
         else:
             val = {"ExternalInstance": {"instance_id": self.__cache_instance(v)}}
         term = {"value": val}

@@ -267,8 +267,8 @@ fn test_nested_rule() {
     assert!(qeval(&mut polar, "j(4)"));
 }
 
-#[test]
 /// A functions permutation that is known to fail.
+#[test]
 fn test_bad_functions() {
     let mut polar = Polar::new();
     polar
@@ -375,8 +375,8 @@ fn test_no_applicable_rules() {
     assert!(qnull(&mut polar, "f()"));
 }
 
-#[test]
 /// From Aït-Kaci's WAM tutorial (1999), page 34.
+#[test]
 fn test_ait_kaci_34() {
     let mut polar = Polar::new();
     polar
@@ -391,6 +391,29 @@ fn test_ait_kaci_34() {
         )
         .unwrap();
     assert!(qeval(&mut polar, "a()"));
+}
+
+#[test]
+fn test_constants() {
+    let mut polar = Polar::new();
+    {
+        let mut kb = polar.kb.write().unwrap();
+        kb.constant(sym!("one"), term!(1));
+        kb.constant(sym!("two"), term!(2));
+        kb.constant(sym!("three"), term!(3));
+    }
+    polar
+        .load(
+            r#"one(x) := one = one, one = x, x < two;
+               two(x) := one < x, two = two, two = x, two < three;
+               three(x) := three = three, three = x;"#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, "one(1)"));
+    assert!(qnull(&mut polar, "two(1)"));
+    assert!(qeval(&mut polar, "two(2)"));
+    assert!(qnull(&mut polar, "three(2)"));
+    assert!(qeval(&mut polar, "three(3)"));
 }
 
 #[test]
@@ -864,8 +887,8 @@ fn test_keyword_bug() {
     ));
 }
 
+/// Test that rule heads work correctly when unification or specializers are used.
 #[test]
-// Test that rule heads work correctly when unification or specializers are used.
 fn test_unify_rule_head() {
     let polar = Polar::new();
     assert!(matches!(
@@ -908,8 +931,8 @@ fn test_unify_rule_head() {
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 }
 
-#[test]
 /// Test that cut commits to all choice points before the cut, not just the last.
+#[test]
 fn test_cut() {
     let mut polar = Polar::new();
     polar.load("a(x) := x = 1 | x = 2;").unwrap();

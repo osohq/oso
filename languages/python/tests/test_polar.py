@@ -1,7 +1,6 @@
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from polar.extras import Datetime, Timedelta
 from polar import exceptions, Polar, Predicate, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
@@ -60,7 +59,9 @@ def test_external(polar, qvar):
         def b(self):
             yield "b"
 
-        def c(self):
+        @classmethod
+        def c(cls):
+            assert issubclass(cls, Foo)
             return "c"
 
         def d(self, x):
@@ -91,8 +92,8 @@ def test_external(polar, qvar):
     assert qvar("new Foo{}.a() = x", "x", one=True) == "A"
     assert qvar("new Foo{}.b = x", "x", one=True) == "b"
     assert qvar("new Foo{}.b() = x", "x", one=True) == "b"
-    assert qvar("new Foo{}.c = x", "x", one=True) == "c"
-    assert qvar("new Foo{}.c() = x", "x", one=True) == "c"
+    assert qvar("Foo.c = x", "x", one=True) == "c"
+    assert qvar("Foo.c() = x", "x", one=True) == "c"
     assert qvar("new Foo{} = f, f.a() = x", "x", one=True) == "A"
     assert qvar("new Foo{}.bar().y() = x", "x", one=True) == "y"
     assert qvar("new Foo{}.e = x", "x", one=True) == [1, 2, 3]
@@ -507,10 +508,10 @@ def test_external_op(polar):
 def test_datetime(polar):
 
     # test datetime comparison
-    t1 = Datetime(2020, 5, 25)
-    t2 = Datetime().now()
-    t3 = Datetime(2030, 5, 25)
-    t4 = Datetime(2020, 5, 26)
+    t1 = datetime(2020, 5, 25)
+    t2 = datetime.now()
+    t3 = datetime(2030, 5, 25)
+    t4 = datetime(2020, 5, 26)
 
     polar.load_str("lt(a, b) := a < b;")
     assert polar._query_pred(Predicate("lt", [t1, t2])).success
@@ -521,11 +522,17 @@ def test_datetime(polar):
     assert polar._query_pred(Predicate("dt", [Variable("x")])).results == [
         {"x": datetime(2020, 5, 25)}
     ]
-    polar.load_str("ltnow(x) := x < new Datetime{}.now();")
+    polar.load_str("ltnow(x) := x < Datetime.now();")
     assert polar._query_pred(Predicate("ltnow", [t1])).success
     assert not polar._query_pred(Predicate("ltnow", [t3])).success
 
     polar.load_str(
-        "timedelta(a: Datetime, b: Datetime) := a.sub(b) == new Timedelta{days: 1};"
+        "timedelta(a: Datetime, b: Datetime) := a.__sub__(b) == new Timedelta{days: 1};"
     )
     assert polar._query_pred(Predicate("timedelta", [t4, t1])).success
+
+
+def test_other_constants(polar, qvar):
+    d = {"a": 1}
+    polar.register_constant("d", d)
+    assert qvar("x = d.a", "x") == [1]
