@@ -536,3 +536,20 @@ def test_other_constants(polar, qvar):
     d = {"a": 1}
     polar.register_constant("d", d)
     assert qvar("x = d.a", "x") == [1]
+
+
+def test_string_methods(polar, qeval):
+    assert qeval('String.find("abc", "bc") = 1')
+    assert qeval('x = "abc", x.find("bc") = 1')
+
+
+def test_number_methods(polar, qeval):
+    polar.register_class(int, name="Number")
+    assert qeval("x = 4095, x.bit_length() = 12")
+
+    polar.register_class(float, name="Number")
+    assert qeval('y = 3.14159, y.hex() = "0x1.921f9f01b866ep+1"')
+
+
+def test_list_methods(polar, qeval):
+    assert qeval("x = [1, 2, 3], x.index(3) = 2, x.copy() = [1, 2, 3]")

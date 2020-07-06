@@ -1071,25 +1071,58 @@ impl PolarVirtualMachine {
         let value = &args[2];
 
         match object.value() {
-            // Push a `Lookup` goal for dictionaries
+            // Push a `Lookup` goal for dictionaries.
             Value::Dictionary(dict) => self.push_goal(Goal::Lookup {
                 dict: dict.clone(),
                 field: field.clone(),
                 value: args.remove(2),
             })?,
-            // Instantiate InstanceLiterals then push a new `Dot` query with the instantiated instance
-            Value::InstanceLiteral(_) => {
-                panic!("Tried to do a lookup on an instance literal! How did it get here????");
-            }
-            // Push an `ExternalLookup` goal for external instances
+            // Push an `ExternalLookup` goal for external instances.
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                let value = value.value().clone().symbol().expect("Bad lookup value.");
+                let value = value.value().clone().symbol().expect("bad lookup value");
                 let call_id = self.new_call_id(&value);
                 self.push_goal(Goal::LookupExternal {
                     call_id,
                     instance_id: *instance_id,
                     field: field.clone(),
                 })?;
+            }
+            // Punt to an external method for strings, numbers, etc.
+            Value::List(_) | Value::Number(_) | Value::String(_) => {
+                let value = value.value().clone().symbol().expect("bad lookup value");
+                let call_id = self.new_call_id(&value);
+                let type_name = Symbol::new(match object.value() {
+                    Value::List(_) => "List",
+                    Value::Number(_) => "Number",
+                    Value::String(_) => "String",
+                    _ => return Err(self.type_error(&object, "unknown type name".to_string())),
+                });
+                match self.value(&type_name).cloned() {
+                    Some(external_type) => match external_type.value() {
+                        Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                            match field.value() {
+                                Value::Call(Predicate { name, args }) => {
+                                    // Rewrite the lookup as a class method call
+                                    // with the object as the first argument.
+                                    let mut args = args.clone();
+                                    args.insert(0, object.clone());
+                                    let field = field.clone_with_value(Value::Call(Predicate {
+                                        name: name.clone(),
+                                        args,
+                                    }));
+                                    self.push_goal(Goal::LookupExternal {
+                                        call_id,
+                                        instance_id: *instance_id,
+                                        field,
+                                    })?;
+                                }
+                                _ => return Err(self.type_error(&object, "bad lookup".to_string())),
+                            }
+                        }
+                        _ => return Err(self.type_error(&object, "invalid type".to_string())),
+                    },
+                    _ => return Err(self.type_error(&object, "no type registered".to_string())),
+                }
             }
             _ => {
                 return Err(self.type_error(

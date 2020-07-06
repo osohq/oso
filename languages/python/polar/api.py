@@ -58,6 +58,9 @@ class Polar:
         self.calls = {}
 
         # Register built-in classes.
+        self.register_class(list, name="List")
+        self.register_class(int, name="Number")
+        self.register_class(str, name="String")
         self.register_class(Http)
         self.register_class(PathMapper)
         self.register_class(datetime, name="Datetime")
