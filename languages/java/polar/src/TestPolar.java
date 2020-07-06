@@ -232,14 +232,14 @@ public class TestPolar {
         }
     }
 
-    private static String getExceptionStackTrace(Exception e) {
+    private static String getExceptionStackTrace(Throwable e) {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         e.printStackTrace(pw);
         return sw.toString();
     }
 
-    private static void runAll() {
+    private static void runAll() throws IllegalAccessException {
         System.out.println("\nRunning tests...\n");
         Method[] methods = TestPolar.class.getDeclaredMethods();
         int total = methods.length;
@@ -257,9 +257,9 @@ public class TestPolar {
                 } else {
                     try {
                         m.invoke(null);
-                    } catch (Exception e) {
+                    } catch (InvocationTargetException e) {
                         status = Status.FAILED;
-                        msg = getExceptionStackTrace(e);
+                        msg = getExceptionStackTrace(e.getCause());
                         nFailed++;
                     }
 
@@ -284,7 +284,7 @@ public class TestPolar {
         PASSED, SKIPPED, FAILED
     }
 
-    public static void main(String[] args) throws IllegalAccessException, InvocationTargetException {
+    public static void main(String[] args) throws IllegalAccessException {
         runAll();
     }
 
