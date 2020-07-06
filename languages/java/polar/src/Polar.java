@@ -52,11 +52,31 @@ public class Polar {
         loadQueue.put(filename, new String(Files.readAllBytes(Paths.get(filename))));
     }
 
+    /**
+     * Load all queued files, flushing the {@code loadQueue}
+     */
     public void loadQueuedFiles() {
         for (String fname : loadQueue.keySet()) {
             loadStr(loadQueue.get(fname), fname);
         }
         loadQueue.clear();
+    }
+
+    /**
+     * Clear the KB, but maintain all registered classes and calls
+     */
+    public void clear() {
+        // clear all Queued files
+        loadQueue.clear();
+
+        // Replace Polar instance
+        ffi.polar_free(polarPtr);
+        polarPtr = ffi.polar_new();
+    }
+
+    private void clearQueryState() {
+        instances.clear();
+        // TODO: clear calls
     }
 
     /**

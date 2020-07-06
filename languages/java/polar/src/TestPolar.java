@@ -1,7 +1,10 @@
+import java.io.File;
+import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 import org.json.*;
+import java.lang.reflect.*;
 
 public class TestPolar {
     public static final String ANSI_RED = "\u001B[31m";
@@ -185,17 +188,70 @@ public class TestPolar {
         Boolean passed = true;
         String msg = null;
         try {
-            // loads a file
             Polar p = new Polar();
+            // loads a file
             p.loadFile("src/test.polar");
             if (!p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
                 throw new Exception("Failed to load file");
             }
+            p.clear();
+
             // throws an error if given a non-polar file
+            Boolean throwsError = false;
+            try {
+                p.loadFile("wrong.txt");
+            } catch (Error e) {
+                if (e.getMessage().equals("Incorrect Polar file extension")) {
+                    throwsError = true;
+                }
+            }
+            if (!throwsError) {
+                throw new Exception("Failed to catch incorrect Polar file extension.");
+            }
+
             // passes filename across FFI boundary
+            File tempFile = File.createTempFile("error-", ".polar");
+            FileWriter w = new FileWriter(tempFile);
+            w.write(";");
+            w.close();
+            throwsError = false;
+            try {
+                p.loadFile(tempFile.getPath());
+                p.queryStr("f(1)");
+            } catch (Error e) {
+                // if (e.getMessage()
+                // .equals("did not expect to find the token ';' at line 1, column 1 in file " +
+                // tempFile.getPath())) {
+                // throwsError = true;
+                // }
+                throwsError = true;
+            }
+            if (!throwsError) {
+                throw new Exception("Failed to pass filename across FFI boundary.");
+            }
+            tempFile.deleteOnExit();
+            p.clear();
+
             // is idempotent
+            p.loadFile("src/test.polar");
+            p.loadFile("src/test.polar");
+            if (!p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
+                throw new Exception("loadFile behavior is not idempotent.");
+            }
+            p.clear();
+
             // can load multiple files
-        } catch (Exception e) {
+            p.loadFile("src/test.polar");
+            p.loadFile("src/test2.polar");
+            if (!p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
+                throw new Exception("Failed to load multiple files.");
+            }
+            if (!p.queryStr("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
+                throw new Exception("Failed to load multiple files.");
+            }
+        } catch (
+
+        Exception e) {
             passed = false;
             msg = getExceptionStackTrace(e);
         } finally {
@@ -220,14 +276,16 @@ public class TestPolar {
         return sw.toString();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IllegalAccessException, InvocationTargetException {
         System.out.println("\nRunning tests...\n");
-        testToJava();
-        testFFIRoundTrip();
-        testRegisterAndMakeClass();
-        testLoadAndQueryStr();
-        testInlineQueries();
-        testLoadFile();
+        Method[] methods = TestPolar.class.getDeclaredMethods();
+        for (Method m : methods) {
+            if (m.getName().startsWith("test")) {
+                m.invoke(null);
+
+            }
+        }
+
     }
 
 }
