@@ -56,6 +56,7 @@ public class Polar {
         for (String fname : loadQueue.keySet()) {
             loadStr(loadQueue.get(fname), fname);
         }
+        loadQueue.clear();
     }
 
     /**
@@ -314,6 +315,7 @@ public class Polar {
 
         /**
          * Generate the next Query result.
+         *
          * @return
          */
         private HashMap<String, Object> nextResult() {
