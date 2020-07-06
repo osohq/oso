@@ -181,7 +181,26 @@ public class TestPolar {
     }
 
     public static void testLoadFile() {
-        // TODO
+        String name = "testLoadFile";
+        Boolean passed = true;
+        String msg = null;
+        try {
+            // loads a file
+            Polar p = new Polar();
+            p.loadFile("src/test.polar");
+            if (!p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
+                throw new Exception("Failed to load file");
+            }
+            // throws an error if given a non-polar file
+            // passes filename across FFI boundary
+            // is idempotent
+            // can load multiple files
+        } catch (Exception e) {
+            passed = false;
+            msg = getExceptionStackTrace(e);
+        } finally {
+            printResults(passed, msg, name);
+        }
     }
 
     private static void printResults(Boolean passed, String message, String name) {
@@ -208,6 +227,7 @@ public class TestPolar {
         testRegisterAndMakeClass();
         testLoadAndQueryStr();
         testInlineQueries();
+        testLoadFile();
     }
 
 }

@@ -44,7 +44,7 @@ public class Polar {
                 .map(f -> f.substring(filename.lastIndexOf(".") + 1));
 
         // check file extension
-        if (!ext.isPresent() || ext.get() != "polar") {
+        if (!ext.isPresent() || !ext.get().equals("polar")) {
             throw new Error("Incorrect Polar file extension");
         }
 
@@ -312,6 +312,10 @@ public class Polar {
             HashMap<String, Object> ret = next;
             next = nextResult();
             return ret;
+        }
+
+        public List<HashMap<String, Object>> results() {
+            return Collections.list(this);
         }
 
         /**
