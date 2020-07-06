@@ -1,6 +1,6 @@
-can_read_patient_data(actor, "read", resource) :=
+can_read_patient_data(actor, "read", resource) if
     actor.role = "medical_staff",
     actor.treated(resource.patient) = true;
 
-allow(actor: Actor, "read", resource) :=
+allow(actor: Actor, "read", resource) if
     can_read_patient_data(actor, "read", resource);

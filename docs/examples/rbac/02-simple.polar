@@ -4,34 +4,34 @@
 # - role hierarchy
 
 # Accountants can do anything an employee can do
-role(actor, "employee") :=
+role(actor, "employee") if
     actor = "alice"
     | actor = "bhavik"
     | actor = "cora"
     | role(actor, "accountant");
 
 # Admins can do anything an accountant can do
-role(actor, "accountant") :=
+role(actor, "accountant") if
     actor = "deirdre" 
     | actor = "ebrahim" 
     | actor = "frantz"
     | role(actor, "admin");
 
-role(actor, "admin") :=
+role(actor, "admin") if
     actor = "greta" 
     | actor = "han"
     | actor = "iqbal";
 
 # Employees can submit expenses
-allow(actor, "submit", "expense") :=
+allow(actor, "submit", "expense") if
     role(actor, "employee");
 
 # Accountants can view expenses
-allow(actor, "view", "expense") :=
+allow(actor, "view", "expense") if
     role(actor, "accountant");
 
 # Admins can approve expenses
-allow(actor, "approve", "expense") :=
+allow(actor, "approve", "expense") if
     role(actor, "admin");
 
 # Deirdre the accountant can view and submit expenses
