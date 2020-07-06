@@ -194,7 +194,7 @@ impl PolarVirtualMachine {
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
         };
-        vm.from_bindings(constants);
+        vm.bind_constants(constants);
         vm
     }
 
@@ -318,7 +318,7 @@ impl PolarVirtualMachine {
         }
 
         Ok(QueryEvent::Result {
-            bindings: self.to_bindings(false),
+            bindings: self.bindings(false),
             trace: self.trace.first().cloned(),
         })
     }
@@ -427,16 +427,16 @@ impl PolarVirtualMachine {
 
     /// Augment the bindings stack with constants from a hash map.
     /// There must be no temporaries bound yet.
-    pub fn from_bindings(&mut self, bindings: Bindings) {
+    pub fn bind_constants(&mut self, bindings: Bindings) {
         assert_eq!(self.bsp(), self.csp);
         for (var, value) in bindings.iter() {
             self.bind(var, value.clone());
-            self.csp += 1;
         }
+        self.csp += bindings.len();
     }
 
     /// Retrieve the current non-constant bindings as a hash map.
-    pub fn to_bindings(&self, include_temps: bool) -> Bindings {
+    pub fn bindings(&self, include_temps: bool) -> Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings[self.csp..] {
             if !include_temps && self.is_temporary_var(&var) {
