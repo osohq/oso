@@ -1,7 +1,9 @@
 import jnr.ffi.Pointer;
 import org.json.*;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 
@@ -11,7 +13,7 @@ public class Polar {
     private Map<String, Class<Object>> classes;
     private Map<String, Function<Map, Object>> constructors;
     private Map<Long, Object> instances;
-    private Set<String> load_queue;
+    private Map<String, String> loadQueue; // Map from filename -> file contents
 
     public Polar() {
         ffi_instance = new Ffi();
@@ -19,7 +21,7 @@ public class Polar {
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
-        load_queue = new HashSet<String>();
+        loadQueue = new HashMap<String, String>();
     }
 
     @Override
@@ -28,19 +30,32 @@ public class Polar {
         ffi_instance.polar_free(polar_ptr);
     }
 
-    public void loadFile(String filename) {
+    /**
+     * Enqueue a polar policy file to be loaded. File contents are loaded into a
+     * String and saved here, so changes to the file made after calls to loadFile
+     * will not be recognized. If the filename already exists in the load queue,
+     * replace it.
+     *
+     * @param filename
+     * @throws IOException If unable to open or read the file.
+     */
+    public void loadFile(String filename) throws IOException {
         Optional<String> ext = Optional.ofNullable(filename).filter(f -> f.contains("."))
                 .map(f -> f.substring(filename.lastIndexOf(".") + 1));
 
+        // check file extension
         if (!ext.isPresent() || ext.get() != "polar") {
             throw new Error("Incorrect Polar file extension");
         }
 
-        File file = new File(filename);
-        if (!file.exists()) {
-            throw new Error("Polar file not found");
-        }
+        // add file to queue
+        loadQueue.put(filename, new String(Files.readAllBytes(Paths.get(filename))));
+    }
 
+    public void loadQueuedFiles() {
+        for (String fname : loadQueue.keySet()) {
+            loadStr(loadQueue.get(fname), fname);
+        }
     }
 
     // Load a Polar string into the KB (with filename).
