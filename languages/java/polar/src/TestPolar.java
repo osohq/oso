@@ -25,7 +25,7 @@ public class TestPolar {
             Polar p = new Polar();
 
             p.loadStr("f(1);");
-            Enumeration<HashMap<String, Object>> results = p.queryStr("f(x)");
+            Polar.Query results = p.queryStr("f(x)");
             if (!results.hasMoreElements() || results.nextElement().get("x") != Integer.valueOf(1)) {
                 throw new Exception();
             }

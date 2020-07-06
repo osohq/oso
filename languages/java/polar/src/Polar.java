@@ -101,9 +101,8 @@ public class Polar {
      * @param queryStr
      * @return
      */
-    public Enumeration<HashMap<String, Object>> queryStr(String queryStr) {
+    public Query queryStr(String queryStr) {
         return new Query(ffi.polar_new_query(polarPtr, queryStr));
-        // return query.results;
     }
 
     // Start the Polar REPL
@@ -112,13 +111,12 @@ public class Polar {
         // load_queued_files
         while (true) {
             Query query = new Query(ffi.polar_query_from_repl(polarPtr));
-            Enumeration<HashMap<String, Object>> results = query;
-            if (!results.hasMoreElements()) {
+            if (!query.hasMoreElements()) {
                 System.out.println("False");
             } else {
                 do {
-                    System.out.println(results.nextElement());
-                } while (results.hasMoreElements());
+                    System.out.println(query.nextElement());
+                } while (query.hasMoreElements());
             }
 
         }
