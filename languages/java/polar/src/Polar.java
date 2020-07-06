@@ -8,16 +8,16 @@ import java.util.*;
 import java.util.function.Function;
 
 public class Polar {
-    private Pointer polar_ptr;
-    private Ffi ffi_instance;
+    private Pointer polarPtr;
+    private Ffi ffi;
     private Map<String, Class<Object>> classes;
     private Map<String, Function<Map, Object>> constructors;
     private Map<Long, Object> instances;
     private Map<String, String> loadQueue; // Map from filename -> file contents
 
     public Polar() {
-        ffi_instance = new Ffi();
-        polar_ptr = ffi_instance.polar_new();
+        ffi = new Ffi();
+        polarPtr = ffi.polar_new();
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
@@ -27,7 +27,7 @@ public class Polar {
     @Override
     protected void finalize() {
         // Free the Polar FFI object
-        ffi_instance.polar_free(polar_ptr);
+        ffi.polar_free(polarPtr);
     }
 
     /**
@@ -60,32 +60,32 @@ public class Polar {
 
     // Load a Polar string into the KB (with filename).
     public void loadStr(String str, String filename) {
-        ffi_instance.polar_load(polar_ptr, str, filename);
+        ffi.polar_load(polarPtr, str, filename);
         checkInlineQueries();
     }
 
     // Load a Polar string into the KB (without filename).
     public void loadStr(String str) {
-        ffi_instance.polar_load(polar_ptr, str, null);
+        ffi.polar_load(polarPtr, str, null);
         checkInlineQueries();
 
     }
 
     // Confirm that all queued inline queries succeed
     private void checkInlineQueries() {
-        Pointer next_query = ffi_instance.polar_next_inline_query(polar_ptr);
+        Pointer next_query = ffi.polar_next_inline_query(polarPtr);
         while (next_query != null) {
-            if (!new Query(next_query).results.hasMoreElements()) {
+            if (!new Query(next_query).hasMoreElements()) {
                 throw new Error("Inline query failed");
             }
-            next_query = ffi_instance.polar_next_inline_query(polar_ptr);
+            next_query = ffi.polar_next_inline_query(polarPtr);
         }
     }
 
     // Query for a Polar string
     public Enumeration<HashMap<String, Object>> query_str(String query_str) {
-        Query query = new Query(ffi_instance.polar_new_query(polar_ptr, query_str));
-        return query.results;
+        return new Query(ffi.polar_new_query(polarPtr, query_str));
+        // return query.results;
     }
 
     // Start the Polar REPL
@@ -93,8 +93,8 @@ public class Polar {
         // clear_query_state
         // load_queued_files
         while (true) {
-            Query query = new Query(ffi_instance.polar_query_from_repl(polar_ptr));
-            Enumeration<HashMap<String, Object>> results = query.results;
+            Query query = new Query(ffi.polar_query_from_repl(polarPtr));
+            Enumeration<HashMap<String, Object>> results = query;
             if (!results.hasMoreElements()) {
                 System.out.println("False");
             } else {
@@ -127,7 +127,7 @@ public class Polar {
 
     public Long cacheInstance(Object instance, Long id) {
         if (id == null) {
-            id = ffi_instance.polar_get_external_id(polar_ptr);
+            id = ffi.polar_get_external_id(polarPtr);
         }
         instances.put(id, instance);
 
@@ -231,68 +231,60 @@ public class Polar {
         return term;
     }
 
-    public class Query {
+    // Query Results are Enumerations of Strings
+    public class Query implements Enumeration<HashMap<String, Object>> {
+        private HashMap<String, Object> next;
         private Pointer query_ptr;
-        public Result results;
 
         public Query(Pointer query_ptr) {
             this.query_ptr = query_ptr;
-            results = new Result();
+            next = nextResult();
         }
 
-        // Query Results are Enumerations of Strings
-        public class Result implements Enumeration<HashMap<String, Object>> {
-            private HashMap<String, Object> next;
+        @Override
+        public boolean hasMoreElements() {
+            return next != null;
+        }
 
-            public Result() {
-                next = nextResult();
-            }
+        @Override
+        public HashMap<String, Object> nextElement() {
+            HashMap<String, Object> ret = next;
+            next = nextResult();
+            return ret;
+        }
 
-            @Override
-            public boolean hasMoreElements() {
-                return next != null;
-            }
-
-            @Override
-            public HashMap<String, Object> nextElement() {
-                HashMap<String, Object> ret = next;
-                next = nextResult();
-                return ret;
-            }
-
-            private HashMap<String, Object> nextResult() {
-                while (true) {
-                    String event_str = ffi_instance.polar_next_query_event(query_ptr);
-                    String kind;
-                    JSONObject data;
-                    try {
-                        JSONObject event = new JSONObject(event_str);
-                        kind = event.keys().next();
-                        data = event.getJSONObject(kind);
-                    } catch (JSONException e) {
-                        // TODO: this sucks, we should have a consistent serialization format
-                        kind = event_str.replace("\"", "");
-                        data = null;
-                    }
-
-                    switch (kind) {
-                        case "Done":
-                            return null;
-                        case "Result":
-                            HashMap<String, Object> results = new HashMap<String, Object>();
-                            JSONObject bindings = data.getJSONObject("bindings");
-
-                            for (String key : bindings.keySet()) {
-                                Object val = toJava(bindings.getJSONObject(key));
-                                results.put(key, val);
-                            }
-                            return results;
-                        default:
-                            throw new Error("Unimplemented event type: " + kind);
-                    }
+        private HashMap<String, Object> nextResult() {
+            while (true) {
+                String event_str = ffi.polar_next_query_event(query_ptr);
+                String kind;
+                JSONObject data;
+                try {
+                    JSONObject event = new JSONObject(event_str);
+                    kind = event.keys().next();
+                    data = event.getJSONObject(kind);
+                } catch (JSONException e) {
+                    // TODO: this sucks, we should have a consistent serialization format
+                    kind = event_str.replace("\"", "");
+                    data = null;
                 }
 
+                switch (kind) {
+                    case "Done":
+                        return null;
+                    case "Result":
+                        HashMap<String, Object> results = new HashMap<String, Object>();
+                        JSONObject bindings = data.getJSONObject("bindings");
+
+                        for (String key : bindings.keySet()) {
+                            Object val = toJava(bindings.getJSONObject(key));
+                            results.put(key, val);
+                        }
+                        return results;
+                    default:
+                        throw new Error("Unimplemented event type: " + kind);
+                }
             }
+
         }
 
     }
