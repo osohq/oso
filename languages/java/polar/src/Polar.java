@@ -58,20 +58,33 @@ public class Polar {
         }
     }
 
-    // Load a Polar string into the KB (with filename).
+    /**
+     * Load a Polar string into the KB (with filename).
+     *
+     * @param str      Polar string to be loaded.
+     * @param filename Name of the source file.
+     */
     public void loadStr(String str, String filename) {
         ffi.polar_load(polarPtr, str, filename);
         checkInlineQueries();
     }
 
-    // Load a Polar string into the KB (without filename).
+    /**
+     * Load a Polar string into the KB (without filename).
+     *
+     * @param str Polar string to be loaded.
+     */
     public void loadStr(String str) {
         ffi.polar_load(polarPtr, str, null);
         checkInlineQueries();
 
     }
 
-    // Confirm that all queued inline queries succeed
+    /**
+     * Confirm that all queued inline queries succeed.
+     *
+     * @throws Error On inline query failure.
+     */
     private void checkInlineQueries() {
         Pointer next_query = ffi.polar_next_inline_query(polarPtr);
         while (next_query != null) {
@@ -82,7 +95,12 @@ public class Polar {
         }
     }
 
-    // Query for a Polar string
+    /**
+     * Query for a Polar string.
+     *
+     * @param query_str
+     * @return
+     */
     public Enumeration<HashMap<String, Object>> query_str(String query_str) {
         return new Query(ffi.polar_new_query(polarPtr, query_str));
         // return query.results;
