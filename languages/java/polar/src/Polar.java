@@ -103,6 +103,7 @@ public class Polar {
      * @return Query object.
      */
     public Query queryStr(String queryStr) {
+        loadQueuedFiles();
         return new Query(ffi.polar_new_query(polarPtr, queryStr));
     }
 
@@ -111,7 +112,7 @@ public class Polar {
      */
     public void repl() {
         // clear_query_state
-        // load_queued_files
+        loadQueuedFiles();
         while (true) {
             Query query = new Query(ffi.polar_query_from_repl(polarPtr));
             if (!query.hasMoreElements()) {
