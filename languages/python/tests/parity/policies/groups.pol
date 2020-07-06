@@ -10,10 +10,10 @@ group G(A, B);
 group H(G, C);
 
 # These rules must not specialize on the action.
-allow(_: A, action) := cut(), action = "A";
-allow(_: G, action) := cut(), action = "G";
-allow(_: H, action) := cut(), action = "H";
-allow(_: D, action) := cut(), action = "D";
+allow(_: A, action) if cut(), action = "A";
+allow(_: G, action) if cut(), action = "G";
+allow(_: H, action) if cut(), action = "H";
+allow(_: D, action) if cut(), action = "D";
 
 ?= !(allow(1, _));
 ?= allow(A{}, "A");
@@ -21,9 +21,9 @@ allow(_: D, action) := cut(), action = "D";
 ?= allow(C{}, "H");
 ?= allow(D{}, "D");
 
-check_order(_: A, action) := action = "A";
-check_order(_: H, action) := action = "H";
-check_order(_: G, action) := action = "G";
+check_order(_: A, action) if action = "A";
+check_order(_: H, action) if action = "H";
+check_order(_: G, action) if action = "G";
 
 class Foo() {
     bar: str
@@ -35,4 +35,4 @@ class Baz() {
 
 group HasBar(Baz, Foo);
 
-get_bar(grp: HasBar, val) := val = grp.bar;
+get_bar(grp: HasBar, val) if val = grp.bar;

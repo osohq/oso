@@ -162,7 +162,7 @@ mod tests {
 
         // First rewrite
         rewrite_rule(&mut rule, &mut kb);
-        assert_eq!(rule.to_polar(), "f(_value_1) := .(a, b(), _value_1);");
+        assert_eq!(rule.to_polar(), "f(_value_1) if .(a, b(), _value_1);");
 
         // Check we can parse the rules back again
         let again = parse_rules(&rule.to_polar());
@@ -181,7 +181,7 @@ mod tests {
         rewrite_rule(&mut rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_2) := .(a, b(), _value_3), .(_value_3, c(), _value_2);"
+            "f(_value_2) if .(a, b(), _value_3), .(_value_3, c(), _value_2);"
         );
     }
 
@@ -190,23 +190,23 @@ mod tests {
         let mut kb = KnowledgeBase::new();
 
         // Lookups with args
-        let rules = parse_rules("f(a, c) := a.b(c);");
+        let rules = parse_rules("f(a, c) if a.b(c);");
         let mut rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a, c) := a.b(c);");
+        assert_eq!(rule.to_polar(), "f(a, c) if a.b(c);");
         rewrite_rule(&mut rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(a, c) := .(a, b(c), _value_1), _value_1;"
+            "f(a, c) if .(a, b(c), _value_1), _value_1;"
         );
 
         // Nested lookups
-        let rules = parse_rules("f(a, c, e) := a.b(c.d(e.f));");
+        let rules = parse_rules("f(a, c, e) if a.b(c.d(e.f));");
         let mut rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a, c, e) := a.b(c.d(e.f));");
+        assert_eq!(rule.to_polar(), "f(a, c, e) if a.b(c.d(e.f));");
         rewrite_rule(&mut rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(a, c, e) := .(e, f(), _value_4), .(c, d(_value_4), _value_3), .(a, b(_value_3), _value_2), _value_2;"
+            "f(a, c, e) if .(e, f(), _value_4), .(c, d(_value_4), _value_3), .(a, b(_value_3), _value_2), _value_2;"
         );
     }
 
@@ -291,7 +291,7 @@ mod tests {
         rewrite_rule(&mut rules[0], &mut kb);
         assert_eq!(
             rules[0].to_polar(),
-            "rule_test(_instance_1) := new (Foo{a: 1, b: 2}, _instance_1);"
+            "rule_test(_instance_1) if new (Foo{a: 1, b: 2}, _instance_1);"
         )
     }
 }

@@ -15,7 +15,7 @@ RSpec.describe Oso::Oso do
     context 'when no constructor is passed' do
       it 'registers the class with the default constructor' do
         subject.register_class(User)
-        subject.load_str('allow(u: User{}, 1, 2) := u.name = "alice";')
+        subject.load_str('allow(u: User{}, 1, 2) if u.name = "alice";')
         allowed = subject.allow(actor: User.new(name: 'alice'), action: 1, resource: 2)
         expect(allowed).to be true
       end
@@ -26,7 +26,7 @@ RSpec.describe Oso::Oso do
         subject.register_class(User) do |**args|
           User.new(**args).tap { |u| u.special = true }
         end
-        subject.load_str('allow(u: User{}, 1, 2) := x = new User{name: "alice"}, x.name = u.name, x.special = true;')
+        subject.load_str('allow(u: User{}, 1, 2) if x = new User{name: "alice"}, x.name = u.name, x.special = true;')
         allowed = subject.allow(actor: User.new(name: 'alice'), action: 1, resource: 2)
         expect(allowed).to be true
       end
@@ -72,10 +72,10 @@ RSpec.describe Oso::Oso do
         end)
         subject.register_class(Widget)
         subject.load_str <<~POLAR
-          allow(actor, "get", _: Http{path: path}) :=
+          allow(actor, "get", _: Http{path: path}) if
               new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
               allow(actor, "get", new Widget{id: id});
-          allow(actor, "get", widget) := widget.id = "12";
+          allow(actor, "get", widget) if widget.id = "12";
         POLAR
         widget12 = Oso::Http.new(path: '/widget/12')
         allowed = subject.allow(actor: 'sam', action: 'get', resource: widget12)
