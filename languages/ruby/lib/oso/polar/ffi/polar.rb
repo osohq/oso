@@ -16,6 +16,7 @@ module Oso
           attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string], FFI::Query
           attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string], FFI::Query
           attach_function :new_query_from_repl, :polar_query_from_repl, [FFI::Polar], FFI::Query
+          attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
           attach_function :free, :polar_free, [FFI::Polar], :int32
         end
         private_constant :Rust
@@ -82,6 +83,13 @@ module Oso
           raise FFI::Error.get if query.null?
 
           query
+        end
+
+        # @param name [String]
+        # @param value [Hash<String, Object>]
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def register_constant(name, value:)
+          raise FFI::Error.get if Rust.register_constant(self, name, JSON.dump(value)).zero?
         end
       end
     end

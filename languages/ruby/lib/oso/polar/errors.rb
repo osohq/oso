@@ -51,8 +51,8 @@ module Oso
       # @param as [String]
       # @param old [Class]
       # @param new [Class]
-      def initialize(as:, old:, new:) # rubocop:disable Naming/MethodParameterName
-        super("Attempted to alias #{new} as '#{as}', but #{old} already has that alias.")
+      def initialize(name:, old:, new:) # rubocop:disable Naming/MethodParameterName
+        super("Attempted to alias #{new} as '#{name}', but #{old} already has that alias.")
       end
     end
 
