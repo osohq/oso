@@ -320,8 +320,13 @@ public class Polar {
                     throw new Error("Unregistered instance");
                 }
             case "Call":
-                // Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(a) })
-                throw new Error("Unimplemented Polar Type");
+                // TODO: implement helper to go from Polar list -> Java list and back
+                JSONArray jArgs = value.getJSONObject(tag).getJSONArray("args");
+                ArrayList<Object> args = new ArrayList<Object>();
+                for (int i = 0; i < jArgs.length(); i++) {
+                    args.add(toJava(jArgs.getJSONObject(i)));
+                }
+                return new Predicate(value.getJSONObject(tag).getString("name"), args);
             default:
                 throw new Error("Unexpected Polar Type");
         }
@@ -365,13 +370,17 @@ public class Polar {
             }
             jVal.put("Dictionary", new JSONObject().put("fields", jMap));
 
+        } else if (value instanceof Predicate) {
+            Predicate pred = (Predicate) value;
+            ArrayList<JSONObject> args = new ArrayList<JSONObject>();
+            for (Object el : pred.args) {
+                args.add(toPolarTerm(el));
+            }
+            jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", args)));
         } else {
             jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
         }
-        // TODO: Predicate, Variable, Symbol
-        // when value.instance_of?(Predicate)
-        // { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el|
-        // to_polar_term(el) } } }
+        // TODO: Variable, Symbol
         // when value.instance_of?(Variable)
         // # This is supported so that we can query for unbound variables
         // { 'Symbol' => value }
@@ -490,5 +499,27 @@ public class Polar {
 
         }
 
+    }
+
+    public static class Predicate {
+        public String name;
+        public List<Object> args;
+
+        public Predicate(String name, List<Object> args) {
+            this.name = name;
+            this.args = args;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof Predicate)) {
+                return false;
+            }
+            if (((Predicate) obj).name.equals(this.name) && ((Predicate) obj).args.equals(this.args)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 }

@@ -86,7 +86,7 @@ public class TestPolar {
         JSONObject polar = p.toPolarTerm(b);
         Object java = p.toJava(polar);
         if (java.getClass() != Boolean.class || java != b) {
-            throw new Exception("Failed to convert Boolean to Polar");
+            throw new Exception();
         }
     }
 
@@ -96,7 +96,7 @@ public class TestPolar {
         JSONObject polar = p.toPolarTerm(i);
         Object java = p.toJava(polar);
         if (java.getClass() != Integer.class || (Integer) java != i) {
-            throw new Exception("Failed to convert Integer to Polar");
+            throw new Exception();
         }
     }
 
@@ -106,7 +106,7 @@ public class TestPolar {
         JSONObject polar = p.toPolarTerm(f);
         Object java = p.toJava(polar);
         if (java.getClass() != Float.class || (Float) java != f) {
-            throw new Exception("Failed to convert Float to Polar");
+            throw new Exception();
         }
     }
 
@@ -116,7 +116,7 @@ public class TestPolar {
         JSONObject polar = p.toPolarTerm(l);
         Object java = p.toJava(polar);
         if (!(java instanceof List) || !((List<Object>) java).equals(l)) {
-            throw new Exception("Failed to convert List to Polar");
+            throw new Exception();
         }
 
     }
@@ -127,7 +127,7 @@ public class TestPolar {
         JSONObject polar = p.toPolarTerm(m);
         Object java = p.toJava(polar);
         if (!(java instanceof Map) || !((Map<String, Object>) java).equals(m)) {
-            throw new Exception("Failed to convert Map to Polar");
+            throw new Exception();
         }
 
     }
@@ -138,8 +138,19 @@ public class TestPolar {
         JSONObject polar = p.toPolarTerm(instance);
         Object java = p.toJava(polar);
         if (java.getClass() != MyClass.class || !((MyClass) java).equals(instance)) {
-            throw new Exception("Failed to convert Java Object to Polar");
+            throw new Exception();
         }
+    }
+
+    public static void testPredicateFFIRoundTrip() throws Exception {
+        Polar p = new Polar();
+        Polar.Predicate pred = new Polar.Predicate("name", List.of(1, "hello"));
+        JSONObject polar = p.toPolarTerm(pred);
+        Object java = p.toJava(polar);
+        if (java.getClass() != Polar.Predicate.class || !((Polar.Predicate) java).equals(pred)) {
+            throw new Exception();
+        }
+
     }
 
     /*** TEST EXTERNALS ***/
