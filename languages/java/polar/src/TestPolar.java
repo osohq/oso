@@ -15,9 +15,11 @@ public class TestPolar {
 
     public static class MyClass {
         public String name;
+        public int id;
 
-        public MyClass(String name) {
+        public MyClass(String name, int id) {
             this.name = name;
+            this.id = id;
         }
     }
 
@@ -126,7 +128,7 @@ public class TestPolar {
 
     public static void testJavaClassFFIRoundTrip() throws Exception {
         Polar p = new Polar();
-        MyClass instance = new MyClass("test");
+        MyClass instance = new MyClass("test", 1);
         JSONObject polar = p.toPolarTerm(instance);
         Object java = p.toJava(polar);
         if (java.getClass() != MyClass.class || !((MyClass) java).equals(instance)) {
@@ -136,13 +138,25 @@ public class TestPolar {
 
     public static void testRegisterAndMakeClass() throws Exception {
         Polar p = new Polar();
-        p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name")));
+        p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")));
 
-        Map<String, String> testArg = Map.of("name", "testName");
-        MyClass instance = (MyClass) p.makeInstance(MyClass.class, testArg, Long.valueOf(0));
-        if (instance.name != "testName") {
+        Map<String, Object> testArg = Map.of("name", "testName", "id", 1);
+        MyClass instance = (MyClass) p.makeInstance(MyClass.class.getName(), testArg, Long.valueOf(0));
+        if (instance.name != "testName" || instance.id != 1) {
             throw new Exception();
         }
+    }
+
+    public static void testMakeInstanceFromPolar() throws Exception {
+        Polar p = new Polar();
+        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        p.loadStr("f(x) := x = new MyClass{name: \"test\", id: 1};");
+        Polar.Query query = p.queryStr("f(x)");
+        MyClass ret = (MyClass) query.nextElement().get("x");
+        if (ret.id != 1 || !ret.name.equals("test")) {
+            throw new Exception();
+        }
+
     }
 
     public static void testLoadFile() throws Exception {

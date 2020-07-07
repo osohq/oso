@@ -153,11 +153,34 @@ public class Polar {
      * @param fromPolar lambda function to convert from a
      *                  {@code Map<String, Object>} of parameters to an instance of
      *                  the Java class.
+     * @throws Error if class has already been registered.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar) {
+    public void registerClass(Class cls, Function<Map, Object> fromPolar) throws Error {
+        if (classes.containsKey(cls.getName())) {
+            throw new Error("A class named " + cls.getName() + " has already been registered.");
+        }
         classes.put(cls.getName(), cls);
         constructors.put(cls.getName(), fromPolar);
+    }
 
+    /**
+     *
+     * Register a Java class with oso using an alias.
+     *
+     * @param cls
+     * @param alias     name to register the class under, which is how the class is
+     *                  accessed from Polar.
+     * @param fromPolar lambda function to convert from a
+     *                  {@code Map<String, Object>} of parameters to an instance of
+     *                  the Java class.
+     * @throws Error if a class has already been registered with the given alias.
+     */
+    public void registerClass(Class cls, String alias, Function<Map, Object> fromPolar) throws Error {
+        if (classes.containsKey(alias)) {
+            throw new Error("A class named " + alias + " has already been registered.");
+        }
+        classes.put(alias, cls);
+        constructors.put(alias, fromPolar);
     }
 
     /**
@@ -169,11 +192,11 @@ public class Polar {
      * @param id
      * @return Object
      */
-    public Object makeInstance(Class cls, Map fields, Long id) {
-        Function<Map, Object> constructor = constructors.get(cls.getName());
+    public Object makeInstance(String cls_name, Map fields, Long id) {
+        Function<Map, Object> constructor = constructors.get(cls_name);
         Object instance;
         if (constructor != null) {
-            instance = constructors.get(cls.getName()).apply(fields);
+            instance = constructors.get(cls_name).apply(fields);
         } else {
             // TODO: default constructor
             throw new Error("unimplemented");
@@ -375,6 +398,20 @@ public class Polar {
                             results.put(key, val);
                         }
                         return results;
+                    case "MakeExternal":
+                        Long id = data.getLong("instance_id");
+                        if (instances.containsKey(id)) {
+                            throw new Error("Duplicate instance registration.");
+                        }
+                        String clsName = data.getJSONObject("instance").getString("tag");
+                        JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields")
+                                .getJSONObject("fields");
+                        Map<String, Object> fields = new HashMap<String, Object>();
+                        for (String k : jFields.keySet()) {
+                            fields.put(k, toJava(jFields.getJSONObject(k)));
+                        }
+                        makeInstance(clsName, fields, id);
+                        break;
                     default:
                         throw new Error("Unimplemented event type: " + kind);
                 }
