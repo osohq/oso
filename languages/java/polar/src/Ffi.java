@@ -29,6 +29,8 @@ public class Ffi {
 
         int polar_question_result(Pointer query_ptr, long call_id, int result);
 
+        int polar_call_result(Pointer query_ptr, long call_id, String value);
+
         int query_free(Pointer query);
 
         int string_free(Pointer s);
@@ -83,6 +85,10 @@ public class Ffi {
 
     public int polarQuestionResult(Pointer query_ptr, long call_id, int result) throws PolarRuntimeException {
         return checkIntResult(polar_lib.polar_question_result(query_ptr, call_id, result));
+    }
+
+    public int polarCallResult(Pointer query_ptr, long call_id, String value) throws PolarRuntimeException {
+        return checkIntResult(polar_lib.polar_call_result(query_ptr, call_id, value));
     }
 
     public int queryFree(Pointer query) throws PolarRuntimeException {
