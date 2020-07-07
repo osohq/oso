@@ -208,19 +208,18 @@ public class Polar {
             return;
         }
         Object instance = instances.get(instanceId);
-        Class[] types = new Class[args.size()];
+        Class[] argTypes = new Class[args.size()];
         for (int i = 0; i < args.size(); i++) {
-            types[i] = args.get(i).getClass();
+            argTypes[i] = args.get(i).getClass();
         }
         try {
             Object result = null;
             Boolean isMethod = true;
             try {
-                Method method = instance.getClass().getMethod(attrName, types);
+                Method method = instance.getClass().getMethod(attrName, argTypes);
                 result = method.invoke(instance, args.toArray());
             } catch (NoSuchMethodException e) {
                 isMethod = false;
-
             }
             if (!isMethod) {
                 try {
@@ -233,6 +232,7 @@ public class Polar {
             }
             Enumeration<Object> enumResult;
             if (result instanceof Enumeration) {
+                // TODO: test this
                 enumResult = (Enumeration<Object>) result;
             } else {
                 enumResult = Collections.enumeration(new ArrayList<Object>(Arrays.asList(result)));
