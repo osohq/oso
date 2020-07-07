@@ -81,7 +81,7 @@ public class Polar {
 
     private void clearQueryState() {
         instances.clear();
-        // TODO: clear calls
+        calls.clear();
     }
 
     /**
@@ -128,8 +128,23 @@ public class Polar {
      * @return Query object.
      */
     public Query queryStr(String queryStr) {
+        clearQueryState();
         loadQueuedFiles();
         return new Query(ffi.polarNewQuery(polarPtr, queryStr));
+    }
+
+    /**
+     * Query for a Predicate.
+     *
+     * @param name
+     * @param args
+     * @return
+     */
+    public Query queryPred(String name, List<Object> args) {
+        clearQueryState();
+        loadQueuedFiles();
+        String pred = toPolarTerm(new Predicate(name, args)).toString();
+        return new Query(ffi.polarNewQueryFromTerm(polarPtr, pred));
     }
 
     /**

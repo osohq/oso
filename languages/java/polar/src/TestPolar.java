@@ -27,6 +27,8 @@ public class TestPolar {
         }
     }
 
+    /**** TEST QUERY ****/
+
     public static void testLoadAndQueryStr() throws Exception {
         Polar p = new Polar();
 
@@ -49,36 +51,30 @@ public class TestPolar {
 
     }
 
-    public static void testBoolToJava() throws Exception {
+    public static void testQueryPred() throws Exception {
         Polar p = new Polar();
 
-        // Test boolean
-        p.loadStr("a(x) := x = true;");
-        HashMap<String, Object> a = p.queryStr("a(x)").nextElement();
-        if (!a.equals(Map.of("x", true))) {
-            throw new Exception("Failed to convert boolean to java.");
+        // test basic query
+        p.loadStr("f(a, b) := a = b;");
+        if (p.queryPred("f", List.of(1, 1)).results().isEmpty()) {
+            throw new Exception("Basic predicate query failed.");
+        }
+        if (!p.queryPred("f", List.of(1, 2)).results().isEmpty()) {
+            throw new Exception("Basic predicate query expected to fail but didn't.");
+        }
+
+        // test query with Java Object
+        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        p.loadStr("g(x) := x.id = 1;");
+        if (p.queryPred("g", List.of(new MyClass("test", 1))).results().isEmpty()) {
+            throw new Exception("Predicate query with Java Object failed.");
+        }
+        if (!p.queryPred("g", List.of(new MyClass("test", 2))).results().isEmpty()) {
+            throw new Exception("Predicate query with Java Object expected to fail but didn't.");
         }
     }
 
-    public static void testDictToJava() throws Exception {
-        Polar p = new Polar();
-        p.loadStr("b(x) := x = {a: 1};");
-        HashMap<String, Object> b = p.queryStr("b(x)").nextElement();
-        if (!b.equals(Map.of("x", Map.of("a", 1)))) {
-            throw new Exception("Failed to convert dictionary to java.");
-        }
-    }
-
-    public static void testListToJava() throws Exception {
-        Polar p = new Polar();
-        p.loadStr("c(x) := x = [\"a\", \"b\", \"c\"];");
-        HashMap<String, Object> c = p.queryStr("c(x)").nextElement();
-        if (!c.equals(Map.of("x", List.of("a", "b", "c")))) {
-            throw new Exception("Failed to convert list to java.");
-        }
-    }
-
-    /*** TEST FFI ***/
+    /*** TEST FFI CONVERSIONS ***/
 
     public static void testBoolFFIRoundTrip() throws Exception {
         Polar p = new Polar();
