@@ -26,7 +26,7 @@ RSpec.describe Oso::Oso do
         subject.register_class(User) do |**args|
           User.new(**args).tap { |u| u.special = true }
         end
-        subject.load_str('allow(u: User{}, 1, 2) if x = new User{name: "alice"}, x.name = u.name, x.special = true;')
+        subject.load_str('allow(u: User{}, 1, 2) if x = new User{name: "alice"} and x.name = u.name and x.special = true;')
         allowed = subject.allow(actor: User.new(name: 'alice'), action: 1, resource: 2)
         expect(allowed).to be true
       end
@@ -73,7 +73,7 @@ RSpec.describe Oso::Oso do
         subject.register_class(Widget)
         subject.load_str <<~POLAR
           allow(actor, "get", _: Http{path: path}) if
-              new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+              new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
               allow(actor, "get", new Widget{id: id});
           allow(actor, "get", widget) if widget.id = "12";
         POLAR

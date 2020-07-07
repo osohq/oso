@@ -55,14 +55,14 @@ def test_query_multiple(tell, qvar):
 
 
 def test_define_rule(tell, qeval):
-    tell("a(x) if b(x), c(x);")
+    tell("a(x) if b(x) and c(x);")
     tell('b("apple")')
     tell('c("apple")')
     assert qeval('a("apple")')
 
 
 def test_missing_rule(tell, qeval):
-    tell("a(x) if b(x), c(x);")
+    tell("a(x) if b(x) and c(x);")
     tell('b("apple")')
     tell('c("apple")')
     assert not qeval('d("apple")')
@@ -82,37 +82,37 @@ def test_recursive_rule(tell, qeval, qvar):
     results = qvar('derive("apple", x)', "x")
     assert results == ["orange"]
     tell("derives(a, b) if derive(a, b);")
-    tell("derives(a, b) if derive(a, z), derives(z, b);")
+    tell("derives(a, b) if derive(a, z) and derives(z, b);")
     assert qeval('derives("apple", "juniper_berry")')
     results = qvar('derives("apple", x)', "x")
     assert results == ["orange", "avacado", "juniper_berry"]
 
 
 def test_disjunctive_rule(tell, qeval):
-    tell("or_eq(a, b) if 1 = 0 | a = b;")
+    tell("or_eq(a, b) if 1 = 0 or a = b;")
     assert qeval("or_eq(1, 1)")
 
-    tell("and_or_eq(a, b, c) if (a = b, b = c) | 1 = 0")
+    tell("and_or_eq(a, b, c) if (a = b and b = c) or 1 = 0")
     assert not qeval("and_or_eq(1, 1, 0)")
     assert qeval("and_or_eq(1, 1, 1)")
 
-    assert qeval("1=0 | (1=1, 1=1)")
-    assert not qeval("1=0 | (1=0, 1=1)")
+    assert qeval("1=0 or (1=1 and 1=1)")
+    assert not qeval("1=0 or (1=0 and 1=1)")
 
     # not sure if these test anything but :)
-    assert qeval("1=0 | (1=0 | 1=1)")
-    assert not qeval("1=0 | (1=0 | 1=0)")
+    assert qeval("1=0 or (1=0 or 1=1)")
+    assert not qeval("1=0 or (1=0 or 1=0)")
 
-    assert qeval("1=1, (1=0 | 1=1)")
-    assert not qeval("1=0, (1=0 | 1=1)")
+    assert qeval("1=1 and (1=0 or 1=1)")
+    assert not qeval("1=0 and (1=0 or 1=1)")
 
 
 def test_parens(tell, qeval):
-    tell("paren1(a, b, c) if (a = b, b = c);")
-    tell("paren2(a, b, c) if ((a = b, b = c));")
-    tell("paren3(a, b, c) if (a = b), (b = c);")
-    tell("paren4(a, b, c, d) if (a = b, b = c, c = d);")
-    tell("paren5(a, b, c) if ((a = b), (b = c));")
+    tell("paren1(a, b, c) if (a = b and b = c);")
+    tell("paren2(a, b, c) if ((a = b and b = c));")
+    tell("paren3(a, b, c) if (a = b) and (b = c);")
+    tell("paren4(a, b, c, d) if (a = b and b = c and c = d);")
+    tell("paren5(a, b, c) if ((a = b) and (b = c));")
 
     assert qeval("paren1(1, 1, 1)")
     assert not qeval("paren1(0, 1, 1)")

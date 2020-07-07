@@ -94,7 +94,7 @@ def test_external(polar, qvar):
     assert qvar("new Foo{}.b() = x", "x", one=True) == "b"
     assert qvar("Foo.c = x", "x", one=True) == "c"
     assert qvar("Foo.c() = x", "x", one=True) == "c"
-    assert qvar("new Foo{} = f, f.a() = x", "x", one=True) == "A"
+    assert qvar("new Foo{} = f and f.a() = x", "x", one=True) == "A"
     assert qvar("new Foo{}.bar().y() = x", "x", one=True) == "y"
     assert qvar("new Foo{}.e = x", "x", one=True) == [1, 2, 3]
     assert qvar("new Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
@@ -424,14 +424,14 @@ def test_constructor(polar, qvar):
     polar.register_class(TestConstructor)
 
     assert (
-        qvar("instance = new TestConstructor{x: 1}, y = instance.x", "y", one=True) == 1
+        qvar("instance = new TestConstructor{x: 1} and y = instance.x", "y", one=True) == 1
     )
     assert (
-        qvar("instance = new TestConstructor{x: 2}, y = instance.x", "y", one=True) == 2
+        qvar("instance = new TestConstructor{x: 2} and y = instance.x", "y", one=True) == 2
     )
     assert (
         qvar(
-            "instance = new TestConstructor{x: new TestConstructor{x: 3}}, y = instance.x.x",
+            "instance = new TestConstructor{x: new TestConstructor{x: 3}} and y = instance.x.x",
             "y",
             one=True,
         )
@@ -447,7 +447,7 @@ def test_constructor(polar, qvar):
 
     assert (
         qvar(
-            "instance = new TestConstructorTwo{x: 1, y: 2}, x = instance.x, y = instance.y",
+            "instance = new TestConstructorTwo{x: 1, y: 2} and x = instance.x and y = instance.y",
             "y",
             one=True,
         )

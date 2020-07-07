@@ -1,24 +1,24 @@
 allow(actor, action, resource) if
-    actorInRole(actor, role, resource),
+    actorInRole(actor, role, resource) and
     allowRole(role, action, resource);
 
 actorInRole(actor, role, resource: Widget) if
     role = resource.company.role(actor);
 
 allow(actor, "get", _: Http{path: path}) if
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
     allow(actor, "get", new Widget{id: id});
 
 allow(actor, "post", _: Http{path: path}) if
-    new PathMapper{template: "/widget/"}.map(path) = {},
+    new PathMapper{template: "/widget/"}.map(path) = {} and
     allow(actor, "create", new Widget{});
 
 allow(actor, "what", _: Http{path: path}) if
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
     allow(actor, "unparameterised_get", new Widget{id: id});
 
 allow(actor, "what", _: Http{path: path, query: {param: "foo"}}) if
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
     allow(actor, "parameterised_get", new Widget{id: id});
 
 allow(actor, "get", resource: Widget) if resource.frob("Widget") = x;
@@ -33,8 +33,8 @@ allow_with_cut(actor, "get", resource: DooDad) if cut(), resource.frob("DooDad")
 allowRole("admin", "create", resource: Widget);
 
 allow(actor: Actor, "frob", resource: Widget) if
-    actor.company.id = resource.company.id,
-    actor.company.default_role = resource.company.default_role,
+    actor.company.id = resource.company.id and
+    actor.company.default_role = resource.company.default_role and
     actor.company.roles = resource.company.roles;
 
 # for testing resource mappings with query parameters
