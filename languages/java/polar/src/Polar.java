@@ -6,6 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 
 public class Polar {
     private Pointer polarPtr;
@@ -14,6 +17,7 @@ public class Polar {
     private Map<String, Function<Map, Object>> constructors;
     private Map<Long, Object> instances;
     private Map<String, String> loadQueue; // Map from filename -> file contents
+    private Map<Long, Enumeration<Object>> calls;
 
     public Polar() {
         ffi = new Ffi();
@@ -22,6 +26,7 @@ public class Polar {
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
         loadQueue = new HashMap<String, String>();
+        calls = new HashMap<Long, Enumeration<Object>>();
     }
 
     @Override
@@ -183,6 +188,54 @@ public class Polar {
         constructors.put(alias, fromPolar);
     }
 
+    public void registerCall(String attrName, List<Object> args, long callId, long instanceId) {
+        if (calls.containsKey(callId)) {
+            return;
+        }
+        Object instance = instances.get(instanceId);
+        Class[] types = new Class[args.size()];
+        for (int i = 0; i < args.size(); i++) {
+            types[i] = args.get(i).getClass();
+        }
+        try {
+            Object result = null;
+            Boolean isMethod = true;
+            try {
+                Method method = instance.getClass().getMethod(attrName, types);
+                result = method.invoke(instance, args.toArray());
+            } catch (NoSuchMethodException e) {
+                isMethod = false;
+
+            }
+            if (!isMethod) {
+                try {
+                    Field field = instance.getClass().getField(attrName);
+                    result = field.get(instance);
+                } catch (NoSuchFieldException e) {
+                    // TODO: Ruby lib rescues this error, make sure behavior is consistent
+                    throw new Error("No such attribute " + attrName + " on class " + instance.getClass().getName());
+                }
+            }
+            Enumeration<Object> enumResult;
+            if (result instanceof Enumeration) {
+                enumResult = (Enumeration<Object>) result;
+            } else {
+                enumResult = Collections.enumeration(new ArrayList<Object>(Arrays.asList(result)));
+            }
+            calls.put(callId, enumResult);
+
+        } catch (IllegalAccessException e) {
+            throw new Error("Illegal access for attribute " + attrName + " on class " + instance.getClass().getName());
+        } catch (InvocationTargetException e) {
+            throw new Error("Invocation target exception for attribute " + attrName + " on class "
+                    + instance.getClass().getName());
+        }
+    }
+
+    public JSONObject nextCallResult(long callId) throws NoSuchElementException {
+        return toPolarTerm(calls.get(callId).nextElement());
+    }
+
     /**
      * Make an instance of a Java class from a {@code Map<String, Object>} of
      * fields.
@@ -192,7 +245,7 @@ public class Polar {
      * @param id
      * @return Object
      */
-    public Object makeInstance(String cls_name, Map fields, Long id) {
+    public Object makeInstance(String cls_name, Map fields, long id) {
         Function<Map, Object> constructor = constructors.get(cls_name);
         Object instance;
         if (constructor != null) {
@@ -212,7 +265,7 @@ public class Polar {
      * @param id
      * @return Long
      */
-    private Long cacheInstance(Object instance, Long id) {
+    public Long cacheInstance(Object instance, Long id) {
         if (id == null) {
             id = ffi.polarGetExternalId(polarPtr);
         }
@@ -411,6 +464,24 @@ public class Polar {
                             fields.put(k, toJava(jFields.getJSONObject(k)));
                         }
                         makeInstance(clsName, fields, id);
+                        break;
+                    case "ExternalCall":
+                        long callId = data.getLong("call_id");
+                        long instanceId = data.getLong("instance_id");
+                        String attrName = data.getString("attribute");
+                        JSONArray jArgs = data.getJSONArray("args");
+                        List<Object> args = new ArrayList<Object>();
+                        for (int i = 0; i < jArgs.length(); i++) {
+                            args.add(toJava(jArgs.getJSONObject(i)));
+                        }
+                        registerCall(attrName, args, callId, instanceId);
+                        String result;
+                        try {
+                            result = nextCallResult(callId).toString();
+                        } catch (NoSuchElementException e) {
+                            result = null;
+                        }
+                        ffi.polarCallResult(queryPtr, callId, result);
                         break;
                     default:
                         throw new Error("Unimplemented event type: " + kind);

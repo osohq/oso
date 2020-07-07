@@ -21,6 +21,10 @@ public class TestPolar {
             this.name = name;
             this.id = id;
         }
+
+        public String myMethod(String arg) {
+            return arg;
+        }
     }
 
     public static void testLoadAndQueryStr() throws Exception {
@@ -73,6 +77,8 @@ public class TestPolar {
             throw new Exception("Failed to convert list to java.");
         }
     }
+
+    /*** TEST FFI ***/
 
     public static void testBoolFFIRoundTrip() throws Exception {
         Polar p = new Polar();
@@ -136,6 +142,8 @@ public class TestPolar {
         }
     }
 
+    /*** TEST EXTERNALS ***/
+
     public static void testRegisterAndMakeClass() throws Exception {
         Polar p = new Polar();
         p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")));
@@ -158,6 +166,37 @@ public class TestPolar {
         }
 
     }
+
+    public static void testRegisterCall() throws Exception {
+        Polar p = new Polar();
+        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        MyClass instance = new MyClass("test", 1);
+        p.cacheInstance(instance, Long.valueOf(1));
+        p.registerCall("myMethod", List.of("hello world"), 1, 1);
+        JSONObject res = p.nextCallResult(1);
+        if (!p.toJava(res).equals("hello world")) {
+            throw new Exception();
+        }
+    }
+
+    public static void testExternalCall() throws Exception {
+        Polar p = new Polar();
+        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+
+        // Test get attribute
+        p.loadStr("id(x) := x = new MyClass{name: \"test\", id: 1}.id;");
+        if (!p.queryStr("id(x)").results().equals(List.of(Map.of("x", 1)))) {
+            throw new Exception("Failed to get attribute on external instance.");
+        }
+
+        // Test call method
+        p.loadStr("method(x) := x = new MyClass{name: \"test\", id: 1}.myMethod(\"hello world\");");
+        if (!p.queryStr("method(x)").results().equals(List.of(Map.of("x", "hello world")))) {
+            throw new Exception("Failed to get attribute on external instance.");
+        }
+    }
+
+    /**** TEST LOADING ****/
 
     public static void testLoadFile() throws Exception {
         Polar p = new Polar();
