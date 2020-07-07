@@ -31,7 +31,7 @@ classes that represent airport passengers and flight resources.
 The ``@polar_class`` decorator **registers** an application class with Polar
 so that it can be recognized as a type. Here's one way we might use those types::
 
-  allow(actor: Passenger, "board", resource: Flight) :=
+  allow(actor: Passenger, "board", resource: Flight) if
       actor.boarding_pass.flight_number = resource.flight_number;
 
 This rule says roughly: "allow any passenger to board a flight if
@@ -81,7 +81,7 @@ of actor.  We write a new rule:
 
 .. code-block:: polar
 
-  allow(flight_attendant: FlightAttendant, "board", flight: Flight) :=
+  allow(flight_attendant: FlightAttendant, "board", flight: Flight) if
     flight_attendant.airline = flight.airline;
 
 Notice the new syntax we have used in the rule head: ``param: Type``.
@@ -97,7 +97,7 @@ write a rule:
 
 .. code-block:: polar
 
-  allow(employee: AirlineEmployee, "board", flight: Flight) :=
+  allow(employee: AirlineEmployee, "board", flight: Flight) if
     employee.airline = flight.airline;
 
 This rule matches both a ``Pilot`` and ``FlightAttendant`` since they are both

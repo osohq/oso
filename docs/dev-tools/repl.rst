@@ -23,7 +23,7 @@ Once oso is installed, we can launch the REPL from the terminal::
 Let's start by loading a simple Polar policy::
 
     # policy.polar
-    allow(actor, "read", resource) := owns(actor, resource);
+    allow(actor, "read", resource) if owns(actor, resource);
     owns("foo", "bar");
 
 
