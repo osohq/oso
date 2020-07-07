@@ -192,7 +192,7 @@ We can add the follow lines of Python:
     # is their expense
     expense = Expense.by_id(2)
     assert oso.query("owner", user, expense)
-    
+
     oso.load_str("allow(user: User, action, expense: Expense) if owner(user, expense);")
 
     # user can read their own expense
