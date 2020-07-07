@@ -445,7 +445,7 @@ RSpec.describe Oso::Polar::Polar do
   context 'when loading a Polar string' do
     context 'with inline queries' do
       it 'succeeds if all inline queries succeed' do
-        subject.load_str('f(1); f(2); ?= f(1); ?= !f(3);')
+        subject.load_str('f(1); f(2); ?= f(1); ?= not f(3);')
       end
 
       it 'fails if an inline query fails' do

@@ -665,7 +665,7 @@ fn test_rule_order() {
 #[test]
 fn test_load_with_query() {
     let polar = Polar::new();
-    let src = "f(1); f(2); ?= f(1); ?= !f(3);";
+    let src = "f(1); f(2); ?= f(1); ?= not f(3);";
     polar.load(src).expect("load failed");
 
     while let Some(query) = polar.next_inline_query() {

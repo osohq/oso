@@ -279,7 +279,7 @@ Exp8<T>: Term = {
 }
 
 // !
-Not = {"!", "not"};
+Not = {"not"};
 Exp7<T>: Term = {
     <start:@L> Not <exp8:Exp8<T>> => {
         let args = vec![exp8];

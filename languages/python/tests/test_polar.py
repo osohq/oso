@@ -311,7 +311,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
 
 def test_load_and_query():
     p = Polar()
-    p.load_str("f(1); f(2); ?= f(1); ?= !f(3);")
+    p.load_str("f(1); f(2); ?= f(1); ?= not f(3);")
 
     with pytest.raises(exceptions.PolarException):
         p.load_str("g(1); ?= g(2);")

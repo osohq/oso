@@ -35,5 +35,5 @@ allow(actor, "approve", "expense") if
 ?= allow("deirdre", "view", "expense");
 
 # but cannot submit or approve them
-?= !allow("deirdre", "submit", "expense");
-?= !allow("deirdre", "approve", "expense");
+?= not allow("deirdre", "submit", "expense");
+?= not allow("deirdre", "approve", "expense");

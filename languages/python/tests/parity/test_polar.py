@@ -71,8 +71,8 @@ def test_missing_rule(tell, qeval):
 def test_negation(tell, qeval):
     tell('b("apple")')
     assert qeval('b("apple")')
-    assert not qeval('!(b("apple"))')
-    assert qeval('!(b("notanapple"))')
+    assert not qeval('not (b("apple"))')
+    assert qeval('not (b("notanapple"))')
 
 
 def test_recursive_rule(tell, qeval, qvar):
