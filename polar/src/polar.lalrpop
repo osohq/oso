@@ -367,7 +367,7 @@ Exp3<T>: Term = {
 
 
 
-Or = {"|", "or"};
+Or = {"or"};
 Exp2<T>: Term = {
     <start:@L> <head:Exp3<T>> Or <mut tail:Exp2<T>> => {
         let args = match &mut tail.value() {

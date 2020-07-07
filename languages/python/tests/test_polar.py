@@ -456,8 +456,8 @@ def test_constructor(polar, qvar):
 
 
 def test_in(polar, qeval):
-    polar.load_str("g(x, y) if !x in y;")
-    polar.load_str("f(x) if !(x=1 | x=2);")
+    polar.load_str("g(x, y) if not x in y;")
+    polar.load_str("f(x) if not (x=1 or x=2);")
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")

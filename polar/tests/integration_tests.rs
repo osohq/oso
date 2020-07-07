@@ -1029,7 +1029,7 @@ fn test_forall() {
 
     assert!(qnull(&mut polar, "forall(x = 2 or x = 3, x != 2)"));
     assert!(qnull(&mut polar, "forall(x = 2 or x = 3, x != 3)"));
-    assert!(qeval(&mut polar, "forall(x = 2 or x = 3, x = 2 | x = 3)"));
+    assert!(qeval(&mut polar, "forall(x = 2 or x = 3, x = 2 or x = 3)"));
     assert!(qeval(&mut polar, "forall(x = 1, x = 1)"));
     assert!(qeval(&mut polar, "forall(x in [2, 3, 4], x > 1)"));
 
