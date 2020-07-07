@@ -130,16 +130,21 @@ module Oso
       # it isn't already one.
       #
       # @param method [#to_sym]
-      # @param args [Array<Hash>]
       # @param call_id [Integer]
-      # @param instance_id [Integer]
+      # @param instance [Hash]
+      # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
-      def register_call(method, args:, call_id:, instance_id:)
+      def register_call(method, call_id:, instance:, args:)
         return if calls.key?(call_id)
 
         args = args.map { |a| to_ruby(a) }
-        instance = get_instance(instance_id)
+        if instance["value"].has_key? "ExternalInstance"
+          instance_id = instance["value"]["ExternalInstance"]["instance_id"]
+          instance = get_instance(instance_id)
+        else
+          instance = to_ruby(instance)
+        end
         result = instance.__send__(method, *args)
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy

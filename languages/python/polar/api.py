@@ -58,9 +58,6 @@ class Polar:
         self.calls = {}
 
         # Register built-in classes.
-        self.register_class(list, name="List")
-        self.register_class(int, name="Number")
-        self.register_class(str, name="String")
         self.register_class(Http)
         self.register_class(PathMapper)
         self.register_class(datetime, name="Datetime")
@@ -297,14 +294,18 @@ class Polar:
 
     def __handle_external_call(self, query, data):
         call_id = data["call_id"]
-
         if call_id not in self.calls:
-            instance_id = data["instance_id"]
+            value = data["instance"]["value"]
+            if "ExternalInstance" in value:
+                instance_id = value["ExternalInstance"]["instance_id"]
+                instance = self.__get_instance(instance_id)
+            else:
+                instance = self._to_python(data["instance"])
+
             attribute = data["attribute"]
             args = [self._to_python(arg) for arg in data["args"]]
 
             # Lookup the attribute on the instance.
-            instance = self.__get_instance(instance_id)
             try:
                 attr = getattr(instance, attribute)
             except AttributeError:

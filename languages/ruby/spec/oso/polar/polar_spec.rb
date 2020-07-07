@@ -192,6 +192,28 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
+  context 'can call host language methods' do
+    it 'on strings' do
+      expect(query(subject, 'x = "abc", x.index("bc") = 1').length).to be 1
+    end
+
+    it 'on integers' do
+      expect(query(subject, 'i = 4095, i.bit_length = 12').length).to be 1
+    end
+
+    it 'on floats' do
+      expect(query(subject, 'f = 3.14159, f.floor = 3').length).to be 1
+    end
+
+    it 'on lists' do
+      expect(query(subject, 'l = [1, 2, 3], l.index(3) = 2, l.clone = [1, 2, 3]').length).to be 1
+    end
+
+    it 'on dicts' do
+      expect(query(subject, 'd = {a: 1}, d.fetch("a") = 1, d.fetch("b", 2) = 2').length).to be 1
+    end
+  end
+
   context '#register_class' do
     it 'errors when registering the same class twice' do
       stub_const('Foo', Class.new)
