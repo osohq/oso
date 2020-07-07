@@ -7,7 +7,7 @@
 # simple-rule-start
 # Accountants can view expenses from their location
 allow(actor: User, "view", resource: Expense) if
-    role(actor, "accountant"),
+    role(actor, "accountant") and
     actor.location = resource.location;
 # simple-rule-end
 
