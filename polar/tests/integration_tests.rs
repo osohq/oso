@@ -237,7 +237,9 @@ fn test_jealous() {
 #[test]
 fn test_trace() {
     let polar = Polar::new();
-    polar.load("f(x) if x = 1 and x = 1; f(y) if y = 1;").unwrap();
+    polar
+        .load("f(x) if x = 1 and x = 1; f(y) if y = 1;")
+        .unwrap();
     let query = polar.new_query("f(1)").unwrap();
     let results = query_results!(query);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
@@ -445,7 +447,9 @@ fn test_not() {
     assert!(qnull(&mut polar, "g(x) and x=3")); // this should fail because unbound x means g(x) always fails
     assert!(qeval(&mut polar, "x=3 and g(x)"));
 
-    polar.load("h(x) if not (not (x = 1 or x = 3) or x = 3);").unwrap();
+    polar
+        .load("h(x) if not (not (x = 1 or x = 3) or x = 3);")
+        .unwrap();
     assert!(qeval(&mut polar, "h(1)"));
     assert!(qnull(&mut polar, "h(2)"));
     assert!(qnull(&mut polar, "h(3)"));
@@ -514,7 +518,9 @@ fn test_two_rule_bodies_nested() {
 #[test]
 fn test_unify_and() {
     let mut polar = Polar::new();
-    polar.load("f(x, y) if a(x) and y = 2; a(1); a(3);").unwrap();
+    polar
+        .load("f(x, y) if a(x) and y = 2; a(1); a(3);")
+        .unwrap();
     assert_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
     assert_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
 }
@@ -605,7 +611,9 @@ fn test_non_instance_specializers() {
 #[test]
 fn test_bindings() {
     let mut polar = Polar::new();
-    polar.load("f(x) if x = y and g(y); g(y) if y = 1;").unwrap();
+    polar
+        .load("f(x) if x = y and g(y); g(y) if y = 1;")
+        .unwrap();
     assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
 }
 
@@ -777,33 +785,39 @@ fn test_debug() {
             0 => {
                 assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
                 "over"
-            },
+            }
             1 => {
-                let expected = indoc!(r#"
+                let expected = indoc!(
+                    r#"
                 001: a() if debug("a") and b() and c() and d();
-                                           ^"#);
+                                           ^"#
+                );
                 assert_eq!(s, expected);
                 "over"
-            },
+            }
             2 => {
-                let expected = indoc!(r#"
+                let expected = indoc!(
+                    r#"
                     001: a() if debug("a") and b() and c() and d();
-                                                       ^"#);
+                                                       ^"#
+                );
                 assert_eq!(s, expected);
                 "over"
-            },
+            }
             3 => {
                 assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
                 "over"
-            },
+            }
             4 => {
-                let expected = indoc!(r#"
+                let expected = indoc!(
+                    r#"
                     001: a() if debug("a") and b() and c() and d();
-                                                               ^"#);
+                                                               ^"#
+                );
                 assert_eq!(s, expected);
                 "over"
-            },
-            _ => panic!("Too many calls!")
+            }
+            _ => panic!("Too many calls!"),
         };
         call_num += 1;
         rt.to_string()
@@ -818,19 +832,21 @@ fn test_debug() {
             0 => {
                 assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
                 "out"
-            },
+            }
             1 => {
                 assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
                 "out"
-            },
+            }
             2 => {
-                let expected = indoc!(r#"
+                let expected = indoc!(
+                    r#"
                 001: a() if debug("a") and b() and c() and d();
-                                                           ^"#);
+                                                           ^"#
+                );
                 assert_eq!(s, expected);
                 "out"
-            },
-            _ => panic!("Too many calls: {}", s)
+            }
+            _ => panic!("Too many calls: {}", s),
         };
         call_num += 1;
         rt.to_string()
@@ -977,7 +993,9 @@ fn test_cut() {
 
     polar.load("c(a, b) if a(a) and b(b) and cut();").unwrap();
     polar.load("c_no_cut(a, b) if a(a) and b(b);").unwrap();
-    polar.load("c_partial_cut(a, b) if a(a) and bcut(b);").unwrap();
+    polar
+        .load("c_partial_cut(a, b) if a(a) and bcut(b);")
+        .unwrap();
     polar
         .load("c_another_partial_cut(a, b) if a(a) and cut() and b(b);")
         .unwrap();

@@ -67,7 +67,7 @@ pub enum Token {
     RCB,       // }
     Dot,       // .
     New,       // new
-    Bang,       // !
+    Bang,      // !
     Mul,       // *
     Div,       // /
     Add,       // +
@@ -91,7 +91,7 @@ pub enum Token {
     If,        // if
     And,       // and
     Or,        // or
-    Not,        // not
+    Not,       // not
     Matches,   // matches
 }
 
@@ -113,7 +113,7 @@ impl ToString for Token {
             Token::RCB => "}".to_owned(),       // }
             Token::Dot => ".".to_owned(),       // .
             Token::New => "new".to_owned(),     // new
-            Token::Bang => "!".to_owned(),       // !
+            Token::Bang => "!".to_owned(),      // !
             Token::Mul => "*".to_owned(),       // *
             Token::Div => "/".to_owned(),       // /
             Token::Add => "+".to_owned(),       // +
@@ -137,7 +137,7 @@ impl ToString for Token {
             Token::If => "if".to_owned(),           // if
             Token::And => "and".to_owned(),         // and
             Token::Or => "or".to_owned(),           // or
-            Token::Not => "not".to_owned(),           // not
+            Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
         }
     }

@@ -150,7 +150,10 @@ mod tests {
         let exp = polar::TermExpParser::new()
             .parse(0, Lexer::new(r#"not a and b or c = d == (e + f) / g.h(i)"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"not a and b or c = d == (e + f) / g.h(i)"#);
+        assert_eq!(
+            exp.to_polar(),
+            r#"not a and b or c = d == (e + f) / g.h(i)"#
+        );
     }
 
     #[test]

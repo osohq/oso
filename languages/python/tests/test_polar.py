@@ -424,10 +424,12 @@ def test_constructor(polar, qvar):
     polar.register_class(TestConstructor)
 
     assert (
-        qvar("instance = new TestConstructor{x: 1} and y = instance.x", "y", one=True) == 1
+        qvar("instance = new TestConstructor{x: 1} and y = instance.x", "y", one=True)
+        == 1
     )
     assert (
-        qvar("instance = new TestConstructor{x: 2} and y = instance.x", "y", one=True) == 2
+        qvar("instance = new TestConstructor{x: 2} and y = instance.x", "y", one=True)
+        == 2
     )
     assert (
         qvar(
