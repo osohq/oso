@@ -140,17 +140,17 @@ mod tests {
         // println!("{}", instance.to_polar());
         // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
         let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"!foo"#))
+            .parse(0, Lexer::new(r#"not foo"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!foo"#);
+        assert_eq!(exp.to_polar(), r#"not foo"#);
         let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"!foo"#))
+            .parse(0, Lexer::new(r#"not foo"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!foo"#);
+        assert_eq!(exp.to_polar(), r#"not foo"#);
         let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"!a, b | c = d == (e + f) / g.h(i)"#))
+            .parse(0, Lexer::new(r#"not a and b or c = d == (e + f) / g.h(i)"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!a, b | c = d == (e + f) / g.h(i)"#);
+        assert_eq!(exp.to_polar(), r#"not a and b or c = d == (e + f) / g.h(i)"#);
     }
 
     #[test]
@@ -313,16 +313,5 @@ mod tests {
         let term = parse_query("{} isa {}");
         assert_eq!(term.to_polar(), r#"{} isa {}"#);
         let _term = parse_query("{x: 1} isa {}");
-    }
-
-    #[test]
-    fn test_parse_alternate_syntax() {
-        let f = r#"
-            a(x) if b(x) and (c(x) or d(x));
-            b(x) if x matches {a: 1};
-            "#;
-        let results = parse_rules(f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) if b(x), c(x) | d(x);"#);
-        assert_eq!(results[1].to_polar(), r#"b(x) if x isa {a: 1};"#);
     }
 }

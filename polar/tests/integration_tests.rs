@@ -237,13 +237,13 @@ fn test_jealous() {
 #[test]
 fn test_trace() {
     let polar = Polar::new();
-    polar.load("f(x) if x = 1, x = 1; f(y) if y = 1;").unwrap();
+    polar.load("f(x) if x = 1 and x = 1; f(y) if y = 1;").unwrap();
     let query = polar.new_query("f(1)").unwrap();
     let results = query_results!(query);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
-  f(x) if x = 1, x = 1; [
-    _x_3 = 1, _x_3 = 1 [
+  f(x) if x = 1 and x = 1; [
+    _x_3 = 1 and _x_3 = 1 [
       _x_3 = 1 [
       ]
       _x_3 = 1 [
@@ -382,7 +382,7 @@ fn test_ait_kaci_34() {
     let mut polar = Polar::new();
     polar
         .load(
-            r#"a() if b(x), c(x);
+            r#"a() if b(x) and c(x);
                b(x) if e(x);
                c(1);
                e(x) if f(x);
@@ -722,7 +722,7 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "lt(1,2)"));
     assert!(!qeval(&mut polar, "lt(2,2)"));
     assert!(qeval(&mut polar, "lt({a: 1}.a,{a: 2}.a)"));
-    assert!(qeval(&mut polar, "f(x), g(y), lt(x,y)"));
+    assert!(qeval(&mut polar, "f(x) and g(y) and lt(x,y)"));
 
     // "<="
     polar.load("leq(x, y) if x <= y;").unwrap();

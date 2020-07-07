@@ -269,7 +269,7 @@ RSpec.describe Oso::Polar::Polar do
       expect(qvar(subject, 'new Foo{}.b() = x', 'x', one: true)).to eq('b')
       expect(qvar(subject, 'new Foo{}.c = x', 'x', one: true)).to eq('c')
       expect(qvar(subject, 'new Foo{}.c() = x', 'x', one: true)).to eq('c')
-      expect(qvar(subject, 'new Foo{} = f, f.a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo{} = f and f.a() = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'new Foo{}.bar().y() = x', 'x', one: true)).to eq('y')
       expect(qvar(subject, 'new Foo{}.e = x', 'x')).to eq([[1, 2, 3]])
       expect(qvar(subject, 'new Foo{}.f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])

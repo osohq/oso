@@ -158,7 +158,7 @@ def test_defining_things(tell, qeval):
 def test_dictionaries(tell, qeval, qvar):
     # basic dictionary lookup
     tell('dict({hello: "world", foo: "bar"})')
-    assert qeval('dict(d), d.hello = "world"')
+    assert qeval('dict(d) and d.hello = "world"')
 
     ### dictionary lookups with variable fields ###
     tell("attr(d, k, d.(k))")
@@ -185,7 +185,7 @@ def test_dictionaries(tell, qeval, qvar):
 
     tell("x({a: {b:{c:123}}})")
     tell("x({a: {y:{c:456}}})")
-    assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
+    assert qvar("x(d) and d.a.(k).c = value", "value") == [123, 456]
 
     tell("lookup(dict, result) if result = dict.a.b.c;")
     assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
@@ -194,7 +194,7 @@ def test_dictionaries(tell, qeval, qvar):
     tell('user({name: "steve", job: "programmer", state: "NY"})')
     tell('user({name: "alex", job: "programmer", state: "CO"})')
     tell('user({name: "graham", job: "business", state: "NY"})')
-    assert qeval('user(d), d.name = "steve"')
+    assert qeval('user(d) and d.name = "steve"')
     assert qvar('user({job: "programmer", name: name, state: state})', "name") == [
         "steve",
         "alex",
@@ -362,7 +362,7 @@ def test_comparisons(tell, qeval, qvar, query):
     assert qeval("3 >= 3")
     assert qeval("3 >= 2")
     assert qeval("3 > 2")
-    assert qeval("x = 1, x == 1")
+    assert qeval("x = 1 and x == 1")
 
 
 def test_bool_from_external_call(polar, qeval, qvar, query):
@@ -404,10 +404,10 @@ def test_arities(tell, qeval):
 
 
 def test_rule_ordering(tell, qeval, externals):
-    tell("f(_: Foo{}) if cut(), 1 = 2;")
+    tell("f(_: Foo{}) if cut() and 1 = 2;")
     tell('f(_: Foo{name: "test"});')
 
     assert qeval('f(new Foo{ name: "test" }) ')
-    assert qeval('x = new Foo{ name: "test" }, f(x) ')
+    assert qeval('x = new Foo{ name: "test" } and f(x) ')
     assert not qeval('f(new Foo{ name: "nope" }) ')
-    assert not qeval('x = new Foo{ name: "nope" }, f(x) ')
+    assert not qeval('x = new Foo{ name: "nope" } and f(x) ')
