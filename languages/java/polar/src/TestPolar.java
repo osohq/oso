@@ -51,9 +51,8 @@ public class TestPolar {
 
     }
 
-    public static void testQueryPred() throws Exception {
+    public static void testBasicQueryPred() throws Exception {
         Polar p = new Polar();
-
         // test basic query
         p.loadStr("f(a, b) := a = b;");
         if (p.queryPred("f", List.of(1, 1)).results().isEmpty()) {
@@ -62,7 +61,10 @@ public class TestPolar {
         if (!p.queryPred("f", List.of(1, 2)).results().isEmpty()) {
             throw new Exception("Basic predicate query expected to fail but didn't.");
         }
+    }
 
+    public static void testQueryPredWithObject() throws Exception {
+        Polar p = new Polar();
         // test query with Java Object
         p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
         p.loadStr("g(x) := x.id = 1;");
@@ -71,6 +73,16 @@ public class TestPolar {
         }
         if (!p.queryPred("g", List.of(new MyClass("test", 2))).results().isEmpty()) {
             throw new Exception("Predicate query with Java Object expected to fail but didn't.");
+        }
+    }
+
+    public static void testQueryPredWithVariable() throws Exception {
+        Polar p = new Polar();
+        // test query with Variable
+        p.loadStr("f(a, b) := a = b;");
+        if (!p.queryPred("f", List.of(1, new Polar.Variable("result"))).results()
+                .equals(List.of(Map.of("result", 1)))) {
+            throw new Exception("Predicate query with Variable failed.");
         }
     }
 

@@ -392,13 +392,11 @@ public class Polar {
                 args.add(toPolarTerm(el));
             }
             jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", args)));
+        } else if (value instanceof Variable) {
+            jVal.put("Symbol", value);
         } else {
             jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
         }
-        // TODO: Variable, Symbol
-        // when value.instance_of?(Variable)
-        // # This is supported so that we can query for unbound variables
-        // { 'Symbol' => value }
 
         // Build Polar term
         JSONObject term = new JSONObject();
@@ -535,6 +533,19 @@ public class Polar {
             } else {
                 return false;
             }
+        }
+    }
+
+    public static class Variable {
+        public String name;
+
+        public Variable(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
         }
     }
 }
