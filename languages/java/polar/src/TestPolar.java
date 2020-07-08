@@ -27,6 +27,12 @@ public class TestPolar {
         }
     }
 
+    public static class MySubClass extends MyClass {
+        public MySubClass(String name, int id) {
+            super(name, id);
+        }
+    }
+
     /**** TEST QUERY ****/
 
     public static void testLoadAndQueryStr() throws Exception {
@@ -65,8 +71,8 @@ public class TestPolar {
 
     public static void testQueryPredWithObject() throws Exception {
         Polar p = new Polar();
+        registerClasses(p);
         // test query with Java Object
-        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
         p.loadStr("g(x) := x.id = 1;");
         if (p.queryPred("g", List.of(new MyClass("test", 1))).results().isEmpty()) {
             throw new Exception("Predicate query with Java Object failed.");
@@ -83,6 +89,55 @@ public class TestPolar {
         if (!p.queryPred("f", List.of(1, new Polar.Variable("result"))).results()
                 .equals(List.of(Map.of("result", 1)))) {
             throw new Exception("Predicate query with Variable failed.");
+        }
+    }
+
+    public static void testExternalIsa() throws Exception {
+        Polar p = new Polar();
+        registerClasses(p);
+        p.loadStr("f(a: MyClass, x) := x = a.id;");
+        List<HashMap<String, Object>> result = p
+                .queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+        if (!result.equals(List.of(Map.of("x", 1)))) {
+            throw new Exception();
+        }
+        p.clear();
+
+        p.loadStr("f(a: MySubClass, x) := x = a.id;");
+        result = p.queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+        if (!result.isEmpty()) {
+            throw new Exception("Failed to filter rules by specializers.");
+        }
+        p.clear();
+
+        boolean throwsError = false;
+        try {
+            p.loadStr("f(a: OtherClass, x) := x = a.id;");
+            p.queryStr("f(1, 2);");
+        } catch (Error e) {
+            throwsError = true;
+        }
+        if (!throwsError) {
+            throw new Exception("Failed to throw unregistered class error");
+        }
+
+    }
+
+    public static void testExternalIsSubSpecializer() throws Exception {
+        Polar p = new Polar();
+        registerClasses(p);
+
+        p.loadStr("f(a: MySubClass, x) := x = 1;");
+        p.loadStr("f(a: MyClass, x) := x = 2;");
+        List<HashMap<String, Object>> result = p
+                .queryPred("f", List.of(new MySubClass("test", 1), new Polar.Variable("x"))).results();
+        if (!result.equals(List.of(Map.of("x", 1), Map.of("x", 2)))) {
+            throw new Exception("Failed to order rules based on specializers.");
+        }
+
+        result = p.queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+        if (!result.equals(List.of(Map.of("x", 2)))) {
+            throw new Exception("Failed to order rules based on specializers.");
         }
     }
 
@@ -165,10 +220,10 @@ public class TestPolar {
 
     public static void testRegisterAndMakeClass() throws Exception {
         Polar p = new Polar();
-        p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        registerClasses(p);
 
         Map<String, Object> testArg = Map.of("name", "testName", "id", 1);
-        MyClass instance = (MyClass) p.makeInstance(MyClass.class.getName(), testArg, Long.valueOf(0));
+        MyClass instance = (MyClass) p.makeInstance("MyClass", testArg, Long.valueOf(0));
         if (instance.name != "testName" || instance.id != 1) {
             throw new Exception();
         }
@@ -176,7 +231,7 @@ public class TestPolar {
 
     public static void testMakeInstanceFromPolar() throws Exception {
         Polar p = new Polar();
-        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        registerClasses(p);
         p.loadStr("f(x) := x = new MyClass{name: \"test\", id: 1};");
         Polar.Query query = p.queryStr("f(x)");
         MyClass ret = (MyClass) query.nextElement().get("x");
@@ -188,7 +243,7 @@ public class TestPolar {
 
     public static void testRegisterCall() throws Exception {
         Polar p = new Polar();
-        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        registerClasses(p);
         MyClass instance = new MyClass("test", 1);
         p.cacheInstance(instance, Long.valueOf(1));
         p.registerCall("myMethod", List.of("hello world"), 1, 1);
@@ -200,7 +255,7 @@ public class TestPolar {
 
     public static void testExternalCall() throws Exception {
         Polar p = new Polar();
-        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        registerClasses(p);
 
         // Test get attribute
         p.loadStr("id(x) := x = new MyClass{name: \"test\", id: 1}.id;");
@@ -283,6 +338,11 @@ public class TestPolar {
         if (!p.queryStr("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
             throw new Exception("Failed to load multiple files.");
         }
+    }
+
+    private static void registerClasses(Polar p) {
+        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
+        p.registerClass(MySubClass.class, "MySubClass", m -> new MySubClass((String) m.get("name"), (int) m.get("id")));
     }
 
     private static void printResults(Status status, String message, String name) {

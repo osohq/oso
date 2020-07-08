@@ -255,19 +255,19 @@ public class Polar {
      * Make an instance of a Java class from a {@code Map<String, Object>} of
      * fields.
      *
-     * @param cls
+     * @param clsName
      * @param fields
      * @param id
      * @return Object
      */
-    public Object makeInstance(String cls_name, Map fields, long id) {
-        Function<Map, Object> constructor = constructors.get(cls_name);
+    public Object makeInstance(String clsName, Map fields, long id) {
+        Function<Map, Object> constructor = constructors.get(clsName);
         Object instance;
         if (constructor != null) {
-            instance = constructors.get(cls_name).apply(fields);
+            instance = constructors.get(clsName).apply(fields);
         } else {
             // TODO: default constructor
-            throw new Error("unimplemented");
+            throw new Error("No constructor found for class " + clsName);
         }
         cacheInstance(instance, id);
         return instance;
@@ -406,6 +406,14 @@ public class Polar {
         return term;
     }
 
+    private Class getPolarClass(String name) {
+        if (classes.containsKey(name)) {
+            return classes.get(name);
+        } else {
+            throw new Error("Unregistered class error.");
+        }
+    }
+
     public class Query implements Enumeration<HashMap<String, Object>> {
         private HashMap<String, Object> next;
         private Pointer queryPtr;
@@ -504,6 +512,37 @@ public class Polar {
                             result = null;
                         }
                         ffi.polarCallResult(queryPtr, callId, result);
+                        break;
+                    case "ExternalIsa":
+                        instanceId = data.getLong("instance_id");
+                        callId = data.getLong("call_id");
+                        String classTag = data.getString("class_tag");
+                        Class cls = getPolarClass(classTag);
+                        Object instance = instances.get(instanceId);
+                        int answer = classes.containsKey(classTag) && cls.isInstance(instance) ? 1 : 0;
+                        ffi.polarQuestionResult(queryPtr, callId, answer);
+                        break;
+                    case "ExternalIsSubSpecializer":
+                        instanceId = data.getLong("instance_id");
+                        callId = data.getLong("call_id");
+                        instance = instances.get(instanceId);
+                        cls = instance.getClass();
+                        Class leftClass = getPolarClass(data.getString("left_class_tag"));
+                        Class rightClass = getPolarClass(data.getString("right_class_tag"));
+
+                        answer = 0;
+                        if (leftClass.isInstance(instance) || rightClass.isInstance(instance)) {
+                            while (cls != null) {
+                                if (cls.equals(leftClass)) {
+                                    answer = 1;
+                                    break;
+                                } else if (cls.equals(rightClass)) {
+                                    break;
+                                }
+                                cls = cls.getSuperclass();
+                            }
+                        }
+                        ffi.polarQuestionResult(queryPtr, callId, answer);
                         break;
                     default:
                         throw new Error("Unimplemented event type: " + kind);
