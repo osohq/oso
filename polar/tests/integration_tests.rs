@@ -804,6 +804,56 @@ fn test_debug() {
 }
 
 #[test]
+fn test_rest_vars() {
+    let mut polar = Polar::new();
+
+    assert_eq!(
+        qvar(&mut polar, "[1,2,3] = [*rest]", "rest"),
+        vec![value!([value!(1), value!(2), value!(3)])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "[1,2,3] = [1, *rest]", "rest"),
+        vec![value!([value!(2), value!(3)])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "[1,2,3] = [1,2, *rest]", "rest"),
+        vec![value!([value!(3)])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "([1,2,3] = [1,2,3, *rest])", "rest"),
+        vec![value!([])]
+    );
+    assert!(qeval(&mut polar, "!([1,2,3] = [1,2,3,4, *_rest])"));
+
+    polar
+        .load(
+            r#"member(x, [x, *_rest]);
+               member(x, [_first, *rest]) := member(x, rest);"#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, "member(1, [1,2,3])"));
+    assert!(qeval(&mut polar, "member(3, [1,2,3])"));
+    assert!(qeval(&mut polar, "!member(4, [1,2,3])"));
+    assert_eq!(
+        qvar(&mut polar, "member(x, [1,2,3])", "x"),
+        vec![value!(1), value!(2), value!(3)]
+    );
+
+    polar
+        .load(
+            r#"append([], x, x);
+               append([first, *rest], x, [first, *tail]) := append(rest, x, tail);"#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, "append([], [], [])"));
+    assert!(qeval(&mut polar, "append([], [1,2,3], [1,2,3])"));
+    assert!(qeval(&mut polar, "append([1], [2,3], [1,2,3])"));
+    assert!(qeval(&mut polar, "append([1,2], [3], [1,2,3])"));
+    assert!(qeval(&mut polar, "append([1,2,3], [], [1,2,3])"));
+    assert!(qeval(&mut polar, "!append([1,2,3], [4], [1,2,3])"));
+}
+
+#[test]
 fn test_in() {
     let mut polar = Polar::new();
     polar.load("f(x, y) := x in y;").unwrap();
