@@ -203,11 +203,19 @@ public class Polar {
         constructors.put(alias, fromPolar);
     }
 
-    public void registerCall(String attrName, List<Object> args, long callId, long instanceId) {
+    public void registerCall(String attrName, List<Object> args, long callId, JSONObject polarInstance) {
         if (calls.containsKey(callId)) {
             return;
         }
-        Object instance = instances.get(instanceId);
+        Object instance;
+        if (polarInstance.getJSONObject("value").has("ExternalInstance")) {
+            long instanceId = polarInstance.getJSONObject("value").getJSONObject("ExternalInstance")
+                    .getLong("instance_id");
+            instance = instances.get(instanceId);
+        } else {
+            instance = toJava(polarInstance);
+
+        }
         Class[] argTypes = new Class[args.size()];
         for (int i = 0; i < args.size(); i++) {
             argTypes[i] = args.get(i).getClass();
@@ -393,7 +401,7 @@ public class Polar {
             }
             jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", args)));
         } else if (value instanceof Variable) {
-            jVal.put("Symbol", value);
+            jVal.put("Variable", value);
         } else {
             jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
         }
@@ -497,14 +505,14 @@ public class Polar {
                         break;
                     case "ExternalCall":
                         long callId = data.getLong("call_id");
-                        long instanceId = data.getLong("instance_id");
+                        JSONObject javaInstance = data.getJSONObject("instance");
                         String attrName = data.getString("attribute");
                         JSONArray jArgs = data.getJSONArray("args");
                         List<Object> args = new ArrayList<Object>();
                         for (int i = 0; i < jArgs.length(); i++) {
                             args.add(toJava(jArgs.getJSONObject(i)));
                         }
-                        registerCall(attrName, args, callId, instanceId);
+                        registerCall(attrName, args, callId, javaInstance);
                         String result;
                         try {
                             result = nextCallResult(callId).toString();
@@ -514,7 +522,7 @@ public class Polar {
                         ffi.polarCallResult(queryPtr, callId, result);
                         break;
                     case "ExternalIsa":
-                        instanceId = data.getLong("instance_id");
+                        Long instanceId = data.getLong("instance_id");
                         callId = data.getLong("call_id");
                         String classTag = data.getString("class_tag");
                         Class cls = getPolarClass(classTag);

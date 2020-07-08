@@ -141,6 +141,18 @@ public class TestPolar {
         }
     }
 
+    public static void testStringMethods() throws Exception {
+        Polar p = new Polar();
+        p.loadStr("f(x) := x.length = 3;");
+        if (p.queryStr("f(\"oso\")").results().isEmpty()) {
+            throw new Exception();
+        }
+
+        if (!p.queryStr("f(\"notoso\")").results().isEmpty()) {
+            throw new Exception();
+        }
+    }
+
     /*** TEST FFI CONVERSIONS ***/
 
     public static void testBoolFFIRoundTrip() throws Exception {
@@ -246,7 +258,7 @@ public class TestPolar {
         registerClasses(p);
         MyClass instance = new MyClass("test", 1);
         p.cacheInstance(instance, Long.valueOf(1));
-        p.registerCall("myMethod", List.of("hello world"), 1, 1);
+        p.registerCall("myMethod", List.of("hello world"), 1, p.toPolarTerm(instance));
         JSONObject res = p.nextCallResult(1);
         if (!p.toJava(res).equals("hello world")) {
             throw new Exception();
@@ -364,7 +376,7 @@ public class TestPolar {
         }
     }
 
-    private static String getExceptionStackTrace(Exception e) {
+    private static String getExceptionStackTrace(Throwable e) {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         e.printStackTrace(pw);
@@ -391,7 +403,7 @@ public class TestPolar {
                         m.invoke(null);
                     } catch (Exception e) {
                         status = Status.FAILED;
-                        msg = getExceptionStackTrace(e);
+                        msg = getExceptionStackTrace(e.getCause());
                         nFailed++;
                     }
 
