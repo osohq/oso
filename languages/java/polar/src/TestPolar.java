@@ -90,8 +90,7 @@ public class TestPolar {
         Polar p = new Polar();
         // test query with Variable
         p.loadStr("f(a, b) := a = b;");
-        if (!p.queryPred("f", List.of(1, new Polar.Variable("result"))).results()
-                .equals(List.of(Map.of("result", 1)))) {
+        if (!p.queryPred("f", List.of(1, new Variable("result"))).results().equals(List.of(Map.of("result", 1)))) {
             throw new Exception("Predicate query with Variable failed.");
         }
         checkMem(p);
@@ -101,15 +100,15 @@ public class TestPolar {
         Polar p = new Polar();
         registerClasses(p);
         p.loadStr("f(a: MyClass, x) := x = a.id;");
-        List<HashMap<String, Object>> result = p
-                .queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+        List<HashMap<String, Object>> result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x")))
+                .results();
         if (!result.equals(List.of(Map.of("x", 1)))) {
             throw new Exception();
         }
         p.clear();
 
         p.loadStr("f(a: MySubClass, x) := x = a.id;");
-        result = p.queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+        result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
         if (!result.isEmpty()) {
             throw new Exception("Failed to filter rules by specializers.");
         }
@@ -118,7 +117,7 @@ public class TestPolar {
         boolean throwsError = false;
         try {
             p.loadStr("f(a: OtherClass, x) := x = a.id;");
-            p.queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+            p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
         } catch (Exceptions.UnregisteredClassError e) {
             throwsError = true;
         }
@@ -134,13 +133,13 @@ public class TestPolar {
 
         p.loadStr("f(a: MySubClass, x) := x = 1;");
         p.loadStr("f(a: MyClass, x) := x = 2;");
-        List<HashMap<String, Object>> result = p
-                .queryPred("f", List.of(new MySubClass("test", 1), new Polar.Variable("x"))).results();
+        List<HashMap<String, Object>> result = p.queryPred("f", List.of(new MySubClass("test", 1), new Variable("x")))
+                .results();
         if (!result.equals(List.of(Map.of("x", 1), Map.of("x", 2)))) {
             throw new Exception("Failed to order rules based on specializers.");
         }
 
-        result = p.queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+        result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
         if (!result.equals(List.of(Map.of("x", 2)))) {
             throw new Exception("Failed to order rules based on specializers.");
         }
@@ -219,10 +218,10 @@ public class TestPolar {
 
     public static void testPredicateFFIRoundTrip() throws Exception {
         Polar p = new Polar();
-        Polar.Predicate pred = new Polar.Predicate("name", List.of(1, "hello"));
+        Predicate pred = new Predicate("name", List.of(1, "hello"));
         JSONObject polar = p.toPolarTerm(pred);
         Object java = p.toJava(polar);
-        if (java.getClass() != Polar.Predicate.class || !((Polar.Predicate) java).equals(pred)) {
+        if (java.getClass() != Predicate.class || !((Predicate) java).equals(pred)) {
             throw new Exception();
         }
         checkMem(p);
