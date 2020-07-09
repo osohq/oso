@@ -1,10 +1,10 @@
 role(actor: User, "employee") if
-    actor.role = "employee"
-    | role(actor, "accountant");
+    actor.role = "employee" or
+    role(actor, "accountant");
 
 role(actor: User, "accountant") if
-    actor.role = "accountant"
-    | role(actor, "admin");
+    actor.role = "accountant" or
+    role(actor, "admin");
 
 role(actor: User, "admin") if
     actor.role = "admin";

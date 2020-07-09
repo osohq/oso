@@ -67,7 +67,7 @@ pub enum Token {
     RCB,       // }
     Dot,       // .
     New,       // new
-    Not,       // !
+    Bang,      // !
     Mul,       // *
     Div,       // /
     Add,       // +
@@ -91,6 +91,7 @@ pub enum Token {
     If,        // if
     And,       // and
     Or,        // or
+    Not,       // not
     Matches,   // matches
 }
 
@@ -112,7 +113,7 @@ impl ToString for Token {
             Token::RCB => "}".to_owned(),       // }
             Token::Dot => ".".to_owned(),       // .
             Token::New => "new".to_owned(),     // new
-            Token::Not => "!".to_owned(),       // !
+            Token::Bang => "!".to_owned(),      // !
             Token::Mul => "*".to_owned(),       // *
             Token::Div => "/".to_owned(),       // /
             Token::Add => "+".to_owned(),       // +
@@ -136,6 +137,7 @@ impl ToString for Token {
             Token::If => "if".to_owned(),           // if
             Token::And => "and".to_owned(),         // and
             Token::Or => "or".to_owned(),           // or
+            Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
         }
     }
@@ -234,6 +236,8 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::And, last + 1)))
         } else if &self.buf == "or" {
             Some(Ok((start, Token::Or, last + 1)))
+        } else if &self.buf == "not" {
+            Some(Ok((start, Token::Not, last + 1)))
         } else if &self.buf == "matches" {
             Some(Ok((start, Token::Matches, last + 1)))
         } else {
@@ -421,7 +425,7 @@ impl<'input> Iterator for Lexer<'input> {
                 '=' => self.scan_1c_or_2c_op(i, Token::Unify, '=', Token::Eq),
                 '<' => self.scan_1c_or_2c_op(i, Token::Lt, '=', Token::Leq),
                 '>' => self.scan_1c_or_2c_op(i, Token::Gt, '=', Token::Geq),
-                '!' => self.scan_1c_or_2c_op(i, Token::Not, '=', Token::Neq),
+                '!' => self.scan_1c_or_2c_op(i, Token::Bang, '=', Token::Neq),
                 '?' => self.scan_2c_op(i, '=', Token::Query),
                 '|' => self.scan_1c_op(i, Token::Pipe),
                 ',' => self.scan_1c_op(i, Token::Comma),

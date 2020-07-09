@@ -94,7 +94,7 @@ def test_external(polar, qvar):
     assert qvar("new Foo{}.b() = x", "x", one=True) == "b"
     assert qvar("Foo.c = x", "x", one=True) == "c"
     assert qvar("Foo.c() = x", "x", one=True) == "c"
-    assert qvar("new Foo{} = f, f.a() = x", "x", one=True) == "A"
+    assert qvar("new Foo{} = f and f.a() = x", "x", one=True) == "A"
     assert qvar("new Foo{}.bar().y() = x", "x", one=True) == "y"
     assert qvar("new Foo{}.e = x", "x", one=True) == [1, 2, 3]
     assert qvar("new Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
@@ -311,7 +311,7 @@ def test_specializers_mixed(polar, qvar, qeval, query):
 
 def test_load_and_query():
     p = Polar()
-    p.load_str("f(1); f(2); ?= f(1); ?= !f(3);")
+    p.load_str("f(1); f(2); ?= f(1); ?= not f(3);")
 
     with pytest.raises(exceptions.PolarException):
         p.load_str("g(1); ?= g(2);")
@@ -424,14 +424,16 @@ def test_constructor(polar, qvar):
     polar.register_class(TestConstructor)
 
     assert (
-        qvar("instance = new TestConstructor{x: 1}, y = instance.x", "y", one=True) == 1
+        qvar("instance = new TestConstructor{x: 1} and y = instance.x", "y", one=True)
+        == 1
     )
     assert (
-        qvar("instance = new TestConstructor{x: 2}, y = instance.x", "y", one=True) == 2
+        qvar("instance = new TestConstructor{x: 2} and y = instance.x", "y", one=True)
+        == 2
     )
     assert (
         qvar(
-            "instance = new TestConstructor{x: new TestConstructor{x: 3}}, y = instance.x.x",
+            "instance = new TestConstructor{x: new TestConstructor{x: 3}} and y = instance.x.x",
             "y",
             one=True,
         )
@@ -447,7 +449,7 @@ def test_constructor(polar, qvar):
 
     assert (
         qvar(
-            "instance = new TestConstructorTwo{x: 1, y: 2}, x = instance.x, y = instance.y",
+            "instance = new TestConstructorTwo{x: 1, y: 2} and x = instance.x and y = instance.y",
             "y",
             one=True,
         )
@@ -456,8 +458,8 @@ def test_constructor(polar, qvar):
 
 
 def test_in(polar, qeval):
-    polar.load_str("g(x, y) if !x in y;")
-    polar.load_str("f(x) if !(x=1 | x=2);")
+    polar.load_str("g(x, y) if not x in y;")
+    polar.load_str("f(x) if not (x=1 or x=2);")
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")

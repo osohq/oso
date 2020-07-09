@@ -55,14 +55,14 @@ def test_query_multiple(tell, qvar):
 
 
 def test_define_rule(tell, qeval):
-    tell("a(x) if b(x), c(x);")
+    tell("a(x) if b(x) and c(x);")
     tell('b("apple")')
     tell('c("apple")')
     assert qeval('a("apple")')
 
 
 def test_missing_rule(tell, qeval):
-    tell("a(x) if b(x), c(x);")
+    tell("a(x) if b(x) and c(x);")
     tell('b("apple")')
     tell('c("apple")')
     assert not qeval('d("apple")')
@@ -71,8 +71,8 @@ def test_missing_rule(tell, qeval):
 def test_negation(tell, qeval):
     tell('b("apple")')
     assert qeval('b("apple")')
-    assert not qeval('!(b("apple"))')
-    assert qeval('!(b("notanapple"))')
+    assert not qeval('not (b("apple"))')
+    assert qeval('not (b("notanapple"))')
 
 
 def test_recursive_rule(tell, qeval, qvar):
@@ -82,37 +82,37 @@ def test_recursive_rule(tell, qeval, qvar):
     results = qvar('derive("apple", x)', "x")
     assert results == ["orange"]
     tell("derives(a, b) if derive(a, b);")
-    tell("derives(a, b) if derive(a, z), derives(z, b);")
+    tell("derives(a, b) if derive(a, z) and derives(z, b);")
     assert qeval('derives("apple", "juniper_berry")')
     results = qvar('derives("apple", x)', "x")
     assert results == ["orange", "avacado", "juniper_berry"]
 
 
 def test_disjunctive_rule(tell, qeval):
-    tell("or_eq(a, b) if 1 = 0 | a = b;")
+    tell("or_eq(a, b) if 1 = 0 or a = b;")
     assert qeval("or_eq(1, 1)")
 
-    tell("and_or_eq(a, b, c) if (a = b, b = c) | 1 = 0")
+    tell("and_or_eq(a, b, c) if (a = b and b = c) or 1 = 0")
     assert not qeval("and_or_eq(1, 1, 0)")
     assert qeval("and_or_eq(1, 1, 1)")
 
-    assert qeval("1=0 | (1=1, 1=1)")
-    assert not qeval("1=0 | (1=0, 1=1)")
+    assert qeval("1=0 or (1=1 and 1=1)")
+    assert not qeval("1=0 or (1=0 and 1=1)")
 
     # not sure if these test anything but :)
-    assert qeval("1=0 | (1=0 | 1=1)")
-    assert not qeval("1=0 | (1=0 | 1=0)")
+    assert qeval("1=0 or (1=0 or 1=1)")
+    assert not qeval("1=0 or (1=0 or 1=0)")
 
-    assert qeval("1=1, (1=0 | 1=1)")
-    assert not qeval("1=0, (1=0 | 1=1)")
+    assert qeval("1=1 and (1=0 or 1=1)")
+    assert not qeval("1=0 and (1=0 or 1=1)")
 
 
 def test_parens(tell, qeval):
-    tell("paren1(a, b, c) if (a = b, b = c);")
-    tell("paren2(a, b, c) if ((a = b, b = c));")
-    tell("paren3(a, b, c) if (a = b), (b = c);")
-    tell("paren4(a, b, c, d) if (a = b, b = c, c = d);")
-    tell("paren5(a, b, c) if ((a = b), (b = c));")
+    tell("paren1(a, b, c) if (a = b and b = c);")
+    tell("paren2(a, b, c) if ((a = b and b = c));")
+    tell("paren3(a, b, c) if (a = b) and (b = c);")
+    tell("paren4(a, b, c, d) if (a = b and b = c and c = d);")
+    tell("paren5(a, b, c) if ((a = b) and (b = c));")
 
     assert qeval("paren1(1, 1, 1)")
     assert not qeval("paren1(0, 1, 1)")
@@ -158,7 +158,7 @@ def test_defining_things(tell, qeval):
 def test_dictionaries(tell, qeval, qvar):
     # basic dictionary lookup
     tell('dict({hello: "world", foo: "bar"})')
-    assert qeval('dict(d), d.hello = "world"')
+    assert qeval('dict(d) and d.hello = "world"')
 
     ### dictionary lookups with variable fields ###
     tell("attr(d, k, d.(k))")
@@ -185,7 +185,7 @@ def test_dictionaries(tell, qeval, qvar):
 
     tell("x({a: {b:{c:123}}})")
     tell("x({a: {y:{c:456}}})")
-    assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
+    assert qvar("x(d) and d.a.(k).c = value", "value") == [123, 456]
 
     tell("lookup(dict, result) if result = dict.a.b.c;")
     assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
@@ -194,7 +194,7 @@ def test_dictionaries(tell, qeval, qvar):
     tell('user({name: "steve", job: "programmer", state: "NY"})')
     tell('user({name: "alex", job: "programmer", state: "CO"})')
     tell('user({name: "graham", job: "business", state: "NY"})')
-    assert qeval('user(d), d.name = "steve"')
+    assert qeval('user(d) and d.name = "steve"')
     assert qvar('user({job: "programmer", name: name, state: state})', "name") == [
         "steve",
         "alex",
@@ -362,7 +362,7 @@ def test_comparisons(tell, qeval, qvar, query):
     assert qeval("3 >= 3")
     assert qeval("3 >= 2")
     assert qeval("3 > 2")
-    assert qeval("x = 1, x == 1")
+    assert qeval("x = 1 and x == 1")
 
 
 def test_bool_from_external_call(polar, qeval, qvar, query):
@@ -404,10 +404,10 @@ def test_arities(tell, qeval):
 
 
 def test_rule_ordering(tell, qeval, externals):
-    tell("f(_: Foo{}) if cut(), 1 = 2;")
+    tell("f(_: Foo{}) if cut() and 1 = 2;")
     tell('f(_: Foo{name: "test"});')
 
     assert qeval('f(new Foo{ name: "test" }) ')
-    assert qeval('x = new Foo{ name: "test" }, f(x) ')
+    assert qeval('x = new Foo{ name: "test" } and f(x) ')
     assert not qeval('f(new Foo{ name: "nope" }) ')
-    assert not qeval('x = new Foo{ name: "nope" }, f(x) ')
+    assert not qeval('x = new Foo{ name: "nope" } and f(x) ')

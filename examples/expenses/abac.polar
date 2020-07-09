@@ -6,7 +6,7 @@ allow(actor: User, "view", resource: Expense) if
 
 # Accountants can view expenses from their location
 allow(actor: User, "view", resource: Expense) if
-    role(actor, "accountant"),
+    role(actor, "accountant") and
     actor.location = resource.location;
 
 # As an accountant, deirdre can view expenses in the same location
@@ -34,11 +34,11 @@ role(actor: User, role, team: Team) if
 
 # Management hierarchies
 allow(actor: User, "view", resource: Expense) if
-    manages(actor, employee),
+    manages(actor, employee) and
     employee isa User{ name: resource.submitted_by };
 
 manages(manager: User, employee) if
-    employee = manager.employees() |
+    employee = manager.employees() or
     manages(manager.employees(), employee);
 
 # Now Cora can view the expense because Cora manager Bhavik who manager Alice

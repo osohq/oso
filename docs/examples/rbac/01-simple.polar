@@ -5,19 +5,19 @@
 # - defining the custom `role` predicate
 
 role(actor, "employee") if
-    actor = "alice" 
-    | actor = "bhavik" 
-    | actor = "cora";
+    actor = "alice" or
+    actor = "bhavik" or
+    actor = "cora";
 
 role(actor, "accountant") if
-    actor = "deirdre" 
-    | actor = "ebrahim" 
-    | actor = "frantz";
+    actor = "deirdre" or
+    actor = "ebrahim" or
+    actor = "frantz";
 
 role(actor, "admin") if
-    actor = "greta" 
-    | actor = "han" 
-    | actor = "iqbal";
+    actor = "greta" or
+    actor = "han" or
+    actor = "iqbal";
 
 # Employees can submit expenses
 allow(actor, "submit", "expense") if
@@ -35,5 +35,5 @@ allow(actor, "approve", "expense") if
 ?= allow("deirdre", "view", "expense");
 
 # but cannot submit or approve them
-?= !allow("deirdre", "submit", "expense");
-?= !allow("deirdre", "approve", "expense");
+?= not allow("deirdre", "submit", "expense");
+?= not allow("deirdre", "approve", "expense");
