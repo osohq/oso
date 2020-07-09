@@ -368,7 +368,7 @@ pub mod to_polar {
                         )
                     } else {
                         format!(
-                            "{}({}) := {};",
+                            "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
                             format_args(Operator::And, &args, ", "),

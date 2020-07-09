@@ -6,7 +6,7 @@
 
 # simple-rule-start
 # Accountants can view expenses from their location
-allow(actor: User, "view", resource: Expense) :=
+allow(actor: User, "view", resource: Expense) if
     role(actor, "accountant"),
     actor.location = resource.location;
 # simple-rule-end
@@ -24,7 +24,7 @@ role(_: User {name: "deirdre"}, "accountant");
 role(_: User { name: "alice" }, "admin", __: Project { id: 1 });
 
 # Project admins can view expenses of the project
-allow(actor: User, "view", resource: Expense) :=
+allow(actor: User, "view", resource: Expense) if
     role(actor, "admin", new Project { id: resource.project_id });
 # project-rule-end
 
@@ -33,11 +33,11 @@ allow(actor: User, "view", resource: Expense) :=
 role(_: User { name: "bhavik" }, "admin",  __: Organization { name: "ACME" });
 
 # Team roles inherit from Organization roles
-role(actor: User, role, team: Team) :=
+role(actor: User, role, team: Team) if
     role(actor, role, new Organization { id: team.organization_id });
 
 # Project roles inherit from Team roles
-role(actor: User, role, project: Project) :=
+role(actor: User, role, project: Project) if
     role(actor, role, new Team { id: project.team_id });
 # role-inherit-end
 

@@ -13,4 +13,4 @@ employee(company("oso"), person("david", "hatch"));
 
 ?= employee(company("oso"), employee), employee = person("david", "hatch");
 
-osoEmployee(employee) := employee(company("oso"), "employee");
+osoEmployee(employee) if employee(company("oso"), "employee");

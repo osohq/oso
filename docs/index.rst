@@ -26,18 +26,18 @@ Let's look at a quick example of a Polar policy for an expense management applic
 .. code-block:: polar
 
   # An owner of a resource can always read it.
-  allow(user, "read", resource) := is_owner(user, resource);
+  allow(user, "read", resource) if is_owner(user, resource);
 
   # Ownership is defined by resource properties.
-  is_owner(user: User, budget: Budget) := user.id = budget.owner_id;
-  is_owner(user: User, expense: Expense) := user.id = expense.owner_id;
+  is_owner(user: User, budget: Budget) if user.id = budget.owner_id;
+  is_owner(user: User, expense: Expense) if user.id = expense.owner_id;
 
   # Ownership is hierarchical across expenses and budgets.
-  allow(user, "read", expense: Expense) := is_owner(user, expense.budget);
+  allow(user, "read", expense: Expense) if is_owner(user, expense.budget);
 
   # Accountants can approve budgets and expenses.
-  allow(user, "approve", Budget) := user.role = "accountant";
-  allow(user, "approve", Expense) := user.role = "accountant";
+  allow(user, "approve", Budget) if user.role = "accountant";
+  allow(user, "approve", Expense) if user.role = "accountant";
 
 This short policy encodes:
 

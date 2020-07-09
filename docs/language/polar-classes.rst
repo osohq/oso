@@ -80,7 +80,7 @@ other rules we could write::
 Further restrictions, e.g., on the values of certain fields,
 may be added in the bodies::
 
-  allow(user: User, action: Smash, resource: Widget) :=
+  allow(user: User, action: Smash, resource: Widget) if
     user.hammer.name = "Mjölnir";
 
 Ordinary parameters matched via unification may be mixed with
@@ -93,7 +93,7 @@ is determined by the class hierarchy of each argument, considered
 in left-to-right order. This is important if a rule includes a
 ``cut`` operator; e.g.::
 
-  allow(user: Invited, action: Frob, resource: DooDad) :=
+  allow(user: Invited, action: Frob, resource: DooDad) if
     cut();
 
 This says that an ``Invited`` user may ``Frob`` a ``DooDad``,

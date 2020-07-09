@@ -280,12 +280,12 @@ Suppose our app has a user, defined as:
     Now, our allow rule can check for the superuser attribute::
 
 
-      allow(actor, "read", "budget") :=
+      allow(actor, "read", "budget") if
           actor.is_superuser = true;
 
-    In this rule, we have used a body, indicated by the ``:=`` operator. ``user``
+    In this rule, we have used a body, indicated by the ``if`` operator. ``user``
     defines a variable, which is bound to the value of ``actor``. In a rule with a body,
-    the portion of the rule before the ``:=`` operator (called the **head**) must first match.
+    the portion of the rule before the ``if`` operator (called the **head**) must first match.
     Then, the ``body`` portition is evaluated.
 
     This rule will allow any **actor** that is a superuser to ``read`` the ``budget`` resource.
@@ -342,7 +342,7 @@ Suppose our app has a user, defined as:
 
     We can add a new authorization rule using this method::
 
-      allow(actor, "write", "budget") :=
+      allow(actor, "write", "budget") if
           actor.role() = "admin";
 
     This rule states that actors whose role method returns ``admin`` can write to ``budget``.

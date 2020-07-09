@@ -44,8 +44,8 @@ Take a very simple example from the getting started guide. We ended up with two
 
 .. code-block:: polar
 
-    allow(actor, "read", "budget") := role(actor, "guest");
-    allow(actor, "write", "budget") := actor.is_superuser = true;
+    allow(actor, "read", "budget") if role(actor, "guest");
+    allow(actor, "write", "budget") if actor.is_superuser = true;
 
 We are asserting that an actor who is a superuser is allowed to "read" a "budget" resource, and that an admin actor is allowed to "write" a "budget".  
 
@@ -117,7 +117,7 @@ We might want admins to do anything that guests can do, so we write:
 
 .. code-block:: polar
 
-    role(actor, "guest") := role(actor, "admin");
+    role(actor, "guest") if role(actor, "admin");
 
 This says that you can have the "guest" role if you already have the "admin" role.
 With this rule, combined with the earlier rule stating
@@ -181,7 +181,7 @@ We can add the follow lines of Python:
 
     oso = Oso()
 
-    oso.load_str("owner(user: User, expense: Expense) := expense.submitted_by = user.name;")
+    oso.load_str("owner(user: User, expense: Expense) if expense.submitted_by = user.name;")
 
     user = User.by_id(1)
 
@@ -193,7 +193,7 @@ We can add the follow lines of Python:
     expense = Expense.by_id(2)
     assert oso.query("owner", user, expense)
     
-    oso.load_str("allow(user: User, action, expense: Expense) := owner(user, expense);")
+    oso.load_str("allow(user: User, action, expense: Expense) if owner(user, expense);")
 
     # user can read their own expense
     assert oso.allow(user, "read", expense)
