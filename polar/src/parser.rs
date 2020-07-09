@@ -317,4 +317,26 @@ mod tests {
         assert_eq!(term.to_polar(), r#"{} isa {}"#);
         let _term = parse_query("{x: 1} isa {}");
     }
+
+    #[test]
+    fn test_parse_rest_vars() {
+        let q = "[1, 2, *x] = [*rest]";
+        assert_eq!(parse_query(q).to_polar(), q);
+
+        assert!(matches!(
+            super::parse_query(0, "[1, 2, *3] = [*rest]").expect_err("parse error"),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::UnrecognizedToken { .. }),
+                ..
+            }
+        ));
+
+        assert!(matches!(
+            super::parse_query(0, "[1, *x, *y] = [*rest]").expect_err("parse error"),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::UnrecognizedToken { .. }),
+                ..
+            }
+        ));
+    }
 }
