@@ -10,12 +10,12 @@ mother("Apollo", "Leto");
 mother("Artemis", "Leto");
 
 # parent(x, y) ⇒ y is a parent of x.
-parent(x, y) := father(x, y);
-parent(x, y) := mother(x, y);
+parent(x, y) if father(x, y);
+parent(x, y) if mother(x, y);
 
 # grandfather(x, y) ⇒ y is a grandfather of x.
-grandfather(x, y) := parent(x, p), father(p, y);
+grandfather(x, y) if parent(x, p), father(p, y);
 
 # ancestor(x, y) ⇒ y is an ancestor of x.
-ancestor(x, y) := parent(x, y);
-ancestor(x, y) := parent(x, p), ancestor(p, y);
+ancestor(x, y) if parent(x, y);
+ancestor(x, y) if parent(x, p), ancestor(p, y);

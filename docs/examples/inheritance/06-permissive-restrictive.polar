@@ -7,7 +7,7 @@
 # sure the hospital is charging correctly for each service provided.  This would
 # be a more permissive policy (a rule that adds access on top of others).
 
-allow(actor: Actor, "read", resource: Order) :=
+allow(actor: Actor, "read", resource: Order) if
     actor.role = "billing";
 
 # Now, billing dept members can read orders! This rule combines with the other
@@ -16,9 +16,9 @@ allow(actor: Actor, "read", resource: Order) :=
 # More restrictive access is also possible.  What if we only want
 # lab technicians and doctors to be able to read the Lab resource.
 
-allow(actor: Actor, "read", resource: Lab) :=
-    cut(),
-    actor.medical_role = "lab_tech" | actor.medical_role = "doctor",
+allow(actor: Actor, "read", resource: Lab) if
+    cut() and
+    (actor.medical_role = "lab_tech" or actor.medical_role = "doctor") and
     actor.treated(resource.patient);
 
 # This rule relies on two features of Polar:

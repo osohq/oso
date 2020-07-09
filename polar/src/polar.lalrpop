@@ -34,7 +34,7 @@ extern {
         "}" => lexer::Token::RCB,       // }
         "." => lexer::Token::Dot,       // .
         "new" => lexer::Token::New,     // new
-        "!" => lexer::Token::Not,       // !
+        "!" => lexer::Token::Bang,       // !
         "*" => lexer::Token::Mul,       // *
         "/" => lexer::Token::Div,       // /
         "+" => lexer::Token::Add,       // +
@@ -58,6 +58,7 @@ extern {
         "if" => lexer::Token::If,       // if
         "and" => lexer::Token::And,     // and
         "or" => lexer::Token::Or,       // or
+        "not" => lexer::Token::Not,       // not
         "matches" => lexer::Token::Matches,   // matches
     }
 }
@@ -147,10 +148,14 @@ pub Term: Term = {
     <term:DictionaryTerm> => term,
     <start:@L> <op:RewrittenOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
     <start:@L> <pred:Predicate> => Term::new_from_parser(src_id, start, Value::Call(pred)),
-    <start:@L> "[" "]" => Term::new_from_parser(src_id, start, Value::List(vec![])),
-    <start:@L> "[" <exp:TermExp> "]" => {
-        let terms = unwrap_and(exp);
-        Term::new_from_parser(src_id, start, Value::List(terms))
+    <start:@L> "[" <mut terms:(<Term> ",")*> <term:Term?> "]" => {
+        match term {
+            Some(term) => {
+                terms.push(term);
+                Term::new_from_parser(src_id, start, Value::List(terms))
+            },
+            None => Term::new_from_parser(src_id, start, Value::List(terms))
+        }
     }
 };
 
@@ -162,22 +167,22 @@ RewritableOperator: Operator = {
 };
 
 pub RewrittenOperation: Operation = {
-    <op:RewritableOperator> "(" <args:TermExp> ")" => {
-        let args = unwrap_and(args);
+    <op:RewritableOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+
         Operation{operator: op, args: args}
     },
-    <op:RewritableOperator> "(" ")" => {
-        Operation{operator: op, args: vec![]}
-    }
 };
 
 pub Predicate: Predicate = {
-    <name:Name> "(" ")" => {
-        let args = vec![];
-        Predicate{name, args}
-    },
-    <name:Name> "(" <args:TermExp> ")" => {
-        let args = unwrap_and(args);
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
         Predicate{name, args}
     }
 };
@@ -274,8 +279,9 @@ Exp8<T>: Term = {
 }
 
 // !
+Not = {"not"};
 Exp7<T>: Term = {
-    <start:@L> "!" <exp8:Exp8<T>> => {
+    <start:@L> Not <exp8:Exp8<T>> => {
         let args = vec![exp8];
         let op = Operation{operator: Operator::Not, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
@@ -361,7 +367,7 @@ Exp3<T>: Term = {
 
 
 
-Or = {"|", "or"};
+Or = {"or"};
 Exp2<T>: Term = {
     <start:@L> <head:Exp3<T>> Or <mut tail:Exp2<T>> => {
         let args = match &mut tail.value() {
@@ -380,7 +386,7 @@ Exp2<T>: Term = {
     <exp3:Exp3<T>> => exp3
 }
 
-And = {",", "and"};
+And = {"and"};
 Exp1<T>: Term = {
     <start:@L> <head:Exp2<T>> And <mut tail:Exp1<T>> => {
         let args = match &mut tail.value() {
