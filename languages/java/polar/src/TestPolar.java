@@ -50,7 +50,7 @@ public class TestPolar {
         p.loadStr("f(1); ?= f(1);");
         try {
             p.loadStr("?= f(2);");
-        } catch (Error e) {
+        } catch (Exceptions.InlineQueryFailedError e) {
             return;
         }
         throw new Exception("Expected inline query to fail but it didn't.");
@@ -113,8 +113,8 @@ public class TestPolar {
         boolean throwsError = false;
         try {
             p.loadStr("f(a: OtherClass, x) := x = a.id;");
-            p.queryStr("f(1, 2);");
-        } catch (Error e) {
+            p.queryPred("f", List.of(new MyClass("test", 1), new Polar.Variable("x"))).results();
+        } catch (Exceptions.UnregisteredClassError e) {
             throwsError = true;
         }
         if (!throwsError) {
@@ -285,10 +285,8 @@ public class TestPolar {
         Boolean throwsError = false;
         try {
             p.loadFile("wrong.txt");
-        } catch (Error e) {
-            if (e.getMessage().equals("Incorrect Polar file extension")) {
-                throwsError = true;
-            }
+        } catch (Exceptions.PolarFileExtensionError e) {
+            throwsError = true;
         }
         if (!throwsError) {
             throw new Exception("Failed to catch incorrect Polar file extension.");
@@ -305,7 +303,7 @@ public class TestPolar {
         try {
             p.loadFile(tempFile.getPath());
             p.queryStr("f(1)");
-        } catch (Error e) {
+        } catch (Exceptions.ParseError e) {
             // TODO: check error message
             throwsError = true;
         }
@@ -340,7 +338,7 @@ public class TestPolar {
         }
     }
 
-    private static void registerClasses(Polar p) {
+    private static void registerClasses(Polar p) throws Exceptions.DuplicateClassAliasError {
         p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
         p.registerClass(MySubClass.class, "MySubClass", m -> new MySubClass((String) m.get("name"), (int) m.get("id")));
     }

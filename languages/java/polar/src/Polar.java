@@ -19,7 +19,7 @@ public class Polar {
     private Map<String, String> loadQueue; // Map from filename -> file contents
     private Map<Long, Enumeration<Object>> calls;
 
-    public Polar() {
+    public Polar() throws Exceptions.OsoException {
         ffi = new Ffi();
         polarPtr = ffi.polarNew();
         classes = new HashMap<String, Class<Object>>();
@@ -29,8 +29,11 @@ public class Polar {
         calls = new HashMap<Long, Enumeration<Object>>();
     }
 
+    /**
+     * @throws Exceptions.OsoException
+     */
     @Override
-    protected void finalize() {
+    protected void finalize() throws Exceptions.OsoException {
         // Free the Polar FFI object
         ffi.polarFree(polarPtr);
     }
@@ -42,15 +45,17 @@ public class Polar {
      * replace it.
      *
      * @param filename
-     * @throws IOException If unable to open or read the file.
+     * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
+     * @throws IOException                        If unable to open or read the
+     *                                            file.
      */
-    public void loadFile(String filename) throws IOException {
+    public void loadFile(String filename) throws IOException, Exceptions.PolarFileExtensionError {
         Optional<String> ext = Optional.ofNullable(filename).filter(f -> f.contains("."))
                 .map(f -> f.substring(filename.lastIndexOf(".") + 1));
 
         // check file extension
         if (!ext.isPresent() || !ext.get().equals("polar")) {
-            throw new Error("Incorrect Polar file extension");
+            throw new Exceptions.PolarFileExtensionError();
         }
 
         // add file to queue
@@ -60,7 +65,7 @@ public class Polar {
     /**
      * Load all queued files, flushing the {@code loadQueue}
      */
-    public void loadQueuedFiles() {
+    public void loadQueuedFiles() throws Exceptions.OsoException {
         for (String fname : loadQueue.keySet()) {
             loadStr(loadQueue.get(fname), fname);
         }
@@ -70,7 +75,7 @@ public class Polar {
     /**
      * Clear the KB, but maintain all registered classes and calls
      */
-    public void clear() {
+    public void clear() throws Exceptions.OsoException {
         // clear all Queued files
         loadQueue.clear();
 
@@ -90,7 +95,7 @@ public class Polar {
      * @param str      Polar string to be loaded.
      * @param filename Name of the source file.
      */
-    public void loadStr(String str, String filename) {
+    public void loadStr(String str, String filename) throws Exceptions.OsoException {
         ffi.polarLoad(polarPtr, str, filename);
         checkInlineQueries();
     }
@@ -100,7 +105,7 @@ public class Polar {
      *
      * @param str Polar string to be loaded.
      */
-    public void loadStr(String str) {
+    public void loadStr(String str) throws Exceptions.OsoException {
         ffi.polarLoad(polarPtr, str, null);
         checkInlineQueries();
 
@@ -109,13 +114,14 @@ public class Polar {
     /**
      * Confirm that all queued inline queries succeed.
      *
-     * @throws Error On inline query failure.
+     * @throws Exceptions.OsoException           On failed query creation.
+     * @throws Exceptions.InlineQueryFailedError On inline query failure.
      */
-    private void checkInlineQueries() {
+    private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
         Pointer nextQuery = ffi.polarNextInlineQuery(polarPtr);
         while (nextQuery != null) {
             if (!new Query(nextQuery).hasMoreElements()) {
-                throw new Error("Inline query failed");
+                throw new Exceptions.InlineQueryFailedError();
             }
             nextQuery = ffi.polarNextInlineQuery(polarPtr);
         }
@@ -127,7 +133,7 @@ public class Polar {
      * @param queryStr
      * @return Query object.
      */
-    public Query queryStr(String queryStr) {
+    public Query queryStr(String queryStr) throws Exceptions.OsoException {
         clearQueryState();
         loadQueuedFiles();
         return new Query(ffi.polarNewQuery(polarPtr, queryStr));
@@ -140,7 +146,7 @@ public class Polar {
      * @param args
      * @return
      */
-    public Query queryPred(String name, List<Object> args) {
+    public Query queryPred(String name, List<Object> args) throws Exceptions.OsoException {
         clearQueryState();
         loadQueuedFiles();
         String pred = toPolarTerm(new Predicate(name, args)).toString();
@@ -149,8 +155,10 @@ public class Polar {
 
     /**
      * Start the Polar REPL.
+     *
+     * @throws Exceptions.OsoException
      */
-    public void repl() {
+    public void repl() throws Exceptions.OsoException {
         // clear_query_state
         loadQueuedFiles();
         while (true) {
@@ -173,11 +181,13 @@ public class Polar {
      * @param fromPolar lambda function to convert from a
      *                  {@code Map<String, Object>} of parameters to an instance of
      *                  the Java class.
-     * @throws Error if class has already been registered.
+     * @throws Exceptions.DuplicateClassAliasError if class has already been
+     *                                             registered.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar) throws Error {
-        if (classes.containsKey(cls.getName())) {
-            throw new Error("A class named " + cls.getName() + " has already been registered.");
+    public void registerClass(Class cls, Function<Map, Object> fromPolar) throws Exceptions.DuplicateClassAliasError {
+        String name = cls.getName();
+        if (classes.containsKey(name)) {
+            throw new Exceptions.DuplicateClassAliasError(name, classes.get(name).getName(), name);
         }
         classes.put(cls.getName(), cls);
         constructors.put(cls.getName(), fromPolar);
@@ -193,17 +203,28 @@ public class Polar {
      * @param fromPolar lambda function to convert from a
      *                  {@code Map<String, Object>} of parameters to an instance of
      *                  the Java class.
-     * @throws Error if a class has already been registered with the given alias.
+     * @throws Exceptions.DuplicateClassAliasError if a class has already been
+     *                                             registered with the given alias.
      */
-    public void registerClass(Class cls, String alias, Function<Map, Object> fromPolar) throws Error {
+    public void registerClass(Class cls, String alias, Function<Map, Object> fromPolar)
+            throws Exceptions.DuplicateClassAliasError {
         if (classes.containsKey(alias)) {
-            throw new Error("A class named " + alias + " has already been registered.");
+            throw new Exceptions.DuplicateClassAliasError(alias, classes.get(alias).getName(), cls.getName());
         }
         classes.put(alias, cls);
         constructors.put(alias, fromPolar);
     }
 
-    public void registerCall(String attrName, List<Object> args, long callId, long instanceId) {
+    /**
+     *
+     * @param attrName
+     * @param args
+     * @param callId
+     * @param instanceId
+     * @throws Exceptions.InvalidCallError
+     */
+    public void registerCall(String attrName, List<Object> args, long callId, long instanceId)
+            throws Exceptions.InvalidCallError {
         if (calls.containsKey(callId)) {
             return;
         }
@@ -212,9 +233,9 @@ public class Polar {
         for (int i = 0; i < args.size(); i++) {
             argTypes[i] = args.get(i).getClass();
         }
+        Object result = null;
+        Boolean isMethod = true;
         try {
-            Object result = null;
-            Boolean isMethod = true;
             try {
                 Method method = instance.getClass().getMethod(attrName, argTypes);
                 result = method.invoke(instance, args.toArray());
@@ -226,28 +247,33 @@ public class Polar {
                     Field field = instance.getClass().getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException e) {
-                    // TODO: Ruby lib rescues this error, make sure behavior is consistent
-                    throw new Error("No such attribute " + attrName + " on class " + instance.getClass().getName());
+                    // do nothing, let result = null. This will cause query to fail.
                 }
             }
-            Enumeration<Object> enumResult;
-            if (result instanceof Enumeration) {
-                // TODO: test this
-                enumResult = (Enumeration<Object>) result;
-            } else {
-                enumResult = Collections.enumeration(new ArrayList<Object>(Arrays.asList(result)));
-            }
-            calls.put(callId, enumResult);
-
         } catch (IllegalAccessException e) {
-            throw new Error("Illegal access for attribute " + attrName + " on class " + instance.getClass().getName());
+            throw new Exceptions.InvalidCallError("Caused by: " + e.toString());
         } catch (InvocationTargetException e) {
-            throw new Error("Invocation target exception for attribute " + attrName + " on class "
-                    + instance.getClass().getName());
+            throw new Exceptions.InvalidCallError("Caused by: " + e.toString());
         }
+        Enumeration<Object> enumResult;
+        if (result instanceof Enumeration) {
+            // TODO: test this
+            enumResult = (Enumeration<Object>) result;
+        } else {
+            enumResult = Collections.enumeration(new ArrayList<Object>(Arrays.asList(result)));
+        }
+        calls.put(callId, enumResult);
+
     }
 
-    public JSONObject nextCallResult(long callId) throws NoSuchElementException {
+    /**
+     *
+     * @param callId
+     * @return
+     * @throws NoSuchElementException
+     * @throws Exceptions.OsoException
+     */
+    public JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
         return toPolarTerm(calls.get(callId).nextElement());
     }
 
@@ -260,14 +286,14 @@ public class Polar {
      * @param id
      * @return Object
      */
-    public Object makeInstance(String clsName, Map fields, long id) {
+    public Object makeInstance(String clsName, Map fields, long id) throws Exceptions.OsoException {
         Function<Map, Object> constructor = constructors.get(clsName);
         Object instance;
         if (constructor != null) {
             instance = constructors.get(clsName).apply(fields);
         } else {
             // TODO: default constructor
-            throw new Error("No constructor found for class " + clsName);
+            throw new Exceptions.MissingConstructorError(clsName);
         }
         cacheInstance(instance, id);
         return instance;
@@ -280,7 +306,7 @@ public class Polar {
      * @param id
      * @return Long
      */
-    public Long cacheInstance(Object instance, Long id) {
+    public Long cacheInstance(Object instance, Long id) throws Exceptions.OsoException {
         if (id == null) {
             id = ffi.polarGetExternalId(polarPtr);
         }
@@ -296,7 +322,8 @@ public class Polar {
      *             "value": _}}
      * @return Object
      */
-    public Object toJava(JSONObject term) {
+    public Object toJava(JSONObject term)
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
         JSONObject value = term.getJSONObject("value");
         String tag = value.keys().next();
         switch (tag) {
@@ -332,7 +359,7 @@ public class Polar {
                 if (instances.containsKey(id)) {
                     return instances.get(id);
                 } else {
-                    throw new Error("Unregistered instance");
+                    throw new Exceptions.UnregisteredInstanceError(id);
                 }
             case "Call":
                 // TODO: implement helper to go from Polar list -> Java list and back
@@ -343,7 +370,7 @@ public class Polar {
                 }
                 return new Predicate(value.getJSONObject(tag).getString("name"), args);
             default:
-                throw new Error("Unexpected Polar Type");
+                throw new Exceptions.UnexpectedPolarTypeError(tag);
         }
     }
 
@@ -354,7 +381,7 @@ public class Polar {
      * @return JSONObject Polar term of form: {@code {"id": _, "offset": _, "value":
      *         _}}.
      */
-    public JSONObject toPolarTerm(Object value) {
+    public JSONObject toPolarTerm(Object value) throws Exceptions.OsoException {
         // Build Polar value
         JSONObject jVal = new JSONObject();
         if (value.getClass() == Boolean.class) {
@@ -406,11 +433,17 @@ public class Polar {
         return term;
     }
 
-    private Class getPolarClass(String name) {
+    /**
+     *
+     * @param name
+     * @return
+     * @throws Exceptions.UnregisteredClassError
+     */
+    private Class getPolarClass(String name) throws Exceptions.UnregisteredClassError {
         if (classes.containsKey(name)) {
             return classes.get(name);
         } else {
-            throw new Error("Unregistered class error.");
+            throw new Exceptions.UnregisteredClassError(name);
         }
     }
 
@@ -423,13 +456,13 @@ public class Polar {
          *
          * @param queryPtr Pointer to the FFI query instance.
          */
-        public Query(Pointer queryPtr) {
+        public Query(Pointer queryPtr) throws Exceptions.OsoException {
             this.queryPtr = queryPtr;
             next = nextResult();
         }
 
         @Override
-        protected void finalize() {
+        protected void finalize() throws Exceptions.OsoException {
             ffi.queryFree(queryPtr);
         }
 
@@ -441,7 +474,11 @@ public class Polar {
         @Override
         public HashMap<String, Object> nextElement() {
             HashMap<String, Object> ret = next;
-            next = nextResult();
+            try {
+                next = nextResult();
+            } catch (Exception e) {
+                throw new NoSuchElementException("Caused by: e.toString()");
+            }
             return ret;
         }
 
@@ -453,8 +490,9 @@ public class Polar {
          * Generate the next Query result.
          *
          * @return
+         * @throws Exceptions.OsoException
          */
-        private HashMap<String, Object> nextResult() {
+        private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
             while (true) {
                 String eventStr = ffi.polarNextQueryEvent(queryPtr);
                 String kind;
@@ -484,7 +522,7 @@ public class Polar {
                     case "MakeExternal":
                         Long id = data.getLong("instance_id");
                         if (instances.containsKey(id)) {
-                            throw new Error("Duplicate instance registration.");
+                            throw new Exceptions.DuplicateInstanceRegistrationError(id);
                         }
                         String clsName = data.getJSONObject("instance").getString("tag");
                         JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields")
@@ -545,7 +583,7 @@ public class Polar {
                         ffi.polarQuestionResult(queryPtr, callId, answer);
                         break;
                     default:
-                        throw new Error("Unimplemented event type: " + kind);
+                        throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
                 }
             }
 
