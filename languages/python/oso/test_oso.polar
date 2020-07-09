@@ -1,10 +1,10 @@
 allow(actor, action, resource) if
-    allowRole(role, action, resource),
+    allowRole(role, action, resource) and
     actorInRole(actor, role, resource);
 
 allow(token, action, resource) if
-    jwt = new Jwt{token: token},
-    jwt.attributes = attributes,
+    jwt = new Jwt{token: token} and
+    jwt.attributes = attributes and
     allow(attributes, action, resource);
 
 allow(_: {sub: sub}, action, resource) if

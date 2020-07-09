@@ -17,8 +17,8 @@ allow(actor: Actor, "read", resource: Order) if
 # lab technicians and doctors to be able to read the Lab resource.
 
 allow(actor: Actor, "read", resource: Lab) if
-    cut(),
-    actor.medical_role = "lab_tech" | actor.medical_role = "doctor",
+    cut() and
+    (actor.medical_role = "lab_tech" or actor.medical_role = "doctor") and
     actor.treated(resource.patient);
 
 # This rule relies on two features of Polar:

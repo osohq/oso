@@ -5,20 +5,20 @@
 # - representing hierachies
 
 allow(actor: User, "view", resource: Expense) if
-    employee = actor.employees,
+    employee = actor.employees and
     employee.name = resource.submitted_by;
 
 # start-manages-rule
 allow(actor: User, "view", resource: Expense) if
-    manages(actor, employee),
+    manages(actor, employee) and
     employee.name = resource.submitted_by;
 # end-manages-rule
 
 # start-hierarchy-rule
 # Management hierarchies
 manages(manager: User, employee) if
-    employee = manager.employees() |
-    manages(manager.employees(), employee);
+    employee = manager.employees()
+    or manages(manager.employees(), employee);
 
 
 # Now Cora can view the expense because Cora manages Bhavik who manages Alice

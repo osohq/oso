@@ -276,10 +276,10 @@ same predicate are *alternatives*: ``y`` is a parent of ``x``
 We can go one level deeper, if we wish::
 
   # grandfather(x, y) ⇒ y is a grandfather of x.
-  grandfather(x, y) if parent(x, p), father(p, y);
+  grandfather(x, y) if parent(x, p) and father(p, y);
 
 This rule has two conditions in its body, separated by the
-conjunction operator ``,`` (read "and"). It says that ``y``
+conjunction operator ``and``. It says that ``y``
 is a grandfather of ``x`` *if* there is some ``p`` that
 is the parent of ``x`` *and* ``y`` is the father of that
 ``p``. For example::
@@ -292,7 +292,7 @@ We can also write recursive rules::
 
   # ancestor(x, y) ⇒ y is an ancestor of x.
   ancestor(x, y) if parent(x, y);
-  ancestor(x, y) if parent(x, p), ancestor(p, y);
+  ancestor(x, y) if parent(x, p) and ancestor(p, y);
 
 This says that ``y`` is an ancestor of ``x`` *if* ``y`` is either a
 parent of ``x`` *or* they are an ancestor of a parent ``p`` of ``x``::
@@ -360,9 +360,9 @@ it is **bound** to the other side, and the result is true; otherwise, the
 two sides are compared for equality (element- or field-wise for compound
 value types like lists and dictionaries), with variables replaced by
 their values. For example, (even without any rules) the conjunctive
-query ``x = 1, x = 1`` succeeds, because the first unification binds
+query ``x = 1 and x = 1`` succeeds, because the first unification binds
 the variable ``x`` to the value ``1``, so the second unification
-is equivalent to ``1 = 1``, which is true. But the query ``x = 1, x = 2``
+is equivalent to ``1 = 1``, which is true. But the query ``x = 1 and x = 2``
 is false, because the second unification is equivalent to ``1 = 2``.
 
 We can now state precisely how the search procedure works for predicates.

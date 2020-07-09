@@ -8,9 +8,9 @@ employee(company("oso"), person("david", "hatch"));
 
 ?= person("sam", "scott");
 
-?= person(first, last), first = "sam", last = "scott";
-?= person(first, last), first = "david", last = "hatch";
+?= person(first, last) and first = "sam" and last = "scott";
+?= person(first, last) and first = "david" and last = "hatch";
 
-?= employee(company("oso"), employee), employee = person("david", "hatch");
+?= employee(company("oso"), employee) and employee = person("david", "hatch");
 
 osoEmployee(employee) if employee(company("oso"), "employee");

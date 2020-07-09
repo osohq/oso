@@ -1,5 +1,5 @@
 can_read_patient_data(actor, "read", resource) if
-    actor.role = "medical_staff",
+    actor.role = "medical_staff" and
     actor.treated(resource.patient) = true;
 
 ## START MARKER ##

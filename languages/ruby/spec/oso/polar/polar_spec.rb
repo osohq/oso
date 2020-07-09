@@ -269,7 +269,7 @@ RSpec.describe Oso::Polar::Polar do
       expect(qvar(subject, 'new Foo{}.b() = x', 'x', one: true)).to eq('b')
       expect(qvar(subject, 'new Foo{}.c = x', 'x', one: true)).to eq('c')
       expect(qvar(subject, 'new Foo{}.c() = x', 'x', one: true)).to eq('c')
-      expect(qvar(subject, 'new Foo{} = f, f.a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo{} = f and f.a() = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'new Foo{}.bar().y() = x', 'x', one: true)).to eq('y')
       expect(qvar(subject, 'new Foo{}.e = x', 'x')).to eq([[1, 2, 3]])
       expect(qvar(subject, 'new Foo{}.f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
@@ -445,7 +445,7 @@ RSpec.describe Oso::Polar::Polar do
   context 'when loading a Polar string' do
     context 'with inline queries' do
       it 'succeeds if all inline queries succeed' do
-        subject.load_str('f(1); f(2); ?= f(1); ?= !f(3);')
+        subject.load_str('f(1); f(2); ?= f(1); ?= not f(3);')
       end
 
       it 'fails if an inline query fails' do

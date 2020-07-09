@@ -33,8 +33,8 @@ For example, given the following Polar policy:
 .. code-block:: polar
 
   has_grandchild_called(grandparent: Person, name) if
-      child in grandparent.children,
-      grandchild in child.children,
+      child in grandparent.children and
+      grandchild in child.children and
       grandchild.name = name;
 
 This can potentially exhibit this N+1 behaviour. It will first call
@@ -73,8 +73,8 @@ For example:
 .. code-block:: polar
 
     has_grandchild_called(grandparent: Person, name) if
-        children = grandparent.children, # gets the _list_ of children
-        grandchild in Person.batch_lookup_children(children),
+        children = grandparent.children and # gets the _list_ of children
+        grandchild in Person.batch_lookup_children(children) and
         grandchild.name = name;
 
 This has the benefit of being the simplest, and most explicit. But does not
@@ -95,8 +95,8 @@ For example, in a Django application you might write:
 .. code-block:: polar
 
     has_grandchild_called(grandparent: Person, name) if
-        child in grandparent.children.prefetch_related("children"),
-        grandchild in child.children.all(),
+        child in grandparent.children.prefetch_related("children") and
+        grandchild in child.children.all() and
         grandchild.name = name;
 
 Since oso is able to work directly with native objects, using the

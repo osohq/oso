@@ -12,21 +12,21 @@
 #       return lookup_role(self.id)
 
 role(actor: User, "employee") if
-    actor.name = "alice"
-    | actor.name = "bhavik"
-    | actor.name = "cora"
-    | role(actor, "accountant");
+    actor.name = "alice" or
+    actor.name = "bhavik" or
+    actor.name = "cora" or
+    role(actor, "accountant");
 
 role(actor: User, "accountant") if
-    actor.name = "deirdre" 
-    | actor.name = "ebrahim" 
-    | actor.name = "frantz"
-    | role(actor, "admin");
+    actor.name = "deirdre" or
+    actor.name = "ebrahim" or
+    actor.name = "frantz" or
+    role(actor, "admin");
 
 role(actor: User, "admin") if
-    actor.name = "greta" 
-    | actor.name = "han"
-    | actor.name = "iqbal";
+    actor.name = "greta" or
+    actor.name = "han" or
+    actor.name = "iqbal";
 
 
 

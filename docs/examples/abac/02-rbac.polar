@@ -7,7 +7,7 @@
 # simple-rule-start
 # Accountants can view expenses from their location
 allow(actor: User, "view", resource: Expense) if
-    role(actor, "accountant"),
+    role(actor, "accountant") and
     actor.location = resource.location;
 # simple-rule-end
 
@@ -43,4 +43,4 @@ role(actor: User, role, project: Project) if
 
 # As an admin of ACME, Bhavik can view expenses in the org
 ?= allow(new User { name: "bhavik" }, "view", new Expense { id: 0 });
-?= !allow(new User { name: "cora" }, "view", new Expense { id: 0 });
+?= not allow(new User { name: "cora" }, "view", new Expense { id: 0 });
