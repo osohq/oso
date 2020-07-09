@@ -1,4 +1,3 @@
-import jnr.ffi.Pointer;
 import org.json.*;
 
 import java.io.IOException;
@@ -11,7 +10,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 
 public class Polar {
-    private Pointer polarPtr;
+    private Ffi.PolarPtr polarPtr;
     private Ffi ffi;
     private Map<String, Class<Object>> classes;
     private Map<String, Function<Map, Object>> constructors;
@@ -29,13 +28,9 @@ public class Polar {
         calls = new HashMap<Long, Enumeration<Object>>();
     }
 
-    /**
-     * @throws Exceptions.OsoException
-     */
     @Override
-    protected void finalize() throws Exceptions.OsoException {
-        // Free the Polar FFI object
-        ffi.polarFree(polarPtr);
+    protected void finalize() {
+        polarPtr.free();
     }
 
     /**
@@ -80,7 +75,7 @@ public class Polar {
         loadQueue.clear();
 
         // Replace Polar instance
-        ffi.polarFree(polarPtr);
+        polarPtr.free();
         polarPtr = ffi.polarNew();
     }
 
@@ -118,12 +113,18 @@ public class Polar {
      * @throws Exceptions.InlineQueryFailedError On inline query failure.
      */
     private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
-        Pointer nextQuery = ffi.polarNextInlineQuery(polarPtr);
-        while (nextQuery != null) {
-            if (!new Query(nextQuery).hasMoreElements()) {
-                throw new Exceptions.InlineQueryFailedError();
+        Ffi.QueryPtr nextQuery = ffi.polarNextInlineQuery(polarPtr);
+        try {
+            while (nextQuery != null) {
+                if (!new Query(nextQuery).hasMoreElements()) {
+                    throw new Exceptions.InlineQueryFailedError();
+                }
+                nextQuery.free();
+                nextQuery = ffi.polarNextInlineQuery(polarPtr);
             }
-            nextQuery = ffi.polarNextInlineQuery(polarPtr);
+        } catch (Exception e) {
+            nextQuery.free();
+            throw e;
         }
     }
 
@@ -447,23 +448,22 @@ public class Polar {
         }
     }
 
+    protected int getQueryCount() {
+        return ffi.queryCounter;
+    }
+
     public class Query implements Enumeration<HashMap<String, Object>> {
         private HashMap<String, Object> next;
-        private Pointer queryPtr;
+        private Ffi.QueryPtr queryPtr;
 
         /**
          * Construct a new Query object.
          *
          * @param queryPtr Pointer to the FFI query instance.
          */
-        public Query(Pointer queryPtr) throws Exceptions.OsoException {
+        public Query(Ffi.QueryPtr queryPtr) throws Exceptions.OsoException {
             this.queryPtr = queryPtr;
             next = nextResult();
-        }
-
-        @Override
-        protected void finalize() throws Exceptions.OsoException {
-            ffi.queryFree(queryPtr);
         }
 
         @Override
@@ -483,7 +483,8 @@ public class Polar {
         }
 
         public List<HashMap<String, Object>> results() {
-            return Collections.list(this);
+            List<HashMap<String, Object>> results = Collections.list(this);
+            return results;
         }
 
         /**
@@ -493,98 +494,104 @@ public class Polar {
          * @throws Exceptions.OsoException
          */
         private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
-            while (true) {
-                String eventStr = ffi.polarNextQueryEvent(queryPtr);
-                String kind;
-                JSONObject data;
-                try {
-                    JSONObject event = new JSONObject(eventStr);
-                    kind = event.keys().next();
-                    data = event.getJSONObject(kind);
-                } catch (JSONException e) {
-                    // TODO: this sucks, we should have a consistent serialization format
-                    kind = eventStr.replace("\"", "");
-                    data = null;
-                }
+            try {
+                while (true) {
+                    String eventStr = ffi.polarNextQueryEvent(queryPtr);
+                    String kind;
+                    JSONObject data;
+                    try {
+                        JSONObject event = new JSONObject(eventStr);
+                        kind = event.keys().next();
+                        data = event.getJSONObject(kind);
+                    } catch (JSONException e) {
+                        // TODO: this sucks, we should have a consistent serialization format
+                        kind = eventStr.replace("\"", "");
+                        data = null;
+                    }
 
-                switch (kind) {
-                    case "Done":
-                        return null;
-                    case "Result":
-                        HashMap<String, Object> results = new HashMap<String, Object>();
-                        JSONObject bindings = data.getJSONObject("bindings");
+                    switch (kind) {
+                        case "Done":
+                            queryPtr.free();
+                            return null;
+                        case "Result":
+                            HashMap<String, Object> results = new HashMap<String, Object>();
+                            JSONObject bindings = data.getJSONObject("bindings");
 
-                        for (String key : bindings.keySet()) {
-                            Object val = toJava(bindings.getJSONObject(key));
-                            results.put(key, val);
-                        }
-                        return results;
-                    case "MakeExternal":
-                        Long id = data.getLong("instance_id");
-                        if (instances.containsKey(id)) {
-                            throw new Exceptions.DuplicateInstanceRegistrationError(id);
-                        }
-                        String clsName = data.getJSONObject("instance").getString("tag");
-                        JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields")
-                                .getJSONObject("fields");
-                        Map<String, Object> fields = new HashMap<String, Object>();
-                        for (String k : jFields.keySet()) {
-                            fields.put(k, toJava(jFields.getJSONObject(k)));
-                        }
-                        makeInstance(clsName, fields, id);
-                        break;
-                    case "ExternalCall":
-                        long callId = data.getLong("call_id");
-                        long instanceId = data.getLong("instance_id");
-                        String attrName = data.getString("attribute");
-                        JSONArray jArgs = data.getJSONArray("args");
-                        List<Object> args = new ArrayList<Object>();
-                        for (int i = 0; i < jArgs.length(); i++) {
-                            args.add(toJava(jArgs.getJSONObject(i)));
-                        }
-                        registerCall(attrName, args, callId, instanceId);
-                        String result;
-                        try {
-                            result = nextCallResult(callId).toString();
-                        } catch (NoSuchElementException e) {
-                            result = null;
-                        }
-                        ffi.polarCallResult(queryPtr, callId, result);
-                        break;
-                    case "ExternalIsa":
-                        instanceId = data.getLong("instance_id");
-                        callId = data.getLong("call_id");
-                        String classTag = data.getString("class_tag");
-                        Class cls = getPolarClass(classTag);
-                        Object instance = instances.get(instanceId);
-                        int answer = classes.containsKey(classTag) && cls.isInstance(instance) ? 1 : 0;
-                        ffi.polarQuestionResult(queryPtr, callId, answer);
-                        break;
-                    case "ExternalIsSubSpecializer":
-                        instanceId = data.getLong("instance_id");
-                        callId = data.getLong("call_id");
-                        instance = instances.get(instanceId);
-                        cls = instance.getClass();
-                        Class leftClass = getPolarClass(data.getString("left_class_tag"));
-                        Class rightClass = getPolarClass(data.getString("right_class_tag"));
-
-                        answer = 0;
-                        if (leftClass.isInstance(instance) || rightClass.isInstance(instance)) {
-                            while (cls != null) {
-                                if (cls.equals(leftClass)) {
-                                    answer = 1;
-                                    break;
-                                } else if (cls.equals(rightClass)) {
-                                    break;
-                                }
-                                cls = cls.getSuperclass();
+                            for (String key : bindings.keySet()) {
+                                Object val = toJava(bindings.getJSONObject(key));
+                                results.put(key, val);
                             }
-                        }
-                        ffi.polarQuestionResult(queryPtr, callId, answer);
-                        break;
-                    default:
-                        throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
+                            return results;
+                        case "MakeExternal":
+                            Long id = data.getLong("instance_id");
+                            if (instances.containsKey(id)) {
+                                throw new Exceptions.DuplicateInstanceRegistrationError(id);
+                            }
+                            String clsName = data.getJSONObject("instance").getString("tag");
+                            JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields")
+                                    .getJSONObject("fields");
+                            Map<String, Object> fields = new HashMap<String, Object>();
+                            for (String k : jFields.keySet()) {
+                                fields.put(k, toJava(jFields.getJSONObject(k)));
+                            }
+                            makeInstance(clsName, fields, id);
+                            break;
+                        case "ExternalCall":
+                            long callId = data.getLong("call_id");
+                            long instanceId = data.getLong("instance_id");
+                            String attrName = data.getString("attribute");
+                            JSONArray jArgs = data.getJSONArray("args");
+                            List<Object> args = new ArrayList<Object>();
+                            for (int i = 0; i < jArgs.length(); i++) {
+                                args.add(toJava(jArgs.getJSONObject(i)));
+                            }
+                            registerCall(attrName, args, callId, instanceId);
+                            String result;
+                            try {
+                                result = nextCallResult(callId).toString();
+                            } catch (NoSuchElementException e) {
+                                result = null;
+                            }
+                            ffi.polarCallResult(queryPtr, callId, result);
+                            break;
+                        case "ExternalIsa":
+                            instanceId = data.getLong("instance_id");
+                            callId = data.getLong("call_id");
+                            String classTag = data.getString("class_tag");
+                            Class cls = getPolarClass(classTag);
+                            Object instance = instances.get(instanceId);
+                            int answer = classes.containsKey(classTag) && cls.isInstance(instance) ? 1 : 0;
+                            ffi.polarQuestionResult(queryPtr, callId, answer);
+                            break;
+                        case "ExternalIsSubSpecializer":
+                            instanceId = data.getLong("instance_id");
+                            callId = data.getLong("call_id");
+                            instance = instances.get(instanceId);
+                            cls = instance.getClass();
+                            Class leftClass = getPolarClass(data.getString("left_class_tag"));
+                            Class rightClass = getPolarClass(data.getString("right_class_tag"));
+
+                            answer = 0;
+                            if (leftClass.isInstance(instance) || rightClass.isInstance(instance)) {
+                                while (cls != null) {
+                                    if (cls.equals(leftClass)) {
+                                        answer = 1;
+                                        break;
+                                    } else if (cls.equals(rightClass)) {
+                                        break;
+                                    }
+                                    cls = cls.getSuperclass();
+                                }
+                            }
+                            ffi.polarQuestionResult(queryPtr, callId, answer);
+                            break;
+                        default:
+                            throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
+                    }
                 }
+            } catch (Exception e) {
+                queryPtr.free();
+                throw e;
             }
 
         }
