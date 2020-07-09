@@ -17,9 +17,9 @@ The debugger can be entered through two mechanisms:
      your Polar file. The debugger will be entered when that rule body is
      evaluated by the Polar engine. For example::
 
-       myRule() := debug(), 1 = 0;
+       myRule() if debug() and 1 = 0;
 
-  2. In the REPL, issue a query of the form: ``debug(), <query>``. This will
+  2. In the REPL, issue a query of the form: ``debug() and <query>``. This will
      enter the debugger before starting the query.
 
 Entering the debugger will pause evaluation of the policy, and a command prompt
@@ -75,9 +75,9 @@ The Polar file used in the following examples looks like this:
 
 .. code-block:: polar
 
-  a() := debug(), b(), c(), d();
+  a() if debug() and b() and c() and d();
   b();
-  c() := debug();
+  c() if debug();
   d();
 
 ``s[tep]``
@@ -88,15 +88,15 @@ Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
 .. code-block:: terminal
 
   > line
-  003: c() := debug();
+  003: c() if debug();
               ^
   > step
   PopQuery(debug)
   > step
   PopQuery(debug)
   > line
-  001: a() := debug(), b(), c(), d();
-                            ^
+  001: a() if debug() and b() and c() and d();
+                                  ^
 
 ``c[ontinue]`` or ``q[uit]``
 ----------------------------
@@ -106,8 +106,8 @@ Continue evaluation.
 .. code-block:: terminal
 
   > line
-  001: a() := debug(), b(), c(), d();
-                            ^
+  001: a() if debug() and b() and c() and d();
+                                  ^
   > continue
   [exit]
 
@@ -120,22 +120,22 @@ Continue evaluation until the next query.
 
   Welcome to the debugger!
   > line
-  001: a() := debug(), b(), c(), d();
+  001: a() if debug() and b() and c() and d();
               ^
   > over
-  001: a() := debug(), b(), c(), d();
-                       ^
+  001: a() if debug() and b() and c() and d();
+                          ^
   > over
-  001: a() := debug(), b(), c(), d();
-                            ^
+  001: a() if debug() and b() and c() and d();
+                                  ^
   > over
   Welcome to the debugger!
   > line
-  003: c() := debug();
+  003: c() if debug();
               ^
   > over
-  001: a() := debug(), b(), c(), d();
-                                 ^
+  001: a() if debug() and b() and c() and d();
+                                          ^
   > over
   [exit]
 
@@ -149,16 +149,16 @@ sibling of the parent query (if one exists).
 
   Welcome to the debugger!
   > line
-  001: a() := debug(), b(), c(), d();
+  001: a() if debug() and b() and c() and d();
               ^
   > out
   Welcome to the debugger!
   > line
-  003: c() := debug();
+  003: c() if debug();
               ^
   > out
-  001: a() := debug(), b(), c(), d();
-                                 ^
+  001: a() if debug() and b() and c() and d();
+                                          ^
   > out
   [exit]
 
@@ -169,9 +169,9 @@ The Polar file used in the following examples looks like this:
 
 .. code-block:: polar
 
-  a() := debug(), b(), c(), d();
+  a() if debug() and b() and c() and d();
   b();
-  c() := debug();
+  c() if debug();
   d();
 
 ``goals``
@@ -183,7 +183,7 @@ Print current stack of goals.
 
   Welcome to the debugger!
   > line
-  001: a() := debug(), b(), c(), d();
+  001: a() if debug() and b() and c() and d();
               ^
   > goals
   PopQuery(a())
@@ -202,12 +202,12 @@ lines of additional context above and below it.
 .. code-block:: terminal
 
   > line
-  003: c() := debug();
+  003: c() if debug();
               ^
   > line 2
-  001: a() := debug(), b(), c(), d();
+  001: a() if debug() and b() and c() and d();
   002: b();
-  003: c() := debug();
+  003: c() if debug();
               ^
   004: d();
 
@@ -219,11 +219,11 @@ Print current stack of queries.
 .. code-block:: terminal
 
   > line
-  001: a() := debug(), b(), c(), d();
+  001: a() if debug() and b() and c() and d();
               ^
   > queries
   a()
-  debug(), b(), c(), d()
+  debug() and b() and c() and d()
   debug()
 
 Variables
@@ -233,7 +233,7 @@ The Polar file used in the following examples looks like this:
 
 .. code-block:: polar
 
-  a() := x = y, y = z, z = 3, debug();
+  a() if x = y and y = z and z = 3 and debug();
 
 ``var [<var> ...]``
 -----------------
@@ -249,7 +249,7 @@ the current scope, print ``<unbound>``.
 .. code-block:: terminal
 
   > line
-  001: a() := x = y, y = z, z = 3, debug();
+  001: a() if x = y and y = z and z = 3 and debug();
                                    ^
   > var
   _y_22, _x_21, _z_23
@@ -268,8 +268,8 @@ Print all variable bindings in the current scope.
 .. code-block:: terminal
 
   > line
-  001: a() := x = y, y = z, z = 3, debug();
-                                   ^
+  001: a() if x = y and y = z and z = 3 and debug();
+                                            ^
   > bindings
   _x_21 = _y_22
   _y_22 = _z_23

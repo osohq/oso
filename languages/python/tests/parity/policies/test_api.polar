@@ -1,44 +1,44 @@
-allow(actor, action, resource) :=
-    actorInRole(actor, role, resource),
+allow(actor, action, resource) if
+    actorInRole(actor, role, resource) and
     allowRole(role, action, resource);
 
-actorInRole(actor, role, resource: Widget) :=
+actorInRole(actor, role, resource: Widget) if
     role = resource.company.role(actor);
 
-allow(actor, "get", _: Http{path: path}) :=
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+allow(actor, "get", _: Http{path: path}) if
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
     allow(actor, "get", new Widget{id: id});
 
-allow(actor, "post", _: Http{path: path}) :=
-    new PathMapper{template: "/widget/"}.map(path) = {},
+allow(actor, "post", _: Http{path: path}) if
+    new PathMapper{template: "/widget/"}.map(path) = {} and
     allow(actor, "create", new Widget{});
 
-allow(actor, "what", _: Http{path: path}) :=
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+allow(actor, "what", _: Http{path: path}) if
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
     allow(actor, "unparameterised_get", new Widget{id: id});
 
-allow(actor, "what", _: Http{path: path, query: {param: "foo"}}) :=
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id},
+allow(actor, "what", _: Http{path: path, query: {param: "foo"}}) if
+    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
     allow(actor, "parameterised_get", new Widget{id: id});
 
-allow(actor, "get", resource: Widget) := resource.frob("Widget") = x;
-allow(actor, "get", resource: DooDad) := resource.frob("DooDad") = x;
+allow(actor, "get", resource: Widget) if resource.frob("Widget") = x;
+allow(actor, "get", resource: DooDad) if resource.frob("DooDad") = x;
 
 # Frobbing a Widget writes an entry into a global frobbed list,
 # which can then be checked to ensure correct method ordering.
 # See test_allow, test_method_resolution_order, test_cut.
-allow_with_cut(actor, "get", resource: Widget) := cut(), resource.frob("Widget") = x;
-allow_with_cut(actor, "get", resource: DooDad) := cut(), resource.frob("DooDad") = x;
+allow_with_cut(actor, "get", resource: Widget) if cut() and resource.frob("Widget") = x;
+allow_with_cut(actor, "get", resource: DooDad) if cut() and resource.frob("DooDad") = x;
 
 allowRole("admin", "create", resource: Widget);
 
-allow(actor: Actor, "frob", resource: Widget) :=
-    actor.company.id = resource.company.id,
-    actor.company.default_role = resource.company.default_role,
+allow(actor: Actor, "frob", resource: Widget) if
+    actor.company.id = resource.company.id and
+    actor.company.default_role = resource.company.default_role and
     actor.company.roles = resource.company.roles;
 
 # for testing resource mappings with query parameters
-allow(actor, "parameterised_get", resource: Widget) :=
+allow(actor, "parameterised_get", resource: Widget) if
     resource.id = "12";
 
 # When choosing which `checkResource` is more specific, will compare
@@ -47,20 +47,20 @@ allow(actor, "parameterised_get", resource: Widget) :=
 #
 # The `is_subspecializer` check compares the application class of `resource`
 # This test checks that works okay.
-allow_two(actor, action, resource) := checkResource(_x, resource);
+allow_two(actor, action, resource) if checkResource(_x, resource);
 checkResource(1, resource: Widget); # two slightly different specs so need to check
 checkResource("1", resource: Widget); # which to prioritise
 
 ?= allow_two(_actor, _action, new Widget{});
 
 # for testing lists
-allow(actor: Actor, "invite", resource: Widget) :=
+allow(actor: Actor, "invite", resource: Widget) if
     actor.group = "social";
 
-allow(actor: Actor, "keep", resource: Widget) :=
-    actor.widget.id = resource.id,
+allow(actor: Actor, "keep", resource: Widget) if
+    actor.widget.id = resource.id and
     actor.widget.name = resource.name;
 
 # for testing iter
-allow(actor: Actor, "can_have", _: Widget{name: "stapler"}) :=
+allow(actor: Actor, "can_have", _: Widget{name: "stapler"}) if
     actor.companies_iter isa Company{id: "Initech"};

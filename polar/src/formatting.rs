@@ -237,7 +237,7 @@ pub mod to_polar {
         fn to_polar(&self) -> String {
             use Operator::*;
             match self {
-                Not => "!",
+                Not => "not",
                 Mul => "*",
                 Div => "/",
                 Add => "+",
@@ -248,8 +248,8 @@ pub mod to_polar {
                 Neq => "!=",
                 Gt => ">",
                 Lt => "<",
-                Or => "|",
-                And => ",",
+                Or => "or",
+                And => "and",
                 New => "new",
                 Dot => ".",
                 Unify => "=",
@@ -302,7 +302,7 @@ pub mod to_polar {
                 }
                 // Unary operators
                 Not => format!(
-                    "{}{}",
+                    "{} {}",
                     self.operator.to_polar(),
                     to_polar_parens(self.operator, &self.args[0])
                 ),
@@ -319,7 +319,7 @@ pub mod to_polar {
                 And => format_args(
                     self.operator,
                     &self.args,
-                    &format!("{} ", self.operator.to_polar()),
+                    &format!(" {} ", self.operator.to_polar()),
                 ),
                 Or => format_args(
                     self.operator,
@@ -368,10 +368,10 @@ pub mod to_polar {
                         )
                     } else {
                         format!(
-                            "{}({}) := {};",
+                            "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
-                            format_args(Operator::And, &args, ", "),
+                            format_args(Operator::And, &args, " and "),
                         )
                     }
                 }
