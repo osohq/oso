@@ -1071,7 +1071,7 @@ impl PolarVirtualMachine {
         let value = &args[2];
 
         match object.value() {
-            // Push a `Lookup` goal for dictionaries.
+            // Push a `Lookup` goal for simple field lookups on dictionaries.
             Value::Dictionary(dict) if !matches!(field.value(), Value::Call(predicate) if !predicate.args.is_empty()) => {
                 self.push_goal(Goal::Lookup {
                     dict: dict.clone(),
