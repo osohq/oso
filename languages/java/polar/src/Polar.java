@@ -116,7 +116,7 @@ public class Polar {
         Ffi.QueryPtr nextQuery = ffi.polarNextInlineQuery(polarPtr);
         try {
             while (nextQuery != null) {
-                if (!new Query(nextQuery).hasMoreElements()) {
+                if (!new Query(nextQuery, this).hasMoreElements()) {
                     throw new Exceptions.InlineQueryFailedError();
                 }
                 nextQuery.free();
@@ -137,7 +137,7 @@ public class Polar {
     public Query queryStr(String queryStr) throws Exceptions.OsoException {
         clearQueryState();
         loadQueuedFiles();
-        return new Query(ffi.polarNewQuery(polarPtr, queryStr));
+        return new Query(ffi.polarNewQuery(polarPtr, queryStr), this);
     }
 
     /**
@@ -151,7 +151,7 @@ public class Polar {
         clearQueryState();
         loadQueuedFiles();
         String pred = toPolarTerm(new Predicate(name, args)).toString();
-        return new Query(ffi.polarNewQueryFromTerm(polarPtr, pred));
+        return new Query(ffi.polarNewQueryFromTerm(polarPtr, pred), this);
     }
 
     /**
@@ -163,7 +163,7 @@ public class Polar {
         // clear_query_state
         loadQueuedFiles();
         while (true) {
-            Query query = new Query(ffi.polarQueryFromRepl(polarPtr));
+            Query query = new Query(ffi.polarQueryFromRepl(polarPtr), this);
             if (!query.hasMoreElements()) {
                 System.out.println("False");
             } else {
@@ -214,6 +214,10 @@ public class Polar {
         }
         classes.put(alias, cls);
         constructors.put(alias, fromPolar);
+    }
+
+    protected String nextQueryEvent(Ffi.QueryPtr queryPtr) throws Exceptions.OsoException {
+        return ffi.polarNextQueryEvent(queryPtr);
     }
 
     /**
@@ -341,38 +345,50 @@ public class Polar {
                         return num.getFloat("Float");
                 }
             case "List":
-                JSONArray jArray = value.getJSONArray(tag);
-                ArrayList<Object> resArray = new ArrayList<Object>();
-                for (int i = 0; i < jArray.length(); i++) {
-                    resArray.add(toJava(jArray.getJSONObject(i)));
-                }
-                return resArray;
+                return polarListToJava(value.getJSONArray(tag));
             case "Dictionary":
-                JSONObject jMap = value.getJSONObject(tag).getJSONObject("fields");
-                HashMap<String, Object> resMap = new HashMap<String, Object>();
-                for (String key : jMap.keySet()) {
-                    resMap.put(key, toJava(jMap.getJSONObject(key)));
-
-                }
-                return resMap;
+                return polarDictToJava(value.getJSONObject(tag).getJSONObject("fields"));
             case "ExternalInstance":
-                Long id = value.getJSONObject(tag).getLong("instance_id");
-                if (instances.containsKey(id)) {
-                    return instances.get(id);
-                } else {
-                    throw new Exceptions.UnregisteredInstanceError(id);
-                }
+                return getCachedInstance(value.getJSONObject(tag).getLong("instance_id"));
             case "Call":
-                // TODO: implement helper to go from Polar list -> Java list and back
-                JSONArray jArgs = value.getJSONObject(tag).getJSONArray("args");
-                ArrayList<Object> args = new ArrayList<Object>();
-                for (int i = 0; i < jArgs.length(); i++) {
-                    args.add(toJava(jArgs.getJSONObject(i)));
-                }
+                List<Object> args = polarListToJava(value.getJSONObject(tag).getJSONArray("args"));
                 return new Predicate(value.getJSONObject(tag).getString("name"), args);
             default:
                 throw new Exceptions.UnexpectedPolarTypeError(tag);
         }
+    }
+
+    /**
+     *
+     * @param dict
+     * @return
+     * @throws Exceptions.UnregisteredInstanceError
+     * @throws Exceptions.UnexpectedPolarTypeError
+     */
+    protected HashMap<String, Object> polarDictToJava(JSONObject dict)
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+        HashMap<String, Object> resMap = new HashMap<String, Object>();
+        for (String key : dict.keySet()) {
+            resMap.put(key, toJava(dict.getJSONObject(key)));
+        }
+        return resMap;
+    }
+
+    /**
+     *
+     * @param list
+     * @return
+     * @throws Exceptions.UnregisteredInstanceError
+     * @throws Exceptions.UnexpectedPolarTypeError
+     */
+    protected List<Object> polarListToJava(JSONArray list)
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+        ArrayList<Object> resArray = new ArrayList<Object>();
+        for (int i = 0; i < list.length(); i++) {
+            resArray.add(toJava(list.getJSONObject(i)));
+        }
+        return resArray;
+
     }
 
     /**
@@ -434,13 +450,43 @@ public class Polar {
         return term;
     }
 
+    protected boolean subspecializer(long instanceId, String leftTag, String rightTag)
+            throws Exceptions.UnregisteredClassError {
+        Object instance = instances.get(instanceId);
+        Class cls, leftClass, rightClass;
+        cls = instance.getClass();
+        leftClass = getPolarClass(leftTag);
+        rightClass = getPolarClass(rightTag);
+
+        boolean answer = false;
+        if (leftClass.isInstance(instance) || rightClass.isInstance(instance)) {
+            while (cls != null) {
+                if (cls.equals(leftClass)) {
+                    answer = true;
+                    break;
+                } else if (cls.equals(rightClass)) {
+                    break;
+                }
+                cls = cls.getSuperclass();
+            }
+        }
+        return answer;
+    }
+
+    protected boolean isa(long instanceId, String classTag)
+            throws Exceptions.UnregisteredClassError, Exceptions.UnregisteredInstanceError {
+        Class cls = getPolarClass(classTag);
+        Object instance = getCachedInstance(instanceId);
+        return cls.isInstance(instance);
+    }
+
     /**
      *
      * @param name
      * @return
      * @throws Exceptions.UnregisteredClassError
      */
-    private Class getPolarClass(String name) throws Exceptions.UnregisteredClassError {
+    protected Class getPolarClass(String name) throws Exceptions.UnregisteredClassError {
         if (classes.containsKey(name)) {
             return classes.get(name);
         } else {
@@ -448,154 +494,20 @@ public class Polar {
         }
     }
 
-    protected int getQueryCount() {
-        return ffi.queryCounter;
+    protected Object getCachedInstance(long instanceId) throws Exceptions.UnregisteredInstanceError {
+        if (instances.containsKey(instanceId)) {
+            return instances.get(instanceId);
+        } else {
+            throw new Exceptions.UnregisteredInstanceError(instanceId);
+        }
     }
 
-    public class Query implements Enumeration<HashMap<String, Object>> {
-        private HashMap<String, Object> next;
-        private Ffi.QueryPtr queryPtr;
+    protected boolean hasInstance(long instanceId) {
+        return instances.containsKey(instanceId);
+    }
 
-        /**
-         * Construct a new Query object.
-         *
-         * @param queryPtr Pointer to the FFI query instance.
-         */
-        public Query(Ffi.QueryPtr queryPtr) throws Exceptions.OsoException {
-            this.queryPtr = queryPtr;
-            next = nextResult();
-        }
-
-        @Override
-        public boolean hasMoreElements() {
-            return next != null;
-        }
-
-        @Override
-        public HashMap<String, Object> nextElement() {
-            HashMap<String, Object> ret = next;
-            try {
-                next = nextResult();
-            } catch (Exception e) {
-                throw new NoSuchElementException("Caused by: e.toString()");
-            }
-            return ret;
-        }
-
-        public List<HashMap<String, Object>> results() {
-            List<HashMap<String, Object>> results = Collections.list(this);
-            return results;
-        }
-
-        /**
-         * Generate the next Query result.
-         *
-         * @return
-         * @throws Exceptions.OsoException
-         */
-        private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
-            try {
-                while (true) {
-                    String eventStr = ffi.polarNextQueryEvent(queryPtr);
-                    String kind;
-                    JSONObject data;
-                    try {
-                        JSONObject event = new JSONObject(eventStr);
-                        kind = event.keys().next();
-                        data = event.getJSONObject(kind);
-                    } catch (JSONException e) {
-                        // TODO: this sucks, we should have a consistent serialization format
-                        kind = eventStr.replace("\"", "");
-                        data = null;
-                    }
-
-                    switch (kind) {
-                        case "Done":
-                            queryPtr.free();
-                            return null;
-                        case "Result":
-                            HashMap<String, Object> results = new HashMap<String, Object>();
-                            JSONObject bindings = data.getJSONObject("bindings");
-
-                            for (String key : bindings.keySet()) {
-                                Object val = toJava(bindings.getJSONObject(key));
-                                results.put(key, val);
-                            }
-                            return results;
-                        case "MakeExternal":
-                            Long id = data.getLong("instance_id");
-                            if (instances.containsKey(id)) {
-                                throw new Exceptions.DuplicateInstanceRegistrationError(id);
-                            }
-                            String clsName = data.getJSONObject("instance").getString("tag");
-                            JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields")
-                                    .getJSONObject("fields");
-                            Map<String, Object> fields = new HashMap<String, Object>();
-                            for (String k : jFields.keySet()) {
-                                fields.put(k, toJava(jFields.getJSONObject(k)));
-                            }
-                            makeInstance(clsName, fields, id);
-                            break;
-                        case "ExternalCall":
-                            long callId = data.getLong("call_id");
-                            long instanceId = data.getLong("instance_id");
-                            String attrName = data.getString("attribute");
-                            JSONArray jArgs = data.getJSONArray("args");
-                            List<Object> args = new ArrayList<Object>();
-                            for (int i = 0; i < jArgs.length(); i++) {
-                                args.add(toJava(jArgs.getJSONObject(i)));
-                            }
-                            registerCall(attrName, args, callId, instanceId);
-                            String result;
-                            try {
-                                result = nextCallResult(callId).toString();
-                            } catch (NoSuchElementException e) {
-                                result = null;
-                            }
-                            ffi.polarCallResult(queryPtr, callId, result);
-                            break;
-                        case "ExternalIsa":
-                            instanceId = data.getLong("instance_id");
-                            callId = data.getLong("call_id");
-                            String classTag = data.getString("class_tag");
-                            Class cls = getPolarClass(classTag);
-                            Object instance = instances.get(instanceId);
-                            int answer = classes.containsKey(classTag) && cls.isInstance(instance) ? 1 : 0;
-                            ffi.polarQuestionResult(queryPtr, callId, answer);
-                            break;
-                        case "ExternalIsSubSpecializer":
-                            instanceId = data.getLong("instance_id");
-                            callId = data.getLong("call_id");
-                            instance = instances.get(instanceId);
-                            cls = instance.getClass();
-                            Class leftClass = getPolarClass(data.getString("left_class_tag"));
-                            Class rightClass = getPolarClass(data.getString("right_class_tag"));
-
-                            answer = 0;
-                            if (leftClass.isInstance(instance) || rightClass.isInstance(instance)) {
-                                while (cls != null) {
-                                    if (cls.equals(leftClass)) {
-                                        answer = 1;
-                                        break;
-                                    } else if (cls.equals(rightClass)) {
-                                        break;
-                                    }
-                                    cls = cls.getSuperclass();
-                                }
-                            }
-                            ffi.polarQuestionResult(queryPtr, callId, answer);
-                            break;
-                        default:
-                            throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
-                    }
-                }
-            } catch (Exception e) {
-                queryPtr.free();
-                throw e;
-            }
-
-        }
-
+    protected int getQueryCount() {
+        return ffi.queryCounter;
     }
 
     public static class Predicate {

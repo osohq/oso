@@ -46,6 +46,14 @@ public class Ffi {
             }
         }
 
+        protected int polarQuestionResult(long call_id, int result) throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_question_result(ptr, call_id, result));
+        }
+
+        protected int polarCallResult(long call_id, String value) throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_call_result(ptr, call_id, value));
+        }
+
     }
 
     protected static interface PolarLib {
@@ -131,14 +139,6 @@ public class Ffi {
 
     protected QueryPtr polarQueryFromRepl(PolarPtr polarPtr) throws Exceptions.OsoException {
         return new QueryPtr(checkResult(polarLib.polar_query_from_repl(polarPtr.get())));
-    }
-
-    protected int polarQuestionResult(QueryPtr queryPtr, long call_id, int result) throws Exceptions.OsoException {
-        return checkResult(polarLib.polar_question_result(queryPtr.get(), call_id, result));
-    }
-
-    protected int polarCallResult(QueryPtr queryPtr, long call_id, String value) throws Exceptions.OsoException {
-        return checkResult(polarLib.polar_call_result(queryPtr.get(), call_id, value));
     }
 
     // protected int queryFree(QueryPtr queryPtr) throws Exceptions.OsoException {

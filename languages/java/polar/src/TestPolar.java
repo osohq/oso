@@ -39,7 +39,7 @@ public class TestPolar {
         Polar p = new Polar();
 
         p.loadStr("f(1);");
-        Polar.Query query = p.queryStr("f(x)");
+        Query query = p.queryStr("f(x)");
         if (!query.results().equals(List.of(Map.of("x", 1)))) {
             throw new Exception();
         }
@@ -247,7 +247,7 @@ public class TestPolar {
         Polar p = new Polar();
         registerClasses(p);
         p.loadStr("f(x) := x = new MyClass{name: \"test\", id: 1};");
-        Polar.Query query = p.queryStr("f(x)");
+        Query query = p.queryStr("f(x)");
         MyClass ret = (MyClass) query.nextElement().get("x");
         if (ret.id != 1 || !ret.name.equals("test")) {
             throw new Exception();
