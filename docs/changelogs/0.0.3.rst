@@ -44,7 +44,7 @@ Now results in the following error message::
 
 .. code-block:: polar
 
-  allow(actor: User, action, resource) :=
+  allow(actor: User, action, resource) if
     actor = resource.owner();
 
 Since ``actor`` is an instance of the ``User`` application class, any attempt to unify ``actor`` (using the ``=`` operator)
@@ -56,7 +56,7 @@ The appropriate way to compare application instance objects is to use field-by-f
 
 .. code-block:: polar
 
-  allow(actor: User, action, resource) :=
+  allow(actor: User, action, resource) if
     actor.id = resource.owner().id;
 
 

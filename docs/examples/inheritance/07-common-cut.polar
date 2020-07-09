@@ -6,19 +6,19 @@
 
 # This rule allows access if there is an `allowInner` rule that matches AND
 # no `exception` rule that matches.
-allow(actor, action, resource) :=
+allow(actor, action, resource) if
     allowInner(actor, action, resource),
     !exception(actor, action, resource);
 
 # Then, we can write `allowInner` rules to permit access (instead of the top
 # level `allow`).
-allowInner(actor: Actor, "read", resource: PatientData) :=
+allowInner(actor: Actor, "read", resource: PatientData) if
     actor.role = "medical_staff",
     actor.treated(resource.patient),
     !resource.private;
 
 # And `exception` to restrict access.
-exception(actor: Actor, "read", resource: Lab) :=
+exception(actor: Actor, "read", resource: Lab) if
     !(actor.medical_role = "lab_tech" | actor.medical_role = "doctor");
 
 # Not actually sure if this works... needs some testing. If it doesn't work

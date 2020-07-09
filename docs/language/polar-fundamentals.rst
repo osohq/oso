@@ -248,12 +248,12 @@ and conversely a predicate may be defined by any mixture of facts
 or rules. Here's a rule that we could define::
 
   # parent(x, y) ⇒ y is a parent of x.
-  parent(x, y) := father(x, y);
-  parent(x, y) := mother(x, y);
+  parent(x, y) if father(x, y);
+  parent(x, y) if mother(x, y);
 
 Again, let's start with the syntax. Each rule has a **head** and
-a **body**, separated by the ``:=`` symbol. (If there is no body,
-the ``:=`` is elided, and the rule becomes a fact.) To apply
+a **body**, separated by the ``if`` symbol. (If there is no body,
+the ``if`` is elided, and the rule becomes a fact.) To apply
 a rule, Polar first matches the head with the query (just as
 for a fact), and then queries for the body. If that sub-query
 is successful, then the rule as a whole succeeds; otherwise,
@@ -276,7 +276,7 @@ same predicate are *alternatives*: ``y`` is a parent of ``x``
 We can go one level deeper, if we wish::
 
   # grandfather(x, y) ⇒ y is a grandfather of x.
-  grandfather(x, y) := parent(x, p), father(p, y);
+  grandfather(x, y) if parent(x, p), father(p, y);
 
 This rule has two conditions in its body, separated by the
 conjunction operator ``,`` (read "and"). It says that ``y``
@@ -291,8 +291,8 @@ is the parent of ``x`` *and* ``y`` is the father of that
 We can also write recursive rules::
 
   # ancestor(x, y) ⇒ y is an ancestor of x.
-  ancestor(x, y) := parent(x, y);
-  ancestor(x, y) := parent(x, p), ancestor(p, y);
+  ancestor(x, y) if parent(x, y);
+  ancestor(x, y) if parent(x, p), ancestor(p, y);
 
 This says that ``y`` is an ancestor of ``x`` *if* ``y`` is either a
 parent of ``x`` *or* they are an ancestor of a parent ``p`` of ``x``::
@@ -311,7 +311,7 @@ let's look in a little more detail at how it executes queries against
 a given set of rules.
 
 Recall that rules have a **head** and an optional **body** (the part
-after a ``:=``). If there is no body, we call the rule a **fact**. The head
+after a ``if``). If there is no body, we call the rule a **fact**. The head
 must contain exactly one predicate, with any number of **parameters**
 in parenthesis; e.g., ``1`` is not a valid head, nor is a bare ``foo``.
 Unlike most non-logic languages, each parameter may be either a variable

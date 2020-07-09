@@ -4,19 +4,19 @@
 # - recursive attributes
 # - representing hierachies
 
-allow(actor: User, "view", resource: Expense) :=
+allow(actor: User, "view", resource: Expense) if
     employee = actor.employees,
     employee.name = resource.submitted_by;
 
 # start-manages-rule
-allow(actor: User, "view", resource: Expense) :=
+allow(actor: User, "view", resource: Expense) if
     manages(actor, employee),
     employee.name = resource.submitted_by;
 # end-manages-rule
 
 # start-hierarchy-rule
 # Management hierarchies
-manages(manager: User, employee) :=
+manages(manager: User, employee) if
     employee = manager.employees() |
     manages(manager.employees(), employee);
 

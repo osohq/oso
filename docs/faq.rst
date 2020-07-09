@@ -32,7 +32,7 @@ For example, given the following Polar policy:
 
 .. code-block:: polar
 
-  has_grandchild_called(grandparent: Person, name) :=
+  has_grandchild_called(grandparent: Person, name) if
       child in grandparent.children,
       grandchild in child.children,
       grandchild.name = name;
@@ -72,7 +72,7 @@ For example:
 
 .. code-block:: polar
 
-    has_grandchild_called(grandparent: Person, name) :=
+    has_grandchild_called(grandparent: Person, name) if
         children = grandparent.children, # gets the _list_ of children
         grandchild in Person.batch_lookup_children(children),
         grandchild.name = name;
@@ -94,7 +94,7 @@ For example, in a Django application you might write:
 
 .. code-block:: polar
 
-    has_grandchild_called(grandparent: Person, name) :=
+    has_grandchild_called(grandparent: Person, name) if
         child in grandparent.children.prefetch_related("children"),
         grandchild in child.children.all(),
         grandchild.name = name;

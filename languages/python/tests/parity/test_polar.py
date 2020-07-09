@@ -55,14 +55,14 @@ def test_query_multiple(tell, qvar):
 
 
 def test_define_rule(tell, qeval):
-    tell("a(x) := b(x), c(x);")
+    tell("a(x) if b(x), c(x);")
     tell('b("apple")')
     tell('c("apple")')
     assert qeval('a("apple")')
 
 
 def test_missing_rule(tell, qeval):
-    tell("a(x) := b(x), c(x);")
+    tell("a(x) if b(x), c(x);")
     tell('b("apple")')
     tell('c("apple")')
     assert not qeval('d("apple")')
@@ -81,18 +81,18 @@ def test_recursive_rule(tell, qeval, qvar):
     tell('derive("avacado", "juniper_berry")')
     results = qvar('derive("apple", x)', "x")
     assert results == ["orange"]
-    tell("derives(a, b) := derive(a, b);")
-    tell("derives(a, b) := derive(a, z), derives(z, b);")
+    tell("derives(a, b) if derive(a, b);")
+    tell("derives(a, b) if derive(a, z), derives(z, b);")
     assert qeval('derives("apple", "juniper_berry")')
     results = qvar('derives("apple", x)', "x")
     assert results == ["orange", "avacado", "juniper_berry"]
 
 
 def test_disjunctive_rule(tell, qeval):
-    tell("or_eq(a, b) := 1 = 0 | a = b;")
+    tell("or_eq(a, b) if 1 = 0 | a = b;")
     assert qeval("or_eq(1, 1)")
 
-    tell("and_or_eq(a, b, c) := (a = b, b = c) | 1 = 0")
+    tell("and_or_eq(a, b, c) if (a = b, b = c) | 1 = 0")
     assert not qeval("and_or_eq(1, 1, 0)")
     assert qeval("and_or_eq(1, 1, 1)")
 
@@ -108,11 +108,11 @@ def test_disjunctive_rule(tell, qeval):
 
 
 def test_parens(tell, qeval):
-    tell("paren1(a, b, c) := (a = b, b = c);")
-    tell("paren2(a, b, c) := ((a = b, b = c));")
-    tell("paren3(a, b, c) := (a = b), (b = c);")
-    tell("paren4(a, b, c, d) := (a = b, b = c, c = d);")
-    tell("paren5(a, b, c) := ((a = b), (b = c));")
+    tell("paren1(a, b, c) if (a = b, b = c);")
+    tell("paren2(a, b, c) if ((a = b, b = c));")
+    tell("paren3(a, b, c) if (a = b), (b = c);")
+    tell("paren4(a, b, c, d) if (a = b, b = c, c = d);")
+    tell("paren5(a, b, c) if ((a = b), (b = c));")
 
     assert qeval("paren1(1, 1, 1)")
     assert not qeval("paren1(0, 1, 1)")
@@ -187,7 +187,7 @@ def test_dictionaries(tell, qeval, qvar):
     tell("x({a: {y:{c:456}}})")
     assert qvar("x(d), d.a.(k).c = value", "value") == [123, 456]
 
-    tell("lookup(dict, result) := result = dict.a.b.c;")
+    tell("lookup(dict, result) if result = dict.a.b.c;")
     assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
 
     ### more basic lookup tests ###
@@ -219,7 +219,7 @@ def test_unify_class_fields(tell, qeval, qvar, externals):
 
 
 def test_argument_patterns(tell, qeval, qvar, externals):
-    tell("isaFoo(name, foo: Foo) := name = foo.name")
+    tell("isaFoo(name, foo: Foo) if name = foo.name")
 
     assert qeval('isaFoo(sam, new Foo{name: "sam"})')
     assert qeval('isaFoo(sam, new Bar{name: "sam"})')
@@ -404,7 +404,7 @@ def test_arities(tell, qeval):
 
 
 def test_rule_ordering(tell, qeval, externals):
-    tell("f(_: Foo{}) := cut(), 1 = 2;")
+    tell("f(_: Foo{}) if cut(), 1 = 2;")
     tell('f(_: Foo{name: "test"});')
 
     assert qeval('f(new Foo{ name: "test" }) ')

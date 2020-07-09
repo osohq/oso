@@ -132,7 +132,7 @@ rules to do this.
 
 A rule in Polar takes the form::
 
-  HEAD := BODY;
+  HEAD if BODY;
 
 where ``HEAD`` must be a *fact* and ``BODY`` any number of *terms*.
 The meaning of a rule is that ``HEAD`` is true **if** each of the ``BODY``
@@ -142,7 +142,7 @@ on how rules are defined and applied see :doc:`polar-queries`.
 
 The following is an example of a rule::
 
-  user("sam", "scott") := person("sam", "scott");
+  user("sam", "scott") if person("sam", "scott");
 
 This example says that Sam is a user **if** he is also defined
 as a person.
@@ -170,7 +170,7 @@ The following are all variables::
 
 To make the above rule more useful, we could write::
 
-  user(first, last) := person(first, last);
+  user(first, last) if person(first, last);
 
 This rule says that **if** there is a person with some name,
 **then** that person is also a user.
@@ -212,7 +212,7 @@ To say that two terms in a rule's body must **both** be true,
 the comma operator (``,`` pronounced "and") can be used. For
 example, the rule::
 
-  oso_user(first, last) :=
+  oso_user(first, last) if
     user(first, last),
     employee(company("oso"), person(first, last));
 
@@ -235,7 +235,7 @@ Dictionary key access
 The dot ``.`` operator can be used to access the value associated with
 a key in a dictionary. For example, the rule::
 
-  first_name(dict, x) :=
+  first_name(dict, x) if
     dict = Person{},
     x = dict.first_name;
 

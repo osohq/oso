@@ -137,9 +137,9 @@ def test_class_specializers(polar, qvar, qeval, query):
     test(_: A{});
     test(_: B{});
 
-    try(v: B{}, res) := res = 2;
-    try(v: C{}, res) := res = 3;
-    try(v: A{}, res) := res = 1;
+    try(v: B{}, res) if res = 2;
+    try(v: C{}, res) if res = 3;
+    try(v: A{}, res) if res = 1;
     """
     polar.load_str(rules)
 
@@ -172,9 +172,9 @@ def test_dict_specializers(polar, qvar, qeval, query):
     polar.register_class(Animal)
 
     rules = """
-    what_is(animal: {genus: "canis"}, res) := res = "canine";
-    what_is(animal: {species: "canis lupus", genus: "canis"}, res) := res = "wolf";
-    what_is(animal: {species: "canis familiaris", genus: "canis"}, res) := res = "dog";
+    what_is(animal: {genus: "canis"}, res) if res = "canine";
+    what_is(animal: {species: "canis lupus", genus: "canis"}, res) if res = "wolf";
+    what_is(animal: {species: "canis familiaris", genus: "canis"}, res) if res = "dog";
     """
     polar.load_str(rules)
 
@@ -201,12 +201,12 @@ def test_class_field_specializers(polar, qvar, qeval, query):
     polar.register_class(Animal)
 
     rules = """
-    what_is(animal: Animal, res) := res = "animal";
-    what_is(animal: Animal{genus: "canis"}, res) := res = "canine";
-    what_is(animal: Animal{family: "canidae"}, res) := res = "canid";
-    what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) := res = "wolf";
-    what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog";
-    what_is(animal: Animal{species: s, genus: "canis"}, res) := res = s;
+    what_is(animal: Animal, res) if res = "animal";
+    what_is(animal: Animal{genus: "canis"}, res) if res = "canine";
+    what_is(animal: Animal{family: "canidae"}, res) if res = "canid";
+    what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) if res = "wolf";
+    what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) if res = "dog";
+    what_is(animal: Animal{species: s, genus: "canis"}, res) if res = s;
     """
     polar.load_str(rules)
 
@@ -252,14 +252,14 @@ def test_specializers_mixed(polar, qvar, qeval, query):
 
     # load rules
     rules = """
-    what_is(animal: Animal, res) := res = "animal_class";
-    what_is(animal: Animal{genus: "canis"}, res) := res = "canine_class";
-    what_is(animal: {genus: "canis"}, res) := res = "canine_dict";
-    what_is(animal: Animal{family: "canidae"}, res) := res = "canid_class";
-    what_is(animal: {species: "canis lupus", genus: "canis"}, res) := res = "wolf_dict";
-    what_is(animal: {species: "canis familiaris", genus: "canis"}, res) := res = "dog_dict";
-    what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) := res = "wolf_class";
-    what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) := res = "dog_class";
+    what_is(animal: Animal, res) if res = "animal_class";
+    what_is(animal: Animal{genus: "canis"}, res) if res = "canine_class";
+    what_is(animal: {genus: "canis"}, res) if res = "canine_dict";
+    what_is(animal: Animal{family: "canidae"}, res) if res = "canid_class";
+    what_is(animal: {species: "canis lupus", genus: "canis"}, res) if res = "wolf_dict";
+    what_is(animal: {species: "canis familiaris", genus: "canis"}, res) if res = "dog_dict";
+    what_is(animal: Animal{species: "canis lupus", genus: "canis"}, res) if res = "wolf_class";
+    what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, res) if res = "dog_class";
     """
     polar.load_str(rules)
 
@@ -320,7 +320,7 @@ def test_load_and_query():
 def test_parser_errors(polar):
     # IntegerOverflow
     rules = """
-    f(a) := a = 18446744073709551616;
+    f(a) if a = 18446744073709551616;
     """
     with pytest.raises(exceptions.IntegerOverflow) as e:
         polar.load_str(rules)
@@ -331,7 +331,7 @@ def test_parser_errors(polar):
 
     # InvalidTokenCharacter
     rules = """
-    f(a) := a = "this is not
+    f(a) if a = "this is not
     allowed";
     """
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
@@ -342,7 +342,7 @@ def test_parser_errors(polar):
     )
 
     rules = """
-    f(a) := a = "this is not allowed\0
+    f(a) if a = "this is not allowed\0
     """
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
@@ -378,7 +378,7 @@ def test_parser_errors(polar):
 
 def test_predicate(polar, qvar):
     """Test that predicates can be converted to and from python."""
-    polar.load_str("f(x) := x = pred(1, 2);")
+    polar.load_str("f(x) if x = pred(1, 2);")
     assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
 
     assert polar._query_pred(
@@ -394,7 +394,7 @@ def test_return_list(polar):
     polar.register_class(Actor)
 
     # for testing lists
-    polar.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
+    polar.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
 
     assert polar._query_pred(
         Predicate(name="allow", args=[Actor(), "join", "party"])
@@ -456,8 +456,8 @@ def test_constructor(polar, qvar):
 
 
 def test_in(polar, qeval):
-    polar.load_str("g(x, y) := !x in y;")
-    polar.load_str("f(x) := !(x=1 | x=2);")
+    polar.load_str("g(x, y) if !x in y;")
+    polar.load_str("f(x) if !(x=1 | x=2);")
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")
@@ -475,7 +475,7 @@ def test_unify(polar, qeval):
 
     polar.register_class(Foo)
 
-    polar.load_str("foo() := new Foo{foo: 1} = new Foo{foo: 1};")
+    polar.load_str("foo() if new Foo{foo: 1} = new Foo{foo: 1};")
     assert qeval("foo()")
 
 
@@ -498,8 +498,8 @@ def test_external_op(polar):
     a1 = A(1)
     a2 = A(2)
 
-    polar.load_str("lt(a, b) := a < b;")
-    polar.load_str("gt(a, b) := a > b;")
+    polar.load_str("lt(a, b) if a < b;")
+    polar.load_str("gt(a, b) if a > b;")
     assert polar._query_pred(Predicate("lt", [a1, a2])).success
     assert not polar._query_pred(Predicate("lt", [a2, a1])).success
     assert polar._query_pred(Predicate("gt", [a2, a1])).success
@@ -513,21 +513,21 @@ def test_datetime(polar):
     t3 = datetime(2030, 5, 25)
     t4 = datetime(2020, 5, 26)
 
-    polar.load_str("lt(a, b) := a < b;")
+    polar.load_str("lt(a, b) if a < b;")
     assert polar._query_pred(Predicate("lt", [t1, t2])).success
     assert not polar._query_pred(Predicate("lt", [t2, t1])).success
 
     # test creating datetime from polar
-    polar.load_str("dt(x) := x = new Datetime{year: 2020, month: 5, day: 25};")
+    polar.load_str("dt(x) if x = new Datetime{year: 2020, month: 5, day: 25};")
     assert polar._query_pred(Predicate("dt", [Variable("x")])).results == [
         {"x": datetime(2020, 5, 25)}
     ]
-    polar.load_str("ltnow(x) := x < Datetime.now();")
+    polar.load_str("ltnow(x) if x < Datetime.now();")
     assert polar._query_pred(Predicate("ltnow", [t1])).success
     assert not polar._query_pred(Predicate("ltnow", [t3])).success
 
     polar.load_str(
-        "timedelta(a: Datetime, b: Datetime) := a.__sub__(b) == new Timedelta{days: 1};"
+        "timedelta(a: Datetime, b: Datetime) if a.__sub__(b) == new Timedelta{days: 1};"
     )
     assert polar._query_pred(Predicate("timedelta", [t4, t1])).success
 
