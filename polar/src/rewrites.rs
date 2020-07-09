@@ -1,6 +1,6 @@
 use super::types::*;
 
-/// Replace the left value by the AND of the right and the left
+/// Replace the left value by the AND of the right and the left.
 fn and_wrap(a: &mut Term, b: Term) {
     let new_value = Value::Expression(Operation {
         operator: Operator::And,
@@ -10,49 +10,53 @@ fn and_wrap(a: &mut Term, b: Term) {
     a.replace_value(new_value);
 }
 
-/// Checks if the expression needs to be rewritten.
-/// If so, replaces the value in place with the symbol, and returns the rewritten expression.
+/// Checks if the expression needs to be rewritten. If so,
+/// replaces the value in place with a temporary variable,
+/// and returns the rewritten expression.
 fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
     match term.value() {
         Value::Expression(Operation {
             operator: Operator::Dot,
-            args: lookup_args,
-        }) if lookup_args.len() == 2 => {
-            let mut lookup_args = lookup_args.clone();
-            let symbol = kb.gensym("value");
-            let var = Value::Variable(symbol);
-            // Take `id` and `offset` from `b` of lookup `a.b`.
-            lookup_args.push(lookup_args[1].clone_with_value(var.clone()));
+            args,
+        }) if args.len() == 2 => {
+            // Rewrite .(a, b) to .(a, b, x) with x a temporary.
+            let temp = Value::Variable(kb.gensym("value"));
             let lookup = Value::Expression(Operation {
                 operator: Operator::Dot,
-                args: lookup_args,
+                args: vec![
+                    args[0].clone(),
+                    args[1].clone(),
+                    args[1].clone_with_value(temp.clone()),
+                ],
             });
-            let _ = term.replace_value(var);
+            term.replace_value(temp);
             Some(term.clone_with_value(lookup))
         }
         Value::Expression(Operation {
             operator: Operator::New,
             args,
         }) if args.len() == 1 => {
+            // Rewrite new(Foo{}) to new(Foo{}, x) with x a temporary.
             assert!(matches!(args[0].value(), Value::InstanceLiteral { .. }));
-            let symbol = kb.gensym("instance");
-            let var = Value::Variable(symbol);
-            let result_term = args[0].clone_with_value(var.clone());
-            let args = vec![args[0].clone(), result_term];
+            let temp = Value::Variable(kb.gensym("instance"));
             let new_op = Value::Expression(Operation {
                 operator: Operator::New,
-                args,
+                args: vec![args[0].clone(), args[0].clone_with_value(temp.clone())],
             });
-
-            term.replace_value(var);
+            term.replace_value(temp);
             Some(term.clone_with_value(new_op))
+        }
+        Value::Variable(Symbol(name)) if name == "_" => {
+            // Change _ in-place to a temporary, but don't rewrite it.
+            term.replace_value(Value::Variable(kb.gensym("_")));
+            None
         }
         _ => None,
     }
 }
 
-/// Walks the term and does an in-place rewrite
-/// Uses `rewrites` as a buffer of new lookup terms
+/// Walks the term and does an in-place rewrite.
+/// Uses `rewrites` as a buffer of new lookup terms.
 fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>) {
     term.map_replace(&mut |term| {
         // First, rewrite this term, maybe returning a lookup
@@ -91,14 +95,14 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>)
     });
 }
 
-/// Rewrite the parameter term and return all new lookups as a vec
+/// Rewrite the parameter term and return all new lookups as a vec.
 pub fn rewrite_parameter(parameter: &mut Term, kb: &mut KnowledgeBase) -> Vec<Term> {
     let mut rewrites = vec![];
     do_rewrite(parameter, kb, &mut rewrites);
     rewrites
 }
 
-/// Rewrite the term in-place
+/// Rewrite the term in-place.
 pub fn rewrite_term(term: &mut Term, kb: &mut KnowledgeBase) {
     let mut rewrites = vec![];
 
@@ -111,6 +115,7 @@ pub fn rewrite_term(term: &mut Term, kb: &mut KnowledgeBase) {
     }
 }
 
+/// Rewrite the rule in-place.
 pub fn rewrite_rule(rule: &mut Rule, kb: &mut KnowledgeBase) {
     rewrite_term(&mut rule.body, kb);
 
@@ -151,6 +156,14 @@ mod tests {
 
     fn parse_rules(src: &str) -> Rules {
         crate::parser::parse_rules(src).unwrap()
+    }
+
+    #[test]
+    fn rewrite_anonymous_vars() {
+        let mut kb = KnowledgeBase::new();
+        let mut query = parse_query("[1, 2, 3] = [_, _, _]");
+        rewrite_term(&mut query, &mut kb);
+        assert_eq!(query.to_polar(), "[1, 2, 3] = [_1, _2, _3]");
     }
 
     #[test]

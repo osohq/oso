@@ -621,7 +621,9 @@ impl KnowledgeBase {
     /// Generate a new symbol.
     pub fn gensym(&self, prefix: &str) -> Symbol {
         let next = self.gensym_counter.fetch_add(1, Ordering::SeqCst);
-        if prefix.starts_with('_') {
+        if prefix == "_" {
+            Symbol(format!("_{}", next))
+        } else if prefix.starts_with('_') {
             Symbol(format!("{}_{}", prefix, next))
         } else {
             Symbol(format!("_{}_{}", prefix, next))
