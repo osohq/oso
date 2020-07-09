@@ -125,8 +125,13 @@ InstanceLiteral<T>: Term = <start:@L> <tag:Name> <fields:Object<T>> => {
 pub InstanceLiteralTerm: Term = <InstanceLiteral<Exp5<"Term">>> => <>;
 pub InstanceLiteralPattern: Term = <InstanceLiteral<Exp9<"Pattern">>> => <>;
 
-pub RestPattern: Term = <start:@L> "*" <rest:Name> => {
-    Term::new_from_parser(src_id, start, Value::RestVariable(rest))
+// Either a *rest variable, or an ordinary term.
+RestVar<T>: Term = {
+    <start:@L> "*" <rest:Name> => {
+        Term::new_from_parser(src_id, start, Value::RestVariable(rest))
+    },
+    <Term> if T == "Term" => <>,
+    <Pattern> if T == "Pattern" => <>
 };
 
 pub Pattern: Term = {
@@ -136,8 +141,7 @@ pub Pattern: Term = {
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,
-    <term:RestPattern> => term,
-    <start:@L> "[" <terms:(<Pattern> ",")*> <term:Pattern?> "]" => {
+    <start:@L> "[" <terms:(<Pattern> ",")*> <term:RestVar<"Pattern">?> "]" => {
         match term {
             Some(term) => Term::new_from_parser(src_id, start, Value::List(vec![term])),
             None => Term::new_from_parser(src_id, start, Value::List(terms))
@@ -150,11 +154,10 @@ pub Term: Term = {
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,
-    <term:RestPattern> => term,
     <term:DictionaryTerm> => term,
     <start:@L> <op:RewrittenOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
     <start:@L> <pred:Predicate> => Term::new_from_parser(src_id, start, Value::Call(pred)),
-    <start:@L> "[" <mut terms:(<Term> ",")*> <term:Term?> "]" => {
+    <start:@L> "[" <mut terms:(<Term> ",")*> <term:RestVar<"Term">?> "]" => {
         match term {
             Some(term) => {
                 terms.push(term);
