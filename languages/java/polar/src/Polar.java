@@ -29,6 +29,10 @@ public class Polar {
         calls = new HashMap<Long, Enumeration<Object>>();
     }
 
+    /******************/
+    /* PUBLIC METHODS */
+    /******************/
+
     /**
      * Enqueue a polar policy file to be loaded. File contents are loaded into a
      * String and saved here, so changes to the file made after calls to loadFile
@@ -55,6 +59,8 @@ public class Polar {
 
     /**
      * Load all queued files, flushing the {@code loadQueue}
+     *
+     * @throws Exceptions.OsoException
      */
     public void loadQueuedFiles() throws Exceptions.OsoException {
         for (String fname : loadQueue.keySet()) {
@@ -65,6 +71,8 @@ public class Polar {
 
     /**
      * Clear the KB, but maintain all registered classes and calls
+     *
+     * @throws Exceptions.OsoException
      */
     public void clear() throws Exceptions.OsoException {
         // clear all Queued files
@@ -74,16 +82,12 @@ public class Polar {
         polarPtr = ffi.polarNew();
     }
 
-    private void clearQueryState() {
-        instances.clear();
-        calls.clear();
-    }
-
     /**
      * Load a Polar string into the KB (with filename).
      *
      * @param str      Polar string to be loaded.
      * @param filename Name of the source file.
+     * @throws Exceptions.OsoException
      */
     public void loadStr(String str, String filename) throws Exceptions.OsoException {
         ffi.polarLoad(polarPtr, str, filename);
@@ -94,6 +98,7 @@ public class Polar {
      * Load a Polar string into the KB (without filename).
      *
      * @param str Polar string to be loaded.
+     * @throws Exceptions.OsoException
      */
     public void loadStr(String str) throws Exceptions.OsoException {
         ffi.polarLoad(polarPtr, str, null);
@@ -102,26 +107,10 @@ public class Polar {
     }
 
     /**
-     * Confirm that all queued inline queries succeed.
-     *
-     * @throws Exceptions.OsoException           On failed query creation.
-     * @throws Exceptions.InlineQueryFailedError On inline query failure.
-     */
-    private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
-        Ffi.QueryPtr nextQuery = ffi.polarNextInlineQuery(polarPtr);
-        while (nextQuery != null) {
-            if (!new Query(nextQuery, this).hasMoreElements()) {
-                throw new Exceptions.InlineQueryFailedError();
-            }
-            nextQuery = ffi.polarNextInlineQuery(polarPtr);
-        }
-    }
-
-    /**
      * Query for a Polar string.
      *
-     * @param queryStr
-     * @return Query object.
+     * @param queryStr Query string
+     * @return Query object (Enumeration of resulting variable bindings).
      */
     public Query queryStr(String queryStr) throws Exceptions.OsoException {
         clearQueryState();
@@ -132,9 +121,10 @@ public class Polar {
     /**
      * Query for a Predicate.
      *
-     * @param name
-     * @param args
-     * @return
+     * @param name Predicate name, e.g. "f" for predicate "f(x)".
+     * @param args List of predicate arguments.
+     * @return Query object (Enumeration of resulting variable bindings).
+     * @throws Exceptions.OsoException
      */
     public Query queryPred(String name, List<Object> args) throws Exceptions.OsoException {
         clearQueryState();
@@ -167,7 +157,7 @@ public class Polar {
     /**
      * Register a Java class with oso.
      *
-     * @param cls
+     * @param cls       Class object to be registered.
      * @param fromPolar lambda function to convert from a
      *                  {@code Map<String, Object>} of parameters to an instance of
      *                  the Java class.
@@ -184,10 +174,9 @@ public class Polar {
     }
 
     /**
-     *
      * Register a Java class with oso using an alias.
      *
-     * @param cls
+     * @param cls       Class object to be registered.
      * @param fromPolar lambda function to convert from a
      *                  {@code Map<String, Object>} of parameters to an instance of
      *                  the Java class.
@@ -205,19 +194,212 @@ public class Polar {
         constructors.put(alias, fromPolar);
     }
 
-    protected String nextQueryEvent(Ffi.QueryPtr queryPtr) throws Exceptions.OsoException {
-        return ffi.polarNextQueryEvent(queryPtr);
+    /*********************/
+    /* PROTECTED METHODS */
+    /*********************/
+
+    /**
+     * Convert Java Objects to Polar (JSON) terms.
+     *
+     * @param value Java Object to be converted to Polar.
+     * @return JSONObject Polar term of form: {@code {"id": _, "offset": _, "value":
+     *         _}}.
+     */
+    protected JSONObject toPolarTerm(Object value) throws Exceptions.OsoException {
+        // Build Polar value
+        JSONObject jVal = new JSONObject();
+        if (value.getClass() == Boolean.class) {
+            jVal.put("Boolean", value);
+
+        } else if (value.getClass() == Integer.class) {
+            jVal.put("Number", Map.of("Integer", value));
+
+        } else if (value.getClass() == Float.class) {
+            jVal.put("Number", Map.of("Float", value));
+
+        } else if (value.getClass() == String.class) {
+            jVal.put("String", value);
+
+        } else if (value instanceof List) {
+            jVal.put("List", javaListToPolar((List<Object>) value));
+
+        } else if (value instanceof Map) {
+            Map<String, JSONObject> jMap = javaMaptoPolar((Map<Object, Object>) value);
+            jVal.put("Dictionary", new JSONObject().put("fields", jMap));
+
+        } else if (value instanceof Predicate) {
+            Predicate pred = (Predicate) value;
+            jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", javaListToPolar(pred.args))));
+        } else if (value instanceof Variable) {
+            jVal.put("Symbol", value);
+        } else {
+            jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
+        }
+
+        // Build Polar term
+        JSONObject term = new JSONObject();
+        term.put("id", 0);
+        term.put("offset", 0);
+        term.put("value", jVal);
+        return term;
     }
 
     /**
+     * Convert a Java List to a JSONified Polar list.
      *
-     * @param attrName
-     * @param args
-     * @param callId
-     * @param instanceId
+     * @param list List<Object>
+     * @return List<JSONObject>
+     * @throws Exceptions.OsoException
+     */
+    private List<JSONObject> javaListToPolar(List<Object> list) throws Exceptions.OsoException {
+        ArrayList<JSONObject> polarList = new ArrayList<JSONObject>();
+        for (Object el : (List<Object>) list) {
+            polarList.add(toPolarTerm(el));
+        }
+        return polarList;
+    }
+
+    /**
+     * Convert a Java Map to a JSONified Polar dictionary.
+     *
+     * @param map Java Map<Object, Object>
+     * @return Map<String, JSONObject>
+     * @throws Exceptions.OsoException
+     */
+    private Map<String, JSONObject> javaMaptoPolar(Map<Object, Object> map) throws Exceptions.OsoException {
+        HashMap<String, JSONObject> polarDict = new HashMap<String, JSONObject>();
+        for (Object key : map.keySet()) {
+            JSONObject val = toPolarTerm(map.get(key));
+            polarDict.put(key.toString(), val);
+        }
+        return polarDict;
+    }
+
+    /**
+     * Turn a Polar term passed across the FFI boundary into a Java Object.
+     *
+     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _,
+     *             "value": _}}
+     * @return Object
+     * @throws Exceptions.UnregisteredInstanceError
+     * @throws Exceptions.UnexpectedPolarTypeError
+     */
+    protected Object toJava(JSONObject term)
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+        JSONObject value = term.getJSONObject("value");
+        String tag = value.keys().next();
+        switch (tag) {
+            case "String":
+                return value.getString(tag);
+            case "Boolean":
+                return value.getBoolean(tag);
+            case "Number":
+                JSONObject num = value.getJSONObject(tag);
+                switch (num.keys().next()) {
+                    case "Integer":
+                        return num.getInt("Integer");
+                    case "Float":
+                        return num.getFloat("Float");
+                }
+            case "List":
+                return polarListToJava(value.getJSONArray(tag));
+            case "Dictionary":
+                return polarDictToJava(value.getJSONObject(tag).getJSONObject("fields"));
+            case "ExternalInstance":
+                return getCachedInstance(value.getJSONObject(tag).getLong("instance_id"));
+            case "Call":
+                List<Object> args = polarListToJava(value.getJSONObject(tag).getJSONArray("args"));
+                return new Predicate(value.getJSONObject(tag).getString("name"), args);
+            default:
+                throw new Exceptions.UnexpectedPolarTypeError(tag);
+        }
+    }
+
+    /**
+     * Convert a JSONified Polar dictionary to a Java Map
+     *
+     * @param dict JSONObject
+     * @return HashMap<String, Object>
+     * @throws Exceptions.UnregisteredInstanceError
+     * @throws Exceptions.UnexpectedPolarTypeError
+     */
+    protected HashMap<String, Object> polarDictToJava(JSONObject dict)
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+        HashMap<String, Object> resMap = new HashMap<String, Object>();
+        for (String key : dict.keySet()) {
+            resMap.put(key, toJava(dict.getJSONObject(key)));
+        }
+        return resMap;
+    }
+
+    /**
+     * Convert a JSONified Polar List to a Java List
+     *
+     * @param list JSONArray
+     * @return List<Object>
+     * @throws Exceptions.UnregisteredInstanceError
+     * @throws Exceptions.UnexpectedPolarTypeError
+     */
+    protected List<Object> polarListToJava(JSONArray list)
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+        ArrayList<Object> resArray = new ArrayList<Object>();
+        for (int i = 0; i < list.length(); i++) {
+            resArray.add(toJava(list.getJSONObject(i)));
+        }
+        return resArray;
+
+    }
+
+    /**
+     * Make an instance of a Java class from a {@code Map<String, Object>} of
+     * fields.
+     *
+     * @param clsName
+     * @param fields
+     * @param id
+     * @return Object
+     */
+    protected Object makeInstance(String clsName, Map fields, long id) throws Exceptions.OsoException {
+        Function<Map, Object> constructor = constructors.get(clsName);
+        Object instance;
+        if (constructor != null) {
+            instance = constructors.get(clsName).apply(fields);
+        } else {
+            // TODO: default constructor
+            throw new Exceptions.MissingConstructorError(clsName);
+        }
+        cacheInstance(instance, id);
+        return instance;
+    }
+
+    /**
+     * Cache an instance of a Java class.
+     *
+     * @param instance
+     * @param id
+     * @return Long
+     * @throws Exceptions.OsoException
+     */
+    protected Long cacheInstance(Object instance, Long id) throws Exceptions.OsoException {
+        if (id == null) {
+            id = ffi.polarGetExternalId(polarPtr);
+        }
+        instances.put(id, instance);
+
+        return id;
+    }
+
+    /**
+     * Register a Java method call, wrapping the result in an enumeration if it
+     * isn't already done.
+     *
+     * @param attrName   Name of the method/attribute.
+     * @param args       Method arguments.
+     * @param callId     Call ID under which to register the call.
+     * @param instanceId ID of the Java instance on which to call the method.
      * @throws Exceptions.InvalidCallError
      */
-    public void registerCall(String attrName, List<Object> args, long callId, long instanceId)
+    protected void registerCall(String attrName, List<Object> args, long callId, long instanceId)
             throws Exceptions.InvalidCallError {
         if (calls.containsKey(callId)) {
             return;
@@ -259,191 +441,73 @@ public class Polar {
     }
 
     /**
+     * Get the next JSONified Polar result of a cached method call (enumeration).
      *
      * @param callId
-     * @return
+     * @return JSONObject
      * @throws NoSuchElementException
      * @throws Exceptions.OsoException
      */
-    public JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
+    protected JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
         return toPolarTerm(calls.get(callId).nextElement());
     }
 
     /**
-     * Make an instance of a Java class from a {@code Map<String, Object>} of
-     * fields.
+     * Get a registered Java class.
      *
-     * @param clsName
-     * @param fields
-     * @param id
-     * @return Object
+     * @param name
+     * @return
+     * @throws Exceptions.UnregisteredClassError
      */
-    public Object makeInstance(String clsName, Map fields, long id) throws Exceptions.OsoException {
-        Function<Map, Object> constructor = constructors.get(clsName);
-        Object instance;
-        if (constructor != null) {
-            instance = constructors.get(clsName).apply(fields);
+    protected Class getRegisteredClass(String name) throws Exceptions.UnregisteredClassError {
+        if (classes.containsKey(name)) {
+            return classes.get(name);
         } else {
-            // TODO: default constructor
-            throw new Exceptions.MissingConstructorError(clsName);
-        }
-        cacheInstance(instance, id);
-        return instance;
-    }
-
-    /**
-     * Cache an instance of a Java class.
-     *
-     * @param instance
-     * @param id
-     * @return Long
-     */
-    public Long cacheInstance(Object instance, Long id) throws Exceptions.OsoException {
-        if (id == null) {
-            id = ffi.polarGetExternalId(polarPtr);
-        }
-        instances.put(id, instance);
-
-        return id;
-    }
-
-    /**
-     * Turn a Polar term passed across the FFI boundary into a Java Object.
-     *
-     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _,
-     *             "value": _}}
-     * @return Object
-     */
-    public Object toJava(JSONObject term)
-            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
-        JSONObject value = term.getJSONObject("value");
-        String tag = value.keys().next();
-        switch (tag) {
-            case "String":
-                return value.getString(tag);
-            case "Boolean":
-                return value.getBoolean(tag);
-            case "Number":
-                JSONObject num = value.getJSONObject(tag);
-                switch (num.keys().next()) {
-                    case "Integer":
-                        return num.getInt("Integer");
-                    case "Float":
-                        return num.getFloat("Float");
-                }
-            case "List":
-                return polarListToJava(value.getJSONArray(tag));
-            case "Dictionary":
-                return polarDictToJava(value.getJSONObject(tag).getJSONObject("fields"));
-            case "ExternalInstance":
-                return getCachedInstance(value.getJSONObject(tag).getLong("instance_id"));
-            case "Call":
-                List<Object> args = polarListToJava(value.getJSONObject(tag).getJSONArray("args"));
-                return new Predicate(value.getJSONObject(tag).getString("name"), args);
-            default:
-                throw new Exceptions.UnexpectedPolarTypeError(tag);
+            throw new Exceptions.UnregisteredClassError(name);
         }
     }
 
     /**
+     * Get a cached Java instance.
      *
-     * @param dict
+     * @param instanceId
      * @return
      * @throws Exceptions.UnregisteredInstanceError
-     * @throws Exceptions.UnexpectedPolarTypeError
      */
-    protected HashMap<String, Object> polarDictToJava(JSONObject dict)
-            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
-        HashMap<String, Object> resMap = new HashMap<String, Object>();
-        for (String key : dict.keySet()) {
-            resMap.put(key, toJava(dict.getJSONObject(key)));
-        }
-        return resMap;
-    }
-
-    /**
-     *
-     * @param list
-     * @return
-     * @throws Exceptions.UnregisteredInstanceError
-     * @throws Exceptions.UnexpectedPolarTypeError
-     */
-    protected List<Object> polarListToJava(JSONArray list)
-            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
-        ArrayList<Object> resArray = new ArrayList<Object>();
-        for (int i = 0; i < list.length(); i++) {
-            resArray.add(toJava(list.getJSONObject(i)));
-        }
-        return resArray;
-
-    }
-
-    /**
-     * Convert Java Objects to Polar (JSON) terms.
-     *
-     * @param value Java Object to be converted to Polar.
-     * @return JSONObject Polar term of form: {@code {"id": _, "offset": _, "value":
-     *         _}}.
-     */
-    public JSONObject toPolarTerm(Object value) throws Exceptions.OsoException {
-        // Build Polar value
-        JSONObject jVal = new JSONObject();
-        if (value.getClass() == Boolean.class) {
-            jVal.put("Boolean", value);
-
-        } else if (value.getClass() == Integer.class) {
-            jVal.put("Number", Map.of("Integer", value));
-
-        } else if (value.getClass() == Float.class) {
-            jVal.put("Number", Map.of("Float", value));
-
-        } else if (value.getClass() == String.class) {
-            jVal.put("String", value);
-
-        } else if (value instanceof List) {
-            ArrayList<JSONObject> list = new ArrayList<JSONObject>();
-            for (Object el : (List<Object>) value) {
-                list.add(toPolarTerm(el));
-            }
-            jVal.put("List", list);
-
-        } else if (value instanceof Map) {
-            Map<Object, Object> map = (Map<Object, Object>) value;
-            HashMap<String, JSONObject> jMap = new HashMap<String, JSONObject>();
-            for (Object key : map.keySet()) {
-                JSONObject val = toPolarTerm(map.get(key));
-                jMap.put(key.toString(), val);
-            }
-            jVal.put("Dictionary", new JSONObject().put("fields", jMap));
-
-        } else if (value instanceof Predicate) {
-            Predicate pred = (Predicate) value;
-            ArrayList<JSONObject> args = new ArrayList<JSONObject>();
-            for (Object el : pred.args) {
-                args.add(toPolarTerm(el));
-            }
-            jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", args)));
-        } else if (value instanceof Variable) {
-            jVal.put("Symbol", value);
+    protected Object getCachedInstance(long instanceId) throws Exceptions.UnregisteredInstanceError {
+        if (instances.containsKey(instanceId)) {
+            return instances.get(instanceId);
         } else {
-            jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
+            throw new Exceptions.UnregisteredInstanceError(instanceId);
         }
-
-        // Build Polar term
-        JSONObject term = new JSONObject();
-        term.put("id", 0);
-        term.put("offset", 0);
-        term.put("value", jVal);
-        return term;
     }
 
+    /**
+     * Determine if a Java instance has been cached.
+     *
+     * @param instanceId
+     * @return
+     */
+    protected boolean hasInstance(long instanceId) {
+        return instances.containsKey(instanceId);
+    }
+
+    /**
+     * Check if a class specializer is more specific than another class specializer.
+     *
+     * @param instanceId
+     * @param leftTag
+     * @param rightTag
+     * @return
+     * @throws Exceptions.UnregisteredClassError
+     */
     protected boolean subspecializer(long instanceId, String leftTag, String rightTag)
             throws Exceptions.UnregisteredClassError {
         Object instance = instances.get(instanceId);
         Class cls, leftClass, rightClass;
         cls = instance.getClass();
-        leftClass = getPolarClass(leftTag);
-        rightClass = getPolarClass(rightTag);
+        leftClass = getRegisteredClass(leftTag);
+        rightClass = getRegisteredClass(rightTag);
 
         boolean answer = false;
         if (leftClass.isInstance(instance) || rightClass.isInstance(instance)) {
@@ -460,37 +524,48 @@ public class Polar {
         return answer;
     }
 
+    /**
+     * Check if a Java instance is an instance of a class.
+     *
+     * @param instanceId
+     * @param classTag
+     * @return
+     * @throws Exceptions.UnregisteredClassError
+     * @throws Exceptions.UnregisteredInstanceError
+     */
     protected boolean isa(long instanceId, String classTag)
             throws Exceptions.UnregisteredClassError, Exceptions.UnregisteredInstanceError {
-        Class cls = getPolarClass(classTag);
+        Class cls = getRegisteredClass(classTag);
         Object instance = getCachedInstance(instanceId);
         return cls.isInstance(instance);
     }
 
+    /*******************/
+    /* PRIVATE METHODS */
+    /*******************/
+
     /**
+     * Confirm that all queued inline queries succeed.
      *
-     * @param name
-     * @return
-     * @throws Exceptions.UnregisteredClassError
+     * @throws Exceptions.OsoException           On failed query creation.
+     * @throws Exceptions.InlineQueryFailedError On inline query failure.
      */
-    protected Class getPolarClass(String name) throws Exceptions.UnregisteredClassError {
-        if (classes.containsKey(name)) {
-            return classes.get(name);
-        } else {
-            throw new Exceptions.UnregisteredClassError(name);
+    private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
+        Ffi.QueryPtr nextQuery = ffi.polarNextInlineQuery(polarPtr);
+        while (nextQuery != null) {
+            if (!new Query(nextQuery, this).hasMoreElements()) {
+                throw new Exceptions.InlineQueryFailedError();
+            }
+            nextQuery = ffi.polarNextInlineQuery(polarPtr);
         }
     }
 
-    protected Object getCachedInstance(long instanceId) throws Exceptions.UnregisteredInstanceError {
-        if (instances.containsKey(instanceId)) {
-            return instances.get(instanceId);
-        } else {
-            throw new Exceptions.UnregisteredInstanceError(instanceId);
-        }
-    }
-
-    protected boolean hasInstance(long instanceId) {
-        return instances.containsKey(instanceId);
+    /**
+     * Clear cached instances and calls.
+     */
+    private void clearQueryState() {
+        instances.clear();
+        calls.clear();
     }
 
 }

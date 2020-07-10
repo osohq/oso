@@ -40,6 +40,10 @@ public class Ffi {
             return checkResult(polarLib.polar_call_result(ptr, call_id, value));
         }
 
+        protected String polarNextQueryEvent() throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_next_query_event(ptr));
+        }
+
         @Override
         protected void finalize() {
             polarLib.polar_free(ptr);
@@ -117,10 +121,6 @@ public class Ffi {
         } else {
             return new QueryPtr(p);
         }
-    }
-
-    protected String polarNextQueryEvent(QueryPtr queryPtr) throws Exceptions.OsoException {
-        return checkResult(polarLib.polar_next_query_event(queryPtr.get()));
     }
 
     protected QueryPtr polarQueryFromRepl(PolarPtr polarPtr) throws Exceptions.OsoException {

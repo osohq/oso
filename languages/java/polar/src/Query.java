@@ -75,7 +75,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      */
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
         while (true) {
-            String eventStr = polar.nextQueryEvent(queryPtr);
+            String eventStr = queryPtr.polarNextQueryEvent();
             String kind;
             JSONObject data;
             try {
