@@ -27,9 +27,9 @@ public class Polar {
         calls = new HashMap<Long, Enumeration<Object>>();
     }
 
-    /******************/
-    /* PUBLIC METHODS */
-    /******************/
+    /*********************/
+    /* PROTECTED METHODS */
+    /*********************/
 
     /**
      * Enqueue a polar policy file to be loaded. File contents are loaded into a
@@ -42,7 +42,7 @@ public class Polar {
      * @throws IOException                        If unable to open or read the
      *                                            file.
      */
-    public void loadFile(String filename) throws IOException, Exceptions.PolarFileExtensionError {
+    protected void loadFile(String filename) throws IOException, Exceptions.PolarFileExtensionError {
         Optional<String> ext = Optional.ofNullable(filename).filter(f -> f.contains("."))
                 .map(f -> f.substring(filename.lastIndexOf(".") + 1));
 
@@ -56,23 +56,11 @@ public class Polar {
     }
 
     /**
-     * Load all queued files, flushing the {@code loadQueue}
-     *
-     * @throws Exceptions.OsoException
-     */
-    public void loadQueuedFiles() throws Exceptions.OsoException {
-        for (String fname : loadQueue.keySet()) {
-            loadStr(loadQueue.get(fname), fname);
-        }
-        loadQueue.clear();
-    }
-
-    /**
      * Clear the KB, but maintain all registered classes and calls
      *
      * @throws Exceptions.OsoException
      */
-    public void clear() throws Exceptions.OsoException {
+    protected void clear() throws Exceptions.OsoException {
         // clear all Queued files
         loadQueue.clear();
 
@@ -87,7 +75,7 @@ public class Polar {
      * @param filename Name of the source file.
      * @throws Exceptions.OsoException
      */
-    public void loadStr(String str, String filename) throws Exceptions.OsoException {
+    protected void loadStr(String str, String filename) throws Exceptions.OsoException {
         ffi.loadStr(str, filename);
         checkInlineQueries();
     }
@@ -98,7 +86,7 @@ public class Polar {
      * @param str Polar string to be loaded.
      * @throws Exceptions.OsoException
      */
-    public void loadStr(String str) throws Exceptions.OsoException {
+    protected void loadStr(String str) throws Exceptions.OsoException {
         ffi.loadStr(str, null);
         checkInlineQueries();
 
@@ -110,7 +98,7 @@ public class Polar {
      * @param queryStr Query string
      * @return Query object (Enumeration of resulting variable bindings).
      */
-    public Query queryStr(String queryStr) throws Exceptions.OsoException {
+    protected Query queryStr(String queryStr) throws Exceptions.OsoException {
         clearQueryState();
         loadQueuedFiles();
         return new Query(ffi.newQueryFromStr(queryStr), this);
@@ -124,7 +112,7 @@ public class Polar {
      * @return Query object (Enumeration of resulting variable bindings).
      * @throws Exceptions.OsoException
      */
-    public Query queryPred(String name, List<Object> args) throws Exceptions.OsoException {
+    protected Query queryPred(String name, List<Object> args) throws Exceptions.OsoException {
         clearQueryState();
         loadQueuedFiles();
         String pred = toPolarTerm(new Predicate(name, args)).toString();
@@ -136,7 +124,7 @@ public class Polar {
      *
      * @throws Exceptions.OsoException
      */
-    public void repl() throws Exceptions.OsoException {
+    protected void repl() throws Exceptions.OsoException {
         // clear_query_state
         loadQueuedFiles();
         while (true) {
@@ -162,7 +150,8 @@ public class Polar {
      * @throws Exceptions.DuplicateClassAliasError if class has already been
      *                                             registered.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar) throws Exceptions.DuplicateClassAliasError {
+    protected void registerClass(Class cls, Function<Map, Object> fromPolar)
+            throws Exceptions.DuplicateClassAliasError {
         String name = cls.getName();
         if (classes.containsKey(name)) {
             throw new Exceptions.DuplicateClassAliasError(name, classes.get(name).getName(), name);
@@ -183,7 +172,7 @@ public class Polar {
      * @throws Exceptions.DuplicateClassAliasError if a class has already been
      *                                             registered with the given alias.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar, String alias)
+    protected void registerClass(Class cls, Function<Map, Object> fromPolar, String alias)
             throws Exceptions.DuplicateClassAliasError {
         if (classes.containsKey(alias)) {
             throw new Exceptions.DuplicateClassAliasError(alias, classes.get(alias).getName(), cls.getName());
@@ -191,10 +180,6 @@ public class Polar {
         classes.put(alias, cls);
         constructors.put(alias, fromPolar);
     }
-
-    /*********************/
-    /* PROTECTED METHODS */
-    /*********************/
 
     /**
      * Convert Java Objects to Polar (JSON) terms.
@@ -541,6 +526,18 @@ public class Polar {
     /*******************/
     /* PRIVATE METHODS */
     /*******************/
+
+    /**
+     * Load all queued files, flushing the {@code loadQueue}
+     *
+     * @throws Exceptions.OsoException
+     */
+    private void loadQueuedFiles() throws Exceptions.OsoException {
+        for (String fname : loadQueue.keySet()) {
+            loadStr(loadQueue.get(fname), fname);
+        }
+        loadQueue.clear();
+    }
 
     /**
      * Confirm that all queued inline queries succeed.
