@@ -337,8 +337,8 @@ public class TestPolar {
     }
 
     private static void registerClasses(Polar p) throws Exceptions.DuplicateClassAliasError {
-        p.registerClass(MyClass.class, "MyClass", m -> new MyClass((String) m.get("name"), (int) m.get("id")));
-        p.registerClass(MySubClass.class, "MySubClass", m -> new MySubClass((String) m.get("name"), (int) m.get("id")));
+        p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")), "MyClass");
+        p.registerClass(MySubClass.class, m -> new MySubClass((String) m.get("name"), (int) m.get("id")), "MySubClass");
     }
 
     private static void printResults(Status status, String message, String name) {

@@ -84,10 +84,6 @@ public class Ffi {
         polarLib = LibraryLoader.create(PolarLib.class).load("lib/libpolar.dylib");
     }
 
-    // protected int polarFree(PolarPtr polarPtr) throws Exceptions.OsoException {
-    // return checkResult(polarLib.polar_free(polarPtr.get()));
-    // }
-
     protected int polarDebugCommand(QueryPtr queryPtr, String value) throws Exceptions.OsoException {
         return checkResult(polarLib.polar_debug_command(queryPtr.get(), value));
     }
@@ -130,10 +126,6 @@ public class Ffi {
     protected QueryPtr polarQueryFromRepl(PolarPtr polarPtr) throws Exceptions.OsoException {
         return new QueryPtr(checkResult(polarLib.polar_query_from_repl(polarPtr.get())));
     }
-
-    // protected int queryFree(QueryPtr queryPtr) throws Exceptions.OsoException {
-    // return checkResult(polarLib.query_free(queryPtr.get()));
-    // }
 
     protected int stringFree(Pointer s) throws Exceptions.OsoException {
         return checkResult(polarLib.string_free(s));

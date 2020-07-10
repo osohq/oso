@@ -187,15 +187,15 @@ public class Polar {
      * Register a Java class with oso using an alias.
      *
      * @param cls
-     * @param alias     name to register the class under, which is how the class is
-     *                  accessed from Polar.
      * @param fromPolar lambda function to convert from a
      *                  {@code Map<String, Object>} of parameters to an instance of
      *                  the Java class.
+     * @param alias     name to register the class under, which is how the class is
+     *                  accessed from Polar.
      * @throws Exceptions.DuplicateClassAliasError if a class has already been
      *                                             registered with the given alias.
      */
-    public void registerClass(Class cls, String alias, Function<Map, Object> fromPolar)
+    public void registerClass(Class cls, Function<Map, Object> fromPolar, String alias)
             throws Exceptions.DuplicateClassAliasError {
         if (classes.containsKey(alias)) {
             throw new Exceptions.DuplicateClassAliasError(alias, classes.get(alias).getName(), cls.getName());
