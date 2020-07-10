@@ -151,4 +151,242 @@ This type of authorization is easy to do before data fetch.  However, it may be
 performed after data fetch by checking the class name or a resource field that
 indicates the type of the data.
 
+Row / attribute level
+---------------------
 
+Row & attribute level access control by necessity requires access to the data
+being authorized. For most types of requests, this authorization must be
+performed after a primary data fetch. Authorizing a GET request for a single record
+requires that record's data before the authorization can be evaluated. An update
+or delete request requires the same data.  A create request is the exception
+to this rule, since it can be authorized on the basis of the data to be created
+before committing it to the data store.
+
+Column / field level
+--------------------
+
+Authorizing access to columns can be done before or after data access. If
+performed before, the columns to be accessed in a read query or updated can be
+authorized.  If performed after, the data could be masked based on the columns
+that are allowed to be read.
+
+Authorizing list endpoints
+--------------------------
+
+A list endpoint can be challenging to authorize since it deals with obtaining
+a collection of resources.  Often the filter used to obtain these resources will
+be related to the authorization policy.  For example, suppose we have the following
+access control rule in our policy::
+
+    # Accountants can view expenses from their location
+    allow(actor: User, "view", resource: Expense) if
+        role(actor, "accountant") and
+        actor.location = resource.location;
+
+To authorize this request for a single record fetch, for example
+``GET /expense/1`` we could fetch the record (the equivalent of
+``SELECT * FROM expenses WHERE id = 1``) then evaluate the allow rule, passing
+the record to oso as a resource.
+
+For a list endpoint, we have a few options:
+
+    1. Apply a less restrictive filter in application code (or no filter) and
+       individually authorize every record.
+    2. Duplicate our filter code in both places (application and Polar).
+    3. Authorize the filter to be applied to the query, instead of the resource.
+    4. Have oso output the filter to be applied for list endpoints.
+
+Let's see an example of how each of these would work. We will use Python
+pseudocode for this example, but the same concepts translate to any web application.
+
+**Authorizing each record individually**
+
+In this example, we apply a filter in our application (how restrictive this is
+depends on the use case & expected amount of records).  For example, suppose each
+user has an associated organization id.  Users can only view expenses by
+organization.  We could apply this filter, then further restrict access using oso.
+
+
+.. code-block:: python
+
+    def get_expenses(user):
+        records = db.fetch(
+            "SELECT * FROM expenses WHERE organization_id = %s AND is_active = 't'",
+                           user.organization_id)
+
+        authorized_records = []
+
+        # Use oso.allow to filter records that are not authorized.
+        for record in records:
+            if not oso.allow(actor=user, action="view", resource=record):
+                continue
+
+            authorized_records.append(record)
+
+This approach works well if the expected size of ``records`` after the database
+fetch is relatively small.  It is not performant if the record set is large.
+
+**Duplicating filter logic**
+
+In this approach, we only use oso to confirm that access is allowed.  While oso
+remains the authoritative source of authorization information, it is not used
+to determine which records to fetch.  This approach is helpful if you have
+authorization rules that must be applied to highly sensitive data using oso,
+but still need the performance gains from explicitly filtering records
+in your application.
+
+.. todo Below example doesn't actually work because a class does not match a
+   rule (only an instance will).
+
+.. code-block:: python
+
+    def get_expenses(user):
+        # Check that user is authorized to list responses.
+        if not oso.allow(actor=user, "list", resource=Expense):
+           return NotAuthorizedResponse()
+
+        # Apply location filter for authorization, as well as other
+        # non-authorization filters (is_active = 't')
+        records = db.fetch(
+            "SELECT * FROM expenses WHERE location_id = %s AND is_active = 't'",
+            user.location_id)
+
+        # Use oso.allow to *confirm* that records are authorized.
+        for record in records:
+            if not oso.allow(actor=user, action="view", resource=record):
+                if DEBUG:
+                    # In debug mode, this is a programming error.
+                    # The logic in oso should be kept in sync with the filters
+                    # in the above query.
+                    assert False
+
+                raise NotAuthorizedResponse()
+
+For the above example, we add the following to our policy::
+
+    # Accountants can list expenses
+    allow(actor: User, "list", resource: Expense) if
+        role(actor, "accountant");
+
+This takes the role check portion from the ``view`` rule and allows us to apply
+it separately, before we authorize the query. This means we don't need to fetch
+expenses when the request would ultimately be denied because the role is not
+allowed to list expenses.
+
+**Authorizing the filter to be applied, instead of the resource**
+
+Instead of duplicating logic in oso and our application, we could authorize the
+request filter.
+
+.. code-block:: python
+
+    def get_expenses(user):
+        # Check that user is authorized to list responses.
+        if not oso.allow(actor=user, "list", resource=Expense):
+           return NotAuthorizedResponse()
+
+        # Structured format representing WHERE clauses.
+        # In an ORM, we might use the ORM's native query construction objects
+        # to represent this.
+        auth_filters = [
+            ("location_id", "=", user.location_id)
+        ]
+
+        # Use ``query_pred`` to evaluate a rule that authorizes the filter.
+        if not oso.query_pred("allow_filter", user, "view", Expense, auth_filters):
+            return NotAuthorizedResponse()
+
+        # This function converts our structured filter into a SQL WHERE statement
+        # for execution.  If we are using an ORM this would be performed by the ORM.
+        where, params = filters_to_sql(auth_filters)
+
+        records = db.fetch(f"SELECT * FROM expenses WHERE {where} AND is_active = 't'",
+                           params)
+
+        # No additional authorization of records is needed since we checked the query.
+
+.. todo We have no way to expect an Expense class as a specializer. We may need
+        some syntax for that.
+
+.. todo It would be nice if the filter structure can actually be evaluated
+    by Polar for "view" queries, but that would require some complicated
+    metaprogramming type stuff, or at least a getattr style predicate.
+
+To support this structure, our Polar policy would look something like::
+
+    # Accountants can list expenses
+    allow(actor: User, "list", resource: Expense) if
+        role(actor, "accountant");
+
+    # A set of filters is allowed for a view request as long as it
+    # restricts the location id properly.
+    allow_filter(actor, "view", resource_type: Expense, filters) if
+        ["location_id", "=", actor.location_id] in filters;
+
+**Have oso output the filter**
+
+This is a similar structure to above, but instead the authorization filter is
+stored in Polar.  This structure can simplify application code, and allows for
+filters that are conditional on other attributes. For example, our policy for
+"view" could contain the additional rule
+
+.. code-block:: polar
+    :emphasize-lines: 1-3
+
+    # Users can view expenses they submitted
+    allow(actor: User, "view", resource: Expense) if
+        resource.submitted_by = actor.name;
+
+    # Accountants can view expenses from their location
+    allow(actor: User, "view", resource: Expense) if
+        role(actor, "accountant") and
+        actor.location = resource.location;
+
+We could instead refactor these rules so that the filters can be evaluated
+by the data store::
+
+    allow_with_filter(actor: User, "view", resource: Expense, filters) if
+        filters = ["submitted_by", "=", actor.name];
+
+    allow_with_filter(actor: User, "view", resource: Expense, filters) if
+        role(actor, "accountant") and
+        filters = ["location", "=", actor.location];
+
+Now, in our app:
+
+.. code-block:: python
+
+    def get_expenses(user):
+        # Get authorization filters from oso
+        filters = oso.query_pred(
+            "allow_with_filter", actor, "view", resource, Variable("filters"))
+
+        # There may be multiple allow rules that matched, so we iterate over all
+        # of them.  In the above example, every user can view expenses they submitted,
+        # and accountants and view those in the same location as them.
+        authorized_records = []
+        for filter_set in filters.results:
+            # This is the same conversion function from earlier.
+            where, params = filters_to_sql(filter_set)
+            records = db.fetch(
+                f"SELECT * FROM expenses WHERE {where} AND is_active = 't'",
+                params)
+
+            authorized_records += records
+
+        # No further authorization is necessary.
+
+This approach results in simpler authorization code, and the policy is truly
+in full control of authorization.  It can be modified independently from
+application code, without any duplication.
+
+Conclusion
+----------
+
+In this guide, we covered the various access control levels
+(model, attribute & field) and showed you how to integrate oso in your application
+at various spots. We then covered list endpoints -- which are often difficult to
+write complex authorization for -- in detail. We discussed several potential
+techniques for structuring a policy that handles these types of requests.
+
+.. todo what to read next

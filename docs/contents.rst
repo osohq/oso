@@ -46,6 +46,8 @@ authorization in your application with oso.
 
    auth-models/index
 
+   integration-guide
+
    application-library/index
 
    faq
