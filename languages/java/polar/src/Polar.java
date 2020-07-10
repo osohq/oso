@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
@@ -222,15 +223,13 @@ public class Polar {
             return;
         }
         Object instance = instances.get(instanceId);
-        Class[] argTypes = new Class[args.size()];
-        for (int i = 0; i < args.size(); i++) {
-            argTypes[i] = args.get(i).getClass();
-        }
+        // Get types of args to pass into `getMethod()`
+        List<Class> argTypes = args.stream().map(a -> a.getClass()).collect(Collectors.toUnmodifiableList());
         Object result = null;
         Boolean isMethod = true;
         try {
             try {
-                Method method = instance.getClass().getMethod(attrName, argTypes);
+                Method method = instance.getClass().getMethod(attrName, argTypes.toArray(new Class[argTypes.size()]));
                 result = method.invoke(instance, args.toArray());
             } catch (NoSuchMethodException e) {
                 isMethod = false;
