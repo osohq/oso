@@ -5,7 +5,7 @@ public class Exceptions {
     public static OsoException getJavaError(String polarError) {
         String msg, kind, subkind;
         JSONObject jError, body;
-        Map<String, Object> details;
+        Map<String, Object> details = null;
 
         if (polarError == null) {
             return new Exceptions.FFIErrorNotFound();
@@ -13,9 +13,13 @@ public class Exceptions {
         jError = new JSONObject(polarError);
         msg = jError.getString("formatted");
         kind = jError.getJSONObject("kind").keys().next();
-        body = jError.getJSONObject("kind").getJSONObject(kind);
-        subkind = body.keys().next();
-        details = body.getJSONObject(subkind).toMap();
+        try {
+            body = jError.getJSONObject("kind").getJSONObject(kind);
+            subkind = body.keys().next();
+            details = body.getJSONObject(subkind).toMap();
+        } catch (JSONException e) {
+            subkind = jError.getJSONObject("kind").getString(kind);
+        }
 
         switch (kind) {
             case "Parse":
