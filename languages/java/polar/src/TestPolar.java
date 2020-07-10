@@ -371,10 +371,6 @@ public class TestPolar {
         try {
             Polar p = new Polar();
             registerClasses(p);
-            // p.loadStr("f(a: MyClass, x) := debug(), x = a.id;");
-            // List<HashMap<String, Object>> results = p.queryPred("f", List.of(new
-            // MyClass("test", 1), new Variable("x")))
-            // .results();
             p.loadStr("f(x) := debug(), x = 1;");
             List<HashMap<String, Object>> results = p.queryStr("f(x)").results();
             System.out.println(results);
