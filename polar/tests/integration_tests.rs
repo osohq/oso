@@ -856,6 +856,13 @@ fn test_debug() {
 }
 
 #[test]
+fn test_anonymous_vars() {
+    let mut polar = Polar::new();
+    assert!(qeval(&mut polar, "[1,2,3] = [_,_,_]"));
+    assert!(qnull(&mut polar, "[1,2,3] = [__,__,__]"));
+}
+
+#[test]
 fn test_rest_vars() {
     let mut polar = Polar::new();
 
@@ -875,7 +882,7 @@ fn test_rest_vars() {
         qvar(&mut polar, "([1,2,3] = [1,2,3, *rest])", "rest"),
         vec![value!([])]
     );
-    assert!(qeval(&mut polar, "not ([1,2,3] = [1,2,3,4, *_rest])"));
+    assert!(qnull(&mut polar, "[1,2,3] = [1,2,3,4, *_rest]"));
 
     polar
         .load(
