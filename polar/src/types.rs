@@ -105,6 +105,12 @@ pub struct Context {
 
 pub type TermList = Vec<Term>;
 
+/// Return true if the list ends with a rest-variable.
+#[allow(clippy::ptr_arg)]
+pub fn has_rest_var(list: &TermList) -> bool {
+    !list.is_empty() && matches!(list.last().unwrap().value(), Value::RestVariable(_))
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Symbol(pub String);
 
@@ -266,6 +272,7 @@ pub enum Value {
     Call(Predicate), // @TODO: Do we just want a type for this instead?
     List(TermList),
     Variable(Symbol),
+    RestVariable(Symbol),
     Expression(Operation),
 }
 
@@ -273,6 +280,7 @@ impl Value {
     pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
         match self {
             Value::Variable(name) => Ok(name),
+            Value::RestVariable(name) => Ok(name),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
                 loc: 0,
@@ -422,7 +430,11 @@ impl Term {
         *self = f(self);
         let mut value = self.value().clone();
         match value {
-            Value::Number(_) | Value::String(_) | Value::Boolean(_) | Value::Variable(_) => {}
+            Value::Number(_)
+            | Value::String(_)
+            | Value::Boolean(_)
+            | Value::Variable(_)
+            | Value::RestVariable(_) => {}
             Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_replace(f)),
             Value::Call(ref mut predicate) => {
                 predicate.args.iter_mut().for_each(|a| a.map_replace(f))
@@ -609,7 +621,9 @@ impl KnowledgeBase {
     /// Generate a new symbol.
     pub fn gensym(&self, prefix: &str) -> Symbol {
         let next = self.gensym_counter.fetch_add(1, Ordering::SeqCst);
-        if prefix.starts_with('_') {
+        if prefix == "_" {
+            Symbol(format!("_{}", next))
+        } else if prefix.starts_with('_') {
             Symbol(format!("{}_{}", prefix, next))
         } else {
             Symbol(format!("_{}_{}", prefix, next))

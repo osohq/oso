@@ -465,7 +465,9 @@ impl PolarVirtualMachine {
     /// Recursively dereference a variable.
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
-            Value::Variable(symbol) => self.value(&symbol).map_or(term.clone(), |t| self.deref(t)),
+            Value::Variable(symbol) | Value::RestVariable(symbol) => {
+                self.value(&symbol).map_or(term.clone(), |t| self.deref(t))
+            }
             _ => term.clone(),
         }
     }
@@ -490,7 +492,9 @@ impl PolarVirtualMachine {
             .iter()
             .map(|t| {
                 t.cloned_map_replace(&mut |t| match t.value() {
-                    Value::Variable(sym) if !self.is_constant_var(sym) => {
+                    Value::Variable(sym) | Value::RestVariable(sym)
+                        if !self.is_constant_var(sym) =>
+                    {
                         if let Some(new) = renames.get(sym) {
                             t.clone_with_value(Value::Variable(new.clone()))
                         } else {
@@ -517,6 +521,15 @@ impl PolarVirtualMachine {
                     let new = self.kb.read().unwrap().gensym(&sym.0);
                     renames.insert(sym.clone(), new.clone());
                     term.clone_with_value(Value::Variable(new))
+                }
+            }
+            Value::RestVariable(sym) => {
+                if let Some(new) = renames.get(sym) {
+                    term.clone_with_value(Value::RestVariable(new.clone()))
+                } else {
+                    let new = self.kb.read().unwrap().gensym(&sym.0);
+                    renames.insert(sym.clone(), new.clone());
+                    term.clone_with_value(Value::RestVariable(new))
                 }
             }
             _ => term.clone(),
@@ -608,14 +621,10 @@ impl PolarVirtualMachine {
 
         match (&left.value(), &right.value()) {
             (Value::List(left), Value::List(right)) => {
-                if left.len() == right.len() {
-                    self.append_goals(left.iter().zip(right).map(|(left, right)| Goal::Isa {
-                        left: left.clone(),
-                        right: right.clone(),
-                    }))?;
-                } else {
-                    self.push_goal(Goal::Backtrack)?;
-                }
+                self.unify_lists(left, right, |(left, right)| Goal::Isa {
+                    left: left.clone(),
+                    right: right.clone(),
+                })?;
             }
 
             (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
@@ -1209,57 +1218,21 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
-        // Unify a symbol `left` with a term `right`.
-        // This is sort of a "sub-goal" of `Unify`.
-        let mut unify_var = |left: &Symbol, right: &Term| -> PolarResult<()> {
-            let left_value = self.value(&left).cloned();
-            let mut right_value = None;
-            if let Value::Variable(ref right_sym) = right.value() {
-                right_value = self.value(right_sym).cloned();
-            }
-
-            match (left_value, right_value) {
-                (Some(left), Some(right)) => {
-                    // Both are bound, unify their values.
-                    self.push_goal(Goal::Unify { left, right })?;
-                }
-                (Some(left), _) => {
-                    // Only left is bound, unify with whatever right is.
-                    self.push_goal(Goal::Unify {
-                        left,
-                        right: right.clone(),
-                    })?;
-                }
-                (None, Some(value)) => {
-                    // Left is unbound, right is bound;
-                    // bind left to the value of right.
-                    self.bind(left, value);
-                }
-                (None, None) => {
-                    // Neither is bound, so bind them together.
-                    // TODO: should theoretically bind the earliest one here?
-                    self.bind(left, right.clone());
-                }
-            }
-            Ok(())
-        };
-
-        // Unify generic terms.
         match (&left.value(), &right.value()) {
-            // Unify symbols as variables.
-            (Value::Variable(var), _) => unify_var(var, right)?,
-            (_, Value::Variable(var)) => unify_var(var, left)?,
+            // Unify variables.
+            (Value::Variable(var), _) => self.unify_var(var, right)?,
+            (_, Value::Variable(var)) => self.unify_var(var, left)?,
 
-            // Unify lists by recursively unifying the elements.
+            // Unify rest-variables with list tails.
+            (Value::RestVariable(var), Value::List(_)) => self.unify_var(var, right)?,
+            (Value::List(_), Value::RestVariable(var)) => self.unify_var(var, left)?,
+
+            // Unify lists by recursively unifying their elements.
             (Value::List(left), Value::List(right)) => {
-                if left.len() == right.len() {
-                    self.append_goals(left.iter().zip(right).map(|(left, right)| Goal::Unify {
-                        left: left.clone(),
-                        right: right.clone(),
-                    }))?;
-                } else {
-                    self.push_goal(Goal::Backtrack)?;
-                }
+                self.unify_lists(left, right, |(left, right)| Goal::Unify {
+                    left: left.clone(),
+                    right: right.clone(),
+                })?
             }
 
             (Value::Dictionary(left), Value::Dictionary(right)) => {
@@ -1362,6 +1335,87 @@ impl PolarVirtualMachine {
         }
 
         Ok(())
+    }
+
+    /// Unify a symbol `left` with a term `right`.
+    /// This is sort of a "sub-goal" of `Unify`.
+    fn unify_var(&mut self, left: &Symbol, right: &Term) -> PolarResult<()> {
+        let left_value = self.value(&left).cloned();
+        let mut right_value = None;
+        if let Value::Variable(ref right_sym) | Value::RestVariable(ref right_sym) = right.value() {
+            right_value = self.value(right_sym).cloned();
+        }
+
+        match (left_value, right_value) {
+            (Some(left), Some(right)) => {
+                // Both are bound, unify their values.
+                self.push_goal(Goal::Unify { left, right })?;
+            }
+            (Some(left), _) => {
+                // Only left is bound, unify with whatever right is.
+                self.push_goal(Goal::Unify {
+                    left,
+                    right: right.clone(),
+                })?;
+            }
+            (None, Some(value)) => {
+                // Left is unbound, right is bound;
+                // bind left to the value of right.
+                self.bind(left, value);
+            }
+            (None, None) => {
+                // Neither is bound, so bind them together.
+                // TODO: should theoretically bind the earliest one here?
+                self.bind(left, right.clone());
+            }
+        }
+        Ok(())
+    }
+
+    /// "Unify" two lists element-wise, respecting rest-variables.
+    /// Used by both `unify` and `isa`; hence the third argument,
+    /// a closure that builds sub-goals.
+    #[allow(clippy::ptr_arg)]
+    fn unify_lists<F>(&mut self, left: &TermList, right: &TermList, unify: F) -> PolarResult<()>
+    where
+        F: FnMut((&Term, &Term)) -> Goal,
+    {
+        if has_rest_var(left) {
+            self.unify_lists_with_rest(left, right, unify)
+        } else if has_rest_var(right) {
+            self.unify_lists_with_rest(right, left, unify)
+        } else if left.len() == right.len() {
+            // No rest-variables; unify element-wise.
+            self.append_goals(left.iter().zip(right).map(unify))
+        } else {
+            self.push_goal(Goal::Backtrack)
+        }
+    }
+
+    /// Unify a list that ends with a rest-variable with another.
+    /// We assume that the left list has the rest-variable.
+    /// A helper method for `unify_lists`.
+    #[allow(clippy::ptr_arg)]
+    fn unify_lists_with_rest<F>(
+        &mut self,
+        left: &TermList,
+        right: &TermList,
+        mut unify: F,
+    ) -> PolarResult<()>
+    where
+        F: FnMut((&Term, &Term)) -> Goal,
+    {
+        assert!(has_rest_var(left));
+        let n = left.len() - 1;
+        if right.len() >= n {
+            let rest = unify((
+                &left[n].clone(),
+                &Term::new_temporary(Value::List(right[n..].to_vec())),
+            ));
+            self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
+        } else {
+            self.push_goal(Goal::Backtrack)
+        }
     }
 
     /// Filter rules to just those applicable to a list of arguments,
@@ -1895,7 +1949,7 @@ mod tests {
 
         // [1,2] isNOTa [1]
         vm.push_goal(Goal::Isa {
-            left: one_two_list,
+            left: one_two_list.clone(),
             right: one_list.clone(),
         })
         .unwrap();
@@ -1937,6 +1991,17 @@ mod tests {
         .unwrap();
         assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
         assert!(vm.is_halted());
+
+        // [1,2] isa [1, *rest]
+        vm.push_goal(Goal::Isa {
+            left: one_two_list,
+            right: term!([1, Value::RestVariable(sym!("rest"))]),
+        })
+        .unwrap();
+        assert_query_events!(vm, [
+            QueryEvent::Result{hashmap!{sym!("rest") => term!([2])}},
+            QueryEvent::Done
+        ]);
     }
 
     #[test]
