@@ -538,3 +538,11 @@ def test_other_constants(polar, qvar):
     d = {"a": 1}
     polar.register_constant("d", d)
     assert qvar("x = d.a", "x") == [1]
+
+
+def test_host_methods(polar, qeval):
+    assert qeval('x = "abc" and x.find("bc") = 1')
+    assert qeval("i = 4095 and i.bit_length() = 12")
+    assert qeval('f = 3.14159 and f.hex() = "0x1.921f9f01b866ep+1"')
+    assert qeval("l = [1, 2, 3] and l.index(3) = 2 and l.copy() = [1, 2, 3]")
+    assert qeval('d = {a: 1} and d.get("a") = 1 and d.get("b", 2) = 2')

@@ -125,6 +125,9 @@ pub fn main() -> anyhow::Result<()> {
                     let input = repl.plain_input("> ").unwrap();
                     query.debug_command(&input).unwrap();
                 }
+                Ok(QueryEvent::ExternalCall { call_id, .. }) => {
+                    query.call_result(call_id, None).unwrap();
+                }
                 Ok(e) => println!("Unsupported event: {:?}", e),
                 Err(e) => println!("{}", e),
             }

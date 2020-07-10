@@ -14,7 +14,7 @@ use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Rc<Trace>>)>;
 use mock_externals::MockExternal;
 
-fn no_results(_: Symbol, _: Vec<Term>, _: u64, _: u64) -> Option<Term> {
+fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Vec<Term>) -> Option<Term> {
     None
 }
 
@@ -41,7 +41,7 @@ fn query_results<F, G, H, I, J>(
     mut debug_handler: G,
 ) -> QueryResults
 where
-    F: FnMut(Symbol, Vec<Term>, u64, u64) -> Option<Term>,
+    F: FnMut(u64, Option<Term>, Symbol, Vec<Term>) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, InstanceLiteral),
     I: FnMut(u64, Symbol) -> bool,
@@ -63,14 +63,14 @@ where
             }
             QueryEvent::ExternalCall {
                 call_id,
+                instance,
                 attribute,
                 args,
-                instance_id,
             } => {
                 query
                     .call_result(
                         call_id,
-                        external_call_handler(attribute, args, call_id, instance_id),
+                        external_call_handler(call_id, instance, attribute, args),
                     )
                     .unwrap();
             }
@@ -625,7 +625,7 @@ fn test_lookup_derefs() {
         .unwrap();
     let query = polar.new_query("f(1)").unwrap();
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, _, _, args: Vec<Term>| {
         // check the argument is bound to an integer
         assert!(matches!(args[0].value(), Value::Number(_)));
         foo_lookups.pop()
@@ -635,7 +635,7 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, _, _, args: Vec<Term>| {
         assert!(matches!(args[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
@@ -689,7 +689,7 @@ fn test_externals_instantiated() {
         .unwrap();
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, _, _, args: Vec<Term>| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
         assert!(
