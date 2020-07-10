@@ -346,7 +346,7 @@ public class Polar {
         Function<Map, Object> constructor = constructors.get(clsName);
         Object instance;
         if (constructor != null) {
-            instance = constructors.get(clsName).apply(fields);
+            instance = constructor.apply(fields);
         } else {
             // TODO: default constructor
             throw new Exceptions.MissingConstructorError(clsName);
@@ -404,7 +404,7 @@ public class Polar {
                     Field field = instance.getClass().getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException e) {
-                    // do nothing, let result = null. This will cause query to fail.
+                    throw new Exceptions.InvalidCallError(attrName);
                 }
             }
         } catch (IllegalAccessException e) {
@@ -432,7 +432,7 @@ public class Polar {
      * @throws Exceptions.OsoException
      */
     protected JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
-        return toPolarTerm(calls.get(callId).nextElement());
+        return toPolarTerm(getCachedCall(callId).nextElement());
     }
 
     /**
@@ -561,6 +561,22 @@ public class Polar {
     private void clearQueryState() {
         instances.clear();
         calls.clear();
+    }
+
+    /**
+     * Get cached Java method call result.
+     *
+     * @param callId
+     * @return
+     * @throws Exceptions.PolarRuntimeException
+     */
+    private Enumeration<Object> getCachedCall(long callId) throws Exceptions.PolarRuntimeException {
+        if (calls.containsKey(callId)) {
+            return calls.get(callId);
+        } else {
+            throw new Exceptions.PolarRuntimeException("Unregistered call ID: " + callId);
+        }
+
     }
 
 }

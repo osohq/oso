@@ -7,8 +7,9 @@ public class Oso {
 
     public Oso() throws Exceptions.OsoException {
         polar = new Polar();
-        // register_class(Http, as: 'Http')
-        // register_class(PathMapper, as: 'PathMapper')
+        registerClass(Http.class,
+                (m) -> new Http((String) m.get("hostname"), (String) m.get("path"), (String) m.get("query")));
+        registerClass(PathMapper.class, (m) -> new PathMapper((String) m.get("template")));
     }
 
     /**
@@ -57,18 +58,6 @@ public class Oso {
     }
 
     /**
-     * Query for a Predicate.
-     *
-     * @param name Predicate name, e.g. "f" for predicate "f(x)".
-     * @param args List of predicate arguments.
-     * @return List of resulting variable bindings.
-     * @throws Exceptions.OsoException
-     */
-    public List<HashMap<String, Object>> queryPredicate(String name, List<Object> args) throws Exceptions.OsoException {
-        return polar.queryPred(name, args).results();
-    }
-
-    /**
      * Register a Java class with oso.
      *
      * @param cls       Class object to be registered.
@@ -97,6 +86,31 @@ public class Oso {
     public void registerClass(Class cls, Function<Map, Object> fromPolar, String alias)
             throws Exceptions.DuplicateClassAliasError {
         polar.registerClass(cls, fromPolar, alias);
+    }
+
+    /**
+     * Submit an `allow` query to the Polar knowledge base.
+     *
+     * @param actor
+     * @param action
+     * @param resource
+     * @return
+     * @throws Exceptions.OsoException
+     */
+    public boolean allow(Object actor, Object action, Object resource) throws Exceptions.OsoException {
+        return polar.queryPred("allow", List.of(actor, action, resource)).hasMoreElements();
+    }
+
+    /**
+     * Query for a Predicate.
+     *
+     * @param name Predicate name, e.g. "f" for predicate "f(x)".
+     * @param args List of predicate arguments.
+     * @return List of resulting variable bindings.
+     * @throws Exceptions.OsoException
+     */
+    public List<HashMap<String, Object>> queryPredicate(String name, List<Object> args) throws Exceptions.OsoException {
+        return polar.queryPred(name, args).results();
     }
 
     /**

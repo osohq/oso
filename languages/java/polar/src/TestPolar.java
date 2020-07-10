@@ -336,6 +336,31 @@ public class TestPolar {
         }
     }
 
+    // TODO: put below in TestOso class
+
+    public static void testPathMapper() throws Exception {
+        Oso oso = new Oso();
+        // Extracts matches into a hash
+        PathMapper mapper = new PathMapper("/widget/{id}");
+        if (!mapper.map("/widget/12").equals(Map.of("id", "12"))) {
+            throw new Exception("Failed to extract matches to a hash");
+        }
+        // maps HTTP resources
+        oso.registerClass(MyClass.class, m -> new MyClass("test", Integer.parseInt((String) m.get("id"))), "MyClass");
+        oso.loadStr("allow(actor, \"get\", _: Http{path: path}) :="
+                + "new PathMapper{template: \"/myclass/{id}\"}.map(path) = {id: id},"
+                + "allow(actor, \"get\", new MyClass{id: id});"
+                + "allow(actor, \"get\", myclass: MyClass) := myclass.id = 12;");
+        Http http12 = new Http(null, "/myclass/12", null);
+        if (!oso.allow("sam", "get", http12)) {
+            throw new Exception("Failed to correctly map HTTP resource");
+        }
+        Http http13 = new Http(null, "/myclass/13", null);
+        if (oso.allow("sam", "get", http13)) {
+            throw new Exception("Failed to correctly map HTTP resource");
+        }
+    }
+
     private static void registerClasses(Polar p) throws Exceptions.DuplicateClassAliasError {
         p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")), "MyClass");
         p.registerClass(MySubClass.class, m -> new MySubClass((String) m.get("name"), (int) m.get("id")), "MySubClass");
@@ -427,7 +452,7 @@ public class TestPolar {
 
     public static void main(String[] args) throws IllegalAccessException {
         runAll();
-        runDebugger();
+        // runDebugger();
     }
 
 }
