@@ -21,7 +21,7 @@ role(_: User {name: "deirdre"}, "accountant");
 
 # project-rule-start
 # Alice is an admin of Project 1
-role(_: User { name: "alice" }, "admin", __: Project { id: 1 });
+role(_: User { name: "alice" }, "admin", _: Project { id: 1 });
 
 # Project admins can view expenses of the project
 allow(actor: User, "view", resource: Expense) if
@@ -30,7 +30,7 @@ allow(actor: User, "view", resource: Expense) if
 
 # role-inherit-start
 # Bhavik is an admin of ACME
-role(_: User { name: "bhavik" }, "admin",  __: Organization { name: "ACME" });
+role(_: User { name: "bhavik" }, "admin",  _: Organization { name: "ACME" });
 
 # Team roles inherit from Organization roles
 role(actor: User, role, team: Team) if
