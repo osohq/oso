@@ -5,7 +5,7 @@ import org.json.JSONArray;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
     private HashMap<String, Object> next;
-    private Ffi.QueryPtr queryPtr;
+    private Ffi.Query ffi;
     private Polar polar;
 
     /**
@@ -13,8 +13,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      *
      * @param queryPtr Pointer to the FFI query instance.
      */
-    public Query(Ffi.QueryPtr queryPtr, Polar polar) throws Exceptions.OsoException {
-        this.queryPtr = queryPtr;
+    public Query(Ffi.Query queryPtr, Polar polar) throws Exceptions.OsoException {
+        this.ffi = queryPtr;
         this.polar = polar;
         next = nextResult();
     }
@@ -64,7 +64,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
         } catch (NoSuchElementException e) {
             result = null;
         }
-        queryPtr.polarCallResult(callId, result);
+        ffi.callResult(callId, result);
     }
 
     /**
@@ -75,7 +75,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      */
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
         while (true) {
-            String eventStr = queryPtr.polarNextQueryEvent();
+            String eventStr = ffi.nextEvent();
             String kind;
             JSONObject data;
             try {
@@ -114,7 +114,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     callId = data.getLong("call_id");
                     String classTag = data.getString("class_tag");
                     int answer = polar.isa(instanceId, classTag) ? 1 : 0;
-                    queryPtr.polarQuestionResult(callId, answer);
+                    ffi.questionResult(callId, answer);
                     break;
                 case "ExternalIsSubSpecializer":
                     instanceId = data.getLong("instance_id");
@@ -122,7 +122,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     String leftTag = data.getString("left_class_tag");
                     String rightTag = data.getString("right_class_tag");
                     answer = polar.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
-                    queryPtr.polarQuestionResult(callId, answer);
+                    ffi.questionResult(callId, answer);
                     break;
                 default:
                     throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);

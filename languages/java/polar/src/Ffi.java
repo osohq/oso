@@ -4,15 +4,46 @@ import jnr.ffi.Pointer;
 public class Ffi {
     private PolarLib polarLib;
 
-    protected class PolarPtr {
+    protected class Polar {
         private Pointer ptr;
 
-        protected PolarPtr(Pointer ptr) {
+        protected Polar(Pointer ptr) {
             this.ptr = ptr;
         }
 
         protected Pointer get() {
             return ptr;
+        }
+
+        protected long newId() throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_get_external_id(ptr));
+        }
+
+        protected int loadStr(String src, String filename) throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_load(ptr, src, filename));
+        }
+
+        protected Query newQueryFromStr(String queryStr) throws Exceptions.OsoException {
+            return new Query(checkResult(polarLib.polar_new_query(ptr, queryStr)));
+        }
+
+        protected Query newQueryFromTerm(String queryTerm) throws Exceptions.OsoException {
+            return new Query(checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm)));
+        }
+
+        protected Query nextInlineQuery() throws Exceptions.OsoException {
+            // Don't check result here because the returned Pointer is null to indicate
+            // termination
+            Pointer p = polarLib.polar_next_inline_query(ptr);
+            if (p == null) {
+                return null;
+            } else {
+                return new Query(p);
+            }
+        }
+
+        protected Query newQueryFromRepl() throws Exceptions.OsoException {
+            return new Query(checkResult(polarLib.polar_query_from_repl(ptr)));
         }
 
         @Override
@@ -21,10 +52,10 @@ public class Ffi {
         }
     }
 
-    protected class QueryPtr {
+    protected class Query {
         private Pointer ptr;
 
-        protected QueryPtr(Pointer ptr) {
+        protected Query(Pointer ptr) {
             this.ptr = ptr;
         }
 
@@ -32,16 +63,20 @@ public class Ffi {
             return ptr;
         }
 
-        protected int polarQuestionResult(long call_id, int result) throws Exceptions.OsoException {
+        protected int questionResult(long call_id, int result) throws Exceptions.OsoException {
             return checkResult(polarLib.polar_question_result(ptr, call_id, result));
         }
 
-        protected int polarCallResult(long call_id, String value) throws Exceptions.OsoException {
+        protected int callResult(long call_id, String value) throws Exceptions.OsoException {
             return checkResult(polarLib.polar_call_result(ptr, call_id, value));
         }
 
-        protected String polarNextQueryEvent() throws Exceptions.OsoException {
+        protected String nextEvent() throws Exceptions.OsoException {
             return checkResult(polarLib.polar_next_query_event(ptr));
+        }
+
+        protected int debugCommand(String value) throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_debug_command(ptr, value));
         }
 
         @Override
@@ -88,43 +123,8 @@ public class Ffi {
         polarLib = LibraryLoader.create(PolarLib.class).load("lib/libpolar.dylib");
     }
 
-    protected int polarDebugCommand(QueryPtr queryPtr, String value) throws Exceptions.OsoException {
-        return checkResult(polarLib.polar_debug_command(queryPtr.get(), value));
-    }
-
-    protected long polarGetExternalId(PolarPtr polarPtr) throws Exceptions.OsoException {
-        return checkResult(polarLib.polar_get_external_id(polarPtr.get()));
-    }
-
-    protected int polarLoad(PolarPtr polarPtr, String src, String filename) throws Exceptions.OsoException {
-        return checkResult(polarLib.polar_load(polarPtr.get(), src, filename));
-    }
-
-    protected PolarPtr polarNew() throws Exceptions.OsoException {
-        return new PolarPtr(checkResult(polarLib.polar_new()));
-    }
-
-    protected QueryPtr polarNewQuery(PolarPtr polarPtr, String queryStr) throws Exceptions.OsoException {
-        return new QueryPtr(checkResult(polarLib.polar_new_query(polarPtr.get(), queryStr)));
-    }
-
-    protected QueryPtr polarNewQueryFromTerm(PolarPtr polarPtr, String queryTerm) throws Exceptions.OsoException {
-        return new QueryPtr(checkResult(polarLib.polar_new_query_from_term(polarPtr.get(), queryTerm)));
-    }
-
-    protected QueryPtr polarNextInlineQuery(PolarPtr polarPtr) throws Exceptions.OsoException {
-        // Don't check result here because the returned Pointer is null to indicate
-        // termination
-        Pointer p = polarLib.polar_next_inline_query(polarPtr.get());
-        if (p == null) {
-            return null;
-        } else {
-            return new QueryPtr(p);
-        }
-    }
-
-    protected QueryPtr polarQueryFromRepl(PolarPtr polarPtr) throws Exceptions.OsoException {
-        return new QueryPtr(checkResult(polarLib.polar_query_from_repl(polarPtr.get())));
+    protected Polar polarNew() throws Exceptions.OsoException {
+        return new Polar(checkResult(polarLib.polar_new()));
     }
 
     protected int stringFree(Pointer s) throws Exceptions.OsoException {
