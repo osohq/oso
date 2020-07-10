@@ -308,6 +308,10 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     assert qvar(f"what_is({dog_dict}, res)", "res") == ["dog_dict", "canine_dict"]
     assert qvar(f"what_is({canine_dict}, res)", "res") == ["canine_dict"]
 
+    # Make sure that a class passed in matches the rule
+    result = polar._query_pred(Predicate("what_is", [Animal, Variable("res")]))
+    assert result.results[0]["res"] == "animal_class"
+
 
 def test_load_and_query():
     p = Polar()
