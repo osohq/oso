@@ -43,7 +43,6 @@ public class TestPolar {
         if (!query.results().equals(List.of(Map.of("x", 1)))) {
             throw new Exception();
         }
-        checkMem(p);
     }
 
     public static void testInlineQueries() throws Exception {
@@ -52,7 +51,6 @@ public class TestPolar {
         try {
             p.loadStr("?= f(2);");
         } catch (Exceptions.InlineQueryFailedError e) {
-            checkMem(p);
             return;
         }
         throw new Exception("Expected inline query to fail but it didn't.");
@@ -69,7 +67,6 @@ public class TestPolar {
         if (!p.queryPred("f", List.of(1, 2)).results().isEmpty()) {
             throw new Exception("Basic predicate query expected to fail but didn't.");
         }
-        checkMem(p);
     }
 
     public static void testQueryPredWithObject() throws Exception {
@@ -83,7 +80,6 @@ public class TestPolar {
         if (!p.queryPred("g", List.of(new MyClass("test", 2))).results().isEmpty()) {
             throw new Exception("Predicate query with Java Object expected to fail but didn't.");
         }
-        checkMem(p);
     }
 
     public static void testQueryPredWithVariable() throws Exception {
@@ -93,7 +89,6 @@ public class TestPolar {
         if (!p.queryPred("f", List.of(1, new Variable("result"))).results().equals(List.of(Map.of("result", 1)))) {
             throw new Exception("Predicate query with Variable failed.");
         }
-        checkMem(p);
     }
 
     public static void testExternalIsa() throws Exception {
@@ -124,7 +119,6 @@ public class TestPolar {
         if (!throwsError) {
             throw new Exception("Failed to throw unregistered class error");
         }
-        checkMem(p);
     }
 
     public static void testExternalIsSubSpecializer() throws Exception {
@@ -143,7 +137,6 @@ public class TestPolar {
         if (!result.equals(List.of(Map.of("x", 2)))) {
             throw new Exception("Failed to order rules based on specializers.");
         }
-        checkMem(p);
     }
 
     /*** TEST FFI CONVERSIONS ***/
@@ -156,7 +149,6 @@ public class TestPolar {
         if (java.getClass() != Boolean.class || java != b) {
             throw new Exception();
         }
-        checkMem(p);
     }
 
     public static void testIntFFIRoundTrip() throws Exception {
@@ -167,7 +159,6 @@ public class TestPolar {
         if (java.getClass() != Integer.class || (Integer) java != i) {
             throw new Exception();
         }
-        checkMem(p);
     }
 
     public static void testFloatFFIRoundTrip() throws Exception {
@@ -178,7 +169,6 @@ public class TestPolar {
         if (java.getClass() != Float.class || (Float) java != f) {
             throw new Exception();
         }
-        checkMem(p);
     }
 
     public static void testListFFIRoundTrip() throws Exception {
@@ -189,7 +179,6 @@ public class TestPolar {
         if (!(java instanceof List) || !((List<Object>) java).equals(l)) {
             throw new Exception();
         }
-        checkMem(p);
 
     }
 
@@ -201,7 +190,6 @@ public class TestPolar {
         if (!(java instanceof Map) || !((Map<String, Object>) java).equals(m)) {
             throw new Exception();
         }
-        checkMem(p);
 
     }
 
@@ -213,7 +201,6 @@ public class TestPolar {
         if (java.getClass() != MyClass.class || !((MyClass) java).equals(instance)) {
             throw new Exception();
         }
-        checkMem(p);
     }
 
     public static void testPredicateFFIRoundTrip() throws Exception {
@@ -224,7 +211,6 @@ public class TestPolar {
         if (java.getClass() != Predicate.class || !((Predicate) java).equals(pred)) {
             throw new Exception();
         }
-        checkMem(p);
 
     }
 
@@ -239,7 +225,6 @@ public class TestPolar {
         if (instance.name != "testName" || instance.id != 1) {
             throw new Exception();
         }
-        checkMem(p);
     }
 
     public static void testMakeInstanceFromPolar() throws Exception {
@@ -251,7 +236,6 @@ public class TestPolar {
         if (ret.id != 1 || !ret.name.equals("test")) {
             throw new Exception();
         }
-        checkMem(p);
 
     }
 
@@ -265,7 +249,6 @@ public class TestPolar {
         if (!p.toJava(res).equals("hello world")) {
             throw new Exception();
         }
-        checkMem(p);
     }
 
     public static void testExternalCall() throws Exception {
@@ -283,7 +266,6 @@ public class TestPolar {
         if (!p.queryStr("method(x)").results().equals(List.of(Map.of("x", "hello world")))) {
             throw new Exception("Failed to get attribute on external instance.");
         }
-        checkMem(p);
     }
 
     /**** TEST LOADING ****/
@@ -294,7 +276,6 @@ public class TestPolar {
         if (!p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
             throw new Exception("Failed to load file");
         }
-        checkMem(p);
     }
 
     public static void testLoadNonPolarFile() throws Exception {
@@ -308,7 +289,6 @@ public class TestPolar {
         if (!throwsError) {
             throw new Exception("Failed to catch incorrect Polar file extension.");
         }
-        checkMem(p);
     }
 
     public static void testLoadFilePassesFilename() throws Exception {
@@ -329,7 +309,6 @@ public class TestPolar {
             throw new Exception("Failed to pass filename across FFI boundary.");
         }
         tempFile.deleteOnExit();
-        checkMem(p);
     }
 
     public static void testLoadFileIdempotent() throws Exception {
@@ -341,7 +320,6 @@ public class TestPolar {
         {
             throw new Exception("loadFile behavior is not idempotent.");
         }
-        checkMem(p);
     }
 
     public static void testLoadMultipleFiles() throws Exception {
@@ -356,7 +334,6 @@ public class TestPolar {
         if (!p.queryStr("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
             throw new Exception("Failed to load multiple files.");
         }
-        checkMem(p);
     }
 
     private static void registerClasses(Polar p) throws Exceptions.DuplicateClassAliasError {
@@ -380,12 +357,6 @@ public class TestPolar {
                     System.out.println(" " + message);
                 break;
 
-        }
-    }
-
-    private static void checkMem(Polar p) throws Exception {
-        if (p.getQueryCount() != 0) {
-            throw new Exception("MEMORY LEAK: " + p.getQueryCount() + " unfreed queries!");
         }
     }
 

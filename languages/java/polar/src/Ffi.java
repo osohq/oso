@@ -3,7 +3,6 @@ import jnr.ffi.Pointer;
 
 public class Ffi {
     private PolarLib polarLib;
-    protected int queryCounter;
 
     protected class PolarPtr {
         private Pointer ptr;
@@ -16,11 +15,9 @@ public class Ffi {
             return ptr;
         }
 
-        protected void free() {
-            if (ptr != null) {
-                polarLib.polar_free(ptr);
-                ptr = null;
-            }
+        @Override
+        protected void finalize() {
+            polarLib.polar_free(ptr);
         }
     }
 
@@ -29,21 +26,10 @@ public class Ffi {
 
         protected QueryPtr(Pointer ptr) {
             this.ptr = ptr;
-            if (ptr != null) {
-                queryCounter++;
-            }
         }
 
         protected Pointer get() {
             return ptr;
-        }
-
-        protected void free() {
-            if (ptr != null) {
-                polarLib.polar_free(ptr);
-                ptr = null;
-                queryCounter--;
-            }
         }
 
         protected int polarQuestionResult(long call_id, int result) throws Exceptions.OsoException {
@@ -52,6 +38,11 @@ public class Ffi {
 
         protected int polarCallResult(long call_id, String value) throws Exceptions.OsoException {
             return checkResult(polarLib.polar_call_result(ptr, call_id, value));
+        }
+
+        @Override
+        protected void finalize() {
+            polarLib.polar_free(ptr);
         }
 
     }
@@ -91,7 +82,6 @@ public class Ffi {
 
     protected Ffi() {
         polarLib = LibraryLoader.create(PolarLib.class).load("lib/libpolar.dylib");
-        queryCounter = 0;
     }
 
     // protected int polarFree(PolarPtr polarPtr) throws Exceptions.OsoException {

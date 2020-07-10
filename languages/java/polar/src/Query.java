@@ -74,66 +74,59 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      * @throws Exceptions.OsoException
      */
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
-        try {
-            while (true) {
-                String eventStr = polar.nextQueryEvent(queryPtr);
-                String kind;
-                JSONObject data;
-                try {
-                    JSONObject event = new JSONObject(eventStr);
-                    kind = event.keys().next();
-                    data = event.getJSONObject(kind);
-                } catch (JSONException e) {
-                    // TODO: this sucks, we should have a consistent serialization format
-                    kind = eventStr.replace("\"", "");
-                    data = null;
-                }
-
-                switch (kind) {
-                    case "Done":
-                        queryPtr.free();
-                        return null;
-                    case "Result":
-                        return polar.polarDictToJava(data.getJSONObject("bindings"));
-                    case "MakeExternal":
-                        Long id = data.getLong("instance_id");
-                        if (polar.hasInstance(id)) {
-                            throw new Exceptions.DuplicateInstanceRegistrationError(id);
-                        }
-                        String clsName = data.getJSONObject("instance").getString("tag");
-                        JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields")
-                                .getJSONObject("fields");
-                        polar.makeInstance(clsName, polar.polarDictToJava(jFields), id);
-                        break;
-                    case "ExternalCall":
-                        long callId = data.getLong("call_id");
-                        long instanceId = data.getLong("instance_id");
-                        String attrName = data.getString("attribute");
-                        JSONArray jArgs = data.getJSONArray("args");
-                        handleCall(attrName, jArgs, instanceId, callId);
-                        break;
-                    case "ExternalIsa":
-                        instanceId = data.getLong("instance_id");
-                        callId = data.getLong("call_id");
-                        String classTag = data.getString("class_tag");
-                        int answer = polar.isa(instanceId, classTag) ? 1 : 0;
-                        queryPtr.polarQuestionResult(callId, answer);
-                        break;
-                    case "ExternalIsSubSpecializer":
-                        instanceId = data.getLong("instance_id");
-                        callId = data.getLong("call_id");
-                        String leftTag = data.getString("left_class_tag");
-                        String rightTag = data.getString("right_class_tag");
-                        answer = polar.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
-                        queryPtr.polarQuestionResult(callId, answer);
-                        break;
-                    default:
-                        throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
-                }
+        while (true) {
+            String eventStr = polar.nextQueryEvent(queryPtr);
+            String kind;
+            JSONObject data;
+            try {
+                JSONObject event = new JSONObject(eventStr);
+                kind = event.keys().next();
+                data = event.getJSONObject(kind);
+            } catch (JSONException e) {
+                // TODO: this sucks, we should have a consistent serialization format
+                kind = eventStr.replace("\"", "");
+                data = null;
             }
-        } catch (Exception e) {
-            queryPtr.free();
-            throw e;
+
+            switch (kind) {
+                case "Done":
+                    return null;
+                case "Result":
+                    return polar.polarDictToJava(data.getJSONObject("bindings"));
+                case "MakeExternal":
+                    Long id = data.getLong("instance_id");
+                    if (polar.hasInstance(id)) {
+                        throw new Exceptions.DuplicateInstanceRegistrationError(id);
+                    }
+                    String clsName = data.getJSONObject("instance").getString("tag");
+                    JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields").getJSONObject("fields");
+                    polar.makeInstance(clsName, polar.polarDictToJava(jFields), id);
+                    break;
+                case "ExternalCall":
+                    long callId = data.getLong("call_id");
+                    long instanceId = data.getLong("instance_id");
+                    String attrName = data.getString("attribute");
+                    JSONArray jArgs = data.getJSONArray("args");
+                    handleCall(attrName, jArgs, instanceId, callId);
+                    break;
+                case "ExternalIsa":
+                    instanceId = data.getLong("instance_id");
+                    callId = data.getLong("call_id");
+                    String classTag = data.getString("class_tag");
+                    int answer = polar.isa(instanceId, classTag) ? 1 : 0;
+                    queryPtr.polarQuestionResult(callId, answer);
+                    break;
+                case "ExternalIsSubSpecializer":
+                    instanceId = data.getLong("instance_id");
+                    callId = data.getLong("call_id");
+                    String leftTag = data.getString("left_class_tag");
+                    String rightTag = data.getString("right_class_tag");
+                    answer = polar.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
+                    queryPtr.polarQuestionResult(callId, answer);
+                    break;
+                default:
+                    throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
+            }
         }
 
     }

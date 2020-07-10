@@ -28,11 +28,6 @@ public class Polar {
         calls = new HashMap<Long, Enumeration<Object>>();
     }
 
-    @Override
-    protected void finalize() {
-        polarPtr.free();
-    }
-
     /**
      * Enqueue a polar policy file to be loaded. File contents are loaded into a
      * String and saved here, so changes to the file made after calls to loadFile
@@ -75,7 +70,6 @@ public class Polar {
         loadQueue.clear();
 
         // Replace Polar instance
-        polarPtr.free();
         polarPtr = ffi.polarNew();
     }
 
@@ -114,17 +108,11 @@ public class Polar {
      */
     private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
         Ffi.QueryPtr nextQuery = ffi.polarNextInlineQuery(polarPtr);
-        try {
-            while (nextQuery != null) {
-                if (!new Query(nextQuery, this).hasMoreElements()) {
-                    throw new Exceptions.InlineQueryFailedError();
-                }
-                nextQuery.free();
-                nextQuery = ffi.polarNextInlineQuery(polarPtr);
+        while (nextQuery != null) {
+            if (!new Query(nextQuery, this).hasMoreElements()) {
+                throw new Exceptions.InlineQueryFailedError();
             }
-        } catch (Exception e) {
-            nextQuery.free();
-            throw e;
+            nextQuery = ffi.polarNextInlineQuery(polarPtr);
         }
     }
 
@@ -506,7 +494,4 @@ public class Polar {
         return instances.containsKey(instanceId);
     }
 
-    protected int getQueryCount() {
-        return ffi.queryCounter;
-    }
 }
