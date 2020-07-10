@@ -367,6 +367,23 @@ public class TestPolar {
         return sw.toString();
     }
 
+    private static void runDebugger() {
+        try {
+            Polar p = new Polar();
+            registerClasses(p);
+            // p.loadStr("f(a: MyClass, x) := debug(), x = a.id;");
+            // List<HashMap<String, Object>> results = p.queryPred("f", List.of(new
+            // MyClass("test", 1), new Variable("x")))
+            // .results();
+            p.loadStr("f(x) := debug(), x = 1;");
+            List<HashMap<String, Object>> results = p.queryStr("f(x)").results();
+            System.out.println(results);
+        } catch (Exceptions.OsoException e) {
+            printResults(Status.FAILED, getExceptionStackTrace(e), "runDebugger");
+        }
+
+    }
+
     private static void runAll() throws IllegalAccessException {
         System.out.println("\nRunning tests...\n");
         Method[] methods = TestPolar.class.getDeclaredMethods();
@@ -414,6 +431,7 @@ public class TestPolar {
 
     public static void main(String[] args) throws IllegalAccessException {
         runAll();
+        runDebugger();
     }
 
 }

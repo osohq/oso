@@ -1,3 +1,6 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.*;
 import org.json.JSONObject;
 import org.json.JSONException;
@@ -123,6 +126,23 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     String rightTag = data.getString("right_class_tag");
                     answer = polar.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
                     ffi.questionResult(callId, answer);
+                    break;
+                case "Debug":
+                    if (data.has("message")) {
+                        String message = data.getString("message");
+                        System.out.println(message);
+                    }
+                    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                    System.out.print("> ");
+                    try {
+                        String input = br.readLine();
+                        if (input == "")
+                            input = " ";
+                        String command = polar.toPolarTerm(input).toString();
+                        ffi.debugCommand(command);
+                    } catch (IOException e) {
+                        throw new Exceptions.PolarRuntimeException("Caused by: " + e.getMessage());
+                    }
                     break;
                 default:
                     throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
