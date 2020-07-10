@@ -30,7 +30,7 @@ impl PolarVirtualMachine {
 /// Traverse a [`Source`](../types/struct.Source.html) line-by-line until `offset` is reached, and
 /// then return the source line containing the `offset` character as well as `num_lines` lines
 /// above and below it.
-fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
+pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
     // Sliding window of lines: current line + indicator + additional context above + below.
     let max_lines = num_lines * 2 + 2;
     let push_line = |lines: &mut Vec<String>, line: String| {

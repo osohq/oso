@@ -187,6 +187,7 @@ impl Polar {
             match line {
                 parser::Line::Rule(mut rule) => {
                     let name = rule.name.clone();
+                    check_singletons(&rule, &kb);
                     rewrite_rule(&mut rule, &mut kb);
                     let generic_rule = kb.rules.entry(name.clone()).or_insert(GenericRule {
                         name,

@@ -38,12 +38,18 @@ pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Rule, Term};
+    use crate::types::{Numeric, Rule, Symbol, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{} = {}", self.0.to_polar(), self.1.to_polar())
+        }
+    }
+
+    impl fmt::Display for Symbol {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.0)
         }
     }
 

@@ -1,4 +1,6 @@
+use super::debugger::source_lines;
 use super::types::*;
+use std::collections::{hash_map::Entry, HashMap};
 
 /// Replace the left value by the AND of the right and the left.
 fn and_wrap(a: &mut Term, b: Term) {
@@ -141,6 +143,49 @@ pub fn rewrite_rule(rule: &mut Rule, kb: &mut KnowledgeBase) {
         }));
     } else {
         panic!("Rule body isn't an and, something is wrong.")
+    }
+}
+
+/// Warn about singleton variables in a rule, except those whose names start with `_`.
+pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) {
+    let mut singletons = HashMap::<Symbol, Option<Term>>::new();
+    let mut check_term = |term: &Term| {
+        if let Value::Variable(sym) | Value::RestVariable(sym) = term.value() {
+            if !sym.0.starts_with('_') && !kb.is_constant(sym) {
+                match singletons.entry(sym.clone()) {
+                    Entry::Occupied(mut o) => {
+                        o.insert(None);
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(Some(term.clone()));
+                    }
+                }
+            }
+        }
+        term.clone()
+    };
+
+    for param in &rule.params {
+        if let Some(mut param) = param.parameter.clone() {
+            param.map_replace(&mut check_term);
+        }
+        if let Some(mut spec) = param.specializer.clone() {
+            spec.map_replace(&mut check_term);
+        }
+    }
+    rule.body.clone().map_replace(&mut check_term);
+
+    let mut singletons = singletons
+        .into_iter()
+        .collect::<Vec<(Symbol, Option<Term>)>>();
+    singletons.sort_by_key(|(_sym, term)| term.as_ref().map_or(0, |term| term.offset()));
+    for (sym, singleton) in singletons {
+        if let Some(term) = singleton {
+            eprintln!("Singleton variable {}", sym);
+            if let Some(ref source) = kb.sources.get_source(&term) {
+                eprintln!("{}", source_lines(source, term.offset(), 0));
+            }
+        }
     }
 }
 

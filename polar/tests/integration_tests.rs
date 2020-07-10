@@ -862,6 +862,13 @@ fn test_anonymous_vars() {
     assert!(qnull(&mut polar, "[1,2,3] = [__,__,__]"));
 }
 
+/// Run this test with --nocapture to see warnings.
+#[test]
+fn test_singleton_vars() {
+    let polar = Polar::new();
+    polar.load("f(x,y,z) if z = z;").unwrap();
+}
+
 #[test]
 fn test_rest_vars() {
     let mut polar = Polar::new();
