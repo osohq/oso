@@ -264,42 +264,31 @@ public class PolarTest extends TestCase {
                 p.queryStr("method(x)").results().equals(List.of(Map.of("x", "hello world"))));
     }
 
+    /**** TEST PARSING ****/
+    public void testIntegerOverFlowError() throws Exception {
+        String rule = "f(x) := x = 18446744073709551616;";
+        Exceptions.IntegerOverflow e = assertThrows(Exceptions.IntegerOverflow.class, () -> p.loadStr(rule));
+        assertEquals("'18446744073709551616' caused an integer overflow at line 1, column 13", e.getMessage());
+
+    }
+
+    public void testInvalidTokenCharacter() throws Exception {
+        String rule = "f(x) := x = \"This is not\n allowed\"";
+        Exceptions.InvalidTokenCharacter e = assertThrows(Exceptions.InvalidTokenCharacter.class,
+                () -> p.loadStr(rule));
+        // TODO: this is a wacky message
+        assertEquals("'\\n' is not a valid character. Found in This is not at line 1, column 25", e.getMessage());
+
+    }
+
+    public void testUnrecognizedTokenError() throws Exception {
+        String rule = "1";
+        Exceptions.UnrecognizedToken e = assertThrows(Exceptions.UnrecognizedToken.class, () -> p.loadStr(rule));
+        assertEquals("did not expect to find the token '1' at line 1, column 1", e.getMessage());
+
+    }
+
     /**** TEST LOADING ****/
-
-    // TODO: test parsing errors
-    // it 'raises on IntegerOverflow errors' do
-    // int = '18446744073709551616'
-    // rule = <<~POLAR
-    // f(a) := a = #{int};
-    // POLAR
-    // expect { subject.load_str(rule) }.to raise_error do |e|
-    // expect(e).to be_an Oso::Polar::ParseError::IntegerOverflow
-    // expect(e.message).to eq("'18446744073709551616' caused an integer overflow at
-    // line 1, column 13")
-    // end
-    // end
-
-    // it 'raises on InvalidTokenCharacter errors' do
-    // rule = <<~POLAR
-    // f(a) := a = "this is not
-    // allowed";
-    // POLAR
-    // expect { subject.load_str(rule) }.to raise_error do |e|
-    // expect(e).to be_an Oso::Polar::ParseError::InvalidTokenCharacter
-    // expect(e.message).to eq("'\\n' is not a valid character. Found in this is not
-    // at line 1, column 25")
-    // end
-    // end
-    // it 'raises on UnrecognizedToken errors' do
-    // rule = <<~POLAR
-    // 1;
-    // POLAR
-    // expect { subject.load_str(rule) }.to raise_error do |e|
-    // expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
-    // expect(e.message).to eq("did not expect to find the token '1' at line 1,
-    // column 1")
-    // end
-    // end
 
     public void testLoadFile() throws Exception {
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
@@ -336,12 +325,10 @@ public class PolarTest extends TestCase {
         assertTrue(p.queryStr("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
     }
 
-    // TODO
     public void testClear() throws Exception {
-        // subject.load_file(test_file)
-        // expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
-        // subject.clear
-        // expect(query(subject, 'f(x)')).to eq([])
-
+        p.loadFile("src/test/java/com/osohq/oso/test.polar");
+        assertEquals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)), p.queryStr("f(x)").results());
+        p.clear();
+        assertTrue(p.queryStr("f(x)").results().isEmpty());
     }
 }
