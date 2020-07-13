@@ -564,7 +564,7 @@ RSpec.describe Oso::Polar::Polar do
         subject.load_str(rule)
         expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
           expect(e).to be_an Oso::Polar::PolarTypeError
-          expect(e.message).to eq('Type error: can only use `in` on a list, this is Symbol(Symbol("_a_3")) at line 1, column 13')
+          expect(e.message).to eq('Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13')
           stack_trace = <<-EOM.chomp
 trace (most recent evaluation last):
   in query at line 1, column 1

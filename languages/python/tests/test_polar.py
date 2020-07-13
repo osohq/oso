@@ -385,7 +385,7 @@ def test_runtime_errors(polar):
         list(polar._query_str("foo(1,2)"))
     assert (
         str(e.value)
-        == 'Type error: can only use `in` on a list, this is Symbol(Symbol("_a_3")) at line 2, column 17'
+        == 'Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 2, column 17'
     )
     assert (
         e.value.stack_trace
