@@ -1,3 +1,5 @@
+package com.osohq.oso;
+
 public class Http {
     public String hostname, path, query;
 

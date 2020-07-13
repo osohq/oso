@@ -1,3 +1,5 @@
+package com.osohq.oso;
+
 import org.json.*;
 import java.util.*;
 

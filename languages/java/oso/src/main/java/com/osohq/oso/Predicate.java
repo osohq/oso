@@ -1,3 +1,5 @@
+package com.osohq.oso;
+
 import java.util.*;
 
 public class Predicate {

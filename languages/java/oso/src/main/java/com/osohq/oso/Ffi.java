@@ -1,3 +1,5 @@
+package com.osohq.oso;
+
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 

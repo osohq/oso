@@ -1,3 +1,5 @@
+package com.osohq.oso;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;

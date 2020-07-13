@@ -1,3 +1,5 @@
+package com.osohq.oso;
+
 public class Variable {
     private String name;
 
