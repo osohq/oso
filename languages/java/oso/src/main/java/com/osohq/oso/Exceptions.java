@@ -25,13 +25,13 @@ public class Exceptions {
 
         switch (kind) {
             case "Parse":
-                return parseError(kind, msg, details);
+                return parseError(subkind, msg, details);
             case "Runtime":
-                return runtimeError(kind, msg, details);
+                return runtimeError(subkind, msg, details);
             case "Operational":
-                return operationalError(kind, msg, details);
+                return operationalError(subkind, msg, details);
             case "Parameter":
-                return apiError(kind, msg, details);
+                return apiError(subkind, msg, details);
             default:
                 return new OsoException(msg, details);
         }
