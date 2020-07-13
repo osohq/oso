@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 import org.json.*;
+
 import java.lang.reflect.*;
 import java.lang.annotation.*;
 
@@ -15,9 +16,9 @@ public class TestPolar {
 
     public static class MyClass {
         public String name;
-        public int id;
+        public Integer id;
 
-        public MyClass(String name, int id) {
+        public MyClass(String name, Integer id) {
             this.name = name;
             this.id = id;
         }
@@ -25,10 +26,22 @@ public class TestPolar {
         public String myMethod(String arg) {
             return arg;
         }
+
+        public List<String> myList() {
+            return List.of("hello", "world");
+        }
+
+        public MySubClass mySubClass(String name, Integer id) {
+            return new MySubClass(name, id);
+        }
+
+        public Enumeration<String> myEnumeration() {
+            return Collections.enumeration(List.of("hello", "world"));
+        }
     }
 
     public static class MySubClass extends MyClass {
-        public MySubClass(String name, int id) {
+        public MySubClass(String name, Integer id) {
             super(name, id);
         }
     }
@@ -139,6 +152,17 @@ public class TestPolar {
         }
     }
 
+    public static void testReturnListFromCall() throws Exception {
+        Polar p = new Polar();
+        registerClasses(p);
+        p.loadStr("test(c: MyClass) := \"hello\" in c.myList;");
+        MyClass c = new MyClass("test", 1);
+        if (p.queryPred("test", List.of(c)).results().isEmpty()) {
+            throw new Exception();
+        }
+
+    }
+
     /*** TEST FFI CONVERSIONS ***/
 
     public static void testBoolFFIRoundTrip() throws Exception {
@@ -214,6 +238,27 @@ public class TestPolar {
 
     }
 
+    public static void testReturnRubyInstanceFromCall() throws Exception {
+        Polar p = new Polar();
+        registerClasses(p);
+        MyClass c = new MyClass("test", 1);
+        p.loadStr("test(c: MyClass) := x = c.mySubClass(c.name, c.id), x.id = c.id;");
+        if (p.queryPred("test", List.of(c)).results().isEmpty()) {
+            throw new Exception();
+        }
+    }
+
+    public static void testEnumerationCallResults() throws Exception {
+        Polar p = new Polar();
+        registerClasses(p);
+        MyClass c = new MyClass("test", 1);
+        p.loadStr("test(c: MyClass, x) := x = c.myEnumeration;");
+        List<HashMap<String, Object>> results = p.queryPred("test", List.of(c, new Variable("x"))).results();
+        if (!results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world")))) {
+            throw new Exception();
+        }
+    }
+
     /*** TEST EXTERNALS ***/
 
     public static void testRegisterAndMakeClass() throws Exception {
@@ -224,6 +269,24 @@ public class TestPolar {
         MyClass instance = (MyClass) p.makeInstance("MyClass", testArg, Long.valueOf(0));
         if (instance.name != "testName" || instance.id != 1) {
             throw new Exception();
+        }
+        // TODO: test that errors when given invalid constructor
+        // TODO: test that errors when registering same class twice
+        // TODO: test that errors if same alias used twice
+        // TODO: test inheritance
+    }
+
+    public static void testDuplicateRegistration() throws Exception {
+        Polar p = new Polar();
+        p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")), "MyClass");
+        boolean throwsError = false;
+        try {
+            p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")), "MyClass");
+        } catch (Exceptions.DuplicateClassAliasError e) {
+            throwsError = true;
+        }
+        if (!throwsError) {
+            throw new Exception("Failed to catch duplicate class registration");
         }
     }
 
@@ -236,7 +299,6 @@ public class TestPolar {
         if (ret.id != 1 || !ret.name.equals("test")) {
             throw new Exception();
         }
-
     }
 
     public static void testRegisterCall() throws Exception {
@@ -269,6 +331,41 @@ public class TestPolar {
     }
 
     /**** TEST LOADING ****/
+
+    // TODO: test parsing errors
+    // it 'raises on IntegerOverflow errors' do
+    // int = '18446744073709551616'
+    // rule = <<~POLAR
+    // f(a) := a = #{int};
+    // POLAR
+    // expect { subject.load_str(rule) }.to raise_error do |e|
+    // expect(e).to be_an Oso::Polar::ParseError::IntegerOverflow
+    // expect(e.message).to eq("'18446744073709551616' caused an integer overflow at
+    // line 1, column 13")
+    // end
+    // end
+
+    // it 'raises on InvalidTokenCharacter errors' do
+    // rule = <<~POLAR
+    // f(a) := a = "this is not
+    // allowed";
+    // POLAR
+    // expect { subject.load_str(rule) }.to raise_error do |e|
+    // expect(e).to be_an Oso::Polar::ParseError::InvalidTokenCharacter
+    // expect(e.message).to eq("'\\n' is not a valid character. Found in this is not
+    // at line 1, column 25")
+    // end
+    // end
+    // it 'raises on UnrecognizedToken errors' do
+    // rule = <<~POLAR
+    // 1;
+    // POLAR
+    // expect { subject.load_str(rule) }.to raise_error do |e|
+    // expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
+    // expect(e.message).to eq("did not expect to find the token '1' at line 1,
+    // column 1")
+    // end
+    // end
 
     public static void testLoadFile() throws Exception {
         Polar p = new Polar();
@@ -334,6 +431,16 @@ public class TestPolar {
         if (!p.queryStr("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)))) {
             throw new Exception("Failed to load multiple files.");
         }
+    }
+
+    // TODO
+    @Skip
+    public static void testClear() throws Exception {
+        // subject.load_file(test_file)
+        // expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
+        // subject.clear
+        // expect(query(subject, 'f(x)')).to eq([])
+
     }
 
     // TODO: put below in TestOso class

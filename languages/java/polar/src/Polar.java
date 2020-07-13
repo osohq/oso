@@ -404,7 +404,7 @@ public class Polar {
                     Field field = instance.getClass().getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException e) {
-                    throw new Exceptions.InvalidCallError(attrName);
+                    throw new Exceptions.InvalidCallError(attrName, argTypes);
                 }
             }
         } catch (IllegalAccessException e) {
