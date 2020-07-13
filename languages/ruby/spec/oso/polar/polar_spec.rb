@@ -49,7 +49,7 @@ RSpec.describe Oso::Polar::Polar do
     end
 
     it 'converts predicates in both directions' do
-      subject.load_str('f(x) := x = pred(1, 2);')
+      subject.load_str('f(x) if x = pred(1, 2);')
       expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Polar::Predicate.new('pred', args: [1, 2])])
       expect(subject.query_pred('f', args: [Oso::Polar::Predicate.new('pred', args: [1, 2])]).to_a).to eq([{}])
     end
@@ -62,13 +62,13 @@ RSpec.describe Oso::Polar::Polar do
     it 'returns Ruby instances from external calls' do
       actor = Actor.new('sam')
       widget = Widget.new(1)
-      subject.load_str('allow(actor, resource) := actor.widget.id = resource.id;')
+      subject.load_str('allow(actor, resource) if actor.widget.id = resource.id;')
       expect(subject.query_pred('allow', args: [actor, widget]).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
-      subject.load_str('widgets(actor, x) := x = actor.widgets.id;')
+      subject.load_str('widgets(actor, x) if x = actor.widgets.id;')
       expect(subject.query_pred('widgets', args: [actor, Oso::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
   end
@@ -184,6 +184,36 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
+  context '#register_constant' do
+    it 'works' do
+      d = {"a" => 1}
+      subject.register_constant("d", value: d)
+      expect(qvar(subject, 'd.a = x', 'x')).to eq([1])
+    end
+  end
+
+  context 'can call host language methods' do
+    it 'on strings' do
+      expect(query(subject, 'x = "abc" and x.index("bc") = 1').length).to be 1
+    end
+
+    it 'on integers' do
+      expect(query(subject, 'i = 4095 and i.bit_length = 12').length).to be 1
+    end
+
+    it 'on floats' do
+      expect(query(subject, 'f = 3.14159 and f.floor = 3').length).to be 1
+    end
+
+    it 'on lists' do
+      expect(query(subject, 'l = [1, 2, 3] and l.index(3) = 2 and l.clone = [1, 2, 3]').length).to be 1
+    end
+
+    it 'on dicts' do
+      expect(query(subject, 'd = {a: 1} and d.fetch("a") = 1 and d.fetch("b", 2) = 2').length).to be 1
+    end
+  end
+
   context '#register_class' do
     it 'errors when registering the same class twice' do
       stub_const('Foo', Class.new)
@@ -196,7 +226,7 @@ RSpec.describe Oso::Polar::Polar do
         stub_const('Foo', Class.new)
         stub_const('Bar', Class.new)
         expect { subject.register_class Bar }.not_to raise_error
-        expect { subject.register_class Foo, as: 'Bar' }.to raise_error Oso::Polar::DuplicateClassAliasError
+        expect { subject.register_class Foo, name: 'Bar' }.to raise_error Oso::Polar::DuplicateClassAliasError
       end
     end
 
@@ -261,7 +291,7 @@ RSpec.describe Oso::Polar::Polar do
       expect(qvar(subject, 'new Foo{}.b() = x', 'x', one: true)).to eq('b')
       expect(qvar(subject, 'new Foo{}.c = x', 'x', one: true)).to eq('c')
       expect(qvar(subject, 'new Foo{}.c() = x', 'x', one: true)).to eq('c')
-      expect(qvar(subject, 'new Foo{} = f, f.a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo{} = f and f.a() = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'new Foo{}.bar().y() = x', 'x', one: true)).to eq('y')
       expect(qvar(subject, 'new Foo{}.e = x', 'x')).to eq([[1, 2, 3]])
       expect(qvar(subject, 'new Foo{}.f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
@@ -315,9 +345,9 @@ RSpec.describe Oso::Polar::Polar do
         test(_: A{});
         test(_: B{});
 
-        try(v: B{}, res) := res = 2;
-        try(v: C{}, res) := res = 3;
-        try(v: A{}, res) := res = 1;
+        try(v: B{}, res) if res = 2;
+        try(v: C{}, res) if res = 3;
+        try(v: A{}, res) if res = 1;
       POLAR
 
       expect(qvar(subject, 'new A{}.a = x', 'x', one: true)).to eq('A')
@@ -369,8 +399,8 @@ RSpec.describe Oso::Polar::Polar do
 
       it 'can unify instances' do
         subject.load_str <<~POLAR
-          yup() := new Animal{family: "steve"} = new Animal{family: "steve"};
-          nope() := new Animal{family: "steve"} = new Animal{family: "gabe"};
+          yup() if new Animal{family: "steve"} = new Animal{family: "steve"};
+          nope() if new Animal{family: "steve"} = new Animal{family: "gabe"};
         POLAR
         expect(query(subject, "yup()")).to eq([{}])
         expect(query(subject, "nope()")).to eq([])
@@ -378,9 +408,9 @@ RSpec.describe Oso::Polar::Polar do
 
       it 'can specialize on dict fields' do
         subject.load_str <<~POLAR
-          what_is(animal: {genus: "canis"}, r) := r = "canine";
-          what_is(animal: {species: "canis lupus", genus: "canis"}, r) := r = "wolf";
-          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) := r = "dog";
+          what_is(animal: {genus: "canis"}, r) if r = "canine";
+          what_is(animal: {species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) if r = "dog";
         POLAR
         expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(%w[wolf canine])
         expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(%w[dog canine])
@@ -389,12 +419,12 @@ RSpec.describe Oso::Polar::Polar do
 
       it 'can specialize on class fields' do
         subject.load_str <<~POLAR
-          what_is(animal: Animal{}, r) := r = "animal";
-          what_is(animal: Animal{genus: "canis"}, r) := r = "canine";
-          what_is(animal: Animal{family: "canidae"}, r) := r = "canid";
-          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) := r = "wolf";
-          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) := r = "dog";
-          what_is(animal: Animal{species: s, genus: "canis"}, r) := r = s;
+          what_is(animal: Animal{}, r) if r = "animal";
+          what_is(animal: Animal{genus: "canis"}, r) if r = "canine";
+          what_is(animal: Animal{family: "canidae"}, r) if r = "canid";
+          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog";
+          what_is(animal: Animal{species: s, genus: "canis"}, r) if r = s;
         POLAR
         expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(['wolf', 'canis lupus', 'canine', 'canid', 'animal'])
         expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(['dog', 'canis familiaris', 'canine', 'canid', 'animal'])
@@ -405,14 +435,14 @@ RSpec.describe Oso::Polar::Polar do
 
       it 'can specialize with a mix of class and dict fields' do
         subject.load_str <<~POLAR
-          what_is(animal: Animal{}, r) := r = "animal_class";
-          what_is(animal: Animal{genus: "canis"}, r) := r = "canine_class";
-          what_is(animal: {genus: "canis"}, r) := r = "canine_dict";
-          what_is(animal: Animal{family: "canidae"}, r) := r = "canid_class";
-          what_is(animal: {species: "canis lupus", genus: "canis"}, r) := r = "wolf_dict";
-          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) := r = "dog_dict";
-          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) := r = "wolf_class";
-          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) := r = "dog_class";
+          what_is(animal: Animal{}, r) if r = "animal_class";
+          what_is(animal: Animal{genus: "canis"}, r) if r = "canine_class";
+          what_is(animal: {genus: "canis"}, r) if r = "canine_dict";
+          what_is(animal: Animal{family: "canidae"}, r) if r = "canid_class";
+          what_is(animal: {species: "canis lupus", genus: "canis"}, r) if r = "wolf_dict";
+          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) if r = "dog_dict";
+          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf_class";
+          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog_class";
         POLAR
 
         wolf_dict = '{species: "canis lupus", genus: "canis", family: "canidae"}'
@@ -437,7 +467,7 @@ RSpec.describe Oso::Polar::Polar do
   context 'when loading a Polar string' do
     context 'with inline queries' do
       it 'succeeds if all inline queries succeed' do
-        subject.load_str('f(1); f(2); ?= f(1); ?= !f(3);')
+        subject.load_str('f(1); f(2); ?= f(1); ?= not f(3);')
       end
 
       it 'fails if an inline query fails' do
@@ -447,7 +477,7 @@ RSpec.describe Oso::Polar::Polar do
 
     it 'raises if a null byte is encountered' do
       rule = <<~POLAR
-        f(a) := a = "this is not allowed\0
+        f(a) if a = "this is not allowed\0
       POLAR
       expect { subject.load_str(rule) }.to raise_error Oso::Polar::NullByteInPolarFileError
     end
@@ -457,7 +487,7 @@ RSpec.describe Oso::Polar::Polar do
     it 'raises on IntegerOverflow errors' do
       int = '18446744073709551616'
       rule = <<~POLAR
-        f(a) := a = #{int};
+        f(a) if a = #{int};
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::IntegerOverflow
@@ -467,7 +497,7 @@ RSpec.describe Oso::Polar::Polar do
 
     it 'raises on InvalidTokenCharacter errors' do
       rule = <<~POLAR
-        f(a) := a = "this is not
+        f(a) if a = "this is not
         allowed";
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
@@ -514,7 +544,7 @@ RSpec.describe Oso::Polar::Polar do
     end
 
     it 'can return a list' do
-      subject.load_str('allow(actor: Actor, "join", "party") := "social" in actor.groups;')
+      subject.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
       expect(subject.query_pred('allow', args: [Actor.new, 'join', 'party']).to_a).to eq([{}])
     end
 

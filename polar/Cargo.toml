@@ -39,6 +39,7 @@ permute = "0.1.0"
 proptest = "0.9.6"
 pretty_assertions = "0.6.1"
 maplit = "1.0.2"
+indoc = "0.3.5"
 
 [features]
 default = []

@@ -34,7 +34,7 @@ extern {
         "}" => lexer::Token::RCB,       // }
         "." => lexer::Token::Dot,       // .
         "new" => lexer::Token::New,     // new
-        "!" => lexer::Token::Not,       // !
+        "!" => lexer::Token::Bang,       // !
         "*" => lexer::Token::Mul,       // *
         "/" => lexer::Token::Div,       // /
         "+" => lexer::Token::Add,       // +
@@ -58,6 +58,7 @@ extern {
         "if" => lexer::Token::If,       // if
         "and" => lexer::Token::And,     // and
         "or" => lexer::Token::Or,       // or
+        "not" => lexer::Token::Not,       // not
         "matches" => lexer::Token::Matches,   // matches
     }
 }
@@ -83,7 +84,7 @@ pub Boolean: Term = <start:@L> <b:"Boolean"> => {
 Name: Symbol = <s:"Symbol"> => s;
 
 pub Symbol: Term  = <start:@L> <n:Name> => {
-    Term::new_from_parser(src_id, start, Value::Symbol(n))
+    Term::new_from_parser(src_id, start, Value::Variable(n))
 };
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -124,6 +125,15 @@ InstanceLiteral<T>: Term = <start:@L> <tag:Name> <fields:Object<T>> => {
 pub InstanceLiteralTerm: Term = <InstanceLiteral<Exp5<"Term">>> => <>;
 pub InstanceLiteralPattern: Term = <InstanceLiteral<Exp9<"Pattern">>> => <>;
 
+// Either a *rest variable, or an ordinary term.
+RestVar<T>: Term = {
+    <start:@L> "*" <rest:Name> => {
+        Term::new_from_parser(src_id, start, Value::RestVariable(rest))
+    },
+    <Term> if T == "Term" => <>,
+    <Pattern> if T == "Pattern" => <>
+};
+
 pub Pattern: Term = {
     <term:InstanceLiteralPattern> => Pattern::term_as_pattern(&term),
     <term:DictionaryPattern> => Pattern::term_as_pattern(&term),
@@ -131,7 +141,7 @@ pub Pattern: Term = {
     <term:PolarString> => term,
     <term:Boolean> => term,
     <term:Symbol> => term,
-    <start:@L> "[" <terms:(<Pattern> ",")*> <term:Pattern?> "]" => {
+    <start:@L> "[" <terms:(<Pattern> ",")*> <term:RestVar<"Pattern">?> "]" => {
         match term {
             Some(term) => Term::new_from_parser(src_id, start, Value::List(vec![term])),
             None => Term::new_from_parser(src_id, start, Value::List(terms))
@@ -147,10 +157,14 @@ pub Term: Term = {
     <term:DictionaryTerm> => term,
     <start:@L> <op:RewrittenOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
     <start:@L> <pred:Predicate> => Term::new_from_parser(src_id, start, Value::Call(pred)),
-    <start:@L> "[" "]" => Term::new_from_parser(src_id, start, Value::List(vec![])),
-    <start:@L> "[" <exp:TermExp> "]" => {
-        let terms = unwrap_and(exp);
-        Term::new_from_parser(src_id, start, Value::List(terms))
+    <start:@L> "[" <mut terms:(<Term> ",")*> <term:RestVar<"Term">?> "]" => {
+        match term {
+            Some(term) => {
+                terms.push(term);
+                Term::new_from_parser(src_id, start, Value::List(terms))
+            },
+            None => Term::new_from_parser(src_id, start, Value::List(terms))
+        }
     }
 };
 
@@ -162,22 +176,22 @@ RewritableOperator: Operator = {
 };
 
 pub RewrittenOperation: Operation = {
-    <op:RewritableOperator> "(" <args:TermExp> ")" => {
-        let args = unwrap_and(args);
+    <op:RewritableOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+
         Operation{operator: op, args: args}
     },
-    <op:RewritableOperator> "(" ")" => {
-        Operation{operator: op, args: vec![]}
-    }
 };
 
 pub Predicate: Predicate = {
-    <name:Name> "(" ")" => {
-        let args = vec![];
-        Predicate{name, args}
-    },
-    <name:Name> "(" <args:TermExp> ")" => {
-        let args = unwrap_and(args);
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
         Predicate{name, args}
     }
 };
@@ -234,7 +248,7 @@ DotOp<T>: Term = {
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <start:@L> <head:Callable<T>> "." <call_loc:@L> "(" <name:Name> ")" => {
-        let call_term = Term::new_from_parser(src_id, call_loc, Value::Symbol(name));
+        let call_term = Term::new_from_parser(src_id, call_loc, Value::Variable(name));
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
@@ -258,7 +272,7 @@ Exp8<T>: Term = {
     },
     // Symbols on the RHS are treated as class names, just like in a specializers
     <start:@L> <left:Exp8<T>> Matches <right:Pattern> => {
-        let right = if let Value::Symbol(ref sym) = right.value() {
+        let right = if let Value::Variable(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
                 fields: Dictionary::new()
@@ -274,8 +288,9 @@ Exp8<T>: Term = {
 }
 
 // !
+Not = {"not"};
 Exp7<T>: Term = {
-    <start:@L> "!" <exp8:Exp8<T>> => {
+    <start:@L> Not <exp8:Exp8<T>> => {
         let args = vec![exp8];
         let op = Operation{operator: Operator::Not, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
@@ -361,7 +376,7 @@ Exp3<T>: Term = {
 
 
 
-Or = {"|", "or"};
+Or = {"or"};
 Exp2<T>: Term = {
     <start:@L> <head:Exp3<T>> Or <mut tail:Exp2<T>> => {
         let args = match &mut tail.value() {
@@ -380,7 +395,7 @@ Exp2<T>: Term = {
     <exp3:Exp3<T>> => exp3
 }
 
-And = {",", "and"};
+And = {"and"};
 Exp1<T>: Term = {
     <start:@L> <head:Exp2<T>> And <mut tail:Exp1<T>> => {
         let args = match &mut tail.value() {
@@ -415,16 +430,16 @@ Parameter: Parameter = {
     },
     // parenthesized specializers do not have symbol translation to class names applied
     <start:@L> <name:Name> ":" "(" <specializer:Pattern> ")" => {
-        let mut name = Term::new_from_parser(src_id, start, Value::Symbol(name));
+        let mut name = Term::new_from_parser(src_id, start, Value::Variable(name));
         Parameter {
             parameter: Some(name),
             specializer: Some(specializer),
         }
     },
     <start:@L> <name:Name> ":" <specializer:Pattern> => {
-        let mut name = Term::new_from_parser(src_id, start, Value::Symbol(name));
+        let mut name = Term::new_from_parser(src_id, start, Value::Variable(name));
         let offset = specializer.offset();
-        if let Value::Symbol(class_name) = specializer.value() {
+        if let Value::Variable(class_name) = specializer.value() {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
             Parameter {

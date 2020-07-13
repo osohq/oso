@@ -218,11 +218,15 @@ impl Polar {
             filename: None,
             src: src.to_owned(),
         };
-        let mut kb = self.kb.write().unwrap();
-        let src_id = kb.new_id();
-        let mut term = parser::parse_query(src_id, src).map_err(|e| fill_context(e, &source))?;
-        kb.sources.add_source(source, src_id);
-        rewrite_term(&mut term, &mut kb);
+        let term = {
+            let mut kb = self.kb.write().unwrap();
+            let src_id = kb.new_id();
+            let mut term =
+                parser::parse_query(src_id, src).map_err(|e| fill_context(e, &source))?;
+            kb.sources.add_source(source, src_id);
+            rewrite_term(&mut term, &mut kb);
+            term
+        };
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
         Ok(Query { done: false, vm })
@@ -263,6 +267,10 @@ impl Polar {
     // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&self) -> u64 {
         self.kb.read().unwrap().new_id()
+    }
+
+    pub fn register_constant(&mut self, name: Symbol, value: Term) {
+        self.kb.write().unwrap().constant(name, value)
     }
 }
 

@@ -41,7 +41,7 @@ macro_rules! term {
 impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
         Self(Parameter {
-            parameter: Some(arg.1.clone_with_value(Value::Symbol(arg.0))),
+            parameter: Some(arg.1.clone_with_value(Value::Variable(arg.0))),
             specializer: Some(Pattern::term_as_pattern(&arg.1)),
         })
     }
@@ -180,7 +180,7 @@ impl From<TermList> for TestHelper<Value> {
 }
 impl From<Symbol> for TestHelper<Value> {
     fn from(other: Symbol) -> Self {
-        Self(Value::Symbol(other))
+        Self(Value::Variable(other))
     }
 }
 impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {

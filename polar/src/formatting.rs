@@ -157,8 +157,13 @@ pub mod display {
                     value.to_polar()
                 ),
                 Goal::LookupExternal {
-                    instance_id, field, ..
-                } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
+                    instance, field, ..
+                } => write!(
+                    fmt,
+                    "LookupExternal({}.{})",
+                    instance.to_polar(),
+                    field.to_polar(),
+                ),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
                 Goal::FilterRules {
@@ -268,7 +273,7 @@ pub mod to_polar {
         fn to_polar(&self) -> String {
             use Operator::*;
             match self {
-                Not => "!",
+                Not => "not",
                 Mul => "*",
                 Div => "/",
                 Add => "+",
@@ -279,8 +284,8 @@ pub mod to_polar {
                 Neq => "!=",
                 Gt => ">",
                 Lt => "<",
-                Or => "|",
-                And => ",",
+                Or => "or",
+                And => "and",
                 New => "new",
                 Dot => ".",
                 Unify => "=",
@@ -333,7 +338,7 @@ pub mod to_polar {
                 }
                 // Unary operators
                 Not => format!(
-                    "{}{}",
+                    "{} {}",
                     self.operator.to_polar(),
                     to_polar_parens(self.operator, &self.args[0])
                 ),
@@ -350,7 +355,7 @@ pub mod to_polar {
                 And => format_args(
                     self.operator,
                     &self.args,
-                    &format!("{} ", self.operator.to_polar()),
+                    &format!(" {} ", self.operator.to_polar()),
                 ),
                 Or => format_args(
                     self.operator,
@@ -399,10 +404,10 @@ pub mod to_polar {
                         )
                     } else {
                         format!(
-                            "{}({}) := {};",
+                            "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
-                            format_args(Operator::And, &args, ", "),
+                            format_args(Operator::And, &args, " and "),
                         )
                     }
                 }
@@ -450,7 +455,8 @@ pub mod to_polar {
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ", "),),
-                Value::Symbol(s) => s.to_polar(),
+                Value::Variable(s) => s.to_polar(),
+                Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
             }
         }
