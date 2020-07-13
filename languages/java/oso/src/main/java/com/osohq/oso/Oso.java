@@ -10,8 +10,8 @@ public class Oso {
     public Oso() throws Exceptions.OsoException {
         polar = new Polar();
         registerClass(Http.class,
-                (m) -> new Http((String) m.get("hostname"), (String) m.get("path"), (String) m.get("query")));
-        registerClass(PathMapper.class, (m) -> new PathMapper((String) m.get("template")));
+                (m) -> new Http((String) m.get("hostname"), (String) m.get("path"), (String) m.get("query")), "Http");
+        registerClass(PathMapper.class, (m) -> new PathMapper((String) m.get("template")), "PathMapper");
     }
 
     /**

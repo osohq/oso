@@ -331,4 +331,22 @@ public class PolarTest extends TestCase {
         p.clear();
         assertTrue(p.queryStr("f(x)").results().isEmpty());
     }
+
+    /*** TEST OSO ***/
+    public void testPathMapper() throws Exception {
+        Oso oso = new Oso();
+        // Extracts matches into a hash
+        PathMapper mapper = new PathMapper("/widget/{id}");
+        assertTrue("Failed to extract matches to a hash", mapper.map("/widget/12").equals(Map.of("id", "12")));
+        // maps HTTP resources
+        oso.registerClass(MyClass.class, m -> new MyClass("test", Integer.parseInt((String) m.get("id"))), "MyClass");
+        oso.loadStr("allow(actor, \"get\", _: Http{path: path}) :="
+                + "new PathMapper{template: \"/myclass/{id}\"}.map(path) = {id: id},"
+                + "allow(actor, \"get\", new MyClass{id: id});"
+                + "allow(actor, \"get\", myclass: MyClass) := myclass.id = 12;");
+        Http http12 = new Http(null, "/myclass/12", null);
+        assertTrue("Failed to correctly map HTTP resource", oso.allow("sam", "get", http12));
+        Http http13 = new Http(null, "/myclass/13", null);
+        assertFalse("Failed to correctly map HTTP resource", oso.allow("sam", "get", http13));
+    }
 }
