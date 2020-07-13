@@ -2,4 +2,5 @@
 
 PR checklist:
 
-- [ ] Needs changelog entry
+<!-- Delete if no entry is required. -->
+- [ ] Added changelog entry.
