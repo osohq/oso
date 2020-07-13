@@ -1,4 +1,4 @@
-use super::debugger::source_lines;
+use super::formatting::source_lines;
 use super::types::*;
 use std::collections::{hash_map::Entry, HashMap};
 
