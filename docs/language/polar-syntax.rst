@@ -175,6 +175,42 @@ To make the above rule more useful, we could write::
 This rule says that **if** there is a person with some name,
 **then** that person is also a user.
 
+If a variable occurs only once, then its value can't be used
+for anything. Such variables are called *singletons*, and Polar
+will warn you if they occur in a rule; e.g., if you try to load
+the rule::
+
+  user(first, last) if person("George", last);
+
+Polar will say::
+
+  Singleton variable first
+  001: user(first, last) if person("George", last);
+            ^
+
+The reason these warnings are important is that, as in this case,
+they indicate potential logical errors. Here, the error is forgetting
+to use the first name, and instead using a literal string in the
+call to ``person``.
+
+There are cases, however, where it *isn't* an error to have
+a singleton variable. For example:
+
+* As a parameter with a specializer: ``allow(_actor: Person{first_name: "George"}, ..);``
+* As a parameter that is explicitly ignored: ``always_true(_);``
+
+In such cases, you can suppress the singleton variable warning by
+starting your variable's name with an ``_`` (underscore), e.g.,
+``_actor`` in the first example above.
+
+A variable named *just* ``_`` (as in the second example above) is called
+an **anonymous** variable, and it is *always* a singleton (but will never
+generate a warning). Each occurrence is translated into a fresh variable,
+guaranteed not to match any other variable. You may therefore have as many
+anonymous variables in a rule as you like, and each will be unique.
+It's up to you whether to use an anonymous variable or a singleton with
+a descriptive name.
+
 .. _operators:
 
 Operators
