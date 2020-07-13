@@ -643,7 +643,7 @@ impl KnowledgeBase {
 
     /// Return true if a constant with the given name has been defined.
     pub fn is_constant(&self, name: &Symbol) -> bool {
-        self.constants.get(name).is_some()
+        self.constants.contains_key(name)
     }
 }
 
