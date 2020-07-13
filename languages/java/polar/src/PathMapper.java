@@ -40,16 +40,3 @@ public class PathMapper {
         return groups;
     }
 }
-// def initialize(template:)
-// capture_group = /({([^}]+)})/
-
-// template = template.dup
-// template.scan(capture_group).each do |outer, inner|
-// template = if inner == '*'
-// template.gsub! outer, '.*'
-//
-
-// end
-
-// def map(string)
-// end
