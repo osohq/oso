@@ -1,7 +1,7 @@
 /// Utils for mocking externals in tests.
 use std::collections::{HashMap, HashSet};
 
-use polar::types::{InstanceLiteral, Symbol, Term};
+use polar::types::{ExternalInstance, InstanceLiteral, Symbol, Term, Value};
 
 #[derive(Default)]
 /// Mock external that keeps track of instance literals and allows
@@ -18,10 +18,10 @@ impl MockExternal {
 
     pub fn external_call(
         &mut self,
+        call_id: u64,
+        instance: Option<Term>,
         attribute: Symbol,
         args: Vec<Term>,
-        call_id: u64,
-        instance_id: u64,
     ) -> Option<Term> {
         assert_eq!(args.len(), 0, "Only support field lookups.");
 
@@ -31,6 +31,10 @@ impl MockExternal {
         }
 
         self.calls.insert(call_id);
+        let instance_id = match instance.unwrap().value() {
+            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => *instance_id,
+            _ => panic!("expected external instance"),
+        };
         self.externals
             .get(&instance_id)
             .expect("Instance not constructed")

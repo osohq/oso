@@ -100,40 +100,51 @@ module Oso
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
-      # @param as [String]
+      # @param name [String]
       # @param from_polar [Proc]
       # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
-      def register_class(cls, as: nil, from_polar: nil) # rubocop:disable Naming/MethodParameterName
+      def register_class(cls, name: nil, from_polar: nil) # rubocop:disable Naming/MethodParameterName
         # TODO(gj): should this take 3 args: cls (Class), constructor_cls
         # (Option<Class>) that defaults to cls, and constructor_method
         # (Option<Symbol>) that defaults to :new?
-        as = cls.name if as.nil?
-        raise DuplicateClassAliasError, as: as, old: get_class(as), new: cls if classes.key? as
+        name = cls.name if name.nil?
+        raise DuplicateClassAliasError, name: name, old: get_class(name), new: cls if classes.key? name
 
-        classes[as] = cls
+        classes[name] = cls
         if from_polar.nil?
-          constructors[as] = :new
+          constructors[name] = :new
         elsif from_polar.respond_to? :call
-          constructors[as] = from_polar
+          constructors[name] = from_polar
         else
           raise InvalidConstructorError
         end
+
+        register_constant(name, value: cls)
+      end
+
+      def register_constant(name, value:)
+        ffi_instance.register_constant(name, value: to_polar_term(value))
       end
 
       # Register a Ruby method call, wrapping the call result in a generator if
       # it isn't already one.
       #
       # @param method [#to_sym]
-      # @param args [Array<Hash>]
       # @param call_id [Integer]
-      # @param instance_id [Integer]
+      # @param instance [Hash]
+      # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
-      def register_call(method, args:, call_id:, instance_id:)
+      def register_call(method, call_id:, instance:, args:)
         return if calls.key?(call_id)
 
         args = args.map { |a| to_ruby(a) }
-        instance = get_instance(instance_id)
+        if instance["value"].has_key? "ExternalInstance"
+          instance_id = instance["value"]["ExternalInstance"]["instance_id"]
+          instance = get_instance(instance_id)
+        else
+          instance = to_ruby(instance)
+        end
         result = instance.__send__(method, *args)
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
@@ -257,7 +268,7 @@ module Oso
                   { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el| to_polar_term(el) } } }
                 when value.instance_of?(Variable)
                   # This is supported so that we can query for unbound variables
-                  { 'Symbol' => value }
+                  { 'Variable' => value }
                 else
                   { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
                 end

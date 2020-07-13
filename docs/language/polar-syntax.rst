@@ -132,7 +132,7 @@ rules to do this.
 
 A rule in Polar takes the form::
 
-  HEAD := BODY;
+  HEAD if BODY;
 
 where ``HEAD`` must be a *fact* and ``BODY`` any number of *terms*.
 The meaning of a rule is that ``HEAD`` is true **if** each of the ``BODY``
@@ -142,7 +142,7 @@ on how rules are defined and applied see :doc:`polar-queries`.
 
 The following is an example of a rule::
 
-  user("sam", "scott") := person("sam", "scott");
+  user("sam", "scott") if person("sam", "scott");
 
 This example says that Sam is a user **if** he is also defined
 as a person.
@@ -170,7 +170,7 @@ The following are all variables::
 
 To make the above rule more useful, we could write::
 
-  user(first, last) := person(first, last);
+  user(first, last) if person(first, last);
 
 This rule says that **if** there is a person with some name,
 **then** that person is also a user.
@@ -209,11 +209,11 @@ Conjunction (and)
 ^^^^^^^^^^^^^^^^^
 
 To say that two terms in a rule's body must **both** be true,
-the comma operator (``,`` pronounced "and") can be used. For
+the and operator (``and``) can be used. For
 example, the rule::
 
-  oso_user(first, last) :=
-    user(first, last),
+  oso_user(first, last) if
+    user(first, last) and
     employee(company("oso"), person(first, last));
 
 will be satisfied if the named person is a user **and** that
@@ -224,7 +224,7 @@ person is an employee of oso.
 Disjunction (or)
 ^^^^^^^^^^^^^^^^^
 
-The pipe operator (``|``, pronounced "or") will be true if either
+The or operator (``or``) will be true if either
 its left **or** its right operand is true. Disjunctions can always
 be replaced by multiple rules with identical heads but different bodies
 (the operands), but may help simplify writing rules with alternatives.
@@ -235,8 +235,8 @@ Dictionary key access
 The dot ``.`` operator can be used to access the value associated with
 a key in a dictionary. For example, the rule::
 
-  first_name(dict, x) :=
-    dict = Person{},
+  first_name(dict, x) if
+    dict = Person{} and
     x = dict.first_name;
 
 will access the value of the field named ``"first_name"`` in ``dict``,
@@ -293,7 +293,7 @@ the operation will fail.
 
 For example::
 
-    x in [1, 2, 3], x = 1
+    x in [1, 2, 3] and x = 1
 
 Will bind ``x`` to ``1``, ``2``, ``3``, in turn, and check that ``x = 1``
 for each. This expression will only succeed for the first item (``1``).

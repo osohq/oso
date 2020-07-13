@@ -126,9 +126,9 @@ mod tests {
             .unwrap();
         assert_eq!(exp2.to_polar(), r#"foo.bar(a, b(c.d(e, [f, g])))"#);
         let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x) := g(x);"#))
+            .parse(0, Lexer::new(r#"f(x) if g(x);"#))
             .unwrap();
-        assert_eq!(rule.to_polar(), r#"f(x) := g(x);"#);
+        assert_eq!(rule.to_polar(), r#"f(x) if g(x);"#);
         let rule = polar::RuleParser::new()
             .parse(0, Lexer::new(r#"f(x);"#))
             .unwrap();
@@ -140,17 +140,20 @@ mod tests {
         // println!("{}", instance.to_polar());
         // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
         let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"!foo"#))
+            .parse(0, Lexer::new(r#"not foo"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!foo"#);
+        assert_eq!(exp.to_polar(), r#"not foo"#);
         let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"!foo"#))
+            .parse(0, Lexer::new(r#"not foo"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!foo"#);
+        assert_eq!(exp.to_polar(), r#"not foo"#);
         let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"!a, b | c = d == (e + f) / g.h(i)"#))
+            .parse(0, Lexer::new(r#"not a and b or c = d == (e + f) / g.h(i)"#))
             .unwrap();
-        assert_eq!(exp.to_polar(), r#"!a, b | c = d == (e + f) / g.h(i)"#);
+        assert_eq!(
+            exp.to_polar(),
+            r#"not a and b or c = d == (e + f) / g.h(i)"#
+        );
     }
 
     #[test]
@@ -225,7 +228,7 @@ mod tests {
             exp3.to_polar()
         );
         let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x) := g(x);"#))
+            .parse(0, Lexer::new(r#"f(x) if g(x);"#))
             .unwrap();
         assert_eq!(rule, rule!("f", [sym!("x")] => pred!("g", [sym!("x")])));
         let rule = polar::RuleParser::new()
@@ -254,7 +257,7 @@ mod tests {
         assert_eq!(rule, rule!("f", ["x"; 1]));
 
         let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x: 1, y: [x]) := y = 2;"#))
+            .parse(0, Lexer::new(r#"f(x: 1, y: [x]) if y = 2;"#))
             .unwrap();
         assert_eq!(
             rule,
@@ -287,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_parse_line() {
-        let kb = r#"f(x) := x = 1;"#;
+        let kb = r#"f(x) if x = 1;"#;
         let line = parse_lines(&kb);
         assert_eq!(
             line[0],
@@ -302,10 +305,10 @@ mod tests {
     #[test]
     fn test_parse_new() {
         let f = r#"
-        a(x) := x = new Foo{a: 1};
+        a(x) if x = new Foo{a: 1};
         "#;
         let results = parse_rules(f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) := x = new Foo{a: 1};"#);
+        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo{a: 1};"#);
     }
 
     #[test]
@@ -316,13 +319,24 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_alternate_syntax() {
-        let f = r#"
-            a(x) if b(x) and (c(x) or d(x));
-            b(x) if x matches {a: 1};
-            "#;
-        let results = parse_rules(f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) := b(x), c(x) | d(x);"#);
-        assert_eq!(results[1].to_polar(), r#"b(x) := x isa {a: 1};"#);
+    fn test_parse_rest_vars() {
+        let q = "[1, 2, *x] = [*rest]";
+        assert_eq!(parse_query(q).to_polar(), q);
+
+        assert!(matches!(
+            super::parse_query(0, "[1, 2, *3] = [*rest]").expect_err("parse error"),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::UnrecognizedToken { .. }),
+                ..
+            }
+        ));
+
+        assert!(matches!(
+            super::parse_query(0, "[1, *x, *y] = [*rest]").expect_err("parse error"),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::UnrecognizedToken { .. }),
+                ..
+            }
+        ));
     }
 }
