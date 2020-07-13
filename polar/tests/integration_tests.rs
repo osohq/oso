@@ -374,7 +374,7 @@ fn test_no_applicable_rules() {
     let mut polar = Polar::new();
     assert!(qnull(&mut polar, "f()"));
 
-    polar.load("f(x);").unwrap();
+    polar.load("f(_);").unwrap();
     assert!(qnull(&mut polar, "f()"));
 }
 
@@ -648,7 +648,7 @@ fn test_lookup_derefs() {
 fn unify_predicates() {
     let mut polar = Polar::new();
     polar
-        .load("f(g(x)); k(x) if h(g(x), g(x)); h(g(1), g(1));")
+        .load("f(g(_x)); k(x) if h(g(x), g(x)); h(g(1), g(1));")
         .unwrap();
 
     assert!(qeval(&mut polar, "f(g(1))"));
@@ -862,7 +862,8 @@ fn test_anonymous_vars() {
     assert!(qnull(&mut polar, "[1,2,3] = [__,__,__]"));
 }
 
-/// Run this test with --nocapture to see warnings.
+/// Run this test with --nocapture to see warnings. It should be
+/// the only test that generates "Singleton variable" warnings.
 #[test]
 fn test_singleton_vars() {
     let polar = Polar::new();

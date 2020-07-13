@@ -283,6 +283,6 @@ mod tests {
     fn can_load_and_query() {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1");
-        let _ = polar.load("f(x);");
+        let _ = polar.load("f(_);");
     }
 }
