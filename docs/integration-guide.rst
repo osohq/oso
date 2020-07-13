@@ -34,9 +34,7 @@ Polar permits the encoding of access control along each of these dimensions.
 Model level
 -----------
 
-Use an allow rule with no resource conditions to control access on a model level
-
-::
+Use an allow rule with no resource conditions to control access on a model level::
 
     allow(actor, "view", _: Expense);
 
@@ -80,7 +78,7 @@ The name of the column to read could be encoded as a string action::
     allow(actor, "amount", _: Expense);
     allow(actor, "submitted_by", _: Expense);
 
-Then, the application would make several `oso.allow()` calls before permitting
+Then, the application would make several ``oso.allow()`` calls before permitting
 access:
 
     - one for model or row access with the "view" action
@@ -141,15 +139,20 @@ There are several possible integration points for oso.  First some definitions:
 
 Policy evaluation points:
 
-- before primary data fetch
-- after primary data fetch
+- **before primary data fetch**: An authorization decision is made before
+  primary data is fetched from the persistence layer. Primary data is not
+  available as context during the authorization decision.
+- **after primary data fetch**: An authorization data is made after the primary
+  data is fetched from the persistence layer and can be used to make an
+  authorization decisions.
 
 Table / model level
 -------------------
 
-This type of authorization is easy to do before data fetch.  However, it may be
-performed after data fetch by checking the class name or a resource field that
-indicates the type of the data.
+This type of authorization is easy to do before data fetch, all that is required
+to make a decision is the model name to authorize.  It may also be performed
+after data fetch by checking the class name or a resource field that indicates
+the type of the data.
 
 Row / attribute level
 ---------------------
@@ -184,17 +187,21 @@ access control rule in our policy::
         actor.location = resource.location;
 
 To authorize this request for a single record fetch, for example
-``GET /expense/1`` we could fetch the record (the equivalent of
+``GET /expense/1``, we could fetch the record (the equivalent of
 ``SELECT * FROM expenses WHERE id = 1``) then evaluate the allow rule, passing
 the record to oso as a resource.
 
-For a list endpoint, we have a few options:
+A list endpoint involves multiple records that must be fetched from the data
+layer, then authorized. Usually a filter must be applied when querying for
+multiple records for performance reasons. We have a few options to perform
+authorization:
 
     1. Apply a less restrictive filter in application code (or no filter) and
        individually authorize every record.
-    2. Duplicate our filter code in both places (application and Polar).
-    3. Authorize the filter to be applied to the query, instead of the resource.
-    4. Have oso output the filter to be applied for list endpoints.
+    2. Duplicate our filtering in both places (application and Polar).
+    3. Authorize the filter to be applied to the query before data fetch,
+       instead of the resource.
+    4. Have oso output the filter to be applied to the query before data fetch.
 
 Let's see an example of how each of these would work. We will use Python
 pseudocode for this example, but the same concepts translate to any web application.
@@ -224,11 +231,12 @@ organization.  We could apply this filter, then further restrict access using os
             authorized_records.append(record)
 
 This approach works well if the expected size of ``records`` after the database
-fetch is relatively small.  It is not performant if the record set is large.
+fetch is relatively small.  It allows the same policy to be used for GET & list
+fetch requests.  It is not performant if the record set is large.
 
 **Duplicating filter logic**
 
-In this approach, we only use oso to confirm that access is allowed.  While oso
+Above, we only use oso to confirm that access is allowed.  While oso
 remains the authoritative source of authorization information, it is not used
 to determine which records to fetch.  This approach is helpful if you have
 authorization rules that must be applied to highly sensitive data using oso,
@@ -271,7 +279,11 @@ For the above example, we add the following to our policy::
 This takes the role check portion from the ``view`` rule and allows us to apply
 it separately, before we authorize the query. This means we don't need to fetch
 expenses when the request would ultimately be denied because the role is not
-allowed to list expenses.
+allowed to list expenses.  The second ``oso.allow()`` call confirms that the
+filter applied in the database fetch produces records that are allowed by the
+access policy.  With this approach, the policy and database fetch logic is
+duplicative and must be manually kept in sync by developer.  To aid with this,
+we add an assertion in debug mode.
 
 **Authorizing the filter to be applied, instead of the resource**
 
@@ -323,6 +335,11 @@ To support this structure, our Polar policy would look something like::
     allow_filter(actor, "view", resource_type: Expense, filters) if
         ["location_id", "=", actor.location_id] in filters;
 
+While we have abstracted the policy slightly further and no longer need
+as many ``oso.allow()`` checks to complete the request, so must keep
+the filter in sync between oso and our code. Instead, we can make oso the
+authoritative source query filters that perform authorization.
+
 **Have oso output the filter**
 
 This is a similar structure to above, but instead the authorization filter is
@@ -342,8 +359,7 @@ filters that are conditional on other attributes. For example, our policy for
         role(actor, "accountant") and
         actor.location = resource.location;
 
-We could instead refactor these rules so that the filters can be evaluated
-by the data store::
+We could instead refactor these rules so that they operate on filters::
 
     allow_with_filter(actor: User, "view", resource: Expense, filters) if
         filters = ["submitted_by", "=", actor.name];
