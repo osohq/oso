@@ -120,7 +120,11 @@ public class Ffi {
     }
 
     protected Ffi() {
-        polarLib = LibraryLoader.create(PolarLib.class).load("lib/libpolar.dylib");
+        String polar_lib_path = System.getenv("POLAR_LIB_PATH");
+        if (polar_lib_path == null) {
+            polar_lib_path = "lib/libpolar.dylib";
+        }
+        polarLib = LibraryLoader.create(PolarLib.class).load(polar_lib_path);
     }
 
     protected Polar polarNew() throws Exceptions.OsoException {
