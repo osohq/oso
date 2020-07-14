@@ -69,7 +69,7 @@ public class Oso {
      * @throws Exceptions.DuplicateClassAliasError if class has already been
      *                                             registered.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar) throws Exceptions.DuplicateClassAliasError {
+    public void registerClass(Class cls, Function<Map, Object> fromPolar) throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         polar.registerClass(cls, fromPolar);
     }
 
@@ -86,7 +86,7 @@ public class Oso {
      *                                             registered with the given alias.
      */
     public void registerClass(Class cls, Function<Map, Object> fromPolar, String alias)
-            throws Exceptions.DuplicateClassAliasError {
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         polar.registerClass(cls, fromPolar, alias);
     }
 

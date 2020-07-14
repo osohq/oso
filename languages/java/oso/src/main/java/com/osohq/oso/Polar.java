@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
@@ -153,13 +154,14 @@ public class Polar {
      *                                             registered.
      */
     protected void registerClass(Class cls, Function<Map, Object> fromPolar)
-            throws Exceptions.DuplicateClassAliasError {
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         String name = cls.getName();
         if (classes.containsKey(name)) {
             throw new Exceptions.DuplicateClassAliasError(name, classes.get(name).getName(), name);
         }
         classes.put(cls.getName(), cls);
         constructors.put(cls.getName(), fromPolar);
+        registerConstant(cls.getName(), cls);
     }
 
     /**
@@ -175,12 +177,24 @@ public class Polar {
      *                                             registered with the given alias.
      */
     protected void registerClass(Class cls, Function<Map, Object> fromPolar, String alias)
-            throws Exceptions.DuplicateClassAliasError {
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         if (classes.containsKey(alias)) {
             throw new Exceptions.DuplicateClassAliasError(alias, classes.get(alias).getName(), cls.getName());
         }
         classes.put(alias, cls);
         constructors.put(alias, fromPolar);
+        registerConstant(alias, cls);
+    }
+
+    /**
+     * Registers `value` as a Polar constant variable called `name`.
+     *
+     * @param name
+     * @param value
+     * @throws OsoException
+     */
+    protected void registerConstant(String name, Object value) throws Exceptions.OsoException {
+        ffi.registerConstant(name, toPolarTerm(value).toString());
     }
 
     /**

@@ -48,6 +48,10 @@ public class Ffi {
             return new Query(checkResult(polarLib.polar_query_from_repl(ptr)));
         }
 
+        protected int registerConstant(String name, String value) throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_register_constant(ptr, name, value));
+        }
+
         @Override
         protected void finalize() {
             polarLib.polar_free(ptr);
@@ -154,6 +158,8 @@ public class Ffi {
         int query_free(Pointer query);
 
         int string_free(Pointer s);
+
+        int polar_register_constant(Pointer polar_ptr, String name, String value);
 
     }
 
