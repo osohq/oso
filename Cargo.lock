@@ -262,6 +262,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-channel"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cced8691919c02aac3cb0a1bc2e9b73d89e832bf9a06fc579d4e71b68a2da061"
+dependencies = [
+ "crossbeam-utils",
+ "maybe-uninit",
+]
+
+[[package]]
 name = "crossbeam-deque"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -732,6 +742,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipe"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcd11e042e056991b5df9c0c5ae6bd0cce219b74294c40f65b89f40f7030106c"
+dependencies = [
+ "crossbeam-channel",
+]
+
+[[package]]
 name = "plotters"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -757,6 +776,7 @@ dependencies = [
  "maplit",
  "ordered-float",
  "permute",
+ "pipe",
  "pretty_assertions",
  "proptest",
  "regex",
