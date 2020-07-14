@@ -247,7 +247,7 @@ public class PolarTest extends TestCase {
     public void testRegisterCall() throws Exception {
         MyClass instance = new MyClass("test", 1);
         p.cacheInstance(instance, Long.valueOf(1));
-        p.registerCall("myMethod", List.of("hello world"), 1, 1);
+        p.registerCall("myMethod", List.of("hello world"), 1, p.toPolarTerm(instance));
         JSONObject res = p.nextCallResult(1);
         assertTrue(p.toJava(res).equals("hello world"));
     }
@@ -340,9 +340,9 @@ public class PolarTest extends TestCase {
         assertTrue("Failed to extract matches to a hash", mapper.map("/widget/12").equals(Map.of("id", "12")));
         // maps HTTP resources
         oso.registerClass(MyClass.class, m -> new MyClass("test", Integer.parseInt((String) m.get("id"))), "MyClass");
-        oso.loadStr("allow(actor, \"get\", _: Http{path: path}) if"
-                + "new PathMapper{template: \"/myclass/{id}\"}.map(path) = {id: id} and"
-                + "allow(actor, \"get\", new MyClass{id: id});"
+        oso.loadStr("allow(actor, \"get\", _: Http{path: path}) if "
+                + "new PathMapper{template: \"/myclass/{id}\"}.map(path) = {id: id} and "
+                + "allow(actor, \"get\", new MyClass{id: id});\n"
                 + "allow(actor, \"get\", myclass: MyClass) if myclass.id = 12;");
         Http http12 = new Http(null, "/myclass/12", null);
         assertTrue("Failed to correctly map HTTP resource", oso.allow("sam", "get", http12));

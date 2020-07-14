@@ -378,18 +378,28 @@ public class Polar {
      * Register a Java method call, wrapping the result in an enumeration if it
      * isn't already done.
      *
-     * @param attrName   Name of the method/attribute.
-     * @param args       Method arguments.
-     * @param callId     Call ID under which to register the call.
-     * @param instanceId ID of the Java instance on which to call the method.
+     * @param attrName      Name of the method/attribute.
+     * @param args          Method arguments.
+     * @param callId        Call ID under which to register the call.
+     * @param polarInstance JSONObject containing either an instance_id or an
+     *                      instance of a built-in type.
      * @throws Exceptions.InvalidCallError
      */
-    protected void registerCall(String attrName, List<Object> args, long callId, long instanceId)
-            throws Exceptions.InvalidCallError {
+    public void registerCall(String attrName, List<Object> args, long callId, JSONObject polarInstance)
+            throws Exceptions.InvalidCallError, Exceptions.UnregisteredInstanceError,
+            Exceptions.UnexpectedPolarTypeError {
         if (calls.containsKey(callId)) {
             return;
         }
-        Object instance = instances.get(instanceId);
+        Object instance;
+        if (polarInstance.getJSONObject("value").has("ExternalInstance")) {
+            long instanceId = polarInstance.getJSONObject("value").getJSONObject("ExternalInstance")
+                    .getLong("instance_id");
+            instance = instances.get(instanceId);
+        } else {
+            instance = toJava(polarInstance);
+        }
+
         // Get types of args to pass into `getMethod()`
         List<Class> argTypes = args.stream().map(a -> a.getClass()).collect(Collectors.toUnmodifiableList());
         Object result = null;

@@ -59,10 +59,10 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      * @param callId
      * @throws Exceptions.OsoException
      */
-    private void handleCall(String attrName, JSONArray jArgs, long instanceId, long callId)
+    private void handleCall(String attrName, JSONArray jArgs, JSONObject polarInstance, long callId)
             throws Exceptions.OsoException {
         List<Object> args = polar.polarListToJava(jArgs);
-        polar.registerCall(attrName, args, callId, instanceId);
+        polar.registerCall(attrName, args, callId, polarInstance);
         String result;
         try {
             result = polar.nextCallResult(callId).toString();
@@ -109,13 +109,13 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     break;
                 case "ExternalCall":
                     long callId = data.getLong("call_id");
-                    long instanceId = data.getLong("instance_id");
+                    JSONObject polarInstance = data.getJSONObject("instance");
                     String attrName = data.getString("attribute");
                     JSONArray jArgs = data.getJSONArray("args");
-                    handleCall(attrName, jArgs, instanceId, callId);
+                    handleCall(attrName, jArgs, polarInstance, callId);
                     break;
                 case "ExternalIsa":
-                    instanceId = data.getLong("instance_id");
+                    Long instanceId = data.getLong("instance_id");
                     callId = data.getLong("call_id");
                     String classTag = data.getString("class_tag");
                     int answer = polar.isa(instanceId, classTag) ? 1 : 0;
