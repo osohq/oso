@@ -1,17 +1,19 @@
 //! # Formatting
 //!
-//! There are three forms of formatting within Polar:
+//! There are three main forms of formatting within Polar:
 //!
 //! 1. Debug strings: super verbose, mostly Rust-auto derived from fmt::Debug trait
 //! 2. Display string: nice user-facing versions, which could be used for things like a debugger
 //! 3. Polar strings: not always implemented, but is same syntax the parser accepts
 //!
+//! In addition, there are special cases like traces and sources that have their own
+//! formatting requirements.
 
 pub use display::*;
 
 pub use to_polar::*;
 
-use crate::types::{Node, Trace};
+use crate::types::{Node, Source, Trace};
 use std::fmt::Write;
 
 pub fn draw(trace: &Trace, nest: usize) -> String {
@@ -34,16 +36,54 @@ pub fn draw(trace: &Trace, nest: usize) -> String {
     res
 }
 
+/// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached,
+/// and return the source line containing the `offset` character as well as `num_lines` lines
+/// above and below it.
+pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
+    // Sliding window of lines: current line + indicator + additional context above + below.
+    let max_lines = num_lines * 2 + 2;
+    let push_line = |lines: &mut Vec<String>, line: String| {
+        if lines.len() == max_lines {
+            lines.remove(0);
+        }
+        lines.push(line);
+    };
+    let mut index = 0;
+    let mut lines = Vec::new();
+    let mut target = None;
+    let prefix_len = "123: ".len();
+    for (lineno, line) in source.src.lines().enumerate() {
+        push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
+        let end = index + line.len() + 1; // Adding one to account for new line byte.
+        if target.is_none() && end >= offset {
+            target = Some(lineno);
+            let spaces = " ".repeat(offset - index + prefix_len);
+            push_line(&mut lines, format!("{}^", spaces));
+        }
+        index = end;
+        if target.is_some() && lineno == target.unwrap() + num_lines {
+            break;
+        }
+    }
+    lines.join("\n")
+}
+
 pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Rule, Term};
+    use crate::types::{Numeric, Rule, Symbol, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{} = {}", self.0.to_polar(), self.1.to_polar())
+        }
+    }
+
+    impl fmt::Display for Symbol {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.0)
         }
     }
 

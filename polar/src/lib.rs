@@ -94,7 +94,7 @@ pub extern "C" fn polar_get_error() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
-    ffi_try!({ box_ptr!(Polar::new()) })
+    ffi_try!({ box_ptr!(Polar::new(None)) })
 }
 
 #[no_mangle]
