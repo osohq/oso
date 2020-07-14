@@ -9,7 +9,7 @@ public class Ffi {
     protected class Polar {
         private Pointer ptr;
 
-        protected Polar(Pointer ptr) {
+        private Polar(Pointer ptr) {
             this.ptr = ptr;
         }
 
@@ -57,7 +57,7 @@ public class Ffi {
     protected class Query {
         private Pointer ptr;
 
-        protected Query(Pointer ptr) {
+        private Query(Pointer ptr) {
             this.ptr = ptr;
         }
 
@@ -91,7 +91,7 @@ public class Ffi {
     protected class QueryEvent {
         private Pointer ptr;
 
-        public QueryEvent(Pointer ptr) {
+        private QueryEvent(Pointer ptr) {
             this.ptr = ptr;
         }
 
@@ -109,7 +109,7 @@ public class Ffi {
     protected class Error {
         private Pointer ptr;
 
-        public Error() {
+        protected Error() {
             ptr = polarLib.polar_get_error();
         }
 
