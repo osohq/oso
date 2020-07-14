@@ -555,4 +555,27 @@ RSpec.describe Oso::Polar::Polar do
       )
     end
   end
+
+  context 'runtime errors' do
+    it 'include a stack trace' do
+        rule = <<~POLAR
+        foo(a,b) := a in b;
+        POLAR
+        subject.load_str(rule)
+        expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
+          expect(e).to be_an Oso::Polar::PolarTypeError
+          expect(e.message).to eq('Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13')
+          stack_trace = <<-EOM.chomp
+trace (most recent evaluation last):
+  in query at line 1, column 1
+    foo(1, 2)
+  in rule foo at line 1, column 13
+    _a_3 in _b_4
+  in rule foo at line 1, column 13
+    _a_3 in _b_4
+EOM
+          expect(e.stack_trace).to eq(stack_trace)
+        end
+      end
+    end
 end
