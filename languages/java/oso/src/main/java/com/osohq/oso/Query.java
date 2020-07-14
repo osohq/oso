@@ -80,7 +80,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      */
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
         while (true) {
-            String eventStr = ffi.nextEvent();
+            String eventStr = ffi.nextEvent().get();
             String kind;
             JSONObject data;
             try {

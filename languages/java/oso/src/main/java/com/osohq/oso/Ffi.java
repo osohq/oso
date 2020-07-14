@@ -73,8 +73,8 @@ public class Ffi {
             return checkResult(polarLib.polar_call_result(ptr, call_id, value));
         }
 
-        protected String nextEvent() throws Exceptions.OsoException {
-            return checkResult(polarLib.polar_next_query_event(ptr));
+        protected QueryEvent nextEvent() throws Exceptions.OsoException {
+            return new QueryEvent(checkResult(polarLib.polar_next_query_event(ptr)));
         }
 
         protected int debugCommand(String value) throws Exceptions.OsoException {
@@ -88,12 +88,48 @@ public class Ffi {
 
     }
 
+    protected class QueryEvent {
+        private Pointer ptr;
+
+        public QueryEvent(Pointer ptr) {
+            this.ptr = ptr;
+        }
+
+        public String get() {
+            return ptr.getString(0);
+        }
+
+        @Override
+        protected void finalize() {
+            polarLib.string_free(ptr);
+        }
+
+    }
+
+    protected class Error {
+        private Pointer ptr;
+
+        public Error() {
+            ptr = polarLib.polar_get_error();
+        }
+
+        private Exceptions.OsoException get() {
+            return Exceptions.getJavaError(ptr.getString(0));
+        }
+
+        @Override
+        protected void finalize() {
+            polarLib.string_free(ptr);
+        }
+
+    }
+
     protected static interface PolarLib {
         int polar_debug_command(Pointer query_ptr, String value);
 
         int polar_free(Pointer polar);
 
-        String polar_get_error();
+        Pointer polar_get_error();
 
         long polar_get_external_id(Pointer polar_ptr);
 
@@ -107,7 +143,7 @@ public class Ffi {
 
         Pointer polar_next_inline_query(Pointer polar_ptr);
 
-        String polar_next_query_event(Pointer query_ptr);
+        Pointer polar_next_query_event(Pointer query_ptr);
 
         Pointer polar_query_from_repl(Pointer polar_ptr);
 
@@ -133,13 +169,9 @@ public class Ffi {
         return checkResult(polarLib.string_free(s));
     }
 
-    private Exceptions.OsoException getError() {
-        return Exceptions.getJavaError(polarLib.polar_get_error());
-    }
-
     private int checkResult(int i) throws Exceptions.OsoException {
         if (i == 0) {
-            throw getError();
+            throw new Error().get();
         } else {
             return i;
         }
@@ -147,7 +179,7 @@ public class Ffi {
 
     private long checkResult(long i) throws Exceptions.OsoException {
         if (i == 0) {
-            throw getError();
+            throw new Error().get();
         } else {
             return i;
         }
@@ -155,18 +187,9 @@ public class Ffi {
 
     private Pointer checkResult(Pointer p) throws Exceptions.OsoException {
         if (p == null) {
-            throw getError();
+            throw new Error().get();
         } else {
             return p;
         }
-    }
-
-    private String checkResult(String s) throws Exceptions.OsoException {
-        if (s == null) {
-            throw getError();
-        } else {
-            return s;
-        }
-
     }
 }
