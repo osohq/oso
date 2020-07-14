@@ -14,7 +14,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 
 public class Polar {
-    private Ffi.Polar ffi;
+    private Ffi.Polar polarFfi;
     private Map<String, Class<Object>> classes;
     private Map<String, Function<Map, Object>> constructors;
     private Map<Long, Object> instances;
@@ -22,7 +22,7 @@ public class Polar {
     private Map<Long, Enumeration<Object>> calls;
 
     public Polar() throws Exceptions.OsoException {
-        ffi = new Ffi().polarNew();
+        polarFfi = new Ffi().polarNew();
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
@@ -68,7 +68,7 @@ public class Polar {
         loadQueue.clear();
 
         // Replace Polar instance
-        ffi = new Ffi().polarNew();
+        polarFfi = new Ffi().polarNew();
     }
 
     /**
@@ -79,7 +79,7 @@ public class Polar {
      * @throws Exceptions.OsoException
      */
     protected void loadStr(String str, String filename) throws Exceptions.OsoException {
-        ffi.loadStr(str, filename);
+        polarFfi.loadStr(str, filename);
         checkInlineQueries();
     }
 
@@ -90,7 +90,7 @@ public class Polar {
      * @throws Exceptions.OsoException
      */
     protected void loadStr(String str) throws Exceptions.OsoException {
-        ffi.loadStr(str, null);
+        polarFfi.loadStr(str, null);
         checkInlineQueries();
 
     }
@@ -104,7 +104,7 @@ public class Polar {
     protected Query queryStr(String queryStr) throws Exceptions.OsoException {
         // clearQueryState();
         loadQueuedFiles();
-        return new Query(ffi.newQueryFromStr(queryStr), this);
+        return new Query(polarFfi.newQueryFromStr(queryStr), this);
     }
 
     /**
@@ -119,7 +119,7 @@ public class Polar {
         // clearQueryState();
         loadQueuedFiles();
         String pred = toPolarTerm(new Predicate(name, args)).toString();
-        return new Query(ffi.newQueryFromTerm(pred), this);
+        return new Query(polarFfi.newQueryFromTerm(pred), this);
     }
 
     /**
@@ -131,7 +131,7 @@ public class Polar {
         // clear_query_state
         loadQueuedFiles();
         while (true) {
-            Query query = new Query(ffi.newQueryFromRepl(), this);
+            Query query = new Query(polarFfi.newQueryFromRepl(), this);
             if (!query.hasMoreElements()) {
                 System.out.println("False");
             } else {
@@ -194,7 +194,7 @@ public class Polar {
      * @throws OsoException
      */
     protected void registerConstant(String name, Object value) throws Exceptions.OsoException {
-        ffi.registerConstant(name, toPolarTerm(value).toString());
+        polarFfi.registerConstant(name, toPolarTerm(value).toString());
     }
 
     /**
@@ -381,7 +381,7 @@ public class Polar {
      */
     protected Long cacheInstance(Object instance, Long id) throws Exceptions.OsoException {
         if (id == null) {
-            id = ffi.newId();
+            id = polarFfi.newId();
         }
         instances.put(id, instance);
 
@@ -572,12 +572,12 @@ public class Polar {
      * @throws Exceptions.InlineQueryFailedError On inline query failure.
      */
     private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
-        Ffi.Query nextQuery = ffi.nextInlineQuery();
+        Ffi.Query nextQuery = polarFfi.nextInlineQuery();
         while (nextQuery != null) {
             if (!new Query(nextQuery, this).hasMoreElements()) {
                 throw new Exceptions.InlineQueryFailedError();
             }
-            nextQuery = ffi.nextInlineQuery();
+            nextQuery = polarFfi.nextInlineQuery();
         }
     }
 

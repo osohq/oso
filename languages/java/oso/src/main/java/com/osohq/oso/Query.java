@@ -10,7 +10,7 @@ import org.json.JSONArray;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
     private HashMap<String, Object> next;
-    private Ffi.Query ffi;
+    private Ffi.Query queryFfi;
     private Polar polar;
 
     /**
@@ -19,7 +19,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      * @param queryPtr Pointer to the FFI query instance.
      */
     public Query(Ffi.Query queryPtr, Polar polar) throws Exceptions.OsoException {
-        this.ffi = queryPtr;
+        this.queryFfi = queryPtr;
         this.polar = polar;
         next = nextResult();
     }
@@ -69,7 +69,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
         } catch (NoSuchElementException e) {
             result = null;
         }
-        ffi.callResult(callId, result);
+        queryFfi.callResult(callId, result);
     }
 
     /**
@@ -80,7 +80,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      */
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
         while (true) {
-            String eventStr = ffi.nextEvent().get();
+            String eventStr = queryFfi.nextEvent().get();
             String kind;
             JSONObject data;
             try {
@@ -119,7 +119,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     callId = data.getLong("call_id");
                     String classTag = data.getString("class_tag");
                     int answer = polar.isa(instanceId, classTag) ? 1 : 0;
-                    ffi.questionResult(callId, answer);
+                    queryFfi.questionResult(callId, answer);
                     break;
                 case "ExternalIsSubSpecializer":
                     instanceId = data.getLong("instance_id");
@@ -127,7 +127,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     String leftTag = data.getString("left_class_tag");
                     String rightTag = data.getString("right_class_tag");
                     answer = polar.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
-                    ffi.questionResult(callId, answer);
+                    queryFfi.questionResult(callId, answer);
                     break;
                 case "Debug":
                     if (data.has("message")) {
@@ -141,7 +141,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                         if (input == "")
                             input = " ";
                         String command = polar.toPolarTerm(input).toString();
-                        ffi.debugCommand(command);
+                        queryFfi.debugCommand(command);
                     } catch (IOException e) {
                         throw new Exceptions.PolarRuntimeException("Caused by: " + e.getMessage());
                     }
