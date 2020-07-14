@@ -4,6 +4,9 @@ import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 
 public class Ffi {
+    // singleton variable
+    private static Ffi ffi = null;
+
     private PolarLib polarLib;
 
     protected class Polar {
@@ -163,8 +166,15 @@ public class Ffi {
 
     }
 
-    protected Ffi() {
+    private Ffi() {
         polarLib = LibraryLoader.create(PolarLib.class).load("../../../target/debug/libpolar.dylib");
+    }
+
+    protected static Ffi get() {
+        if (ffi == null) {
+            ffi = new Ffi();
+        }
+        return ffi;
     }
 
     protected Polar polarNew() throws Exceptions.OsoException {

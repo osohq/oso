@@ -22,7 +22,7 @@ public class Polar {
     private Map<Long, Enumeration<Object>> calls;
 
     public Polar() throws Exceptions.OsoException {
-        polarFfi = new Ffi().polarNew();
+        polarFfi = Ffi.get().polarNew();
         classes = new HashMap<String, Class<Object>>();
         constructors = new HashMap<String, Function<Map, Object>>();
         instances = new HashMap<Long, Object>();
@@ -68,7 +68,7 @@ public class Polar {
         loadQueue.clear();
 
         // Replace Polar instance
-        polarFfi = new Ffi().polarNew();
+        polarFfi = Ffi.get().polarNew();
     }
 
     /**
