@@ -205,7 +205,7 @@ public class PolarTest extends TestCase {
         assertEquals(pred, java);
     }
 
-    public void testReturnRubyInstanceFromCall() throws Exception {
+    public void testReturnJavaInstanceFromCall() throws Exception {
         MyClass c = new MyClass("test", 1);
         p.loadStr("test(c: MyClass) := x = c.mySubClass(c.name, c.id), x.id = c.id;");
         assertFalse(p.queryPred("test", List.of(c)).results().isEmpty());
