@@ -987,14 +987,14 @@ fn test_in() {
 }
 
 #[test]
-fn test_isa() {
+fn test_matches() {
     let mut polar = Polar::new(None);
-    qnull(&mut polar, "x = 1 and y = 2 and x isa y");
-    qeval(&mut polar, "x = 1 and y = 1 and x isa y");
+    qnull(&mut polar, "x = 1 and y = 2 and x matches y");
+    qeval(&mut polar, "x = 1 and y = 1 and x matches y");
 
-    qeval(&mut polar, "x = {foo: 1} and x isa {foo: 1}");
-    qnull(&mut polar, "x = {foo: 1} and x isa {foo: 1, bar: 2}");
-    qnull(&mut polar, "x = {foo: 1} and x isa {foo: 2}");
+    qeval(&mut polar, "x = {foo: 1} and x matches {foo: 1}");
+    qnull(&mut polar, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
+    qnull(&mut polar, "x = {foo: 1} and x matches {foo: 2}");
 }
 
 #[test]
