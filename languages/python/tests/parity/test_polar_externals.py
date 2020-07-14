@@ -23,6 +23,11 @@ class MyClass:
         self.x = x
         self.y = y
 
+    def __eq__(self, other):
+        if isinstance(other, MyClass):
+            return self.x == other.x and self.y == other.y
+        return False
+
 
 class YourClass:
     pass

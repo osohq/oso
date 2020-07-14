@@ -24,8 +24,7 @@ pub use formatting::{draw, ToPolarString};
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use std::panic::catch_unwind;
-
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::{null, null_mut};
 
 /// Get a reference to an object from a pointer
@@ -60,7 +59,7 @@ pub const POLAR_SUCCESS: i32 = 1;
 /// Unwrap the result term and return a zero/null pointer in the failure case
 macro_rules! ffi_try {
     ($body:block) => {
-        if let Ok(res) = catch_unwind(|| $body) {
+        if let Ok(res) = catch_unwind(AssertUnwindSafe(|| $body)) {
             res
         } else {
             set_error(error::OperationalError::Unknown.into());
@@ -95,7 +94,7 @@ pub extern "C" fn polar_get_error() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
-    ffi_try!({ box_ptr!(Polar::new()) })
+    ffi_try!({ box_ptr!(Polar::new(None)) })
 }
 
 #[no_mangle]
@@ -119,6 +118,30 @@ pub extern "C" fn polar_load(
                 POLAR_FAILURE
             }
             Ok(_) => POLAR_SUCCESS,
+        }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_register_constant(
+    polar_ptr: *mut Polar,
+    name: *const c_char,
+    value: *const c_char,
+) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        let name = unsafe { ffi_string!(name) };
+        let value = unsafe { ffi_string!(value) };
+        let value = serde_json::from_str(&value);
+        match value {
+            Ok(value) => {
+                polar.register_constant(types::Symbol::new(name.as_ref()), value);
+                POLAR_SUCCESS
+            }
+            Err(e) => {
+                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
+                POLAR_FAILURE
+            }
         }
     })
 }
@@ -222,11 +245,8 @@ pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_cha
         if !value.is_null() {
             let s = unsafe { ffi_string!(value) };
             let t = serde_json::from_str(&s);
-            match t {
-                Ok(types::Term {
-                    value: types::Value::String(command),
-                    ..
-                }) => match query.debug_command(command) {
+            match t.as_ref().map(types::Term::value) {
+                Ok(types::Value::String(command)) => match query.debug_command(command) {
                     Ok(_) => POLAR_SUCCESS,
                     Err(e) => {
                         set_error(e);

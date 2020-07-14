@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterable
+from datetime import datetime, timedelta
 from pathlib import Path
 from types import GeneratorType
 from typing import Any, Sequence, List
@@ -59,6 +60,8 @@ class Polar:
         # Register built-in classes.
         self.register_class(Http)
         self.register_class(PathMapper)
+        self.register_class(datetime, name="Datetime")
+        self.register_class(timedelta, name="Timedelta")
 
     def __del__(self):
         # Not usually needed but useful for tests since we make a lot of these.
@@ -103,19 +106,25 @@ class Polar:
             if not had_result:
                 print("False")
 
-    def register_class(self, cls, from_polar=None):
+    def register_class(self, cls, *, name=None, from_polar=None):
         """Registers `cls` as a class accessible by Polar. `from_polar` can
         either be a method or a string. In the case of a string, Polar will
         look for the method using `getattr(cls, from_polar)`."""
-        cls_name = cls.__name__
+        cls_name = cls.__name__ if name is None else name
         self.classes[cls_name] = cls
         self.class_constructors[cls_name] = from_polar
+        self.register_constant(cls_name, cls)
+
+    def register_constant(self, name, value):
+        """Registers `value` as a Polar constant variable called `name`."""
+        name = to_c_str(name)
+        value = ffi_serialize(self._to_polar_term(value))
+        lib.polar_register_constant(self.polar, name, value)
 
     ########## HIDDEN METHODS ##########
 
     def _load_queued_files(self):
         """Load queued policy files into the knowledge base."""
-        self.instances = {}
         while self.load_queue:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
@@ -165,7 +174,7 @@ class Polar:
                 name=value[tag]["name"],
                 args=[self._to_python(v) for v in value[tag]["args"]],
             )
-        elif tag == "Symbol":
+        elif tag == "Variable":
             raise PolarRuntimeException(
                 f"variable: {value} is unbound. make sure the value is set before using it in a method call"
             )
@@ -198,10 +207,10 @@ class Polar:
             }
         elif isinstance(v, Variable):
             # This is supported so that we can query for unbound variables
-            val = {"Symbol": v}
+            val = {"Variable": v}
         else:
             val = {"ExternalInstance": {"instance_id": self.__cache_instance(v)}}
-        term = {"id": 0, "offset": 0, "value": val}
+        term = {"value": val}
         return term
 
     ########## PRIVATE METHODS ##########
@@ -221,8 +230,12 @@ class Polar:
                     self.__handle_make_external(data)
                 if kind == "ExternalCall":
                     self.__handle_external_call(query, data)
+                if kind == "ExternalOp":
+                    self.__handle_external_op(query, data)
                 if kind == "ExternalIsa":
                     self.__handle_external_isa(query, data)
+                if kind == "ExternalUnify":
+                    self.__handle_external_unify(query, data)
                 if kind == "ExternalIsSubSpecializer":
                     self.__handle_external_is_subspecializer(query, data)
                 if kind == "Debug":
@@ -281,14 +294,18 @@ class Polar:
 
     def __handle_external_call(self, query, data):
         call_id = data["call_id"]
-
         if call_id not in self.calls:
-            instance_id = data["instance_id"]
+            value = data["instance"]["value"]
+            if "ExternalInstance" in value:
+                instance_id = value["ExternalInstance"]["instance_id"]
+                instance = self.__get_instance(instance_id)
+            else:
+                instance = self._to_python(data["instance"])
+
             attribute = data["attribute"]
             args = [self._to_python(arg) for arg in data["args"]]
 
             # Lookup the attribute on the instance.
-            instance = self.__get_instance(instance_id)
             try:
                 attr = getattr(instance, attribute)
             except AttributeError:
@@ -320,6 +337,33 @@ class Polar:
         except StopIteration:
             external_call(self.polar, query, call_id, None)
 
+    def __handle_external_op(self, query, data):
+        op = data["operator"]
+        args = [self._to_python(arg) for arg in data["args"]]
+        answer: bool
+        try:
+            if op == "Lt":
+                answer = args[0] < args[1]
+            elif op == "Gt":
+                answer = args[0] > args[1]
+            elif op == "Eq":
+                answer = args[0] == args[1]
+            elif op == "Leq":
+                answer = args[0] <= args[1]
+            elif op == "Geq":
+                answer = args[0] >= args[1]
+            elif op == "Neq":
+                answer = args[0] != args[1]
+            else:
+                raise PolarRuntimeException(
+                    f"Unsupported external operation '{type(args[0])} {op} {type(args[1])}'"
+                )
+            external_answer(self.polar, query, data["call_id"], answer)
+        except TypeError:
+            raise PolarRuntimeException(
+                f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
+            )
+
     def __handle_external_isa(self, query, data):
         cls_name = data["class_tag"]
         if cls_name in self.classes:
@@ -329,6 +373,17 @@ class Polar:
         else:
             isa = False
         external_answer(self.polar, query, data["call_id"], isa)
+
+    def __handle_external_unify(self, query, data):
+        left_instance_id = data["left_instance_id"]
+        right_instance_id = data["right_instance_id"]
+        try:
+            left_instance = self.__get_instance(left_instance_id)
+            right_instance = self.__get_instance(right_instance_id)
+            eq = left_instance == right_instance
+            external_answer(self.polar, query, data["call_id"], eq)
+        except PolarRuntimeException:
+            external_answer(self.polar, query, data["call_id"], False)
 
     def __handle_external_is_subspecializer(self, query, data):
         mro = self.__get_instance(data["instance_id"]).__class__.__mro__

@@ -5,8 +5,8 @@ module Oso
   class Oso
     def initialize
       @polar = ::Oso::Polar.new
-      register_class(Http, as: 'Http')
-      register_class(PathMapper, as: 'PathMapper')
+      register_class(Http, name: 'Http')
+      register_class(PathMapper, name: 'PathMapper')
     end
 
     def load_file(file)
@@ -17,11 +17,11 @@ module Oso
       polar.load_str(str)
     end
 
-    def register_class(cls, as: nil) # rubocop:disable Naming/MethodParameterName
+    def register_class(cls, name: nil) # rubocop:disable Naming/MethodParameterName
       if block_given?
-        polar.register_class(cls, as: as, from_polar: Proc.new)
+        polar.register_class(cls, name: name, from_polar: Proc.new)
       else
-        polar.register_class(cls, as: as)
+        polar.register_class(cls, name: name)
       end
     end
 
@@ -34,6 +34,10 @@ module Oso
 
     def query_predicate(name, *args)
       polar.query_pred(name, args: args)
+    end
+
+    def load_queued_files
+      polar.load_queued_files
     end
 
     private

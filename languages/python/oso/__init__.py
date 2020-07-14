@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     import flask
 
 # oso version
-__version__ = "0.1.0rc6"
+__version__ = "0.1.0"
 
 
 class OsoException(Exception):
@@ -79,7 +79,7 @@ def polar_class(_cls=None, *, from_polar=None):
     """
 
     def wrap(cls):
-        Polar().register_class(cls, from_polar)
+        Polar().register_class(cls, from_polar=from_polar)
         return cls
 
     if _cls is None:

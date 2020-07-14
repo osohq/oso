@@ -8,8 +8,8 @@ use polar::*;
 use polar::{types::*, Polar, Query};
 
 fn runner_from_query(q: &str) -> Runner {
-    let polar = Polar::new();
-    let query_term = polar::parser::parse_query(q).unwrap();
+    let polar = Polar::new(None);
+    let query_term = polar::parser::parse_query(0, q).unwrap();
     let query = polar.new_query_from_term(query_term);
     Runner::new(polar, query)
 }
@@ -112,7 +112,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                     b.iter_batched(
                         || {
                             let mut runner =
-                                runner_from_query("has_grandchild_called(Person{}, \"bert\")");
+                                runner_from_query("has_grandchild_called(new Person{}, \"bert\")");
                             runner.load(policy).unwrap();
                             n_results(&mut runner, *n);
                             runner.external_cost = Some(std::time::Duration::new(0, *delay));
@@ -205,7 +205,7 @@ impl Runner {
 
     fn handle_external_call(&mut self, call_id: u64) {
         let result = self.external_calls.pop().expect("more results");
-        if matches!(result, Some(Term { value: Value::ExternalInstance { .. }, ..}) | Some(Term { value: Value::List { .. }, ..}))
+        if matches!(result.as_ref().map(Term::value), Some(Value::ExternalInstance { .. }) | Some(Value::List { .. }))
         {
             self.calls_count += 1;
             if let Some(cost) = self.external_cost {
@@ -223,12 +223,12 @@ impl Runner {
         let mut repl = crate::cli::repl::Repl::new();
         println!("{}", message);
         let input = repl.plain_input("> ").unwrap();
-        self.query.debug_command(input).unwrap();
+        self.query.debug_command(&input).unwrap();
     }
 
     fn make_external(&mut self, literal: InstanceLiteral) -> Term {
         let instance_id = self.polar.get_external_id();
-        Term::new(Value::ExternalInstance(ExternalInstance {
+        Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id,
             literal: Some(literal),
         }))

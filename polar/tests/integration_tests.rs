@@ -1,18 +1,24 @@
 mod mock_externals;
 
+use indoc::indoc;
 use maplit::btreemap;
 use permute::permute;
+use pipe::pipe;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::io::{Read, Write};
 use std::iter::FromIterator;
+use std::rc::Rc;
+use std::sync::RwLock;
+use std::thread::spawn;
 
 use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
 
-type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Trace>)>;
+type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Rc<Trace>>)>;
 use mock_externals::MockExternal;
 
-fn no_results(_: Symbol, _: Vec<Term>, _: u64, _: u64) -> Option<Term> {
+fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Vec<Term>) -> Option<Term> {
     None
 }
 
@@ -39,7 +45,7 @@ fn query_results<F, G, H, I, J>(
     mut debug_handler: G,
 ) -> QueryResults
 where
-    F: FnMut(Symbol, Vec<Term>, u64, u64) -> Option<Term>,
+    F: FnMut(u64, Option<Term>, Symbol, Vec<Term>) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, InstanceLiteral),
     I: FnMut(u64, Symbol) -> bool,
@@ -52,20 +58,23 @@ where
             QueryEvent::Done => break,
             QueryEvent::Result { bindings, trace } => {
                 results.push((
-                    bindings.into_iter().map(|(k, v)| (k, v.value)).collect(),
+                    bindings
+                        .into_iter()
+                        .map(|(k, v)| (k, v.value().clone()))
+                        .collect(),
                     trace,
                 ));
             }
             QueryEvent::ExternalCall {
                 call_id,
+                instance,
                 attribute,
                 args,
-                instance_id,
             } => {
                 query
                     .call_result(
                         call_id,
-                        external_call_handler(attribute, args, call_id, instance_id),
+                        external_call_handler(call_id, instance, attribute, args),
                     )
                     .unwrap();
             }
@@ -87,8 +96,8 @@ where
                 call_id,
                 external_is_subspecializer_handler(instance_id, left_class_tag, right_class_tag),
             ),
-            QueryEvent::Debug { message } => {
-                query.debug_command(debug_handler(&message)).unwrap();
+            QueryEvent::Debug { ref message } => {
+                query.debug_command(&debug_handler(message)).unwrap();
             }
             _ => {}
         }
@@ -155,8 +164,11 @@ fn qnull(polar: &mut Polar, query_str: &str) -> bool {
 }
 
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
-    let mut external_results: Vec<Term> =
-        external_results.into_iter().map(Term::new).rev().collect();
+    let mut external_results: Vec<Term> = external_results
+        .into_iter()
+        .map(Term::new_from_test)
+        .rev()
+        .collect();
     let query = polar.new_query(query_str).unwrap();
     query_results!(query, |_, _, _, _| external_results.pop())
 }
@@ -185,9 +197,9 @@ fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_functions() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
-        .load("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);")
+        .load("f(1); f(2); g(1); g(2); h(2); k(x) if f(x) and h(x) and g(x);")
         .unwrap();
 
     assert!(qnull(&mut polar, "k(1)"));
@@ -199,12 +211,12 @@ fn test_functions() {
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_jealous() {
-    let polar = Polar::new();
+    let polar = Polar::new(None);
     polar
         .load(
             r#"loves("vincent", "mia");
                loves("marcellus", "mia");
-               jealous(a, b) := loves(a, c), loves(b, c);"#,
+               jealous(a, b) if loves(a, c) and loves(b, c);"#,
         )
         .unwrap();
 
@@ -228,30 +240,32 @@ fn test_jealous() {
 
 #[test]
 fn test_trace() {
-    let polar = Polar::new();
-    polar.load("f(x) := x = 1, x = 1; f(y) := y = 1;").unwrap();
+    let polar = Polar::new(None);
+    polar
+        .load("f(x) if x = 1 and x = 1; f(y) if y = 1;")
+        .unwrap();
     let query = polar.new_query("f(1)").unwrap();
     let results = query_results!(query);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
-  f(x) := x = 1, x = 1; [
-    _x_1 = 1, _x_1 = 1 [
-      _x_1 = 1 [
+  f(x) if x = 1 and x = 1; [
+    _x_3 = 1 and _x_3 = 1 [
+      _x_3 = 1 [
       ]
-      _x_1 = 1 [
+      _x_3 = 1 [
       ]
     ]
   ]
 ]
 "#;
-    assert!(trace == expected);
+    assert_eq!(trace, expected);
 }
 
 #[test]
 fn test_nested_rule() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
-        .load("f(x) := g(x); g(x) := h(x); h(2); g(x) := j(x); j(4);")
+        .load("f(x) if g(x); g(x) if h(x); h(2); g(x) if j(x); j(4);")
         .unwrap();
 
     assert!(qeval(&mut polar, "f(2)"));
@@ -260,12 +274,12 @@ fn test_nested_rule() {
     assert!(qeval(&mut polar, "j(4)"));
 }
 
-#[test]
 /// A functions permutation that is known to fail.
+#[test]
 fn test_bad_functions() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
-        .load("f(2); f(1); g(1); g(2); h(2); k(x) := f(x), h(x), g(x);")
+        .load("f(2); f(1); g(1); g(2); h(2); k(x) if f(x) and h(x) and g(x);")
         .unwrap();
     assert_eq!(qvar(&mut polar, "k(a)", "a"), vec![value!(2)]);
 }
@@ -279,11 +293,11 @@ fn test_functions_reorder() {
         "g(1)",
         "g(2)",
         "h(2)",
-        "k(x) := f(x), g(x), h(x)",
+        "k(x) if f(x) and g(x) and h(x)",
     ];
 
     for (i, permutation) in permute(parts).into_iter().enumerate() {
-        let mut polar = Polar::new();
+        let mut polar = Polar::new(None);
 
         let mut joined = permutation.join(";");
         joined.push(';');
@@ -313,7 +327,7 @@ fn test_functions_reorder() {
 
 #[test]
 fn test_results() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar.load("foo(1); foo(2); foo(3);").unwrap();
     assert_eq!(
         qvar(&mut polar, "foo(a)", "a"),
@@ -332,7 +346,7 @@ fn test_result_permutations() {
     ];
     for permutation in permute(parts).into_iter() {
         eprintln!("{:?}", permutation);
-        let mut polar = Polar::new();
+        let mut polar = Polar::new(None);
         let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();
         polar.load(&format!("{};", rules.join(";"))).unwrap();
         assert_eq!(
@@ -344,7 +358,7 @@ fn test_result_permutations() {
 
 #[test]
 fn test_multi_arg_method_ordering() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
         .load("bar(2, 1); bar(1, 1); bar(1, 2); bar(2, 2);")
         .unwrap();
@@ -361,24 +375,24 @@ fn test_multi_arg_method_ordering() {
 
 #[test]
 fn test_no_applicable_rules() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     assert!(qnull(&mut polar, "f()"));
 
-    polar.load("f(x);").unwrap();
+    polar.load("f(_);").unwrap();
     assert!(qnull(&mut polar, "f()"));
 }
 
-#[test]
 /// From Aït-Kaci's WAM tutorial (1999), page 34.
+#[test]
 fn test_ait_kaci_34() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
         .load(
-            r#"a() := b(x), c(x);
-               b(x) := e(x);
+            r#"a() if b(x) and c(x);
+               b(x) if e(x);
                c(1);
-               e(x) := f(x);
-               e(x) := g(x);
+               e(x) if f(x);
+               e(x) if g(x);
                f(2);
                g(1);"#,
         )
@@ -387,22 +401,45 @@ fn test_ait_kaci_34() {
 }
 
 #[test]
+fn test_constants() {
+    let mut polar = Polar::new(None);
+    {
+        let mut kb = polar.kb.write().unwrap();
+        kb.constant(sym!("one"), term!(1));
+        kb.constant(sym!("two"), term!(2));
+        kb.constant(sym!("three"), term!(3));
+    }
+    polar
+        .load(
+            r#"one(x) if one = one and one = x and x < two;
+               two(x) if one < x and two = two and two = x and two < three;
+               three(x) if three = three and three = x;"#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, "one(1)"));
+    assert!(qnull(&mut polar, "two(1)"));
+    assert!(qeval(&mut polar, "two(2)"));
+    assert!(qnull(&mut polar, "three(2)"));
+    assert!(qeval(&mut polar, "three(3)"));
+}
+
+#[test]
 fn test_not() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar.load("odd(1); even(2);").unwrap();
     assert!(qeval(&mut polar, "odd(1)"));
-    assert!(qnull(&mut polar, "!odd(1)"));
+    assert!(qnull(&mut polar, "not odd(1)"));
     assert!(qnull(&mut polar, "even(1)"));
-    assert!(qeval(&mut polar, "!even(1)"));
+    assert!(qeval(&mut polar, "not even(1)"));
     assert!(qnull(&mut polar, "odd(2)"));
-    assert!(qeval(&mut polar, "!odd(2)"));
+    assert!(qeval(&mut polar, "not odd(2)"));
     assert!(qeval(&mut polar, "even(2)"));
-    assert!(qnull(&mut polar, "!even(2)"));
+    assert!(qnull(&mut polar, "not even(2)"));
     assert!(qnull(&mut polar, "even(3)"));
-    assert!(qeval(&mut polar, "!even(3)"));
+    assert!(qeval(&mut polar, "not even(3)"));
 
     polar
-        .load("f(x) := !a(x); a(1); b(2); g(x) := !(a(x) | b(x));")
+        .load("f(x) if not a(x); a(1); b(2); g(x) if not (a(x) or b(x));")
         .unwrap();
 
     assert!(qnull(&mut polar, "f(1)"));
@@ -411,10 +448,12 @@ fn test_not() {
     assert!(qnull(&mut polar, "g(1)"));
     assert!(qnull(&mut polar, "g(2)"));
     assert!(qeval(&mut polar, "g(3)"));
-    assert!(qnull(&mut polar, "g(x), x=3")); // this should fail because unbound x means g(x) always fails
-    assert!(qeval(&mut polar, "x=3, g(x)"));
+    assert!(qnull(&mut polar, "g(x) and x=3")); // this should fail because unbound x means g(x) always fails
+    assert!(qeval(&mut polar, "x=3 and g(x)"));
 
-    polar.load("h(x) := !(!(x = 1 | x = 3) | x = 3);").unwrap();
+    polar
+        .load("h(x) if not (not (x = 1 or x = 3) or x = 3);")
+        .unwrap();
     assert!(qeval(&mut polar, "h(1)"));
     assert!(qnull(&mut polar, "h(2)"));
     assert!(qnull(&mut polar, "h(3)"));
@@ -422,28 +461,28 @@ fn test_not() {
 
 #[test]
 fn test_and() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar.load("f(1); f(2);").unwrap();
-    assert!(qeval(&mut polar, "f(1), f(2)"));
-    assert!(qnull(&mut polar, "f(1), f(2), f(3)"));
+    assert!(qeval(&mut polar, "f(1) and f(2)"));
+    assert!(qnull(&mut polar, "f(1) and f(2) and f(3)"));
 }
 
 #[test]
 fn test_equality() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     assert!(qeval(&mut polar, "1 = 1"));
     assert!(qnull(&mut polar, "1 = 2"));
 }
 
 #[test]
 fn test_lookup() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     assert!(qeval(&mut polar, "{x: 1}.x = 1"));
 }
 
 #[test]
 fn test_instance_lookup() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     // Q: Not sure if this should be allowed? I can't get (new a{x: 1}).x to parse, but that might
     // be the only thing we should permit
     assert_eq!(
@@ -455,9 +494,9 @@ fn test_instance_lookup() {
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_retries() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
-        .load("f(1); f(2); g(1); g(2); h(2); k(x) := f(x), h(x), g(x); k(3);")
+        .load("f(1); f(2); g(1); g(2); h(2); k(x) if f(x) and h(x) and g(x); k(3);")
         .unwrap();
 
     assert!(qnull(&mut polar, "k(1)"));
@@ -468,50 +507,52 @@ fn test_retries() {
 
 #[test]
 fn test_two_rule_bodies_not_nested() {
-    let mut polar = Polar::new();
-    polar.load("f(x) := a(x); f(1);").unwrap();
+    let mut polar = Polar::new(None);
+    polar.load("f(x) if a(x); f(1);").unwrap();
     assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
 }
 
 #[test]
 fn test_two_rule_bodies_nested() {
-    let mut polar = Polar::new();
-    polar.load("f(x) := a(x); f(1); a(x) := g(x);").unwrap();
+    let mut polar = Polar::new(None);
+    polar.load("f(x) if a(x); f(1); a(x) if g(x);").unwrap();
     assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
 }
 
 #[test]
 fn test_unify_and() {
-    let mut polar = Polar::new();
-    polar.load("f(x, y) := a(x), y = 2; a(1); a(3);").unwrap();
+    let mut polar = Polar::new(None);
+    polar
+        .load("f(x, y) if a(x) and y = 2; a(1); a(3);")
+        .unwrap();
     assert_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
     assert_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
 }
 
 #[test]
 fn test_symbol_lookup() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     assert_eq!(
         qvar(&mut polar, "{x: 1}.x = result", "result"),
         vec![value!(1)]
     );
     assert_eq!(
-        qvar(&mut polar, "{x: 1} = dict, dict.x = result", "result"),
+        qvar(&mut polar, "{x: 1} = dict and dict.x = result", "result"),
         vec![value!(1)]
     );
 }
 
 #[test]
 fn test_or() {
-    let mut polar = Polar::new();
-    polar.load("f(x) := a(x) | b(x); a(1); b(3);").unwrap();
+    let mut polar = Polar::new(None);
+    polar.load("f(x) if a(x) or b(x); a(1); b(3);").unwrap();
 
     assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1), value!(3)]);
     assert!(qeval(&mut polar, "f(1)"));
     assert!(qnull(&mut polar, "f(2)"));
     assert!(qeval(&mut polar, "f(3)"));
 
-    polar.load("g(x) := a(x) | b(x) | c(x); c(5);").unwrap();
+    polar.load("g(x) if a(x) or b(x) or c(x); c(5);").unwrap();
     assert_eq!(
         qvar(&mut polar, "g(x)", "x"),
         vec![value!(1), value!(3), value!(5)]
@@ -524,7 +565,7 @@ fn test_or() {
 
 #[test]
 fn test_dict_head() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar.load("f({x: 1});").unwrap();
     polar.load("g(_: {x: 1});").unwrap();
 
@@ -557,38 +598,40 @@ fn test_dict_head() {
 
 #[test]
 fn test_non_instance_specializers() {
-    let mut polar = Polar::new();
-    polar.load("f(x: 1) := x = 1;").unwrap();
+    let mut polar = Polar::new(None);
+    polar.load("f(x: 1) if x = 1;").unwrap();
     assert!(qeval(&mut polar, "f(1)"));
     assert!(qnull(&mut polar, "f(2)"));
 
-    polar.load("g(x: 1, y: [x]) := y = [1];").unwrap();
+    polar.load("g(x: 1, y: [x]) if y = [1];").unwrap();
     assert!(qeval(&mut polar, "g(1, [1])"));
     assert!(qnull(&mut polar, "g(1, [2])"));
 
-    polar.load("h(x: {y: y}, x.y) := y = 1;").unwrap();
+    polar.load("h(x: {y: y}, x.y) if y = 1;").unwrap();
     assert!(qeval(&mut polar, "h({y: 1}, 1)"));
     assert!(qnull(&mut polar, "h({y: 1}, 2)"));
 }
 
 #[test]
 fn test_bindings() {
-    let mut polar = Polar::new();
-    polar.load("f(x) := x = y, g(y); g(y) := y = 1;").unwrap();
+    let mut polar = Polar::new(None);
+    polar
+        .load("f(x) if x = y and g(y); g(y) if y = 1;")
+        .unwrap();
     assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
 }
 
 #[test]
 fn test_lookup_derefs() {
-    let polar = Polar::new();
+    let polar = Polar::new(None);
     polar
-        .load("f(x) := x = y, g(y); g(y) := new Foo{}.get(y) = y;")
+        .load("f(x) if x = y and g(y); g(y) if new Foo{}.get(y) = y;")
         .unwrap();
     let query = polar.new_query("f(1)").unwrap();
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, _, _, args: Vec<Term>| {
         // check the argument is bound to an integer
-        assert!(matches!(args[0].value, Value::Number(_)));
+        assert!(matches!(args[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
 
@@ -596,8 +639,8 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
-        assert!(matches!(args[0].value, Value::Number(_)));
+    let mock_foo = |_, _, _, args: Vec<Term>| {
+        assert!(matches!(args[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
     let query = polar.new_query("f(2)").unwrap();
@@ -607,9 +650,9 @@ fn test_lookup_derefs() {
 
 #[test]
 fn unify_predicates() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
-        .load("f(g(x)); k(x) := h(g(x), g(x)); h(g(1), g(1));")
+        .load("f(g(_x)); k(x) if h(g(x), g(x)); h(g(1), g(1));")
         .unwrap();
 
     assert!(qeval(&mut polar, "f(g(1))"));
@@ -620,7 +663,7 @@ fn unify_predicates() {
 /// Test that rules are executed in the correct order.
 #[test]
 fn test_rule_order() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar.load("a(\"foo\");").unwrap();
     polar.load("a(\"bar\");").unwrap();
     polar.load("a(\"baz\");").unwrap();
@@ -633,8 +676,8 @@ fn test_rule_order() {
 
 #[test]
 fn test_load_with_query() {
-    let polar = Polar::new();
-    let src = "f(1); f(2); ?= f(1); ?= !f(3);";
+    let polar = Polar::new(None);
+    let src = "f(1); f(2); ?= f(1); ?= not f(3);";
     polar.load(src).expect("load failed");
 
     while let Some(query) = polar.next_inline_query() {
@@ -644,17 +687,17 @@ fn test_load_with_query() {
 
 #[test]
 fn test_externals_instantiated() {
-    let polar = Polar::new();
+    let polar = Polar::new(None);
     polar
-        .load("f(x, foo: Foo) := foo.bar(new Bar{x: x}) = 1;")
+        .load("f(x, foo: Foo) if foo.bar(new Bar{x: x}) = 1;")
         .unwrap();
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, args: Vec<Term>, _, _| {
+    let mock_foo = |_, _, _, args: Vec<Term>| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
         assert!(
-            matches!(&args[0].value,
+            matches!(&args[0].value(),
                 Value::ExternalInstance(ExternalInstance {
                     literal: Some(InstanceLiteral {
                         ref tag, ref fields
@@ -662,7 +705,7 @@ fn test_externals_instantiated() {
                     ..
                 }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
             "expected external instance Bar {{ x: 1 }}, found: {:?}",
-            args[0].value
+            args[0].value()
         );
         foo_lookups.pop()
     };
@@ -675,48 +718,48 @@ fn test_externals_instantiated() {
 #[ignore] // ignore because this take a LONG time (could consider lowering the goal limit)
 #[should_panic(expected = "Goal count exceeded! MAX_EXECUTED_GOALS = 10000")]
 fn test_infinite_loop() {
-    let mut polar = Polar::new();
-    polar.load("f(x) := f(x);").unwrap();
+    let mut polar = Polar::new(None);
+    polar.load("f(x) if f(x);").unwrap();
     qeval(&mut polar, "f(1)");
 }
 
 #[test]
 fn test_comparisons() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
 
     // "<"
     polar
-        .load("lt(x, y) := x < y; f(x) := x = 1; g(x) := x = 2;")
+        .load("lt(x, y) if x < y; f(x) if x = 1; g(x) if x = 2;")
         .unwrap();
     assert!(qeval(&mut polar, "lt(1,2)"));
     assert!(!qeval(&mut polar, "lt(2,2)"));
     assert!(qeval(&mut polar, "lt({a: 1}.a,{a: 2}.a)"));
-    assert!(qeval(&mut polar, "f(x), g(y), lt(x,y)"));
+    assert!(qeval(&mut polar, "f(x) and g(y) and lt(x,y)"));
 
     // "<="
-    polar.load("leq(x, y) := x <= y;").unwrap();
+    polar.load("leq(x, y) if x <= y;").unwrap();
     assert!(qeval(&mut polar, "leq(1,1)"));
     assert!(qeval(&mut polar, "leq(1,2)"));
     assert!(!qeval(&mut polar, "leq(2,1)"));
 
     // ">"
-    polar.load("gt(x, y) := x > y;").unwrap();
+    polar.load("gt(x, y) if x > y;").unwrap();
     assert!(qeval(&mut polar, "gt(2,1)"));
     assert!(!qeval(&mut polar, "gt(2,2)"));
 
     // ">="
-    polar.load("geq(x, y) := x >= y;").unwrap();
+    polar.load("geq(x, y) if x >= y;").unwrap();
     assert!(qeval(&mut polar, "geq(1,1)"));
     assert!(qeval(&mut polar, "geq(2,1)"));
     assert!(!qeval(&mut polar, "geq(1,2)"));
 
     // "=="
-    polar.load("eq(x, y) := x == y;").unwrap();
+    polar.load("eq(x, y) if x == y;").unwrap();
     assert!(qeval(&mut polar, "eq(1,1)"));
     assert!(!qeval(&mut polar, "eq(2,1)"));
 
     // "!="
-    polar.load("neq(x, y) := x != y;").unwrap();
+    polar.load("neq(x, y) if x != y;").unwrap();
     assert!(qeval(&mut polar, "neq(1,2)"));
     assert!(!qeval(&mut polar, "neq(1,1)"));
 
@@ -735,54 +778,179 @@ fn test_comparisons() {
 
 #[test]
 fn test_debug() {
-    let polar = Polar::new();
+    let polar = Polar::new(None);
     polar
-        .load("a() := debug(\"a\"), b(), c(), d();\nb();\nc() := debug(\"c\");\nd();\n")
+        .load("a() if debug(\"a\") and b() and c() and d();\nb();\nc() if debug(\"c\");\nd();\n")
         .unwrap();
 
-    // The `match` statement below is checking that the correct messages are received when a user
-    // repeatedly calls the `over` debugger command. The LHS of the match arms is the message
-    // received from the debugger, and the RHS is the subsequent command the "user" enters into the
-    // debugger prompt.
-    let debug_handler = |s: &str| match s {
-        "Welcome to the debugger!\ndebug(\"a\")" => "over".to_string(),
-        "001: a() := debug(\"a\"), b(), c(), d();
-                        ^" => "over".to_string(),
-        "001: a() := debug(\"a\"), b(), c(), d();
-                             ^" => "over".to_string(),
-        "Welcome to the debugger!\ndebug(\"c\")" => "over".to_string(),
-        "001: a() := debug(\"a\"), b(), c(), d();
-                                  ^" => "over".to_string(),
-        message => panic!("Unexpected debug message: {}", message),
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
+                "over"
+            }
+            1 => {
+                let expected = indoc!(
+                    r#"
+                001: a() if debug("a") and b() and c() and d();
+                                           ^"#
+                );
+                assert_eq!(s, expected);
+                "over"
+            }
+            2 => {
+                let expected = indoc!(
+                    r#"
+                    001: a() if debug("a") and b() and c() and d();
+                                                       ^"#
+                );
+                assert_eq!(s, expected);
+                "over"
+            }
+            3 => {
+                assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
+                "over"
+            }
+            4 => {
+                let expected = indoc!(
+                    r#"
+                    001: a() if debug("a") and b() and c() and d();
+                                                               ^"#
+                );
+                assert_eq!(s, expected);
+                "over"
+            }
+            _ => panic!("Too many calls!"),
+        };
+        call_num += 1;
+        rt.to_string()
     };
+
     let query = polar.new_query("a()").unwrap();
     let _results = query_results!(query, no_results, no_externals, debug_handler);
 
-    // The `match` statement below is checking that the correct messages are received when a user
-    // repeatedly calls the `out` debugger command. The LHS of the match arms is the message
-    // received from the debugger, and the RHS is the subsequent command the "user" enters into the
-    // debugger prompt.
-    let debug_handler = |s: &str| match s {
-        "Welcome to the debugger!\ndebug(\"a\")" => "out".to_string(),
-        "Welcome to the debugger!\ndebug(\"c\")" => "out".to_string(),
-        "001: a() := debug(\"a\"), b(), c(), d();
-                                  ^" => "out".to_string(),
-        message => panic!("Unexpected debug message: {}", message),
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
+                "out"
+            }
+            1 => {
+                assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
+                "out"
+            }
+            2 => {
+                let expected = indoc!(
+                    r#"
+                001: a() if debug("a") and b() and c() and d();
+                                                           ^"#
+                );
+                assert_eq!(s, expected);
+                "out"
+            }
+            _ => panic!("Too many calls: {}", s),
+        };
+        call_num += 1;
+        rt.to_string()
     };
     let query = polar.new_query("a()").unwrap();
     let _results = query_results!(query, no_results, no_externals, debug_handler);
 }
 
 #[test]
+fn test_anonymous_vars() {
+    let mut polar = Polar::new(None);
+    assert!(qeval(&mut polar, "[1,2,3] = [_,_,_]"));
+    assert!(qnull(&mut polar, "[1,2,3] = [__,__,__]"));
+}
+
+#[test]
+fn test_singleton_vars() {
+    let (mut read, write) = pipe();
+    spawn(move || {
+        let output = RwLock::new(Box::new(write) as Box<dyn Write>);
+        let polar = Polar::new(Some(output));
+        polar.load("f(x,y,z) if z = z;").unwrap();
+    });
+
+    let mut out = String::new();
+    read.read_to_string(&mut out).unwrap();
+    assert_eq!(
+        &out,
+        indoc!(
+            r#"Singleton variable x
+               001: f(x,y,z) if z = z;
+                      ^
+               Singleton variable y
+               001: f(x,y,z) if z = z;
+                        ^
+               "#
+        )
+    );
+}
+
+#[test]
+fn test_rest_vars() {
+    let mut polar = Polar::new(None);
+
+    assert_eq!(
+        qvar(&mut polar, "[1,2,3] = [*rest]", "rest"),
+        vec![value!([value!(1), value!(2), value!(3)])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "[1,2,3] = [1, *rest]", "rest"),
+        vec![value!([value!(2), value!(3)])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "[1,2,3] = [1,2, *rest]", "rest"),
+        vec![value!([value!(3)])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "([1,2,3] = [1,2,3, *rest])", "rest"),
+        vec![value!([])]
+    );
+    assert!(qnull(&mut polar, "[1,2,3] = [1,2,3,4, *_rest]"));
+
+    polar
+        .load(
+            r#"member(x, [x, *_rest]);
+               member(x, [_first, *rest]) := member(x, rest);"#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, "member(1, [1,2,3])"));
+    assert!(qeval(&mut polar, "member(3, [1,2,3])"));
+    assert!(qeval(&mut polar, "not member(4, [1,2,3])"));
+    assert_eq!(
+        qvar(&mut polar, "member(x, [1,2,3])", "x"),
+        vec![value!(1), value!(2), value!(3)]
+    );
+
+    polar
+        .load(
+            r#"append([], x, x);
+               append([first, *rest], x, [first, *tail]) := append(rest, x, tail);"#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, "append([], [], [])"));
+    assert!(qeval(&mut polar, "append([], [1,2,3], [1,2,3])"));
+    assert!(qeval(&mut polar, "append([1], [2,3], [1,2,3])"));
+    assert!(qeval(&mut polar, "append([1,2], [3], [1,2,3])"));
+    assert!(qeval(&mut polar, "append([1,2,3], [], [1,2,3])"));
+    assert!(qeval(&mut polar, "not append([1,2,3], [4], [1,2,3])"));
+}
+
+#[test]
 fn test_in() {
-    let mut polar = Polar::new();
-    polar.load("f(x, y) := x in y;").unwrap();
+    let mut polar = Polar::new(None);
+    polar.load("f(x, y) if x in y;").unwrap();
     assert!(qeval(&mut polar, "f(1, [1,2,3])"));
     assert_eq!(
         qvar(&mut polar, "f(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
-    assert!(qeval(&mut polar, "4 in [1,2,3] | 1 in [1,2,3]"));
+    assert!(qeval(&mut polar, "4 in [1,2,3] or 1 in [1,2,3]"));
 
     // strange test case but it's important to note that this returns
     // 3 results, with 1 binding each
@@ -812,55 +980,55 @@ fn test_in() {
     ));
 
     // negation
-    assert!(qeval(&mut polar, "!(4 in [1,2,3])"));
-    assert!(qnull(&mut polar, "!(1 in [1,2,3])"));
-    assert!(qnull(&mut polar, "!(2 in [1,2,3])"));
-    assert!(qnull(&mut polar, "!(3 in [1,2,3])"));
+    assert!(qeval(&mut polar, "not (4 in [1,2,3])"));
+    assert!(qnull(&mut polar, "not (1 in [1,2,3])"));
+    assert!(qnull(&mut polar, "not (2 in [1,2,3])"));
+    assert!(qnull(&mut polar, "not (3 in [1,2,3])"));
 }
 
 #[test]
 fn test_isa() {
-    let mut polar = Polar::new();
-    qnull(&mut polar, "x = 1, y = 2, x isa y");
-    qeval(&mut polar, "x = 1, y = 1, x isa y");
+    let mut polar = Polar::new(None);
+    qnull(&mut polar, "x = 1 and y = 2 and x isa y");
+    qeval(&mut polar, "x = 1 and y = 1 and x isa y");
 
-    qeval(&mut polar, "x = {foo: 1}, x isa {foo: 1}");
-    qnull(&mut polar, "x = {foo: 1}, x isa {foo: 1, bar: 2}");
-    qnull(&mut polar, "x = {foo: 1}, x isa {foo: 2}");
+    qeval(&mut polar, "x = {foo: 1} and x isa {foo: 1}");
+    qnull(&mut polar, "x = {foo: 1} and x isa {foo: 1, bar: 2}");
+    qnull(&mut polar, "x = {foo: 1} and x isa {foo: 2}");
 }
 
 #[test]
 fn test_keyword_bug() {
-    let polar = Polar::new();
-    let result = polar.load("g(a) := a.new(b);").unwrap_err();
+    let polar = Polar::new(None);
+    let result = polar.load("g(a) if a.new(b);").unwrap_err();
     assert!(matches!(
         result.kind,
         ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 
-    let result = polar.load("f(a) := a.in(b);").unwrap_err();
+    let result = polar.load("f(a) if a.in(b);").unwrap_err();
     assert!(matches!(
         result.kind,
         ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 
-    let result = polar.load("cut(a) := a;").unwrap_err();
+    let result = polar.load("cut(a) if a;").unwrap_err();
     assert!(matches!(
         result.kind,
         ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 
-    let result = polar.load("debug(a) := a;").unwrap_err();
+    let result = polar.load("debug(a) if a;").unwrap_err();
     assert!(matches!(
         result.kind,
         ErrorKind::Parse(ParseError::ReservedWord { .. })
     ));
 }
 
+/// Test that rule heads work correctly when unification or specializers are used.
 #[test]
-// Test that rule heads work correctly when unification or specializers are used.
 fn test_unify_rule_head() {
-    let polar = Polar::new();
+    let polar = Polar::new(None);
     assert!(matches!(
         polar
             .load("f(Foo{a: 1});")
@@ -889,8 +1057,8 @@ fn test_unify_rule_head() {
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
-    polar.load("f(_: Foo{a: 1}, x) := x = 1;").unwrap();
-    polar.load("g(_: Foo{a: Foo{a: 1}}, x) := x = 1;").unwrap();
+    polar.load("f(_: Foo{a: 1}, x) if x = 1;").unwrap();
+    polar.load("g(_: Foo{a: Foo{a: 1}}, x) if x = 1;").unwrap();
 
     let query = polar.new_query("f(new Foo{a: 1}, x)").unwrap();
     let (results, _externals) = query_results_with_externals(query);
@@ -901,11 +1069,56 @@ fn test_unify_rule_head() {
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 }
 
+/// Test that cut commits to all choice points before the cut, not just the last.
+#[test]
+fn test_cut() {
+    let mut polar = Polar::new(None);
+    polar.load("a(x) if x = 1 or x = 2;").unwrap();
+    polar.load("b(x) if x = 3 or x = 4;").unwrap();
+    polar.load("bcut(x) if x = 3 or x = 4 and cut();").unwrap();
+
+    polar.load("c(a, b) if a(a) and b(b) and cut();").unwrap();
+    polar.load("c_no_cut(a, b) if a(a) and b(b);").unwrap();
+    polar
+        .load("c_partial_cut(a, b) if a(a) and bcut(b);")
+        .unwrap();
+    polar
+        .load("c_another_partial_cut(a, b) if a(a) and cut() and b(b);")
+        .unwrap();
+
+    // Ensure we return multiple results without a cut.
+    assert!(qvars(&mut polar, "c_no_cut(a, b)", &["a", "b"]).len() > 1);
+
+    // Ensure that only one result is returned when cut is at the end.
+    assert_eq!(
+        qvars(&mut polar, "c(a, b)", &["a", "b"]),
+        vec![vec![value!(1), value!(3)]]
+    );
+
+    // Make sure that cut in `bcut` does not affect `c_partial_cut`.
+    // If it did, only one result would be returned, [1, 3].
+    assert_eq!(
+        qvars(&mut polar, "c_partial_cut(a, b)", &["a", "b"]),
+        vec![vec![value!(1), value!(3)], vec![value!(2), value!(3)]]
+    );
+
+    // Make sure cut only affects choice points before it.
+    assert_eq!(
+        qvars(&mut polar, "c_another_partial_cut(a, b)", &["a", "b"]),
+        vec![vec![value!(1), value!(3)], vec![value!(1), value!(4)]]
+    );
+
+    polar.load("f(x) if (x = 1 and cut()) or x = 2;").unwrap();
+    assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
+    assert!(qeval(&mut polar, "f(1)"));
+    assert!(qeval(&mut polar, "f(2)"));
+}
+
 #[test]
 fn test_forall() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
     polar
-        .load("all_ones(l) := forall(item in l, item = 1);")
+        .load("all_ones(l) if forall(item in l, item = 1);")
         .unwrap();
 
     assert!(qeval(&mut polar, "all_ones([1])"));
@@ -913,14 +1126,14 @@ fn test_forall() {
     assert!(qnull(&mut polar, "all_ones([1, 2, 1])"));
 
     polar
-        .load("not_ones(l) := forall(item in l, item != 1);")
+        .load("not_ones(l) if forall(item in l, item != 1);")
         .unwrap();
     assert!(qnull(&mut polar, "not_ones([1])"));
     assert!(qeval(&mut polar, "not_ones([2, 3, 4])"));
 
-    assert!(qnull(&mut polar, "forall(x = 2 | x = 3, x != 2)"));
-    assert!(qnull(&mut polar, "forall(x = 2 | x = 3, x != 3)"));
-    assert!(qeval(&mut polar, "forall(x = 2 | x = 3, x = 2 | x = 3)"));
+    assert!(qnull(&mut polar, "forall(x = 2 or x = 3, x != 2)"));
+    assert!(qnull(&mut polar, "forall(x = 2 or x = 3, x != 3)"));
+    assert!(qeval(&mut polar, "forall(x = 2 or x = 3, x = 2 or x = 3)"));
     assert!(qeval(&mut polar, "forall(x = 1, x = 1)"));
     assert!(qeval(&mut polar, "forall(x in [2, 3, 4], x > 1)"));
 
@@ -930,12 +1143,27 @@ fn test_forall() {
 
     assert!(qeval(&mut polar, "forall(g(x), x in [1, 2, 3])"));
 
-    polar.load("allow(_: {x: 1}, y) := y = 1;").unwrap();
-    polar.load("allow(_: {y: 1}, y) := y = 2;").unwrap();
-    polar.load("allow(_: {z: 1}, y) := y = 3;").unwrap();
+    polar.load("allow(_: {x: 1}, y) if y = 1;").unwrap();
+    polar.load("allow(_: {y: 1}, y) if y = 2;").unwrap();
+    polar.load("allow(_: {z: 1}, y) if y = 3;").unwrap();
 
     assert!(qeval(
         &mut polar,
         "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])"
     ));
+}
+
+#[test]
+fn test_emoji_policy() {
+    let mut polar = Polar::new(None);
+    polar
+        .load(
+            r#"
+                    👩‍🔧("👩‍🦰");
+                    allow(👩, "🛠", "🚙") if 👩‍🔧(👩);
+                "#,
+        )
+        .unwrap();
+    assert!(qeval(&mut polar, r#"allow("👩‍🦰","🛠","🚙")"#));
+    assert!(qnull(&mut polar, r#"allow("🧟","🛠","🚙")"#));
 }

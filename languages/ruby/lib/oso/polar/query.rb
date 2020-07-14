@@ -47,8 +47,8 @@ module Oso
       # @param call_id [Integer]
       # @param instance_id [Integer]
       # @raise [Error] if the FFI call raises one.
-      def handle_call(method, args:, call_id:, instance_id:)
-        polar.register_call(method, args: args, call_id: call_id, instance_id: instance_id)
+      def handle_call(method, call_id:, instance:, args:)
+        polar.register_call(method, call_id: call_id, instance: instance, args: args)
         result = JSON.dump(polar.next_call_result(call_id))
         call_result(result, call_id: call_id)
       rescue InvalidCallError, StopIteration
@@ -80,10 +80,10 @@ module Oso
               polar.make_instance(cls_name, fields: fields, id: id)
             when 'ExternalCall'
               call_id = event.data['call_id']
-              instance_id = event.data['instance_id']
+              instance = event.data['instance']
               method = event.data['attribute']
               args = event.data['args']
-              handle_call(method, args: args, call_id: call_id, instance_id: instance_id)
+              handle_call(method, call_id: call_id, instance: instance, args: args)
             when 'ExternalIsSubSpecializer'
               instance_id = event.data['instance_id']
               left_tag = event.data['left_class_tag']
@@ -95,10 +95,15 @@ module Oso
               class_tag = event.data['class_tag']
               answer = polar.isa?(instance_id, class_tag: class_tag)
               question_result(answer, call_id: event.data['call_id'])
+            when 'ExternalUnify'
+              left_instance_id = event.data['left_instance_id']
+              right_instance_id = event.data['right_instance_id']
+              answer = polar.unify?(left_instance_id, right_instance_id)
+              question_result(answer, call_id: event.data['call_id'])
             when 'Debug'
               puts event.data['message'] if event.data['message']
               print '> '
-              input = gets.chomp!
+              input = $stdin.gets.chomp!
               command = JSON.dump(polar.to_polar_term(input))
               ffi_instance.debug_command(command)
             else

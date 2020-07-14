@@ -82,7 +82,7 @@ impl Drop for Repl {
 
 pub fn main() -> anyhow::Result<()> {
     let mut repl = Repl::new();
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
 
     let mut args = env::args();
     let _ = args.next(); // skip the binary filename
@@ -123,7 +123,10 @@ pub fn main() -> anyhow::Result<()> {
                 Ok(QueryEvent::Debug { message }) => {
                     println!("{}", message);
                     let input = repl.plain_input("> ").unwrap();
-                    query.debug_command(input).unwrap();
+                    query.debug_command(&input).unwrap();
+                }
+                Ok(QueryEvent::ExternalCall { call_id, .. }) => {
+                    query.call_result(call_id, None).unwrap();
                 }
                 Ok(e) => println!("Unsupported event: {:?}", e),
                 Err(e) => println!("{}", e),

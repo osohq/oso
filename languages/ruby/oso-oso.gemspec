@@ -24,11 +24,12 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Runtime dependencies
-  spec.add_runtime_dependency 'ffi', '~> 1.13'
+  spec.add_runtime_dependency 'ffi', '~> 1.0'
 
   # Development dependencies
   spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
   spec.add_development_dependency 'rake', '~> 12.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'solargraph', '~> 0.39.8'
+  spec.add_development_dependency 'yard', '~> 0.9.25'
 end

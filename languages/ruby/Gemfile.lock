@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     oso-oso (0.0.0)
-      ffi (~> 1.13)
+      ffi (~> 1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -89,6 +89,7 @@ DEPENDENCIES
   rake (~> 12.0)
   rspec (~> 3.0)
   solargraph (~> 0.39.8)
+  yard (~> 0.9.25)
 
 BUNDLED WITH
    2.1.4

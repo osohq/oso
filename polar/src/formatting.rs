@@ -1,17 +1,19 @@
 //! # Formatting
 //!
-//! There are three forms of formatting within Polar:
+//! There are three main forms of formatting within Polar:
 //!
 //! 1. Debug strings: super verbose, mostly Rust-auto derived from fmt::Debug trait
 //! 2. Display string: nice user-facing versions, which could be used for things like a debugger
 //! 3. Polar strings: not always implemented, but is same syntax the parser accepts
 //!
+//! In addition, there are special cases like traces and sources that have their own
+//! formatting requirements.
 
 pub use display::*;
 
 pub use to_polar::*;
 
-use crate::types::{Node, Trace};
+use crate::types::{Node, Source, Trace};
 use std::fmt::Write;
 
 pub fn draw(trace: &Trace, nest: usize) -> String {
@@ -34,16 +36,54 @@ pub fn draw(trace: &Trace, nest: usize) -> String {
     res
 }
 
+/// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached,
+/// and return the source line containing the `offset` character as well as `num_lines` lines
+/// above and below it.
+pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
+    // Sliding window of lines: current line + indicator + additional context above + below.
+    let max_lines = num_lines * 2 + 2;
+    let push_line = |lines: &mut Vec<String>, line: String| {
+        if lines.len() == max_lines {
+            lines.remove(0);
+        }
+        lines.push(line);
+    };
+    let mut index = 0;
+    let mut lines = Vec::new();
+    let mut target = None;
+    let prefix_len = "123: ".len();
+    for (lineno, line) in source.src.lines().enumerate() {
+        push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
+        let end = index + line.len() + 1; // Adding one to account for new line byte.
+        if target.is_none() && end >= offset {
+            target = Some(lineno);
+            let spaces = " ".repeat(offset - index + prefix_len);
+            push_line(&mut lines, format!("{}^", spaces));
+        }
+        index = end;
+        if target.is_some() && lineno == target.unwrap() + num_lines {
+            break;
+        }
+    }
+    lines.join("\n")
+}
+
 pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Term};
+    use crate::types::{Numeric, Rule, Symbol, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{} = {}", self.0.to_polar(), self.1.to_polar())
+        }
+    }
+
+    impl fmt::Display for Symbol {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.0)
         }
     }
 
@@ -80,6 +120,14 @@ pub mod display {
 
     impl fmt::Display for Goal {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn fmt_rules(rules: &[Rule]) -> String {
+                rules
+                    .iter()
+                    .map(|rule| rule.to_polar())
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            }
+
             match self {
                 Goal::Isa { left, right } => {
                     write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
@@ -111,10 +159,25 @@ pub mod display {
                     value.to_polar()
                 ),
                 Goal::LookupExternal {
-                    instance_id, field, ..
-                } => write!(fmt, "LookupExternal({}.{})", instance_id, field.to_polar(),),
+                    instance, field, ..
+                } => write!(
+                    fmt,
+                    "LookupExternal({}.{})",
+                    instance.to_polar(),
+                    field.to_polar(),
+                ),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
+                Goal::FilterRules {
+                    applicable_rules,
+                    unfiltered_rules,
+                    ..
+                } => write!(
+                    fmt,
+                    "FilterRules([{}], [{}])",
+                    fmt_rules(applicable_rules),
+                    fmt_rules(unfiltered_rules),
+                ),
                 Goal::SortRules {
                     rules,
                     outer,
@@ -123,11 +186,7 @@ pub mod display {
                 } => write!(
                     fmt,
                     "SortRules([{}], outer={}, inner={})",
-                    rules
-                        .iter()
-                        .map(|rule| rule.to_polar())
-                        .collect::<Vec<String>>()
-                        .join(" "),
+                    fmt_rules(rules),
                     outer,
                     inner,
                 ),
@@ -173,7 +232,7 @@ pub mod to_polar {
     /// Helper method: uses the operator precedence to determine if `t`
     /// has a lower precedence than `op`.
     fn has_lower_pred(op: Operator, t: &Term) -> bool {
-        match t.value {
+        match t.value() {
             Value::Expression(Operation {
                 operator: other, ..
             }) => op.precedence() > other.precedence(),
@@ -223,7 +282,7 @@ pub mod to_polar {
         fn to_polar(&self) -> String {
             use Operator::*;
             match self {
-                Not => "!",
+                Not => "not",
                 Mul => "*",
                 Div => "/",
                 Add => "+",
@@ -234,8 +293,8 @@ pub mod to_polar {
                 Neq => "!=",
                 Gt => ">",
                 Lt => "<",
-                Or => "|",
-                And => ",",
+                Or => "or",
+                And => "and",
                 New => "new",
                 Dot => ".",
                 Unify => "=",
@@ -276,7 +335,7 @@ pub mod to_polar {
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {
-                        let call = self.args[1].value.clone().call().unwrap();
+                        let call = self.args[1].value().clone().call().unwrap();
                         if call.args.is_empty() {
                             format!("{}.{}", self.args[0].to_polar(), call.name.to_polar())
                         } else {
@@ -288,7 +347,7 @@ pub mod to_polar {
                 }
                 // Unary operators
                 Not => format!(
-                    "{}{}",
+                    "{} {}",
                     self.operator.to_polar(),
                     to_polar_parens(self.operator, &self.args[0])
                 ),
@@ -305,7 +364,7 @@ pub mod to_polar {
                 And => format_args(
                     self.operator,
                     &self.args,
-                    &format!("{} ", self.operator.to_polar()),
+                    &format!(" {} ", self.operator.to_polar()),
                 ),
                 Or => format_args(
                     self.operator,
@@ -341,15 +400,11 @@ pub mod to_polar {
 
     impl ToPolarString for Rule {
         fn to_polar(&self) -> String {
-            match &self.body {
-                Term {
-                    value:
-                        Value::Expression(Operation {
-                            operator: Operator::And,
-                            args,
-                        }),
-                    ..
-                } => {
+            match &self.body.value() {
+                Value::Expression(Operation {
+                    operator: Operator::And,
+                    args,
+                }) => {
                     if args.is_empty() {
                         format!(
                             "{}({});",
@@ -358,10 +413,10 @@ pub mod to_polar {
                         )
                     } else {
                         format!(
-                            "{}({}) := {};",
+                            "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
-                            format_args(Operator::And, &args, ", "),
+                            format_args(Operator::And, &args, " and "),
                         )
                     }
                 }
@@ -378,7 +433,7 @@ pub mod to_polar {
 
     impl ToPolarString for Term {
         fn to_polar(&self) -> String {
-            self.value.to_polar()
+            self.value().to_polar()
         }
     }
 
@@ -409,7 +464,8 @@ pub mod to_polar {
                 Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ", "),),
-                Value::Symbol(s) => s.to_polar(),
+                Value::Variable(s) => s.to_polar(),
+                Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
             }
         }
