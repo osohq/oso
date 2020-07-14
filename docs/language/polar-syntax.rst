@@ -145,6 +145,8 @@ To make the above rule more useful, we could write::
 This rule says that **if** there is a person with some name,
 **then** that person is also a user.
 
+.. _singletons:
+
 If a variable occurs only once, then its value can't be used
 for anything. Such variables are called *singletons*, and Polar
 will warn you if they occur in a rule; e.g., if you try to load
@@ -344,6 +346,8 @@ by an application method.
 
 Any bindings made inside a ``forall`` (``role`` or ``x`` in the example above)
 cannot be accessed after the ``forall`` predicate.
+
+.. _operator-rest:
 
 *rest operator
 ^^^^^^^^^^^^^^
