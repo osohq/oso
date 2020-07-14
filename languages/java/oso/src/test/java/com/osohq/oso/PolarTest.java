@@ -218,6 +218,17 @@ public class PolarTest extends TestCase {
         assertTrue(results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world"))));
     }
 
+    public void testStringMethods() throws Exception {
+        p.loadStr("f(x) if x.length = 3;");
+        if (p.queryStr("f(\"oso\")").results().isEmpty()) {
+            throw new Exception();
+        }
+
+        if (!p.queryStr("f(\"notoso\")").results().isEmpty()) {
+            throw new Exception();
+        }
+    }
+
     /*** TEST EXTERNALS ***/
 
     public void testRegisterAndMakeClass() throws Exception {
