@@ -8,19 +8,18 @@ language.
 
 This guide is a brief description of the core syntax elements of Polar.
 
-Each Polar file defines a set of facts and rules.  When a Polar file is loaded
-into the authorization engine, all facts and rules are added to the engine's knowledge base.
-This knowledge base is similar to a specialized database.
+Each Polar file defines a set of rules.  When a Polar file is loaded into the
+authorization engine, all rules are added to the engine's knowledge base.
 
 The knowledge base may be queried.  The behavior of queries is described further
 in :doc:`polar-queries`.
 
 .. _basic-types:
 
-Basic Types
-===========
+Primitive Types
+================
 
-Polar has only a few basic data types.
+Polar has only a few primitive data types.
 
 Numbers
 -------
@@ -31,8 +30,7 @@ Polar parses unquoted integers as numeric values. For example::
   43
   7
 
-are all parsed as numbers. Numbers only compare equal with other numbers of the
-same value.
+are all parsed as numbers.
 
 Strings
 -------
@@ -49,34 +47,27 @@ Compound Types
 
 To support more complex data, Polar includes the following compound data types.
 
-Tuples
+Lists
 ------
 
-A tuple is a sequence of values, defined using parentheses ``(v1, v2, ...,
-vn)``.
+A list is a sequence of values, defined using brackets ``[v1, v2, ...,
+vn]``.
 
 .. highlight:: polar
 
 For example::
 
-  ("sam", "scott")
-  ("polar", "lang", "oso")
-  ("oso", ("polar", "lang"))
+  ["polar", "lang", "oso"]
+  ["oso", ["polar", "lang"]]
 
-Tuples may have any length. Two tuples are equal if they have the same
-length and all of the corresponding elements are equal.
+Lists may have any length.
 
 .. _dictionaries:
 
 Dictionaries
 ------------
 
-.. note::
-
-  This is an area of active development! Syntax is likely to change and
-  evolve.
-
-While tuples are useful for representing ordered data, dictionaries
+While lists are useful for representing ordered data, dictionaries
 (aka hash tables or associative arrays) can be more expressive for
 relational data such as mappings. Dictionaries are another core type
 in Polar, represented as::
@@ -85,50 +76,29 @@ in Polar, represented as::
 
 For example::
 
-  {"first_name": "sam", "last_name": "scott"}
+  {first_name: "Yogi", last_name: "Bear"}
 
-Classes
--------
+Class Instances
+---------------
 
 A similar syntax can be used to represent instances of classes.  The class
 name is specified before the dictionary::
 
-  Person{"first_name": "sam", "last_name": "scott"}
+  Person{first_name: "Yogi", last_name: "Bear"}
 
 Classes can be registered from your application to integrate with Polar.  See
 :doc:`/application-library/index` for more information.
 
-Facts
-=====
-
-Facts are data added directly to the knowledge base. Facts are defined
-in a Polar file and terminated with a semicolon. Instances of any of the
-data types above may be defined as facts, but the most important kind
-of facts are predicates, which we'll discuss next.
-
-.. _predicates:
-
-Predicates
-----------
-
-A tuple combined with a name is known as a ``predicate``.  Predicates take
-the form ``name(arg1, ..., argN)``.  As we will see, predicates are the most basic construction
-in Polar for accessing data and expressing authorization logic.
-
-Some sample predicates::
-
-  person("sam", "scott");
-  company("oso");
+A class instance literal must be used either with the :ref:`operator-new` or
+as a :ref:`pattern`.
 
 .. _polar-rules:
 
 Rules
 =====
 
-Data types and predicates are useful for representing and querying
-information in the knowledge base, but they do not allow us to express
-conditional ("**if** this **then** that") statements. We can use
-rules to do this.
+Every statement in a Polar file is part of a rule.  Rules allow us to express
+conditional ("**if** this **then** that") statements.
 
 A rule in Polar takes the form::
 
@@ -142,7 +112,7 @@ on how rules are defined and applied see :doc:`polar-queries`.
 
 The following is an example of a rule::
 
-  user("sam", "scott") if person("sam", "scott");
+  user("yogi", "bear") if person("yogi", "bear");
 
 This example says that Sam is a user **if** he is also defined
 as a person.
@@ -150,7 +120,7 @@ as a person.
 Terms
 -----
 
-A *term* is either a fact or a combination of facts using :ref:`operators`.
+A *term* is either a data type or a combination of facts using :ref:`operators`.
 
 .. _variables:
 
@@ -160,7 +130,7 @@ Variables
 The example rule above is static. More powerful rules can be
 formed using variables.  In Polar, a variable does not need a separate
 declaration; it is created the first time it is referenced. Variables can be
-substituted for values in dictionaries, or items in a tuple or predicate.
+substituted for values in dictionaries, or items in a list or rule call.
 
 The following are all variables::
 
@@ -175,6 +145,42 @@ To make the above rule more useful, we could write::
 This rule says that **if** there is a person with some name,
 **then** that person is also a user.
 
+If a variable occurs only once, then its value can't be used
+for anything. Such variables are called *singletons*, and Polar
+will warn you if they occur in a rule; e.g., if you try to load
+the rule::
+
+  user(first, last) if person("George", last);
+
+Polar will say::
+
+  Singleton variable first
+  001: user(first, last) if person("George", last);
+            ^
+
+The reason these warnings are important is that, as in this case,
+they indicate potential logical errors. Here, the error is forgetting
+to use the first name, and instead using a literal string in the
+call to ``person``.
+
+There are cases, however, where it *isn't* an error to have
+a singleton variable. For example:
+
+* As a parameter with a specializer: ``allow(_actor: Person{first_name: "George"}, ..);``
+* As a parameter that is explicitly ignored: ``always_true(_);``
+
+In such cases, you can suppress the singleton variable warning by
+starting your variable's name with an ``_`` (underscore), e.g.,
+``_actor`` in the first example above.
+
+A variable named *just* ``_`` (as in the second example above) is called
+an **anonymous** variable, and it is *always* a singleton (but will never
+generate a warning). Each occurrence is translated into a fresh variable,
+guaranteed not to match any other variable. You may therefore have as many
+anonymous variables in a rule as you like, and each will be unique.
+It's up to you whether to use an anonymous variable or a singleton with
+a descriptive name.
+
 .. _operators:
 
 Operators
@@ -182,7 +188,7 @@ Operators
 
 .. todo not really true... some operators can be used in other places.
 
-Operators are used to combine terms in rule bodies.
+Operators are used to combine terms in rule bodies into expressions.
 
 Unification
 ^^^^^^^^^^^
@@ -190,7 +196,7 @@ Unification
 Unification is the basic matching operation in Polar. Two values are
 said to *unify* if they are equal or if there is a consistent set of
 variable bindings that makes them equal. Unification is defined
-recursively over compound types (e.g., tuples and dictionaries):
+recursively over compound types (e.g., lists and dictionaries):
 two compound values unify if all of their corresponding elements
 unify.
 
@@ -233,10 +239,10 @@ Dictionary key access
 ^^^^^^^^^^^^^^^^^^^^^
 
 The dot ``.`` operator can be used to access the value associated with
-a key in a dictionary. For example, the rule::
+a key in a dictionary or class instance. For example, the rule::
 
   first_name(dict, x) if
-    dict = Person{} and
+    dict = new Person{} and
     x = dict.first_name;
 
 will access the value of the field named ``"first_name"`` in ``dict``,
@@ -261,11 +267,6 @@ will compare the value of the variable age with 10 and unify if it's less than 1
 Cut
 ^^^
 
-.. note::
-  This is an area of active development!
-  The ``cut()`` operator does not currently prevent
-  backtracking across rules, only within them.
-
 The *cut* operator, which in Polar is written as ``cut()``, commits
 the query engine to the enclosing rule definition, and refuses to
 consider any others. Any definitions that have already run are not
@@ -280,6 +281,17 @@ proceed it must succeed in order for it to be reached, so it
 frequently appears at the end of the body: **if** so-and-so is true,
 then **cut** out all other alternatives.  ``cut()`` should be
 used sparingly.
+
+.. _operator-new:
+
+New
+^^^
+
+The new operator is used to construct a new instance of an application class.
+See :doc:`../application-library/application-types`. The single argument to the
+new operator must be an instance literal::
+
+    new Person{first_name: "yogi", last_name: "bear"}
 
 .. _operator-in:
 
@@ -332,3 +344,90 @@ by an application method.
 
 Any bindings made inside a ``forall`` (``role`` or ``x`` in the example above)
 cannot be accessed after the ``forall`` predicate.
+
+*rest operator
+^^^^^^^^^^^^^^
+
+The rest operator (``*``) can be used to destructure a list. For example::
+
+    x = [1, 2, 3] and
+    [first, *tail] = x
+
+After executing the above, the variable ``first`` will have the value ``1``, and
+``tail`` the value ``[2, 3]``.
+
+The rest operator is only valid within a list literal and in front of a
+variable. It **must** be the last element of the list literal (``[*rest,
+tail]``) is invalid. Any number of elements can come before the rest operator.
+
+The rest operator is only useful when combined with a unification operation that
+assigns a value to it.
+
+Patterns and matching
+----------------------
+
+Polar has powerful pattern matching facilities that are useful to control which
+rules execute & in what order.
+
+Specialization
+^^^^^^^^^^^^^^
+
+Rule heads (the part of the rule before the ``if`` keyword) can contain
+specializers.  For example, the rule::
+
+    has_first_name(person: Person, name) if person.name = name;
+
+Would only execute if the ``person`` argument is of the type ``Person``.
+
+Multiple rules of the same structure can be written with different
+specializers::
+
+    has_first_name(user: User, name) if user.name = name;
+
+Now, the ``first_name`` rule can be used with instances of the ``User`` or
+``Person`` type.
+
+For more on this feature, see
+:doc:`../application-library/application-types.rst`.
+
+Patterns
+^^^^^^^^
+
+The expression after the ``:`` is called a pattern.  The following are valid
+patterns:
+
+- any primitive type
+- a dictionary literal
+- an instance literal (without the new operator)
+- a type name (used above)
+
+When a rule is evaluated, the value of the argument is matched against the
+pattern.  For primitive types, a value matches a pattern if it is equal.
+
+For dictionary types, a value matches a pattern if the pattern is a subset of
+the dictionary.  For example::
+
+    {x: 1, y: 2} matches {x: 1}
+    {x: 1, y: 3} matches {y: 3}
+    {x: 1, y: 3} matches {x:1, y: 3}
+
+    # Does not match because y value are not equal
+    not {x: 1, y: 3} matches {x:1, y: 4}
+
+    # a type name matches if the value has the same type
+    new Person{} matches Person
+
+    # The fields are checked in the same manner as dictionaries, and the type is
+    # checked like above.
+    new Person{x: 1, y: 2} matches Person{x: 1}
+
+For type matching, subclasses are also considered.  So, a class that is a
+subclass of ``Person`` would match ``Person{x: 1}``.
+
+Matches operator
+^^^^^^^^^^^^^^
+
+The above example used the ``matches`` operator to describe the behavior of
+pattern matching.  This operator can be used anywhere within a rule body to
+perform a match.  The same operation is used by the engine to test whether a
+rule argument matches the specializer.
