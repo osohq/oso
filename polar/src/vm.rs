@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
@@ -6,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use super::debugger::{DebugEvent, Debugger};
 use super::error;
 use super::formatting::draw;
-use super::lexer::make_context;
+use super::lexer::{loc_to_pos, make_context};
 use super::types::*;
 use super::{PolarResult, ToPolarString};
 
@@ -535,6 +536,53 @@ impl PolarVirtualMachine {
             _ => term.clone(),
         });
         rule
+    }
+
+    /// Get the query stack as a string for printing in error messages.
+    fn stack_trace(&self) -> String {
+        let mut trace_stack = self.trace_stack.clone();
+        let mut trace = self.trace.clone();
+
+        // Build linear stack from trace tree. Not just using query stack because it doesn't
+        // know about rules, query stack should really use this too.
+        let mut stack = vec![];
+        while let Some(t) = trace.last() {
+            stack.push(t.clone());
+            trace = trace_stack.pop().unwrap_or_else(Vec::new);
+        }
+
+        stack.reverse();
+
+        let mut st = String::new();
+        write!(st, "trace (most recent evaluation last):").unwrap();
+
+        let mut rule = None;
+        for t in stack {
+            match &t.node {
+                Node::Rule(r) => {
+                    rule = Some(r.clone());
+                }
+                Node::Term(t) => {
+                    write!(st, "\n  ").unwrap();
+                    let source = { self.kb.read().unwrap().sources.get_source(&t) };
+                    if let Some(source) = source {
+                        if let Some(rule) = &rule {
+                            write!(st, "in rule {} ", rule.name.to_polar()).unwrap();
+                        } else {
+                            write!(st, "in query ").unwrap();
+                        }
+                        let (row, column) = loc_to_pos(&source.src, t.offset());
+                        write!(st, "at line {}, column {}", row + 1, column + 1).unwrap();
+                        if let Some(filename) = source.filename {
+                            write!(st, " in file {}", filename).unwrap();
+                        }
+                        writeln!(st).unwrap();
+                    };
+                    write!(st, "    {}", t.to_polar()).unwrap();
+                }
+            }
+        }
+        st
     }
 }
 
@@ -1718,12 +1766,14 @@ impl PolarVirtualMachine {
         } else {
             None
         };
-        error::RuntimeError::TypeError {
+        let stack_trace = self.stack_trace();
+        let error = error::RuntimeError::TypeError {
             msg,
             loc: term.offset(),
             context,
-        }
-        .into()
+            stack_trace: Some(stack_trace),
+        };
+        error.into()
     }
 }
 

@@ -283,7 +283,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
@@ -294,7 +295,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
@@ -305,7 +307,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
@@ -316,7 +319,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
