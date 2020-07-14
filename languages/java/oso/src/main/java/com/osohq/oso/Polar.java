@@ -216,7 +216,7 @@ public class Polar {
             Predicate pred = (Predicate) value;
             jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", javaListToPolar(pred.args))));
         } else if (value instanceof Variable) {
-            jVal.put("Symbol", value);
+            jVal.put("Variable", value);
         } else {
             jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
         }
