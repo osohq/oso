@@ -102,7 +102,7 @@ public class Polar {
      * @return Query object (Enumeration of resulting variable bindings).
      */
     protected Query queryStr(String queryStr) throws Exceptions.OsoException {
-        clearQueryState();
+        // clearQueryState();
         loadQueuedFiles();
         return new Query(ffi.newQueryFromStr(queryStr), this);
     }
@@ -116,7 +116,7 @@ public class Polar {
      * @throws Exceptions.OsoException
      */
     protected Query queryPred(String name, List<Object> args) throws Exceptions.OsoException {
-        clearQueryState();
+        // clearQueryState();
         loadQueuedFiles();
         String pred = toPolarTerm(new Predicate(name, args)).toString();
         return new Query(ffi.newQueryFromTerm(pred), this);
@@ -419,15 +419,16 @@ public class Polar {
         Object result = null;
         Boolean isMethod = true;
         try {
+            Class cls = instance instanceof Class ? (Class) instance : instance.getClass();
             try {
-                Method method = instance.getClass().getMethod(attrName, argTypes.toArray(new Class[argTypes.size()]));
+                Method method = cls.getMethod(attrName, argTypes.toArray(new Class[argTypes.size()]));
                 result = method.invoke(instance, args.toArray());
             } catch (NoSuchMethodException e) {
                 isMethod = false;
             }
             if (!isMethod) {
                 try {
-                    Field field = instance.getClass().getField(attrName);
+                    Field field = cls.getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException e) {
                     throw new Exceptions.InvalidCallError(attrName, argTypes);
