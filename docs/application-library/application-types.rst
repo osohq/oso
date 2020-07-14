@@ -105,8 +105,25 @@ subclasses of ``AirlineEmployee``.
 
 .. TODO (dhatch): This would be a great spot to intro groups.
 
+Built-in types
+--------------
+Because your application objects probably use your language's built-in
+primitive types such as ``str``, ``dict``, and ``int``, Polar allows you
+to use methods on those types for its built-ins, too. That way you can use
+familiar methods like ``str.startswith()`` on strings regardless of whether
+they originated in your application or as a literal in your policy.
+This applies to all of the Polar :ref:`primitive types <basic-types>`:
+strings, lists, dictionaries, and numbers, in any supported application
+language.
+
+.. warning:: Do not attempt to mutate a literal using a method on it.
+  Literals in Polar are constant, and any changes made to such objects
+  on the application side will not be reflected back to Polar.
+
 Summary
 =======
 - **Application types** can be registered with Polar to make application data available within policies.
 - The inheritance structure of application types can be leveraged in the policy with **specialized rules**,
   supporting more sophistiscated access control models.
+- You can use built-in methods on primitive types like strings and
+  dictionaries, exactly as if they were application types.

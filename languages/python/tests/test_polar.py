@@ -564,7 +564,7 @@ def test_other_constants(polar, qvar):
 
 
 def test_host_methods(polar, qeval):
-    assert qeval('x = "abc" and x.find("bc") = 1')
+    assert qeval('x = "abc" and x.startswith("a") = true and x.find("bc") = 1')
     assert qeval("i = 4095 and i.bit_length() = 12")
     assert qeval('f = 3.14159 and f.hex() = "0x1.921f9f01b866ep+1"')
     assert qeval("l = [1, 2, 3] and l.index(3) = 2 and l.copy() = [1, 2, 3]")
