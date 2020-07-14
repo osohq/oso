@@ -83,7 +83,7 @@ public class Ffi {
 
         @Override
         protected void finalize() {
-            polarLib.polar_free(ptr);
+            polarLib.query_free(ptr);
         }
 
     }
