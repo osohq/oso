@@ -473,7 +473,7 @@ public class Polar {
      * @param instanceId
      * @return
      */
-    protected boolean hasInstance(long instanceId) {
+    protected boolean hasCachedInstance(long instanceId) {
         return instances.containsKey(instanceId);
     }
 

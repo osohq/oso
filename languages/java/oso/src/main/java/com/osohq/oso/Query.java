@@ -100,7 +100,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     return polar.polarDictToJava(data.getJSONObject("bindings"));
                 case "MakeExternal":
                     Long id = data.getLong("instance_id");
-                    if (polar.hasInstance(id)) {
+                    if (polar.hasCachedInstance(id)) {
                         throw new Exceptions.DuplicateInstanceRegistrationError(id);
                     }
                     String clsName = data.getJSONObject("instance").getString("tag");
