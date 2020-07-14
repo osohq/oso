@@ -105,8 +105,11 @@ subclasses of ``AirlineEmployee``.
 
 .. TODO (dhatch): This would be a great spot to intro groups.
 
+.. _built-in-types:
+
 Built-in types
 --------------
+
 Because your application objects probably use your language's built-in
 primitive types such as ``str``, ``dict``, and ``int``, Polar allows you
 to use methods on those types for its built-ins, too. That way you can use
