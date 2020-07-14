@@ -1,17 +1,18 @@
 package com.osohq.oso;
 
-import static org.junit.Assert.assertThrows;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.util.*;
 import org.json.*;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-public class PolarTest extends TestCase {
+public class PolarTest {
     protected Polar p;
 
     public static class MyClass {
@@ -38,6 +39,10 @@ public class PolarTest extends TestCase {
         public Enumeration<String> myEnumeration() {
             return Collections.enumeration(List.of("hello", "world"));
         }
+
+        public static String myStaticMethod() {
+            return "hello world";
+        }
     }
 
     public static class MySubClass extends MyClass {
@@ -46,16 +51,7 @@ public class PolarTest extends TestCase {
         }
     }
 
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public PolarTest(String testName) {
-        super(testName);
-    }
-
-    @Override
+    @BeforeEach
     public void setUp() {
         try {
             p = new Polar();
@@ -68,94 +64,59 @@ public class PolarTest extends TestCase {
     }
 
     /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite() {
-        return new TestSuite(PolarTest.class);
-    }
-
-    /**
      * Rigourous Test :-)
      */
+    @Test
     public void testApp() {
         assertTrue(true);
     }
 
     /**** TEST QUERY ****/
 
+    @Test
     public void testLoadAndQueryStr() throws Exception {
         p.loadStr("f(1);");
         Query query = p.queryStr("f(x)");
         assertEquals(List.of(Map.of("x", 1)), query.results());
     }
 
+    @Test
     public void testInlineQueries() throws Exception {
         p.loadStr("f(1); ?= f(1);");
-        assertThrows("Expected inline query to fail but it didn't.", Exceptions.InlineQueryFailedError.class,
-                () -> p.loadStr("?= f(2);"));
+        assertThrows(Exceptions.InlineQueryFailedError.class, () -> p.loadStr("?= f(2);"),
+                "Expected inline query to fail but it didn't.");
     }
 
+    @Test
     public void testBasicQueryPred() throws Exception {
         // test basic query
         p.loadStr("f(a, b) if a = b;");
-        assertFalse("Basic predicate query failed.", p.queryPred("f", List.of(1, 1)).results().isEmpty());
-        assertTrue("Basic predicate query expected to fail but didn't.",
-                p.queryPred("f", List.of(1, 2)).results().isEmpty());
+        assertFalse(p.queryPred("f", List.of(1, 1)).results().isEmpty(), "Basic predicate query failed.");
+        assertTrue(p.queryPred("f", List.of(1, 2)).results().isEmpty(),
+                "Basic predicate query expected to fail but didn't.");
     }
 
+    @Test
     public void testQueryPredWithObject() throws Exception {
         // test query with Java Object
         p.loadStr("g(x) if x.id = 1;");
-        assertFalse("Predicate query with Java Object failed.",
-                p.queryPred("g", List.of(new MyClass("test", 1))).results().isEmpty());
-        assertTrue("Predicate query with Java Object expected to fail but didn't.",
-                p.queryPred("g", List.of(new MyClass("test", 2))).results().isEmpty());
+        assertFalse(p.queryPred("g", List.of(new MyClass("test", 1))).results().isEmpty(),
+                "Predicate query with Java Object failed.");
+        assertTrue(p.queryPred("g", List.of(new MyClass("test", 2))).results().isEmpty(),
+                "Predicate query with Java Object expected to fail but didn't.");
     }
 
+    @Test
     public void testQueryPredWithVariable() throws Exception {
         // test query with Variable
         p.loadStr("f(a, b) if a = b;");
-        assertTrue("Predicate query with Variable failed.",
-                p.queryPred("f", List.of(1, new Variable("result"))).results().equals(List.of(Map.of("result", 1))));
-    }
-
-    public void testExternalIsa() throws Exception {
-        p.loadStr("f(a: MyClass, x) if x = a.id;");
-        List<HashMap<String, Object>> result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x")))
-                .results();
-        assertTrue(result.equals(List.of(Map.of("x", 1))));
-        p.clear();
-
-        p.loadStr("f(a: MySubClass, x) if x = a.id;");
-        result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
-        assertTrue("Failed to filter rules by specializers.", result.isEmpty());
-        p.clear();
-
-        p.loadStr("f(a: OtherClass, x) if x = a.id;");
-        assertThrows(Exceptions.UnregisteredClassError.class,
-                () -> p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results());
-    }
-
-    public void testExternalIsSubSpecializer() throws Exception {
-        p.loadStr("f(a: MySubClass, x) if x = 1;");
-        p.loadStr("f(a: MyClass, x) if x = 2;");
-        List<HashMap<String, Object>> result = p.queryPred("f", List.of(new MySubClass("test", 1), new Variable("x")))
-                .results();
-        assertTrue("Failed to order rules based on specializers.",
-                result.equals(List.of(Map.of("x", 1), Map.of("x", 2))));
-
-        result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
-        assertTrue("Failed to order rules based on specializers.", result.equals(List.of(Map.of("x", 2))));
-    }
-
-    public void testReturnListFromCall() throws Exception {
-        p.loadStr("test(c: MyClass) if \"hello\" in c.myList;");
-        MyClass c = new MyClass("test", 1);
-        assertFalse(p.queryPred("test", List.of(c)).results().isEmpty());
+        assertTrue(p.queryPred("f", List.of(1, new Variable("result"))).results().equals(List.of(Map.of("result", 1))),
+                "Predicate query with Variable failed.");
     }
 
     /*** TEST FFI CONVERSIONS ***/
 
+    @Test
     public void testBoolFFIRoundTrip() throws Exception {
         Boolean b = true;
         JSONObject polar = p.toPolarTerm(b);
@@ -163,6 +124,7 @@ public class PolarTest extends TestCase {
         assertEquals(b, java);
     }
 
+    @Test
     public void testIntFFIRoundTrip() throws Exception {
         int i = 3;
         JSONObject polar = p.toPolarTerm(i);
@@ -170,6 +132,7 @@ public class PolarTest extends TestCase {
         assertEquals(i, java);
     }
 
+    @Test
     public void testFloatFFIRoundTrip() throws Exception {
         float f = (float) 3.50;
         JSONObject polar = p.toPolarTerm(f);
@@ -177,6 +140,7 @@ public class PolarTest extends TestCase {
         assertEquals(f, java);
     }
 
+    @Test
     public void testListFFIRoundTrip() throws Exception {
         List<Integer> l = List.of(1, 2, 3, 4);
         JSONObject polar = p.toPolarTerm(l);
@@ -184,6 +148,7 @@ public class PolarTest extends TestCase {
         assertEquals(l, java);
     }
 
+    @Test
     public void testDictFFIRoundTrip() throws Exception {
         Map<String, Integer> m = Map.of("a", 1, "b", 2);
         JSONObject polar = p.toPolarTerm(m);
@@ -191,6 +156,7 @@ public class PolarTest extends TestCase {
         assertEquals(m, java);
     }
 
+    @Test
     public void testJavaClassFFIRoundTrip() throws Exception {
         MyClass instance = new MyClass("test", 1);
         JSONObject polar = p.toPolarTerm(instance);
@@ -198,6 +164,7 @@ public class PolarTest extends TestCase {
         assertEquals(instance, java);
     }
 
+    @Test
     public void testPredicateFFIRoundTrip() throws Exception {
         Predicate pred = new Predicate("name", List.of(1, "hello"));
         JSONObject polar = p.toPolarTerm(pred);
@@ -205,32 +172,9 @@ public class PolarTest extends TestCase {
         assertEquals(pred, java);
     }
 
-    public void testReturnJavaInstanceFromCall() throws Exception {
-        MyClass c = new MyClass("test", 1);
-        p.loadStr("test(c: MyClass) if x = c.mySubClass(c.name, c.id) and x.id = c.id;");
-        assertFalse(p.queryPred("test", List.of(c)).results().isEmpty());
-    }
-
-    public void testEnumerationCallResults() throws Exception {
-        MyClass c = new MyClass("test", 1);
-        p.loadStr("test(c: MyClass, x) if x = c.myEnumeration;");
-        List<HashMap<String, Object>> results = p.queryPred("test", List.of(c, new Variable("x"))).results();
-        assertTrue(results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world"))));
-    }
-
-    public void testStringMethods() throws Exception {
-        p.loadStr("f(x) if x.length = 3;");
-        if (p.queryStr("f(\"oso\")").results().isEmpty()) {
-            throw new Exception();
-        }
-
-        if (!p.queryStr("f(\"notoso\")").results().isEmpty()) {
-            throw new Exception();
-        }
-    }
-
     /*** TEST EXTERNALS ***/
 
+    @Test
     public void testRegisterAndMakeClass() throws Exception {
         Map<String, Object> testArg = Map.of("name", "testName", "id", 1);
         MyClass instance = (MyClass) p.makeInstance("MyClass", testArg, Long.valueOf(0));
@@ -242,11 +186,13 @@ public class PolarTest extends TestCase {
         // TODO: test inheritance
     }
 
+    @Test
     public void testDuplicateRegistration() throws Exception {
         assertThrows(Exceptions.DuplicateClassAliasError.class, () -> p.registerClass(MyClass.class,
                 m -> new MyClass((String) m.get("name"), (int) m.get("id")), "MyClass"));
     }
 
+    @Test
     public void testMakeInstanceFromPolar() throws Exception {
         p.loadStr("f(x) if x = new MyClass{name: \"test\", id: 1};");
         Query query = p.queryStr("f(x)");
@@ -255,6 +201,7 @@ public class PolarTest extends TestCase {
         assertEquals(Integer.valueOf(1), ret.id);
     }
 
+    @Test
     public void testRegisterCall() throws Exception {
         MyClass instance = new MyClass("test", 1);
         p.cacheInstance(instance, Long.valueOf(1));
@@ -263,19 +210,94 @@ public class PolarTest extends TestCase {
         assertTrue(p.toJava(res).equals("hello world"));
     }
 
+    @Test
     public void testExternalCall() throws Exception {
         // Test get attribute
         p.loadStr("id(x) if x = new MyClass{name: \"test\", id: 1}.id;");
-        assertTrue("Failed to get attribute on external instance.",
-                p.queryStr("id(x)").results().equals(List.of(Map.of("x", 1))));
+        assertTrue(p.queryStr("id(x)").results().equals(List.of(Map.of("x", 1))),
+                "Failed to get attribute on external instance.");
 
         // Test call method
         p.loadStr("method(x) if x = new MyClass{name: \"test\", id: 1}.myMethod(\"hello world\");");
-        assertTrue("Failed to get attribute on external instance.",
-                p.queryStr("method(x)").results().equals(List.of(Map.of("x", "hello world"))));
+        assertTrue(p.queryStr("method(x)").results().equals(List.of(Map.of("x", "hello world"))),
+                "Failed to get attribute on external instance.");
+    }
+
+    @Test
+    public void testReturnJavaInstanceFromCall() throws Exception {
+        MyClass c = new MyClass("test", 1);
+        p.loadStr("test(c: MyClass) if x = c.mySubClass(c.name, c.id) and x.id = c.id;");
+        assertFalse(p.queryPred("test", List.of(c)).results().isEmpty());
+    }
+
+    @Test
+    public void testEnumerationCallResults() throws Exception {
+        MyClass c = new MyClass("test", 1);
+        p.loadStr("test(c: MyClass, x) if x = c.myEnumeration;");
+        List<HashMap<String, Object>> results = p.queryPred("test", List.of(c, new Variable("x"))).results();
+        assertTrue(results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world"))));
+    }
+
+    @Test
+    public void testStringMethods() throws Exception {
+        p.loadStr("f(x) if x.length = 3;");
+        if (p.queryStr("f(\"oso\")").results().isEmpty()) {
+            throw new Exception();
+        }
+
+        if (!p.queryStr("f(\"notoso\")").results().isEmpty()) {
+            throw new Exception();
+        }
+    }
+
+    @Test
+    public void testExternalIsa() throws Exception {
+        p.loadStr("f(a: MyClass, x) if x = a.id;");
+        List<HashMap<String, Object>> result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x")))
+                .results();
+        assertTrue(result.equals(List.of(Map.of("x", 1))));
+        p.clear();
+
+        p.loadStr("f(a: MySubClass, x) if x = a.id;");
+        result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
+        assertTrue(result.isEmpty(), "Failed to filter rules by specializers.");
+        p.clear();
+
+        p.loadStr("f(a: OtherClass, x) if x = a.id;");
+        assertThrows(Exceptions.UnregisteredClassError.class,
+                () -> p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results());
+    }
+
+    @Test
+    public void testExternalIsSubSpecializer() throws Exception {
+        p.loadStr("f(a: MySubClass, x) if x = 1;");
+        p.loadStr("f(a: MyClass, x) if x = 2;");
+        List<HashMap<String, Object>> result = p.queryPred("f", List.of(new MySubClass("test", 1), new Variable("x")))
+                .results();
+        assertTrue(result.equals(List.of(Map.of("x", 1), Map.of("x", 2))),
+                "Failed to order rules based on specializers.");
+
+        result = p.queryPred("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
+        assertTrue(result.equals(List.of(Map.of("x", 2))), "Failed to order rules based on specializers.");
+    }
+
+    @Test
+    public void testReturnListFromCall() throws Exception {
+        p.loadStr("test(c: MyClass) if \"hello\" in c.myList;");
+        MyClass c = new MyClass("test", 1);
+        assertFalse(p.queryPred("test", List.of(c)).results().isEmpty());
+    }
+
+    @Test
+    public void testClassMethods() throws Exception {
+        p.loadStr("test(x) if x=1 and MyClass.myStaticMethod = \"hello world\";");
+
+        assertFalse(p.queryStr("test(1)").results().isEmpty());
     }
 
     /**** TEST PARSING ****/
+
+    @Test
     public void testIntegerOverFlowError() throws Exception {
         String rule = "f(x) if x = 18446744073709551616;";
         Exceptions.IntegerOverflow e = assertThrows(Exceptions.IntegerOverflow.class, () -> p.loadStr(rule));
@@ -283,6 +305,7 @@ public class PolarTest extends TestCase {
 
     }
 
+    @Test
     public void testInvalidTokenCharacter() throws Exception {
         String rule = "f(x) if x = \"This is not\n allowed\"";
         Exceptions.InvalidTokenCharacter e = assertThrows(Exceptions.InvalidTokenCharacter.class,
@@ -292,6 +315,7 @@ public class PolarTest extends TestCase {
 
     }
 
+    @Test
     public void testUnrecognizedTokenError() throws Exception {
         String rule = "1";
         Exceptions.UnrecognizedToken e = assertThrows(Exceptions.UnrecognizedToken.class, () -> p.loadStr(rule));
@@ -301,34 +325,39 @@ public class PolarTest extends TestCase {
 
     /**** TEST LOADING ****/
 
+    @Test
     public void testLoadFile() throws Exception {
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
         assertTrue(p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
     }
 
+    @Test
     public void testLoadNonPolarFile() throws Exception {
-        assertThrows("Failed to catch incorrect Polar file extension.", Exceptions.PolarFileExtensionError.class,
-                () -> p.loadFile("wrong.txt"));
+        assertThrows(Exceptions.PolarFileExtensionError.class, () -> p.loadFile("wrong.txt"),
+                "Failed to catch incorrect Polar file extension.");
     }
 
+    @Test
     public void testLoadFilePassesFilename() throws Exception {
         File tempFile = File.createTempFile("error-", ".polar");
         FileWriter w = new FileWriter(tempFile);
         w.write(";");
         w.close();
         p.loadFile(tempFile.getPath());
-        assertThrows("Failed to pass filename across FFI boundary.", Exceptions.ParseError.class,
-                () -> p.queryStr("f(1)"));
+        assertThrows(Exceptions.ParseError.class, () -> p.queryStr("f(1)"),
+                "Failed to pass filename across FFI boundary.");
         tempFile.deleteOnExit();
     }
 
+    @Test
     public void testLoadFileIdempotent() throws Exception {
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
-        assertTrue("loadFile behavior is not idempotent.",
-                p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+        assertTrue(p.queryStr("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))),
+                "loadFile behavior is not idempotent.");
     }
 
+    @Test
     public void testLoadMultipleFiles() throws Exception {
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
         p.loadFile("src/test/java/com/osohq/oso/test2.polar");
@@ -336,6 +365,7 @@ public class PolarTest extends TestCase {
         assertTrue(p.queryStr("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
     }
 
+    @Test
     public void testClear() throws Exception {
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
         assertEquals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)), p.queryStr("f(x)").results());
@@ -344,11 +374,12 @@ public class PolarTest extends TestCase {
     }
 
     /*** TEST OSO ***/
+    @Test
     public void testPathMapper() throws Exception {
         Oso oso = new Oso();
         // Extracts matches into a hash
         PathMapper mapper = new PathMapper("/widget/{id}");
-        assertTrue("Failed to extract matches to a hash", mapper.map("/widget/12").equals(Map.of("id", "12")));
+        assertTrue(mapper.map("/widget/12").equals(Map.of("id", "12")), "Failed to extract matches to a hash");
         // maps HTTP resources
         oso.registerClass(MyClass.class, m -> new MyClass("test", Integer.parseInt((String) m.get("id"))), "MyClass");
         oso.loadStr("allow(actor, \"get\", _: Http{path: path}) if "
@@ -356,8 +387,8 @@ public class PolarTest extends TestCase {
                 + "allow(actor, \"get\", new MyClass{id: id});\n"
                 + "allow(actor, \"get\", myclass: MyClass) if myclass.id = 12;");
         Http http12 = new Http(null, "/myclass/12", null);
-        assertTrue("Failed to correctly map HTTP resource", oso.allow("sam", "get", http12));
+        assertTrue(oso.allow("sam", "get", http12), "Failed to correctly map HTTP resource");
         Http http13 = new Http(null, "/myclass/13", null);
-        assertFalse("Failed to correctly map HTTP resource", oso.allow("sam", "get", http13));
+        assertFalse(oso.allow("sam", "get", http13), "Failed to correctly map HTTP resource");
     }
 }
