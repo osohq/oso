@@ -494,19 +494,18 @@ public class Polar {
         leftClass = getRegisteredClass(leftTag);
         rightClass = getRegisteredClass(rightTag);
 
-        boolean answer = false;
         if (leftClass.isInstance(instance) || rightClass.isInstance(instance)) {
             while (cls != null) {
                 if (cls.equals(leftClass)) {
-                    answer = true;
-                    break;
+                    return true;
                 } else if (cls.equals(rightClass)) {
-                    break;
+                    return false;
                 }
                 cls = cls.getSuperclass();
             }
+            assert false;
         }
-        return answer;
+        return false;
     }
 
     /**
