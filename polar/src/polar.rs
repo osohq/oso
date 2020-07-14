@@ -166,15 +166,15 @@ impl Iterator for Query {
 #[derive(Default)]
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
-    pub output: Option<RwLock<Box<dyn Write>>>,
+    pub output: Option<Arc<RwLock<Box<dyn Write>>>>,
 }
 
 impl Polar {
-    pub fn new(output: Option<RwLock<Box<dyn Write>>>) -> Self {
+    pub fn new(output: Option<Arc<RwLock<Box<dyn Write>>>>) -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             output: match output {
-                None => Some(RwLock::new(Box::new(stderr()))),
+                None => Some(Arc::new(RwLock::new(Box::new(stderr())))),
                 Some(_) => output,
             },
         }
@@ -284,7 +284,8 @@ impl Polar {
             term
         };
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
+        let vm =
+            PolarVirtualMachine::new(self.kb.clone(), vec![query], self.output.as_ref().cloned());
         Ok(Query { done: false, vm })
     }
 
@@ -296,7 +297,8 @@ impl Polar {
             rewrite_term(&mut term, &mut kb);
         }
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query]);
+        let vm =
+            PolarVirtualMachine::new(self.kb.clone(), vec![query], self.output.as_ref().cloned());
         Query { done: false, vm }
     }
 

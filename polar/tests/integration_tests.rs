@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::iter::FromIterator;
 use std::rc::Rc;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use std::thread::spawn;
 
 use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
@@ -870,7 +870,7 @@ fn test_anonymous_vars() {
 fn test_singleton_vars() {
     let (mut read, write) = pipe();
     spawn(move || {
-        let output = RwLock::new(Box::new(write) as Box<dyn Write>);
+        let output = Arc::new(RwLock::new(Box::new(write) as Box<dyn Write>));
         let polar = Polar::new(Some(output));
         polar.load("f(x,y,z) if z = z;").unwrap();
     });
@@ -889,6 +889,21 @@ fn test_singleton_vars() {
                "#
         )
     );
+}
+
+#[test]
+fn test_print() {
+    let (mut read, write) = pipe();
+    spawn(move || {
+        let output = Arc::new(RwLock::new(Box::new(write) as Box<dyn Write>));
+        let mut polar = Polar::new(Some(output));
+        polar.load("f(x,y,z) if print(x, y, z);").unwrap();
+        assert!(qeval(&mut polar, "f(1, 2, 3)"));
+    });
+
+    let mut out = String::new();
+    read.read_to_string(&mut out).unwrap();
+    assert_eq!(&out, "1, 2, 3\n");
 }
 
 #[test]

@@ -169,13 +169,20 @@ pub struct PolarVirtualMachine {
 
     /// Logging flag.
     log: bool,
+
+    /// Output stream.
+    output: Option<Arc<RwLock<Box<dyn std::io::Write>>>>,
 }
 
 // Methods which aren't goals/instructions.
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
     /// Reverse the goal list for the sanity of callers.
-    pub fn new(kb: Arc<RwLock<KnowledgeBase>>, goals: Goals) -> Self {
+    pub fn new(
+        kb: Arc<RwLock<KnowledgeBase>>,
+        goals: Goals,
+        output: Option<Arc<RwLock<Box<dyn std::io::Write>>>>,
+    ) -> Self {
         let constants = kb
             .read()
             .expect("cannot acquire KB read lock")
@@ -194,6 +201,7 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
+            output,
         };
         vm.bind_constants(constants);
         vm
@@ -216,7 +224,7 @@ impl PolarVirtualMachine {
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
         if self.log {
-            eprintln!("{}", goal);
+            self.print(&format!("{}", goal));
         }
         self.goal_counter += 1;
         match goal.as_ref() {
@@ -312,9 +320,9 @@ impl PolarVirtualMachine {
         }
 
         if self.log {
-            eprintln!("⇒ result");
+            self.print("⇒ result");
             for t in &self.trace {
-                eprintln!("trace\n{}", draw(t, 0));
+                self.print(&format!("trace\n{}", draw(t, 0)));
             }
         }
 
@@ -421,7 +429,11 @@ impl PolarVirtualMachine {
     /// Push a binding onto the binding stack.
     fn bind(&mut self, var: &Symbol, value: Term) {
         if self.log {
-            eprintln!("⇒ bind: {} ← {}", var.to_polar(), value.to_polar());
+            self.print(&format!(
+                "⇒ bind: {} ← {}",
+                var.to_polar(),
+                value.to_polar()
+            ));
         }
         self.bindings.push(Binding(var.clone(), value));
     }
@@ -538,6 +550,14 @@ impl PolarVirtualMachine {
         rule
     }
 
+    /// Print a message to the output stream.
+    fn print(&self, message: &str) {
+        if let Some(ref writer) = self.output {
+            let mut writer = writer.write().unwrap();
+            writeln!(&mut writer, "{}", message).unwrap();
+        }
+    }
+
     /// Get the query stack as a string for printing in error messages.
     fn stack_trace(&self) -> String {
         let mut trace_stack = self.trace_stack.clone();
@@ -592,7 +612,7 @@ impl PolarVirtualMachine {
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> PolarResult<()> {
         if self.log {
-            eprintln!("⇒ backtrack");
+            self.print("⇒ backtrack");
         }
         loop {
             match self.choices.last_mut() {
@@ -1028,6 +1048,15 @@ impl PolarVirtualMachine {
                     );
                 }
                 self.push_goal(Goal::Debug { message })?
+            }
+            Operator::Print => {
+                self.print(
+                    &args
+                        .iter()
+                        .map(|arg| self.deref(arg).to_polar())
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                );
             }
             Operator::New => {
                 assert_eq!(args.len(), 2);
@@ -1883,7 +1912,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), vec![goal]);
+        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), vec![goal], None);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -2258,6 +2287,7 @@ mod tests {
             vec![Goal::Debug {
                 message: "Hello".to_string(),
             }],
+            None,
         );
         assert!(matches!(
             vm.run().unwrap(),
@@ -2270,6 +2300,7 @@ mod tests {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
             vec![Goal::Halt],
+            None,
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.goals.len(), 0);
@@ -2290,6 +2321,7 @@ mod tests {
                 left: vars,
                 right: vals,
             }],
+            None,
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
@@ -2404,6 +2436,7 @@ mod tests {
                 "bar",
                 [external_instance.clone(), external_instance, sym!("z")]
             ))],
+            None,
         );
 
         let mut results = Vec::new();

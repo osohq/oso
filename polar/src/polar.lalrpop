@@ -52,6 +52,7 @@ extern {
         "?=" => lexer::Token::Query,    // ?=
         "cut" => lexer::Token::Cut,
         "debug" => lexer::Token::Debug,
+        "print" => lexer::Token::Print,
         "in" => lexer::Token::In,       // in
         "isa" => lexer::Token::Isa,     // isa
         "forall" => lexer::Token::ForAll,     // forall
@@ -173,6 +174,7 @@ RewritableOperator: Operator = {
     "new" => Operator::New,
     "in" => Operator::In,
     "debug" => Operator::Debug,
+    "print" => Operator::Print,
 };
 
 pub RewrittenOperation: Operation = {
