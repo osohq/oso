@@ -4,7 +4,7 @@ rust:
 	$(MAKE) -C ../.. rust-build
 
 test: rust
-	cd oso && mvn test
+	cd oso && mvn clean test
 
 package: rust
-	cd oso && mvn package
+	cd oso && mvn clean package
