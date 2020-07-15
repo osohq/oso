@@ -1,5 +1,11 @@
 package com.osohq.oso;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 
@@ -166,16 +172,48 @@ public class Ffi {
 
     }
 
-    private Ffi() {
-        polarLib = LibraryLoader.create(PolarLib.class).load("../../../target/debug/libpolar.dylib");
+    protected Ffi() {
+        String platform = System.getProperty("os.name").toLowerCase();
+        String path = null;
+        String prefix = null;
+        String suffix = null;
+
+        if (platform.contains("win")) {
+            path = "win/polar.dll";
+            prefix = "polar";
+            suffix = "dll";
+        } else if (platform.contains("mac")) {
+            path = "macos/libpolar.dylib";
+            prefix = "libpolar";
+            suffix = "dylib";
+        } else {
+            path = "linux/libpolar.so";
+            prefix = "libpolar";
+            suffix = "so";
+        }
+        try {
+            InputStream input = getClass().getClassLoader().getResourceAsStream(path);
+            File file = File.createTempFile(prefix, suffix);
+            OutputStream out = new FileOutputStream(file);
+            int read;
+            byte[] bytes = new byte[1024];
+            while ((read = input.read(bytes)) != -1) {
+                out.write(bytes, 0, read);
+            }
+            out.close();
+            file.deleteOnExit();
+            polarLib = LibraryLoader.create(PolarLib.class).load(file.getAbsolutePath());
+        } catch (IOException e) {
+
+        }
     }
 
-    protected static Ffi get() {
+	protected static Ffi get() {
         if (ffi == null) {
             ffi = new Ffi();
         }
         return ffi;
-    }
+	}
 
     protected Polar polarNew() throws Exceptions.OsoException {
         return new Polar(checkResult(polarLib.polar_new()));
