@@ -18,7 +18,7 @@ jobs:
         run: grep "__version__ = \"$oso_version\"" oso/__init__.py
         working-directory: languages/python
       - name: Check java version matches
-        run: mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version
+        run: grep "<version>$oso_version</version>" pom.xml
         working-directory: languages/java/oso
 
   build_dylib:
