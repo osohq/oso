@@ -23,7 +23,12 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: 2.4
-          working-directory: 'languages/ruby'
+          working-directory: "languages/ruby"
+
+      - name: Install Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: "9"
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
