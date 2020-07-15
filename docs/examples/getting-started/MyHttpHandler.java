@@ -5,7 +5,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -18,6 +17,13 @@ public class MyHttpHandler implements HttpHandler {
     public MyHttpHandler() {
         try {
             oso = new Oso();
+            // Allow Alice to make GET requests to any path.
+            oso.loadStr("allow(\"alice@example.com\", \"GET\", _);");
+
+            // Allow anyone whose email address ends in "@example.com" to make
+            // POST requests to any path that starts with "/admin".
+            oso.loadStr("allow(email, \"POST\", path) if\n" + "email.end_with?(\"@example.com\") = true and\n"
+                    + "path.start_with?(\"/admin\") = true;");
         } catch (OsoException e) {
             System.out.println("Failed to initialize oso.");
         }
@@ -30,7 +36,7 @@ public class MyHttpHandler implements HttpHandler {
             String resource = exchange.getRequestURI().toString();
 
             return oso.allow(actor, action, resource);
-        } catch (OsoException e) {
+        } catch (Exception e) {
             return false;
         }
     }
@@ -47,13 +53,13 @@ public class MyHttpHandler implements HttpHandler {
     }
 
     public static void main(String[] args) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8001), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 5050), 0);
         ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
 
         server.createContext("/", new MyHttpHandler());
         server.setExecutor(threadPoolExecutor);
         server.start();
-        System.out.println("Server started on port 8001");
+        System.out.println("Server started on port 5050");
     }
 
 }
