@@ -84,7 +84,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: jar
-          path: languages/java/oso/target/oso-${{ steps.version.outputs.oso_version }}.jar"
+          path: languages/java/oso/target/oso-${{ steps.version.outputs.oso_version }}.jar
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
