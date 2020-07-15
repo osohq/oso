@@ -1,362 +1,187 @@
-=====================
-Get started with oso
-=====================
+===============
+Getting started
+===============
 
-.. container:: left-col
+If you don't know what oso is, head back to `the introduction </>`_. If you've
+never used oso before and want to get up-and-running quickly, this guide is for
+you.
 
-    **oso** provides tools to authorize user actions in your application.  This
-    guide will gradually introduce basic concepts, with references to more detailed
-    documentation throughout.
+In general, it takes less than 5 minutes to add oso to an existing application
+and begin writing an authorization policy. In the next 15 minutes, we're going
+to create a simple web server with no authorization, add oso to the project,
+and then write our first policy. We encourage you to code along in your local
+environment!
 
-    Since **oso** supports multiple languages, some pages (including this guide!)
-    throughout the documentation allow language selection.  Just choose your
-    application's language from the available options to see content for your language.
+First, let's create a simple web server:
 
-.. _install:
+.. literalinclude:: /examples/getting-started/server-01.rb
+  :caption: server.rb
+  :language: ruby
+  :lines: 3-
 
+Our server currently has no authorization --- anyone is able to view our
+precious secrets. Let's use `cURL <https://curl.haxx.se/>`_ to check that
+everything's working. We'll first start our server...
 
-Installing oso
---------------
+.. code-block:: console
 
-.. container:: left-col
+  $ ruby server.rb
+  [2020-07-15 00:35:52] INFO  WEBrick 1.3.1
+  [2020-07-15 00:35:52] INFO  ruby 2.4.10 (2020-03-31) [x86_64-linux]
+  [2020-07-15 00:35:52] INFO  WEBrick::HTTPServer#start: pid=537647 port=5050
 
-    oso is available as a package, installation depends on the language.
+...and then, in another terminal, make a request to our running server:
 
+.. code-block:: console
 
-.. container:: right-col content-tabs
+  $ curl localhost:5050
+  Authorized!
 
-    .. tab-container:: python
-        :title: Python
+Adding oso
+==========
 
-        Download and install the ``oso`` `Python wheel <https://pypi.org/project/oso/>`_
-        using ``pip install``.  The ``oso`` module requires Python version > 3.6.
+.. |gem| replace:: the ``oso-oso`` gem
+.. _gem: https://rubygems.org/gems/oso-oso
 
-    .. tab-container:: ruby
-        :title: Ruby
+Next, let's add oso to our application so that we can write our first
+authorization policy. If you don't already have |gem|_ installed, go ahead and
+install it now:
 
-        Download and install the ``oso`` `Ruby gem <https://rubygems.org/gems/oso-oso>`_ using
-        ``gem install oso-oso`` or ``bundle add oso-oso`` (if using Bundler).
+.. code-block:: console
 
-Make authorization decisions
-----------------------------
+  $ gem install oso-oso
+  Fetching oso-oso-0.2.0.gem
+  Successfully installed oso-oso-0.2.0
+  1 gem installed
 
-.. container:: left-col
+Now that we've installed the gem, we can import it into our project and
+construct a new ``Oso`` instance that will serve as our Grand Arbiter of
+Authorization:
 
-    The oso library is used to make authorization decisions.  Each decision is
-    made using an **actor**, **resource** and **action**.
+.. literalinclude:: /examples/getting-started/server-02.rb
+  :caption: server.rb
+  :language: ruby
+  :lines: 3-8
 
-.. container:: right-col content-tabs
+We're now at a point where we can start asking our global ``Oso`` instance to
+make authorization decisions. Let's give it a whirl!
 
-    .. tab-container:: python
-        :title: Python
+Decisions, decisions...
+=======================
 
-        The primary entrypoint of ``oso`` is the :py:class:`oso.Oso` class.  This class
-        should be initialized in application setup, and typically will be shared
-        throughout:
+The ``Oso`` instance exposes an ``allow()`` predicate method that takes three
+keyword arguments, **actor**, **action**, and **resource**:
 
-        .. testcode::
+.. literalinclude:: /examples/getting-started/allow-01.rb
+  :language: ruby
+  :lines: 6
 
-          from oso import Oso
+The above method call returns ``true`` if **actor** may perform **action** on
+**resource** and ``false`` otherwise.
 
-          def setup_oso():
-              oso = Oso()
-              return oso
+.. note:: For more on actors, actions, and resources, check out
+  :doc:`/auth-fundamentals`.
 
-        .. testoutput::
-           :hide:
+oso's authorization system is deny-by-default. Since we haven't yet written any
+policy code, Alice is not allowed to approve expenses. To see that in action,
+start an IRB session and follow along:
 
-        The :py:meth:`oso.Oso.allow` method can be used to make authorization decisions.
-        With oso, an authorization decision takes an **actor**, **resource** and **action**.
+.. code-block:: irb
 
-        Add :py:meth:`oso.Oso.allow` calls anywhere in your application where an authorization needs to
-        be made. For example::
+  irb(main):001:0> require 'oso'
+  => true
+  irb(main):002:0> OSO ||= Oso.new
+  => #<Oso::Oso:0x000055a708eb8f70 ...>
+  irb(main):003:0> OSO.allow(actor: 'alice', action: 'approve', resource: 'expense')
+  => false
 
-           from myapp.oso import get_oso
-           from myapp.http import response
+We can add a rule explicitly allowing Alice to approve expenses...
 
-           def handle_read_request(request, ...):
-               oso = get_oso()
-               allowed = oso.allow(
-                   actor=request.username,
-                   action="read",
-                   resource="budget")
+.. code-block:: irb
 
-               if not allowed:
-                   return response.not_authorized()
-               ...
+  irb(main):004:0> OSO.load_str <<~RULE
+  irb(main):005:0" allow("alice", "approve", "expense");
+  irb(main):006:0" RULE
+  => nil
 
-        ``handle_read_request`` represents the route handler in your web framework of
-        choice.  Here, we are asking **oso** whether a ``read`` action for a resource
-        called ``budget`` is allowed.
+...and now Alice has the power...
 
-    .. tab-container:: ruby
-        :title: Ruby
+.. code-block:: irb
 
-        The primary entrypoint of ``oso`` is the ``Oso`` class.  This class
-        should be initialized in application setup, and typically will be shared
-        throughout:
+  irb(main):007:0> OSO.allow(actor: 'alice', action: 'approve', resource: 'expense')
+  => true
 
-        .. code-block:: ruby
+...and everyone else is still denied:
 
-          require "oso"
+.. code-block:: irb
 
-          OSO ||= Oso.new
+  irb(main):008:0> OSO.allow(actor: 'bhavik', action: 'approve', resource: 'expense')
+  => false
 
-        The ``Oso#allow`` method can be used to make authorization decisions.
-        With oso, an authorization decision takes an **actor**, **resource** and **action**.
+.. note:: For a deeper introduction to writing authorization rules with oso,
+  see :doc:`/auth-fundamentals`.
 
-        Add ``Oso#allow`` calls anywhere in your application where an authorization needs to
-        be made. For example:
+Authorizing HTTP requests
+=========================
 
-        .. code-block:: ruby
+oso produces authorization decisions but makes no assumptions about how those
+decisions are enforced. To enforce the authorization decisions returned by
+``Oso#allow``, let's create a helper method that we can use in our HTTP handler
+to determine whether a request is authorized:
 
-           def authorize_request(request)
-               allowed = OSO.allow(
-                   actor: request.username,
-                   action: "read",
-                   resource: "budget")
+.. literalinclude:: /examples/getting-started/server-03.rb
+  :caption: server.rb
+  :language: ruby
+  :lines: 3-
+  :emphasize-lines: 6-8, 12
 
-               if !allowed
-                   response.not_authorized()
-               end
+Our new ``authorize?`` method passes data from the incoming request to ``Oso#allow``:
 
-               # Handle request
-               ...
-            end
+* The **actor** is pulled from the ``user`` HTTP header.
+* The **action** is the HTTP method.
+* The **resource** is the request path.
 
-        ``authorize_request`` represents the route handler in your web framework of
-        choice.  Here, we are asking **oso** whether a ``read`` action for a resource
-        called ``budget`` is allowed.
+Since we haven't yet added any rules to our server's ``Oso`` instance, all
+requests will currently be denied. We can test that out by restarting our
+server and making a new request. If we receive an ``Unauthorized!`` response,
+everything's working:
 
-Write policies
---------------
+.. code-block:: console
 
-.. todo link below
+  $ curl localhost:5050
+  Unauthorized!
 
-.. container:: left-col
+As a final step, let's write a couple authorization rules over HTTP requests:
 
-    We have not specified a policy, so this request will never be allowed.  **oso**
-    allows us to write requests using the **Polar language**.  Let's add a basic
-    Polar file to our application.
+.. literalinclude:: /examples/getting-started/server-04.rb
+  :caption: server.rb
+  :language: ruby
+  :lines: 8-17
 
-    Create a file called ``policy.polar``::
+And let's test out our new rules:
 
-      allow("alice", "read", "budget");
+.. code-block:: console
 
-    This simple policy contains a single **allow rule**.  It states that the actor
-    ``"alice"`` can perform the action ``"read"`` on ``"budget"``.  Allow rules
-    take three parameters, the actor, action and resource.
+  $ curl -H "user: alice@example.com" localhost:5050/anything
+  Authorized!
+  $ curl -H "user: bhavik@example.com" -d '' localhost:5050/admin
+  Authorized!
 
-.. container:: right-col content-tabs
+We encourage you to experiment with adding your own rules to the policy!
 
-    .. tab-container:: python
-        :title: Python
+Summary
+=======
 
-        Load this file in our setup, using :py:meth:`oso.Oso.load_file`:
+We just blitzed through a ton of stuff:
 
-        .. code-block:: python
-           :emphasize-lines: 5
+* Installing oso.
+* Setting up our app to enforce the policy decisions made by oso.
+* Writing new authorization rules.
 
-           from oso import Oso
-
-           def setup_oso():
-               oso = Oso()
-               oso.load_file("policy.polar")
-               return oso
-
-    .. tab-container:: ruby
-        :title: Ruby
-
-        Load this file in our setup, using ``Oso#load_file``:
-
-        .. code-block:: ruby
-           :emphasize-lines: 4
-
-           require "oso"
-
-           OSO ||= Oso.new
-           OSO.load_file("policy.polar")
-        .. todo
-
-
-.. container:: left-col
-
-    Now, if we make a request to this route with user ``"alice"`` our request will
-    be permitted.
-
-Use actor properties to make authorization decisions
-----------------------------------------------------
-
-.. container:: left-col
-
-    Of course, most authorization rules will be more complex than checking username
-    alone.
-
-    To support this, we can pass our application's user object into Polar.
-
-Suppose our app has a user, defined as:
-
-.. container:: right-col content-tabs
-
-    .. tab-container:: python
-        :title: python
-
-        .. testcode::
-
-          import oso
-
-          @oso.polar_class
-          class user:
-              def __init__(self, username: str, is_superuser: bool):
-                  self.username = username
-                  self.is_superuser = is_superuser
-
-        .. testoutput::
-           :hide:
-
-        the :py:func:`oso.polar_class` function allows polar to access the
-        ``username`` and ``is_superuser`` fields on our application's ``user`` object.
-
-        instead of passing the username to ``allow`` as a string, we can pass now our ``user`` object
-        directly:
-
-        .. code-block:: python
-           :emphasize-lines: 7
-
-           from myapp.oso import get_oso
-           from myapp.http import response
-
-           def handle_read_request(request, ...):
-               oso = get_oso()
-               allowed = oso.allow(
-                   actor=request.user,
-                   action="read",
-                   resource="budget")
-
-               if not allowed:
-                   return response.not_authorized()
-               ...
-
-    .. tab-container:: ruby
-        :title: Ruby
-
-        .. code-block:: ruby
-
-          require "oso"
-
-          class User
-              attr_accessor :username, :is_superuser
-              def initialize(self, username:, is_superuser:)
-                  @username = username
-                  @is_superuser = is_superuser
-              end
-          end
-
-          OSO.register_class(User)
-
-        The ``Oso#register_class`` method allows polar to access the ``username`` and
-        ``is_superuser`` fields on our application's ``User`` object.
-
-        Instead of passing the username to ``allow`` as a string, we can pass now our ``User`` object
-        directly:
-
-        .. code-block:: ruby
-           :emphasize-lines: 7
-
-           def authorize_request(request)
-               allowed = OSO.allow(
-                   actor: request.user,
-                   action: "read",
-                   resource: "budget")
-
-               if !allowed
-                   response.not_authorized()
-               end
-               ...
-           end
-
-.. container:: left-col
-
-    Now, our allow rule can check for the superuser attribute::
-
-
-      allow(actor, "read", "budget") if
-          actor.is_superuser = true;
-
-    In this rule, we have used a body, indicated by the ``if`` operator. ``user``
-    defines a variable, which is bound to the value of ``actor``. In a rule with a body,
-    the portion of the rule before the ``if`` operator (called the **head**) must first match.
-    Then, the ``body`` portition is evaluated.
-
-    This rule will allow any **actor** that is a superuser to ``read`` the ``budget`` resource.
-
-
-.. container:: left-col
-
-    We aren't just limited to accessing attributes from Polar.  Suppose our ``User``
-    object has been extended to load a user's role from our database.
-
-.. container:: right-col content-tabs
-
-    We can add a ``role`` method to access the user's role.
-
-    .. tab-container:: python
-        :title: Python
-
-        .. code-block:: python
-          :emphasize-lines: 9,10
-
-          import oso
-
-          @oso.polar_class
-          class User:
-              def __init__(self, username: str, is_superuser: bool):
-                  self.username = username
-                  self.is_superuser = is_superuser
-
-              def role(self):
-                  return db.users.get_role(self)
-
-    .. tab-container:: ruby
-        :title: Ruby
-
-        .. code-block:: ruby
-
-          require "oso"
-
-          class User
-              attr_accessor :username, :is_superuser
-              def initialize(self, username:, is_superuser:)
-                  @username = username
-                  @is_superuser = is_superuser
-              end
-
-              def role(self)
-                  return users.get_role(self)
-              end
-          end
-
-          OSO.register_class(User)
-
-.. container:: left-col
-
-    We can add a new authorization rule using this method::
-
-      allow(actor, "write", "budget") if
-          actor.role() = "admin";
-
-    This rule states that actors whose role method returns ``admin`` can write to ``budget``.
-
-What's next
-===========
-
-.. container:: left-col
-
-    In this guide, we've covered how to install oso, and write basic Polar rules over our
-    application's domain models.
-
-    To continue, either:
-
-    1. Explore :doc:`RBAC </auth-models/rbac>` or :doc:`ABAC </auth-models/abac>` authorization models.
-    2. Learn more about :doc:`authorization fundementals </auth-fundamentals>` with oso.
-    3. Dive deeper into the :doc:`Polar language </language/index>`.
+If you're interested in what sets oso apart from existing authorization
+solutions, check out :doc:`/why-oso`. If you want to learn more about
+authorization in oso, including common patterns like :doc:`/auth-models/rbac`
+and :doc:`/auth-models/abac`, we recommend continuing on to the
+:doc:`/auth-fundamentals` guide. For more details on the logic programming
+language we used to write our authorization policies, head on over to the
+:doc:`/language/index` guide.
