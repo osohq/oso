@@ -11,8 +11,7 @@ use super::lexer::{loc_to_pos, make_context};
 use super::types::*;
 use super::{PolarResult, ToPolarString};
 
-pub const MAX_CHOICES: usize = 10_000;
-pub const MAX_GOALS: usize = 10_000;
+pub const MAX_STACK_SIZE: usize = 10_000;
 pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30);
 
 #[derive(Clone, Debug)]
@@ -141,7 +140,6 @@ impl std::ops::DerefMut for GoalStack {
 
 pub type Queries = TermList;
 
-#[derive(Default)]
 pub struct PolarVirtualMachine {
     /// Stacks.
     pub goals: GoalStack,
@@ -153,6 +151,10 @@ pub struct PolarVirtualMachine {
     pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
     query_start_time: Option<std::time::Instant>,
+    query_timeout: std::time::Duration,
+
+    /// Maximum size of goal stack
+    stack_limit: usize,
 
     /// Binding stack constant below here.
     csp: usize,
@@ -170,6 +172,12 @@ pub struct PolarVirtualMachine {
     log: bool,
 }
 
+impl Default for PolarVirtualMachine {
+    fn default() -> Self {
+        Self::new(Default::default(), Default::default())
+    }
+}
+
 // Methods which aren't goals/instructions.
 impl PolarVirtualMachine {
     /// Make a new virtual machine with an initial list of goals.
@@ -184,6 +192,8 @@ impl PolarVirtualMachine {
             goals: GoalStack::new_reversed(goals),
             bindings: vec![],
             query_start_time: None,
+            query_timeout: QUERY_TIMEOUT_S,
+            stack_limit: MAX_STACK_SIZE,
             csp: 0,
             choices: vec![],
             queries: vec![],
@@ -196,6 +206,16 @@ impl PolarVirtualMachine {
         };
         vm.bind_constants(constants);
         vm
+    }
+
+    #[cfg(test)]
+    fn set_stack_limit(&mut self, limit: usize) {
+        self.stack_limit = limit;
+    }
+
+    #[cfg(test)]
+    fn set_query_timeout(&mut self, timeout_s: u64) {
+        self.query_timeout = std::time::Duration::from_secs(timeout_s);
     }
 
     pub fn new_id(&self) -> u64 {
@@ -336,9 +356,9 @@ impl PolarVirtualMachine {
 
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
-        if self.goals.len() >= MAX_GOALS {
+        if self.goals.len() >= self.stack_limit {
             return Err(error::RuntimeError::StackOverflow {
-                msg: format!("Goal stack overflow! MAX_GOALS = {}", MAX_GOALS),
+                msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
             }
             .into());
         }
@@ -372,7 +392,7 @@ impl PolarVirtualMachine {
             .rev()
             .map(GoalStack::new_reversed)
             .collect();
-        assert!(self.choices.len() < MAX_CHOICES, "too many choices");
+        assert!(self.choices.len() < self.stack_limit, "too many choices");
         self.choices.push(Choice {
             alternatives,
             bsp: self.bsp(),
@@ -588,12 +608,12 @@ impl PolarVirtualMachine {
             .query_start_time
             .expect("Query start time not recorded");
 
-        if now - start_time > QUERY_TIMEOUT_S {
+        if now - start_time > self.query_timeout {
             return Err(error::RuntimeError::QueryTimeout {
                 msg: format!(
                     "Query running for {}. Exceeded query timeout of {} seconds",
                     (now - start_time).as_secs(),
-                    QUERY_TIMEOUT_S.as_secs()
+                    self.query_timeout.as_secs()
                 ),
             }
             .into());
@@ -2494,5 +2514,34 @@ mod tests {
             vm.deref(&term!(Value::Variable(answer))),
             term!(value!(true))
         );
+    }
+
+    #[test]
+    fn test_timeout() {
+        let mut vm = PolarVirtualMachine::default();
+        vm.set_query_timeout(1);
+        // Turn this off so we don't hit it.
+        vm.set_stack_limit(std::usize::MAX);
+
+        loop {
+            vm.push_goal(Goal::Noop).unwrap();
+            vm.push_goal(Goal::UnifyExternal {
+                left_instance_id: 1,
+                right_instance_id: 1,
+            }).unwrap();
+            let result = vm.run();
+            match result {
+                Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
+                Err(err) => {
+                    assert!(matches!(err, error::PolarError {
+                        kind: error::ErrorKind::Runtime(error::RuntimeError::QueryTimeout { .. }),
+                        ..
+                    }));
+
+                    // End test.
+                    break;
+                }
+            }
+        }
     }
 }
