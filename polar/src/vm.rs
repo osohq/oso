@@ -1132,7 +1132,10 @@ impl PolarVirtualMachine {
 
             Ok(())
         } else {
-            Err(self.type_error(&term, format!("can't query for: {}", term.value().to_polar())))
+            Err(self.type_error(
+                &term,
+                format!("can't query for: {}", term.value().to_polar()),
+            ))
         }
     }
 

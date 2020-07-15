@@ -1180,7 +1180,10 @@ fn test_boolean_expression() {
     // Fails because `f` is not true.
     assert!(qnull(&mut polar, "a = {t: true, f: false} and a.f and a.t"));
     // succeeds because `t` is true.
-    assert!(qeval(&mut polar, "a = {t: true, f: false} and (a.f or a.t)"));
+    assert!(qeval(
+        &mut polar,
+        "a = {t: true, f: false} and (a.f or a.t)"
+    ));
 
     assert!(qeval(&mut polar, "true"));
     assert!(qnull(&mut polar, "false"));
