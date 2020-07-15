@@ -13,7 +13,7 @@ use super::{PolarResult, ToPolarString};
 
 pub const MAX_CHOICES: usize = 10_000;
 pub const MAX_GOALS: usize = 10_000;
-pub const MAX_EXECUTED_GOALS: usize = 10_000;
+pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30);
 
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
@@ -152,11 +152,10 @@ pub struct PolarVirtualMachine {
     pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
+    query_start_time: Option<std::time::Instant>,
+
     /// Binding stack constant below here.
     csp: usize,
-
-    /// Executed goal counter.
-    goal_counter: usize,
 
     /// Interactive debugger.
     pub debugger: Debugger,
@@ -184,9 +183,9 @@ impl PolarVirtualMachine {
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             bindings: vec![],
+            query_start_time: None,
             csp: 0,
             choices: vec![],
-            goal_counter: 0,
             queries: vec![],
             trace_stack: vec![],
             trace: vec![],
@@ -218,7 +217,9 @@ impl PolarVirtualMachine {
         if self.log {
             eprintln!("{}", goal);
         }
-        self.goal_counter += 1;
+
+        self.check_timeout()?;
+
         match goal.as_ref() {
             Goal::Backtrack => self.backtrack()?,
             Goal::Cut { choice_index } => self.cut(*choice_index),
@@ -295,6 +296,10 @@ impl PolarVirtualMachine {
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
     pub fn run(&mut self) -> PolarResult<QueryEvent> {
+        if self.query_start_time.is_none() {
+            self.query_start_time = Some(std::time::Instant::now());
+        }
+
         if self.goals.is_empty() {
             if self.choices.is_empty() {
                 return Ok(QueryEvent::Done);
@@ -337,15 +342,7 @@ impl PolarVirtualMachine {
             }
             .into());
         }
-        if self.goal_counter >= MAX_EXECUTED_GOALS {
-            return Err(error::RuntimeError::StackOverflow {
-                msg: format!(
-                    "Goal count exceeded! MAX_EXECUTED_GOALS = {}",
-                    MAX_EXECUTED_GOALS
-                ),
-            }
-            .into());
-        }
+
         self.goals.push(Rc::new(goal));
         Ok(())
     }
@@ -584,6 +581,26 @@ impl PolarVirtualMachine {
         }
         st
     }
+
+    fn check_timeout(&self) -> PolarResult<()> {
+        let now = std::time::Instant::now();
+        let start_time = self
+            .query_start_time
+            .expect("Query start time not recorded");
+
+        if now - start_time > QUERY_TIMEOUT_S {
+            return Err(error::RuntimeError::QueryTimeout {
+                msg: format!(
+                    "Query running for {}. Exceeded query timeout of {} seconds",
+                    (now - start_time).as_secs(),
+                    QUERY_TIMEOUT_S.as_secs()
+                ),
+            }
+            .into());
+        }
+
+        Ok(())
+    }
 }
 
 /// Implementations of instructions.
@@ -638,7 +655,10 @@ impl PolarVirtualMachine {
     }
 
     /// Interact with the debugger.
-    fn debug(&self, message: &str) -> QueryEvent {
+    fn debug(&mut self, message: &str) -> QueryEvent {
+        // Query start time is reset when a debug event occurs.
+        self.query_start_time.take();
+
         QueryEvent::Debug {
             message: message.to_string(),
         }
