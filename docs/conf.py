@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.githubpages",
     "sphinxcontrib.contentui",
+    "sphinx_tabs.tabs",
 ]
 
 html_static_path = ["_static"]
