@@ -6,7 +6,7 @@
 
   <groupId>com.osohq.oso</groupId>
   <artifactId>oso</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>0.1.0rc6</version>
 
   <name>oso</name>
   <description>A simple oso.</description>
@@ -41,6 +41,24 @@
   </dependencies>
 
   <build>
+  <plugins>
+    <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.4</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
         <plugin>
