@@ -56,6 +56,10 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: "10"
+      - name: Set version env
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-env name=oso_version::${github_ref/refs\/tags\/v/}"
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
@@ -79,7 +83,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: jar
-          path: languages/java/oso/target/oso-${{ steps.version.outputs.oso_version }}.jar
+          path: languages/java/oso/target/oso-$oso_version.jar
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
