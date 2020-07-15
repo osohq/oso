@@ -56,6 +56,11 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: "10"
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
