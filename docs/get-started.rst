@@ -281,7 +281,7 @@ Suppose our app has a user, defined as:
 
 
       allow(actor, "read", "budget") if
-          actor.is_superuser = true;
+          actor.is_superuser;
 
     In this rule, we have used a body, indicated by the ``if`` operator. ``user``
     defines a variable, which is bound to the value of ``actor``. In a rule with a body,
