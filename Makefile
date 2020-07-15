@@ -1,6 +1,6 @@
 .PHONY: test rust-test rust-build python-build python-test
 
-test: rust-test python-test ruby-test
+test: rust-test python-test ruby-test java-test
 
 rust-test:
 	cargo test
@@ -17,6 +17,9 @@ python-test: python-build
 
 ruby-test:
 	$(MAKE) -C languages/ruby test
+
+java-test:
+	$(MAKE) -C languages/java test
 
 docs-test: python-build
 	$(MAKE) -C docs test
