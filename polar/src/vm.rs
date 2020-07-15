@@ -141,7 +141,6 @@ impl std::ops::DerefMut for GoalStack {
 
 pub type Queries = TermList;
 
-#[derive(Default)]
 pub struct PolarVirtualMachine {
     /// Stacks.
     pub goals: GoalStack,
@@ -171,7 +170,17 @@ pub struct PolarVirtualMachine {
     log: bool,
 
     /// Output stream.
-    output: Option<Arc<RwLock<Box<dyn std::io::Write>>>>,
+    output: Arc<RwLock<Box<dyn std::io::Write>>>,
+}
+
+impl Default for PolarVirtualMachine {
+    fn default() -> Self {
+        PolarVirtualMachine::new(
+            Arc::new(RwLock::new(KnowledgeBase::default())),
+            vec![],
+            None,
+        )
+    }
 }
 
 // Methods which aren't goals/instructions.
@@ -201,7 +210,11 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
-            output,
+            output: if let Some(output) = output {
+                output
+            } else {
+                Arc::new(RwLock::new(Box::new(std::io::stderr())))
+            },
         };
         vm.bind_constants(constants);
         vm
@@ -552,10 +565,8 @@ impl PolarVirtualMachine {
 
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
-        if let Some(ref writer) = self.output {
-            let mut writer = writer.write().unwrap();
-            writeln!(&mut writer, "{}", message).unwrap();
-        }
+        let mut writer = self.output.write().unwrap();
+        writeln!(&mut writer, "{}", message).unwrap();
     }
 
     /// Get the query stack as a string for printing in error messages.
