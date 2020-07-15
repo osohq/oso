@@ -2528,7 +2528,8 @@ mod tests {
             vm.push_goal(Goal::UnifyExternal {
                 left_instance_id: 1,
                 right_instance_id: 1,
-            }).unwrap();
+            })
+            .unwrap();
             let result = vm.run();
             match result {
                 Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
