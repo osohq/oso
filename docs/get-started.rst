@@ -143,13 +143,13 @@ Our new ``authorize?`` method passes data from the incoming request to ``Oso#all
 
 Since we haven't yet added any rules to our server's ``Oso`` instance, all
 requests will currently be denied. We can test that out by restarting our
-server and making a new request. If we receive an ``Unauthorized!`` response,
+server and making a new request. If we receive a ``Not Authorized!`` response,
 everything's working:
 
 .. code-block:: console
 
   $ curl localhost:5050
-  Unauthorized!
+  Not Authorized!
 
 As a final step, let's write a couple authorization rules over HTTP requests:
 
