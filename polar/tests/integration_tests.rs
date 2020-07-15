@@ -1171,7 +1171,7 @@ fn test_emoji_policy() {
 #[test]
 /// Check that boolean expressions evaluate without requiring "= true".
 fn test_boolean_expression() {
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
 
     // Succeeds because t is true.
     assert!(qeval(&mut polar, "a = {t: true, f: false} and a.t"));
@@ -1179,7 +1179,7 @@ fn test_boolean_expression() {
     assert!(qnull(&mut polar, "a = {t: true, f: false} and a.f"));
     // Fails because `f` is not true.
     assert!(qnull(&mut polar, "a = {t: true, f: false} and a.f and a.t"));
-    // succeeds because `t` is true.
+    // Succeeds because `t` is true.
     assert!(qeval(
         &mut polar,
         "a = {t: true, f: false} and (a.f or a.t)"
