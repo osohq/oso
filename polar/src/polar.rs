@@ -163,20 +163,19 @@ impl Iterator for Query {
     }
 }
 
-#[derive(Default)]
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
-    pub output: Option<Arc<RwLock<Box<dyn Write>>>>,
+    pub output: Arc<RwLock<Box<dyn Write>>>,
 }
 
 impl Polar {
-    pub fn new(output: Option<Arc<RwLock<Box<dyn Write>>>>) -> Self {
+    pub fn new(output: Option<Box<dyn Write>>) -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
-            output: match output {
-                None => Some(Arc::new(RwLock::new(Box::new(stderr())))),
-                Some(_) => output,
-            },
+            output: Arc::new(RwLock::new(match output {
+                None => Box::new(stderr()),
+                Some(output) => output,
+            })),
         }
     }
 
@@ -247,13 +246,10 @@ impl Polar {
         singletons.sort_by_key(|(_sym, term)| term.as_ref().map_or(0, |term| term.offset()));
         for (sym, singleton) in singletons {
             if let Some(term) = singleton {
-                if let Some(ref writer) = self.output {
-                    let mut writer = writer.write().unwrap();
-                    writeln!(&mut writer, "Singleton variable {}", sym).unwrap();
-                    if let Some(ref source) = kb.sources.get_source(&term) {
-                        writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0))
-                            .unwrap();
-                    }
+                let mut writer = self.output.write().unwrap();
+                writeln!(&mut writer, "Singleton variable {}", sym).unwrap();
+                if let Some(ref source) = kb.sources.get_source(&term) {
+                    writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0)).unwrap();
                 }
             }
         }
@@ -284,8 +280,7 @@ impl Polar {
             term
         };
         let query = Goal::Query { term };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), vec![query], self.output.as_ref().cloned());
+        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query], Some(self.output.clone()));
         Ok(Query { done: false, vm })
     }
 
@@ -297,8 +292,7 @@ impl Polar {
             rewrite_term(&mut term, &mut kb);
         }
         let query = Goal::Query { term };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), vec![query], self.output.as_ref().cloned());
+        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query], Some(self.output.clone()));
         Query { done: false, vm }
     }
 
