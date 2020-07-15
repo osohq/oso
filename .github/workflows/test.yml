@@ -28,7 +28,7 @@ jobs:
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "9"
+          java-version: "10"
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
