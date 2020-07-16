@@ -56,19 +56,22 @@ class AuditEntry:
         self.actor = load(row[2])
         self.action = load(row[3])
         self.resource = load(row[4])
-        self.query = row[5]
-        self.success = True if row[6] == 1 else False
-        self.trace = json.loads(row[7])
+        self.success = row[5] == 1
+        trace = row[6]
+        self.trace = json.loads(trace) if trace else None
 
 
 class AuditLog:
     def __init__(self):
-        self.db_path = os.getenv("DB_PATH")
+        self.db_path = os.getenv("DB_PATH", "audit.db")
+        print("db path")
+        print(self.db_path)
         if not self.db_path:
             raise ValueError(
                 "Please initialize the AuditLog with the path to a SQLite3 DB."
             )
         with self._cursor() as cur:
+            print("creating table")
             cur.execute(
                 "CREATE TABLE IF NOT EXISTS events ( "
                 "id INTEGER NOT NULL PRIMARY KEY, "
@@ -76,7 +79,6 @@ class AuditLog:
                 "actor BLOB NOT NULL, "
                 "action BLOB NOT NULL, "
                 "resource BLOB NOT NULL, "
-                "query BLOB NOT NULL, "
                 "success BOOLEAN NOT NULL CHECK (success IN (0,1)), "
                 "trace BLOB "
                 ");"
@@ -92,8 +94,8 @@ class AuditLog:
     def write(self, event: tuple):
         with self._cursor() as cur:
             cur.execute(
-                "INSERT INTO events (timestamp, actor, action, resource, query, success, trace) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO events (timestamp, actor, action, resource, success, trace) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 event,
             )
 
@@ -125,15 +127,11 @@ def log(actor, action, resource, result):
             actor = pickle.dumps(actor)
             action = pickle.dumps(action)
             resource = pickle.dumps(resource)
-            query = str(Predicate("allow", [actor, action, resource]))
             success = 1 if result.success else 0
             trace = None
             if success:
                 trace = json.dumps(result.traces[0])
-
-            AuditLog().write(
-                (timestamp, actor, action, resource, query, success, trace)
-            )
+            AuditLog().write((timestamp, actor, action, resource, success, trace))
         except ValueError:
             logger.debug("no audit DB configured; cannot log event")
         except Exception as e:

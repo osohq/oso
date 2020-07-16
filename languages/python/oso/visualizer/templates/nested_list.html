@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if nested_list %}
+<div class="row">
+  <ul>
+    {% for key, values in nested_list.items() %}
+    <li>
+      {{ key }}
+
+      <ul>
+        {% for (slug, thing) in values %}
+        <li>
+          <a href={{ url_for(endpoint, filename=[slug]) }}>
+            {{ thing }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if graphs %}
+<div class="row">
+  {% for graph in graphs %}
+  <div class="col text-center p-4">
+    {{ graph }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

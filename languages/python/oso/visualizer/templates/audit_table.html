@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<br>
+<table style="width:100%" class="table">
+  <tr>
+    <th>Timestamp</th>
+    <th>Actor</th>
+    <th>Action</th>
+    <th>Resource</th>
+    <th>Result</th>
+  </tr>
+  {% for (uri, timestamp, actor, action, resource, result) in events %}
+  <tr>
+    <td>{{ timestamp }}</td>
+    <td>{{ actor }}</td>
+    <td>{{ action }}</td>
+    <td>{{ resource }}</td>
+    <td><a href={{ url_for(endpoint, id=uri) }} class="list-group-item list-group-item-action">{{ result }}</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

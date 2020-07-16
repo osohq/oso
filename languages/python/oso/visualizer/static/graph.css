@@ -1,0 +1,20 @@
+a.oso-visualizer-linkable text {
+  fill: hsl(204, 100%, 49%);
+}
+
+a.oso-visualizer-linkable:hover text {
+  fill: hsl(204, 100%, 29%);
+}
+
+html,
+body {
+  overflow: hidden;
+}
+
+svg {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+}
