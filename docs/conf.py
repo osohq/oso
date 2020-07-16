@@ -44,6 +44,10 @@ extensions = [
 ]
 
 spelling_word_list_filename = "spelling_allowed_words.txt"
+spelling_filters = [
+    # Fix spell check of contractions
+    "sphinxcontrib.spelling.filters.ContractionFilter"
+]
 
 html_static_path = ["_static"]
 
