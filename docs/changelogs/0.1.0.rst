@@ -58,7 +58,7 @@ API changes
 Python
 ^^^^^^
 
-Disambiguated load functions. :py:func:`oso.Oso.load` is no longer valid:
+Disambiguated load functions. ``oso.Oso.load`` is no longer valid:
 
 * Load files with :py:func:`oso.Oso.load_file`.
 * Load strings with :py:func:`oso.Oso.load_str`.

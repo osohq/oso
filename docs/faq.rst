@@ -17,7 +17,7 @@ Frequently Asked Questions
     In most cases, the lookup itself will be the most costly part.
 
 The "N+1 Problem"
-----------------
+-----------------
 
 A core part of understanding how oso will perform under regular
 workloads is recognising that oso applies a search algorithm to
@@ -25,7 +25,7 @@ evaluate the policy.
 
 Since it is common in policies to iterate over members or attributes
 in order to look for matching information, it can be common to encounter
-variants of the 
+variants of the
 `N+1 problem <https://medium.com/@bretdoucette/n-1-queries-and-how-to-avoid-them-a12f02345be5>`_.
 
 For example, given the following Polar policy:

@@ -1,12 +1,14 @@
-
+===================
 Introduction to oso
 ===================
-**oso** is an authorization system designed to make it easy for developers to express
-complex authorization logic naturally and concisely throughout an application.
 
+**oso** is an authorization system designed to make it easy for developers to
+express complex authorization logic naturally and concisely throughout an
+application.
 
 Why oso
 -------
+
 1. oso makes it easy to build, debug, and maintain your authorization code
    using a declarative policy language, called Polar.
    Polar allows you to express a wide variety of authorization patterns – 
@@ -19,9 +21,10 @@ Why oso
    applications and services written in different languages.
 
 Example
-------
+-------
 
-Let's look at a quick example of a Polar policy for an expense management application:
+Let's look at a quick example of a Polar policy for an expense management
+application:
 
 .. code-block:: polar
 
@@ -47,10 +50,13 @@ This short policy encodes:
    budget can read expenses associated with that budget.
 3. Role-based access. Users that are accountants can approve budgets.
 
-Many authorization systems force developers to choose one of these models – like just roles or hierarchies or ownership semantics – but Polar's flexibility shines here, allowing the developer to use any or all of them.
+Many authorization systems force developers to choose one of these models – like
+just roles or hierarchies or ownership semantics – but Polar's flexibility
+shines here, allowing the developer to use any or all of them.
 
 What it's like to use oso
 -------------------------
+
 - Express your policy as code using the declarative :doc:`Polar language </language/index>`.
 - Maintain authorization across a variety of languages and environments with a cross-language
   :doc:`authorization library </application-library/index>`.
@@ -60,4 +66,4 @@ What it's like to use oso
 - :ref:`Write tests <testing>` over your policy to ensure correct behavior.
 
 .. we don't support this yet:
-.. - Integrations with common web frameworks and ORMs.
+.. Integrations with common web frameworks and ORMs.

@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.githubpages",
     "sphinxcontrib.contentui",
+    "sphinxcontrib.spelling",
 ]
 
 html_static_path = ["_static"]
@@ -50,7 +51,16 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build",
+                    "Thumbs.db",
+                    ".DS_Store",
+                    "changelogs/vNEXT.rst",
+                    "changelogs/vTEMPLATE.rst",
+                    "**.pytest_cache**",
+                    "integrations",
+                    "language/polar-classes.rst",
+                    "polar.rst",
+                    "ruby/README.md"]
 
 # Don't copy the source or show a link
 html_copy_source = False

@@ -62,7 +62,8 @@ into the authorization engine using the oso :doc:`/application-library/index`.
 Once loaded, policies can be used to evaulate authorization queries.
 
 Policies are made up of :ref:`rules <polar-rules>`. Each rule defines
-a :ref:`predicate <predicates>`—a statement that is either true or false.
+a statement that is either true or false.
+
 In oso, one such rule is distinguished, and used to drive the authorization
 decision: the ``allow`` rule.
 
