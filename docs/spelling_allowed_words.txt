@@ -30,3 +30,4 @@ precompiled
 arities
 amongst
 superclass
+django
