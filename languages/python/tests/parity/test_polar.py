@@ -373,7 +373,7 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
     polar.register_class(Booler)
 
     result = qvar("new Booler{}.whats_up() = var", "var", one=True)
-    assert qeval("new Booler{}.whats_up() = true")
+    assert qeval("new Booler{}.whats_up()")
 
 
 def test_numbers_from_external_call(polar, qeval, qvar, query):

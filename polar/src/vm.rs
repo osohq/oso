@@ -914,8 +914,9 @@ impl PolarVirtualMachine {
             Value::Expression(Operation { operator, args }) => {
                 return self.query_for_operation(&term, *operator, args.clone());
             }
-            v => {
-                return Err(self.type_error(&term, format!("can't query for: {}", v.to_polar())));
+            _ => {
+                let term = self.deref(term);
+                self.query_for_value(&term)?;
             }
         }
         Ok(QueryEvent::None)
@@ -1121,7 +1122,25 @@ impl PolarVirtualMachine {
         Ok(QueryEvent::None)
     }
 
-    /// Push goals for lookups and method calls.
+    /// Query for a value.  Succeeds if the value is 'truthy' or backtracks.
+    /// Currently only defined for boolean values.
+    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {
+        if let Value::Boolean(value) = term.value() {
+            if !value {
+                // Backtrack if the boolean is false.
+                self.push_goal(Goal::Backtrack)?;
+            }
+
+            Ok(())
+        } else {
+            Err(self.type_error(
+                &term,
+                format!("can't query for: {}", term.value().to_polar()),
+            ))
+        }
+    }
+
+    /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
         assert_eq!(args.len(), 3);
         let object = self.deref(&args[0]);

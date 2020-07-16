@@ -644,6 +644,11 @@ impl KnowledgeBase {
     pub fn constant(&mut self, name: Symbol, value: Term) {
         self.constants.insert(name, value);
     }
+
+    /// Return true if a constant with the given name has been defined.
+    pub fn is_constant(&self, name: &Symbol) -> bool {
+        self.constants.contains_key(name)
+    }
 }
 
 #[allow(clippy::large_enum_variant)]

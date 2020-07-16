@@ -82,7 +82,7 @@ impl Drop for Repl {
 
 pub fn main() -> anyhow::Result<()> {
     let mut repl = Repl::new();
-    let mut polar = Polar::new();
+    let mut polar = Polar::new(None);
 
     let mut args = env::args();
     let _ = args.next(); // skip the binary filename
