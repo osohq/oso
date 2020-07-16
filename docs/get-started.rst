@@ -195,7 +195,7 @@ make authorization decisions. Let's give it a whirl!
     oso's authorization system is deny-by-default. Since we haven't yet written any
     policy code, Alice is not allowed to approve expenses.
 
-    To see that in action, start a jshell session and follow along:
+    To see that in action, start a `jshell <https://docs.oracle.com/javase/9/jshell/introduction-jshell.htm#JSHEL-GUID-630F27C8-1195-4989-9F6B-2C51D46F52C8>`_ session and follow along:
 
     .. code-block:: text
 
