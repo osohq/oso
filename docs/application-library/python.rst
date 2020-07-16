@@ -9,7 +9,7 @@ Oso currently provides an authorization library to integrate oso with Python app
 Installing the oso Python library
 ==================================
 
-Download and install the oso Python wheel and install using ``pip install``.
+Download and install the oso Python wheel and install using ``pip install oso``.
 The ``oso`` module requires Python version > 3.6.
 
 Using the oso library
