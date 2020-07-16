@@ -5,18 +5,18 @@ class Two(Num);
 class Three(Two, One) { unit: One, pair: Two };
 
 # Test instances and subclassing.
-?= One{} isa One{};
-?= !(One{} isa Two{});
-?= !(Two{} isa One{});
-?= !(Two{} isa Three{});
+?= One{} matches One{};
+?= !(One{} matches Two{});
+?= !(Two{} matches One{});
+?= !(Two{} matches Three{});
 ?= three = Three{unit: One{}, pair: Two{}},
-   three isa One{},
-   three isa Two{},
-   three isa Three{};
+   three matches One{},
+   three matches Two{},
+   three matches Three{};
 
 ?= three = Three{ unit: One{}, pair: Two{} },
    x = three.unit,
-   x isa One{};
+   x matches One{};
 
 # Methods.
 one(1);
