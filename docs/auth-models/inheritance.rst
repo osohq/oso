@@ -41,7 +41,7 @@ Basic Policy
     an actor to perform the ``"read"`` action on an ``Order`` if:
 
     1. The actor's ``role`` property is equal to ``"medical_staff"``.
-    2. The :application method ``treated(patient)``
+    2. The application method ``treated(patient)``
        on the actor returns true for the patient of the ``resource``.
 
     Note the head of the rule.  Each argument uses a type specializer to
