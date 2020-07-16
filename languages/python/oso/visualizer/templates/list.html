@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="list-group">
+  {% for (uri, label) in items %}
+  <a href={{ url_for(endpoint, slug=uri) }} class="list-group-item list-group-item-action">
+    {{label|safe}}
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}
