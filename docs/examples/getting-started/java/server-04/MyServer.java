@@ -40,7 +40,7 @@ public class MyServer implements HttpHandler {
     public void handle(HttpExchange exchange) throws IOException {
 
         OutputStream outputStream = exchange.getResponseBody();
-        String htmlResponse = authorized(exchange) ? "Authorized!\n" : "Not authorized!\n";
+        String htmlResponse = authorized(exchange) ? "Authorized!\n" : "Not Authorized!\n";
         exchange.sendResponseHeaders(200, htmlResponse.length());
         outputStream.write(htmlResponse.getBytes());
         outputStream.flush();

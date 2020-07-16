@@ -11,6 +11,6 @@ end
 
 server = WEBrick::HTTPServer.new Port: 5050
 server.mount_proc '/' do |req, res|
-  res.body = authorized?(req) ? 'Authorized!' : 'Unauthorized!'
+  res.body = authorized?(req) ? 'Authorized!' : 'Not Authorized!'
 end
 server.start
