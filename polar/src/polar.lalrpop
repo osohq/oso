@@ -262,7 +262,7 @@ Exp9<T>: Term = {
 
 Matches = {"matches"};
 
-// in isa
+// in matches
 Exp8<T>: Term = {
     <start:@L> <left:Exp8<T>> "in" <right:Exp9<T>> => {
         let args = vec![left, right];
