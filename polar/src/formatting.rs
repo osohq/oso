@@ -13,8 +13,7 @@ pub use display::*;
 
 pub use to_polar::*;
 
-use crate::types::{Node, Source, Trace};
-use crate::types::{Node, Operation, Operator, Parameter, Term, Trace, Value};
+use crate::types::{Node, Operation, Operator, Parameter, Source, Term, Trace, Value};
 use std::fmt::Write;
 
 pub fn draw(trace: &Trace, nest: usize) -> String {
@@ -67,6 +66,8 @@ pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String 
         }
     }
     lines.join("\n")
+}
+
 /// Formats a vector of terms as a string-separated list
 /// When providing an operator, parentheses are applied suitably
 /// (see: to_polar_parens)
@@ -109,8 +110,7 @@ pub mod display {
     use std::fmt;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Rule, Symbol, Term};
-    use crate::types::{Numeric, Operation, Operator, Rule, Term, Value};
+    use crate::types::{Numeric, Operation, Operator, Rule, Symbol, Term, Value};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
