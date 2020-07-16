@@ -118,6 +118,16 @@ We can add a rule explicitly allowing Alice to approve expenses...
   irb(main):008:0> OSO.allow(actor: "bhavik", action: "approve", resource: "expense")
   => false
 
+When we ask oso for a policy decision via ``Oso#allow``, the oso engine
+searches through its knowledge base to determine whether the provided
+**actor**, **action**, and **resource** satisfy any rules.
+
+In the above case, we passed in ``"alice"`` as the **actor**, ``"approve"`` as
+the **action**, and ``"expense"`` as the **resource**, satisfying the
+``allow("alice", "approve", "expense");`` rule. When we pass in ``"bhavik"`` as
+the actor, the rule no longer succeeds because the string ``"bhavik"`` does not
+match the string ``"alice"``.
+
 .. note:: For a deeper introduction to writing authorization rules with oso,
   see :doc:`/auth-fundamentals`.
 
