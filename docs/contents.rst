@@ -12,68 +12,72 @@ Welcome to the home of the oso documentation.
 If this is your first time here, we recommend you head
 over to :doc:`index`.
 
-Introduction to oso
-===================
+Getting Started
+===============
 
-These guides contain a brief introduction to oso and important
-aspects of oso like logic programming. This is a great
+These guides contain a brief introduction to oso. This is a great
 starting point if you are new to **oso**.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Introduction
+   :maxdepth: 1
+   :titlesonly:
+   :caption: Getting started
 
-   index
-
-   get-started
-
-   why-oso
+   Quickstart <get-started>
+   download
 
 
+Understand oso
+==============
 
-User Guides
-===========
-
-These guides contain narrative documentation and examples. 
+These guides contain narrative documentation and examples.
 This is a good place to go to learn more about implementing
 authorization in your application with oso.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: User Guides
+   :maxdepth: 1
+   :titlesonly:
+   :caption: Understand oso
 
+   oso-overview
+   why-oso
    auth-fundamentals
-
    auth-models/index
-
-   application-library/index
-
-   faq
+   language/polar-fundamentals
 
 
-Language & API Reference
-========================
 
-Reference material for more experienced oso users, or those looking to dive deep
-on a particular concept.
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Language & API Reference
-
-   language/index
-   dev-tools/index
-   api/index
-
-Changelog
+Reference
 =========
 
-Release history of the oso project.
+Reference material for concepts, terminology and language APIs.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Reference
+   :titlesonly:
+
+
+   application-library/index
+   api/index
+   frameworks/index
+   language/index
+
+   dev-tools/index
+   performance
+   faq
+
+Project
+=======
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Project
+   :titlesonly:
 
    changelogs/index
+   Github <http://TODO>
+   Issue Tracker <http://TODO>
 
 
 Indices and tables
