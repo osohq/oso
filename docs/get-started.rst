@@ -88,11 +88,11 @@ start an IRB session and follow along:
 
 .. code-block:: irb
 
-  irb(main):001:0> require 'oso'
+  irb(main):001:0> require "oso"
   => true
   irb(main):002:0> OSO ||= Oso.new
   => #<Oso::Oso:0x000055a708eb8f70 ...>
-  irb(main):003:0> OSO.allow(actor: 'alice', action: 'approve', resource: 'expense')
+  irb(main):003:0> OSO.allow(actor: "alice", action: "approve", resource: "expense")
   => false
 
 We can add a rule explicitly allowing Alice to approve expenses...
@@ -108,14 +108,14 @@ We can add a rule explicitly allowing Alice to approve expenses...
 
 .. code-block:: irb
 
-  irb(main):007:0> OSO.allow(actor: 'alice', action: 'approve', resource: 'expense')
+  irb(main):007:0> OSO.allow(actor: "alice", action: "approve", resource: "expense")
   => true
 
 ...and everyone else is still denied:
 
 .. code-block:: irb
 
-  irb(main):008:0> OSO.allow(actor: 'bhavik', action: 'approve', resource: 'expense')
+  irb(main):008:0> OSO.allow(actor: "bhavik", action: "approve", resource: "expense")
   => false
 
 .. note:: For a deeper introduction to writing authorization rules with oso,
