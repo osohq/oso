@@ -53,7 +53,6 @@ extern {
         "cut" => lexer::Token::Cut,
         "debug" => lexer::Token::Debug,
         "in" => lexer::Token::In,       // in
-        "isa" => lexer::Token::Isa,     // isa
         "forall" => lexer::Token::ForAll,     // forall
         "if" => lexer::Token::If,       // if
         "and" => lexer::Token::And,     // and
@@ -261,7 +260,7 @@ Exp9<T>: Term = {
     <exp10:Exp10<T>> => exp10
 };
 
-Matches = {"isa", "matches"};
+Matches = {"matches"};
 
 // in isa
 Exp8<T>: Term = {
