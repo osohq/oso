@@ -428,6 +428,8 @@ the dictionary.  For example::
 For type matching, subclasses are also considered.  So, a class that is a
 subclass of ``Person`` would match ``Person{x: 1}``.
 
+.. _operator-matches:
+
 Matches operator
 ^^^^^^^^^^^^^^
 

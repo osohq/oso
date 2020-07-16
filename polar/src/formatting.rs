@@ -333,7 +333,7 @@ pub mod to_polar {
                 Cut => "cut",
                 ForAll => "forall",
                 Debug => "debug",
-                Isa => "isa",
+                Isa => "matches",
             }
             .to_string()
         }
