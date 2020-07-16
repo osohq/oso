@@ -4,7 +4,7 @@ import java.util.concurrent.*;
 import com.sun.net.httpserver.*;
 
 import com.osohq.oso.Oso;
-import com.osohq.oso.Exceptions.*;
+// import com.osohq.oso.Exceptions.OsoException;
 
 public class MyServer implements HttpHandler {
     private Oso oso;
@@ -19,7 +19,7 @@ public class MyServer implements HttpHandler {
             // POST requests to any path that starts with "/admin".
             oso.loadStr("allow(email, \"POST\", path) if\n" + "email.endsWith(\"@example.com\") = true and\n"
                     + "path.startsWith(\"/admin\") = true;");
-        } catch (OsoException e) {
+        } catch (Exception e) {
             System.out.println("Failed to initialize oso.");
         }
     }
@@ -54,6 +54,7 @@ public class MyServer implements HttpHandler {
         server.createContext("/", new MyServer());
         server.setExecutor(threadPoolExecutor);
         server.start();
+        System.out.println("MyServer running on " + server.getAddress());
     }
 
 }

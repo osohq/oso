@@ -101,14 +101,21 @@ authorization policy.
 
     If you don't already have the oso JAR downloaded, do so now.
 
-    Now that we've installed oso, we can import it into our project and
-    construct a new ``Oso`` instance that will serve as our Grand Arbiter of
-    Authorization:
+    We can import oso into our project and construct a new ``Oso`` instance that will serve as our authorization engine:
 
     .. literalinclude:: /examples/getting-started/java/server-02/MyServer.java
       :caption: MyServer.java
       :language: java
       :lines: 6-19
+
+    To compile and run the server with oso, make sure to set the classpath as follows, where ``dir`` is the path to the oso JAR:
+
+    .. code-block:: console
+
+      $ export CLASSPATH=dir/oso-0.2.1.jar:.
+      $ javac MyServer.java
+      $ java MyServer
+      MyServer running on /127.0.0.1:5050
 
 Decisions, decisions...
 =======================
