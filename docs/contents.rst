@@ -23,6 +23,7 @@ starting point if you are new to **oso**.
    :titlesonly:
    :caption: Getting started
 
+   index
    Quickstart <getting-started>
    download
 
