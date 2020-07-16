@@ -129,7 +129,7 @@ One rule to rule them all
 
     Now, this ``allow`` rule will be evaluated for any instance that is a subclass
     of ``PatientData``.  Polar's language integration understands the class
-    inheritance structure when selecting rules to evalute!
+    inheritance structure when selecting rules to evaluate!
 
 .. TODO: include when groups are back
   Working with groups

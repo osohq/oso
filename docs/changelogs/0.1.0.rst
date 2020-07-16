@@ -79,4 +79,4 @@ Other bugs & improvements
 
 - More consistent formatting for error messages.
 - Performance improvements to the Polar virtual machine that are especially
-  impactful for policies with many rules.
+  significant for policies with many rules.

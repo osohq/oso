@@ -93,7 +93,7 @@ if the ``actor`` is a ``FlightAttendant``, and the resource is a ``Flight``.
 Flight attendants are not the only type of employee that needs to board the flight.
 We also need to let pilots aboard, with the same logic.  We have a class in our
 application called ``AirlineEmployee`` that is a superclass of both ``FlightAttendant``
-and ``Pilot``.  Polar understands our application type hiearchy.  We can
+and ``Pilot``.  Polar understands our application type hierarchy.  We can
 write a rule:
 
 .. code-block:: polar
@@ -128,6 +128,6 @@ Summary
 =======
 - **Application types** can be registered with Polar to make application data available within policies.
 - The inheritance structure of application types can be leveraged in the policy with **specialized rules**,
-  supporting more sophistiscated access control models.
+  supporting more sophisticated access control models.
 - You can use built-in methods on primitive types like strings and
   dictionaries, exactly as if they were application types.
