@@ -13,6 +13,7 @@
 import os
 import sys
 from sphinx.highlighting import lexers
+from sphinxcontrib.spelling.filters import ContractionFilter
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
@@ -43,10 +44,12 @@ extensions = [
     "sphinxcontrib.spelling",
 ]
 
+
+
 spelling_word_list_filename = "spelling_allowed_words.txt"
 spelling_filters = [
     # Fix spell check of contractions
-    "sphinxcontrib.spelling.filters.ContractionFilter"
+    ContractionFilter
 ]
 
 html_static_path = ["_static"]
