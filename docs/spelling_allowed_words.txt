@@ -6,8 +6,6 @@ specializer
 specializers
 subclasses
 destructure
-un-run
-un
 disjunction
 disjunctions
 unification

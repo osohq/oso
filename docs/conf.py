@@ -12,8 +12,11 @@
 #
 import os
 import sys
+
 from sphinx.highlighting import lexers
 from sphinxcontrib.spelling.filters import ContractionFilter
+
+from enchant.tokenize import Filter
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
@@ -44,12 +47,24 @@ extensions = [
     "sphinxcontrib.spelling",
 ]
 
+class HyphenatedWordFilter(Filter):
+    """Treat some hypthenated words as allowed due to made up words in our docs."""
+    # This cannot just be allowed words because hypthenated words are split.
+
+    words = {
+        'un-taken',
+        'un-run'
+    }
+
+    def _skip(self, word):
+        return word in self.words
 
 
 spelling_word_list_filename = "spelling_allowed_words.txt"
 spelling_filters = [
     # Fix spell check of contractions
-    ContractionFilter
+    ContractionFilter,
+    HyphenatedWordFilter
 ]
 
 html_static_path = ["_static"]
