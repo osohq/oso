@@ -312,10 +312,10 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_isa() {
-        let term = parse_query("{} isa {}");
-        assert_eq!(term.to_polar(), r#"{} isa {}"#);
-        let _term = parse_query("{x: 1} isa {}");
+    fn test_parse_matches() {
+        let term = parse_query("{} matches {}");
+        assert_eq!(term.to_polar(), r#"{} matches {}"#);
+        let _term = parse_query("{x: 1} matches {}");
     }
 
     #[test]
