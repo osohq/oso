@@ -1,8 +1,9 @@
 .. Introduce some of the core oso concepts like rules/predicates + search
    semantics
 
-What makes oso unique
-========================
+========
+Why oso?
+========
 
 Having gone through the :doc:`getting-started` guide, you may be
 wondering what all the fuss is about. Why are we introducing a new language just

@@ -1,5 +1,5 @@
 ==========
-changelogs
+Changelogs
 ==========
 
 .. toctree::
