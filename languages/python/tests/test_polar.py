@@ -634,7 +634,7 @@ def test_unbound_variable(polar):
     first = next(results)
 
     # y will be bound to 1
-    first['y'] = 1
+    first["y"] = 1
 
     # x should be unbound
-    assert isinstance(first['x'], Variable)
+    assert isinstance(first["x"], Variable)
