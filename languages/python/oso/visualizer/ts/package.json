@@ -1,0 +1,21 @@
+{
+  "name": "viz-purposes",
+  "version": "0.0.1",
+  "main": "src/graph.ts",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "watch": "parcel watch src/graph.ts --out-dir ../static --public-url .",
+    "build": "parcel build src/graph.ts --out-dir ../static --public-url ."
+  },
+  "dependencies": {
+    "d3": "^5.15.0",
+    "d3-flextree": "^2.1.1",
+    "query-string": "^6.11.1"
+  },
+  "devDependencies": {
+    "@types/d3": "^5.7.2",
+    "parcel-bundler": "^1.12.4",
+    "typescript": "^3.8.3"
+  }
+}
