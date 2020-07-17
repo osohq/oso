@@ -1,16 +1,38 @@
-# frozen_string_literal: true
+class Expense
+  attr_reader :amount, :description, :submitted_by
 
-require "webrick"
+  def initialize(amount, description, submitted_by)
+    @amount = amount
+    @description = description
+    @submitted_by = submitted_by
+  end
+end
+
+EXPENSES = {
+  1 => Expense.new(500,   "coffee",   "alice@example.com"),
+  2 => Expense.new(5000,  "software", "alice@example.com"),
+  3 => Expense.new(50000, "flight",   "bhavik@example.com"),
+}
+
 require "oso"
 
 OSO ||= Oso.new
 
-def authorized?(req)
-  OSO.allow(actor: req.header["user"]&.first, action: req.request_method, resource: req.path)
-end
+require "webrick"
 
 server = WEBrick::HTTPServer.new Port: 5050
 server.mount_proc "/" do |req, res|
-  res.body = authorized?(req) ? "Authorized!" : "Not Authorized!"
+  actor = req.header["user"]&.first
+  action = req.request_method
+  _, resource_type, resource_id = req.path.split("/")
+  resource = EXPENSES[resource_id.to_i]
+
+  if resource_type != "expenses" || resource.nil?
+    res.body = "Not Found!"
+  elsif OSO.allow(actor: actor, action: action, resource: resource)
+    res.body = resource.inspect
+  else
+    res.body = "Not Authorized!"
+  end
 end
 server.start

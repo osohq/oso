@@ -1,5 +1,5 @@
 class Expense
-  attr_reader :amount, :description, :submitted_by
+  attr_reader :submitted_by
 
   def initialize(amount, description, submitted_by)
     @amount = amount
@@ -14,17 +14,29 @@ EXPENSES = {
   3 => Expense.new(50000, "flight",   "bhavik@example.com"),
 }
 
+require "oso"
+
+OSO ||= Oso.new
+OSO.load_str <<~RULE
+  allow(actor, "GET", expense) if
+      expense.submitted_by = actor;
+RULE
+
 require "webrick"
 
 server = WEBrick::HTTPServer.new Port: 5050
 server.mount_proc "/" do |req, res|
+  actor = req.header["user"]&.first
+  action = req.request_method
   _, resource_type, resource_id = req.path.split("/")
   resource = EXPENSES[resource_id.to_i]
 
   if resource_type != "expenses" || resource.nil?
     res.body = "Not Found!"
-  else
+  elsif OSO.allow(actor: actor, action: action, resource: resource)
     res.body = resource.inspect
+  else
+    res.body = "Not Authorized!"
   end
 end
 server.start

@@ -1,6 +1,4 @@
-# frozen_string_literal: true
-
-require 'oso'
+require "oso"
 
 OSO ||= Oso.new
-OSO.allow(actor: 'alice', action: 'approve', resource: 'expense')
+OSO.allow(actor: "alice", action: "view", resource: "expense")
