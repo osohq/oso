@@ -38,11 +38,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             resource = EXPENSES[int(resource_id)]
 
             if resource_type != "expenses":
-                return self._respond("Not Found", 404)
+                return self._respond("Not Found!", 404)
             elif OSO.allow(actor, action, resource):
                 self._respond(resource)
             else:
-                self._respond("Not authorized", 403)
+                self._respond("Not Authorized!", 403)
 
         except (KeyError, ValueError) as e:
             self._respond("Not Found!", 404)
