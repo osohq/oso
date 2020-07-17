@@ -277,9 +277,9 @@ able to view expenses, but no one outside the company will be able to:
 We bind the provided email to the ``actor`` variable in the rule head and then
 perform the ``.end_with?("@example.com")`` check in the rule body. If you
 noticed that the ``.end_with?`` call looks pretty familiar, you're right on ---
-oso is actually calling out to the |string_end_with|_ defined in the Ruby
-standard library. The **actor** value passed to oso is a Ruby string, and oso
-allows us to call any ``String`` method from Ruby's standard library on it.
+oso is actually calling out to |string_end_with|_ defined in the Ruby standard
+library. The **actor** value passed to oso is a Ruby string, and oso allows us
+to call any ``String`` method from Ruby's standard library on it.
 
 And that's just the tip of the iceberg. You can register *any* Ruby object with
 oso and then leverage it in your application's authorization policy. For
