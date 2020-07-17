@@ -3,7 +3,6 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::rc::Rc;
@@ -284,7 +283,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
@@ -295,7 +295,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
@@ -306,7 +307,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
@@ -317,7 +319,8 @@ impl Value {
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
                 loc: 0,
-                context: None, // @TODO
+                context: None,     // @TODO
+                stack_trace: None, // @TODO
             }),
         }
     }
@@ -584,6 +587,7 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Trace {
     pub node: Node,
+    pub polar_str: String,
     pub children: Vec<Rc<Trace>>,
 }
 
@@ -639,6 +643,11 @@ impl KnowledgeBase {
     /// Define a constant variable.
     pub fn constant(&mut self, name: Symbol, value: Term) {
         self.constants.insert(name, value);
+    }
+
+    /// Return true if a constant with the given name has been defined.
+    pub fn is_constant(&self, name: &Symbol) -> bool {
+        self.constants.contains_key(name)
     }
 }
 
@@ -762,5 +771,14 @@ mod tests {
         };
         let err: crate::PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());
+        let rule = Rule {
+            name: Symbol::new("foo"),
+            params: vec![],
+            body: Term::new_temporary(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![dict.clone(), dict.clone(), dict],
+            })),
+        };
+        eprintln!("{}", rule);
     }
 }

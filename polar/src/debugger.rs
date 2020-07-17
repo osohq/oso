@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use super::formatting::source_lines;
 use super::types::*;
 use super::vm::*;
 use super::{PolarResult, ToPolarString};
@@ -25,38 +26,6 @@ impl PolarVirtualMachine {
         }
         Ok(())
     }
-}
-
-/// Traverse a [`Source`](../types/struct.Source.html) line-by-line until `offset` is reached, and
-/// then return the source line containing the `offset` character as well as `num_lines` lines
-/// above and below it.
-fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
-    // Sliding window of lines: current line + indicator + additional context above + below.
-    let max_lines = num_lines * 2 + 2;
-    let push_line = |lines: &mut Vec<String>, line: String| {
-        if lines.len() == max_lines {
-            lines.remove(0);
-        }
-        lines.push(line);
-    };
-    let mut index = 0;
-    let mut lines = Vec::new();
-    let mut target = None;
-    let prefix_len = "123: ".len();
-    for (lineno, line) in source.src.lines().enumerate() {
-        push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
-        let end = index + line.len() + 1; // Adding one to account for new line byte.
-        if target.is_none() && end >= offset {
-            target = Some(lineno);
-            let spaces = " ".repeat(offset - index + prefix_len);
-            push_line(&mut lines, format!("{}^", spaces));
-        }
-        index = end;
-        if target.is_some() && lineno == target.unwrap() + num_lines {
-            break;
-        }
-    }
-    lines.join("\n")
 }
 
 /// [`Debugger`](struct.Debugger.html) step granularity.
@@ -257,12 +226,12 @@ impl Debugger {
             }
             "n" | "next" | "over" => {
                 self.step = Some(Step::Over {
-                    snapshot: vm.queries[..vm.queries.len() - 1].to_vec(),
+                    snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
                 })
             }
             "out" => {
                 self.step = Some(Step::Out {
-                    snapshot: vm.queries[..vm.queries.len() - 3].to_vec(),
+                    snapshot: vm.queries[..vm.queries.len().saturating_sub(3)].to_vec(),
                 })
             }
             "stack" | "queries" => return Some(show(&vm.queries)),

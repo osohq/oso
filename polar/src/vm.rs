@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
@@ -6,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use super::debugger::{DebugEvent, Debugger};
 use super::error;
 use super::formatting::draw;
-use super::lexer::make_context;
+use super::lexer::{loc_to_pos, make_context};
 use super::types::*;
 use super::{PolarResult, ToPolarString};
 
@@ -536,6 +537,53 @@ impl PolarVirtualMachine {
         });
         rule
     }
+
+    /// Get the query stack as a string for printing in error messages.
+    fn stack_trace(&self) -> String {
+        let mut trace_stack = self.trace_stack.clone();
+        let mut trace = self.trace.clone();
+
+        // Build linear stack from trace tree. Not just using query stack because it doesn't
+        // know about rules, query stack should really use this too.
+        let mut stack = vec![];
+        while let Some(t) = trace.last() {
+            stack.push(t.clone());
+            trace = trace_stack.pop().unwrap_or_else(Vec::new);
+        }
+
+        stack.reverse();
+
+        let mut st = String::new();
+        write!(st, "trace (most recent evaluation last):").unwrap();
+
+        let mut rule = None;
+        for t in stack {
+            match &t.node {
+                Node::Rule(r) => {
+                    rule = Some(r.clone());
+                }
+                Node::Term(t) => {
+                    write!(st, "\n  ").unwrap();
+                    let source = { self.kb.read().unwrap().sources.get_source(&t) };
+                    if let Some(source) = source {
+                        if let Some(rule) = &rule {
+                            write!(st, "in rule {} ", rule.name.to_polar()).unwrap();
+                        } else {
+                            write!(st, "in query ").unwrap();
+                        }
+                        let (row, column) = loc_to_pos(&source.src, t.offset());
+                        write!(st, "at line {}, column {}", row + 1, column + 1).unwrap();
+                        if let Some(filename) = source.filename {
+                            write!(st, " in file {}", filename).unwrap();
+                        }
+                        writeln!(st).unwrap();
+                    };
+                    write!(st, "    {}", t.to_polar()).unwrap();
+                }
+            }
+        }
+        st
+    }
 }
 
 /// Implementations of instructions.
@@ -855,6 +903,7 @@ impl PolarVirtualMachine {
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
         self.trace.push(Rc::new(Trace {
             node: Node::Term(term.clone()),
+            polar_str: term.to_string(),
             children: vec![],
         }));
 
@@ -865,8 +914,9 @@ impl PolarVirtualMachine {
             Value::Expression(Operation { operator, args }) => {
                 return self.query_for_operation(&term, *operator, args.clone());
             }
-            v => {
-                return Err(self.type_error(&term, format!("can't query for: {}", v.to_polar())));
+            _ => {
+                let term = self.deref(term);
+                self.query_for_value(&term)?;
             }
         }
         Ok(QueryEvent::None)
@@ -1072,7 +1122,25 @@ impl PolarVirtualMachine {
         Ok(QueryEvent::None)
     }
 
-    /// Push goals for lookups and method calls.
+    /// Query for a value.  Succeeds if the value is 'truthy' or backtracks.
+    /// Currently only defined for boolean values.
+    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {
+        if let Value::Boolean(value) = term.value() {
+            if !value {
+                // Backtrack if the boolean is false.
+                self.push_goal(Goal::Backtrack)?;
+            }
+
+            Ok(())
+        } else {
+            Err(self.type_error(
+                &term,
+                format!("can't query for: {}", term.value().to_polar()),
+            ))
+        }
+    }
+
+    /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
         assert_eq!(args.len(), 3);
         let object = self.deref(&args[0]);
@@ -1558,6 +1626,7 @@ impl PolarVirtualMachine {
                 goals.push(Goal::TraceRule {
                     trace: Rc::new(Trace {
                         node: Node::Rule(rule.clone()),
+                        polar_str: rule.to_string(),
                         children: vec![],
                     }),
                 });
@@ -1716,12 +1785,14 @@ impl PolarVirtualMachine {
         } else {
             None
         };
-        error::RuntimeError::TypeError {
+        let stack_trace = self.stack_trace();
+        let error = error::RuntimeError::TypeError {
             msg,
             loc: term.offset(),
             context,
-        }
-        .into()
+            stack_trace: Some(stack_trace),
+        };
+        error.into()
     }
 }
 

@@ -1,11 +1,15 @@
 use super::error;
+use super::formatting::source_lines;
 use super::lexer::make_context;
+use super::parser;
 use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
 use super::{PolarError, PolarResult};
 
-use super::parser;
+use std::collections::{hash_map::Entry, HashMap};
+use std::io::{stderr, Write};
+use std::sync::{Arc, RwLock};
 
 // @TODO: This should probably go in the readme, it's meant to be the things you'd have to know to add
 // new language bindings.
@@ -57,8 +61,6 @@ use super::parser;
 // machinery in the application language.
 
 // @TODO: Once the external constructor stuff and instance ids are worked out explain them.
-
-use std::sync::{Arc, RwLock};
 
 fn fill_context(e: PolarError, source: &Source) -> PolarError {
     match e.kind {
@@ -161,15 +163,20 @@ impl Iterator for Query {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
+    pub output: Option<RwLock<Box<dyn Write>>>,
 }
 
 impl Polar {
-    pub fn new() -> Self {
+    pub fn new(output: Option<RwLock<Box<dyn Write>>>) -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
+            output: match output {
+                None => Some(RwLock::new(Box::new(stderr()))),
+                Some(_) => output,
+            },
         }
     }
 
@@ -186,8 +193,10 @@ impl Polar {
         while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(mut rule) => {
-                    let name = rule.name.clone();
+                    self.check_singletons(&rule, &kb);
                     rewrite_rule(&mut rule, &mut kb);
+
+                    let name = rule.name.clone();
                     let generic_rule = kb.rules.entry(name.clone()).or_insert(GenericRule {
                         name,
                         rules: vec![],
@@ -201,6 +210,53 @@ impl Polar {
         }
 
         Ok(())
+    }
+
+    /// Warn about singleton variables in a rule, except those whose names start with `_`.
+    pub fn check_singletons(&self, rule: &Rule, kb: &KnowledgeBase) {
+        let mut singletons = HashMap::<Symbol, Option<Term>>::new();
+        let mut check_term = |term: &Term| {
+            if let Value::Variable(sym) | Value::RestVariable(sym) = term.value() {
+                if !sym.0.starts_with('_') && !kb.is_constant(sym) {
+                    match singletons.entry(sym.clone()) {
+                        Entry::Occupied(mut o) => {
+                            o.insert(None);
+                        }
+                        Entry::Vacant(v) => {
+                            v.insert(Some(term.clone()));
+                        }
+                    }
+                }
+            }
+            term.clone()
+        };
+
+        for param in &rule.params {
+            if let Some(mut param) = param.parameter.clone() {
+                param.map_replace(&mut check_term);
+            }
+            if let Some(mut spec) = param.specializer.clone() {
+                spec.map_replace(&mut check_term);
+            }
+        }
+        rule.body.clone().map_replace(&mut check_term);
+
+        let mut singletons = singletons
+            .into_iter()
+            .collect::<Vec<(Symbol, Option<Term>)>>();
+        singletons.sort_by_key(|(_sym, term)| term.as_ref().map_or(0, |term| term.offset()));
+        for (sym, singleton) in singletons {
+            if let Some(term) = singleton {
+                if let Some(ref writer) = self.output {
+                    let mut writer = writer.write().unwrap();
+                    writeln!(&mut writer, "Singleton variable {}", sym).unwrap();
+                    if let Some(ref source) = kb.sources.get_source(&term) {
+                        writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0))
+                            .unwrap();
+                    }
+                }
+            }
+        }
     }
 
     // Used in integration tests
@@ -277,11 +333,11 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
 
+    #[test]
     fn can_load_and_query() {
-        let polar = Polar::new();
+        let polar = Polar::new(None);
         let _query = polar.new_query("1 = 1");
-        let _ = polar.load("f(x);");
+        let _ = polar.load("f(_);");
     }
 }

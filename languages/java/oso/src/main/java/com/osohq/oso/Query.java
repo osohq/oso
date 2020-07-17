@@ -1,0 +1,156 @@
+package com.osohq.oso;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.*;
+import org.json.JSONObject;
+import org.json.JSONException;
+import org.json.JSONArray;
+
+public class Query implements Enumeration<HashMap<String, Object>> {
+    private HashMap<String, Object> next;
+    private Ffi.Query queryFfi;
+    private Polar polar;
+
+    /**
+     * Construct a new Query object.
+     *
+     * @param queryPtr Pointer to the FFI query instance.
+     */
+    public Query(Ffi.Query queryPtr, Polar polar) throws Exceptions.OsoException {
+        this.queryFfi = queryPtr;
+        this.polar = polar;
+        next = nextResult();
+    }
+
+    @Override
+    public boolean hasMoreElements() {
+        return next != null;
+    }
+
+    @Override
+    public HashMap<String, Object> nextElement() {
+        HashMap<String, Object> ret = next;
+        try {
+            next = nextResult();
+        } catch (Exception e) {
+            throw new NoSuchElementException("Caused by: e.toString()");
+        }
+        return ret;
+    }
+
+    /**
+     * Get all query results
+     *
+     * @return List of all query results (binding sets)
+     */
+    public List<HashMap<String, Object>> results() {
+        List<HashMap<String, Object>> results = Collections.list(this);
+        return results;
+    }
+
+    /**
+     * Helper for `ExternalCall` query events
+     *
+     * @param attrName
+     * @param jArgs
+     * @param instanceId
+     * @param callId
+     * @throws Exceptions.OsoException
+     */
+    private void handleCall(String attrName, JSONArray jArgs, JSONObject polarInstance, long callId)
+            throws Exceptions.OsoException {
+        List<Object> args = polar.polarListToJava(jArgs);
+        polar.registerCall(attrName, args, callId, polarInstance);
+        String result;
+        try {
+            result = polar.nextCallResult(callId).toString();
+        } catch (NoSuchElementException e) {
+            result = null;
+        }
+        queryFfi.callResult(callId, result);
+    }
+
+    /**
+     * Generate the next Query result
+     *
+     * @return
+     * @throws Exceptions.OsoException
+     */
+    private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
+        while (true) {
+            String eventStr = queryFfi.nextEvent().get();
+            String kind;
+            JSONObject data;
+            try {
+                JSONObject event = new JSONObject(eventStr);
+                kind = event.keys().next();
+                data = event.getJSONObject(kind);
+            } catch (JSONException e) {
+                // TODO: this sucks, we should have a consistent serialization format
+                kind = eventStr.replace("\"", "");
+                data = null;
+            }
+
+            switch (kind) {
+                case "Done":
+                    return null;
+                case "Result":
+                    return polar.polarDictToJava(data.getJSONObject("bindings"));
+                case "MakeExternal":
+                    Long id = data.getLong("instance_id");
+                    if (polar.hasCachedInstance(id)) {
+                        throw new Exceptions.DuplicateInstanceRegistrationError(id);
+                    }
+                    String clsName = data.getJSONObject("instance").getString("tag");
+                    JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields").getJSONObject("fields");
+                    polar.makeInstance(clsName, polar.polarDictToJava(jFields), id);
+                    break;
+                case "ExternalCall":
+                    long callId = data.getLong("call_id");
+                    JSONObject polarInstance = data.getJSONObject("instance");
+                    String attrName = data.getString("attribute");
+                    JSONArray jArgs = data.getJSONArray("args");
+                    handleCall(attrName, jArgs, polarInstance, callId);
+                    break;
+                case "ExternalIsa":
+                    Long instanceId = data.getLong("instance_id");
+                    callId = data.getLong("call_id");
+                    String classTag = data.getString("class_tag");
+                    int answer = polar.isa(instanceId, classTag) ? 1 : 0;
+                    queryFfi.questionResult(callId, answer);
+                    break;
+                case "ExternalIsSubSpecializer":
+                    instanceId = data.getLong("instance_id");
+                    callId = data.getLong("call_id");
+                    String leftTag = data.getString("left_class_tag");
+                    String rightTag = data.getString("right_class_tag");
+                    answer = polar.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
+                    queryFfi.questionResult(callId, answer);
+                    break;
+                case "Debug":
+                    if (data.has("message")) {
+                        String message = data.getString("message");
+                        System.out.println(message);
+                    }
+                    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                    System.out.print("> ");
+                    try {
+                        String input = br.readLine();
+                        if (input == "")
+                            input = " ";
+                        String command = polar.toPolarTerm(input).toString();
+                        queryFfi.debugCommand(command);
+                    } catch (IOException e) {
+                        throw new Exceptions.PolarRuntimeException("Caused by: " + e.getMessage());
+                    }
+                    break;
+                default:
+                    throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
+            }
+        }
+
+    }
+
+}

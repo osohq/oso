@@ -63,4 +63,4 @@ allow(actor: Actor, "keep", resource: Widget) if
 
 # for testing iter
 allow(actor: Actor, "can_have", _: Widget{name: "stapler"}) if
-    actor.companies_iter isa Company{id: "Initech"};
+    actor.companies_iter matches Company{id: "Initech"};

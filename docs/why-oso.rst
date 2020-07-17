@@ -45,7 +45,7 @@ Take a very simple example from the getting started guide. We ended up with two
 .. code-block:: polar
 
     allow(actor, "read", "budget") if role(actor, "guest");
-    allow(actor, "write", "budget") if actor.is_superuser = true;
+    allow(actor, "write", "budget") if actor.is_superuser;
 
 We are asserting that an actor who is a superuser is allowed to "read" a "budget" resource, and that an admin actor is allowed to "write" a "budget".  
 

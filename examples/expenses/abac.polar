@@ -35,7 +35,7 @@ role(actor: User, role, team: Team) if
 # Management hierarchies
 allow(actor: User, "view", resource: Expense) if
     manages(actor, employee) and
-    employee isa User{ name: resource.submitted_by };
+    employee matches User{ name: resource.submitted_by };
 
 manages(manager: User, employee) if
     employee = manager.employees() or

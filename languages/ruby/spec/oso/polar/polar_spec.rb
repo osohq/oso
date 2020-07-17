@@ -345,9 +345,9 @@ RSpec.describe Oso::Polar::Polar do
         test(_: A{});
         test(_: B{});
 
-        try(v: B{}, res) if res = 2;
-        try(v: C{}, res) if res = 3;
-        try(v: A{}, res) if res = 1;
+        try(_: B{}, res) if res = 2;
+        try(_: C{}, res) if res = 3;
+        try(_: A{}, res) if res = 1;
       POLAR
 
       expect(qvar(subject, 'new A{}.a = x', 'x', one: true)).to eq('A')
@@ -408,9 +408,9 @@ RSpec.describe Oso::Polar::Polar do
 
       it 'can specialize on dict fields' do
         subject.load_str <<~POLAR
-          what_is(animal: {genus: "canis"}, r) if r = "canine";
-          what_is(animal: {species: "canis lupus", genus: "canis"}, r) if r = "wolf";
-          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) if r = "dog";
+          what_is(_: {genus: "canis"}, r) if r = "canine";
+          what_is(_: {species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+          what_is(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog";
         POLAR
         expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(%w[wolf canine])
         expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(%w[dog canine])
@@ -419,12 +419,12 @@ RSpec.describe Oso::Polar::Polar do
 
       it 'can specialize on class fields' do
         subject.load_str <<~POLAR
-          what_is(animal: Animal{}, r) if r = "animal";
-          what_is(animal: Animal{genus: "canis"}, r) if r = "canine";
-          what_is(animal: Animal{family: "canidae"}, r) if r = "canid";
-          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf";
-          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog";
-          what_is(animal: Animal{species: s, genus: "canis"}, r) if r = s;
+          what_is(_: Animal{}, r) if r = "animal";
+          what_is(_: Animal{genus: "canis"}, r) if r = "canine";
+          what_is(_: Animal{family: "canidae"}, r) if r = "canid";
+          what_is(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+          what_is(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog";
+          what_is(_: Animal{species: s, genus: "canis"}, r) if r = s;
         POLAR
         expect(qvar(subject, "what_is(#{wolf}, r)", 'r')).to eq(['wolf', 'canis lupus', 'canine', 'canid', 'animal'])
         expect(qvar(subject, "what_is(#{dog}, r)", 'r')).to eq(['dog', 'canis familiaris', 'canine', 'canid', 'animal'])
@@ -435,14 +435,14 @@ RSpec.describe Oso::Polar::Polar do
 
       it 'can specialize with a mix of class and dict fields' do
         subject.load_str <<~POLAR
-          what_is(animal: Animal{}, r) if r = "animal_class";
-          what_is(animal: Animal{genus: "canis"}, r) if r = "canine_class";
-          what_is(animal: {genus: "canis"}, r) if r = "canine_dict";
-          what_is(animal: Animal{family: "canidae"}, r) if r = "canid_class";
-          what_is(animal: {species: "canis lupus", genus: "canis"}, r) if r = "wolf_dict";
-          what_is(animal: {species: "canis familiaris", genus: "canis"}, r) if r = "dog_dict";
-          what_is(animal: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf_class";
-          what_is(animal: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog_class";
+          what_is(_: Animal{}, r) if r = "animal_class";
+          what_is(_: Animal{genus: "canis"}, r) if r = "canine_class";
+          what_is(_: {genus: "canis"}, r) if r = "canine_dict";
+          what_is(_: Animal{family: "canidae"}, r) if r = "canid_class";
+          what_is(_: {species: "canis lupus", genus: "canis"}, r) if r = "wolf_dict";
+          what_is(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog_dict";
+          what_is(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf_class";
+          what_is(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog_class";
         POLAR
 
         wolf_dict = '{species: "canis lupus", genus: "canis", family: "canidae"}'
@@ -555,4 +555,27 @@ RSpec.describe Oso::Polar::Polar do
       )
     end
   end
+
+  context 'runtime errors' do
+    it 'include a stack trace' do
+        rule = <<~POLAR
+        foo(a,b) := a in b;
+        POLAR
+        subject.load_str(rule)
+        expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
+          expect(e).to be_an Oso::Polar::PolarTypeError
+          expect(e.message).to eq('Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13')
+          stack_trace = <<-EOM.chomp
+trace (most recent evaluation last):
+  in query at line 1, column 1
+    foo(1, 2)
+  in rule foo at line 1, column 13
+    _a_3 in _b_4
+  in rule foo at line 1, column 13
+    _a_3 in _b_4
+EOM
+          expect(e.stack_trace).to eq(stack_trace)
+        end
+      end
+    end
 end

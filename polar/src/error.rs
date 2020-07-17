@@ -213,6 +213,7 @@ pub enum RuntimeError {
         msg: String,
         loc: usize,
         context: Option<ErrorContext>,
+        stack_trace: Option<String>,
     },
     UnboundVariable {
         sym: Symbol,
@@ -227,7 +228,9 @@ impl fmt::Display for RuntimeError {
         match self {
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
-            Self::TypeError { msg, loc, context } => {
+            Self::TypeError {
+                msg, loc, context, ..
+            } => {
                 write!(f, "Type error: {}", msg)?;
                 if let Some(context) = context {
                     write!(f, "{}", context)
