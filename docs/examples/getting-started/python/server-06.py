@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 
-
 @dataclass
 class Expense:
     amount: int
     description: str
     submitted_by: str
-
 
 EXPENSES = {
     1: Expense(500, "coffee", "alice@example.com"),
@@ -25,10 +23,9 @@ OSO.load_str(
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-
 class MyRequestHandler(BaseHTTPRequestHandler):
-    def _respond(self, msg):
-        self.send_response(200)
+    def _respond(self, msg, code=200):
+        self.send_response(code)
         self.end_headers()
         self.wfile.write(str(msg).encode())
 
@@ -41,16 +38,16 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             resource = EXPENSES[int(resource_id)]
 
             if resource_type != "expenses":
-                return self._respond("Not Found")
+                return self._respond("Not Found", 404)
             elif OSO.allow(actor, action, resource):
                 self._respond(resource)
             else:
-                self._respond("Not authorized")
+                self._respond("Not authorized", 403)
 
         except (KeyError, ValueError) as e:
-            self._respond("Not Found!")
-
+            self._respond("Not Found!", 404)
 
 server_address = ("", 5050)
 httpd = HTTPServer(server_address, MyRequestHandler)
+print("running on port", httpd.server_port)
 httpd.serve_forever()

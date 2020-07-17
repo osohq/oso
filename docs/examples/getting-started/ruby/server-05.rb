@@ -1,5 +1,5 @@
 class Expense
-  attr_reader :submitted_by
+  attr_reader :amount, :description, :submitted_by
 
   def initialize(amount, description, submitted_by)
     @amount = amount
