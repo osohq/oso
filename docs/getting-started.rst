@@ -406,69 +406,6 @@ library. The **actor** value passed to oso is a Python string, and oso allows us
 to call any ``str`` method from Python's standard library on it.
 
 And that's just the tip of the iceberg. You can register *any* Python object with
-``"alice@example.com"``:
-
-.. code-block:: console
-
-  $ curl -H "user: bhavik@example.com" localhost:5050/expenses/1
-  Not Authorized!
-  $ curl -H "user: bhavik@example.com" localhost:5050/expenses/3
-  Not Authorized!
-
-Rules over dynamic data
------------------------
-
-It's nice that Alice can now view expenses, but it would be really onerous if
-we had to write a separate rule for every single actor we wanted to authorize.
-Luckily, we don't!
-
-Let's replace our static rule checking that the provided email matches
-``"alice@example.com"`` with a dynamic one that checks that the provided email
-ends in ``"@example.com"``. That way, everyone at Example.com, Inc. will be
-able to view expenses, but no one outside the company will be able to:
-
-.. .. literalinclude:: /examples/getting-started/ruby/server-05.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lines: 19-23
-..   :lineno-start: 19
-..   :emphasize-lines: 2-
-
-.. literalinclude:: /examples/getting-started/python/server-05.py
-  :caption: server.py
-  :language: python
-  :lines: 17-21
-  :lineno-start: 17
-  :emphasize-lines: 2-
-
-.. .. |string_end_with| replace:: the ``String#end_with?`` method
-.. .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
-
-.. |string_end_with| replace:: the ``str#endswith`` method
-.. _string_end_with: https://docs.python.org/3/library/stdtypes.html#str.endswith
-
-.. We bind the provided email to the ``actor`` variable in the rule head and then
-.. perform the ``.end_with?("@example.com")`` check in the rule body. If you
-.. noticed that the ``.end_with?`` call looks pretty familiar, you're right on ---
-.. oso is actually calling out to |string_end_with|_ defined in the Ruby standard
-.. library. The **actor** value passed to oso is a Ruby string, and oso allows us
-.. to call any ``String`` method from Ruby's standard library on it.
-.. 
-.. And that's just the tip of the iceberg. You can register *any* Ruby object with
-.. oso and then leverage it in your application's authorization policy. For
-.. example, if you have ``Expense`` and ``User`` classes defined in your
-.. application, you could write a policy rule in oso that says a ``User`` may
-.. approve an ``Expense`` if they manage the ``User`` who submitted the expense
-.. and the expense's amount is less than $100.00:
-
-We bind the provided email to the ``actor`` variable in the rule head and then
-perform the ``.endswith("@example.com")`` check in the rule body. If you
-noticed that the ``.endswith`` call looks pretty familiar, you're right on ---
-oso is actually calling out to |string_end_with|_ defined in the Python standard
-library. The **actor** value passed to oso is a Python string, and oso allows us
-to call any ``str`` method from Python's standard library on it.
-
-And that's just the tip of the iceberg. You can register *any* Python object with
 oso and then leverage it in your application's authorization policy. For
 example, if you have ``Expense`` and ``User`` classes defined in your
 application, you could write a policy rule in oso that says a ``User`` may
