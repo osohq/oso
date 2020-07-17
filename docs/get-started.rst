@@ -335,7 +335,7 @@ our access policy that allows all employees to see each other's expenses. They
 would like us to modify the policy such that employees can only see their own
 expenses.
 
-We can extend our existing rule with a second condition:
+To accomplish that, we can extend our existing rule with a second condition:
 
 .. literalinclude:: /examples/getting-started/server-06.rb
   :caption: server.rb
