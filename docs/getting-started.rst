@@ -165,7 +165,7 @@ perform the **action** ``"view"`` on the
 
 oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
-start an IRB session and follow along:
+start a REPL session and follow along:
 
 .. .. code-block:: irb
 ..
