@@ -286,9 +286,17 @@ oso and then leverage it in your application's authorization policy. For
 example, if you have ``Expense`` and ``User`` classes defined in your
 application, you could write a policy rule in oso that says a ``User`` may
 approve an ``Expense`` if they manage the ``User`` who submitted the expense
-and the expense's amount is less than $100.00. In the process of evaluating
-that rule, the oso engine would call back into the application in order to make
-determinations that rely on application data, such as:
+and the expense's amount is less than $100.00:
+
+.. code-block:: polar
+
+  allow(approver, "approve", expense) if
+      approver = expense.submitted_by.manager
+      and expense.amount < 10000 = true;
+
+In the process of evaluating that rule, the oso engine would call back into the
+application in order to make determinations that rely on application data, such
+as:
 
 - Which user submitted the expense in question?
 - Who is their manager?
