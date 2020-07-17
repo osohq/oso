@@ -561,9 +561,6 @@ And vice-versa:
   $ curl -H "user: bhavik@example.com" localhost:5050/expenses/3
   Expense(...)
 
-
-- CEO can see all expenses with an amount greater than $100.00
-
 We encourage you to play around with the current policy and experiment with
 adding your own rules!
 
