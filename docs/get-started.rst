@@ -327,18 +327,19 @@ our access policy that allows all employees to see each other's expenses. They
 would like us to modify the policy such that employees can only see their own
 expenses.
 
-With oso, that change takes a matter of seconds:
+We can extend our existing rule with a second condition:
 
 .. literalinclude:: /examples/getting-started/server-06.rb
   :caption: server.rb
   :language: ruby
-  :lines: 19-23
-  :emphasize-lines: 3-4
+  :lines: 19-24
+  :emphasize-lines: 3, 5
   :lineno-start: 19
 
-Behind the scenes, oso does the heavy lifting of looking up the
-``submitted_by`` field on the provided ``Expense`` instance and comparing that
-value against the provided **actor**.
+Behind the scenes, oso looks up the ``submitted_by`` field on the provided
+``Expense`` instance and compares that value against the provided **actor**.
+And just like that, an actor can only see an expense if they have an
+``@example.com`` email *and* they submitted the expense.
 
 Now Alice can see her own expenses but not Bhavik's:
 
