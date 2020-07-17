@@ -18,7 +18,7 @@ A basic web server
 Our application serves data about expenses submitted by users. The ``Expense``
 class isn't too complicated...
 
-.. literalinclude:: /examples/getting-started/server-01.rb
+.. literalinclude:: /examples/getting-started/ruby/server-01.rb
   :caption: server.rb
   :language: ruby
   :lineno-start: 1
@@ -26,7 +26,7 @@ class isn't too complicated...
 
 ...and our "database" of expenses is a map from ID to expense:
 
-.. literalinclude:: /examples/getting-started/server-01.rb
+.. literalinclude:: /examples/getting-started/ruby/server-01.rb
   :caption: server.rb
   :language: ruby
   :lineno-start: 11
@@ -34,7 +34,7 @@ class isn't too complicated...
 
 Our web server contains some simple logic to filter out bad requests and not much else:
 
-.. literalinclude:: /examples/getting-started/server-01.rb
+.. literalinclude:: /examples/getting-started/ruby/server-01.rb
   :caption: server.rb
   :language: ruby
   :lineno-start: 17
@@ -90,7 +90,7 @@ install it now:
 Now that we've installed the gem, we can import it into our project and
 construct a new ``Oso`` instance that will serve as our authorization engine:
 
-.. literalinclude:: /examples/getting-started/server-02.rb
+.. literalinclude:: /examples/getting-started/ruby/server-02.rb
   :caption: server.rb
   :language: ruby
   :lines: 17-23
@@ -105,7 +105,7 @@ Decisions, decisions...
 The ``Oso`` instance exposes an ``allow()`` predicate method that takes three
 keyword arguments, **actor**, **action**, and **resource**:
 
-.. literalinclude:: /examples/getting-started/allow-01.rb
+.. literalinclude:: /examples/getting-started/ruby/allow-01.rb
   :language: ruby
   :lines: 4
 
@@ -170,7 +170,7 @@ use a custom HTTP header to indicate that a request is "authenticated" as a
 particular user. The header value will be an email address, e.g.,
 ``"alice@example.com"``. We'll pass it to ``Oso#allow`` as the **actor**...
 
-.. literalinclude:: /examples/getting-started/server-03.rb
+.. literalinclude:: /examples/getting-started/ruby/server-03.rb
   :caption: server.rb
   :language: ruby
   :lineno-start: 24
@@ -179,7 +179,7 @@ particular user. The header value will be an email address, e.g.,
 
 ...and we'll use the HTTP method as the **action**:
 
-.. literalinclude:: /examples/getting-started/server-03.rb
+.. literalinclude:: /examples/getting-started/ruby/server-03.rb
   :caption: server.rb
   :language: ruby
   :lineno-start: 24
@@ -195,7 +195,7 @@ To recap:
 If we pass all three pieces of data to ``Oso#allow``, it'll return a boolean
 decision that we can use in our server's response logic:
 
-.. literalinclude:: /examples/getting-started/server-03.rb
+.. literalinclude:: /examples/getting-started/ruby/server-03.rb
   :caption: server.rb
   :language: ruby
   :lineno-start: 24
@@ -221,7 +221,7 @@ instance's knowledge base.
 
 Our first rule allows the actor ``"alice@example.com"`` to ``GET`` any expense:
 
-.. literalinclude:: /examples/getting-started/server-04.rb
+.. literalinclude:: /examples/getting-started/ruby/server-04.rb
   :caption: server.rb
   :language: ruby
   :lines: 19-20
@@ -264,7 +264,7 @@ Let's replace our static rule checking that the provided email matches
 ends in ``"@example.com"``. That way, everyone at Example.com, Inc. will be
 able to view expenses, but no one outside the company will be able to:
 
-.. literalinclude:: /examples/getting-started/server-05.rb
+.. literalinclude:: /examples/getting-started/ruby/server-05.rb
   :caption: server.rb
   :language: ruby
   :lines: 19-23
@@ -337,7 +337,7 @@ expenses.
 
 To accomplish that, we can extend our existing rule with a second condition:
 
-.. literalinclude:: /examples/getting-started/server-06.rb
+.. literalinclude:: /examples/getting-started/ruby/server-06.rb
   :caption: server.rb
   :language: ruby
   :lines: 19-24
