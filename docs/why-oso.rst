@@ -4,7 +4,7 @@
 What makes oso unique
 ========================
 
-Having gone through the `getting started <get-started>`_ guide, you may be
+Having gone through the :doc:`getting-started` guide, you may be
 wondering what all the fuss is about. Why are we introducing a new language just
 for the sake of replacing a few `if` statements in your code?
 

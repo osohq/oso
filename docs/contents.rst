@@ -25,7 +25,7 @@ starting point if you are new to **oso**.
 
    index
 
-   get-started
+   getting-started
 
    why-oso
 

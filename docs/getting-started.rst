@@ -1,5 +1,5 @@
 ===============
-Getting started
+Getting Started
 ===============
 
 If you don't know what oso is, head back to `the introduction </>`_. If you've
