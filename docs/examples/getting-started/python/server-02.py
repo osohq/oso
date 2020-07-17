@@ -13,6 +13,13 @@ EXPENSES = {
     2: Expense(5000, "software", "alice@example.com"),
     3: Expense(50000, "flight", "bhavik@example.com"),
 }
+# expenses code
+
+from oso import Oso
+
+OSO = Oso()
+
+# server code
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
