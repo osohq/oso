@@ -16,7 +16,7 @@ allow("guest", action, resource) if
 allow(_: {username: name}, action, resource) if
     allow(new Actor{name: name}, action, resource);
 
-allow(actor: Actor, "get", resource: Widget);
+allow(_actor: Actor, "get", _resource: Widget);
 allow(actor: Actor, "create", resource: Company) if
     resource.role(actor) = "admin";
 

@@ -63,15 +63,6 @@ def ffi_deserialize(string):
             lib.string_free(string)
 
 
-@contextmanager
-def manage_query(query):
-    """Context manager for Polar queries."""
-    try:
-        yield query
-    finally:
-        lib.query_free(query)
-
-
 def load_str(polar, string, filename, do_query):
     """Load a Polar string, checking that all inline queries succeed."""
     string = to_c_str(string)

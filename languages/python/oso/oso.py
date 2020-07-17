@@ -7,7 +7,8 @@ import os
 from typing import Any, cast, Callable, List, TYPE_CHECKING
 import inspect
 
-from polar import Polar, Predicate, QueryResult
+from polar import CLASSES, CONSTRUCTORS, Polar, Predicate, Query, QueryResult
+
 from .extras import Http, PathMapper
 
 if TYPE_CHECKING:
@@ -36,7 +37,7 @@ class Oso(Polar):
         self.register_class(PathMapper)
 
     # TODO (dhatch): should we name this 'is_allowed'?
-    def allow(self, actor, action, resource, debug=False) -> bool:
+    def allow(self, actor, action, resource) -> bool:
         """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
 
         Uses allow rules in the Polar policy to determine whether a request is
@@ -50,24 +51,11 @@ class Oso(Polar):
 
         :return: ``True`` if the request is allowed, ``False`` otherwise.
         """
-        # actor + resource are python classes
-        pred = Predicate(name="allow", args=[actor, action, resource])
-        result = self._query_pred(pred, debug=debug, single=True,)
+        result = self.query_predicate("allow", actor, action, resource, single=True)
         return result.success
 
-    def query_predicate(self, name, *args, debug=False) -> QueryResult:
-        """Query for predicate with name ``name`` and args ``args``.
 
-        :param name: The name of the predicate to query.
-        :param args: Arguments for the predicate.
-
-        :return: The result of the query.
-        """
-        pred = Predicate(name=name, args=args)
-        return self._query_pred(pred, debug=debug)
-
-
-def polar_class(_cls=None, *, from_polar=None):
+def polar_class(_cls=None, *, name=None, from_polar=None):
     """Decorator to register a Python class with Polar. An alternative to ``register_class()``.
 
     :param str from_polar: Name of static class function to create a new class instance from ``fields``.
@@ -75,7 +63,9 @@ def polar_class(_cls=None, *, from_polar=None):
     """
 
     def wrap(cls):
-        Polar().register_class(cls, from_polar=from_polar)
+        cls_name = cls.__name__ if name is None else name
+        CLASSES[cls_name] = cls
+        CONSTRUCTORS[cls_name] = from_polar or cls
         return cls
 
     if _cls is None:
