@@ -292,7 +292,7 @@ and the expense's amount is less than $100.00:
 
   allow(approver, "approve", expense) if
       approver = expense.submitted_by.manager
-      and expense.amount < 10000 = true;
+      and expense.amount < 10000;
 
 In the process of evaluating that rule, the oso engine would call back into the
 application in order to make determinations that rely on application data, such

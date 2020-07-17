@@ -19,7 +19,7 @@ require "oso"
 OSO ||= Oso.new
 OSO.load_str <<~RULE
   allow(actor, "GET", _expense) if
-      actor.end_with?("@example.com") = true;
+      actor.end_with?("@example.com");
 RULE
 
 require "webrick"

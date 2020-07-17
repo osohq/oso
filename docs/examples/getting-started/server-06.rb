@@ -19,7 +19,7 @@ require "oso"
 OSO ||= Oso.new
 OSO.load_str <<~RULE
   allow(actor, "GET", expense) if
-      actor.end_with?("@example.com") = true
+      actor.end_with?("@example.com")
       and expense.submitted_by = actor;
 RULE
 
