@@ -1,8 +1,0 @@
-class Make();
-
-allow(actor, "make", resource: Widget) if
-    x = Make{};
-
-allow(actor, "get", resource: Widget);
-allow(actor, "edit", resource: Widget);
-allow(actor, "delete", resource: Widget);
