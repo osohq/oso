@@ -1,6 +1,6 @@
-============================
-Python library documentation
-============================
+======
+Python
+======
 
 .. automodule:: oso
 

@@ -1,11 +1,11 @@
-===============
-Getting Started
-===============
+==========
+Quickstart
+==========
 
 .. todo::
     Speed up the getting started so we can do time to dopamine in 5 minutes.
 
-If you don't know what oso is, head back to `the introduction </>`_. If you've
+If you don't know what oso is, head back to :doc:`the introduction </index>`. If you've
 never used oso before and want to get up-and-running quickly, this guide is for
 you.
 
@@ -184,7 +184,7 @@ perform the **action** ``"view"`` on the
 **resource** ``"expense"``.
 
 .. note:: For more on **actors**, **actions**, and **resources**, check out
-  :doc:`/auth-fundamentals`.
+  :doc:`/understand/auth-fundamentals`.
 
 oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
@@ -254,7 +254,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik"`` does not
 match the string ``"alice"``.
 
 .. note:: For a deeper introduction to writing authorization rules with oso,
-  see :doc:`/auth-fundamentals`.
+  see :doc:`/understand/auth-fundamentals`.
 
 Authorizing HTTP requests
 =========================
@@ -451,7 +451,7 @@ as:
 - Does the expense's ``amount`` field contain a value less than $100.00?
 
 .. note:: For more on leveraging application data in an oso policy, check out
-  :doc:`application-library/application-types`.
+  :doc:`/understand/language/application-types`.
 
 Once we've added our new dynamic rule and restarted the web server, every user
 with an ``@example.com`` email should be allowed to view any expense:
@@ -534,9 +534,9 @@ We just blitzed through a ton of stuff:
 * Writing authorization rules over static and dynamic application data.
 
 If you're interested in what sets oso apart from existing authorization
-solutions, check out :doc:`/why-oso`. If you want to learn more about
-authorization in oso, including common patterns like :doc:`/auth-models/rbac`
-and :doc:`/auth-models/abac`, we recommend continuing on to the
-:doc:`/auth-fundamentals` guide. For more details on the logic programming
+solutions, check out :doc:`/understand/overview`. If you want to learn more about
+authorization in oso, including common patterns like :doc:`/understand/policies/auth-models/rbac`
+and :doc:`/understand/policies/auth-models/abac`, we recommend continuing on to the
+:doc:`/understand/auth-fundamentals` guide. For more details on the logic programming
 language we used to write our authorization policies, head on over to the
-:doc:`/language/index` guide.
+:doc:`/understand/language/index` guide.

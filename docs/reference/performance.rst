@@ -1,6 +1,6 @@
-==========================
-Frequently Asked Questions
-==========================
+===========
+Performance
+===========
 
 
 .. todo:: 
@@ -63,11 +63,10 @@ For example:
 
     class Person:
         @classmethod
-        def batch_lookup_children(cls, people: List[Person]]):
+        def batch_lookup_children(cls, people: List[Person]):
             parent_ids = [p.id for p in people]
             children = db.query(
-                "select id, name from people, children
-                    where people.id = chlidren.child_id, children.parent_id in ?", 
+                "select id, name from people, children where people.id = chlidren.child_id, children.parent_id in ?", 
                 parent_ids
             )
             return children

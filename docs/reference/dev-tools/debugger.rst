@@ -25,7 +25,7 @@ The debugger can be entered through two mechanisms:
 Entering the debugger will pause evaluation of the policy, and a command prompt
 will appear:
 
-.. code-block:: terminal
+.. code-block:: console
 
   Welcome to the debugger!
   >
@@ -47,7 +47,7 @@ Help
 
 Print the debugger command reference.
 
-.. code-block:: terminal
+.. code-block:: console
 
   > help
   Debugger Commands
@@ -85,7 +85,7 @@ The Polar file used in the following examples looks like this:
 
 Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
 
-.. code-block:: terminal
+.. code-block:: console
 
   > line
   003: c() if debug();
@@ -103,7 +103,7 @@ Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
 
 Continue evaluation.
 
-.. code-block:: terminal
+.. code-block:: console
 
   > line
   001: a() if debug() and b() and c() and d();
@@ -116,7 +116,7 @@ Continue evaluation.
 
 Continue evaluation until the next query.
 
-.. code-block:: terminal
+.. code-block:: console
 
   Welcome to the debugger!
   > line
@@ -145,7 +145,7 @@ Continue evaluation until the next query.
 Evaluate goals through the end of the current parent query and stop at the next
 sibling of the parent query (if one exists).
 
-.. code-block:: terminal
+.. code-block:: console
 
   Welcome to the debugger!
   > line
@@ -179,7 +179,7 @@ The Polar file used in the following examples looks like this:
 
 Print current stack of goals.
 
-.. code-block:: terminal
+.. code-block:: console
 
   Welcome to the debugger!
   > line
@@ -199,7 +199,7 @@ Print current stack of goals.
 For the current stop point, print the corresponding Polar line and ``<n>``
 lines of additional context above and below it.
 
-.. code-block:: terminal
+.. code-block:: console
 
   > line
   003: c() if debug();
@@ -216,7 +216,7 @@ lines of additional context above and below it.
 
 Print current stack of queries.
 
-.. code-block:: terminal
+.. code-block:: console
 
   > line
   001: a() if debug() and b() and c() and d();
@@ -246,7 +246,7 @@ the current scope, print ``<unbound>``.
           available under the names used in the Polar file. ``var`` with no
           argument will list variable names in the current scope.
 
-.. code-block:: terminal
+.. code-block:: console
 
   > line
   001: a() if x = y and y = z and z = 3 and debug();
@@ -265,7 +265,7 @@ the current scope, print ``<unbound>``.
 
 Print all variable bindings in the current scope.
 
-.. code-block:: terminal
+.. code-block:: console
 
   > line
   001: a() if x = y and y = z and z = 3 and debug();

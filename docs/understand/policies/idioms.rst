@@ -2,6 +2,10 @@
 Imperative Idioms in Polar
 ==========================
 
+
+.. todo::
+    Turn this into the "Getting Started Level 3 guide"
+
 If this is your first experience with logic programming, welcome! Logic
 programming is a powerful paradigm that's well suited to writing authorization
 logic. The syntax might feel a bit foreign at first, but fear not: almost

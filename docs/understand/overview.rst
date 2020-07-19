@@ -22,7 +22,7 @@ feel free to :ref:`jump to the next section <Separation of Concerns>`.
 
 
 First of all, oso is an **application framework for authorization** and is distributed
-in the form of a **library**. oso is supported in :doc:`various languages </application-library/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language. This library is designed to make it easy to add complex authorization to any application.
+in the form of a **library**. oso is supported in :doc:`various languages </reference/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language. This library is designed to make it easy to add complex authorization to any application.
 
 
 The core of oso is an implementation of the **polar language**. This handles

@@ -66,7 +66,7 @@ The Polar debugger allows interactive debugging of Polar rules. It can be helpfu
 why a rule is behaving differently than expected.  Just add the
 ``debug()`` predicate to your rule body to get started.
 
-More info: :doc:`/dev-tools/debugger`.
+More info: :doc:`/reference/dev-tools/debugger`.
 
 Other bugs & improvements
 =========================

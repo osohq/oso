@@ -1,4 +1,3 @@
-.. _application-types:
 =================
 Application types
 =================

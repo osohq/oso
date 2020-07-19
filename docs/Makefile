@@ -36,10 +36,6 @@ livehtml: deps api-docs
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 test: doctest
-	python3 run_doc_tests.py learn-queries.polar
-	python3 run_doc_tests.py externals-example/company.py externals-example/company.polar
-	cd externals-example && python3 -m pytest
-
 	cd examples/inheritance/python && pytest .
 	cd examples/abac/python && pytest .
 	cd examples/rbac/python && pytest .
