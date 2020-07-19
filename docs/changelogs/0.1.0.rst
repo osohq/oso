@@ -58,7 +58,7 @@ API changes
 Python
 ^^^^^^
 
-Disambiguated load functions. :py:func:`oso.Oso.load` is no longer valid:
+Disambiguated load functions. ``oso.Oso.load`` is no longer valid:
 
 * Load files with :py:func:`oso.Oso.load_file`.
 * Load strings with :py:func:`oso.Oso.load_str`.
@@ -79,4 +79,4 @@ Other bugs & improvements
 
 - More consistent formatting for error messages.
 - Performance improvements to the Polar virtual machine that are especially
-  impactful for policies with many rules.
+  significant for policies with many rules.
