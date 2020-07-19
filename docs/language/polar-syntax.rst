@@ -373,6 +373,8 @@ Patterns and matching
 Polar has powerful pattern matching facilities that are useful to control which
 rules execute & in what order.
 
+.. _specialization:
+
 Specialization
 ^^^^^^^^^^^^^^
 
