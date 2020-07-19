@@ -12,6 +12,8 @@ the resource she wants to access. This is known as `attribute-based access
 control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
 
 
+.. _abac-basics:
+
 ABAC basics
 -----------
 
@@ -74,6 +76,8 @@ of "can see their own expenses" and represented it as a single comparison.
 The power of ABAC comes from being able to express these kind of permissions
 based on who you are and how you are related to the data.
 
+.. _abac-rbac:
+
 ABAC ❤️ RBAC
 ------------
 
@@ -123,7 +127,9 @@ And these can also follow inheritance patterns like we saw with regular roles.
    :start-after: role-inherit-start
    :end-before: role-inherit-end
 
-Hierachies
+.. _abac-hierarchies:
+
+Hierarchies
 -----------
 
 Up to this point, we've made a big deal about ABAC being able to represent relations
@@ -158,4 +164,4 @@ then we need to make sure this logic is evaluated recursively:
    :end-before: end-hierarchy-rule
 
 .. todo::
-   Summary
+   Add a summary

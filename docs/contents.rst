@@ -21,8 +21,7 @@ These guides contain a brief introduction to oso. This is a great
 starting point if you are new to **oso**.
 
 .. toctree::
-   :maxdepth: 1
-   :titlesonly:
+   :maxdepth: 2
    :caption: Getting started
 
    Quickstart <getting-started>
@@ -36,11 +35,9 @@ authorization in your application with oso.
 
 .. toctree::
    :maxdepth: 1
-   :titlesonly:
    :caption: Understand oso
 
    oso-overview
-   why-oso
    auth-fundamentals
 
    idioms

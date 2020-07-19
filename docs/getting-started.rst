@@ -2,6 +2,9 @@
 Getting Started
 ===============
 
+.. todo::
+    Speed up the getting started so we can do time to dopamine in 5 minutes.
+
 If you don't know what oso is, head back to `the introduction </>`_. If you've
 never used oso before and want to get up-and-running quickly, this guide is for
 you.
