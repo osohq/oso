@@ -5,3 +5,4 @@ msmb_theme==1.2.0
 sphinx_rtd_theme
 sphinxcontrib-contentui
 sphinx-tabs
+git+https://github.com/bashtage/sphinx-material.git

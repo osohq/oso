@@ -77,8 +77,40 @@ html_extra_path = ["_api_docs"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
-html_theme_options = {"logo_only": True}
+# html_theme = "sphinx_rtd_theme"
+html_theme = 'sphinx_material'
+# html_theme_options = {"logo_only": True}
+html_theme_options = {
+
+    # Set the name of the project to appear in the navigation.
+    'nav_title': 'oso',
+
+    # Set you GA account ID to enable tracking
+    'google_analytics_account': 'UA-XXXXX',
+
+    # Specify a base_url used to generate sitemap.xml. If not
+    # specified, then no sitemap will be built.
+    'base_url': 'https://docs.osohq.com',
+
+    # Set the color and the accent color
+    'color_primary': '#0E024E',
+    'color_accent': '#0E024E',
+
+    # Set the repo location to get a badge with stats
+    'repo_url': 'https://github.com/osohq/oso/',
+    'repo_name': 'oso',
+
+    # Visible levels of the global TOC; -1 means unlimited
+    'globaltoc_depth': 1,
+    # If False, expand all TOC entries
+    'globaltoc_collapse': True,
+    # If True, show hidden TOC entries
+    'globaltoc_includehidden': True,
+}
+html_sidebars = {
+    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
+}
+
 html_logo = "oso_logo_resized.png"
 html_css_files = [
     "css/custom.css",
