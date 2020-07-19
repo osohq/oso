@@ -41,10 +41,10 @@ Basic Policy
     an actor to perform the ``"read"`` action on an ``Order`` if:
 
     1. The actor's ``role`` property is equal to ``"medical_staff"``.
-    2. The :ref:`application method` ``treated(patient)``
+    2. The application method ``treated(patient)``
        on the actor returns true for the patient of the ``resource``.
 
-    Note the head of the rule.  Each argument uses a :ref:`type specializer` to
+    Note the head of the rule.  Each argument uses a type specializer to
     ensure this rule only applies to certain types of resources and actor.  This
     rule indicates that the ``actor`` parameter must be an instance of the ``Actor``
     class and the ``resource`` parameter must be an instance of the ``Order`` class.
@@ -93,7 +93,7 @@ One rule to rule them all
 .. container:: left-col
 
     We haven't talked about the application side of this yet.  So far, we've assumed
-    ``Order``, ``Lab``, and ``Test`` are :ref:`application classes`.
+    ``Order``, ``Lab``, and ``Test`` are application classes.
 
 .. container:: content-tabs right-col
 
@@ -129,7 +129,7 @@ One rule to rule them all
 
     Now, this ``allow`` rule will be evaluated for any instance that is a subclass
     of ``PatientData``.  Polar's language integration understands the class
-    inheritance structure when selecting rules to evalute!
+    inheritance structure when selecting rules to evaluate!
 
 .. TODO: include when groups are back
   Working with groups
@@ -160,7 +160,7 @@ Summary
     significant repetition.   We tried out a few strategies for representing common
     policy, but using it across many resource types.  First, we wrote a custom rule
     that moved duplicated logic into one place.  Then we used specializers &
-    Polar's :ref:`application class` integration to condense our policy even
+    Polar's application class integration to condense our policy even
     further.
 
 .. TODO

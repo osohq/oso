@@ -52,7 +52,7 @@ authorization in your application with oso.
 
 
 Language & API Reference
-=============
+========================
 
 Reference material for more experienced oso users, or those looking to dive deep
 on a particular concept.

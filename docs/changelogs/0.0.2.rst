@@ -14,7 +14,8 @@ Breaking changes
    to follow migration steps before upgrading.
 
 ``@external_class`` decorator is now named ``@polar_class``
-----------------------------------------------------------
+-----------------------------------------------------------
+
 The :py:func:`oso.polar_class` decorator replaces ``external_class``.
 The decorator is now safe to use on classes that extend ``odoo.model.Model``.
 
@@ -22,14 +23,14 @@ New features
 ==============
 
 Comparison Operators
-----------------
+--------------------
 
 Added operators for numerical comparisons.
 
 More info: :ref:`numerical-comparison`.
 
 Method return types
-----------------
+-------------------
 
 When calling methods on application classes from Polar,
 the method return type no longer needs to be a generator.
@@ -50,7 +51,7 @@ and adds the given fields with type restrictions. Instances of such a
 class are created using the syntax ``Name{field: value, ...}``.
 
 Dictionary keys do not need to be quoted
---------------------------------
+----------------------------------------
 
 The following:
 

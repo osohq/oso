@@ -76,7 +76,7 @@ provided to find the right combination of rules and inputs to answer the
 query.
 
 Using the two simple rules defined above, to answer the above
-query the search algorith may need to perform some number of steps like:
+query the search algorithm may need to perform some number of steps like:
 
 - Find all rules with name ``allow`` that expect three inputs
 - Determine which order to apply those rules. The two rules above have the same types of inputs, so they are evaluated in the order in which they were defined.
@@ -127,7 +127,7 @@ budgets.
 A way to think of inferences is "you get out more than what you put in".
 Every rule that you add gives oso more possible options and combinations
 of things to try. Your work scales linearly, but the logic you can express
-grows exponentionally -- this is some of the value added by the oso search algorithm.
+grows exponentially -- this is some of the value added by the oso search algorithm.
 
 To learn more about how polar and logic programming works head over to
 :doc:`/language/polar-fundamentals`
@@ -137,7 +137,7 @@ oso in your application
 
 So far we've seen what makes logic programming powerful. However until now logic
 programming has only been available in the form of standalone languages, and
-where they support some form of FFI, these are usually deeply entertwined with
+where they support some form of FFI, these are usually deeply intertwined with
 the internals of the language.
 
 What makes oso truly unique, is that it is embeddable in your application
