@@ -34,7 +34,7 @@ from Polar by default.
       ...
 
 Attempt to unify Python instances in Polar results in error
-----------------------------------------------------------
+-----------------------------------------------------------
 Fix for undefined behavior of application instance unification.
 Now results in the following error message::
 

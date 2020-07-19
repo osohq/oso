@@ -7,7 +7,7 @@ ABAC
 
 .. container:: left-col
 
-    Whereas RBAC allows you to group users and permissions into pre-defined buckets,
+    Whereas RBAC allows you to group users and permissions into predefined buckets,
     you may also want to represent fine-grained or dynamic permissions based on *who* the user is and her relation to
     the resource she wants to access. This is known as `attribute-based access
     control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
@@ -131,7 +131,7 @@ ABAC ❤️ RBAC
        :start-after: role-inherit-start
        :end-before: role-inherit-end
 
-Hierachies
+Hierarchies
 -----------
 
 .. container:: left-col

@@ -6,7 +6,7 @@ Classes & specialized rules
 
 .. note::
    This guide assumes you have familiarity with the
-   :doc:`polar-syntax` and :doc:`polar-queries`.
+   :doc:`polar-syntax` and :doc:`polar-fundamentals`.
 
 .. note::
    This is an area of active development! Syntax is likely to change

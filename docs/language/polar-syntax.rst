@@ -12,7 +12,7 @@ Each Polar file defines a set of rules.  When a Polar file is loaded into the
 authorization engine, all rules are added to the engine's knowledge base.
 
 The knowledge base may be queried.  The behavior of queries is described further
-in :doc:`polar-queries`.
+in :doc:`polar-fundamentals`.
 
 .. _basic-types:
 
@@ -108,7 +108,7 @@ where ``HEAD`` must be a *fact* and ``BODY`` any number of *terms*.
 The meaning of a rule is that ``HEAD`` is true **if** each of the ``BODY``
 terms is true. There may be multiple rules with the same head; each
 ``BODY`` will be tried in turn, and any or all may succeed. For more
-on how rules are defined and applied see :doc:`polar-queries`.
+on how rules are defined and applied see :doc:`polar-fundamentals`.
 
 The following is an example of a rule::
 
@@ -209,7 +209,7 @@ bound to ``1`` or unbound.
 
 Unification is also used to determine if queries match rule ``HEAD`` s,
 and if the ``BODY`` of rules match other facts in the knowledge base.
-We will cover unification further in :doc:`polar-queries`.
+We will cover unification further in :doc:`polar-fundamentals`.
 
 .. todo add a little table with unification examples, esp. w/dictionaries.
 
@@ -269,14 +269,12 @@ will compare the value of the variable age with 10 and unify if it's less than 1
 Cut
 ^^^
 
-The *cut* operator, which in Polar is written as ``cut()``, commits
-the query engine to the enclosing rule definition, and refuses to
-consider any others. Any definitions that have already run are not
-"un-run", though, or avoided by using cut; it just ensures that no
-*others* will run. Such "other" rule definitions are often less
-specific rules (see :doc:`polar-classes`), and the use of `cut()`
-can be used, e.g., to override an ``allow`` method on a less-specific
-class.
+The *cut* operator, which in Polar is written as ``cut()``, commits the query
+engine to the enclosing rule definition, and refuses to consider any others. Any
+definitions that have already run are not "un-run", though, or avoided by using
+cut; it just ensures that no *others* will run. Such "other" rule definitions
+are often less specific rules, and the use of `cut()` can be used, e.g., to
+override an ``allow`` method on a less-specific class.
 
 ``cut()`` can appear anywhere in a rule body, but terms that
 proceed it must succeed in order for it to be reached, so it
@@ -349,8 +347,8 @@ cannot be accessed after the ``forall`` predicate.
 
 .. _operator-rest:
 
-*rest operator
-^^^^^^^^^^^^^^
+``*rest`` operator
+^^^^^^^^^^^^^^^^^^
 
 The rest operator (``*``) can be used to destructure a list. For example::
 
@@ -392,7 +390,9 @@ Now, the ``first_name`` rule can be used with instances of the ``User`` or
 ``Person`` type.
 
 For more on this feature, see
-:doc:`../application-library/application-types.rst`.
+:doc:`../application-library/application-types`.
+
+.. _pattern:
 
 Patterns
 ^^^^^^^^
@@ -431,7 +431,7 @@ subclass of ``Person`` would match ``Person{x: 1}``.
 .. _operator-matches:
 
 Matches operator
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 The above example used the ``matches`` operator to describe the behavior of
 pattern matching.  This operator can be used anywhere within a rule body to

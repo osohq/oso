@@ -7,7 +7,7 @@ Python library documentation
 Classes
 =======
 .. autoclass:: oso.Oso
-   :members: allow, load, register_class
+   :members: allow, load_str, load_file, register_class
 
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
