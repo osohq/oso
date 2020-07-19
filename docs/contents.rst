@@ -73,6 +73,9 @@ Reference material for concepts, terminology and language APIs.
 
 Project-related information.
 
+.. todo::
+   Add links to Github + Issues
+
 .. toctree::
    :maxdepth: 1
    :caption: Project

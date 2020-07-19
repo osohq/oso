@@ -127,8 +127,8 @@ In order to write our first authorization policy, we first need to add oso to
 our application. If you don't already have |python-package|_ installed, go
 ahead and install it now:
 
-.. TODO: replace the hard-coded version number in the below snippet with the
-   current latest version on RubyGems... somehow.
+.. todo::
+  replace the hard-coded version number in the below snippet with the current latest version on RubyGems... somehow.
 
 .. .. code-block:: console
 

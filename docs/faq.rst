@@ -3,21 +3,23 @@ Frequently Asked Questions
 ==========================
 
 
-.. TODO: once we have some performance numbers
-    Performance of oso
-    ------------------
-
-    The performance of oso depends almost entirely on two things:
-    the structure of your Polar policy, and the time to lookup application data.
-
-    At the time of writing, for some typical Polar workloads, the time
-    to evaluate a query takes TODO: fill me in.
-
-    For looking up application data, oso adds about 2us of overhead, per datum returned.
-    In most cases, the lookup itself will be the most costly part.
+.. todo:: 
+    add perf numbers
+    
+.. Performance of oso
+.. ------------------
+.. 
+.. The performance of oso depends almost entirely on two things:
+.. the structure of your Polar policy, and the time to lookup application data.
+.. 
+.. At the time of writing, for some typical Polar workloads, the time
+.. to evaluate a query takes TODO: fill me in.
+.. 
+.. For looking up application data, oso adds about 2us of overhead, per datum returned.
+.. In most cases, the lookup itself will be the most costly part.
 
 The "N+1 Problem"
-----------------
+-----------------
 
 A core part of understanding how oso will perform under regular
 workloads is recognising that oso applies a search algorithm to
@@ -103,22 +105,25 @@ Since oso is able to work directly with native objects, using the
 existing Django methods to prefetch the grandchildren in this case
 can be applied directly where it's used.
 
-.. TODO
-    3. *Coming soon*: Polar SQL query builder
+.. todo::
+    Use oso for SQL queries?
+.. 3. *Coming soon*: Polar SQL query builder
+.. 
+.. One way to avoid this is to directly connect Polar to your SQL database
+.. and allow it to optimise the queries.
+.. 
+.. See: https://www.cs.cmu.edu/afs/cs/project/ai-repository/ai/lang/prolog/code/io/pl2sql/0.html
 
-    One way to avoid this is to directly connect Polar to your SQL database
-    and allow it to optimise the queries.
 
-    See: https://www.cs.cmu.edu/afs/cs/project/ai-repository/ai/lang/prolog/code/io/pl2sql/0.html
+.. todo::
+    Add section for detecting performance issues
 
-
-.. TODO: profiling tool
-    Detecting performance issues
-    ----------------------------
-
-    In order to facilitate understanding and debugging performance
-    issues like the above, oso includes simple profiling functionality.
-    On making a query, add the `profile=True` paramter. When a trace is
-    returned for a query, you can see where the majority of time was spent.
-
-    This information can be viewed with the oso trace viewer.
+.. Detecting performance issues
+.. ----------------------------
+.. 
+.. In order to facilitate understanding and debugging performance
+.. issues like the above, oso includes simple profiling functionality.
+.. On making a query, add the `profile=True` paramter. When a trace is
+.. returned for a query, you can see where the majority of time was spent.
+.. 
+.. This information can be viewed with the oso trace viewer.

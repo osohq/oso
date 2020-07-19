@@ -398,7 +398,8 @@ that occurred since the last alternative are undone. If no unexplored
 alternatives remain, the query as a whole fails, and a false result
 is reported.
 
-.. todo a graphical representation of the search procedure.
+.. todo::
+   a graphical representation of the search procedure.
 
 Summary
 =======

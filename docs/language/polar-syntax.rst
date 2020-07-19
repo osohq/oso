@@ -188,7 +188,8 @@ a descriptive name.
 Operators
 ---------
 
-.. todo not really true... some operators can be used in other places.
+.. todo::
+   not really true... some operators can be used in other places.
 
 Operators are used to combine terms in rule bodies into expressions.
 
@@ -211,7 +212,8 @@ Unification is also used to determine if queries match rule ``HEAD`` s,
 and if the ``BODY`` of rules match other facts in the knowledge base.
 We will cover unification further in :doc:`polar-queries`.
 
-.. todo add a little table with unification examples, esp. w/dictionaries.
+.. todo::
+   add a little table with unification examples, esp. w/dictionaries.
 
 Conjunction (and)
 ^^^^^^^^^^^^^^^^^

@@ -60,6 +60,10 @@ html_show_sourcelink = False
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "borland"
 
+### Show/hide TODOs
+
+todo_include_todos = True
+
 # -- Options for HTML output -------------------------------------------------
 
 # Add any paths that contain custom static files (such as style sheets) here,

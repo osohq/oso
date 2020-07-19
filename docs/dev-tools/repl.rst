@@ -4,6 +4,9 @@
 The Polar REPL
 ==============
 
+.. todo::
+    Update the REPL guide
+
 Developers can query Polar knowledge bases from the command line using the
 Polar REPL (Read, Evaluate, Print, Loop). To run the REPL, first make sure
 you have :ref:`installed oso <install>`.
@@ -13,11 +16,6 @@ Once oso is installed, we can launch the REPL from the terminal::
     python3 -m polar.parser --interactive <policy files>
 
 .. Both Python and Polar files can be loaded into the REPL.
-
-.. TODO: (leina) remove this once fix is merged
-.. .. note::
-..    Python files must be loaded into the REPL first if they define classes
-..    referenced in the Polar files.
 
 
 Let's start by loading a simple Polar policy::

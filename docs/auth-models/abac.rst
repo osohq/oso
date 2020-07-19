@@ -157,4 +157,5 @@ then we need to make sure this logic is evaluated recursively:
    :start-after: start-hierarchy-rule
    :end-before: end-hierarchy-rule
 
-.. TODO: Summary
+.. todo::
+   Summary

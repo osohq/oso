@@ -17,8 +17,8 @@ RBAC basics
 Representing roles in Polar is as simple as creating :polar:`role()`
 :ref:`rules <polar-rules>`:
 
-.. TODO(gj): Update the below snippet once we can represent set membership in
-..           Polar.
+.. todo::
+   (gj): Update the below snippet once we can represent set membership.
 
 .. literalinclude:: /examples/rbac/01-simple.polar
    :caption: rbac.polar

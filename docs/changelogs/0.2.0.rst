@@ -9,9 +9,6 @@
 Breaking changes
 ================
 
-.. TODO remove warning and replace with "None" if no breaking
-   changes.
-
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 

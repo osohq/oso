@@ -2,4 +2,5 @@
 Install & Download
 ==================
 
-.. TODO
+.. todo::
+    Add install instructions

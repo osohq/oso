@@ -243,8 +243,9 @@ authorization rules that must be applied to highly sensitive data using oso,
 but still need the performance gains from explicitly filtering records
 in your application.
 
-.. todo Below example doesn't actually work because a class does not match a
-   rule (only an instance will).
+.. todo::
+    Below example doesn't actually work because a class does not match a
+    rule (only an instance will).
 
 .. code-block:: python
 
@@ -317,10 +318,12 @@ request filter.
 
         # No additional authorization of records is needed since we checked the query.
 
-.. todo We have no way to expect an Expense class as a specializer. We may need
-        some syntax for that.
+.. todo::
+    We have no way to expect an Expense class as a specializer. We may need
+    some syntax for that.
 
-.. todo It would be nice if the filter structure can actually be evaluated
+.. todo::
+    It would be nice if the filter structure can actually be evaluated
     by Polar for "view" queries, but that would require some complicated
     metaprogramming type stuff, or at least a getattr style predicate.
 
@@ -405,4 +408,5 @@ at various spots. We then covered list endpoints -- which are often difficult to
 write complex authorization for -- in detail. We discussed several potential
 techniques for structuring a policy that handles these types of requests.
 
-.. todo what to read next
+.. todo::
+    what to read next

@@ -113,25 +113,27 @@ Now, this ``allow`` rule will be evaluated for any instance that is a subclass
 of ``PatientData``.  Polar's language integration understands the class
 inheritance structure when selecting rules to evalute!
 
-.. TODO: include when groups are back
-  Working with groups
-  -------------------
+.. todo::
+    include when groups are back
 
-  This worked well for us, but remember this is just an example.  Not all
-  applications may have encoded relationships this way.  Maybe when we wrote our
-  code we didn't create a ``PatientData`` class, and just implemented ``Lab``,
-  ``Order`` and ``Test`` separately.  We still want to treat them as one concept
-  in Polar, but don't want to change our application.
-
-  Polar includes a ``group`` feature that can be used for exactly this purpose:
-
-  .. literalinclude:: /examples/inheritance/05-group.polar
-     :language: polar
-     :emphasize-lines: 1
-
-  The :ref:`group` declaration creates a new type in our Polar file called
-  ``PatientData``.  This time, we tell Polar that ``Lab``, ``Order`` and ``Test``
-  are part of this group.  We can write our rule in the same way as before.
+..  Working with groups
+..  -------------------
+..
+..  This worked well for us, but remember this is just an example.  Not all
+..  applications may have encoded relationships this way.  Maybe when we wrote our
+..  code we didn't create a ``PatientData`` class, and just implemented ``Lab``,
+..  ``Order`` and ``Test`` separately.  We still want to treat them as one concept
+..  in Polar, but don't want to change our application.
+..
+..  Polar includes a ``group`` feature that can be used for exactly this purpose:
+..
+..  .. literalinclude:: /examples/inheritance/05-group.polar
+..     :language: polar
+..     :emphasize-lines: 1
+..
+..  The :ref:`group` declaration creates a new type in our Polar file called
+..  ``PatientData``.  This time, we tell Polar that ``Lab``, ``Order`` and ``Test``
+..  are part of this group.  We can write our rule in the same way as before.
 
 Summary
 -------
@@ -143,6 +145,8 @@ that moved duplicated logic into one place.  Then we used specializers &
 Polar's :ref:`application class` integration to condense our policy even
 further.
 
-.. TODO
-  Finally, we saw how groups & inheritance can both be exploited to
-  write flexible policies that accurately model our application's domain model.
+.. todo::
+    Include when we have groups again
+
+..  Finally, we saw how groups & inheritance can both be exploited to
+..  write flexible policies that accurately model our application's domain model.

@@ -59,7 +59,8 @@ inputs to ask a specific question. But we can also ask questions like "what is
 Alice allowed to do?". In oso, this query would be written as ``alice = new User
 { name: "alice" }, allow(alice, action, resource)``.
 
-.. TODO: if we're going to do this would need examples of how this actually
+.. todo::
+    if we're going to do this would need examples of how this actually
     works. This is the "Explain why logic programming is powerful" task
 
 Because ``action`` and ``resource`` are both "unbound variables", meaning they do
@@ -147,7 +148,10 @@ as a simple library, and integrates directly with your application data.
 What this means is that you can use oso as a natural extension of your app,
 build up reusable logic in your policy and leverage it throughout your application.
 
-Take the following snippet from the `example expenses app <#TODO>`_:
+.. todo::
+    Add link to example app
+
+Take the following snippet from the `example expenses app <#>`_:
 
 .. code-block:: python
 
@@ -206,7 +210,8 @@ expense owners can interact with their own expenses.
 Both of these lines are completely adaptable to other authorization models,
 data structures, application structures, and so on.
 
-.. TODO: Maybe add Gabe's filesystem guide here as an in-depth version of the above?
+.. todo::
+    Maybe add Gabe's filesystem guide here as an in-depth version of the above?
 
 
 .. pull-quote::

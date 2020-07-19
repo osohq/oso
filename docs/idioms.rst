@@ -80,7 +80,8 @@ rule head:
 The rule will fail when evaluated on a regular ``User`` and succeed when
 evaluated on an ``Admin``, encoding an implicit ``if Admin`` condition.
 
-.. TODO: ``else`` with ``cut``?
+.. todo::
+  ``else`` with ``cut``?
 
 .. _lists:
 

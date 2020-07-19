@@ -7,6 +7,8 @@
 Welcome to the oso documentation!
 ==================================
 
+.. todo::
+    "what is oso" wording 
 
 .. admonition:: What is oso?
 
@@ -27,3 +29,6 @@ To see these principles in action, :doc:`continue on to the Getting Started guid
 
 To learn more about oso and how these principles motivated its design, 
 :doc:`read the oso overview page <oso-overview>`.
+
+
+.. todolist::
