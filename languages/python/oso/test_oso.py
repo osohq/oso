@@ -23,7 +23,6 @@ actors = {
 }
 
 
-@polar_class
 class Actor:
     name: str = ""
 
@@ -36,7 +35,6 @@ class Actor:
 
 
 # example of registering a non-dataclass class
-@polar_class(from_polar="from_polar")
 class Widget:
     # Data fields.
     id: str = ""
@@ -55,7 +53,6 @@ class Widget:
 
 
 @dataclass
-@polar_class
 class Company:
     # Data fields.
     id: str = ""
@@ -78,6 +75,10 @@ class Company:
 def test_oso():
     _oso = Oso()
     _oso.register_class(Jwt)
+    _oso.register_class(Actor)
+    _oso.register_class(Widget, from_polar="from_polar")
+    _oso.register_class(Company)
+
     # import the test policy
     _oso.load_file(Path(__file__).parent / "test_oso.polar")
 
@@ -157,6 +158,11 @@ def test_instance_from_external_call(test_oso):
     Jwt.add_key(public_key)
     assert test_oso.allow(token("guest"), "frob", resource)
 
+def test_allow_model(test_oso):
+    """ Test user auditor can list companies but not widgets"""
+    user = Actor(name="auditor")
+    assert not test_oso.allow(user, "list", Widget)
+    assert test_oso.allow(user, "list", Company)
 
 if __name__ == "__main__":
     pytest.main([__file__])
