@@ -1,6 +1,7 @@
 from typing import Any, Callable, List
+from polar import Predicate
 from . import Oso
-from polar.api import Http, Predicate
+from .helpers import Http
 
 
 class OsoFlask(Oso):

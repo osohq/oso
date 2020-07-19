@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import pytest
 import os
 
-from polar.api import Polar
+from polar import Polar
 
 
 # DEFINED So pytests have same interface.

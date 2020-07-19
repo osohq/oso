@@ -45,7 +45,7 @@ def get_version(rel_path):
 
 setup(
     name="oso",
-    version=get_version("oso/__init__.py"),
+    version=get_version("oso/oso.py"),
     description="oso auth library",  # Optional
     long_description=long_description,  # Optional
     long_description_content_type="text/markdown",  # Optional (see note above)

@@ -7,8 +7,7 @@ import os
 from typing import Any, cast, Callable, List, TYPE_CHECKING
 import inspect
 
-from polar import api
-from polar.api import Polar, Predicate, QueryResult
+from polar import Polar, Predicate, QueryResult
 from .extras import Http, PathMapper
 
 if TYPE_CHECKING:
@@ -19,7 +18,7 @@ class OsoException(Exception):
     pass
 
 
-class Oso(api.Polar):
+class Oso(Polar):
     """The central object to manage application policy state, e.g.
     the policy data, and verify requests.
 

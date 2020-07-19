@@ -11,8 +11,7 @@ from dataclasses import dataclass
 import oso
 from oso import Oso, polar_class
 from oso.jwt import Jwt
-from polar import api
-from polar.api import Polar, Predicate
+from polar import Polar, Predicate
 from polar.test_helpers import public_key, private_key
 
 # Fake global actor name → company ID map.
