@@ -7,10 +7,6 @@ Overview
 
 oso is a policy engine for declarative authorization policies that executes and interacts directly in/with your application
 
-Let's imagine we're building a SaaS app that allows organizations to manage their
-employee expenses. We'll need authorization logic to restrict access to, for example, allow employees to view their own expenses, and their managers to view and approve their expenses.
-
-
 oso is designed based on 3 principles, which we'll describe briefly then in more detail below
 
 1. **Separation of concerns.** Authorization logic is distinct from business logic. By separating the two, you can make changes to the policy which apply across the entire application, write reusable patterns, and get a single place to control, test and visualize access.
@@ -22,7 +18,7 @@ Key Pieces
 
 Before we go into more depth about the principles, it might be helpful to
 give an overview of the key pieces of oso. If you're already familiar with oso,
-feel free to :ref:`jump to the next section <separation-of-concerns>`.
+feel free to :ref:`jump to the next section <Separation of Concerns>`.
 
 
 First of all, oso is an **application framework for authorization** and is distributed
@@ -54,13 +50,34 @@ The oso library is responsible for converting types between oso primitive types
 (like strings, numbers, and lists), and native application types (e.g. Python's ``str``,
 ``int``, and ``list`` classes), as well as keeping track of instances of application classes. When executing a query like ``oso.allow(user, "view", expense)`` oso creates a new virtual machine to execute the query. The virtual machine executes, returning to the native library whenever some application-specific information is needed.
 
+Use Cases
+---------
+
+Authorization is a broad subject, and arises in many different areas. Although oso
+is designed to be used anywhere, and for any type of authorization, there are some
+applications that are more naturally suited for it.
+
+Currently, the *ideal* use case for oso is within multi-tenant applications
+with some degree of complexity in the permissions scheme. For example, any application
+where authorization decisions need to take into account *who* the user is and their
+*relation* to the data being accessed.
+
+For applications where all users fall into two roles (e.g. admin and user), the value
+in using oso might be to enable moving to a more complex model at a later date.
+
+oso *does not* handle assigning users to roles, or assigning permissions to users directly. Although you *can* do this with oso, our belief is that this data is better managed by the application in whatever database is already in place. oso can be used to
+reference that data directly, express what roles can do in an application, and even extend the roles to include inheritance structures and hierarchies.
+
+This means that currently oso should not be seen as a replacement for things like AWS IAM or Active Directory. In the future, these may be possible, and if you ever want someone to rant to about these kinds of things, you'll find us happy to listen.
+
 
 Now let's return to our three principles in more detail.
 
-.. _separation-of-concerns:
-
 Separation of Concerns
 ----------------------
+
+Let's imagine we're building a SaaS app that allows organizations to manage their
+employee expenses. We'll need authorization logic to restrict access to, for example, allow employees to view their own expenses, and their managers to view and approve their expenses.
 
 With oso you separate authorization logic from your app by making a generic
 ``allow`` check using the library:
