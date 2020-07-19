@@ -18,45 +18,65 @@ A basic web server
 Our application serves data about expenses submitted by users. The ``Expense``
 class isn't too complicated...
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-01.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lineno-start: 1
-..   :lines: 1-9
+.. tabs::
+  .. group-tab:: Python
 
-.. literalinclude:: /examples/getting-started/python/server-01.py
-  :caption: server.py
-  :language: python
-  :lineno-start: 1
-  :lines: 1-7
+    .. literalinclude:: /examples/getting-started/python/server-01.py
+      :caption: server.py
+      :language: python
+      :lineno-start: 1
+      :lines: 1-7
+
+  .. group-tab:: Ruby
+
+    .. literalinclude:: /examples/getting-started/ruby/server-01.rb
+      :caption: server.rb
+      :language: ruby
+      :lineno-start: 1
+      :lines: 1-9
+
 
 ...and our "database" of expenses is a map from ID to expense:
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-01.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lineno-start: 9
-..   :lines: 9-13
 
-.. literalinclude:: /examples/getting-started/python/server-01.py
-  :caption: server.py
-  :language: python
-  :lineno-start: 9
-  :lines: 9-13
+
+.. tabs::
+  .. group-tab:: Python
+      
+    .. literalinclude:: /examples/getting-started/python/server-01.py
+      :caption: server.py
+      :language: python
+      :lineno-start: 9
+      :lines: 9-13
+  
+  .. group-tab:: Ruby
+
+    .. literalinclude:: /examples/getting-started/ruby/server-01.rb
+      :caption: server.rb
+      :language: ruby
+      :lineno-start: 9
+      :lines: 9-13
+
 
 Our web server contains some simple logic to filter out bad requests and not much else:
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-01.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lineno-start: 17
-..   :lines: 17-
 
-.. literalinclude:: /examples/getting-started/python/server-01.py
-  :caption: server.py
-  :language: python
-  :lineno-start: 15
-  :lines: 15-
+.. tabs::
+  .. group-tab:: Python
+      
+    .. literalinclude:: /examples/getting-started/python/server-01.py
+      :caption: server.py
+      :language: python
+      :lineno-start: 15
+      :lines: 15-
+
+  .. group-tab:: Ruby
+
+    .. literalinclude:: /examples/getting-started/ruby/server-01.rb
+      :caption: server.rb
+      :language: ruby
+      :lineno-start: 17
+      :lines: 17-
 
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
