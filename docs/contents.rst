@@ -44,6 +44,8 @@ authorization in your application with oso.
 
    auth-fundamentals
 
+   idioms
+
    auth-models/index
 
    integration-guide
