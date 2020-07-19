@@ -4,16 +4,18 @@
    contain the root `toctree` directive.
 
 
-Overview
-========
+Welcome to the oso documentation!
+==================================
 
-Welcome to the home of the oso documentation.
+Introduction to the documentation
 
-If this is your first time here, we recommend you head
-over to :doc:`index`.
+.. toctree::
+    :maxdepth: 1
+    :titlesonly:
 
-Getting Started
-===============
+    Docs Home <index>
+
+------
 
 These guides contain a brief introduction to oso. This is a great
 starting point if you are new to **oso**.
@@ -23,13 +25,10 @@ starting point if you are new to **oso**.
    :titlesonly:
    :caption: Getting started
 
-   index
    Quickstart <getting-started>
    download
 
-
-Understand oso
-==============
+----------
 
 These guides contain narrative documentation and examples.
 This is a good place to go to learn more about implementing
@@ -51,9 +50,7 @@ authorization in your application with oso.
 
    integration-guide
 
-
-Reference
-=========
+----------
 
 Reference material for concepts, terminology and language APIs.
 
@@ -72,8 +69,9 @@ Reference material for concepts, terminology and language APIs.
    performance
    faq
 
-Project
-=======
+----------
+
+Project-related information.
 
 .. toctree::
    :maxdepth: 1

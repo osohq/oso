@@ -1,63 +1,29 @@
+.. oso documentation master file, created by
+   sphinx-quickstart on Fri Mar 20 10:34:51 2020.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
 
-Introduction to oso
-===================
-**oso** is an authorization system designed to make it easy for developers to express
-complex authorization logic naturally and concisely throughout an application.
+
+Welcome to the oso documentation!
+==================================
 
 
-Why oso
--------
-1. oso makes it easy to build, debug, and maintain your authorization code
-   using a declarative policy language, called Polar.
-   Polar allows you to express a wide variety of authorization patterns – 
-   including roles, attributes, hierarchies, integrations with identity providers,
-   and others – naturally and concisely.
-2. oso enables you to write rules directly over your application objects
-   because it is tightly integrated with your application.
-3. oso gives you the flexibility to write a policy in Polar and apply it to
-   multiple applications or shared services at once, including across
-   applications and services written in different languages.
+.. admonition:: What is oso?
 
-Example
-------
+    oso is a library for adding authorization to applications using a declarative
+    policy language
 
-Let's look at a quick example of a Polar policy for an expense management application:
+The core use case of oso is to add authorization logic to any application.
+This is commonly solved by custom logic sprinkled ad-hoc throughout an application,
+leading to code that is hard to maintain, modify, and debug.
 
-.. code-block:: polar
+oso is built on the following principles:
 
-  # An owner of a resource can always read it.
-  allow(user, "read", resource) if is_owner(user, resource);
+- **Separation of concerns.** Authorization logic is distinct from business logic. By separating the two, you can make changes to the policy which apply across the entire application, write reusable patterns, and get a single place to control, test and visualize access.
+- **Right tool for the right job.** Authorization deals in facts and rules about who is allowed to do what in a system. Solutions to describe authorization logic ought to be declarative and have semantics that map to common domain concepts – like roles and relationships, or whether a policy is satisfied given certain inputs.
+- **Authorization decisions and application data are inseparable.** Authorization decisions always rely on application context – like who a user is and her relationship to the data she's trying to access. The authorization system ought to be able to call directly into the application so you can write policies using applications objects and data directly.
 
-  # Ownership is defined by resource properties.
-  is_owner(user: User, budget: Budget) if user.id = budget.owner_id;
-  is_owner(user: User, expense: Expense) if user.id = expense.owner_id;
+To see these principles in action, :doc:`continue on to the Getting Started guide <getting-started>`.
 
-  # Ownership is hierarchical across expenses and budgets.
-  allow(user, "read", expense: Expense) if is_owner(user, expense.budget);
-
-  # Accountants can approve budgets and expenses.
-  allow(user, "approve", Budget) if user.role = "accountant";
-  allow(user, "approve", Expense) if user.role = "accountant";
-
-This short policy encodes:
-
-1. Ownership semantics. Anyone who is an owner of a resource can read the resource. The definition
-   of ownership can vary depending on the resource type.
-2. A hierarchical relationship between resources. Anyone who is the owner of a
-   budget can read expenses associated with that budget.
-3. Role-based access. Users that are accountants can approve budgets.
-
-Many authorization systems force developers to choose one of these models – like just roles or hierarchies or ownership semantics – but Polar's flexibility shines here, allowing the developer to use any or all of them.
-
-What it's like to use oso
--------------------------
-- Express your policy as code using the declarative :doc:`Polar language </language/index>`.
-- Maintain authorization across a variety of languages and environments with a cross-language
-  :doc:`authorization library </application-library/index>`.
-- :doc:`Use native application objects & data </application-library/application-types>`
-  directly in Polar policy.
-- Understand why policy decisions are made using the :doc:`Policy debugger </dev-tools/debugger>`.
-- :ref:`Write tests <testing>` over your policy to ensure correct behavior.
-
-.. we don't support this yet:
-.. - Integrations with common web frameworks and ORMs.
+To learn more about oso and how these principles motivated its design, 
+:doc:`read the oso overview page <oso-overview>`.
