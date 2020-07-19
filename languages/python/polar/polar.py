@@ -5,10 +5,10 @@ from pathlib import Path
 
 from _polar_lib import lib
 
-from .cache import Cache
 from .errors import get_error
 from .exceptions import PolarApiException, PolarRuntimeException
 from .ffi import ffi_serialize, load_str, check_result, is_null, to_c_str, Predicate
+from .host import Host
 from .query import Query, QueryResult
 
 
@@ -21,7 +21,7 @@ class Polar:
 
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
         self.polar = lib.polar_new()
-        self.cache = Cache(self.polar, classes=classes, constructors=constructors)
+        self.host = Host(self.polar, classes=classes, constructors=constructors)
         self.load_queue = []
         self.constructors = constructors
 
@@ -30,7 +30,7 @@ class Polar:
         self.register_class(timedelta, name="Timedelta")
 
     def __del__(self):
-        del self.cache
+        del self.host
         lib.polar_free(self.polar)
 
     def load_file(self, policy_file):
@@ -71,7 +71,7 @@ class Polar:
         elif isinstance(query, Predicate):
             query = check_result(
                 lib.polar_new_query_from_term(
-                    self.polar, ffi_serialize(self.cache.to_polar_term(query))
+                    self.polar, ffi_serialize(self.host.to_polar_term(query))
                 )
             )
         else:
@@ -96,7 +96,7 @@ class Polar:
 
     def run(self, query):
         """Send an FFI query object to a new Query object for evaluation."""
-        return Query(self.polar, cache=self.cache).run(query)
+        return Query(self.polar, host=self.host).run(query)
 
     def repl(self):
         self._load_queued_files()
@@ -117,13 +117,13 @@ class Polar:
         either be a method or a string. In the case of a string, Polar will
         look for the method using `getattr(cls, from_polar)`."""
         cls_name = cls.__name__ if name is None else name
-        self.cache.cache_class(cls, cls_name, from_polar)
+        self.host.cache_class(cls, cls_name, from_polar)
         self.register_constant(cls_name, cls)
 
     def register_constant(self, name, value):
         """Register `value` as a Polar constant variable called `name`."""
         name = to_c_str(name)
-        value = ffi_serialize(self.cache.to_polar_term(value))
+        value = ffi_serialize(self.host.to_polar_term(value))
         lib.polar_register_constant(self.polar, name, value)
 
     def _load_queued_files(self):

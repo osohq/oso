@@ -1,8 +1,10 @@
+"""Translate between Polar and the host language (Python)."""
+
 from .exceptions import PolarApiException, PolarRuntimeException
 from .ffi import new_id, Predicate, Variable
 
 
-class Cache:
+class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
     def __init__(self, polar, classes={}, constructors={}, instances={}):

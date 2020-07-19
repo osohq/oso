@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 
 from _polar_lib import lib
-from .cache import Cache
 from .exceptions import PolarApiException
 from .ffi import (
     external_answer,
@@ -16,6 +15,7 @@ from .ffi import (
     to_c_str,
     Variable,
 )
+from .host import Host
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -32,16 +32,16 @@ class QueryResult:
 class Query:
     """Execute a Polar query through the FFI/event interface."""
 
-    def __init__(self, polar, query=None, cache=None, calls={}):
+    def __init__(self, polar, query=None, host=None, calls={}):
         if not polar:
             raise PolarApiException("no Polar handle")
         self.polar = polar
         self.query = query
-        self.cache = cache.copy() if cache else Cache(polar)
+        self.host = host.copy() if host else Host(polar)
         self.calls = calls.copy()
 
     def __del__(self):
-        del self.cache
+        del self.host
         lib.query_free(self.query)
 
     def run(self, query=None):
@@ -75,7 +75,7 @@ class Query:
                 self.handle_debug(query, data)
             if kind == "Result":
                 bindings = {
-                    k: self.cache.to_python(v) for k, v in data["bindings"].items()
+                    k: self.host.to_python(v) for k, v in data["bindings"].items()
                 }
                 trace = data["trace"]
                 yield {"bindings": bindings, "trace": trace}
@@ -84,8 +84,8 @@ class Query:
         id = data["instance_id"]
         cls_name = data["instance"]["tag"]
         fields = data["instance"]["fields"]["fields"]
-        fields = {k: self.cache.to_python(v) for k, v in fields.items()}
-        self.cache.make_instance(cls_name, fields, id)
+        fields = {k: self.host.to_python(v) for k, v in fields.items()}
+        self.host.make_instance(cls_name, fields, id)
 
     def handle_external_call(self, query, data):
         call_id = data["call_id"]
@@ -93,12 +93,12 @@ class Query:
             value = data["instance"]["value"]
             if "ExternalInstance" in value:
                 instance_id = value["ExternalInstance"]["instance_id"]
-                instance = self.cache.get_instance(instance_id)
+                instance = self.host.get_instance(instance_id)
             else:
-                instance = self.cache.to_python(data["instance"])
+                instance = self.host.to_python(data["instance"])
 
             attribute = data["attribute"]
-            args = [self.cache.to_python(arg) for arg in data["args"]]
+            args = [self.host.to_python(arg) for arg in data["args"]]
 
             # Lookup the attribute on the instance.
             try:
@@ -127,14 +127,14 @@ class Query:
         # Return the next result of the call.
         try:
             value = next(self.calls[call_id])
-            stringified = ffi_serialize(self.cache.to_polar_term(value))
+            stringified = ffi_serialize(self.host.to_polar_term(value))
             external_call(self.polar, query, call_id, stringified)
         except StopIteration:
             external_call(self.polar, query, call_id, None)
 
     def handle_external_op(self, query, data):
         op = data["operator"]
-        args = [self.cache.to_python(arg) for arg in data["args"]]
+        args = [self.host.to_python(arg) for arg in data["args"]]
         answer: bool
         try:
             if op == "Lt":
@@ -160,9 +160,9 @@ class Query:
             )
 
     def handle_external_isa(self, query, data):
-        cls = self.cache.get_class(data["class_tag"])
+        cls = self.host.get_class(data["class_tag"])
         if cls:
-            instance = self.cache.get_instance(data["instance_id"])
+            instance = self.host.get_instance(data["instance_id"])
             isa = isinstance(instance, cls)
         else:
             isa = False
@@ -172,17 +172,17 @@ class Query:
         left_instance_id = data["left_instance_id"]
         right_instance_id = data["right_instance_id"]
         try:
-            left_instance = self.cache.get_instance(left_instance_id)
-            right_instance = self.cache.get_instance(right_instance_id)
+            left_instance = self.host.get_instance(left_instance_id)
+            right_instance = self.host.get_instance(right_instance_id)
             eq = left_instance == right_instance
             external_answer(self.polar, query, data["call_id"], eq)
         except PolarRuntimeException:
             external_answer(self.polar, query, data["call_id"], False)
 
     def handle_external_is_subspecializer(self, query, data):
-        mro = self.cache.get_instance(data["instance_id"]).__class__.__mro__
-        left = self.cache.get_class(data["left_class_tag"])
-        right = self.cache.get_class(data["right_class_tag"])
+        mro = self.host.get_instance(data["instance_id"]).__class__.__mro__
+        left = self.host.get_class(data["left_class_tag"])
+        right = self.host.get_class(data["right_class_tag"])
         try:
             is_subspecializer = mro.index(left) < mro.index(right)
         except ValueError:
@@ -193,5 +193,5 @@ class Query:
         if data["message"]:
             print(data["message"])
         command = input("> ")
-        stringified = ffi_serialize(self.cache.to_polar_term(command))
+        stringified = ffi_serialize(self.host.to_polar_term(command))
         check_result(lib.polar_debug_command(query, stringified))
