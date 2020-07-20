@@ -16,3 +16,38 @@ jobs:
       - uses: actions/checkout@v2
         ref: "v${{ github.event.inputs.version }}"
       - run: echo "this might work"
+      - uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          repo: "osohq/oso"
+          version: "${{ github.event.inputs.version }}"
+          file: "oso-java-${{ github.event.inputs.version }}.zip"
+      - run: unzip oso-java-${{ github.event.inputs.version }}.zip
+      - run: ls oso-java-${{ github.event.inputs.version }}
+  python:
+    name: Publish python package to pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        ref: "v${{ github.event.inputs.version }}"
+      - run: echo "this might work"
+      - uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          repo: "osohq/oso"
+          version: "${{ github.event.inputs.version }}"
+          file: "oso-python-${{ github.event.inputs.version }}.zip"
+      - run: unzip oso-python-${{ github.event.inputs.version }}.zip
+      - run: ls oso-python-${{ github.event.inputs.version }}
+  ruby:
+    name: Publish ruby gem to rubygems
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        ref: "v${{ github.event.inputs.version }}"
+      - run: echo "this might work"
+      - uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          repo: "osohq/oso"
+          version: "${{ github.event.inputs.version }}"
+          file: "oso-ruby-${{ github.event.inputs.version }}.zip"
+      - run: unzip oso-ruby-${{ github.event.inputs.version }}.zip
+      - run: ls oso-ruby-${{ github.event.inputs.version }}
