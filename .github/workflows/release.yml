@@ -357,5 +357,6 @@ jobs:
         with:
           name: jar
       - run: |
-          java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar" Test.java
+          javac -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar" Test.java
+          java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar" Test
         working-directory: test
