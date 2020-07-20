@@ -17,6 +17,9 @@ jobs:
       - name: Check python version matches
         run: grep "__version__ = \"$oso_version\"" oso/__init__.py
         working-directory: languages/python
+      - name: Check ruby version matches
+        run: grep "VERSION = '$oso_version'" lib/oso/version.rb
+        working-directory: languages/ruby
       - name: Check java version matches
         run: grep "<version>$oso_version</version>" pom.xml
         working-directory: languages/java/oso
@@ -85,6 +88,46 @@ jobs:
         with:
           name: jar
           path: languages/java/oso/target/oso-${{ steps.version.outputs.oso_version }}.jar
+
+  build_gem:
+    name: Build Gem.
+    runs-on: ubuntu-18.04
+    needs: build_dylib
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Ruby + gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4
+          working-directory: "languages/ruby"
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - name: Download dylibs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_library
+      - name: Copy libraries into resources.
+        run: |
+          mkdir -p languages/ruby/ext/oso-oso/lib
+          cp -r oso_library/libpolar.so languages/ruby/ext/oso-oso/lib/
+          cp -r oso_library/libpolar.dylib languages/ruby/ext/oso-oso/lib/
+          cp -r oso_library/polar.dll languages/ruby/ext/oso-oso/lib/
+      - name: Test
+        run: |
+          make test
+        working-directory: languages/ruby
+      - name: Build
+        run: |
+          gem build oso-oso.gemspec
+        working-directory: languages/ruby
+      - uses: actions/upload-artifact@v2
+        with:
+          name: gem
+          path: languages/ruby/oso-oso-${{ steps.version.outputs.oso_version }}.gem
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -178,6 +221,12 @@ jobs:
           name: wheel
       - name: Zip file
         run: zip --junk-paths -r oso-python.zip wheel/
+      - name: Download oso gem from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: gem
+      - name: Zip file
+        run: zip --junk-paths -r oso-ruby.zip gem/
       - name: Download oso jar from package run
         uses: actions/download-artifact@v1
         with:
@@ -219,6 +268,15 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./oso-python.zip
           asset_name: oso-python-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Ruby Gem
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-ruby.zip
+          asset_name: oso-ruby-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
       - name: Upload Java Jar
         uses: actions/upload-release-asset@v1

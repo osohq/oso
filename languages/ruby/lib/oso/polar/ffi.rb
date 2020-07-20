@@ -6,7 +6,9 @@ module Oso
   module Polar
     module FFI
       LIB = ::FFI::Platform::LIBPREFIX + 'polar.' + ::FFI::Platform::LIBSUFFIX
-      LIB_PATH = File.expand_path(File.join(__dir__, "../../../../../target/debug/#{LIB}"))
+      LIB_PATH = File.expand_path(File.join(__dir__, "../../../ext/oso-oso/lib/#{LIB}"))
+      # @TODO: Fall back to this if there's no release build libs. Easier for dev.
+      # LIB_PATH = File.expand_path(File.join(__dir__, "../../../../../target/debug/#{LIB}"))
 
       # Wrapper classes defined upfront to fix Ruby loading issues. Actual
       # implementations live in the sibling `ffi/` directory and are `require`d
