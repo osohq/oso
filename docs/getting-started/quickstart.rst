@@ -27,13 +27,13 @@ Our web server contains some simple logic to filter out bad requests and not muc
   .. group-tab:: Python
 
     .. literalinclude:: /examples/getting-started/python/server.py
-      :caption: :download:`server.py </examples/getting-started/python/server.py>`
+      :caption: Download: :download:`server.py </examples/getting-started/python/server.py>`
       :language: python
 
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/getting-started/ruby/server.rb
-      :caption: :download:`server.rb </examples/getting-started/ruby/server.rb>`
+      :caption: Download: :download:`server.rb </examples/getting-started/ruby/server.rb>`
       :language: ruby
 
 
@@ -125,14 +125,14 @@ a new ``Oso`` instance that will serve as our authorization engine:
 
     .. literalinclude:: server-02.py
       :base_path: /examples/getting-started/python/
-      :caption: server.py
+      :filename: server.py
       :diff: server.py
 
   .. group-tab:: Ruby
 
       .. literalinclude:: server-02.rb
         :base_path: /examples/getting-started/ruby/
-        :caption: server.rb
+        :filename: server.rb
         :diff: server.rb
 
 
@@ -268,14 +268,14 @@ decision that we can use in our server's response logic:
 
     .. literalinclude:: server-03.py
       :base_path: /examples/getting-started/python/
-      :caption: server.py
+      :filename: server.py
       :diff: server-02.py
 
   .. group-tab:: Ruby
 
     .. literalinclude:: server-03.rb
       :base_path: /examples/getting-started/ruby/
-      :caption: server.rb
+      :filename: server.rb
       :diff: server-02.rb
 
 Since we haven't yet added any authorization rules to our server's ``Oso``
@@ -302,14 +302,14 @@ Our first rule allows the actor ``"alice@example.com"`` to ``GET`` any expense:
 
     .. literalinclude:: server-04.py
       :base_path: /examples/getting-started/python/
-      :caption: server.py
+      :filename: server.py
       :diff: server-03.py
 
   .. group-tab:: Ruby
 
     .. literalinclude:: server-04.rb
       :base_path: /examples/getting-started/ruby/
-      :caption: server.rb
+      :filename: server.rb
       :diff: server-03.rb
 
 The rule will succeed if the **actor** and **action** match the strings
@@ -353,14 +353,14 @@ able to view expenses, but no one outside the company will be able to:
 
     .. literalinclude:: server-05.py
       :base_path: /examples/getting-started/python/
-      :caption: server.py
+      :filename: server.py
       :diff: server-04.py
 
   .. group-tab:: Ruby
 
     .. literalinclude:: server-05.rb
       :base_path: /examples/getting-started/ruby/
-      :caption: server.rb
+      :filename: server.rb
       :diff: server-04.rb
 
 .. .. |string_end_with| replace:: the ``String#end_with?`` method
@@ -451,14 +451,14 @@ To accomplish that, we can extend our existing rule with a second condition:
 
     .. literalinclude:: server-06.py
       :base_path: /examples/getting-started/python/
-      :caption: server.py
+      :filename: server.py
       :diff: server-05.py
 
   .. group-tab:: Ruby
 
     .. literalinclude:: server-06.rb
       :base_path: /examples/getting-started/ruby/
-      :caption: server.rb
+      :filename: server.rb
       :diff: server-05.rb
 
 Behind the scenes, oso looks up the ``submitted_by`` field on the provided

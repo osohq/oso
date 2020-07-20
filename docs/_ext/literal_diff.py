@@ -13,18 +13,21 @@ from typing import List, Tuple
 
 class LiteralIncludeDiffReader(LiteralInclude):
     def show_diff(self, location: Tuple[str, int] = None) -> List[str]:
-        print("Called show diff")
         new_lines = self.read_file(self.filename)
         old_filename = self.options.get("diff")
         old_lines = self.read_file(old_filename)
-        old_name = self.options.get("caption") or "Original"
-        new_name = self.options.get("caption") or "Current"
+        old_name = self.options.get("filename") or "Original"
+        new_name = self.options.get("filename") or "Current"
         diff = unified_diff(old_lines, new_lines, old_name, new_name)
         return list(diff)
 
 
 class LiteralIncludeDiff(LiteralInclude):
-    option_spec = {"base_path": directives.unchanged, **LiteralInclude.option_spec}
+    option_spec = {
+        "base_path": directives.unchanged,
+        "filename": directives.unchanged,
+        **LiteralInclude.option_spec,
+    }
 
     def run(self):
         base_path = self.options.get("base_path")
