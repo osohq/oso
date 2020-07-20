@@ -118,7 +118,8 @@ jobs:
           cp -r oso_library/polar.dll languages/ruby/ext/oso-oso/lib/
       - name: Test
         run: |
-          make test
+          bundle install
+          bundle exec rake spec
         working-directory: languages/ruby
       - name: Build
         run: |
