@@ -1,0 +1,17 @@
+name: Publish Release
+on: workflow_dispatch
+  inputs:
+    version:
+      description: 'Version Number'
+      required: true
+
+# Pull all the release artifacts from 
+
+jobs:
+  java:
+    name: Publish java jar to maven repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        ref: "v${{ github.event.inputs.version }}"
+      - run: echo "this might work"
