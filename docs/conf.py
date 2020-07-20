@@ -34,6 +34,8 @@ author = "oso"
 
 master_doc = "index"
 
+sys.path.append(os.path.abspath("./_ext"))
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -47,6 +49,8 @@ extensions = [
     "sphinx_tabs.tabs",
     "sphinx.ext.ifconfig",
     "sphinxcontrib.spelling",
+    "sphinx_copybutton",
+    "literal_diff",
 ]
 
 
@@ -77,6 +81,7 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
+    "**.tmp",
     "_build",
     "Thumbs.db",
     ".DS_Store",
@@ -120,7 +125,7 @@ html_theme_options = {
     "google_analytics_account": "UA-XXXXX",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
-    "base_url": "https://docs.osohq.com",
+    "base_url": "https://docs.osohq.com/",
     # Set the color and the accent color
     "color_primary": "#0E024E",
     "color_accent": "#0E024E",

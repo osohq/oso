@@ -7,3 +7,4 @@ sphinxcontrib-contentui
 sphinx-tabs
 git+https://github.com/bashtage/sphinx-material.git
 sphinxcontrib-spelling
+sphinx-copybutton
