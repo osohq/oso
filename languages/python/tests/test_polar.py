@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from polar import exceptions, Polar, Predicate, Variable
+from polar import exceptions, Polar, Predicate, Query, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
 
@@ -478,6 +478,23 @@ def test_constructor(polar, qvar):
         )
         == 2
     )
+
+
+def test_instance_cache(polar, qeval):
+    class Counter:
+        count = False
+        def __init__(self):
+            self.__class__.count += 1
+
+    polar.register_class(Counter)
+    polar.load_str("f(c: Counter) if c.count > 0;");
+
+    assert Counter.count == 0
+    c = Counter()
+    assert Counter.count == 1
+    assert polar.query_predicate("f", c).success
+    assert Counter.count == 1
+    assert c not in polar.host.instances.values()
 
 
 def test_in(polar, qeval):

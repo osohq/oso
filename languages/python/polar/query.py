@@ -37,7 +37,7 @@ class Query:
             raise PolarApiException("no Polar handle")
         self.polar = polar
         self.query = query
-        self.host = host.copy() if host else Host(polar)
+        self.host = host or Host(polar)
         self.calls = calls.copy()
 
     def __del__(self):

@@ -33,6 +33,11 @@ class Polar:
         del self.host
         lib.polar_free(self.polar)
 
+    def clear(self):
+        self.load_queue = []
+        lib.polar_free(self.polar)
+        self.polar = lib.polar_new()
+
     def load_file(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
         until a query is made."""
@@ -49,13 +54,6 @@ class Polar:
         """Load a Polar string, checking that all inline queries succeed."""
         load_str(self.polar, string, None, self.run)
 
-    def clear(self):
-        """Clear all facts and internal Polar classes from the knowledge base."""
-        self.load_queue = []
-        lib.polar_free(self.polar)
-        self.polar = None
-        self.polar = lib.polar_new()
-
     def query(self, query, single=False):
         """Query for a predicate, parsing it if necessary.
 
@@ -66,19 +64,20 @@ class Polar:
         """
         self._load_queued_files()
 
+        host = self.host.copy()
         if isinstance(query, str):
             query = check_result(lib.polar_new_query(self.polar, to_c_str(query)))
         elif isinstance(query, Predicate):
             query = check_result(
                 lib.polar_new_query_from_term(
-                    self.polar, ffi_serialize(self.host.to_polar_term(query))
+                    self.polar, ffi_serialize(host.to_polar_term(query))
                 )
             )
         else:
             raise PolarApiException(f"Can not query for {query}")
 
         results = []
-        for result in self.run(query):
+        for result in self.run(query, host=host):
             results.append(result)
             if single:
                 break
@@ -94,9 +93,11 @@ class Polar:
         """
         return self.query(Predicate(name=name, args=args), **kwargs)
 
-    def run(self, query):
+    def run(self, query, host=None):
         """Send an FFI query object to a new Query object for evaluation."""
-        return Query(self.polar, host=self.host).run(query)
+        if host is None:
+            host = self.host.copy()
+        return Query(self.polar, host=host).run(query)
 
     def repl(self):
         self._load_queued_files()
