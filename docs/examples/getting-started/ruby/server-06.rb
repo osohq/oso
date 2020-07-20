@@ -1,3 +1,6 @@
+require "oso"
+require "webrick"
+
 class Expense
   attr_reader :amount, :description, :submitted_by
 
@@ -14,16 +17,12 @@ EXPENSES = {
   3 => Expense.new(50000, "flight",   "bhavik@example.com"),
 }
 
-require "oso"
-
 OSO ||= Oso.new
 OSO.load_str <<~RULE
   allow(actor, "GET", expense) if
       actor.end_with?("@example.com")
       and expense.submitted_by = actor;
 RULE
-
-require "webrick"
 
 server = WEBrick::HTTPServer.new Port: 5050
 server.mount_proc "/" do |req, res|

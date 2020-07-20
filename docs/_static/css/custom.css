@@ -1,3 +1,9 @@
 .rst-content tt.literal, .rst-content tt.literal, .rst-content code.literal {
     color: #000080;
 }
+
+.highlight {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}

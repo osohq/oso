@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 
 @dataclass
@@ -14,22 +15,17 @@ EXPENSES = {
     3: Expense(50000, "flight", "bhavik@example.com"),
 }
 
-# expenses code
-
 from oso import Oso
 
-OSO = Oso()
-
-# server code
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
+oso = Oso()
 
 
 class MyRequestHandler(BaseHTTPRequestHandler):
     def _respond(self, msg, code=200):
         self.send_response(code)
         self.end_headers()
-        self.wfile.write(msg.encode())
+        self.wfile.write(str(msg).encode())
+        self.wfile.write(b"\n")
 
     def do_GET(self):
         try:
