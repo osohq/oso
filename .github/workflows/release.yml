@@ -330,7 +330,7 @@ jobs:
         with:
           name: wheel
       - run: |
-          pip install oso==${{ steps.version.outputs.oso_version }} --no-index -f ../wheel
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
 
