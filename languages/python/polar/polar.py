@@ -116,8 +116,7 @@ class Polar:
         """Register `cls` as a class accessible by Polar. `from_polar` can
         either be a method or a string. In the case of a string, Polar will
         look for the method using `getattr(cls, from_polar)`."""
-        cls_name = cls.__name__ if name is None else name
-        self.host.cache_class(cls, cls_name, from_polar)
+        cls_name = self.host.cache_class(cls, name, from_polar)
         self.register_constant(cls_name, cls)
 
     def register_constant(self, name, value):

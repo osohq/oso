@@ -23,18 +23,31 @@ class Host:
             instances=self.instances.copy(),
         )
 
-    def get_class(self, cls_name, default=None):
-        return self.classes.get(cls_name, default)
+    def get_class(self, name):
+        """Fetch a Python class from the cache."""
+        try:
+            return self.classes[name]
+        except KeyError:
+            raise PolarRuntimeException(f"unregistered class {name}")
 
-    def cache_class(self, cls, cls_name, constructor=None):
+    def cache_class(self, cls, name=None, constructor=None):
         """Cache Python class by name."""
         if not isinstance(cls, type):
             raise PolarApiException(f"{cls} is not a class")
-        if not isinstance(cls_name, str):
-            raise PolarApiException(f"{cls_name} is not a class name")
+        name = cls.__name__ if name is None else name
+        if not isinstance(name, str):
+            raise PolarApiException(f"{name} is not a class name")
 
-        self.classes[cls_name] = cls
-        self.constructors[cls_name] = constructor or cls
+        self.classes[name] = cls
+        self.constructors[name] = constructor or cls
+        return name
+
+    def get_constructor(self, name):
+        """Fetch a constructor by name from the cache."""
+        try:
+            return self.constructors[name]
+        except:
+            raise PolarRuntimeException(f"missing constructor for class {name}")
 
     def get_instance(self, id):
         """Look up Python instance by id."""
@@ -49,25 +62,71 @@ class Host:
         self.instances[id] = instance
         return id
 
-    def make_instance(self, cls_name, fields, id):
+    def make_instance(self, name, fields, id):
         """Make and cache a new instance of a Python class."""
-        cls = self.get_class(cls_name)
-        if not cls:
-            raise PolarRuntimeException(f"unregistered class {cls_name}")
-        constructor = self.constructors.get(cls_name, cls)
-        if not constructor:
-            raise PolarRuntimeException(f"missing constructor for class {cls_name}")
-        elif isinstance(constructor, str):
+        cls = self.get_class(name)
+        constructor = self.get_constructor(name)
+        if isinstance(constructor, str):
             constructor = getattr(cls, constructor)
         if id in self.instances:
-            breakpoint()
             raise PolarRuntimeException(f"instance {id} is already registered")
         instance = constructor(**fields)
         self.cache_instance(instance, id)
         return instance
 
+    def unify(self, left_instance_id, right_instance_id) -> bool:
+        """Return true if the left instance is equal to the right."""
+        try:
+            left = self.get_instance(left_instance_id)
+            right = self.get_instance(right_instance_id)
+            return left == right
+        except PolarRuntimeException:
+            return False
+
+    def isa(self, instance_id, class_tag) -> bool:
+        try:
+            instance = self.get_instance(instance_id)
+            cls = self.get_class(class_tag)
+            return isinstance(instance, cls)
+        except PolarRuntimeException:
+            return False
+
+    def is_subspecializer(self, instance_id, left_tag, right_tag) -> bool:
+        """Return true if the left class is more specific than the right class
+        with respect to the given instance."""
+        try:
+            mro = self.get_instance(instance_id).__class__.__mro__
+            left = self.get_class(left_tag)
+            right = self.get_class(right_tag)
+            return mro.index(left) < mro.index(right)
+        except (ValueError, PolarRuntimeException):
+            return False
+
+    def operator(self, op, args):
+        try:
+            if op == "Lt":
+                return args[0] < args[1]
+            elif op == "Gt":
+                return args[0] > args[1]
+            elif op == "Eq":
+                return args[0] == args[1]
+            elif op == "Leq":
+                return args[0] <= args[1]
+            elif op == "Geq":
+                return args[0] >= args[1]
+            elif op == "Neq":
+                return args[0] != args[1]
+            else:
+                raise PolarRuntimeException(
+                    f"Unsupported external operation '{type(args[0])} {op} {type(args[1])}'"
+                )
+        except TypeError:
+            raise PolarRuntimeException(
+                f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
+            )
+
     def to_polar_term(self, v):
-        """Convert Python values to Polar terms."""
+        """Convert a Python object to a Polar term."""
         if type(v) == bool:
             val = {"Boolean": v}
         elif type(v) == int:
@@ -99,7 +158,7 @@ class Host:
         return term
 
     def to_python(self, value):
-        """ Convert polar terms to python values."""
+        """Convert a Polar term to a Python object."""
         value = value["value"]
         tag = [*value][0]
         if tag in ["String", "Boolean"]:

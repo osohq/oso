@@ -135,58 +135,26 @@ class Query:
     def handle_external_op(self, query, data):
         op = data["operator"]
         args = [self.host.to_python(arg) for arg in data["args"]]
-        answer: bool
-        try:
-            if op == "Lt":
-                answer = args[0] < args[1]
-            elif op == "Gt":
-                answer = args[0] > args[1]
-            elif op == "Eq":
-                answer = args[0] == args[1]
-            elif op == "Leq":
-                answer = args[0] <= args[1]
-            elif op == "Geq":
-                answer = args[0] >= args[1]
-            elif op == "Neq":
-                answer = args[0] != args[1]
-            else:
-                raise PolarRuntimeException(
-                    f"Unsupported external operation '{type(args[0])} {op} {type(args[1])}'"
-                )
-            external_answer(self.polar, query, data["call_id"], answer)
-        except TypeError:
-            raise PolarRuntimeException(
-                f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
-            )
+        answer = self.host.operator(op, args)
+        external_answer(self.polar, query, data["call_id"], answer)
 
     def handle_external_isa(self, query, data):
-        cls = self.host.get_class(data["class_tag"])
-        if cls:
-            instance = self.host.get_instance(data["instance_id"])
-            isa = isinstance(instance, cls)
-        else:
-            isa = False
+        instance_id = data["instance_id"]
+        class_tag = data["class_tag"]
+        isa = self.host.isa(instance_id, class_tag)
         external_answer(self.polar, query, data["call_id"], isa)
 
     def handle_external_unify(self, query, data):
         left_instance_id = data["left_instance_id"]
         right_instance_id = data["right_instance_id"]
-        try:
-            left_instance = self.host.get_instance(left_instance_id)
-            right_instance = self.host.get_instance(right_instance_id)
-            eq = left_instance == right_instance
-            external_answer(self.polar, query, data["call_id"], eq)
-        except PolarRuntimeException:
-            external_answer(self.polar, query, data["call_id"], False)
+        unify = self.host.unify(left_instance_id, right_instance_id)
+        external_answer(self.polar, query, data["call_id"], unify)
 
     def handle_external_is_subspecializer(self, query, data):
-        mro = self.host.get_instance(data["instance_id"]).__class__.__mro__
-        left = self.host.get_class(data["left_class_tag"])
-        right = self.host.get_class(data["right_class_tag"])
-        try:
-            is_subspecializer = mro.index(left) < mro.index(right)
-        except ValueError:
-            is_subspecializer = False
+        instance_id = data["instance_id"]
+        left_tag = data["left_class_tag"]
+        right_tag = data["right_class_tag"]
+        is_subspecializer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
         external_answer(self.polar, query, data["call_id"], is_subspecializer)
 
     def handle_debug(self, query, data):
