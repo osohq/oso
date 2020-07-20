@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        ref: "v${{ github.event.inputs.version }}"
+        with:
+          ref: "v${{ github.event.inputs.version }}"
       - run: echo "this might work"
       - uses: dsaltares/fetch-gh-release-asset@master
         with:
@@ -28,7 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        ref: "v${{ github.event.inputs.version }}"
+        with:
+          ref: "v${{ github.event.inputs.version }}"
       - run: echo "this might work"
       - uses: dsaltares/fetch-gh-release-asset@master
         with:
@@ -42,7 +44,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        ref: "v${{ github.event.inputs.version }}"
+        with:
+          ref: "v${{ github.event.inputs.version }}"
       - run: echo "this might work"
       - uses: dsaltares/fetch-gh-release-asset@master
         with:
