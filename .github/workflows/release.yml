@@ -298,30 +298,30 @@ jobs:
       #     asset_name: oso-docs.zip
       #     asset_content_type: application/zip
 
-
   validate:
     name: Test artifacts on ${{ matrix.os }}
-      runs-on: ${{ matrix.os }}
-      strategy:
-        matrix:
-          os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
-          python-version: [3.7, 3.8]
-      steps:
-        - name: Set version output
-          id: version
-          env:
-            github_ref: ${{ github.ref }}
-          run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-        - uses: actions/checkout@v2
-        - name: Set up Python ${{ matrix.python-version }}
-          uses: actions/setup-python@v1
-          with:
-            python-version: ${{ matrix.python-version }}
-        - name: Download oso python wheels from package run
-          uses: actions/download-artifact@v1
-          with:
-            name: wheel
-        - run: |
-            pip install "oso==$oso_version" --no-index -f ../wheel
-            python test.py
-          working-directory: test
+    needs: [build_wheels, build_jar] #@TODO: build-gem
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
+        python-version: [3.7, 3.8]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - run: |
+          pip install "oso==$oso_version" --no-index -f ../wheel
+          python test.py
+        working-directory: test
