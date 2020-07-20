@@ -125,6 +125,10 @@ jobs:
         run: |
           gem build oso-oso.gemspec
         working-directory: languages/ruby
+      - run: ls -la
+        working-directory: languages/ruby
+      - run: gem install oso-oso-${{ steps.version.outputs.oso_version }}.gem
+        working-directory: languages/ruby
       - uses: actions/upload-artifact@v2
         with:
           name: gem
@@ -322,6 +326,6 @@ jobs:
         with:
           name: wheel
       - run: |
-          pip install "oso==$oso_version" --no-index -f ../wheel
+          pip install oso==${{ steps.version.outputs.oso_version }} --no-index -f ../wheel
           python test.py
         working-directory: test
