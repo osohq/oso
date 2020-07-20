@@ -9,6 +9,8 @@ on:
 # Pull all the release artifacts from
 
 jobs:
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   java:
     name: Publish java jar to maven repository
     runs-on: ubuntu-latest
