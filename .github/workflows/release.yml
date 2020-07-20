@@ -166,6 +166,12 @@ jobs:
         env:
           github_ref: ${{ github.ref }}
         run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - name: Download oso dylibs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_library
+      - name: Zip file
+        run: zip --junk-paths -r oso-lib.zip oso_library/
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
@@ -196,7 +202,15 @@ jobs:
             Oso Release ${{ steps.version.outputs.oso_version }}
           draft: true
           prerelease: false
-
+      - name: Upload Libraries
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-lib.zip
+          asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
       - name: Upload Python Package
         uses: actions/upload-release-asset@v1
         env:
