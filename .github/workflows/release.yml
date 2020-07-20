@@ -302,8 +302,8 @@ jobs:
       #     asset_name: oso-docs.zip
       #     asset_content_type: application/zip
 
-  validate:
-    name: Test artifacts on ${{ matrix.os }}
+  validate_python:
+    name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: [build_wheels, build_jar] #@TODO: build-gem
     runs-on: ${{ matrix.os }}
     strategy:
@@ -328,4 +328,30 @@ jobs:
       - run: |
           pip install oso==${{ steps.version.outputs.oso_version }} --no-index -f ../wheel
           python test.py
+        working-directory: test
+
+  validate_java:
+    name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
+    needs: [build_wheels, build_jar] #@TODO: build-gem
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
+        java-version: [8, 9, 10, 11, 12, 13, 14]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java-version }}
+      - name: Download oso jar from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: jar
+      - run: |
+          java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar" Test.java
         working-directory: test
