@@ -359,7 +359,7 @@ jobs:
         with:
           name: gem
       - run: |
-
+          gem install ../gem/oso-oso-${{ steps.version.outputs.oso_version }}.gem
           ruby test.rb
         working-directory: test
 
