@@ -308,7 +308,7 @@ jobs:
 
   validate_python:
     name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
-    needs: [build_wheels, build_jar] #@TODO: build-gem
+    needs: [build_wheels]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -334,9 +334,38 @@ jobs:
           python test.py
         working-directory: test
 
+  validate_ruby:
+    name: Test ruby ${{ matrix.ruby-version }} on ${{ matrix.os }}
+    needs: [build_gem]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
+        ruby-version: [2.4, 2.5, 2.6, 2.7]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - uses: actions/checkout@v2
+      - name: Set up ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          working-directory: "languages/ruby"
+      - name: Download oso gem from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: gem
+      - run: |
+
+          ruby test.rb
+        working-directory: test
+
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
-    needs: [build_wheels, build_jar] #@TODO: build-gem
+    needs: [build_jar]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -357,6 +386,6 @@ jobs:
         with:
           name: jar
       - run: |
-          javac -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar" Test.java
-          java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar" Test
+          javac -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test.java
+          java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test
         working-directory: test
