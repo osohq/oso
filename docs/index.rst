@@ -25,15 +25,14 @@ By using oso, you can:
 2. Concisely express policies with a declarative language
 3. Interact directly with your application data
 
+:guilabel:`testing`
+
 To see this in action, :doc:`continue on to the Getting Started guide <getting-started/quickstart>`.
 
 To learn more about oso and the principles behind its design, 
 :doc:`read the oso overview page <understand/overview>`.
 
 -----
-
-Docs Overview
--------------
 
 .. toctree::
     :maxdepth: 1
@@ -42,25 +41,27 @@ Docs Overview
 
     Docs Home <self>
 
-These guides contain a brief introduction to oso. This is a great
-starting point if you are new to **oso**.
+.. These guides contain a brief introduction to oso. This is a great
+.. starting point if you are new to **oso**.
 
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
+   :hidden:
 
    getting-started/quickstart
    getting-started/download
 
-----------
+.. ----------
 
-These guides contain narrative documentation and examples.
-This is a good place to go to learn more about implementing
-authorization in your application with oso.
+.. These guides contain narrative documentation and examples.
+.. This is a good place to go to learn more about implementing
+.. authorization in your application with oso.
 
 .. toctree::
    :maxdepth: 1
    :caption: Understand oso
+   :hidden:
 
    understand/overview
    understand/auth-fundamentals
@@ -68,14 +69,15 @@ authorization in your application with oso.
    understand/application/index
    understand/policies/index
 
-----------
-
-Reference material for concepts, terminology and language APIs.
+.. ----------
+.. 
+.. Reference material for concepts, terminology and language APIs.
 
 .. toctree::
    :maxdepth: 1
    :caption: Reference
    :titlesonly:
+   :hidden:
 
    reference/libraries/index
    reference/frameworks/index
@@ -85,9 +87,9 @@ Reference material for concepts, terminology and language APIs.
    reference/performance
    reference/faq
 
-----------
-
-Project-related information.
+..  ----------
+..  
+..  Project-related information.
 
 .. todo::
    Add links to Github + Issues
@@ -96,17 +98,19 @@ Project-related information.
    :maxdepth: 1
    :caption: Project
    :titlesonly:
+   :hidden:
+
 
    project/changelogs/index
    Github <https://github.com/osohq/oso>
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. 
+.. Indices and tables
+.. ==================
+.. 
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
 
 
 

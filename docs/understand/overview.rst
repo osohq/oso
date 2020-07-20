@@ -16,14 +16,27 @@ oso is designed based on 3 principles, which we'll describe briefly then in more
 Key Pieces
 ----------
 
+.. todo::
+    First part is high-level overview of pieces, but not whats going on
+    Second part is low-level what goes on.
+    Add high-level description of what is going on
+    (You write policies, gets loaded in. oso talks to application when
+    it needs to look up data) -- User facing version.
+    Move/remove second part. Put to end or somewhere else. (As an "internals" section)
+
 Before we go into more depth about the principles, it might be helpful to
 give an overview of the key pieces of oso. If you're already familiar with oso,
 feel free to :ref:`jump to the next section <Separation of Concerns>`.
 
 
 First of all, oso is an **application framework for authorization** and is distributed
-in the form of a **library**. oso is supported in :doc:`various languages </reference/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language. This library is designed to make it easy to add complex authorization to any application.
+in the form of a **library**.
 
+
+..todo::
+    Add example code here, side-by-side app code + policy code
+
+oso is supported in :doc:`various languages </reference/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language. This library is designed to make it easy to add complex authorization to any application.
 
 The core of oso is an implementation of the **polar language**. This handles
 parsing policy files, and executing queries in the form of a virtual machine.
@@ -53,6 +66,14 @@ The oso library is responsible for converting types between oso primitive types
 Use Cases
 ---------
 
+..todo::
+    Move to its own (sidebar) section
+
+    The three areas:
+    - Customer-facing applications
+    - Internal applications
+    - Infrastructure
+
 Authorization is a broad subject, and arises in many different areas. Although oso
 is designed to be used anywhere, and for any type of authorization, there are some
 applications that are more naturally suited for it.
@@ -78,6 +99,19 @@ Separation of Concerns
 
 Let's imagine we're building a SaaS app that allows organizations to manage their
 employee expenses. We'll need authorization logic to restrict access to, for example, allow employees to view their own expenses, and their managers to view and approve their expenses.
+
+..todo::
+    Emphasize that the reader would be adding this line to application code
+    and policy file is separate.
+
+..todo::
+    Move this up to the key pieces as a concrete example
+    Adding a new example of before/after
+    Trying using the word "sprinkle"
+    On its own - having if statements is not that big a deal. But over time,
+    across multiple files, apps. You end up with an accidental/defacto permissions
+    system built around how it was written elsewhere. Because once you've copied
+    that code a couple of times, you aint changing it.
 
 With oso you separate authorization logic from your app by making a generic
 ``allow`` check using the library:
