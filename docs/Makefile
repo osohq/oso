@@ -29,10 +29,10 @@ api-docs: _api_docs/ruby
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html doctest spelling clean: Makefile api-docs
+html doctest spelling clean: Makefile deps api-docs
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-livehtml: api-docs
+livehtml: deps api-docs
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 test: doctest
