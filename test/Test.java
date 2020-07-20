@@ -1,8 +1,8 @@
 import com.osohq.oso.*;
 
 class Test {
-    static class A {
-        private String x;
+    public static class A {
+        public String x;
     
         public A(String x) {
             this.x = x;
