@@ -27,12 +27,3 @@
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */
 }
-
-.ui.segment {
-    font-size: inherit !important;
-}
-
-.caption-text {
-    color: #756f6f;
-    font-size: smaller;
-}
