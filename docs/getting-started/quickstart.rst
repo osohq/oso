@@ -236,7 +236,7 @@ start a REPL session and follow along:
       irb(main):006:0> OSO.allow(actor: "bhavik", action: "view", resource: "expense")
       => false
 
-When we ask oso for a policy decision via ``Oso#allow``, the oso engine
+When we ask oso for a policy decision via ``allow``, the oso engine
 searches through its knowledge base to determine whether the provided
 **actor**, **action**, and **resource** satisfy any **allow** rules.
 
@@ -356,6 +356,16 @@ able to view expenses, but no one outside the company will be able to:
       :filename: server.py
       :diff: server-04.py
 
+    .. |str_endswith| replace:: the ``str.endswith`` method
+    .. _str_endswith: https://docs.python.org/3/library/stdtypes.html#str.endswith
+
+    We bind the provided email to the ``actor`` variable in the rule head and then
+    perform the ``.endswith("@example.com")`` check in the rule body. If you
+    noticed that the ``.endswith`` call looks pretty familiar, you're right on ---
+    oso is actually calling out to |str_endswith|_ defined in the Python standard
+    library. The **actor** value passed to oso is a Python string, and oso allows us
+    to call any ``str`` method from Python's standard library on it.
+
   .. group-tab:: Ruby
 
     .. literalinclude:: server-05.rb
@@ -363,39 +373,23 @@ able to view expenses, but no one outside the company will be able to:
       :filename: server.rb
       :diff: server-04.rb
 
-.. .. |string_end_with| replace:: the ``String#end_with?`` method
-.. .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
+    .. |string_end_with| replace:: the ``String#end_with?`` method
+    .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
 
-.. |string_end_with| replace:: the ``str.endswith`` method
-.. _string_end_with: https://docs.python.org/3/library/stdtypes.html#str.endswith
+    We bind the provided email to the ``actor`` variable in the rule head and then
+    perform the ``.end_with?("@example.com")`` check in the rule body. If you
+    noticed that the ``.end_with?`` call looks pretty familiar, you're right on ---
+    oso is actually calling out to |string_end_with|_ defined in the Ruby standard
+    library. The **actor** value passed to oso is a Ruby string, and oso allows us
+    to call any ``String`` method from Ruby's standard library on it.
 
-.. We bind the provided email to the ``actor`` variable in the rule head and then
-.. perform the ``.end_with?("@example.com")`` check in the rule body. If you
-.. noticed that the ``.end_with?`` call looks pretty familiar, you're right on ---
-.. oso is actually calling out to |string_end_with|_ defined in the Ruby standard
-.. library. The **actor** value passed to oso is a Ruby string, and oso allows us
-.. to call any ``String`` method from Ruby's standard library on it.
-.. 
-.. And that's just the tip of the iceberg. You can register *any* Ruby object with
-.. oso and then leverage it in your application's authorization policy. For
-.. example, if you have ``Expense`` and ``User`` classes defined in your
-.. application, you could write a policy rule in oso that says a ``User`` may
-.. approve an ``Expense`` if they manage the ``User`` who submitted the expense
-.. and the expense's amount is less than $100.00:
-
-We bind the provided email to the ``actor`` variable in the rule head and then
-perform the ``.endswith("@example.com")`` check in the rule body. If you
-noticed that the ``.endswith`` call looks pretty familiar, you're right on ---
-oso is actually calling out to |string_end_with|_ defined in the Python standard
-library. The **actor** value passed to oso is a Python string, and oso allows us
-to call any ``str`` method from Python's standard library on it.
-
-And that's just the tip of the iceberg. You can register *any* Python object with
+And that's just the tip of the iceberg. You can register *any* application object with
 oso and then leverage it in your application's authorization policy. For
 example, if you have ``Expense`` and ``User`` classes defined in your
 application, you could write a policy rule in oso that says a ``User`` may
 approve an ``Expense`` if they manage the ``User`` who submitted the expense
 and the expense's amount is less than $100.00:
+
 
 .. code-block:: polar
 
