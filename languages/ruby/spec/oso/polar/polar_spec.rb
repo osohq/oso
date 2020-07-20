@@ -56,7 +56,7 @@ RSpec.describe Oso::Polar::Polar do
 
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
-      expect(subject.to_ruby(subject.to_polar_term(actor))).to eq(actor)
+      expect(subject.host.to_ruby(subject.host.to_polar_term(actor))).to eq(actor)
     end
 
     it 'returns Ruby instances from external calls' do
@@ -70,6 +70,27 @@ RSpec.describe Oso::Polar::Polar do
       actor = Actor.new('sam')
       subject.load_str('widgets(actor, x) if x = actor.widgets.id;')
       expect(subject.query_pred('widgets', args: [actor, Oso::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
+    end
+
+    it 'caches instances and does not leak them' do
+      stub_const('Counter', Class.new do
+                   @count = 0
+                   class << self
+                     attr_accessor :count
+                   end
+
+                   def initialize()
+                     self.class.count += 1
+                   end
+                 end)
+      subject.register_class(Counter)
+      subject.load_str('f(c: Counter) if c.class.count > 0;')
+      expect(Counter.count).to be 0
+      c = Counter.new
+      expect(Counter.count).to be 1
+      expect(subject.query_pred('f', args: [c]).to_a).to eq([{}])
+      expect(Counter.count).to be 1
+      expect(subject.host.instances.value?(c)).to be false
     end
   end
 
@@ -129,10 +150,10 @@ RSpec.describe Oso::Polar::Polar do
           end
         end)
         subject.register_class(Foo)
-        one = subject.to_polar_term(1)
-        two = subject.to_polar_term(2)
-        id = subject.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
-        instance = subject.get_instance(id)
+        one = subject.host.to_polar_term(1)
+        two = subject.host.to_polar_term(2)
+        id = subject.host.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
         expect(instance.baz).to eq(2)
@@ -143,8 +164,8 @@ RSpec.describe Oso::Polar::Polar do
           def initialize; end
         end)
         subject.register_class(Foo)
-        id = subject.make_instance('Foo', fields: {}, id: 1)
-        instance = subject.get_instance(id)
+        id = subject.host.make_instance('Foo', fields: {}, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
     end
@@ -165,10 +186,10 @@ RSpec.describe Oso::Polar::Polar do
         end)
         constructor = ->(**args) { Foo.new(**args) }
         subject.register_class(Foo, from_polar: constructor)
-        one = subject.to_polar_term(1)
-        two = subject.to_polar_term(2)
-        id = subject.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
-        instance = subject.get_instance(id)
+        one = subject.host.to_polar_term(1)
+        two = subject.host.to_polar_term(2)
+        id = subject.host.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
         expect(instance.baz).to eq(2)
@@ -177,8 +198,8 @@ RSpec.describe Oso::Polar::Polar do
       it 'handles no args' do
         stub_const('Foo', Class.new)
         subject.register_class(Foo, from_polar: -> { Foo.new })
-        id = subject.make_instance('Foo', fields: {}, id: 1)
-        instance = subject.get_instance(id)
+        id = subject.host.make_instance('Foo', fields: {}, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
     end
