@@ -1,11 +1,12 @@
 name: Publish Release
-on: workflow_dispatch
-  inputs:
-    version:
-      description: 'Version Number'
-      required: true
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version Number"
+        required: true
 
-# Pull all the release artifacts from 
+# Pull all the release artifacts from
 
 jobs:
   java:
