@@ -21,11 +21,17 @@ module B
 end
 
 oso.register_class A
-oso.register_class(B::C, name: "C") { |y:| B::C.new(y) }
+oso.load_file __dir__ + '/test.polar'
+oso.load_queued_files
+
+oso.allow(actor: 'a', action: 'b', resource: 'c')
+
+oso.register_class(B::C, name: 'C') { |y:| B::C.new(y) }
 oso.load_str <<~POLAR
   c(instance, y) if instance = new C{y: y};
   ?= c(instance, "hello") and instance.y = "hello";
 POLAR
-oso.load_file __dir__ + '/test.polar'
-oso.load_queued_files
+
+oso.query_predicate('predicate', A.new(x: 'hello'), B::C.new('hello')).next
+
 puts 'Tests Pass'
