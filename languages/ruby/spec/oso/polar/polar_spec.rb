@@ -51,7 +51,7 @@ RSpec.describe Oso::Polar::Polar do
     it 'converts predicates in both directions' do
       subject.load_str('f(x) if x = pred(1, 2);')
       expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Polar::Predicate.new('pred', args: [1, 2])])
-      expect(subject.query_pred('f', args: [Oso::Polar::Predicate.new('pred', args: [1, 2])]).to_a).to eq([{}])
+      expect(subject.query_predicate('f', Oso::Polar::Predicate.new('pred', args: [1, 2])).to_a).to eq([{}])
     end
 
     it 'converts Ruby instances in both directions' do
@@ -63,13 +63,13 @@ RSpec.describe Oso::Polar::Polar do
       actor = Actor.new('sam')
       widget = Widget.new(1)
       subject.load_str('allow(actor, resource) if actor.widget.id = resource.id;')
-      expect(subject.query_pred('allow', args: [actor, widget]).to_a.length).to eq 1
+      expect(subject.query_predicate('allow', actor, widget).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
       subject.load_str('widgets(actor, x) if x = actor.widgets.id;')
-      expect(subject.query_pred('widgets', args: [actor, Oso::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
+      expect(subject.query_predicate('widgets', actor, Oso::Polar::Variable.new('x')).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
 
     it 'caches instances and does not leak them' do
@@ -88,7 +88,7 @@ RSpec.describe Oso::Polar::Polar do
       expect(Counter.count).to be 0
       c = Counter.new
       expect(Counter.count).to be 1
-      expect(subject.query_pred('f', args: [c]).to_a).to eq([{}])
+      expect(subject.query_predicate('f', c).to_a).to eq([{}])
       expect(Counter.count).to be 1
       expect(subject.host.instances.value?(c)).to be false
     end
@@ -566,12 +566,12 @@ RSpec.describe Oso::Polar::Polar do
 
     it 'can return a list' do
       subject.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
-      expect(subject.query_pred('allow', args: [Actor.new, 'join', 'party']).to_a).to eq([{}])
+      expect(subject.query_predicate('allow', Actor.new, 'join', 'party').to_a).to eq([{}])
     end
 
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
-      expect(subject.query_pred('f', args: [Oso::Polar::Variable.new('a')]).to_a).to eq(
+      expect(subject.query_predicate('f', Oso::Polar::Variable.new('a')).to_a).to eq(
         [{ 'a' => 1 }, { 'a' => 2 }, { 'a' => 3 }]
       )
     end

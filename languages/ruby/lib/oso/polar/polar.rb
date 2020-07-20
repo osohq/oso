@@ -77,7 +77,7 @@ module Oso
       # @param name [String]
       # @param args [Array<Object>]
       # @raise [Error] if the FFI call raises one.
-      def query_pred(name, args:)
+      def query_predicate(name, *args)
         query(Predicate.new(name, args: args))
       end
 
@@ -128,14 +128,6 @@ module Oso
       attr_reader :ffi_polar
       # @return [Array<String>]
       attr_reader :load_queue
-
-      # Query for a Polar string.
-      #
-      # @param str [String]
-      # @return [Enumerator]
-      def query_str(str)
-        query(str)
-      end
     end
   end
 end

@@ -17,7 +17,7 @@ module Oso
       polar.load_str(str)
     end
 
-    def register_class(cls, name: nil) # rubocop:disable Naming/MethodParameterName
+    def register_class(cls, name: nil)
       if block_given?
         polar.register_class(cls, name: name, from_polar: Proc.new)
       else
@@ -26,18 +26,14 @@ module Oso
     end
 
     def allow(actor:, action:, resource:)
-      polar.query_pred('allow', args: [actor, action, resource]).next
+      polar.query_predicate('allow', actor, action, resource).next
       true
     rescue StopIteration
       false
     end
 
     def query_predicate(name, *args)
-      polar.query_pred(name, args: args)
-    end
-
-    def load_queued_files
-      polar.load_queued_files
+      polar.query_predicate(name, *args)
     end
 
     private

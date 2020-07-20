@@ -2,7 +2,7 @@
 
 module Helpers
   def query(polar, query)
-    polar.send(:query_str, query).to_a
+    polar.send(:query, query).to_a
   end
 
   def qvar(polar, query, var, one: false)
