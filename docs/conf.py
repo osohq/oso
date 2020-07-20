@@ -144,6 +144,9 @@ html_sidebars = {
 }
 
 html_logo = "oso_logo_resized.png"
+html_js_files = [
+    "js/custom.js",
+]
 html_css_files = [
     "css/custom.css",
 ]

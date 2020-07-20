@@ -2,8 +2,28 @@
     color: #000080;
 }
 
+.wy-side-nav-search, .wy-nav-top {
+    background: #0E024E;
+}
+
 .highlight {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 6px;
+}
+
+.highlight .gin {
+    color: #000000;
+    background-color: #ddffdd;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+.highlight .gdn {
+    color: #000000;
+    background-color: #ffdddd;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
 }

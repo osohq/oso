@@ -1,18 +1,6 @@
 {% extends "!layout.html" %}
-  {% block footer %} {{ super() }}
-
-  <style>
-    /* Sidebar header (and topbar for mobile) */
-    .wy-side-nav-search, .wy-nav-top {
-      background: #0E024E;
-    }
-    /* Sidebar */
-    /* .wy-nav-side { */
-      /* background: #ff0000; */
-    /* } */
-  </style>
-
-  <!-- Start of HubSpot Embed Code -->
-  <script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/8091225.js"></script>
-  <!-- End of HubSpot Embed Code -->
+{% block footer %} {{ super() }}
+<!-- Start of HubSpot Embed Code -->
+<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/8091225.js"></script>
+<!-- End of HubSpot Embed Code -->s
 {% endblock %}
