@@ -158,11 +158,13 @@ def test_instance_from_external_call(test_oso):
     Jwt.add_key(public_key)
     assert test_oso.allow(token("guest"), "frob", resource)
 
+
 def test_allow_model(test_oso):
     """ Test user auditor can list companies but not widgets"""
     user = Actor(name="auditor")
     assert not test_oso.allow(user, "list", Widget)
     assert test_oso.allow(user, "list", Company)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
