@@ -127,6 +127,10 @@ jobs:
         working-directory: languages/ruby
       - run: ls -la
         working-directory: languages/ruby
+      - run: ls -la
+        working-directory: languages/ruby/ext/oso-oso/lib
+      - run: git ls-files -z
+        working-directory: languages/ruby
       - run: gem install oso-oso-${{ steps.version.outputs.oso_version }}.gem
         working-directory: languages/ruby
       - uses: actions/upload-artifact@v2

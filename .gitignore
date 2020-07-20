@@ -26,6 +26,9 @@ __pycache__/
 
 # C extensions
 *.so
+!languages/ruby/ext/oso-oso/lib/libpolar.dylib
+!languages/ruby/ext/oso-oso/lib/libpolar.so
+!languages/ruby/ext/oso-oso/lib/polar.dll
 
 # Distribution / packaging
 .Python

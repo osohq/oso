@@ -1,7 +1,5 @@
 import com.osohq.oso.*;
 
-import com.osohq.oso.Oso;
-
 class Test {
     static class A {
         private String x;
@@ -16,6 +14,7 @@ class Test {
             Oso o = new Oso();
             o.registerClass(A.class, m -> new A((String) m.get("x")), "A");
             o.loadFile("test.polar");
+            o.allow("a", "b", "c");
         } catch (Exception e) {
             System.out.println(e);
             System.exit(1);
