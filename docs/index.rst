@@ -16,7 +16,7 @@ Welcome to the oso documentation!
     policy language
 
 The core use case of oso is to add authorization logic to any application.
-This is commonly solved by custom logic sprinkled ad-hoc throughout an application,
+This is commonly solved by custom logic sprinkled ad hoc throughout an application,
 leading to code that is hard to maintain, modify, and debug.
 
 By using oso, you can:

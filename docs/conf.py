@@ -80,10 +80,11 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "changelogs/vNEXT.rst",
-    "changelogs/vTEMPLATE.rst",
+    "project/changelogs/vNEXT.rst",
+    "project/changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
+    "understand/language/polar-classes.rst",  # we don't currently have classes
 ]
 
 # Don't copy the source or show a link
@@ -95,7 +96,7 @@ pygments_style = "borland"
 
 ### Show/hide TODOs
 
-todo_include_todos = True
+todo_include_todos = False
 
 # -- Options for HTML output -------------------------------------------------
 

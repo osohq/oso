@@ -29,3 +29,13 @@ arities
 amongst
 superclass
 Django
+Todo
+Bhavik
+pseudocode
+performant
+duplicative
+metaprogramming
+natively
+SaaS
+backend
+hoc

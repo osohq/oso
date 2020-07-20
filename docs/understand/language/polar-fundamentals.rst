@@ -173,7 +173,7 @@ Enough abstract nonsense—let's see some code! We'll start, as is
 traditional in logic programming, with a simple genealogy example.
 Suppose we are given the following fragment of a family tree:
 
-.. image:: /language/olympians.svg
+.. image:: /understand/language/olympians.svg
 
 We could represent the direct relations as the following facts in Polar::
 
@@ -375,7 +375,7 @@ unifications. If all of the unifications of the query arguments with
 the parameters in the head succeed, then a sub-query for the body
 of the rule is executed. The body of a rule may consist of a single
 predicate, or a conjunction of them, or of any of the operators
-described in the :doc:`Polar language reference </language/index>`,
+described in the :doc:`Polar language reference </reference/polar-syntax>`,
 e.g., disjunction, negation, numeric comparisons, etc. Each conjunct
 is queried for, in left-to-right order, accumulating any bindings
 from unifications. If the queries for every conjunct in the body all
@@ -411,6 +411,6 @@ In this guide, we have explored:
 
 What we haven't explored here is how to use Polar to express
 particular authorization policies. Many examples can be found
-in the :doc:`Authorization Fundamentals </auth-fundamentals>`
-and :doc:`Authorization Models </auth-models/index>` sections
+in the :doc:`Authorization Fundamentals </understand/auth-fundamentals>`
+and :doc:`Authorization Models </understand/policies/auth-models/index>` sections
 of the manual.

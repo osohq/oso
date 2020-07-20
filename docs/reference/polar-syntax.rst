@@ -12,7 +12,7 @@ Each Polar file defines a set of rules.  When a Polar file is loaded into the
 authorization engine, all rules are added to the engine's knowledge base.
 
 The knowledge base may be queried.  The behavior of queries is described further
-in :doc:`polar-fundamentals`.
+in :doc:`/understand/language/polar-fundamentals`.
 
 .. _basic-types:
 
@@ -87,7 +87,7 @@ name is specified before the dictionary::
   Person{first_name: "Yogi", last_name: "Bear"}
 
 Classes can be registered from your application to integrate with Polar.  See
-:doc:`/application-library/index` for more information.
+:doc:`/understand/language/application-types` for more information.
 
 A class instance literal must be used either with the :ref:`operator-new` or
 as a :ref:`pattern`.
@@ -108,7 +108,7 @@ where ``HEAD`` must be a *fact* and ``BODY`` any number of *terms*.
 The meaning of a rule is that ``HEAD`` is true **if** each of the ``BODY``
 terms is true. There may be multiple rules with the same head; each
 ``BODY`` will be tried in turn, and any or all may succeed. For more
-on how rules are defined and applied see :doc:`polar-fundamentals`.
+on how rules are defined and applied see :doc:`/understand/language/polar-fundamentals`.
 
 The following is an example of a rule::
 
@@ -210,7 +210,7 @@ bound to ``1`` or unbound.
 
 Unification is also used to determine if queries match rule ``HEAD`` s,
 and if the ``BODY`` of rules match other facts in the knowledge base.
-We will cover unification further in :doc:`polar-fundamentals`.
+We will cover unification further in :doc:`/understand/language/polar-fundamentals`.
 
 .. todo::
    add a little table with unification examples, esp. w/dictionaries.
@@ -290,7 +290,7 @@ New
 ^^^
 
 The new operator is used to construct a new instance of an application class.
-See :doc:`../application-library/application-types`. The single argument to the
+See :doc:`/understand/language/application-types`. The single argument to the
 new operator must be an instance literal::
 
     new Person{first_name: "yogi", last_name: "bear"}
@@ -394,7 +394,7 @@ Now, the ``first_name`` rule can be used with instances of the ``User`` or
 ``Person`` type.
 
 For more on this feature, see
-:doc:`../application-library/application-types`.
+:doc:`/understand/language/application-types`.
 
 .. _pattern:
 

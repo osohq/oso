@@ -10,8 +10,8 @@ authorization logic.
 In this guide, we'll walk through a policy for an application with two Actor types: **Customers** and
 **Internal Users**.
 
-.. note:: This guide is written using the :doc:`/application-library/python`
-    and assumes you are familiar with oso's :doc:`/auth-fundamentals`.
+.. note:: This guide is written using the :doc:`Python library </reference/libraries/python/index>`
+    and assumes you are familiar with oso's :doc:`/understand/auth-fundamentals`.
 
 
 A Tale of Two Actors
@@ -189,9 +189,3 @@ It is common to require different authorization logic for different types of app
 we showed how to use different Actor types to represent different users in oso. We wrote Polar policies with rules
 that specialized on the type of Actor, and even added attributes to some actor types that we used in the policy.
 We also demonstrated how inheritance can be used to match rules to multiple types of Actors.
-
-
-
-
-
-

@@ -26,7 +26,7 @@ Key Pieces
 
 Before we go into more depth about the principles, it might be helpful to
 give an overview of the key pieces of oso. If you're already familiar with oso,
-feel free to :ref:`jump to the next section <Separation of Concerns>`.
+feel free to :ref:`jump to the next section <separation-of-concerns>`.
 
 
 First of all, oso is an **application framework for authorization** and is distributed
@@ -94,6 +94,8 @@ This means that currently oso should not be seen as a replacement for things lik
 
 Now let's return to our three principles in more detail.
 
+.. _separation-of-concerns:
+
 Separation of Concerns
 ----------------------
 
@@ -137,12 +139,15 @@ extract out common patterns into reusable code. We can write a rule ``submitted(
 If we wanted to change this logic by instead looking up the user ID,
 we only need to change this one line.
 
+..todo::
+    Examples for the following?
+
 Similarly, creating or modifying permissions means making changes to just the policy file, and having them applied throughout the application. Meaning you are less likely
 to either break a workflow by forgetting to update permissions somewhere, and less
 likely to introduce a security hole.
 
 Furthermore, by conforming to a standardized approach to authorization, you can leverage
-tooling built around the standard. For oso, this means access to :doc:`a policy debugger and interactive REPL </dev-tools/index>`.
+tooling built around the standard. For oso, this means access to :doc:`a policy debugger and interactive REPL </reference/dev-tools/index>`.
 
 Right tool for the job
 ----------------------
@@ -152,7 +157,7 @@ using natural language, you will generally find they have no problem doing so.
 What often happens, however, is the authorization system used makes it hard
 to take an intuitive concept and implement it.
 
-oso policies are written usen a declarative language, designed specifically
+oso policies are written using a declarative language, designed specifically
 for writing authorization logic in applications. This means that you write what you want the outcome to be, and oso worries about things like what order to run things in, and how to achieve the desired end goal.
 
 Let's take a slightly more complex example continuing from above. Suppose we now
@@ -185,6 +190,8 @@ With oso, that might look as follows:
 
 .. todo::
     Keep going! Come up with the conclusion here for why the policy is great.
+    Concrete example - search algorithm, what its doing. Make policy flatter
+    (oso handles the searching, recursion etc.). + more concise (you get the combinations).
 
 - This is declarative - why is that better?
 - We don't need to worry about the search algorithm - why is this better?

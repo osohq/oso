@@ -13,6 +13,8 @@ ABAC
     control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
 
 
+.. _abac-basics:
+
 ABAC basics
 -----------
 
@@ -80,6 +82,8 @@ ABAC basics
     The power of ABAC comes from being able to express these kind of permissions
     based on who you are and how you are related to the data.
 
+.. _abac-rbac:
+
 ABAC ❤️ RBAC
 ------------
 
@@ -130,6 +134,8 @@ ABAC ❤️ RBAC
        :language: polar
        :start-after: role-inherit-start
        :end-before: role-inherit-end
+
+.. _abac-hierarchies:
 
 Hierarchies
 -----------

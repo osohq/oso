@@ -9,7 +9,7 @@ attributes may be accessed from within a policy. Using application types
 lets us take advantage of our app's existing domain model.
 
 Let's continue our :ref:`airport authorization example <airport>` from
-the :doc:`/auth-fundamentals` document. Suppose we have some simple Python
+the :doc:`/understand/auth-fundamentals` document. Suppose we have some simple Python
 classes that represent airport passengers and flight resources.
 
 .. code-block:: python
