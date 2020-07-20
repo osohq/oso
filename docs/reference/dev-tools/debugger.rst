@@ -236,7 +236,7 @@ The Polar file used in the following examples looks like this:
   a() if x = y and y = z and z = 3 and debug();
 
 ``var [<var> ...]``
------------------
+-------------------
 
 Print variables in the current scope. If one or more arguments are provided,
 print the value of those variables. If a provided variable does not exist in

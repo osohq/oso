@@ -393,7 +393,7 @@ string in the set of strings determined by the regexp.
 If a query fails (i.e., is false), then the current branch of the search
 is abandoned, and Polar **backtracks** to the last alternative, which
 will be either another possible rule for the current query, or the next
-untaken branch of a disjunction. When backtracking, all variable bindings
+un-taken branch of a disjunction. When backtracking, all variable bindings
 that occurred since the last alternative are undone. If no unexplored
 alternatives remain, the query as a whole fails, and a false result
 is reported.

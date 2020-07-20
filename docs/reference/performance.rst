@@ -22,12 +22,12 @@ The "N+1 Problem"
 -----------------
 
 A core part of understanding how oso will perform under regular
-workloads is recognising that oso applies a search algorithm to
+workloads is recognizing that oso applies a search algorithm to
 evaluate the policy.
 
 Since it is common in policies to iterate over members or attributes
 in order to look for matching information, it can be common to encounter
-variants of the 
+variants of the
 `N+1 problem <https://medium.com/@bretdoucette/n-1-queries-and-how-to-avoid-them-a12f02345be5>`_.
 
 For example, given the following Polar policy:
@@ -39,14 +39,14 @@ For example, given the following Polar policy:
       grandchild in child.children and
       grandchild.name = name;
 
-This can potentially exhibit this N+1 behaviour. It will first call
+This can potentially exhibit this N+1 behavior. It will first call
 the `Person.children` method on the input grandparent, expecting a
 list to iterate over with the `in` operator. This might translate
 into a DB query by the application.
 
 For each `child` returned from this method, `Person.children` is again
 called, which may make another DB query, ultimately resulting in N+1
-queries - one for the initial query, and one for each grandhchild.
+queries - one for the initial query, and one for each grandchild.
 
 The answer to solving this ultimately lies in how your application accesses
 data. Since this problem is not unique to oso and authorization queries,
@@ -79,7 +79,7 @@ For example:
         grandchild.name = name;
 
 This has the benefit of being the simplest, and most explicit. But does not
-leverage any data access abstractions. Any optimisation method works fine here,
+leverage any data access abstractions. Any optimization method works fine here,
 for example if this were a sufficiently common use case, then a `grandchildren`
 method and DB index could be added to improve performance.
 

@@ -6,3 +6,4 @@ sphinx_rtd_theme
 sphinxcontrib-contentui
 sphinx-tabs
 git+https://github.com/bashtage/sphinx-material.git
+sphinxcontrib-spelling

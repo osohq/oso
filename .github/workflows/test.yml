@@ -50,5 +50,9 @@ jobs:
       - run: make test
       - name: Install yard (for doc build)
         run: gem install yard
+      - name: Install spelling check
+        run: sudo apt-get install -y libenchant-dev
       - name: Doc test
         run: make -C docs test
+      - name: Spelling
+        run: SPHINXOPTS="-W" make -C docs spelling
