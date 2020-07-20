@@ -221,6 +221,9 @@ pub enum RuntimeError {
     StackOverflow {
         msg: String,
     },
+    QueryTimeout {
+        msg: String,
+    },
 }
 
 impl fmt::Display for RuntimeError {
@@ -240,6 +243,7 @@ impl fmt::Display for RuntimeError {
             }
             Self::UnboundVariable { sym } => write!(f, "{} is an unbound variable", sym.0),
             Self::StackOverflow { msg } => write!(f, "Hit a stack limit: {}", msg),
+            Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
         }
     }
 }
