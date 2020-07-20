@@ -8,7 +8,7 @@ Welcome to the oso documentation!
 ==================================
 
 .. todo::
-    "what is oso" wording 
+    "what is oso" wording
 
 .. admonition:: What is oso?
 
@@ -29,7 +29,7 @@ By using oso, you can:
 
 To see this in action, :doc:`continue on to the Getting Started guide <getting-started/quickstart>`.
 
-To learn more about oso and the principles behind its design, 
+To learn more about oso and the principles behind its design,
 :doc:`read the oso overview page <understand/overview>`.
 
 -----
@@ -50,7 +50,7 @@ To learn more about oso and the principles behind its design,
    :hidden:
 
    getting-started/quickstart
-   getting-started/download
+   getting-started/download/index
 
 .. ----------
 
@@ -70,7 +70,7 @@ To learn more about oso and the principles behind its design,
    understand/policies/index
 
 .. ----------
-.. 
+..
 .. Reference material for concepts, terminology and language APIs.
 
 .. toctree::
@@ -88,7 +88,7 @@ To learn more about oso and the principles behind its design,
    reference/faq
 
 ..  ----------
-..  
+..
 ..  Project-related information.
 
 .. todo::
@@ -104,10 +104,10 @@ To learn more about oso and the principles behind its design,
    project/changelogs/index
    Github <https://github.com/osohq/oso>
 
-.. 
+..
 .. Indices and tables
 .. ==================
-.. 
+..
 .. * :ref:`genindex`
 .. * :ref:`modindex`
 .. * :ref:`search`
