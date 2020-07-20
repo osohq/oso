@@ -137,3 +137,214 @@ Summary
   models.
 - You can use built-in methods on primitive types & literals like strings and
   dictionaries, exactly as if they were application types.
+
+
+.. JAVA EXAMPLES
+
+.. For example:
+..
+.. .. code-block:: polar
+..    :caption: policy.polar
+..
+..    allow(actor, action, resource) if actor.isAdmin;
+..
+.. The above rule expects the ``actor`` variable to be a Java instance with the field ``isAdmin``.
+.. The Java instance is passed into oso with a call to ``Oso.allow``:
+..
+.. .. TODO: add link to javadocs
+..
+.. .. code-block:: java
+..    :caption: User.java
+..
+..    public class User {
+..       public boolean isAdmin;
+..       public String name;
+..
+..       public User(String name, boolean isAdmin) {
+..          this.isAdmin = isAdmin;
+..          this.name = name;
+..       }
+..
+..       public static void main(String[] args) {
+..          User user = new User("alice", true);
+..          assert oso.allow(user, "foo", "bar");
+..       }
+..    }
+..
+..
+.. The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has a field
+.. called ``isAdmin``, it is evaluated by the Polar rule and found to be true.
+
+.. Java instances can be constructed from inside an oso policy using the :ref:`operator-new` operator if the Java class has been **registered** using
+.. the ``registerClass()`` method.
+..
+.. Registering classes also makes it possible to use :ref:`specialization` and the
+.. :ref:`operator-matches` with the registered class:
+..
+.. .. code-block:: polar
+..    :caption: policy.polar
+..
+..    allow(actor: User, action, resource) if actor matches User{name: "alice", isAdmin: true};
+..
+.. .. code-block:: java
+..    :caption: User.java
+..
+..       public static void main(String[] args) {
+..          oso.registerClass(User, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+..
+..          User user = new User("alice", true);
+..          assert oso.allow(user, "foo", "bar");
+..          assert !oso.allow("notauser", "foo", "bar");
+..       }
+..
+.. Once a class is registered, its static methods can also be called from oso policies:
+..
+.. .. code-block:: polar
+..    :caption: policy.polar
+..
+..    allow(actor: User, action, resource) if actor.name in User.superusers();
+..
+.. .. code-block:: java
+..    :caption: User.java
+..
+..       public static List<String> superusers() {
+..          return List.of("alice", "bhavik", "clarice");
+..       }
+..
+..       public static void main(String[] args) {
+..          oso.registerClass(User, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+..
+..          User user = new User("alice", true);
+..          assert oso.allow(user, "foo", "bar");
+..       }
+
+.. RUBY EXAMPLES
+
+.. For example:
+..
+.. .. code-block:: polar
+..    :caption: policy.polar
+..
+..    allow(actor, action, resource) if actor.is_admin?;
+..
+.. The above rule expects the ``actor`` variable to be a Ruby instance with the attribute ``is_admin?``.
+.. The Ruby instance is passed into oso with a call to ``allow()``:
+..
+.. .. code-block:: ruby
+..    :caption: app.rb
+..
+..    class User
+..       attr_reader :name
+..       attr_reader :is_admin
+..
+..       def initialize(name, is_admin)
+..          @name = name
+..          @is_admin = is_admin
+..       end
+..    end
+..
+..    user = User.new("alice", true)
+..    raise "should be allowed" unless oso.allow(user, "foo", "bar")
+..
+.. The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
+.. called ``is_admin``, it is evaluated by the policy and found to be true.
+
+.. Registering classes also makes it possible to use :ref:`specialization` and the
+.. :ref:`operator-matches` with the registered class:
+..
+.. .. code-block:: polar
+..    :caption: policy.polar
+..
+..    allow(actor: User, action, resource) if actor matches User{name: "alice", is_admin: true};
+..
+.. .. code-block:: ruby
+..    :caption: app.rb
+..
+..    OSO.register_class(User)
+..    user = User.new("alice", true)
+..    raise "should be allowed" unless oso.allow(user, "foo", "bar")
+..    raise "should not be allowed" unless not oso.allow(user, "foo", "bar")
+..
+.. Once a class is registered, its class methods can also be called from oso policies:
+..
+.. .. code-block:: polar
+..    :caption: policy.polar
+..
+..    allow(actor: User, action, resource) if actor.name in User.superusers();
+..
+.. .. code-block:: ruby
+..    :caption: app.rub
+..
+..    class User
+..       # ...
+..       def self.superusers
+..          ["alice", "bhavik", "clarice"]
+..       end
+..    end
+..
+..    oso.register_class(User)
+..
+..    user = User.new("alice", true)
+..    raise "should be allowed" unless oso.allow(user, "foo", "bar")
+
+.. PYTHON EXAMPLES
+
+.. For example:
+..
+.. .. code-block:: polar
+..    :caption: policy.polar
+..
+..    allow(actor, action, resource) if actor.is_admin;
+..
+.. The above rule expects the ``actor`` variable to be a Python instance with the attribute ``is_admin``.
+.. The Python instance is passed into oso with a call to :py:meth:`~oso.Oso.allow`:
+..
+.. .. code-block:: python
+..    :caption: app.py
+..
+..    user = User()
+..    user.is_admin = True
+..    assert(oso.allow(user, "foo", "bar))
+..
+.. The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
+.. called ``is_admin``, it is evaluated by the policy and found to be true.
+
+.. Registering classes also makes it possible to use :ref:`specialization` and the
+.. :ref:`operator-matches` with the registered class:
+
+.. .. code-block:: polar
+..    :caption: policy.polar
+
+..    allow(actor: User, action, resource) if actor matches User{name: "alice"};
+
+.. .. code-block:: python
+..    :caption: app.py
+
+..    oso.register_class(User)
+
+..    user = User()
+..    user.name = "alice"
+..    assert(oso.allow(user, "foo", "bar))
+..    assert(not oso.allow("notauser", "foo", "bar"))
+
+.. Once a class is registered, its class methods can also be called from oso policies:
+
+.. .. code-block:: polar
+..    :caption: policy.polar
+
+..    allow(actor: User, action, resource) if actor.name in User.superusers();
+
+.. .. code-block:: python
+..    :caption: app.py
+
+..    class User:
+..       @classmethod
+..       def superusers(cls):
+..          """ Class method to return list of superusers. """
+..          return ["alice", "bhavik", "clarice"]
+
+..    oso.register_class(User)
+
+..    user = User()
+..    user.name = "alice"
+..    assert(oso.allow(user, "foo", "bar))
