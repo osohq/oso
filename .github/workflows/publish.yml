@@ -6,8 +6,6 @@ on:
         description: "Version Number"
         required: true
 
-# Pull all the release artifacts from
-
 jobs:
   java:
     name: Publish java jar to maven repository
@@ -19,13 +17,6 @@ jobs:
         with:
           ref: "v${{ github.event.inputs.version }}"
       - run: echo "this might work"
-      - uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          repo: "osohq/oso"
-          version: "${{ github.event.inputs.version }}"
-          file: "oso-java-${{ github.event.inputs.version }}.zip"
-      - run: unzip oso-java-${{ github.event.inputs.version }}.zip
-      - run: ls oso-java-${{ github.event.inputs.version }}
   python:
     name: Publish python package to pypi
     runs-on: ubuntu-latest
@@ -36,11 +27,8 @@ jobs:
         with:
           ref: "v${{ github.event.inputs.version }}"
       - run: echo "this might work"
-      - uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          repo: "osohq/oso"
-          version: "${{ github.event.inputs.version }}"
-          file: "oso-python-${{ github.event.inputs.version }}.zip"
+      - run: |
+        curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.version }}.zip
       - run: ls oso-python-${{ github.event.inputs.version }}
   ruby:
@@ -53,10 +41,3 @@ jobs:
         with:
           ref: "v${{ github.event.inputs.version }}"
       - run: echo "this might work"
-      - uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          repo: "osohq/oso"
-          version: "${{ github.event.inputs.version }}"
-          file: "oso-ruby-${{ github.event.inputs.version }}.zip"
-      - run: unzip oso-ruby-${{ github.event.inputs.version }}.zip
-      - run: ls oso-ruby-${{ github.event.inputs.version }}
