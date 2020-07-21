@@ -38,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+      TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -45,13 +47,17 @@ jobs:
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.version }}.zip -d oso-python-${{ github.event.inputs.version }}
-      - run: ls -l
-      - run: ls oso-python-${{ github.event.inputs.version }}
+      - name: Install Python
+        with:
+          python-version: "3.7"
+      - run: pip install twine
+      - run: twine upload oso-python-${{ github.event.inputs.version }}/*.whl --non-interactive
   ruby:
     name: Publish ruby gem to rubygems
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GEM_HOST_API_KEY: ${{ secrets.GEM_HOST_API_KEY }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -59,5 +65,10 @@ jobs:
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-ruby-${{ github.event.inputs.version }}.zip") | .url') --output oso-ruby-${{ github.event.inputs.version }}.zip
       - run: unzip oso-ruby-${{ github.event.inputs.version }}.zip -d oso-ruby-${{ github.event.inputs.version }}
-      - run: ls -l
-      - run: ls oso-ruby-${{ github.event.inputs.version }}
+      - name: Set up ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          working-directory: "languages/ruby"
+      - run: gem push oso-oso-${{ github.event.inputs.version }}.gem
+        working-directory: "oso-ruby-${{ github.event.inputs.version }}"
