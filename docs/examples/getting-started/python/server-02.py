@@ -30,8 +30,10 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             _, resource_type, resource_id = self.path.split("/")
+            if resource_type != "expenses":
+                return self._respond("Not Found!", 404)
             resource = EXPENSES[int(resource_id)]
-            self._respond(str(resource))
+            self._respond(resource)
         except (KeyError, ValueError) as e:
             self._respond("Not Found!", 404)
 
