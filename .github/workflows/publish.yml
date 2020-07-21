@@ -29,7 +29,7 @@ jobs:
       - run: echo "this might work"
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
-      - run: unzip oso-python-${{ github.event.inputs.version }}.zip
+      - run: unzip oso-python-${{ github.event.inputs.version }}.zip -d oso-python-${{ github.event.inputs.version }}
       - run: ls -l
       - run: ls oso-python-${{ github.event.inputs.version }}
   ruby:
