@@ -86,13 +86,13 @@ def new_id(polar):
     return check_result(lib.polar_get_external_id(polar))
 
 
-def external_call(polar, query, call_id, value):
+def external_call(query, call_id, value):
     """Make an external call and propagate FFI errors."""
     if value is None:
         value = ffi.NULL
     check_result(lib.polar_call_result(query, call_id, value))
 
 
-def external_answer(polar, query, call_id, answer):
+def external_answer(query, call_id, answer):
     answer = 1 if answer else 0
     check_result(lib.polar_question_result(query, call_id, answer))

@@ -20,10 +20,9 @@ class Polar:
     """Polar API"""
 
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
-        self.polar = lib.polar_new()
-        self.host = Host(self.polar, classes=classes, constructors=constructors)
+        self.ffi_polar = lib.polar_new()
+        self.host = Host(self.ffi_polar, classes=classes, constructors=constructors)
         self.load_queue = []
-        self.constructors = constructors
 
         # Register built-in classes.
         self.register_class(datetime, name="Datetime")
@@ -31,12 +30,12 @@ class Polar:
 
     def __del__(self):
         del self.host
-        lib.polar_free(self.polar)
+        lib.polar_free(self.ffi_polar)
 
     def clear(self):
         self.load_queue = []
-        lib.polar_free(self.polar)
-        self.polar = lib.polar_new()
+        lib.polar_free(self.ffi_polar)
+        self.ffi_polar = lib.polar_new()
 
     def load_file(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
@@ -52,7 +51,7 @@ class Polar:
 
     def load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
-        load_str(self.polar, string, None, self.run)
+        load_str(self.ffi_polar, string, None, self.run)
 
     def query(self, query, single=False):
         """Query for a predicate, parsing it if necessary.
@@ -66,11 +65,11 @@ class Polar:
 
         host = self.host.copy()
         if isinstance(query, str):
-            query = check_result(lib.polar_new_query(self.polar, to_c_str(query)))
+            query = check_result(lib.polar_new_query(self.ffi_polar, to_c_str(query)))
         elif isinstance(query, Predicate):
             query = check_result(
                 lib.polar_new_query_from_term(
-                    self.polar, ffi_serialize(host.to_polar_term(query))
+                    self.ffi_polar, ffi_serialize(host.to_polar_term(query))
                 )
             )
         else:
@@ -97,12 +96,12 @@ class Polar:
         """Send an FFI query object to a new Query object for evaluation."""
         if host is None:
             host = self.host.copy()
-        return Query(self.polar, host=host).run(query)
+        return Query(self.ffi_polar, host=host).run(query)
 
     def repl(self):
         self._load_queued_files()
         while True:
-            query = lib.polar_query_from_repl(self.polar)
+            query = lib.polar_query_from_repl(self.ffi_polar)
             had_result = False
             if is_null(query):
                 print("Query error: ", get_error())
@@ -124,11 +123,11 @@ class Polar:
         """Register `value` as a Polar constant variable called `name`."""
         name = to_c_str(name)
         value = ffi_serialize(self.host.to_polar_term(value))
-        lib.polar_register_constant(self.polar, name, value)
+        lib.polar_register_constant(self.ffi_polar, name, value)
 
     def _load_queued_files(self):
         """Load queued policy files into the knowledge base."""
         while self.load_queue:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
-                load_str(self.polar, file.read(), filename, self.run)
+                load_str(self.ffi_polar, file.read(), filename, self.run)

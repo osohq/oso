@@ -32,27 +32,24 @@ class QueryResult:
 class Query:
     """Execute a Polar query through the FFI/event interface."""
 
-    def __init__(self, polar, query=None, host=None, calls={}):
-        if not polar:
-            raise PolarApiException("no Polar handle")
-        self.polar = polar
-        self.query = query
-        self.host = host or Host(polar)
-        self.calls = calls.copy()
+    def __init__(self, ffi_query, *, host=None):
+        self.ffi_query = ffi_query
+        self.host = host
+        self.calls = {}
 
     def __del__(self):
         del self.host
-        lib.query_free(self.query)
+        lib.query_free(self.ffi_query)
 
-    def run(self, query=None):
+    def run(self, ffi_query=None):
         """Run the event loop and yield results."""
-        if query is None:
-            query = self.query
+        if ffi_query is None:
+            ffi_query = self.ffi_query
         else:
-            self.query = query
-        assert query, "no query to run"
+            self.ffi_query = ffi_query
+        assert ffi_query, "no query to run"
         while True:
-            event_s = lib.polar_next_query_event(query)
+            event_s = lib.polar_next_query_event(ffi_query)
             event = ffi_deserialize(event_s)
             if event == "Done":
                 break
@@ -62,17 +59,17 @@ class Query:
             if kind == "MakeExternal":
                 self.handle_make_external(data)
             if kind == "ExternalCall":
-                self.handle_external_call(query, data)
+                self.handle_external_call(ffi_query, data)
             if kind == "ExternalOp":
-                self.handle_external_op(query, data)
+                self.handle_external_op(ffi_query, data)
             if kind == "ExternalIsa":
-                self.handle_external_isa(query, data)
+                self.handle_external_isa(ffi_query, data)
             if kind == "ExternalUnify":
-                self.handle_external_unify(query, data)
+                self.handle_external_unify(ffi_query, data)
             if kind == "ExternalIsSubSpecializer":
-                self.handle_external_is_subspecializer(query, data)
+                self.handle_external_is_subspecializer(ffi_query, data)
             if kind == "Debug":
-                self.handle_debug(query, data)
+                self.handle_debug(ffi_query, data)
             if kind == "Result":
                 bindings = {
                     k: self.host.to_python(v) for k, v in data["bindings"].items()
@@ -104,7 +101,7 @@ class Query:
             try:
                 attr = getattr(instance, attribute)
             except AttributeError:
-                external_call(self.polar, query, call_id, None)
+                external_call(query, call_id, None)
                 # @TODO: polar line numbers in errors once polar errors are better.
                 # raise PolarRuntimeException(f"Error calling {attribute}")
                 return
@@ -128,34 +125,34 @@ class Query:
         try:
             value = next(self.calls[call_id])
             stringified = ffi_serialize(self.host.to_polar_term(value))
-            external_call(self.polar, query, call_id, stringified)
+            external_call(query, call_id, stringified)
         except StopIteration:
-            external_call(self.polar, query, call_id, None)
+            external_call(query, call_id, None)
 
     def handle_external_op(self, query, data):
         op = data["operator"]
         args = [self.host.to_python(arg) for arg in data["args"]]
         answer = self.host.operator(op, args)
-        external_answer(self.polar, query, data["call_id"], answer)
+        external_answer(query, data["call_id"], answer)
 
     def handle_external_isa(self, query, data):
         instance_id = data["instance_id"]
         class_tag = data["class_tag"]
         isa = self.host.isa(instance_id, class_tag)
-        external_answer(self.polar, query, data["call_id"], isa)
+        external_answer(query, data["call_id"], isa)
 
     def handle_external_unify(self, query, data):
         left_instance_id = data["left_instance_id"]
         right_instance_id = data["right_instance_id"]
         unify = self.host.unify(left_instance_id, right_instance_id)
-        external_answer(self.polar, query, data["call_id"], unify)
+        external_answer(query, data["call_id"], unify)
 
     def handle_external_is_subspecializer(self, query, data):
         instance_id = data["instance_id"]
         left_tag = data["left_class_tag"]
         right_tag = data["right_class_tag"]
         is_subspecializer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
-        external_answer(self.polar, query, data["call_id"], is_subspecializer)
+        external_answer(query, data["call_id"], is_subspecializer)
 
     def handle_debug(self, query, data):
         if data["message"]:

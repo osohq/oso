@@ -9,7 +9,7 @@ class Host:
 
     def __init__(self, polar, classes={}, constructors={}, instances={}):
         assert polar, "no Polar handle"
-        self.polar = polar  # a "weak" handle, which we do not free
+        self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = classes.copy()
         self.constructors = constructors.copy()
         self.instances = instances.copy()
@@ -17,7 +17,7 @@ class Host:
     def copy(self):
         """Copy an existing cache."""
         return type(self)(
-            self.polar,
+            self.ffi_polar,
             classes=self.classes.copy(),
             constructors=self.constructors.copy(),
             instances=self.instances.copy(),
@@ -58,7 +58,7 @@ class Host:
     def cache_instance(self, instance, id=None):
         """Cache Python instance under Polar-generated id."""
         if id is None:
-            id = new_id(self.polar)
+            id = new_id(self.ffi_polar)
         self.instances[id] = instance
         return id
 
