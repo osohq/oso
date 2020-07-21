@@ -32,6 +32,8 @@ Polar parses unquoted integers as numeric values. For example::
 
 are all parsed as numbers.
 
+.. _strings:
+
 Strings
 -------
 
@@ -46,6 +48,8 @@ Compound Types
 ==============
 
 To support more complex data, Polar includes the following compound data types.
+
+.. _lists:
 
 Lists
 ------

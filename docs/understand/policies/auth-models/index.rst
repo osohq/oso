@@ -1,3 +1,5 @@
+.. _auth-models:
+
 ====================
 Authorization Models
 ====================
