@@ -1223,7 +1223,7 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    /// Evaluate numerical comparisons
+    /// Evaluate comparisons.
     fn comparison_op_helper(
         &mut self,
         term: &Term,
@@ -1244,7 +1244,25 @@ impl PolarVirtualMachine {
                     Operator::Eq => left == right,
                     Operator::Neq => left != right,
                     _ => unreachable!(
-                        "operator: {:?} should not be handled by this method, this is a bug",
+                        "operator {:?} should not be handled by this method, this is a bug",
+                        op
+                    ),
+                };
+                if !result {
+                    self.push_goal(Goal::Backtrack)?;
+                }
+                Ok(QueryEvent::None)
+            }
+            (Value::String(left), Value::String(right)) => {
+                let result = match op {
+                    Operator::Lt => left < right,
+                    Operator::Leq => left <= right,
+                    Operator::Gt => left > right,
+                    Operator::Geq => left >= right,
+                    Operator::Eq => left == right,
+                    Operator::Neq => left != right,
+                    _ => unreachable!(
+                        "operator {:?} should not be handled by this method, this is a bug",
                         op
                     ),
                 };
