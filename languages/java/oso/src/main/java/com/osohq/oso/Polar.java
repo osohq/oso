@@ -8,7 +8,8 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
@@ -213,11 +214,14 @@ public class Polar {
         } else if (value.getClass() == Integer.class) {
             jVal.put("Number", Map.of("Integer", value));
 
-        } else if (value.getClass() == Float.class) {
+        } else if (value.getClass() == Float.class || value.getClass() == Double.class) {
             jVal.put("Number", Map.of("Float", value));
 
         } else if (value.getClass() == String.class) {
             jVal.put("String", value);
+
+        } else if (value.getClass().isArray()) {
+            jVal.put("List", javaArrayToPolar(value));
 
         } else if (value instanceof List) {
             jVal.put("List", javaListToPolar((List<Object>) value));
@@ -256,6 +260,35 @@ public class Polar {
             polarList.add(toPolarTerm(el));
         }
         return polarList;
+    }
+
+    /**
+     * Convert a Java Array to a JSONified Polar list.
+     *
+     * @param list List<Object>
+     * @return List<JSONObject>
+     * @throws Exceptions.OsoException
+     */
+    private List<JSONObject> javaArrayToPolar(Object array) throws Exceptions.OsoException {
+        assert (array.getClass().isArray());
+
+        List<Object> l;
+        if (array instanceof int[] || array instanceof boolean[] || array instanceof char[]
+                || array instanceof byte[]) {
+            l = IntStream.of((int[]) array).boxed().collect(Collectors.toList());
+
+        } else if (array instanceof float[] || array instanceof double[]) {
+            l = DoubleStream.of((double[]) array).boxed().collect(Collectors.toList());
+
+        } else if (array instanceof Object[]) {
+            l = Arrays.asList((Object[]) array);
+
+        } else {
+            throw new Exceptions.OsoException(
+                    "Oso does not support arrays of type " + array.getClass().getComponentType().getName());
+        }
+        return javaListToPolar(l);
+
     }
 
     /**

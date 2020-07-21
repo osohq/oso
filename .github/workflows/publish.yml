@@ -5,7 +5,6 @@ on:
       version:
         description: "Version Number"
         required: true
-
 jobs:
   java:
     name: Publish java jar to maven repository
