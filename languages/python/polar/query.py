@@ -151,7 +151,9 @@ class Query:
         instance_id = data["instance_id"]
         left_tag = data["left_class_tag"]
         right_tag = data["right_class_tag"]
-        is_subspecializer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
+        is_subspecializer = self.host.is_subspecializer(
+            instance_id, left_tag, right_tag
+        )
         external_answer(query, data["call_id"], is_subspecializer)
 
     def handle_debug(self, query, data):

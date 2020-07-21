@@ -419,9 +419,7 @@ def test_return_list(polar):
     # for testing lists
     polar.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
 
-    assert polar.query(
-        Predicate(name="allow", args=[Actor(), "join", "party"])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[Actor(), "join", "party"])).success
 
 
 def test_query(load_file, polar):
@@ -483,11 +481,12 @@ def test_constructor(polar, qvar):
 def test_instance_cache(polar, qeval):
     class Counter:
         count = False
+
         def __init__(self):
             self.__class__.count += 1
 
     polar.register_class(Counter)
-    polar.load_str("f(c: Counter) if c.count > 0;");
+    polar.load_str("f(c: Counter) if c.count > 0;")
 
     assert Counter.count == 0
     c = Counter()
