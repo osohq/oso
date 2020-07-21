@@ -20,8 +20,9 @@ jobs:
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-lib-${{ github.event.inputs.version }}.zip") | .url') --output oso-lib-${{ github.event.inputs.version }}.zip
       - run: unzip oso-lib-${{ github.event.inputs.version }}.zip -d oso-lib-${{ github.event.inputs.version }}
-      - run: ls -l
-      - run: ls oso-lib-${{ github.event.inputs.version }}
+      - uses: actions/setup-java@v1
+        with:
+          java-version: "10"
       - name: Copy libraries into resources.
         run: |
           mkdir -p languages/java/oso/src/main/resources/linux
@@ -69,7 +70,7 @@ jobs:
       - name: Set up ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby-version }}
+          ruby-version: "2.7"
           working-directory: "languages/ruby"
       - run: gem push oso-oso-${{ github.event.inputs.version }}.gem
         working-directory: "oso-ruby-${{ github.event.inputs.version }}"
