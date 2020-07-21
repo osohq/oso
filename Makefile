@@ -20,9 +20,11 @@ ruby-test:
 	$(MAKE) -C languages/ruby test
 
 java-test:
-	$(MAKE) -C languages/java test
 	$(MAKE) -C languages/java package
-	cd test && java -classpath "../languages/java/oso/target/*:." Test.java
+	cd test && \
+		javac -classpath "../languages/java/oso/target/*:." Test.java && \
+		java -classpath "../languages/java/oso/target/*:." Test
+
 
 docs-test: python-build
 	$(MAKE) -C docs test
