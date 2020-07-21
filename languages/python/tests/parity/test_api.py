@@ -68,18 +68,14 @@ def test_register_class(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Predicate(name="allow", args=(actor, action, resource))
-    ).success
+    assert polar.query(Predicate(name="allow", args=(actor, action, resource))).success
 
 
 def test_allow(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Predicate(name="allow", args=[actor, action, resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
     actor = Actor(name="president")
     assert polar.query(
         Predicate(name="actorInRole", args=[actor, "admin", resource])
@@ -94,15 +90,11 @@ def test_method_resolution_order(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Predicate(name="allow", args=[actor, action, resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
     assert get_frobbed() == ["Widget"]
     set_frobbed([])
     resource = DooDad(id="2")
-    assert polar.query(
-        Predicate(name="allow", args=[actor, action, resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
     assert get_frobbed() == ["DooDad", "Widget"]
 
 
@@ -227,9 +219,7 @@ def test_instance_initialization(polar, query, qvar):
 def test_instance_from_external_call(polar, load_policy):
     user = Actor(name="guest")
     resource = Widget(id="1", name="name")
-    assert polar.query(
-        Predicate(name="allow", args=[user, "frob", resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[user, "frob", resource])).success
 
     resource = Widget(id="2", name="name")
     assert not polar.query(
@@ -258,17 +248,13 @@ def test_return_list(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "invite"
-    assert polar.query(
-        Predicate(name="allow", args=[actor, action, resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
 
 
 def test_type_fields(polar, load_policy):
     resource = Widget(id=1, name="goldfish")
     actor = Actor(name="elmo", id=1, widget=resource)
-    assert polar.query(
-        Predicate(name="allow", args=[actor, "keep", resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[actor, "keep", resource])).success
 
 
 def test_iter_fields(polar, load_policy):
@@ -290,15 +276,9 @@ def test_clear(polar, load_policy):
 
     actor = Actor(name="milton", id=1)
     resource = Widget(id=1, name="thingy")
-    assert polar.query(
-        Predicate(name="allow", args=[actor, "make", resource])
-    ).success
-    assert polar.query(
-        Predicate(name="allow", args=[actor, "get", resource])
-    ).success
-    assert polar.query(
-        Predicate(name="allow", args=[actor, "edit", resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[actor, "make", resource])).success
+    assert polar.query(Predicate(name="allow", args=[actor, "get", resource])).success
+    assert polar.query(Predicate(name="allow", args=[actor, "edit", resource])).success
     assert polar.query(
         Predicate(name="allow", args=[actor, "delete", resource])
     ).success
@@ -312,9 +292,7 @@ def test_clear(polar, load_policy):
 
     polar.clear()
     polar.load_file(new)
-    assert polar.query(
-        Predicate(name="allow", args=[actor, "make", resource])
-    ).success
+    assert polar.query(Predicate(name="allow", args=[actor, "make", resource])).success
     assert not polar.query(
         Predicate(name="allow", args=[actor, "get", resource])
     ).success
