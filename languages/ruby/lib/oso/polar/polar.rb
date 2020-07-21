@@ -106,6 +106,9 @@ module Oso
       # @param from_polar [Proc]
       # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
       def register_class(cls, name: nil, from_polar: nil)
+        if block_given?
+          from_polar = Proc.new
+        end
         name = host.cache_class(cls, name: name, constructor: from_polar)
         register_constant(name, value: cls)
       end
