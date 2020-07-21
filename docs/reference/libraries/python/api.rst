@@ -3,7 +3,6 @@ Python API
 ==========
 
 .. automodule:: oso
-.. automodule:: exceptions
 
 Classes
 =======
