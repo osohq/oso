@@ -34,15 +34,13 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         try:
             _, resource_type, resource_id = self.path.split("/")
-            resource = EXPENSES[int(resource_id)]
-
             if resource_type != "expenses":
                 return self._respond("Not Found!", 404)
-            elif oso.allow(actor, action, resource):
+            resource = EXPENSES[int(resource_id)]
+            if oso.allow(actor, action, resource):
                 self._respond(resource)
             else:
                 self._respond("Not Authorized!", 403)
-
         except (KeyError, ValueError) as e:
             self._respond("Not Found!", 404)
 
