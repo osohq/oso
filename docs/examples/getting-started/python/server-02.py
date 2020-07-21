@@ -20,7 +20,7 @@ from oso import Oso
 oso = Oso()
 
 
-class MyRequestHandler(BaseHTTPRequestHandler):
+class RequestHandler(BaseHTTPRequestHandler):
     def _respond(self, msg, code=200):
         self.send_response(code)
         self.end_headers()
@@ -37,6 +37,6 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
 
 server_address = ("", 5050)
-httpd = HTTPServer(server_address, MyRequestHandler)
+httpd = HTTPServer(server_address, RequestHandler)
 print("running on port", httpd.server_port)
 httpd.serve_forever()
