@@ -51,6 +51,7 @@ extensions = [
     "sphinxcontrib.spelling",
     "sphinx_copybutton",
     "literal_diff",
+    "fontawesome",
 ]
 
 
@@ -120,7 +121,7 @@ html_theme = "sphinx_material"
 # html_theme_options = {"logo_only": True}
 html_theme_options = {
     # Set the name of the project to appear in the navigation.
-    "nav_title": "oso",
+    "nav_title": "Documentation",
     # Set you GA account ID to enable tracking
     "google_analytics_account": "UA-XXXXX",
     # Specify a base_url used to generate sitemap.xml. If not
@@ -133,12 +134,16 @@ html_theme_options = {
     "repo_url": "https://github.com/osohq/oso/",
     "repo_name": "oso",
     # Visible levels of the global TOC; -1 means unlimited
-    "globaltoc_depth": 1,
+    "globaltoc_depth": 3,
     # If False, expand all TOC entries
     "globaltoc_collapse": True,
     # If True, show hidden TOC entries
     "globaltoc_includehidden": True,
+    # "heroes": {"index": "Welcome to the home of the oso documentation!",},
 }
+
+version_dropdown = True
+version_info = {"release": "/", "devel": "/devel"}
 html_sidebars = {
     "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
 }
@@ -150,6 +155,8 @@ html_js_files = [
 html_css_files = [
     "css/custom.css",
 ]
+
+html_favicon = "favicon.ico"
 
 # --- doctest options ----
 

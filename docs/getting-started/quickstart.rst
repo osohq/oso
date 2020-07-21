@@ -89,7 +89,7 @@ do so now:
 
     .. code-block:: console
       
-      $ pip install oso==0.2.2
+      $ pip install oso==0.2
       Collecting oso==0.2.2
         Using cached https://files.pythonhosted.org/packages/c7/c6/7b47b251d1ea137b7c724cec63591c43083f37e0f8356e232d45ec785743/oso-0.2.2-cp38-cp38-manylinux2010_x86_64.whl
       Requirement already satisfied: cffi==1.14.0 in /home/sam/work/oso/oso/languages/python/.eggs/cffi-1.14.0-py3.8-linux-x86_64.egg (from oso==0.2.2) (1.14.0)
@@ -111,14 +111,6 @@ do so now:
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine:
 
-.. tip::
-  Try copying the patch, and applying it locally with:
-
-  .. code-block:: console
-
-      $ patch <<EOF <hit enter>
-      > <paste contents>
-      EOF
 
 .. tabs::
   .. group-tab:: Python
@@ -263,6 +255,15 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
 If we pass all three pieces of data to ``allow``, it'll return a boolean
 decision that we can use in our server's response logic:
 
+.. tip::
+  Try copying the patch, and applying it locally with:
+
+  .. code-block:: console
+
+      $ patch <<EOF <hit enter>
+      > <paste contents>
+      EOF
+
 .. tabs::
   .. group-tab:: Python
 
@@ -381,32 +382,6 @@ able to view expenses, but no one outside the company will be able to:
     library. The **actor** value passed to oso is a Ruby string, and oso allows us
     to call any ``String`` method from Ruby's standard library on it.
 
-And that's just the tip of the iceberg. You can register *any* application object with
-oso and then leverage it in your application's authorization policy. For
-example, if you have ``Expense`` and ``User`` classes defined in your
-application, you could write a policy rule in oso that says a ``User`` may
-approve an ``Expense`` if they manage the ``User`` who submitted the expense
-and the expense's amount is less than $100.00:
-
-
-.. code-block:: polar
-
-  allow(approver, "approve", expense) if
-      approver = expense.submitted_by.manager
-      and expense.amount < 10000;
-
-In the process of evaluating that rule, the oso engine would call back into the
-application in order to make determinations that rely on application data, such
-as:
-
-- Which user submitted the expense in question?
-- Who is their manager?
-- Is their manager the approver?
-- Does the expense's ``amount`` field contain a value less than $100.00?
-
-.. note:: For more on leveraging application data in an oso policy, check out
-  :doc:`/understand/language/application-types`.
-
 Once we've added our new dynamic rule and restarted the web server, every user
 with an ``@example.com`` email should be allowed to view any expense:
 
@@ -422,6 +397,35 @@ are denied access:
 
   $ curl -H "user: bhavik@example.org" localhost:5050/expenses/1
   Not Authorized!
+
+And that's just the tip of the iceberg. You can register *any* application object with
+oso and then leverage it in your application's authorization policy.
+
+.. For
+.. example, if you have ``Expense`` and ``User`` classes defined in your
+.. application, you could write a policy rule in oso that says a ``User`` may
+.. approve an ``Expense`` if they manage the ``User`` who submitted the expense
+.. and the expense's amount is less than $100.00:
+
+
+.. .. code-block:: polar
+
+..   allow(approver, "approve", expense) if
+..       approver = expense.submitted_by.manager
+..       and expense.amount < 10000;
+
+.. In the process of evaluating that rule, the oso engine would call back into the
+.. application in order to make determinations that rely on application data, such
+.. as:
+
+.. - Which user submitted the expense in question?
+.. - Who is their manager?
+.. - Is their manager the approver?
+.. - Does the expense's ``amount`` field contain a value less than $100.00?
+
+.. .. note:: For more on leveraging application data in an oso policy, check out
+..   :doc:`/understand/language/application-types`.
+
 
 Writing your access policy as declarative rules over your app's classes and
 data is one of oso's most powerful features. In the next section, we'll update

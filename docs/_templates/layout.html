@@ -1,4 +1,8 @@
 {% extends "!layout.html" %}
+{%- block extrahead %}
+{{ super() }}
+<script src="https://kit.fontawesome.com/2c76e395a4.js" crossorigin="anonymous"></script>
+{% endblock %}
 {% block footer %} {{ super() }}
 <!-- Start of HubSpot Embed Code -->
 <script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/8091225.js"></script>
