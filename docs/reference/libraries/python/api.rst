@@ -3,6 +3,7 @@ Python API
 ==========
 
 .. automodule:: oso
+.. automodule:: exceptions
 
 Classes
 =======
@@ -12,3 +13,7 @@ Classes
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
 .. autofunction:: oso.polar_class
+
+Exceptions
+==========
+.. TODO: add exceptions here once Alex's refactor branch is merged
