@@ -131,3 +131,23 @@ class Polar:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
                 load_str(self.ffi_polar, file.read(), filename, self.run)
+
+
+def polar_class(_cls=None, *, name=None, from_polar=None):
+    """Decorator to register a Python class with Polar.
+    An alternative to ``register_class()``.
+
+    :param str from_polar: Name of class function to create a new instance from ``fields``.
+                           Defaults to class constructor.
+    """
+
+    def wrap(cls):
+        cls_name = cls.__name__ if name is None else name
+        CLASSES[cls_name] = cls
+        CONSTRUCTORS[cls_name] = from_polar or cls
+        return cls
+
+    if _cls is None:
+        return wrap
+
+    return wrap(_cls)

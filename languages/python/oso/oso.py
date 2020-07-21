@@ -7,7 +7,7 @@ import os
 from typing import Any, cast, Callable, List, TYPE_CHECKING
 import inspect
 
-from polar import CLASSES, CONSTRUCTORS, Polar, Predicate, Query, QueryResult
+from polar import Polar
 
 from .extras import Http, PathMapper
 
@@ -53,22 +53,3 @@ class Oso(Polar):
         """
         result = self.query_predicate("allow", actor, action, resource, single=True)
         return result.success
-
-
-def polar_class(_cls=None, *, name=None, from_polar=None):
-    """Decorator to register a Python class with Polar. An alternative to ``register_class()``.
-
-    :param str from_polar: Name of static class function to create a new class instance from ``fields``.
-                            Defaults to class constructor.
-    """
-
-    def wrap(cls):
-        cls_name = cls.__name__ if name is None else name
-        CLASSES[cls_name] = cls
-        CONSTRUCTORS[cls_name] = from_polar or cls
-        return cls
-
-    if _cls is None:
-        return wrap
-
-    return wrap(_cls)
