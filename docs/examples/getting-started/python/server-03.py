@@ -18,6 +18,7 @@ EXPENSES = {
 from oso import Oso
 
 oso = Oso()
+oso.load_file("expenses.pol")
 
 
 class RequestHandler(BaseHTTPRequestHandler):

@@ -18,6 +18,7 @@ EXPENSES = {
 }
 
 OSO ||= Oso.new
+OSO.load_file("expenses.pol")
 
 server = WEBrick::HTTPServer.new Port: 5050
 server.mount_proc "/" do |req, res|

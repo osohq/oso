@@ -271,12 +271,22 @@ decision that we can use in our server's response logic:
       :filename: server.py
       :diff: server-02.py
 
+    
+    .. literalinclude:: expenses-01.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
+
   .. group-tab:: Ruby
 
     .. literalinclude:: server-03.rb
       :base_path: /examples/getting-started/ruby/
       :filename: server.rb
       :diff: server-02.rb
+
+    .. literalinclude:: expenses-01.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
+
 
 Since we haven't yet added any authorization rules to our server's ``Oso``
 instance, all requests for valid expenses will be denied. We can test that by
@@ -297,20 +307,10 @@ instance's knowledge base.
 
 Our first rule allows the actor ``"alice@example.com"`` to ``GET`` any expense:
 
-.. tabs::
-  .. group-tab:: Python
+.. literalinclude:: expenses-02.pol
+  :base_path: /examples/getting-started/polar/
+  :caption: expenses.pol
 
-    .. literalinclude:: server-04.py
-      :base_path: /examples/getting-started/python/
-      :filename: server.py
-      :diff: server-03.py
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: server-04.rb
-      :base_path: /examples/getting-started/ruby/
-      :filename: server.rb
-      :diff: server-03.rb
 
 The rule will succeed if the **actor** and **action** match the strings
 ``"alice@example.com"`` and ``"GET"``, respectively. We capture the provided
@@ -351,10 +351,9 @@ able to view expenses, but no one outside the company will be able to:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: server-05.py
-      :base_path: /examples/getting-started/python/
-      :filename: server.py
-      :diff: server-04.py
+    .. literalinclude:: expenses-03-py.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
 
     .. |str_endswith| replace:: the ``str.endswith`` method
     .. _str_endswith: https://docs.python.org/3/library/stdtypes.html#str.endswith
@@ -368,10 +367,9 @@ able to view expenses, but no one outside the company will be able to:
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: server-05.rb
-      :base_path: /examples/getting-started/ruby/
-      :filename: server.rb
-      :diff: server-04.rb
+    .. literalinclude:: expenses-03-rb.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
 
     .. |string_end_with| replace:: the ``String#end_with?`` method
     .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
@@ -438,27 +436,15 @@ our access policy that allows all employees to see each other's expenses. They
 would like us to modify the policy such that employees can only see their own
 expenses.
 
-To accomplish that, we can extend our existing rule with a second condition:
+To accomplish that, we can replace our existing rule with:
 
-.. tabs::
-  .. group-tab:: Python
-
-    .. literalinclude:: server-06.py
-      :base_path: /examples/getting-started/python/
-      :filename: server.py
-      :diff: server-05.py
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: server-06.rb
-      :base_path: /examples/getting-started/ruby/
-      :filename: server.rb
-      :diff: server-05.rb
+.. literalinclude:: expenses-04.pol
+  :base_path: /examples/getting-started/polar/
+  :caption: expenses.pol
 
 Behind the scenes, oso looks up the ``submitted_by`` field on the provided
 ``Expense`` instance and compares that value against the provided **actor**.
-And just like that, an actor can only see an expense if they have an
-``@example.com`` email *and* they submitted the expense.
+And just like that, an actor can only see an expense if they submitted the expense.
 
 Now Alice can see her own expenses but not Bhavik's:
 
