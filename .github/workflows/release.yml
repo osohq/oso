@@ -256,9 +256,8 @@ jobs:
         with:
           name: gem
       - run: |
-          gem install ../gem/oso-oso-${{ steps.version.outputs.oso_version }}.gem
-          ruby test.rb
-        working-directory: test
+          gem install gem/oso-oso-${{ steps.version.outputs.oso_version }}.gem
+          ruby languages/ruby/spec/oso/language_parity_spec.rb
 
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
