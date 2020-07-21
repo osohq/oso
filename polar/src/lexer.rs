@@ -316,7 +316,7 @@ impl<'input> Lexer<'input> {
                     self.c = self.chars.next();
                     last = i;
                 }
-                '.' => {
+                '.' | 'e' | 'E' | '+' | '-' => {
                     parse_as_float = true;
                     self.buf.push(char);
                     self.c = self.chars.next();
