@@ -1,4 +1,5 @@
-from oso import Oso
+from polar.exceptions import UnrecognizedEOF
+from oso import Oso, OsoException
 
 oso = Oso()
 
@@ -44,3 +45,37 @@ oso.load_file(polar_file)
 oso._load_queued_files()
 
 assert oso.allow("a", "b", "c")
+
+
+oso.load_str("""?= x = "hello world!" and x.endswith("world!");""")
+
+exception_thrown = False
+try:
+    oso.load_str("missingSemicolon()")
+except UnrecognizedEOF as e:
+    exception_thrown = True
+    assert (
+        str(e)
+        == "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
+    )
+assert exception_thrown
+
+assert oso.query_predicate("specializers", D("hello"), B.C("hello")).success
+assert oso.query_predicate("floatLists").success
+assert oso.query_predicate("intDicts").success
+assert oso.query_predicate("comparisons").success
+assert oso.query_predicate("testForall").success
+assert oso.query_predicate("testRest").success
+assert oso.query_predicate("testMatches", A("hello")).success
+assert oso.query_predicate("testMethodCalls", A("hello"), B.C("hello")).success
+assert oso.query_predicate("testOr").success
+
+
+assert oso.query_predicate("testCut").success is False
+
+import math
+
+oso.register_constant("Math", math)
+oso.load_str("?= Math.factorial(5) == 120;")
+
+assert oso.query_predicate("testHttpAndPathMapper").success

@@ -60,5 +60,5 @@ testCut() if
     and x == 3;
 
 testHttpAndPathMapper() if
-    new Http{hostname: "foo", path: "/", query: {x: 1}}.send("hostname") = "foo"
+    new Http{hostname: "foo", path: "/", query: {x: 1}}.hostname = "foo"
     and new PathMapper{template: "/foo/{id}/bar/{ego}"}.map("/foo/1/bar/2") = {id: "1", ego: "2"};
