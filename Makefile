@@ -18,7 +18,6 @@ python-test: python-build
 
 ruby-test:
 	$(MAKE) -C languages/ruby test
-	cd test && ruby test.rb
 
 java-test:
 	$(MAKE) -C languages/java test
