@@ -16,7 +16,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: "v${{ github.event.inputs.version }}"
-      - run: echo "this might work"
+      - run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-lib-${{ github.event.inputs.version }}.zip") | .url') --output oso-lib-${{ github.event.inputs.version }}.zip
+      - run: unzip oso-lib-${{ github.event.inputs.version }}.zip -d oso-lib-${{ github.event.inputs.version }}
+      - run: ls -l
+      - run: ls oso-lib-${{ github.event.inputs.version }}
   python:
     name: Publish python package to pypi
     runs-on: ubuntu-latest
@@ -26,7 +30,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: "v${{ github.event.inputs.version }}"
-      - run: echo "this might work"
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.version }}.zip -d oso-python-${{ github.event.inputs.version }}
@@ -41,4 +44,8 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: "v${{ github.event.inputs.version }}"
-      - run: echo "this might work"
+      - run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-ruby-${{ github.event.inputs.version }}.zip") | .url') --output oso-ruby-${{ github.event.inputs.version }}.zip
+      - run: unzip oso-ruby-${{ github.event.inputs.version }}.zip -d oso-ruby-${{ github.event.inputs.version }}
+      - run: ls -l
+      - run: ls oso-ruby-${{ github.event.inputs.version }}
