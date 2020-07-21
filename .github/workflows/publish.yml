@@ -47,7 +47,8 @@ jobs:
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.version }}.zip -d oso-python-${{ github.event.inputs.version }}
-      - name: Install Python
+      - uses: actions/setup-python@v2
+        name: Install Python
         with:
           python-version: "3.7"
       - run: pip install twine
