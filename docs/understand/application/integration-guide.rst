@@ -29,7 +29,7 @@ Control over data access is commonly exercised over several dimensions:
 - column or field level (an actor can access or update only certain fields of a
   record)
 
-Polar permits the encoding of access control along each of these dimensions.
+oso permits the encoding of access control along each of these dimensions.
 
 Model level
 -----------
@@ -65,7 +65,7 @@ Field level
 -----------
 
 Field level access control is along a different dimension than row or model
-level access. There are several ways to represent this in Polar.
+level access. There are several ways to structure this with oso.
 
 **String actions**
 
@@ -121,10 +121,10 @@ returns all columns present in the expense.
 Policy evaluation points
 ========================
 
-Policy evaluation is performed by running a Polar query from within your
-application.  This query can be integrated anywhere during the request
-processing flow. We will discuss several possible points for each of the above
-access control types.  Which you choose depends on the structure of your
+Policy evaluation is performed by using the oso library to run a Polar query
+from within your application.  This query can be integrated anywhere during the
+request processing flow. We will discuss several possible points for each of the
+above access control types.  Which you choose depends on the structure of your
 application, and your authorization requirements.
 
 There are several possible integration points for oso.  First some definitions:
@@ -198,7 +198,7 @@ authorization:
 
     1. Apply a less restrictive filter in application code (or no filter) and
        individually authorize every record.
-    2. Duplicate our filtering in both places (application and Polar).
+    2. Duplicate our filtering in both places (application and policy).
     3. Authorize the filter to be applied to the query before data fetch,
        instead of the resource.
     4. Have oso output the filter to be applied to the query before data fetch.
@@ -327,7 +327,7 @@ request filter.
     by Polar for "view" queries, but that would require some complicated
     metaprogramming type stuff, or at least a getattr style predicate.
 
-To support this structure, our Polar policy would look something like::
+To support this structure, our policy would look something like::
 
     # Accountants can list expenses
     allow(actor: User, "list", resource: Expense) if
@@ -346,9 +346,9 @@ authoritative source query filters that perform authorization.
 **Have oso output the filter**
 
 This is a similar structure to above, but instead the authorization filter is
-stored in Polar.  This structure can simplify application code, and allows for
-filters that are conditional on other attributes. For example, our policy for
-"view" could contain the additional rule
+contained in the policy.  This structure can simplify application code, and
+allows for filters that are conditional on other attributes. For example, our
+policy for "view" could contain the additional rule
 
 .. code-block:: polar
     :emphasize-lines: 1-3

@@ -1,5 +1,7 @@
 .. _polar-classes:
 
+.. TODO: This guide is out of date and not included anywhere.
+
 ===========================
 Classes & specialized rules
 ===========================

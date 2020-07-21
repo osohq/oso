@@ -16,11 +16,10 @@ control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
 ABAC basics
 -----------
 
-
 Continuing from the RBAC examples, suppose we want to allow employees
 to view *their own* expenses.
 
-Recall that we had previously set up our users as classes in Polar:
+Recall that we had previously registered our user classes with oso:
 
 .. tabs::
     .. group-tab:: Python
@@ -129,11 +128,11 @@ And these can also follow inheritance patterns like we saw with regular roles.
 Hierarchies
 -----------
 
-Up to this point, we've made a big deal about ABAC being able to represent relations
-between users and resources. In the previous example, we even showed how relations
-between resources permits creating inheritance logic. To expand on that idea,
-here we look at representing organizational hierarchies and how these might look in
-Polar.
+Up to this point, we've made a big deal about ABAC being able to represent
+relations between users and resources. In the previous example, we even showed
+how relations between resources permits creating inheritance logic. To expand on
+that idea, here we look at representing organizational hierarchies in our
+policy.
 
 Starting out with a simple example, suppose managers can view employees' expenses:
 

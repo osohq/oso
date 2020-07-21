@@ -10,9 +10,9 @@ Performance
 .. ------------------
 .. 
 .. The performance of oso depends almost entirely on two things:
-.. the structure of your Polar policy, and the time to lookup application data.
+.. the structure of your policy, and the time to lookup application data.
 .. 
-.. At the time of writing, for some typical Polar workloads, the time
+.. At the time of writing, for some typical policies, the time
 .. to evaluate a query takes TODO: fill me in.
 .. 
 .. For looking up application data, oso adds about 2us of overhead, per datum returned.
@@ -30,7 +30,7 @@ in order to look for matching information, it can be common to encounter
 variants of the
 `N+1 problem <https://medium.com/@bretdoucette/n-1-queries-and-how-to-avoid-them-a12f02345be5>`_.
 
-For example, given the following Polar policy:
+For example, given the following policy:
 
 .. code-block:: polar
 

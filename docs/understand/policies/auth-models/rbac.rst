@@ -14,7 +14,7 @@ on a :ref:`resource <resources>` --- can be grouped into roles.
 RBAC basics
 -----------
 
-Representing roles in Polar is as simple as creating :polar:`role()`
+Representing roles in our policy is as simple as creating :polar:`role()`
 :ref:`rules <polar-rules>`:
 
 .. todo::
@@ -78,8 +78,9 @@ RBAC with existing roles
 
 Our accounting firm's authorization scheme is flexible, hierarchical, and ---
 let's just go ahead and say it --- beautiful. However, it's entirely based on
-data that lives in our Polar policy. One of the distinguishing features of
-Polar is the ability to :ref:`reach into existing domain models <application-types>` to retrieve context for an authorization decision.
+data that lives in our policy. One of the distinguishing features of
+oso is the ability to :ref:`reach into existing domain models
+<application-types>` to retrieve context for an authorization decision.
 
 
 Imagine we have a ``user_roles`` database table that contains mappings
@@ -97,7 +98,7 @@ between users and the roles they've been assigned.
            :language: python
 
         By registering our application class with oso, we can begin leveraging
-        it from within our Polar policy:
+        it from within our policy:
 
         .. literalinclude:: /examples/rbac/python/04-external.py
            :caption: rbac.py
@@ -114,7 +115,7 @@ between users and the roles they've been assigned.
            :language: ruby
 
         By registering our application class with oso, we can begin leveraging
-        it from within our Polar policy:
+        it from within our policy:
 
         .. literalinclude:: /examples/rbac/ruby/04-external.rb
            :caption: rbac.rb
@@ -138,7 +139,7 @@ momentous shift that just occurred: by adding a single decorator to our
 application model, we're now able to write rich policy over the model's
 fields and methods... and we aren't finished yet!
 
-We're still mapping users to roles in Polar despite having access to the
+We're still mapping users to roles in the policy despite having access to the
 existing mappings through the :py:meth:`User.role` method. Let's amend that:
 
 .. literalinclude:: /examples/rbac/06-external.polar
@@ -147,16 +148,19 @@ existing mappings through the :py:meth:`User.role` method. Let's amend that:
    :lines: 1-10
 
 There's something really powerful happening in the above that bears
-highlighting: using oso allowed us to not only create policies over existing
+highlighting: oso allowed us to not only create policies over existing
 application data but, crucially, *to arrange that data in novel ways*,
 enriching the pool of contextual data that informs authorization decisions
 without littering complex logic all over the application. The hierarchy we
 created among the :polar:`"admin"`, :polar:`"accountant"`, and
 :polar:`"employee"` roles extends the existing authorization data but lives
-entirely in Polar and required **zero** new application code.
+entirely in the authorization policy and required **zero** new application code.
 
 Summary
 -------
+
+.. REVIEW ME: I think this is fine, the wording would be kind of redundant
+   otherwise.
 
 We started with the basics of RBAC by writing out a toy policy and assigning
 roles to actors within Polar. We saw how simple it is to construct arbitrary
@@ -174,6 +178,8 @@ database. But we took it a step further and rearranged the existing
 application roles (:polar:`"admin"`, :polar:`"accountant"`, and
 :polar:`"employee"`) into a hierarchy that extended the application's
 authorization system without requiring any changes to core application code.
+
+.. REVIEW ME: Ok here?
 
 The seasoned vets in the audience may have recognized the :polar:`actor.role`
 attribute lookup for what it is: a pinch of `attribute-based access control
