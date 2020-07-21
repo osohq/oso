@@ -9,8 +9,8 @@ public class Oso {
 
     public Oso() throws Exceptions.OsoException {
         polar = new Polar();
-        registerClass(Http.class,
-                (m) -> new Http((String) m.get("hostname"), (String) m.get("path"), (String) m.get("query")), "Http");
+        registerClass(Http.class, (m) -> new Http((String) m.get("hostname"), (String) m.get("path"),
+                (Map<String, String>) m.get("query")), "Http");
         registerClass(PathMapper.class, (m) -> new PathMapper((String) m.get("template")), "PathMapper");
     }
 
@@ -69,7 +69,8 @@ public class Oso {
      * @throws Exceptions.DuplicateClassAliasError if class has already been
      *                                             registered.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar) throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
+    public void registerClass(Class cls, Function<Map, Object> fromPolar)
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         polar.registerClass(cls, fromPolar);
     }
 
@@ -88,6 +89,17 @@ public class Oso {
     public void registerClass(Class cls, Function<Map, Object> fromPolar, String alias)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         polar.registerClass(cls, fromPolar, alias);
+    }
+
+    /**
+     * Registers `value` as a Polar constant variable called `name`.
+     *
+     * @param name
+     * @param value
+     * @throws OsoException
+     */
+    public void registerConstant(String name, Object value) throws Exceptions.OsoException {
+        polar.registerConstant(name, value);
     }
 
     /**
