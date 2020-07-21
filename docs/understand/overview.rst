@@ -5,9 +5,9 @@ Overview
 .. todo::
     "what is oso" wording 
 
-oso is a policy engine for declarative authorization policies that executes and interacts directly in/with your application
+oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it. 
 
-oso is designed based on 3 principles, which we'll describe briefly then in more detail below
+oso is designed based on 3 principles, which we'll describe briefly here then in more detail below.
 
 1. **Separation of concerns.** Authorization logic is distinct from business logic. By separating the two, you can make changes to the policy which apply across the entire application, write reusable patterns, and get a single place to control, test and visualize access.
 2. **Right tool for the right job.** Authorization deals in facts and rules about who is allowed to do what in a system. Solutions to describe authorization logic ought to be declarative and have semantics that map to common domain concepts – like roles and relationships, or boolean conditions over the input attributes.
