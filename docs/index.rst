@@ -7,22 +7,17 @@
 Welcome to the oso documentation!
 ==================================
 
-.. todo::
-    "what is oso" wording
+oso helps developers build authorization in their applications.
 
 .. admonition:: What is oso?
 
     oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it. oso ships as a library with a debugger and a REPL.
 
-The core use case of oso is to add authorization logic to any application.
-This is commonly solved by custom logic sprinkled ad hoc throughout an application,
-leading to code that is hard to maintain, modify, and debug.
-
-By using oso, you can:
+Using oso, you can:
 
 1. Separate authorization code from business logic
-2. Concisely express policies with a declarative language
-3. Interact directly with your application data
+2. Express policies concisely with a declarative language
+3. Write policies that call directly into your application
 
 :guilabel:`testing`
 
