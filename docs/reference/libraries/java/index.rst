@@ -28,27 +28,34 @@ For example:
 
 The above rule expects the ``actor`` variable to be a Java instance with the field ``isAdmin``.
 The Java instance is passed into oso with a call to ``Oso.allow``:
+
 .. TODO: add link to javadocs
 
 .. code-block:: java
-   :caption: app.java
+   :caption: User.java
 
    public class User {
       public boolean isAdmin;
+      public String name;
 
-      public User(boolean isAdmin) {
+      public User(String name, boolean isAdmin) {
          this.isAdmin = isAdmin;
+         this.name = name;
+      }
+
+      public static void main(String[] args) {
+         User user = new User("alice", true);
+         assert oso.allow(user, "foo", "bar");
       }
    }
 
-   User user = new User(true);
-   assert oso.allow(user, "foo", "bar);
 
 The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has a field
 called ``isAdmin``, it is evaluated by the Polar rule and found to be true.
 
 Java instances can be constructed from inside an oso policy using the :ref:`operator-new` operator if the Java class has been **registered** using
-either the :py:meth:`~oso.Oso.register_class` function or the :py:func:`~oso.polar_class` decorator.
+the ``registerClass()`` method.
+.. TODO: link to javadoc above
 
 Registering classes also makes it possible to use :ref:`specialization` and the
 :ref:`operator-matches` with the registered class:
@@ -56,17 +63,40 @@ Registering classes also makes it possible to use :ref:`specialization` and the
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor: User, action, resource) := actor matches User{name: "alice"};
+   allow(actor: User, action, resource) := actor matches User{name: "alice", isAdmin: true};
 
-.. code-block:: python
-   :caption: app.py
+.. code-block:: java
+   :caption: User.java
 
-   oso.register_class(User)
+      public static void main(String[] args) {
+         oso.registerClass(User, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
 
-   user = User()
-   user.name = "alice"
-   assert(oso.allow(user, "foo", "bar))
-   assert(not oso.allow("notauser", "foo", "bar"))
+         User user = new User("alice", true);
+         assert oso.allow(user, "foo", "bar");
+         assert !oso.allow("notauser", "foo", "bar");
+      }
+
+Once a class is registered, its static methods can also be called from oso policies:
+
+.. code-block:: polar
+   :caption: policy.polar
+
+   allow(actor: User, action, resource) := actor.name in User.superusers();
+
+.. code-block:: java
+   :caption: User.java
+
+      public static List<String> superusers() {
+         return List.of("alice", "bhavik", "clarice");
+      }
+
+      public static void main(String[] args) {
+         oso.registerClass(User, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+
+         User user = new User("alice", true);
+         assert oso.allow(user, "foo", "bar");
+      }
+
 
 Numbers
 ^^^^^^^
@@ -74,80 +104,136 @@ Polar supports both integer and floating point numbers (see :ref:`basic-types`)
 
 Strings
 ^^^^^^^
-Python strings are mapped to Polar :ref:`strings`. Python's string methods may be accessed from policies:
+Java Strings are mapped to Polar :ref:`strings`. Java's String methods may be accessed from policies:
 
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.username.endswith("example.com");
+   allow(actor, action, resource) := actor.username.endsWith("example.com");
 
-.. code-block:: python
-   :caption: app.py
+.. code-block:: java
+   :caption: User.java
 
-   user = User()
-   user.username = "alice@example.com"
-   assert(oso.allow(user, "foo", "bar))
+   public class User {
+      public String username;
 
-.. warning::
-    Polar does not support methods that mutate strings in place. E.g. :py:meth:`capitalize()` will have no effect on
-    a string in Polar.
+      public User(String username) {
+         this.username = username;
+      }
 
-Lists
-^^^^^
-Python lists are mapped to Polar :ref:`lists`. Python's list methods may be accessed from policies:
+      public static void main(String[] args) {
+         User user = new User("alice@example.com");
+         assert oso.allow(user, "foo", "bar");
+      }
+   }
+
+Lists and Arrays
+^^^^^^^^^^^^^^^^
+Java `Arrays <https://docs.oracle.com/javase/tutorial/java/nutsandbolts/arrays.html>`_ *and* objects that implement the `List <https://docs.oracle.com/javase/8/docs/api/java/util/List.html>`_ interface are
+mapped to Polar :ref:`Lists <lists>`. Java's ``List`` methods may be accessed from policies:
 
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.groups.index("HR") = 0;
+   allow(actor, action, resource) := actor.groups.contains("HR");
 
-.. code-block:: python
-   :caption: app.py
+.. code-block:: java
+   :caption: User.java
 
-   user = User()
-   user.groups = ["HR", "payroll"]
-   assert(oso.allow(user, "foo", "bar"))
+   public class User {
+      public List<String> groups;
+
+      public User(List<String> groups) {
+         this.groups = groups;
+      }
+
+      public static void main(String[] args) {
+         User user = new User(List.of("HR", "payroll"));
+         assert oso.allow(user, "foo", "bar");
+      }
+   }
+
+Note that the ``allow()`` call would also succeed if ``groups`` were an array.
 
 .. warning::
-    Polar does not support methods that mutate lists in place. E.g. :py:meth:`reverse()` will have no effect on
+    Polar does not support methods that mutate lists in place. E.g. ``add()`` will have no effect on
     a list in Polar.
 
-Likewise, lists constructed in Polar may be passed into Python methods:
+Likewise, lists constructed in Polar may be passed into Java methods:
 
 .. code-block:: polar
    :caption: policy.polar
 
    allow(actor, action, resource) := actor.has_groups(["HR", "payroll"]);
 
-.. code-block:: python
-   :caption: app.py
+.. code-block:: java
+   :caption: User.java
 
-   class User:
-      def has_groups(groups):
-            for g in groups:
-               if not g in self.groups:
-                  return False
-            return True
+      public boolean hasGroups(List<String> groups) {
+         for(String g : groups) {
+            if (!this.groups.contains(g))
+               return false;
+         }
+         return true;
+      }
 
-   user = User()
-   user.groups = ["HR", "payroll"]
-   assert(oso.allow(user, "foo", "bar))
+      public static void main(String[] args) {
+         User user = new User(List.of("HR", "payroll"));
+         assert oso.allow(user, "foo", "bar");
+      }
 
-Dictionaries
-^^^^^^^^^^^^
-Python dictionaries are mapped to Polar :ref:`dictionaries`:
+Maps
+^^^^
+Java objects that implement the `Map <https://docs.oracle.com/javase/8/docs/api/java/util/Map.html>`_ interface
+are mapped to Polar :ref:`dictionaries`:
 
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.roles = {project1: "admin", project2: "guest"};
+   allow(actor, action, resource) := actor.roles.project1 = "admin";
 
-.. code-block:: python
-   :caption: app.py
+.. code-block:: java
+   :caption: User.java
 
-   user = User()
-   user.roles = {"project1": "admin", "project2": "guest"}
-   assert(oso.allow(user, "foo", "bar))
+   public class User {
+      public Map<String, String> roles;
 
-Likewise, dictionaries constructed in Polar may be passed into Python methods.
+      public User(Map<String, String> roles) {
+         this.roles = roles;
+      }
+
+      public static void main(String[] args) {
+         User user = new User(Map.of("project1", "admin"));
+         assert oso.allow(user, "foo", "bar");
+      }
+   }
+
+Likewise, dictionaries constructed in Polar may be passed into Java methods.
+
+Enumerations
+^^^^^^^^^^^^
+Oso handles Java objects that implement the `Enumeration <https://docs.oracle.com/javase/7/docs/api/java/util/Enumeration.html>`_ interface by evaluating each of the
+object's elements one at a time:
+
+.. code-block:: polar
+   :caption: policy.polar
+
+   allow(actor, action, resource) := actor.getGroup = "payroll";
+
+.. code-block:: java
+   :caption: User.java
+
+      public Enumeration<String> getGroup() {
+         return Collections.enumeration(List.of("HR", "payroll"));
+      }
+
+      public static void main(String[] args) {
+         User user = new User(Map.of("project1", "admin"));
+         assert oso.allow(user, "foo", "bar");
+      }
+
+In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
+``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``allow()`` will succeed.
+Note that if ``getGroup()`` returned a list, the rule would fail, as the evaluation would be ``["HR", "payroll"] = "payroll"``.
+
 

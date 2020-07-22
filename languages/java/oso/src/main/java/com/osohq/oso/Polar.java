@@ -365,6 +365,7 @@ public class Polar {
             instance = constructor.apply(fields);
         } else {
             // TODO: default constructor
+            List<Class> argTypes = fields.stream().map(a -> a.getClass()).collect(Collectors.toUnmodifiableList());
             throw new Exceptions.MissingConstructorError(clsName);
         }
         cacheInstance(instance, id);
@@ -441,7 +442,6 @@ public class Polar {
         }
         Enumeration<Object> enumResult;
         if (result instanceof Enumeration) {
-            // TODO: test this
             enumResult = (Enumeration<Object>) result;
         } else {
             enumResult = Collections.enumeration(new ArrayList<Object>(Arrays.asList(result)));

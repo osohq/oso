@@ -40,7 +40,7 @@ The code above provides a ``User`` object as the *actor* for our ``allow`` rule.
 called ``is_admin``, it is evaluated by the policy and found to be true.
 
 Python instances can be constructed from inside an oso policy using the :ref:`operator-new` operator if the Python class has been **registered** using
-either the :py:meth:`~oso.Oso.register_class` function or the :py:func:`~oso.polar_class` decorator.
+either the :py:meth:`~oso.Oso.register_class` method or the :py:func:`~oso.polar_class` decorator.
 
 Registering classes also makes it possible to use :ref:`specialization` and the
 :ref:`operator-matches` with the registered class:
@@ -108,12 +108,12 @@ Python strings are mapped to Polar :ref:`strings`. Python's string methods may b
 
 Lists
 ^^^^^
-Python lists are mapped to Polar :ref:`lists`. Python's list methods may be accessed from policies:
+Python lists are mapped to Polar :ref:`Lists <lists>`. Python's list methods may be accessed from policies:
 
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.groups.index("HR") = 0;
+   allow(actor, action, resource) := actor.groups.index("HR") == 0;
 
 .. code-block:: python
    :caption: app.py
@@ -155,13 +155,13 @@ Python dictionaries are mapped to Polar :ref:`dictionaries`:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.roles = {project1: "admin", project2: "guest"};
+   allow(actor, action, resource) := actor.roles.project1 = "admin";
 
 .. code-block:: python
    :caption: app.py
 
    user = User()
-   user.roles = {"project1": "admin", "project2": "guest"}
+   user.roles = {"project1": "admin"}
    assert(oso.allow(user, "foo", "bar))
 
 Likewise, dictionaries constructed in Polar may be passed into Python methods.
