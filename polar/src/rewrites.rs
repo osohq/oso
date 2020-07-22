@@ -39,7 +39,7 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
                 args: vec![
                     args[0].clone(),
                     args[1].clone(),
-                    args[1].clone_with_value(temp.clone()),
+                    term.clone_with_value(temp.clone()),
                 ],
             });
             term.replace_value(temp);
@@ -56,7 +56,7 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
                 args: vec![
                     args[0].clone(),
                     args[1].clone(),
-                    args[1].clone_with_value(temp.clone()),
+                    term.clone_with_value(temp.clone()),
                 ],
             });
             term.replace_value(temp);

@@ -1234,17 +1234,28 @@ impl PolarVirtualMachine {
         assert!(matches!(result.value(), Value::Variable(_)));
         match (left_term.value(), right_term.value()) {
             (Value::Number(left), Value::Number(right)) => {
-                let answer = match op {
+                if let Some(answer) = match op {
                     Operator::Add => *left + *right,
                     Operator::Sub => *left - *right,
                     Operator::Mul => *left * *right,
                     Operator::Div => *left / *right,
-                    _ => todo!(),
-                };
-                self.push_goal(Goal::Unify {
-                    left: term.clone_with_value(Value::Number(answer)),
-                    right: result.clone(),
-                })?;
+                    _ => {
+                        return Err(error::RuntimeError::Unsupported {
+                            msg: format!("numeric operation {}", op.to_polar()),
+                        }
+                        .into())
+                    }
+                } {
+                    self.push_goal(Goal::Unify {
+                        left: term.clone_with_value(Value::Number(answer)),
+                        right: result.clone(),
+                    })?;
+                } else {
+                    return Err(error::RuntimeError::ArithmeticError {
+                        msg: term.to_polar(),
+                    }
+                    .into());
+                }
             }
             (_, _) => todo!(),
         }

@@ -821,6 +821,18 @@ fn test_arithmetic() {
     assert!(qnull(&mut polar, "odd(2)"));
     assert!(qeval(&mut polar, "odd(3)"));
     assert!(qnull(&mut polar, "odd(4)"));
+
+    let check_arithmetic_error = |query: &str| {
+        let mut query = polar.new_query(query).unwrap();
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(
+            error.kind,
+            ErrorKind::Runtime(RuntimeError::ArithmeticError { .. })
+        ));
+    };
+    check_arithmetic_error("9223372036854775807 + 1 > 0");
+    check_arithmetic_error("-9223372036854775807 - 2 < 0");
+    check_arithmetic_error("1 / 0 == 0");
 }
 
 #[test]

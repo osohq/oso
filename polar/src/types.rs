@@ -216,71 +216,89 @@ pub enum Numeric {
 }
 
 impl Add for Numeric {
-    type Output = Self;
+    type Output = Option<Self>;
 
-    fn add(self, other: Self) -> Self {
+    fn add(self, other: Self) -> Option<Self> {
         match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => Numeric::Integer(a + b),
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_add(b).map(Numeric::Integer),
             (Numeric::Integer(a), Numeric::Float(b)) => {
-                Numeric::Float(OrderedFloat(a as f64 + b.0))
+                Some(Numeric::Float(OrderedFloat(a as f64 + b.0)))
             }
             (Numeric::Float(a), Numeric::Integer(b)) => {
-                Numeric::Float(OrderedFloat(a.0 + b as f64))
+                Some(Numeric::Float(OrderedFloat(a.0 + b as f64)))
             }
-            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 + b.0)),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 + b.0))),
         }
     }
 }
 
 impl Sub for Numeric {
-    type Output = Self;
+    type Output = Option<Self>;
 
-    fn sub(self, other: Self) -> Self {
+    fn sub(self, other: Self) -> Option<Self> {
         match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => Numeric::Integer(a - b),
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_sub(b).map(Numeric::Integer),
             (Numeric::Integer(a), Numeric::Float(b)) => {
-                Numeric::Float(OrderedFloat(a as f64 - b.0))
+                Some(Numeric::Float(OrderedFloat(a as f64 - b.0)))
             }
             (Numeric::Float(a), Numeric::Integer(b)) => {
-                Numeric::Float(OrderedFloat(a.0 - b as f64))
+                Some(Numeric::Float(OrderedFloat(a.0 - b as f64)))
             }
-            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 - b.0)),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 - b.0))),
         }
     }
 }
 
 impl Mul for Numeric {
-    type Output = Self;
+    type Output = Option<Self>;
 
-    fn mul(self, other: Self) -> Self {
+    fn mul(self, other: Self) -> Option<Self> {
         match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => Numeric::Integer(a * b),
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_mul(b).map(Numeric::Integer),
             (Numeric::Integer(a), Numeric::Float(b)) => {
-                Numeric::Float(OrderedFloat(a as f64 * b.0))
+                Some(Numeric::Float(OrderedFloat(a as f64 * b.0)))
             }
             (Numeric::Float(a), Numeric::Integer(b)) => {
-                Numeric::Float(OrderedFloat(a.0 * b as f64))
+                Some(Numeric::Float(OrderedFloat(a.0 * b as f64)))
             }
-            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 * b.0)),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 * b.0))),
         }
     }
 }
 
 impl Div for Numeric {
-    type Output = Self;
+    type Output = Option<Self>;
 
-    fn div(self, other: Self) -> Self {
+    fn div(self, other: Self) -> Option<Self> {
         match (self, other) {
             (Numeric::Integer(a), Numeric::Integer(b)) => {
-                Numeric::Float(OrderedFloat(a as f64 / b as f64))
+                if b == 0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a as f64 / b as f64)))
+                }
             }
             (Numeric::Integer(a), Numeric::Float(b)) => {
-                Numeric::Float(OrderedFloat(a as f64 / b.0))
+                if b.0 == 0.0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a as f64 / b.0)))
+                }
             }
             (Numeric::Float(a), Numeric::Integer(b)) => {
-                Numeric::Float(OrderedFloat(a.0 / b as f64))
+                if b == 0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a.0 / b as f64)))
+                }
             }
-            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 / b.0)),
+            (Numeric::Float(a), Numeric::Float(b)) => {
+                if b.0 == 0.0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a.0 / b.0)))
+                }
+            }
         }
     }
 }
