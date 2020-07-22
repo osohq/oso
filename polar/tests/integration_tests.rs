@@ -731,7 +731,9 @@ fn test_comparisons() {
         .load("lt(x, y) if x < y; f(x) if x = 1; g(x) if x = 2;")
         .unwrap();
     assert!(qeval(&mut polar, "lt(1,2)"));
-    assert!(!qeval(&mut polar, "lt(2,2)"));
+    assert!(qnull(&mut polar, "lt(2,2)"));
+    assert!(qeval(&mut polar, "lt(\"aa\",\"ab\")"));
+    assert!(qnull(&mut polar, "lt(\"aa\",\"aa\")"));
     assert!(qeval(&mut polar, "lt({a: 1}.a,{a: 2}.a)"));
     assert!(qeval(&mut polar, "f(x) and g(y) and lt(x,y)"));
 
@@ -739,33 +741,44 @@ fn test_comparisons() {
     polar.load("leq(x, y) if x <= y;").unwrap();
     assert!(qeval(&mut polar, "leq(1,1)"));
     assert!(qeval(&mut polar, "leq(1,2)"));
-    assert!(!qeval(&mut polar, "leq(2,1)"));
+    assert!(qnull(&mut polar, "leq(2,1)"));
+    assert!(qeval(&mut polar, "leq(\"aa\",\"aa\")"));
+    assert!(qeval(&mut polar, "leq(\"aa\",\"ab\")"));
+    assert!(qnull(&mut polar, "leq(\"ab\",\"aa\")"));
 
     // ">"
     polar.load("gt(x, y) if x > y;").unwrap();
     assert!(qeval(&mut polar, "gt(2,1)"));
-    assert!(!qeval(&mut polar, "gt(2,2)"));
+    assert!(qnull(&mut polar, "gt(2,2)"));
+    assert!(qeval(&mut polar, "gt(\"ab\",\"aa\")"));
+    assert!(qnull(&mut polar, "gt(\"aa\",\"aa\")"));
 
     // ">="
     polar.load("geq(x, y) if x >= y;").unwrap();
     assert!(qeval(&mut polar, "geq(1,1)"));
     assert!(qeval(&mut polar, "geq(2,1)"));
-    assert!(!qeval(&mut polar, "geq(1,2)"));
+    assert!(qnull(&mut polar, "geq(1,2)"));
+    assert!(qeval(&mut polar, "geq(\"ab\",\"aa\")"));
+    assert!(qeval(&mut polar, "geq(\"aa\",\"aa\")"));
 
     // "=="
     polar.load("eq(x, y) if x == y;").unwrap();
     assert!(qeval(&mut polar, "eq(1,1)"));
-    assert!(!qeval(&mut polar, "eq(2,1)"));
+    assert!(qnull(&mut polar, "eq(2,1)"));
+    assert!(qeval(&mut polar, "eq(\"aa\", \"aa\")"));
+    assert!(qnull(&mut polar, "eq(\"ab\", \"aa\")"));
 
     // "!="
     polar.load("neq(x, y) if x != y;").unwrap();
     assert!(qeval(&mut polar, "neq(1,2)"));
-    assert!(!qeval(&mut polar, "neq(1,1)"));
+    assert!(qnull(&mut polar, "neq(1,1)"));
+    assert!(qnull(&mut polar, "neq(\"aa\", \"aa\")"));
+    assert!(qeval(&mut polar, "neq(\"ab\", \"aa\")"));
 
     let mut query = polar.new_query("eq(bob, bob)").unwrap();
     query
         .next_event()
-        .expect_err("Comparison operators should not allow non-integer operands");
+        .expect_err("can't compare unbound variables");
 
     assert!(qeval(&mut polar, "1.0 == 1"));
     assert!(qeval(&mut polar, "0.99 < 1"));
@@ -773,6 +786,52 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "1 == 1"));
     assert!(qeval(&mut polar, "0.0 == 0"));
     assert!(qeval(&mut polar, "0.000000000000000001 == 0"));
+}
+
+#[test]
+fn test_arithmetic() {
+    let mut polar = Polar::new(None);
+    assert!(qeval(&mut polar, "1 + 1 == 2"));
+    assert!(qeval(&mut polar, "1 + 1 < 3 and 1 + 1 > 1"));
+    assert!(qeval(&mut polar, "2 - 1 == 1"));
+    assert!(qeval(&mut polar, "1 - 2 == -1"));
+    assert!(qeval(&mut polar, "1.23 - 3.21 == -1.98"));
+    assert!(qeval(&mut polar, "2 * 3 == 6"));
+    assert!(qeval(&mut polar, "6 / 2 == 3"));
+    assert!(qeval(&mut polar, "2 / 6 == 0.3333333333333333"));
+
+    polar
+        .load(
+            r#"even(0) if cut();
+               even(x) if x > 0 and odd(x - 1);
+               odd(1) if cut();
+               odd(x) if x > 0 and even(x - 1);"#,
+        )
+        .unwrap();
+
+    assert!(qeval(&mut polar, "even(0)"));
+    assert!(qnull(&mut polar, "even(1)"));
+    assert!(qeval(&mut polar, "even(2)"));
+    assert!(qnull(&mut polar, "even(3)"));
+    assert!(qeval(&mut polar, "even(4)"));
+
+    assert!(qnull(&mut polar, "odd(0)"));
+    assert!(qeval(&mut polar, "odd(1)"));
+    assert!(qnull(&mut polar, "odd(2)"));
+    assert!(qeval(&mut polar, "odd(3)"));
+    assert!(qnull(&mut polar, "odd(4)"));
+
+    let check_arithmetic_error = |query: &str| {
+        let mut query = polar.new_query(query).unwrap();
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(
+            error.kind,
+            ErrorKind::Runtime(RuntimeError::ArithmeticError { .. })
+        ));
+    };
+    check_arithmetic_error("9223372036854775807 + 1 > 0");
+    check_arithmetic_error("-9223372036854775807 - 2 < 0");
+    check_arithmetic_error("1 / 0 == 0");
 }
 
 #[test]
