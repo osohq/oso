@@ -9,7 +9,7 @@ The Polar REPL
 
 Developers can query Polar knowledge bases from the command line using the
 Polar REPL (Read, Evaluate, Print, Loop). To run the REPL, first make sure
-you have :doc:`installed oso </getting-started/download>`.
+you have :doc:`installed oso </getting-started/download/index>`.
 
 Once oso is installed, we can launch the REPL from the terminal::
 
