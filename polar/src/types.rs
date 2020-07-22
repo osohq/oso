@@ -6,6 +6,7 @@ use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
+use std::ops::{Add, Div, Mul, Sub};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -212,6 +213,76 @@ pub type Float = OrderedFloat<f64>;
 pub enum Numeric {
     Integer(i64),
     Float(Float),
+}
+
+impl Add for Numeric {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => Numeric::Integer(a + b),
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                Numeric::Float(OrderedFloat(a as f64 + b.0))
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                Numeric::Float(OrderedFloat(a.0 + b as f64))
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 + b.0)),
+        }
+    }
+}
+
+impl Sub for Numeric {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => Numeric::Integer(a - b),
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                Numeric::Float(OrderedFloat(a as f64 - b.0))
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                Numeric::Float(OrderedFloat(a.0 - b as f64))
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 - b.0)),
+        }
+    }
+}
+
+impl Mul for Numeric {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => Numeric::Integer(a * b),
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                Numeric::Float(OrderedFloat(a as f64 * b.0))
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                Numeric::Float(OrderedFloat(a.0 * b as f64))
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 * b.0)),
+        }
+    }
+}
+
+impl Div for Numeric {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => {
+                Numeric::Float(OrderedFloat(a as f64 / b as f64))
+            }
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                Numeric::Float(OrderedFloat(a as f64 / b.0))
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                Numeric::Float(OrderedFloat(a.0 / b as f64))
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => Numeric::Float(OrderedFloat(a.0 / b.0)),
+        }
+    }
 }
 
 impl PartialEq for Numeric {

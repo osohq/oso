@@ -790,6 +790,19 @@ fn test_comparisons() {
 }
 
 #[test]
+fn test_arithmetic() {
+    let mut polar = Polar::new(None);
+    assert!(qeval(&mut polar, "1 + 1 == 2"));
+    assert!(qeval(&mut polar, "1 + 1 < 3 and 1 + 1 > 1"));
+    assert!(qeval(&mut polar, "2 - 1 == 1"));
+    assert!(qeval(&mut polar, "1 - 2 == -1"));
+    assert!(qeval(&mut polar, "1.23 - 3.21 == -1.98"));
+    assert!(qeval(&mut polar, "2 * 3 == 6"));
+    assert!(qeval(&mut polar, "6 / 2 == 3"));
+    assert!(qeval(&mut polar, "2 / 6 == 0.3333333333333333"));
+}
+
+#[test]
 fn test_debug() {
     let polar = Polar::new(None);
     polar
