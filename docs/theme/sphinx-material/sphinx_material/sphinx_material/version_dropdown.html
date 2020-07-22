@@ -1,0 +1,20 @@
+{% if theme_version_dropdown %}
+  {% if theme_version_info %}
+  <div class="md-flex__cell md-flex__cell--shrink dropdown">
+    <button class="dropdownbutton">{{ theme_version_dropdown_text }}</button>
+    <div class="dropdown-content md-hero">
+      {%- for title, href in theme_version_info.items() %}
+          <a title="{{ title|striptags|e }}" href="{{ href|e }}">{{ title }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <script src="{{ pathto('_static/javascripts/version_dropdown.js', 1) }}"></script>
+  <script>
+    var json_loc = "{{ pathto(theme_version_json, 1) }}",
+        target_loc = "{{ pathto('../', 1) }}",
+        text = "{{ theme_version_dropdown_text }}";
+    $( document ).ready( add_version_dropdown(json_loc, target_loc, text));
+  </script>
+  {% endif %}
+{% endif %}

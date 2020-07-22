@@ -1,0 +1,20 @@
+{%- if nav_bar_tabs %}
+  <nav class="md-tabs" data-md-component="tabs">
+    <div class="md-tabs__inner md-grid">
+      <ul class="md-tabs__list">
+        {%- block rootrellink %}
+          {%- if theme_master_doc %}
+          <li class="md-tabs__item"><a href="{{ pathto(master_doc)|e }}" class="md-tabs__link">{{ shorttitle }}</a></li>
+          {%- endif %}
+        {%- endblock %}
+        {%- for item in theme_nav_links %}
+            {% set localhref=pathto( item.href ) if item.internal else item.href|e %}
+            <li class="md-tabs__item"><a href="{{ localhref|e }}" class="md-tabs__link">{{ item.title }}</a></li>
+        {%- endfor %}
+        {%- for parent in parents %}
+          <li class="md-tabs__item"><a href="{{ parent.link|e }}" class="md-tabs__link">{{ parent.title }}</a></li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </nav>
+{%- endif %}

@@ -1,0 +1,8 @@
+include LICENSE.md
+include README.rst
+recursive-include sphinx_material/sphinx_material *
+include versioneer.py
+include sphinx_material/_version.py
+include setup.cfg
+include requirements.txt
+include requirements-dev.txt

@@ -1,0 +1,11 @@
+{%- if theme_google_analytics_account %}
+  <script>
+      window.ga = window.ga || function () {
+          (ga.q = ga.q || []).push(arguments)
+      };
+      ga.l = +new Date;
+      ga('create', '{{ theme_google_analytics_account }}', 'auto');
+      ga('send', 'pageview');
+  </script>
+  <script async src='https://www.google-analytics.com/analytics.js'></script>
+{%- endif %}
