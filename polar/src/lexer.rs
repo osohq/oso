@@ -86,6 +86,8 @@ pub enum Token {
     In,        // in
     Cut,       // cut()
     Debug,     // debug()
+    Print,     // print()
+    Isa,       // isa
     ForAll,    // forall
     If,        // if
     And,       // and
@@ -102,35 +104,37 @@ impl ToString for Token {
             Token::String(s) => s.clone(),
             Token::Boolean(b) => b.to_string(),
             Token::Symbol(sym) => sym.0.clone(),
-            Token::Colon => ":".to_owned(),     // :
-            Token::Comma => ",".to_owned(),     // ,
-            Token::LB => "[".to_owned(),        // [
-            Token::RB => "]".to_owned(),        // ]
-            Token::LP => "(".to_owned(),        // (
-            Token::RP => ")".to_owned(),        // )
-            Token::LCB => "{".to_owned(),       // {
-            Token::RCB => "}".to_owned(),       // }
-            Token::Dot => ".".to_owned(),       // .
-            Token::New => "new".to_owned(),     // new
-            Token::Bang => "!".to_owned(),      // !
-            Token::Mul => "*".to_owned(),       // *
-            Token::Div => "/".to_owned(),       // /
-            Token::Add => "+".to_owned(),       // +
-            Token::Sub => "-".to_owned(),       // -
-            Token::Eq => "==".to_owned(),       // ==
-            Token::Neq => "!=".to_owned(),      // !=
-            Token::Leq => "<=".to_owned(),      // <=
-            Token::Geq => ">=".to_owned(),      // >=
-            Token::Lt => "<".to_owned(),        // <
-            Token::Gt => ">".to_owned(),        // >
-            Token::Unify => "-".to_owned(),     // =
-            Token::Pipe => "|".to_owned(),      // |
-            Token::SemiColon => ";".to_owned(), // ;
-            Token::Define => ":=".to_owned(),   // :=
-            Token::Query => "?=".to_owned(),    // ?=
-            Token::In => "in".to_owned(),       // in
-            Token::Cut => "cut".to_owned(),     // cut
-            Token::Debug => "debug".to_owned(),
+            Token::Colon => ":".to_owned(),         // :
+            Token::Comma => ",".to_owned(),         // ,
+            Token::LB => "[".to_owned(),            // [
+            Token::RB => "]".to_owned(),            // ]
+            Token::LP => "(".to_owned(),            // (
+            Token::RP => ")".to_owned(),            // )
+            Token::LCB => "{".to_owned(),           // {
+            Token::RCB => "}".to_owned(),           // }
+            Token::Dot => ".".to_owned(),           // .
+            Token::New => "new".to_owned(),         // new
+            Token::Bang => "!".to_owned(),          // !
+            Token::Mul => "*".to_owned(),           // *
+            Token::Div => "/".to_owned(),           // /
+            Token::Add => "+".to_owned(),           // +
+            Token::Sub => "-".to_owned(),           // -
+            Token::Eq => "==".to_owned(),           // ==
+            Token::Neq => "!=".to_owned(),          // !=
+            Token::Leq => "<=".to_owned(),          // <=
+            Token::Geq => ">=".to_owned(),          // >=
+            Token::Lt => "<".to_owned(),            // <
+            Token::Gt => ">".to_owned(),            // >
+            Token::Unify => "-".to_owned(),         // =
+            Token::Pipe => "|".to_owned(),          // |
+            Token::SemiColon => ";".to_owned(),     // ;
+            Token::Define => ":=".to_owned(),       // :=
+            Token::Query => "?=".to_owned(),        // ?=
+            Token::In => "in".to_owned(),           // in
+            Token::Cut => "cut".to_owned(),         // cut
+            Token::Debug => "debug".to_owned(),     // debug
+            Token::Print => "print".to_owned(),     // print
+            Token::Isa => "isa".to_owned(),         // isa
             Token::ForAll => "forall".to_owned(),   // forall
             Token::If => "if".to_owned(),           // if
             Token::And => "and".to_owned(),         // and
@@ -224,6 +228,10 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Cut, last + 1)))
         } else if &self.buf == "debug" {
             Some(Ok((start, Token::Debug, last + 1)))
+        } else if &self.buf == "print" {
+            Some(Ok((start, Token::Print, last + 1)))
+        } else if &self.buf == "isa" {
+            Some(Ok((start, Token::Isa, last + 1)))
         } else if &self.buf == "forall" {
             Some(Ok((start, Token::ForAll, last + 1)))
         } else if &self.buf == "if" {
