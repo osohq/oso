@@ -130,7 +130,7 @@ language.
 
 .. warning:: Do not attempt to mutate a literal using a method on it.
   Literals in Polar are constant, and any changes made to such objects
-  by calling a method will not be persitent.
+  by calling a method will not be persisted.
 
 Summary
 =======
