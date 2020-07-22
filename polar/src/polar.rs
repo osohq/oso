@@ -172,10 +172,7 @@ impl Polar {
     pub fn new(output: Option<Box<dyn Write>>) -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
-            output: Arc::new(RwLock::new(match output {
-                None => Box::new(stderr()),
-                Some(output) => output,
-            })),
+            output: Arc::new(RwLock::new(output.unwrap_or_else(|| Box::new(stderr())))),
         }
     }
 
