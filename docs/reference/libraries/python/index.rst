@@ -24,7 +24,7 @@ For example:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.is_admin;
+   allow(actor, action, resource) if actor.is_admin;
 
 The above rule expects the ``actor`` variable to be a Python instance with the attribute ``is_admin``.
 The Python instance is passed into oso with a call to :py:meth:`~oso.Oso.allow`:
@@ -48,7 +48,7 @@ Registering classes also makes it possible to use :ref:`specialization` and the
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor: User, action, resource) := actor matches User{name: "alice"};
+   allow(actor: User, action, resource) if actor matches User{name: "alice"};
 
 .. code-block:: python
    :caption: app.py
@@ -65,7 +65,7 @@ Once a class is registered, its class methods can also be called from oso polici
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor: User, action, resource) := actor.name in User.superusers();
+   allow(actor: User, action, resource) if actor.name in User.superusers();
 
 .. code-block:: python
    :caption: app.py
@@ -93,7 +93,7 @@ Python strings are mapped to Polar :ref:`strings`. Python's string methods may b
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.username.endswith("example.com");
+   allow(actor, action, resource) if actor.username.endswith("example.com");
 
 .. code-block:: python
    :caption: app.py
@@ -113,7 +113,7 @@ Python lists are mapped to Polar :ref:`Lists <lists>`. Python's list methods may
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.groups.index("HR") == 0;
+   allow(actor, action, resource) if actor.groups.index("HR") == 0;
 
 .. code-block:: python
    :caption: app.py
@@ -131,7 +131,7 @@ Likewise, lists constructed in Polar may be passed into Python methods:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.has_groups(["HR", "payroll"]);
+   allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
 
 .. code-block:: python
    :caption: app.py
@@ -155,7 +155,7 @@ Python dictionaries are mapped to Polar :ref:`dictionaries`:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.roles.project1 = "admin";
+   allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: python
    :caption: app.py
@@ -174,7 +174,7 @@ object's elements one at a time. `Generator <https://docs.python.org/3/glossary.
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.get_group = "payroll";
+   allow(actor, action, resource) if actor.get_group = "payroll";
 
 .. code-block:: python
    :caption: app.py

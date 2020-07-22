@@ -24,7 +24,7 @@ For example:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.isAdmin;
+   allow(actor, action, resource) if actor.isAdmin;
 
 The above rule expects the ``actor`` variable to be a Java instance with the field ``isAdmin``.
 The Java instance is passed into oso with a call to ``Oso.allow``:
@@ -63,7 +63,7 @@ Registering classes also makes it possible to use :ref:`specialization` and the
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor: User, action, resource) := actor matches User{name: "alice", isAdmin: true};
+   allow(actor: User, action, resource) if actor matches User{name: "alice", isAdmin: true};
 
 .. code-block:: java
    :caption: User.java
@@ -81,7 +81,7 @@ Once a class is registered, its static methods can also be called from oso polic
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor: User, action, resource) := actor.name in User.superusers();
+   allow(actor: User, action, resource) if actor.name in User.superusers();
 
 .. code-block:: java
    :caption: User.java
@@ -109,7 +109,7 @@ Java Strings are mapped to Polar :ref:`strings`. Java's String methods may be ac
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.username.endsWith("example.com");
+   allow(actor, action, resource) if actor.username.endsWith("example.com");
 
 .. code-block:: java
    :caption: User.java
@@ -135,7 +135,7 @@ mapped to Polar :ref:`Lists <lists>`. Java's ``List`` methods may be accessed fr
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.groups.contains("HR");
+   allow(actor, action, resource) if actor.groups.contains("HR");
 
 .. code-block:: java
    :caption: User.java
@@ -164,7 +164,7 @@ Likewise, lists constructed in Polar may be passed into Java methods:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.has_groups(["HR", "payroll"]);
+   allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
 
 .. code-block:: java
    :caption: User.java
@@ -190,7 +190,7 @@ are mapped to Polar :ref:`dictionaries`:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.roles.project1 = "admin";
+   allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: java
    :caption: User.java
@@ -218,7 +218,7 @@ object's elements one at a time:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.getGroup = "payroll";
+   allow(actor, action, resource) if actor.getGroup = "payroll";
 
 .. code-block:: java
    :caption: User.java

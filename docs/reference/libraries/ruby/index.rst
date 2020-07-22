@@ -24,7 +24,7 @@ For example:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.is_admin?;
+   allow(actor, action, resource) if actor.is_admin?;
 
 The above rule expects the ``actor`` variable to be a Ruby instance with the attribute ``is_admin?``.
 The Ruby instance is passed into oso with a call to ``allow()``:
@@ -57,7 +57,7 @@ Registering classes also makes it possible to use :ref:`specialization` and the
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor: User, action, resource) := actor matches User{name: "alice", is_admin: true};
+   allow(actor: User, action, resource) if actor matches User{name: "alice", is_admin: true};
 
 .. code-block:: ruby
    :caption: app.rb
@@ -72,7 +72,7 @@ Once a class is registered, its class methods can also be called from oso polici
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor: User, action, resource) := actor.name in User.superusers();
+   allow(actor: User, action, resource) if actor.name in User.superusers();
 
 .. code-block:: ruby
    :caption: app.rub
@@ -100,7 +100,7 @@ Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be ac
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.username.end_with?("example.com");
+   allow(actor, action, resource) if actor.username.end_with?("example.com");
 
 .. code-block:: ruby
    :caption: app.rb
@@ -127,7 +127,7 @@ Ruby `Arrays <https://ruby-doc.org/core-2.7.0/Array.html>`_ are mapped to Polar 
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.groups.include?("HR");
+   allow(actor, action, resource) if actor.groups.include?("HR");
 
 .. code-block:: ruby
    :caption: app.rb
@@ -151,7 +151,7 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.has_groups?(["HR", "payroll"]);
+   allow(actor, action, resource) if actor.has_groups?(["HR", "payroll"]);
 
 .. code-block:: ruby
    :caption: app.rb
@@ -177,7 +177,7 @@ Ruby dictionaries are mapped to Polar :ref:`dictionaries`:
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.roles.project1 = "admin";
+   allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: ruby
    :caption: app.rb
@@ -203,7 +203,7 @@ object's elements one at a time.
 .. code-block:: polar
    :caption: policy.polar
 
-   allow(actor, action, resource) := actor.get_group = "payroll";
+   allow(actor, action, resource) if actor.get_group = "payroll";
 
 .. code-block:: ruby
    :caption: app.rb
