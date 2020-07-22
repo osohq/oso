@@ -85,6 +85,7 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
+    "theme/**",
     "project/changelogs/vNEXT.rst",
     "project/changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
