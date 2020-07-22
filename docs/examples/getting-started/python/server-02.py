@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 
 @dataclass
@@ -14,33 +15,30 @@ EXPENSES = {
     3: Expense(50000, "flight", "bhavik@example.com"),
 }
 
-# expenses code
-
 from oso import Oso
 
-OSO = Oso()
-
-# server code
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
+oso = Oso()
 
 
-class MyRequestHandler(BaseHTTPRequestHandler):
+class RequestHandler(BaseHTTPRequestHandler):
     def _respond(self, msg, code=200):
         self.send_response(code)
         self.end_headers()
-        self.wfile.write(msg.encode())
+        self.wfile.write(str(msg).encode())
+        self.wfile.write(b"\n")
 
     def do_GET(self):
         try:
             _, resource_type, resource_id = self.path.split("/")
+            if resource_type != "expenses":
+                return self._respond("Not Found!", 404)
             resource = EXPENSES[int(resource_id)]
-            self._respond(str(resource))
+            self._respond(resource)
         except (KeyError, ValueError) as e:
             self._respond("Not Found!", 404)
 
 
 server_address = ("", 5050)
-httpd = HTTPServer(server_address, MyRequestHandler)
+httpd = HTTPServer(server_address, RequestHandler)
 print("running on port", httpd.server_port)
 httpd.serve_forever()

@@ -18,68 +18,26 @@ environment!
 A basic web server
 ==================
 
-Our application serves data about expenses submitted by users. The ``Expense``
-class isn't too complicated...
+Our application serves data about expenses submitted by users.
+
+We have a simple ``Expense`` class, and some stored data in the ``EXPENSES`` dictionary.
+Our web server contains some simple logic to filter out bad requests and not much else.
 
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/python/server-01.py
-      :caption: server.py
+    .. literalinclude:: /examples/getting-started/python/server.py
+      :class: copybutton
+      :caption: Download: :download:`server.py </examples/getting-started/python/server.py>`
       :language: python
-      :lineno-start: 1
-      :lines: 1-7
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/ruby/server-01.rb
-      :caption: server.rb
+    .. literalinclude:: /examples/getting-started/ruby/server.rb
+      :class: copybutton
+      :caption: Download: :download:`server.rb </examples/getting-started/ruby/server.rb>`
       :language: ruby
-      :lineno-start: 1
-      :lines: 1-9
 
-
-...and our "database" of expenses is a map from ID to expense:
-
-
-
-.. tabs::
-  .. group-tab:: Python
-      
-    .. literalinclude:: /examples/getting-started/python/server-01.py
-      :caption: server.py
-      :language: python
-      :lineno-start: 9
-      :lines: 9-13
-  
-  .. group-tab:: Ruby
-
-    .. literalinclude:: /examples/getting-started/ruby/server-01.rb
-      :caption: server.rb
-      :language: ruby
-      :lineno-start: 9
-      :lines: 9-13
-
-
-Our web server contains some simple logic to filter out bad requests and not much else:
-
-
-.. tabs::
-  .. group-tab:: Python
-      
-    .. literalinclude:: /examples/getting-started/python/server-01.py
-      :caption: server.py
-      :language: python
-      :lineno-start: 15
-      :lines: 15-
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: /examples/getting-started/ruby/server-01.rb
-      :caption: server.rb
-      :language: ruby
-      :lineno-start: 17
-      :lines: 17-
 
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
@@ -88,17 +46,22 @@ an existing expense, we respond with the expense data. Otherwise, we return
 Let's use `cURL <https://curl.haxx.se/>`_ to check that everything's working.
 We'll first start our server...
 
-.. .. code-block:: console
+.. tabs::
+  .. group-tab:: Python
 
-..   $ ruby server.rb
-..   [2020-07-15 00:35:52] INFO  WEBrick 1.3.1
-..   [2020-07-15 00:35:52] INFO  ruby 2.4.10 (2020-03-31) [x86_64-linux]
-..   [2020-07-15 00:35:52] INFO  WEBrick::HTTPServer#start: pid=537647 port=5050
+    .. code-block:: console
 
-.. code-block:: console
+      $ python server.py
+      running on port 5050
 
-  $ python server.py
-  running on port 5050
+  .. group-tab:: Ruby
+
+    .. code-block:: console
+
+      $ ruby server.rb
+      [2020-07-15 00:35:52] INFO  WEBrick 1.3.1
+      [2020-07-15 00:35:52] INFO  ruby 2.4.10 (2020-03-31) [x86_64-linux]
+      [2020-07-15 00:35:52] INFO  WEBrick::HTTPServer#start: pid=537647 port=5050
 
 ...and then, in another terminal, make some requests to our running server:
 
@@ -116,48 +79,49 @@ let's create an access policy with oso!
 Adding oso
 ==========
 
-.. |gem| replace:: the **oso-oso** gem
-.. _gem: https://rubygems.org/gems/oso-oso
 
-.. |python-package| replace:: the **oso** package
-.. _python-package: https://pypi.org/project/oso/
 
-.. In order to write our first authorization policy, we first need to add oso to
-.. our application. If you don't already have |python-package|_ installed, go ahead and
-.. install it now:
+.. admonition:: Installation
 
-In order to write our first authorization policy, we first need to add oso to
-our application. If you don't already have |python-package|_ installed, go
-ahead and install it now:
+  In order to write our first authorization policy, we first need to add oso to
+  our application. If you don't already have it :doc:`installed </getting-started/download/index>`, go ahead and
+  do so now:
 
-.. todo::
-  replace the hard-coded version number in the below snippet with the current latest version on RubyGems... somehow.
+  .. todo::
+    replace the hard-coded version number(s) in the below snippet with the current latest version on RubyGems... somehow.
 
-.. .. code-block:: console
+  .. tabs::
+    .. group-tab:: Python
 
-..   $ gem install oso-oso
-..   Fetching oso-oso-#.#.#.gem
-..   Successfully installed oso-oso-#.#.#
-..   1 gem installed
+      .. code-block:: console
+        
+        $ pip install oso
 
-.. code-block::
+    .. group-tab:: Ruby
 
-  $ pip install -q oso==0.2.2
+      .. code-block:: console
+        
+        $ gem install oso-oso
 
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine:
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-02.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lines: 17-23
-..   :lineno-start: 15
 
-.. literalinclude:: /examples/getting-started/python/server-02.py
-  :caption: server.py
-  :language: python
-  :lines: 17-23
-  :lineno-start: 15
+.. tabs::
+  .. group-tab:: Python
+
+    .. literalinclude:: server-02.py
+      :base_path: /examples/getting-started/python/
+      :filename: server.py
+      :diff: server.py
+
+  .. group-tab:: Ruby
+
+      .. literalinclude:: server-02.rb
+        :base_path: /examples/getting-started/ruby/
+        :filename: server.rb
+        :diff: server.rb
+
 
 And just like that, we're ready to start asking our global ``Oso`` instance to
 make authorization decisions!
@@ -165,19 +129,22 @@ make authorization decisions!
 Decisions, decisions...
 =======================
 
-.. The ``Oso`` instance exposes an ``allow()`` predicate method that takes three
-.. keyword arguments, **actor**, **action**, and **resource**:
-
-The ``Oso`` instance exposes an ``allow()`` predicate method that takes three
+The ``Oso`` instance exposes an ``allow()`` method that takes three
 arguments, **actor**, **action**, and **resource**:
 
-.. .. literalinclude:: /examples/getting-started/ruby/allow-01.rb
-..   :language: ruby
-..   :lines: 4
 
-.. literalinclude:: /examples/getting-started/python/allow-01.py
-  :language: python
-  :lines: 12
+.. tabs::
+  .. group-tab:: Python
+
+    .. literalinclude:: /examples/getting-started/python/allow-01.py
+      :language: python
+      :lines: 12
+
+  .. group-tab:: Ruby
+
+      .. literalinclude:: /examples/getting-started/ruby/allow-01.rb
+        :language: ruby
+        :lines: 4
 
 The above method call returns ``true`` if the **actor** ``"alice"`` may
 perform the **action** ``"view"`` on the
@@ -190,60 +157,73 @@ oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
 start a REPL session and follow along:
 
-.. .. code-block:: irb
-..
-..  irb(main):001:0> require "oso"
-..  => true
-..  irb(main):002:0> OSO ||= Oso.new
-..  => #<Oso::Oso:0x000055a708eb8f70 ...>
-..  irb(main):003:0> OSO.allow(actor: "alice", action: "view", resource: "expense")
-..  => false
+.. tabs::
+  .. group-tab:: Python
 
-.. code-block:: pycon
+    .. code-block:: pycon
 
-  >>> from oso import Oso
-  >>> OSO = Oso()
-  >>> OSO
-  <oso.Oso object at 0x7f267494dc70>
-  >>> OSO.allow("alice", "view", "expense")
-  False
+      >>> from oso import Oso
+      >>> OSO = Oso()
+      >>> OSO
+      <oso.Oso object at 0x7f267494dc70>
+      >>> OSO.allow("alice", "view", "expense")
+      False
 
-We can add a rule explicitly allowing Alice to view expenses...
 
-.. .. code-block:: irb
-.. 
-..   irb(main):004:0> OSO.load_str 'allow("alice", "view", "expense");'
-..   => nil
+    We can add a rule explicitly allowing Alice to view expenses...
 
-.. code-block:: pycon
+    .. code-block:: pycon
 
-  >>> OSO.load_str('allow("alice", "view", "expense");')
+      >>> OSO.load_str('allow("alice", "view", "expense");')
 
-...and now Alice has the power...
+    ...and now Alice has the power...
 
-.. .. code-block:: irb
-.. 
-..   irb(main):005:0> OSO.allow(actor: "alice", action: "view", resource: "expense")
-..   => true
+    .. code-block:: pycon
 
-.. code-block:: pycon
+      >>> OSO.allow("alice", "view", "expense")
+      True
 
-  >>> OSO.allow("alice", "view", "expense")
-  True
+    ...and everyone else is still denied:
 
-...and everyone else is still denied:
+    .. code-block:: pycon
 
-.. .. code-block:: irb
-.. 
-..   irb(main):006:0> OSO.allow(actor: "bhavik", action: "view", resource: "expense")
-..   => false
+      >>> OSO.allow("bhavik", "view", "expense")
+      False
 
-.. code-block:: pycon
 
-  >>> OSO.allow("bhavik", "view", "expense")
-  False
+  .. group-tab:: Ruby
 
-When we ask oso for a policy decision via ``Oso#allow``, the oso engine
+    .. code-block:: irb
+
+      irb(main):001:0> require "oso"
+      => true
+      irb(main):002:0> OSO ||= Oso.new
+      => #<Oso::Oso:0x000055a708eb8f70 ...>
+      irb(main):003:0> OSO.allow(actor: "alice", action: "view", resource: "expense")
+      => false
+
+    We can add a rule explicitly allowing Alice to view expenses...
+
+    .. code-block:: irb
+    
+      irb(main):004:0> OSO.load_str 'allow("alice", "view", "expense");'
+      => nil
+
+    ...and now Alice has the power...
+
+    .. code-block:: irb
+    
+      irb(main):005:0> OSO.allow(actor: "alice", action: "view", resource: "expense")
+      => true
+
+    ...and everyone else is still denied:
+
+    .. code-block:: irb
+    
+      irb(main):006:0> OSO.allow(actor: "bhavik", action: "view", resource: "expense")
+      => false
+
+When we ask oso for a policy decision via ``allow``, the oso engine
 searches through its knowledge base to determine whether the provided
 **actor**, **action**, and **resource** satisfy any **allow** rules.
 
@@ -262,61 +242,48 @@ Authorizing HTTP requests
 In lieu of setting up real identity and authentication systems, we're going to
 use a custom HTTP header to indicate that a request is "authenticated" as a
 particular user. The header value will be an email address, e.g.,
-``"alice@example.com"``. We'll pass it to ``Oso#allow`` as the **actor**...
+``"alice@example.com"``. We'll pass it to ``allow`` as the **actor**
+and we'll use the HTTP method as the **action**.
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-03.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lineno-start: 24
-..   :lines: 24-25
-..   :emphasize-lines: 2
+Finally, the **resource** is the expense retrieved from our stored expenses.
 
-.. literalinclude:: /examples/getting-started/python/server-03.py
-  :caption: server.py
-  :language: python
-  :lineno-start: 27
-  :lines: 27-28
-  :emphasize-lines: 2
-
-
-...and we'll use the HTTP method as the **action**:
-
-.. .. literalinclude:: /examples/getting-started/ruby/server-03.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lineno-start: 24
-..   :lines: 24-28
-..   :emphasize-lines: 3
-
-.. literalinclude:: /examples/getting-started/python/server-03.py
-  :caption: server.py
-  :language: python
-  :lineno-start: 27
-  :lines: 27-32
-  :emphasize-lines: 3
-
-To recap:
-
-* The **actor** is pulled from the ``user`` HTTP header.
-* The **action** is the HTTP method.
-* The **resource** is the expense retrieved from our "database".
-
-If we pass all three pieces of data to ``Oso#allow``, it'll return a boolean
+If we pass all three pieces of data to ``allow``, it'll return a boolean
 decision that we can use in our server's response logic:
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-03.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lineno-start: 24
-..   :lines: 24-37
-..   :emphasize-lines: 9-13
+.. tip::
+  Try copying the patch, and applying it locally with:
 
-.. literalinclude:: /examples/getting-started/python/server-03.py
-  :caption: server.py
-  :language: python
-  :lineno-start: 27
-  :lines: 27-43
-  :emphasize-lines: 11-14
+  .. code-block::
+
+      $ patch <<EOF <hit enter>
+      > <paste contents>
+      EOF
+
+.. tabs::
+  .. group-tab:: Python
+
+    .. literalinclude:: server-03.py
+      :base_path: /examples/getting-started/python/
+      :filename: server.py
+      :diff: server-02.py
+      :class: copybutton
+    
+    .. literalinclude:: expenses-01.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
+
+  .. group-tab:: Ruby
+
+    .. literalinclude:: server-03.rb
+      :base_path: /examples/getting-started/ruby/
+      :filename: server.rb
+      :diff: server-02.rb
+      :class: copybutton
+
+    .. literalinclude:: expenses-01.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
+
 
 Since we haven't yet added any authorization rules to our server's ``Oso``
 instance, all requests for valid expenses will be denied. We can test that by
@@ -337,19 +304,10 @@ instance's knowledge base.
 
 Our first rule allows the actor ``"alice@example.com"`` to ``GET`` any expense:
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-04.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lines: 19-20
-..   :lineno-start: 19
-..   :emphasize-lines: 2
-
-.. literalinclude:: /examples/getting-started/python/server-04.py
-  :caption: server.py
-  :language: python
-  :lines: 17-18
-  :lineno-start: 17
-  :emphasize-lines: 2
+.. literalinclude:: expenses-02.pol
+  :base_path: /examples/getting-started/polar/
+  :caption: expenses.pol
+  :class: copybutton
 
 The rule will succeed if the **actor** and **action** match the strings
 ``"alice@example.com"`` and ``"GET"``, respectively. We capture the provided
@@ -387,53 +345,66 @@ Let's replace our static rule checking that the provided email matches
 ends in ``"@example.com"``. That way, everyone at Example.com, Inc. will be
 able to view expenses, but no one outside the company will be able to:
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-05.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lines: 19-23
-..   :lineno-start: 19
-..   :emphasize-lines: 2-
+.. tabs::
+  .. group-tab:: Python
 
-.. literalinclude:: /examples/getting-started/python/server-05.py
-  :caption: server.py
-  :language: python
-  :lines: 17-21
-  :lineno-start: 17
-  :emphasize-lines: 2-
+    .. literalinclude:: expenses-03-py.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
+      :class: copybutton
 
-.. .. |string_end_with| replace:: the ``String#end_with?`` method
-.. .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
+    .. |str_endswith| replace:: the ``str.endswith`` method
+    .. _str_endswith: https://docs.python.org/3/library/stdtypes.html#str.endswith
 
-.. |string_end_with| replace:: the ``str#endswith`` method
-.. _string_end_with: https://docs.python.org/3/library/stdtypes.html#str.endswith
+    We bind the provided email to the ``actor`` variable in the rule head and then
+    perform the ``.endswith("@example.com")`` check in the rule body. If you
+    noticed that the ``.endswith`` call looks pretty familiar, you're right on ---
+    oso is actually calling out to |str_endswith|_ defined in the Python standard
+    library. The **actor** value passed to oso is a Python string, and oso allows us
+    to call any ``str`` method from Python's standard library on it.
 
-.. We bind the provided email to the ``actor`` variable in the rule head and then
-.. perform the ``.end_with?("@example.com")`` check in the rule body. If you
-.. noticed that the ``.end_with?`` call looks pretty familiar, you're right on ---
-.. oso is actually calling out to |string_end_with|_ defined in the Ruby standard
-.. library. The **actor** value passed to oso is a Ruby string, and oso allows us
-.. to call any ``String`` method from Ruby's standard library on it.
-.. 
-.. And that's just the tip of the iceberg. You can register *any* Ruby object with
-.. oso and then leverage it in your application's authorization policy. For
-.. example, if you have ``Expense`` and ``User`` classes defined in your
-.. application, you could write a policy rule in oso that says a ``User`` may
-.. approve an ``Expense`` if they manage the ``User`` who submitted the expense
-.. and the expense's amount is less than $100.00:
+  .. group-tab:: Ruby
 
-We bind the provided email to the ``actor`` variable in the rule head and then
-perform the ``.endswith("@example.com")`` check in the rule body. If you
-noticed that the ``.endswith`` call looks pretty familiar, you're right on ---
-oso is actually calling out to |string_end_with|_ defined in the Python standard
-library. The **actor** value passed to oso is a Python string, and oso allows us
-to call any ``str`` method from Python's standard library on it.
+    .. literalinclude:: expenses-03-rb.pol
+      :base_path: /examples/getting-started/polar/
+      :caption: expenses.pol
+      :class: copybutton
 
-And that's just the tip of the iceberg. You can register *any* Python object with
-oso and then leverage it in your application's authorization policy. For
+    .. |string_end_with| replace:: the ``String#end_with?`` method
+    .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
+
+    We bind the provided email to the ``actor`` variable in the rule head and then
+    perform the ``.end_with?("@example.com")`` check in the rule body. If you
+    noticed that the ``.end_with?`` call looks pretty familiar, you're right on ---
+    oso is actually calling out to |string_end_with|_ defined in the Ruby standard
+    library. The **actor** value passed to oso is a Ruby string, and oso allows us
+    to call any ``String`` method from Ruby's standard library on it.
+
+Once we've added our new dynamic rule and restarted the web server, every user
+with an ``@example.com`` email should be allowed to view any expense:
+
+.. code-block:: console
+
+  $ curl -H "user: bhavik@example.com" localhost:5050/expenses/1
+  Expense(...)
+
+If a user's email doesn't end in ``"@example.com"``, the rule fails, and they
+are denied access:
+
+.. code-block:: console
+
+  $ curl -H "user: bhavik@example.org" localhost:5050/expenses/1
+  Not Authorized!
+
+And that's just the tip of the iceberg. You can register *any* application object with
+oso and then leverage it in your application's authorization policy.
+
+For
 example, if you have ``Expense`` and ``User`` classes defined in your
 application, you could write a policy rule in oso that says a ``User`` may
 approve an ``Expense`` if they manage the ``User`` who submitted the expense
 and the expense's amount is less than $100.00:
+
 
 .. code-block:: polar
 
@@ -453,21 +424,6 @@ as:
 .. note:: For more on leveraging application data in an oso policy, check out
   :doc:`/understand/language/application-types`.
 
-Once we've added our new dynamic rule and restarted the web server, every user
-with an ``@example.com`` email should be allowed to view any expense:
-
-.. code-block:: console
-
-  $ curl -H "user: bhavik@example.com" localhost:5050/expenses/1
-  Expense(...)
-
-If a user's email doesn't end in ``"@example.com"``, the rule fails, and they
-are denied access:
-
-.. code-block:: console
-
-  $ curl -H "user: bhavik@example.org" localhost:5050/expenses/1
-  Not Authorized!
 
 Writing your access policy as declarative rules over your app's classes and
 data is one of oso's most powerful features. In the next section, we'll update
@@ -482,26 +438,16 @@ our access policy that allows all employees to see each other's expenses. They
 would like us to modify the policy such that employees can only see their own
 expenses.
 
-To accomplish that, we can extend our existing rule with a second condition:
+To accomplish that, we can replace our existing rule with:
 
-.. .. literalinclude:: /examples/getting-started/ruby/server-06.rb
-..   :caption: server.rb
-..   :language: ruby
-..   :lines: 19-24
-..   :emphasize-lines: 3, 5
-..   :lineno-start: 19
-
-.. literalinclude:: /examples/getting-started/python/server-06.py
-  :caption: server.py
-  :language: python
-  :lines: 17-22
-  :emphasize-lines: 3, 5
-  :lineno-start: 17
+.. literalinclude:: expenses-04.pol
+  :base_path: /examples/getting-started/polar/
+  :caption: expenses.pol
+  :class: copybutton
 
 Behind the scenes, oso looks up the ``submitted_by`` field on the provided
 ``Expense`` instance and compares that value against the provided **actor**.
-And just like that, an actor can only see an expense if they have an
-``@example.com`` email *and* they submitted the expense.
+And just like that, an actor can only see an expense if they submitted the expense.
 
 Now Alice can see her own expenses but not Bhavik's:
 

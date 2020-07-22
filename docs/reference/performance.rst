@@ -4,7 +4,7 @@ Performance
 
 
 .. todo:: 
-    add perf numbers
+    add performance numbers
     
 .. Performance of oso
 .. ------------------

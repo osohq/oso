@@ -34,6 +34,8 @@ author = "oso"
 
 master_doc = "index"
 
+sys.path.append(os.path.abspath("./_ext"))
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -47,6 +49,9 @@ extensions = [
     "sphinx_tabs.tabs",
     "sphinx.ext.ifconfig",
     "sphinxcontrib.spelling",
+    "sphinx_copybutton",
+    "literal_diff",
+    "fontawesome",
 ]
 
 
@@ -77,6 +82,7 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
+    "**.tmp",
     "_build",
     "Thumbs.db",
     ".DS_Store",
@@ -90,6 +96,11 @@ exclude_patterns = [
 # Don't copy the source or show a link
 html_copy_source = False
 html_show_sourcelink = False
+
+# add copy button to <pre> elements inside a div with class="copyable"
+copybutton_selector = "div.copybutton pre"
+copybutton_prompt_text = "\\[\\d*\\]: |\\.\\.\\.: "
+copybutton_prompt_is_regexp = True
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "borland"
@@ -115,12 +126,12 @@ html_theme = "sphinx_material"
 # html_theme_options = {"logo_only": True}
 html_theme_options = {
     # Set the name of the project to appear in the navigation.
-    "nav_title": "oso",
+    "nav_title": "Documentation",
     # Set you GA account ID to enable tracking
     "google_analytics_account": "UA-XXXXX",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
-    "base_url": "https://docs.osohq.com",
+    "base_url": "https://docs.osohq.com/",
     # Set the color and the accent color
     "color_primary": "#0E024E",
     "color_accent": "#0E024E",
@@ -128,20 +139,29 @@ html_theme_options = {
     "repo_url": "https://github.com/osohq/oso/",
     "repo_name": "oso",
     # Visible levels of the global TOC; -1 means unlimited
-    "globaltoc_depth": 1,
+    "globaltoc_depth": 3,
     # If False, expand all TOC entries
     "globaltoc_collapse": True,
     # If True, show hidden TOC entries
     "globaltoc_includehidden": True,
+    # "heroes": {"index": "Welcome to the home of the oso documentation!",},
 }
+
+version_dropdown = True
+version_info = {"release": "/", "devel": "/devel"}
 html_sidebars = {
     "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
 }
 
 html_logo = "oso_logo_resized.png"
+html_js_files = [
+    "js/custom.js",
+]
 html_css_files = [
     "css/custom.css",
 ]
+
+html_favicon = "favicon.ico"
 
 # --- doctest options ----
 

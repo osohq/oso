@@ -1,3 +1,92 @@
 .rst-content tt.literal, .rst-content tt.literal, .rst-content code.literal {
     color: #000080;
 }
+
+.wy-side-nav-search, .wy-nav-top {
+    background: #0E024E;
+}
+
+nav.md-tabs {
+    background: #343131;
+}
+
+.literal-block-wrapper {
+    background: #eee;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin: 0;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.highlight {
+    background: #fcfcfc;
+    /* border: 1px solid #ddd; */
+    border-radius: 6px;
+    margin: 0;
+    /* box-shadow: 0 2px 2px 0 rgba(0,0,0,.14); */
+}
+
+.highlight-polar .highlight {
+    /* background: 
+    #f7f9ff; */
+}
+
+/* These are used to make the +/- in the diff view not selectable */
+.highlight .gin {
+    color: #000000;
+    background-color: #ddffdd;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+.highlight .gdn {
+    color: #000000;
+    background-color: #ffdddd;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+/* Prompts and outputs are not selectable */
+.highlight .gp, .go {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+.code-block-caption .caption-text {
+    color: #888080;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+}
+
+.md-header {
+    background-color: #0E024E;
+}
+
+.md-tabs {
+    background-color: #0E024E;
+}
+
+.ui.segment {
+    padding: 2% !important;
+    font-size: inherit !important;
+}
+
+.ui.menu {
+    font-size: 0.8rem;
+}
+
+/* Our pretend version of a fontawesome icon for oso */
+.fa-oso {
+    content: url("oso_logo.png");
+    filter: opacity(75%);
+    height: 1rem;
+    vertical-align: middle;
+}
+
+.with-columns footer {
+    width: 100% !important;
+}

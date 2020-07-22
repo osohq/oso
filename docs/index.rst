@@ -19,8 +19,6 @@ Using oso, you can:
 2. Express policies concisely with a declarative language
 3. Write policies that call directly into your application
 
-:guilabel:`testing`
-
 To see this in action, :doc:`continue on to the Getting Started guide <getting-started/quickstart>`.
 
 To learn more about oso and the principles behind its design,
@@ -58,6 +56,7 @@ To learn more about oso and the principles behind its design,
    :hidden:
 
    understand/overview
+   understand/use-cases
    understand/auth-fundamentals
 
    understand/application/index
@@ -86,7 +85,7 @@ To learn more about oso and the principles behind its design,
 ..  Project-related information.
 
 .. todo::
-   Add links to Github + Issues
+   Add links to GitHub + Issues
 
 .. toctree::
    :maxdepth: 1
@@ -96,7 +95,7 @@ To learn more about oso and the principles behind its design,
 
 
    project/changelogs/index
-   Github <https://github.com/osohq/oso>
+   GitHub <https://github.com/osohq/oso>
 
 ..
 .. Indices and tables

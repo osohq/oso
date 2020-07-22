@@ -1,3 +1,5 @@
+require "webrick"
+
 class Expense
   attr_reader :amount, :description, :submitted_by
 
@@ -13,8 +15,6 @@ EXPENSES = {
   2 => Expense.new(5000,  "software", "alice@example.com"),
   3 => Expense.new(50000, "flight",   "bhavik@example.com"),
 }
-
-require "webrick"
 
 server = WEBrick::HTTPServer.new Port: 5050
 server.mount_proc "/" do |req, res|

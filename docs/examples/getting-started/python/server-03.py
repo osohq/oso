@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
 
 @dataclass
 class Expense:
     amount: int
     description: str
     submitted_by: str
+
 
 EXPENSES = {
     1: Expense(500, "coffee", "alice@example.com"),
@@ -14,15 +17,16 @@ EXPENSES = {
 
 from oso import Oso
 
-OSO = Oso()
+oso = Oso()
+oso.load_file("expenses.pol")
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
-class MyRequestHandler(BaseHTTPRequestHandler):
+class RequestHandler(BaseHTTPRequestHandler):
     def _respond(self, msg, code=200):
         self.send_response(code)
         self.end_headers()
         self.wfile.write(str(msg).encode())
+        self.wfile.write(b"\n")
 
     def do_GET(self):
         actor = self.headers.get("user", None)
@@ -30,19 +34,18 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
         try:
             _, resource_type, resource_id = self.path.split("/")
-            resource = EXPENSES[int(resource_id)]
-
             if resource_type != "expenses":
-                return self._respond("Not Found!")
-            elif OSO.allow(actor, action, resource):
+                return self._respond("Not Found!", 404)
+            resource = EXPENSES[int(resource_id)]
+            if oso.allow(actor, action, resource):
                 self._respond(resource)
             else:
                 self._respond("Not Authorized!", 403)
-
         except (KeyError, ValueError) as e:
             self._respond("Not Found!", 404)
 
+
 server_address = ("", 5050)
-httpd = HTTPServer(server_address, MyRequestHandler)
+httpd = HTTPServer(server_address, RequestHandler)
 print("running on port", httpd.server_port)
 httpd.serve_forever()

@@ -14,13 +14,13 @@ oso is available as a library in several languages:
 **Coming soon**
 
 - Go
-- Javascript
+- JavaScript
 - Rust
 
 Source code
 -----------
 
-The source code for oso is hosted on Github.
+The source code for oso is hosted on GitHub.
 
 .. todo::
-  Link to github
+  Link to GitHub
