@@ -86,7 +86,7 @@ name is specified before the dictionary::
 
   Person{first_name: "Yogi", last_name: "Bear"}
 
-Classes can be registered from your application to integrate with Polar.  See
+Classes can be registered with the oso library to integrate with Polar.  See
 :doc:`/understand/language/application-types` for more information.
 
 A class instance literal must be used either with the :ref:`operator-new` or

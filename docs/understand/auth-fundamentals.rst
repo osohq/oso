@@ -104,7 +104,7 @@ and access is granted.
 
 Now, what happens if an actor named ``"charlie"`` tries to board a flight?
 In that case, no matching rules will be found, so the authorization query
-fails and access is denied. Thus we see that Polar policies are "deny by
+fails and access is denied. Thus we see that policies are "deny by
 default".
 
 Going further
@@ -117,14 +117,17 @@ but only flights for which they have boarding passes. Maybe we'd
 like to check whether or not passengers have gone through security
 before allowing them to board. And what about flight attendants?
 We might want to write separate rules for their boarding permissions.
-All of this is possible in Polar, and easy to integrate with your
+All of this is possible, and easy to integrate with your
 application's data using
 :doc:`application types </understand/language/application-types>`.
 
 Summary
 =======
-- In oso, authorization begins with a **query**, which is evaluated against a Polar **policy**.
-- Policies are made up of **rules**, and ``allow`` rules are used to grant access.
+
+- In oso, authorization begins with a **query**, which is evaluated against a
+  **policy** written in the **Polar** language.
+- Policies are made up of **rules**, and ``allow`` rules are used to grant
+  access from the ``oso.allow()`` method.
 
 For more detailed examples of oso in action, check out our
 :doc:`authorization model guides </understand/policies/auth-models/index>`.

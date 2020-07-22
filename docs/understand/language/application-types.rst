@@ -4,7 +4,7 @@
 Application types
 =================
 
-Any type defined in our application can be registered with Polar, and its
+Any type defined in our application can be registered with oso, and its
 attributes may be accessed from within a policy. Using application types
 lets us take advantage of our app's existing domain model.
 
@@ -29,8 +29,9 @@ classes that represent airport passengers and flight resources.
     def boarding_pass(self):
       return db.get_boarding_passes(passenger=self.name)
 
-The ``@polar_class`` decorator **registers** an application class with Polar
-so that it can be recognized as a type. Here's one way we might use those types::
+The ``@polar_class`` decorator **registers** an application class with oso
+so that it can be recognized as a type in our policy. Here's one way we might
+use those types::
 
   allow(actor: Passenger, "board", resource: Flight) if
       actor.boarding_pass.flight_number = resource.flight_number;
@@ -87,14 +88,14 @@ of actor.  We write a new rule:
 
 Notice the new syntax we have used in the rule head: ``param: Type``.
 This form indicates that that the rule will only be evaluated if the parameter
-has the type specified by ``Type``.  Polar will only evaluate this allow rule
-if the ``actor`` is a ``FlightAttendant``, and the resource is a ``Flight``.
+has the type specified by ``Type``.  This allow rule evaluates if the ``actor``
+is a ``FlightAttendant``, and the resource is a ``Flight``.
 
-Flight attendants are not the only type of employee that needs to board the flight.
-We also need to let pilots aboard, with the same logic.  We have a class in our
-application called ``AirlineEmployee`` that is a superclass of both ``FlightAttendant``
-and ``Pilot``.  Polar understands our application type hierarchy.  We can
-write a rule:
+Flight attendants are not the only type of employee that needs to board the
+flight.  We also need to let pilots aboard, with the same logic.  We have a
+class in our application called ``AirlineEmployee`` that is a superclass of both
+``FlightAttendant`` and ``Pilot``.  oso understands our application type
+hierarchy.  We can write a rule:
 
 .. code-block:: polar
 
@@ -112,9 +113,8 @@ subclasses of ``AirlineEmployee``.
 Built-in types
 --------------
 
-Because your application objects probably use your language's built-in
-primitive types such as ``str``, ``dict``, and ``int``, Polar allows you
-to use methods on those types for its built-ins, too. That way you can use
+Methods called on Polar built-ins (``str``, ``dict``, ``number`` & ``list``)
+call methods on the corresponding language type. That way you can use
 familiar methods like ``str.startswith()`` on strings regardless of whether
 they originated in your application or as a literal in your policy.
 This applies to all of the Polar :ref:`primitive types <basic-types>`:
@@ -123,12 +123,17 @@ language.
 
 .. warning:: Do not attempt to mutate a literal using a method on it.
   Literals in Polar are constant, and any changes made to such objects
-  on the application side will not be reflected back to Polar.
+  by calling a method will not be persisted.
+
+.. todo:: more info on this, link to each language guide
 
 Summary
 =======
-- **Application types** can be registered with Polar to make application data available within policies.
-- The inheritance structure of application types can be leveraged in the policy with **specialized rules**,
-  supporting more sophisticated access control models.
-- You can use built-in methods on primitive types like strings and
+
+- **Application types** can be registered with oso to make application data
+  available within policies.
+- The inheritance structure of application types can be leveraged in the policy
+  with **specialized rules**, supporting more sophisticated access control
+  models.
+- You can use built-in methods on primitive types & literals like strings and
   dictionaries, exactly as if they were application types.

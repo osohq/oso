@@ -113,8 +113,8 @@ We can use the same idea to shorten our policy even further!
     :language: polar
 
 Now, this ``allow`` rule will be evaluated for any instance that is a subclass
-of ``PatientData``.  Polar's language integration understands the class
-inheritance structure when selecting rules to evaluate!
+of ``PatientData``.  Polar understands the class inheritance structure when
+selecting rules to evaluate!
 
 .. TODO: include when groups are back
   Working with groups
@@ -124,9 +124,9 @@ inheritance structure when selecting rules to evaluate!
   applications may have encoded relationships this way.  Maybe when we wrote our
   code we didn't create a ``PatientData`` class, and just implemented ``Lab``,
   ``Order`` and ``Test`` separately.  We still want to treat them as one concept
-  in Polar, but don't want to change our application.
+  in our policy, but don't want to change our application.
   
-  Polar includes a ``group`` feature that can be used for exactly this purpose:
+  Polar includes a ``group`` construct that can be used for exactly this purpose:
   
   .. literalinclude:: /examples/inheritance/05-group.polar
      :language: polar
@@ -142,9 +142,8 @@ Summary
 In this guide, we saw an example of an application policy that could result in
 significant repetition.   We tried out a few strategies for representing common
 policy, but using it across many resource types.  First, we wrote a custom rule
-that moved duplicated logic into one place.  Then we used specializers &
-Polar's application class integration to condense our policy even
-further.
+that moved duplicated logic into one place.  Then we used specializers and
+application types to condense our policy even further.
 
 .. TODO
   Finally, we saw how groups & inheritance can both be exploited to

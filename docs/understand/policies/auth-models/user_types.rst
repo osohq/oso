@@ -19,7 +19,7 @@ A Tale of Two Actors
 
 Our example application has customers and internal users. Customers are allowed to access the customer dashboard,
 and internal users are allowed to access the customer dashboard as well as an internal dashboard. We can write a simple
-Polar policy to express this logic.
+policy to express this logic.
 
 .. tabs::
     .. group-tab:: Python
@@ -44,7 +44,7 @@ Polar policy to express this logic.
 Note that if we already had classes in our application that represented customers and internal users,
 we could have simply decorated them with :py:func:`oso.polar_class`.
 
-We can now write a simple Polar policy over these Actor types:
+We can now write a simple policy over these Actor types:
 
 .. literalinclude:: /examples/user_types/user_policy.polar
     :caption: user_types.polar
@@ -186,6 +186,6 @@ Summary
 =======
 
 It is common to require different authorization logic for different types of application users. In this example,
-we showed how to use different Actor types to represent different users in oso. We wrote Polar policies with rules
+we showed how to use different Actor types to represent different users in oso. We wrote policies with rules
 that specialized on the type of Actor, and even added attributes to some actor types that we used in the policy.
 We also demonstrated how inheritance can be used to match rules to multiple types of Actors.

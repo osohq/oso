@@ -2,7 +2,7 @@
 Polar Language
 ==============
 
-Guide to the polar language
+Guide to the Polar language
 
 .. toctree::
   :maxdepth: 1

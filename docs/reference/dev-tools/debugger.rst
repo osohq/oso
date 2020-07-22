@@ -15,7 +15,7 @@ The debugger can be entered through two mechanisms:
 
   1. Add the ``debug()`` predicate in the body of the rule you want to debug in
      your Polar file. The debugger will be entered when that rule body is
-     evaluated by the Polar engine. For example::
+     evaluated by the Polar VM. For example::
 
        myRule() if debug() and 1 = 0;
 
