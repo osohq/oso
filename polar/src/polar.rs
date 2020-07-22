@@ -244,9 +244,9 @@ impl Polar {
         for (sym, singleton) in singletons {
             if let Some(term) = singleton {
                 let mut writer = self.output.write().unwrap();
-                writeln!(&mut writer, "Singleton variable {}", sym).unwrap();
+                let _ = writeln!(&mut writer, "Singleton variable {}", sym);
                 if let Some(ref source) = kb.sources.get_source(&term) {
-                    writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0)).unwrap();
+                    let _ = writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0));
                 }
             }
         }

@@ -566,7 +566,7 @@ impl PolarVirtualMachine {
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
         let mut writer = self.output.write().unwrap();
-        writeln!(&mut writer, "{}", message).unwrap();
+        let _ = writeln!(&mut writer, "{}", message);
     }
 
     /// Get the query stack as a string for printing in error messages.
@@ -585,7 +585,7 @@ impl PolarVirtualMachine {
         stack.reverse();
 
         let mut st = String::new();
-        write!(st, "trace (most recent evaluation last):").unwrap();
+        let _ = write!(st, "trace (most recent evaluation last):");
 
         let mut rule = None;
         for t in stack {
@@ -594,22 +594,22 @@ impl PolarVirtualMachine {
                     rule = Some(r.clone());
                 }
                 Node::Term(t) => {
-                    write!(st, "\n  ").unwrap();
+                    let _ = write!(st, "\n  ");
                     let source = { self.kb.read().unwrap().sources.get_source(&t) };
                     if let Some(source) = source {
                         if let Some(rule) = &rule {
-                            write!(st, "in rule {} ", rule.name.to_polar()).unwrap();
+                            let _ = write!(st, "in rule {} ", rule.name.to_polar());
                         } else {
-                            write!(st, "in query ").unwrap();
+                            let _ = write!(st, "in query ");
                         }
                         let (row, column) = loc_to_pos(&source.src, t.offset());
-                        write!(st, "at line {}, column {}", row + 1, column + 1).unwrap();
+                        let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
                         if let Some(filename) = source.filename {
-                            write!(st, " in file {}", filename).unwrap();
+                            let _ = write!(st, " in file {}", filename);
                         }
-                        writeln!(st).unwrap();
+                        let _ = writeln!(st);
                     };
-                    write!(st, "    {}", t.to_polar()).unwrap();
+                    let _ = write!(st, "    {}", t.to_polar());
                 }
             }
         }
