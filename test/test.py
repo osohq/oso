@@ -46,9 +46,10 @@ oso._load_queued_files()
 
 assert oso.allow("a", "b", "c")
 
-
+# Test that a built in string method can be called.
 oso.load_str("""?= x = "hello world!" and x.endswith("world!");""")
 
+# Test that a custom error type is thrown.
 exception_thrown = False
 try:
     oso.load_str("missingSemicolon()")
@@ -69,13 +70,14 @@ assert oso.query_predicate("testRest").success
 assert oso.query_predicate("testMatches", A("hello")).success
 assert oso.query_predicate("testMethodCalls", A("hello"), B.C("hello")).success
 assert oso.query_predicate("testOr").success
+assert oso.query_predicate("testHttpAndPathMapper").success
 
-
+# Test that cut doesn't return anything.
 assert oso.query_predicate("testCut").success is False
 
 import math
 
+# Test that a constant can be called.
 oso.register_constant("Math", math)
 oso.load_str("?= Math.factorial(5) == 120;")
 
-assert oso.query_predicate("testHttpAndPathMapper").success

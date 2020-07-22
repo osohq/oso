@@ -40,10 +40,12 @@ oso.load_queued_files
 
 raise unless oso.allow(actor: 'a', action: 'b', resource: 'c')
 
+# Test that a built in string method can be called.
 oso.load_str <<~POLAR
   ?= x = "hello world!" and x.end_with?("world!");
 POLAR
 
+# Test that a custom error type is thrown.
 exception_thrown = false
 begin
   oso.load_str 'missingSemicolon()'
@@ -62,7 +64,9 @@ oso.query_predicate('testRest').next
 oso.query_predicate('testMatches', A.new(x: 'hello')).next
 oso.query_predicate('testMethodCalls', A.new(x: 'hello'), B::C.new('hello')).next
 oso.query_predicate('testOr').next
+oso.query_predicate('testHttpAndPathMapper').next
 
+# Test that cut doesn't return anything.
 exception_thrown = false
 begin
   oso.query_predicate('testCut').next
@@ -71,7 +75,8 @@ rescue StopIteration
 end
 raise unless exception_thrown
 
+# Test that a constant can be called.
 oso.register_class String
 oso.load_str '?= x = "" and x.length == String.send("new").length;'
 
-oso.query_predicate('testHttpAndPathMapper').next
+

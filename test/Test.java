@@ -41,7 +41,11 @@ class Test {
             o.registerClass(BC.class, m -> new BC((String) m.get("y")), "C");
             o.loadFile("test.polar");
             o.allow("a", "b", "c");
+            
+            // Test that a built in string method can be called.
             o.loadStr("?= x = \"hello world!\" and x.endsWith(\"world!\");");
+
+            // Test that a custom error type is thrown.
             boolean throwsException = false;
             try {
                 o.loadStr("missingSemicolon()");
@@ -54,16 +58,21 @@ class Test {
             if (!throwsException)
                 throw new Exception();
             boolean passes = !o.queryPredicate("specializers", List.of(new D("hello"), new BC("hello"))).isEmpty()
-                    && !o.queryPredicate("floatLists", null).isEmpty() && !o.queryPredicate("intDicts", null).isEmpty()
+                    && !o.queryPredicate("floatLists", null).isEmpty()
+                    && !o.queryPredicate("intDicts", null).isEmpty()
                     && !o.queryPredicate("comparisons", null).isEmpty()
-                    && !o.queryPredicate("testForall", null).isEmpty() && !o.queryPredicate("testRest", null).isEmpty()
+                    && !o.queryPredicate("testForall", null).isEmpty()
+                    && !o.queryPredicate("testRest", null).isEmpty()
                     && !o.queryPredicate("testMatches", List.of(new A("hello"))).isEmpty()
                     && !o.queryPredicate("testMethodCalls", List.of(new A("hello"), new BC("hello"))).isEmpty()
-                    && !o.queryPredicate("testOr", null).isEmpty() && o.queryPredicate("testCut", null).isEmpty()
+                    && !o.queryPredicate("testOr", null).isEmpty()
+                    // Test that cut doesn't return anything.
+                    && o.queryPredicate("testCut", null).isEmpty()
                     && !o.queryPredicate("testHttpAndPathMapper", null).isEmpty();
             if (!passes)
                 throw new Exception();
 
+            // Test that a constant can be called.
             o.registerConstant("Math", Math.class);
             o.loadStr("?= Math.PI == 3.141592653589793;");
 
