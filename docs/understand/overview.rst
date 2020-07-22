@@ -18,7 +18,7 @@ Authorization logic involving these is typically hard to express concisely, and 
 oso is designed based on 3 principles, which we'll describe briefly here then in more detail below.
 
 1. **Separation of concerns.** Authorization logic is distinct from business logic. By separating the two, you can make changes to the policy which apply across the entire application, write reusable patterns, and get a single place to control, test and visualize access.
-2. **Right tool for the right job.** Authorization deals in facts and rules about who is allowed to do what in a system. Solutions to describe authorization logic ought to be declarative and have semantics that map to common domain concepts – like roles and relationships, or boolean conditions over the input attributes.
+2. **Right tool for the job.** Authorization deals in facts and rules about who is allowed to do what in a system. Solutions to describe authorization logic ought to be declarative and have semantics that map to common domain concepts – like roles and relationships, or boolean conditions over the input attributes.
 3. **Authorization decisions and application data are inseparable.** Authorization decisions always rely on application context – like who a user is and her relationship to the data she's trying to access. The authorization system ought to be able to call directly into the application so you can write policies using the application's objects and data.
 
 Key Pieces
