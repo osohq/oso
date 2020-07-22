@@ -4,8 +4,6 @@ module Oso
   module Polar
     # A single Polar query.
     class Query
-      # @return [Host]
-      attr_reader :host
       attr_reader :results
 
       # @param ffi_query [FFI::Query]
@@ -23,6 +21,8 @@ module Oso
       attr_reader :calls
       # @return [FFI::Query]
       attr_reader :ffi_query
+      # @return [Host]
+      attr_reader :host
 
       # Send result of predicate check across FFI boundary.
       #

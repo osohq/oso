@@ -67,7 +67,7 @@ module Oso
         when Predicate
           ffi_query = ffi_polar.new_query_from_term(new_host.to_polar_term(query))
         else
-          raise 'Invalid query type'
+          raise InvalidQueryTypeError
         end
         Query.new(ffi_query, host: new_host).results
       end

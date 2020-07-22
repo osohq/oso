@@ -4,6 +4,7 @@ module Oso
   module Polar
     # Translate between Polar and the host language (Ruby).
     class Host
+      protected
       # @return [FFI::Polar]
       attr_reader :ffi_polar
       # @return [Hash<String, Class>]
@@ -13,6 +14,7 @@ module Oso
       # @return [Hash<Integer, Object>]
       attr_reader :instances
 
+      public
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
         @classes = {}
@@ -76,7 +78,12 @@ module Oso
       # @param id [Integer]
       # @return [Boolean]
       def instance?(id)
-        instances.key? id
+        case id
+        when Integer
+          instances.key? id
+        else
+          instances.value? id
+        end
       end
 
       # Fetch a Ruby instance from the {#instances} cache.

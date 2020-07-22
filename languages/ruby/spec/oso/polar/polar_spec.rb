@@ -90,7 +90,7 @@ RSpec.describe Oso::Polar::Polar do
       expect(Counter.count).to be 1
       expect(subject.query_predicate('f', c).to_a).to eq([{}])
       expect(Counter.count).to be 1
-      expect(subject.host.instances.value?(c)).to be false
+      expect(subject.host.instance?(c)).to be false
     end
   end
 
@@ -136,6 +136,18 @@ RSpec.describe Oso::Polar::Polar do
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       subject.clear
       expect(query(subject, 'f(x)')).to eq([])
+    end
+  end
+
+  context '#query' do
+    it 'is able to make basic queries' do
+      subject.load_str('f(1);');
+      expect(subject.query('f(1)').to_a).to eq([{}])
+      expect(subject.query_predicate('f', 1).to_a).to eq([{}])
+    end
+
+    it 'raises an error when given an invalid query' do
+      expect { subject.query(1) }.to raise_error Oso::Polar::InvalidQueryTypeError
     end
   end
 
