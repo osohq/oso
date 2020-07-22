@@ -293,8 +293,8 @@ start a REPL session and follow along:
     Run: ``jshell --class-path oso-0.2.1.jar Server.java``
 
     .. code-block:: java
+
         jshell> Oso oso = new Oso()
-        oso ==> com.osohq.oso.Oso@368f2016
 
         jshell> String alice = "alice@example.com"
         alice ==> "alice@example.com"
