@@ -113,9 +113,8 @@ subclasses of ``AirlineEmployee``.
 Built-in types
 --------------
 
-Because your application objects probably use your language's built-in
-primitive types such as ``str``, ``dict``, and ``int``, Polar allows you
-to use methods on those types for its built-ins too. That way you can use
+Methods called on Polar built-ins (``str``, ``dict``, ``number`` & ``list``)
+call methods on the corresponding language type. That way you can use
 familiar methods like ``str.startswith()`` on strings regardless of whether
 they originated in your application or as a literal in your policy.
 This applies to all of the Polar :ref:`primitive types <basic-types>`:
@@ -125,6 +124,8 @@ language.
 .. warning:: Do not attempt to mutate a literal using a method on it.
   Literals in Polar are constant, and any changes made to such objects
   by calling a method will not be persisted.
+
+.. todo:: more info on this, link to each language guide
 
 Summary
 =======
