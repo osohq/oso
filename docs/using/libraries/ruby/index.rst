@@ -2,7 +2,7 @@
 Ruby Authorization Library
 ============================
 
-oso is packaged as a gem for use in Ruby applications.
+oso is packaged as a :doc:`gem</getting-started/download/ruby>` for use in Ruby applications.
 
 API documentation for the gem lives :doc:`here</ruby/index>`.
 

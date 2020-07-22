@@ -2,7 +2,7 @@
 Java Authorization Library
 ============================
 
-Oso currently provides an authorization library to integrate oso with Java applications.
+oso is available as a :doc:`package</getting-started/download/java>` for use in Java applications.
 
 Code-level documentation is :doc:`here</java/index>`.
 

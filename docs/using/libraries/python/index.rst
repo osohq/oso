@@ -2,7 +2,7 @@
 Python Authorization Library
 ============================
 
-Oso currently provides an authorization library to integrate oso with Python applications.
+oso is available as a :doc:`package</getting-started/download/python>` for use in Python applications.
 
 Code-level documentation is :doc:`here<api>`.
 
