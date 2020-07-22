@@ -270,7 +270,7 @@ extricating it. Leaving us with the following options:
 
 At its best, authorization logic weaves together discrete bits of business logic into a
 rich authorization tapestry. Striking a balance between using application data wherever
-its needed to make decisions, while keeping the code clean, reusable, and maintanable.
+its needed to make decisions, while keeping the code clean, reusable, and maintainable.
 
 
 .. admonition:: What's next?
