@@ -1,6 +1,9 @@
 require "oso"
 require "webrick"
 
+OSO ||= Oso.new
+OSO.load_file("expenses.polar")
+
 class Expense
   attr_reader :amount, :description, :submitted_by
 
@@ -17,9 +20,6 @@ EXPENSES = {
   3 => Expense.new(50000, "flight",   "bhavik@example.com"),
 }
 
-OSO ||= Oso.new
-OSO.load_file("expenses.pol")
-
 server = WEBrick::HTTPServer.new Port: 5050
 server.mount_proc "/" do |req, res|
   actor = req.header["user"]&.first
@@ -35,4 +35,4 @@ server.mount_proc "/" do |req, res|
     res.body = "Not Authorized!"
   end
 end
-server.start
+server.start if __FILE__ == $0

@@ -27,4 +27,4 @@ server.mount_proc "/" do |req, res|
     res.body = resource.inspect
   end
 end
-server.start
+server.start if __FILE__ == $0

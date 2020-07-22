@@ -8,5 +8,6 @@ def setup_oso():
 
 oso = setup_oso()
 
-
-oso.allow("alice", "view", "expense")
+actor = "alice@example.com"
+resource = EXPENSES[1]
+oso.allow(actor, "view", resource)

@@ -28,16 +28,15 @@ Our web server contains some simple logic to filter out bad requests and not muc
 
     .. literalinclude:: /examples/getting-started/python/server.py
       :class: copybutton
-      :caption: Download: :download:`server.py </examples/getting-started/python/server.py>`
+      :caption: :fab:`python` server.py :download:`(link) </examples/getting-started/python/server.py>`
       :language: python
 
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/getting-started/ruby/server.rb
       :class: copybutton
-      :caption: Download: :download:`server.rb </examples/getting-started/ruby/server.rb>`
+      :caption: :fas:`gem` server.rb :download:`(link) </examples/getting-started/ruby/server.rb>`
       :language: ruby
-
 
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
@@ -79,8 +78,6 @@ let's create an access policy with oso!
 Adding oso
 ==========
 
-
-
 .. admonition:: Installation
 
   In order to write our first authorization policy, we first need to add oso to
@@ -104,23 +101,37 @@ Adding oso
         $ gem install oso-oso
 
 Now that we've installed oso, we can import it into our project and construct
-a new ``Oso`` instance that will serve as our authorization engine:
+a new ``Oso`` instance that will serve as our authorization engine.
 
+Here's an updated version of our webserver code from before with the new lines
+highlighted:
 
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: server-02.py
-      :base_path: /examples/getting-started/python/
-      :filename: server.py
-      :diff: server.py
+    .. literalinclude:: /examples/getting-started/python/server-with-oso.py
+      :caption: :fab:`python` server.py :download:`(link) </examples/getting-started/python/server-with-oso.py>`
+      :language: python
+      :class: copybutton
+      :emphasize-lines: 3,5-6,31-32,39-42
+    
+    And a new empty Polar policy file:
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+      :caption: :fa:`oso` expenses.polar
 
   .. group-tab:: Ruby
 
-      .. literalinclude:: server-02.rb
-        :base_path: /examples/getting-started/ruby/
-        :filename: server.rb
-        :diff: server.rb
+    .. literalinclude:: /examples/getting-started/ruby/server-with-oso.rb
+      :caption: :fas:`gem` server.rb :download:`(link) </examples/getting-started/ruby/server-with-oso.rb>`
+      :language: ruby
+      :class: copybutton
+      :emphasize-lines: 1,4-5,25-26,32-36
+
+    And a new empty Polar policy file:
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+      :caption: :fa:`oso` expenses.polar
 
 
 And just like that, we're ready to start asking our global ``Oso`` instance to
@@ -138,17 +149,18 @@ arguments, **actor**, **action**, and **resource**:
 
     .. literalinclude:: /examples/getting-started/python/allow-01.py
       :language: python
-      :lines: 12
+      :lines: 11-13
 
   .. group-tab:: Ruby
 
       .. literalinclude:: /examples/getting-started/ruby/allow-01.rb
         :language: ruby
-        :lines: 4
+        :lines: 4-6
 
-The above method call returns ``true`` if the **actor** ``"alice"`` may
-perform the **action** ``"view"`` on the
-**resource** ``"expense"``.
+The above method call returns ``true`` if the **actor** ``"alice@example.com"`` may
+perform the **action** ``"GET"`` on the
+**resource** ``EXPENSES[1]``. We're using ``"GET"`` here to match up with the HTTP
+verb used in our server, but this could be anything.
 
 .. note:: For more on **actors**, **actions**, and **resources**, check out
   :doc:`/using/auth-fundamentals`.
@@ -162,32 +174,38 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
-      >>> from oso import Oso
-      >>> OSO = Oso()
-      >>> OSO
+      >>> from server import *
+      >>> oso
       <oso.Oso object at 0x7f267494dc70>
-      >>> OSO.allow("alice", "view", "expense")
+      >>> alice = "alice@example.com"
+      >>> expense = EXPENSES[1]
+      >>> oso.allow(alice, "GET", expense)
       False
 
+    We can add a rule explicitly allowing Alice to GET expenses...
 
-    We can add a rule explicitly allowing Alice to view expenses...
+    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    ...which we can load into our oso instance:
 
     .. code-block:: pycon
 
-      >>> OSO.load_str('allow("alice", "view", "expense");')
+      >>> oso.load_file("expenses.polar")
 
     ...and now Alice has the power...
 
     .. code-block:: pycon
 
-      >>> OSO.allow("alice", "view", "expense")
+      >>> oso.allow(alice, "GET", expense)
       True
 
     ...and everyone else is still denied:
 
     .. code-block:: pycon
 
-      >>> OSO.allow("bhavik", "view", "expense")
+      >>> OSO.allow("bhavik", "GET", expense)
       False
 
 
@@ -195,43 +213,58 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):001:0> require "oso"
-      => true
-      irb(main):002:0> OSO ||= Oso.new
-      => #<Oso::Oso:0x000055a708eb8f70 ...>
-      irb(main):003:0> OSO.allow(actor: "alice", action: "view", resource: "expense")
-      => false
+        irb(main):001:0> require "./server"
+        => true
+        irb(main):002:0> alice = "alice@example.com"
+        => "alice@example.com"
+        irb(main):003:0> expense = EXPENSES[1]
+        => #<Expense:0x00564efc19e640 @amount=500, @description="coffee", @submitted_by="alice@example.com">
+        irb(main):004:0> OSO.allow(actor: alice, action: "GET", resource: expense)
+        => false
 
     We can add a rule explicitly allowing Alice to view expenses...
 
+    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    ...which we can load into our oso instance:
+
     .. code-block:: irb
 
-      irb(main):004:0> OSO.load_str 'allow("alice", "view", "expense");'
-      => nil
+      irb(main):005:0> OSO.load_file("expenses.polar")
+      => #<Set: {"expenses.polar"}>
 
     ...and now Alice has the power...
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allow(actor: "alice", action: "view", resource: "expense")
+      irb(main):005:0> OSO.allow(actor: "alice", action: "GET", resource: "expense")
       => true
 
     ...and everyone else is still denied:
 
     .. code-block:: irb
 
-      irb(main):006:0> OSO.allow(actor: "bhavik", action: "view", resource: "expense")
+      irb(main):006:0> OSO.allow(actor: "bhavik", action: "GET", resource: "expense")
       => false
+
+.. note::
+  Each time you do ``Oso.load_file``, it will load the policy
+  **without** clearing what is already loaded in. Be sure to
+  clear oso using ``Oso.clear`` or create a new instance if you want
+  to try adding a few new rules.
 
 When we ask oso for a policy decision via ``allow``, the oso engine
 searches through its knowledge base to determine whether the provided
 **actor**, **action**, and **resource** satisfy any **allow** rules.
 
-In the above case, we passed in ``"alice"`` as the **actor**, ``"view"`` as the
-**action**, and ``"expense"`` as the **resource**, satisfying the
-``allow("alice", "view", "expense");`` rule. When we pass in ``"bhavik"`` as
-the actor, the rule no longer succeeds because the string ``"bhavik"`` does not
-match the string ``"alice"``.
+In the above case, we passed in ``alice`` as the **actor**, ``"GET"`` as the
+**action**, and ``EXPENSE[1]`` as the **resource**, satisfying the
+``allow("alice@example.com", "GET", _expense);`` rule.
+When we pass in ``"bhavik@example.com"`` as
+the actor, the rule no longer succeeds because the string ``"bhavik@example.com"`` does not
+match the string ``"alice@example.com"``.
 
 .. note:: For a deeper introduction to writing authorization rules with oso,
   see :doc:`/using/auth-fundamentals`.
@@ -239,98 +272,29 @@ match the string ``"alice"``.
 Authorizing HTTP requests
 =========================
 
-In lieu of setting up real identity and authentication systems, we're going to
-use a custom HTTP header to indicate that a request is "authenticated" as a
+In lieu of setting up real identity and authentication systems,
+in the example we used a custom HTTP header to indicate that
+a request is "authenticated" as a
 particular user. The header value will be an email address, e.g.,
 ``"alice@example.com"``. We'll pass it to ``allow`` as the **actor**
 and we'll use the HTTP method as the **action**.
 
 Finally, the **resource** is the expense retrieved from our stored expenses.
 
-If we pass all three pieces of data to ``allow``, it'll return a boolean
-decision that we can use in our server's response logic:
+Assuming you added the rule from the previous step:
 
-.. tip::
-  Try copying the patch, and applying it locally with:
-
-  .. code-block::
-
-      $ patch <<EOF <hit enter>
-      > <paste contents>
-      EOF
-
-.. tabs::
-  .. group-tab:: Python
-
-    .. literalinclude:: server-03.py
-      :base_path: /examples/getting-started/python/
-      :filename: server.py
-      :diff: server-02.py
-      :class: copybutton
-
-    .. literalinclude:: expenses-01.pol
-      :base_path: /examples/getting-started/polar/
-      :caption: expenses.pol
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: server-03.rb
-      :base_path: /examples/getting-started/ruby/
-      :filename: server.rb
-      :diff: server-02.rb
-      :class: copybutton
-
-    .. literalinclude:: expenses-01.pol
-      :base_path: /examples/getting-started/polar/
-      :caption: expenses.pol
-
-
-Since we haven't yet added any authorization rules to our server's ``Oso``
-instance, all requests for valid expenses will be denied. We can test that by
-restarting the server and making a valid request. If you receive a ``Not
-Authorized!`` response, everything's working:
-
-.. code-block:: console
-
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/1
-  Not Authorized!
-
-Rules over static data
-----------------------
-
-A web server that only ever returns ``Not Authorized!`` isn't a ton of fun, so
-let's write a rule allowing certain HTTP requests and load it into our ``Oso``
-instance's knowledge base.
-
-Our first rule allows the actor ``"alice@example.com"`` to ``GET`` any expense:
-
-.. literalinclude:: expenses-02.pol
-  :base_path: /examples/getting-started/polar/
-  :caption: expenses.pol
+.. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+  :caption: :fa:`oso` expenses.polar
   :class: copybutton
 
-The rule will succeed if the **actor** and **action** match the strings
-``"alice@example.com"`` and ``"GET"``, respectively. We capture the provided
-**resource** value in the ``_expense`` variable, but we don't do anything with
-it since we want the rule to apply to all expenses.
-
-With the first rule in place, Alice can ``GET`` expenses:
+We can test everything works by
+starting the new server and making a valid request:
 
 .. code-block:: console
 
   $ curl -H "user: alice@example.com" localhost:5050/expenses/1
-  Expense(...)
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/3
-  Expense(...)
-
-But Bhavik can't since their email doesn't match the string
-``"alice@example.com"``:
-
-.. code-block:: console
-
+  Expense(amount=500, description='coffee', submitted_by='alice@example.com')
   $ curl -H "user: bhavik@example.com" localhost:5050/expenses/1
-  Not Authorized!
-  $ curl -H "user: bhavik@example.com" localhost:5050/expenses/3
   Not Authorized!
 
 Rules over dynamic data
@@ -348,9 +312,8 @@ able to view expenses, but no one outside the company will be able to:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: expenses-03-py.pol
-      :base_path: /examples/getting-started/polar/
-      :caption: expenses.pol
+    .. literalinclude:: /examples/getting-started/polar/expenses-03-py.polar
+      :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
     .. |str_endswith| replace:: the ``str.endswith`` method
@@ -365,9 +328,8 @@ able to view expenses, but no one outside the company will be able to:
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: expenses-03-rb.pol
-      :base_path: /examples/getting-started/polar/
-      :caption: expenses.pol
+    .. literalinclude:: /examples/getting-started/polar/expenses-03-rb.polar
+      :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
     .. |string_end_with| replace:: the ``String#end_with?`` method
@@ -398,35 +360,7 @@ are denied access:
 
 And that's just the tip of the iceberg. You can register *any* application object with
 oso and then leverage it in your application's authorization policy.
-
-For
-example, if you have ``Expense`` and ``User`` classes defined in your
-application, you could write a policy rule in oso that says a ``User`` may
-approve an ``Expense`` if they manage the ``User`` who submitted the expense
-and the expense's amount is less than $100.00:
-
-
-.. code-block:: polar
-
-  allow(approver, "approve", expense) if
-      approver = expense.submitted_by.manager
-      and expense.amount < 10000;
-
-In the process of evaluating that rule, the oso engine would call back into the
-application in order to make determinations that rely on application data, such
-as:
-
-- Which user submitted the expense in question?
-- Who is their manager?
-- Is their manager the approver?
-- Does the expense's ``amount`` field contain a value less than $100.00?
-
-.. note:: For more on leveraging application data in an oso policy, check out
-  :doc:`/using/policies/application-types`.
-
-
-Writing your access policy as declarative rules over your app's classes and
-data is one of oso's most powerful features. In the next section, we'll update
+In the next section, we'll update
 our existing policy to leverage the ``Expense`` class defined in our
 application.
 
@@ -440,9 +374,8 @@ expenses.
 
 To accomplish that, we can replace our existing rule with:
 
-.. literalinclude:: expenses-04.pol
-  :base_path: /examples/getting-started/polar/
-  :caption: expenses.pol
+.. literalinclude:: /examples/getting-started/polar/expenses-04.polar
+  :caption: :fa:`oso` expenses.polar
   :class: copybutton
 
 Behind the scenes, oso looks up the ``submitted_by`` field on the provided
@@ -469,6 +402,34 @@ And vice-versa:
 
 We encourage you to play around with the current policy and experiment with
 adding your own rules!
+
+For
+example, if you have ``Expense`` and ``User`` classes defined in your
+application, you could write a policy rule in oso that says a ``User`` may
+approve an ``Expense`` if they manage the ``User`` who submitted the expense
+and the expense's amount is less than $100.00:
+
+
+.. code-block:: polar
+  :class: no-select
+
+  allow(approver, "approve", expense) if
+      approver = expense.submitted_by.manager
+      and expense.amount < 10000;
+
+In the process of evaluating that rule, the oso engine would call back into the
+application in order to make determinations that rely on application data, such
+as:
+
+- Which user submitted the expense in question?
+- Who is their manager?
+- Is their manager the approver?
+- Does the expense's ``amount`` field contain a value less than $100.00?
+
+.. note:: For more on leveraging application data in an oso policy, check out
+  :doc:`/understand/language/application-types`.
+
+
 
 Summary
 =======

@@ -50,7 +50,6 @@ extensions = [
     "sphinx.ext.ifconfig",
     "sphinxcontrib.spelling",
     "sphinx_copybutton",
-    "literal_diff",
     "fontawesome",
 ]
 

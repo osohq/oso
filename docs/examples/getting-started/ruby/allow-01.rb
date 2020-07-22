@@ -1,4 +1,6 @@
 require "oso"
 
 OSO ||= Oso.new
-OSO.allow(actor: "alice", action: "view", resource: "expense")
+actor = "alice@example.com"
+resource = EXPENSES[1]
+OSO.allow(actor: actor, action: "view", resource: resource)

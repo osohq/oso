@@ -41,7 +41,7 @@ oso ships as a **library**.
 .. container:: right-col
 
     .. code-block:: polar
-        :caption: :fa:`oso` expense.pol
+        :caption: :fa:`oso` expense.polar
 
         allow(user, "read", expense) if
             user.email = expense.submitted_by;
@@ -117,7 +117,7 @@ Splitting out authorization logic with oso might look as follows:
         .. container:: right-col
 
             .. code-block:: polar
-                :caption: :fa:`oso` expense.pol
+                :caption: :fa:`oso` expense.polar
 
                 # employees can read expenses they submitted
                 allow(user, "read", expense) if
@@ -173,7 +173,7 @@ have two different user types who can approve expenses. With oso, that might loo
 .. container:: left-col
 
     .. code-block:: polar
-        :caption: :fa:`oso` expense.pol
+        :caption: :fa:`oso` expense.polar
 
         # managers can approve their employees' expenses
         allow(user, "approve", expense) if
@@ -188,7 +188,7 @@ have two different user types who can approve expenses. With oso, that might loo
 .. container:: right-col
 
     .. code-block:: polar
-        :caption: :fa:`oso` organization.pol
+        :caption: :fa:`oso` organization.polar
 
         # manages user or managers users' manager
         manages(manager, user) if
@@ -288,7 +288,7 @@ language to drive the execution of its virtual machine.
 .. todo::
     better wording for "in the form of a virtual machine"
 
-oso can read files with the ``.pol`` suffix, which are policy files written in Polar syntax.
+oso can read files with the ``.polar`` suffix, which are policy files written in Polar syntax.
 These are parsed and loaded into a *knowledge base*, which can be thought of an
 in-memory cache of the rules in the file.
 
