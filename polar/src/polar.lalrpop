@@ -52,6 +52,7 @@ extern {
         "?=" => lexer::Token::Query,    // ?=
         "cut" => lexer::Token::Cut,
         "debug" => lexer::Token::Debug,
+        "print" => lexer::Token::Print,
         "in" => lexer::Token::In,       // in
         "forall" => lexer::Token::ForAll,     // forall
         "if" => lexer::Token::If,       // if
@@ -166,6 +167,7 @@ pub Term: Term = {
     <term:Boolean> => term,
     <term:Symbol> => term,
     <term:DictionaryTerm> => term,
+    <start:@L> <op:BuiltinOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
     <start:@L> <op:RewrittenOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
     <start:@L> <pred:Predicate> => Term::new_from_parser(src_id, start, Value::Call(pred)),
     <start:@L> "[" <mut terms:(<Term> ",")*> <term:RestVar<"Term">?> "]" => {
@@ -179,11 +181,25 @@ pub Term: Term = {
     }
 };
 
+BuiltinOperator: Operator = {
+    "debug" => Operator::Debug,
+    "print" => Operator::Print,
+};
+
+pub BuiltinOperation: Operation = {
+    <op:BuiltinOperator> "(" <mut args:(<Exp2<"Term">> ",")*> <arg:Exp2<"Term">?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Operation{operator: op, args: args}
+    },
+};
+
 RewritableOperator: Operator = {
     "." => Operator::Dot,
     "new" => Operator::New,
     "in" => Operator::In,
-    "debug" => Operator::Debug,
 };
 
 pub RewrittenOperation: Operation = {
@@ -192,7 +208,6 @@ pub RewrittenOperation: Operation = {
             Some(arg) => args.push(arg),
             None => ()
         };
-
         Operation{operator: op, args: args}
     },
 };

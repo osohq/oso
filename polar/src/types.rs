@@ -130,6 +130,7 @@ pub struct Predicate {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Operator {
     Debug,
+    Print,
     Cut,
     In,
     Isa,
@@ -155,6 +156,7 @@ pub enum Operator {
 impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
+            Operator::Print => 11,
             Operator::Debug => 11,
             Operator::New => 10,
             Operator::Cut => 10,
