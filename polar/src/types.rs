@@ -155,7 +155,7 @@ pub enum Operator {
 impl Operator {
     pub fn precedence(self) -> i32 {
         match self {
-            Operator::Print => 12,
+            Operator::Print => 11,
             Operator::Debug => 11,
             Operator::New => 10,
             Operator::Cut => 10,
