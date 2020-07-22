@@ -24,7 +24,7 @@ oso is designed to solve these problems based on 3 principles, which we'll descr
 What is oso
 -----------
 
-oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it. 
+oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it.
 
 Here are some of the nuts and bolts.
 
@@ -101,7 +101,7 @@ Splitting out authorization logic with oso might look as follows:
 
             .. code-block:: python
                 :caption: :fab:`python` expense.py
-                
+
                 def show(expense):
                     if oso.query("allow", [user, "read", expense]):
                         return str(expense)
@@ -132,7 +132,7 @@ Splitting out authorization logic with oso might look as follows:
                     user.email = expense.submitted_by;
 
 .. note::
-    Want to see how this policy works? Check out the :doc:`guide for writing policies </understand/policies/index>`.
+    Want to see how this policy works? Check out the :doc:`guide for writing policies </using/policies/index>`.
 
 The ``oso.query`` call can be made anywhere. So even if we have developer APIs
 and multiple different backend server calls -- which all require checking the
@@ -154,7 +154,7 @@ If we need to extend the permissions to make ``download`` stricter,  we just add
 adds more conditions: :polar:`allow(user, "download", expense) if allow(user, "read", expense) and user.has_mfa_enabled()`;
 
 Furthermore, by conforming to a standardized approach to authorization, we can leverage
-tooling built around the standard. For oso, this means access to :doc:`a policy debugger and interactive REPL </reference/dev-tools/index>`.
+tooling built around the standard. For oso, this means access to :doc:`a policy debugger and interactive REPL </using/dev-tools/index>`.
 
 Right tool for the job
 ----------------------
@@ -246,7 +246,7 @@ Perhaps there are users and administrators, but otherwise all users are treated 
 However, any application that needs to control access to data needs to
 determine access based on *who* the user is and her *relation* to the data.
 
-That's why the policies you see on this page are all about those attributes - e.g., 
+That's why the policies you see on this page are all about those attributes - e.g.,
 "does the user's email match the email that submitted the expense?", "is the user
 a manager of the project the expense?"
 
@@ -257,7 +257,7 @@ extricating it. Leaving us with the following options:
 
 * Build authorization as a separate consumer of the same application data.
 
-  * Now we have another system to keep in sync with potentially every other application, and possibly duplicate all of the classes and methods used to access data. 
+  * Now we have another system to keep in sync with potentially every other application, and possibly duplicate all of the classes and methods used to access data.
 
 * Synchronize relevant data into the authorization system.
 
@@ -278,7 +278,7 @@ its needed to make decisions, while keeping the code clean, reusable, and mainta
     Stay here and continue reading about what lies under the hood of the oso library.
 
     Head back to :doc:`/getting-started/quickstart` if you
-    haven't already, or continue on to :doc:`/understand/auth-fundamentals`.
+    haven't already, or continue on to :doc:`/using/auth-fundamentals`.
 
 
 .. todo::
@@ -287,7 +287,7 @@ its needed to make decisions, while keeping the code clean, reusable, and mainta
 Internals
 ---------
 
-oso is supported in :doc:`a number of languages </reference/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language.
+oso is supported in :doc:`a number of languages </using/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language.
 
 The core of oso is an implementation of the **Polar language**. This handles
 parsing policy files, and executing queries in the form of a virtual machine.

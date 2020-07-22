@@ -1,6 +1,6 @@
-=======================
-Application Integration
-=======================
+===================
+Add oso to your app
+===================
 
 Guide to adding oso to your application
 

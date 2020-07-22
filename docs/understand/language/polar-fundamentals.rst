@@ -375,7 +375,7 @@ unifications. If all of the unifications of the query arguments with
 the parameters in the head succeed, then a sub-query for the body
 of the rule is executed. The body of a rule may consist of a single
 predicate, or a conjunction of them, or of any of the operators
-described in the :doc:`Polar language reference </reference/polar-syntax>`,
+described in the :doc:`Polar language reference </using/polar-syntax>`,
 e.g., disjunction, negation, numeric comparisons, etc. Each conjunct
 is queried for, in left-to-right order, accumulating any bindings
 from unifications. If the queries for every conjunct in the body all
@@ -411,6 +411,6 @@ In this guide, we have explored:
 
 What we haven't explored here is how to use Polar to express
 particular authorization policies. Many examples can be found
-in the :doc:`Authorization Fundamentals </understand/auth-fundamentals>`
-and :doc:`Authorization Models </understand/policies/auth-models/index>` sections
+in the :doc:`Authorization Fundamentals </using/auth-fundamentals>`
+and :doc:`Authorization Models </using/examples/index>` sections
 of the manual.

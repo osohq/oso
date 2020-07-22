@@ -10,8 +10,8 @@ authorization logic.
 In this guide, we'll walk through a policy for an application with two Actor types: **Customers** and
 **Internal Users**.
 
-.. note:: This guide is written using the :doc:`Python library </reference/libraries/python/index>`
-    and assumes you are familiar with oso's :doc:`/understand/auth-fundamentals`.
+.. note:: This guide is written using the :doc:`Python library </using/libraries/python/index>`
+    and assumes you are familiar with oso's :doc:`/using/auth-fundamentals`.
 
 
 A Tale of Two Actors
