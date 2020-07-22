@@ -24,6 +24,7 @@ We have a simple ``Expense`` class, and some stored data in the ``EXPENSES`` dic
 Our web server contains some simple logic to filter out bad requests and not much else.
 
 .. tabs::
+
   .. group-tab:: Python
 
     .. literalinclude:: /examples/getting-started/python/server.py
@@ -37,6 +38,13 @@ Our web server contains some simple logic to filter out bad requests and not muc
       :class: copybutton
       :caption: :fas:`gem` server.rb :download:`(link) </examples/getting-started/ruby/server.rb>`
       :language: ruby
+
+  .. group-tab:: Java
+
+    .. literalinclude:: /examples/getting-started/java/server/Server.java
+      :class: copybutton
+      :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server/Server.java>`
+      :language: java
 
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
@@ -100,6 +108,12 @@ Adding oso
 
         $ gem install oso-oso
 
+    .. group-tab:: Java
+
+      .. todo:: Java install
+
+      Download :download:`oso-0.2.5.jar </examples/getting-started/java/lib/oso-0.2.5.jar>`,
+
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine.
 
@@ -133,6 +147,19 @@ highlighted:
     .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
       :caption: :fa:`oso` expenses.polar
 
+  .. group-tab:: Java
+
+    .. literalinclude:: /examples/getting-started/java/server-with-oso/Server.java
+      :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server-with-oso/Server.java>`
+      :language: java
+      :class: copybutton
+      :emphasize-lines: 4,26-31,53-55
+
+    And a new empty Polar policy file:
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+      :caption: :fa:`oso` expenses.polar
+
 
 And just like that, we're ready to start asking our global ``Oso`` instance to
 make authorization decisions!
@@ -157,6 +184,13 @@ arguments, **actor**, **action**, and **resource**:
         :language: ruby
         :lines: 4-6
 
+  .. group-tab:: Java
+
+    .. literalinclude:: /examples/getting-started/java/allow-01.java
+      :language: java
+      :lines: 5-8
+      :dedent: 8
+
 The above method call returns ``true`` if the **actor** ``"alice@example.com"`` may
 perform the **action** ``"GET"`` on the
 **resource** ``EXPENSES[1]``. We're using ``"GET"`` here to match up with the HTTP
@@ -172,7 +206,10 @@ start a REPL session and follow along:
 .. tabs::
   .. group-tab:: Python
 
+    Run: ``python``
+
     .. code-block:: pycon
+
 
       >>> from server import *
       >>> oso
@@ -210,6 +247,8 @@ start a REPL session and follow along:
 
 
   .. group-tab:: Ruby
+
+    Run: ``irb``
 
     .. code-block:: irb
 
@@ -249,8 +288,51 @@ start a REPL session and follow along:
       irb(main):006:0> OSO.allow(actor: "bhavik", action: "GET", resource: "expense")
       => false
 
+  .. group-tab:: Java
+
+    Run: ``jshell --class-path oso-0.2.1.jar Server.java``
+
+    .. code-block:: java
+        jshell> Oso oso = new Oso()
+        oso ==> com.osohq.oso.Oso@368f2016
+
+        jshell> String alice = "alice@example.com"
+        alice ==> "alice@example.com"
+
+        jshell> Expense expense = Server.EXPENSES[1]
+        expense ==> Expense(5000, software, alice@example.com)
+
+        jshell> oso.allow(alice, "GET", expense)
+        $12 ==> false
+
+    We can add a rule explicitly allowing Alice to view expenses...
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    ...which we can load into our oso instance:
+
+    .. code-block:: java
+
+      jshell> oso.loadFile("expenses.polar")
+
+    ...and now Alice has the power...
+
+    .. code-block:: java
+
+      jshell> oso.allow(alice, "GET", expense)
+      $14 ==> true
+
+    ...and everyone else is still denied:
+
+    .. code-block:: java
+
+      jshell> oso.allow("bhavik", "GET", expense)
+      $15 ==> false
+
 .. note::
-  Each time you do ``Oso.load_file``, it will load the policy
+  Each time you load a file, it will load the policy
   **without** clearing what is already loaded in. Be sure to
   clear oso using ``Oso.clear`` or create a new instance if you want
   to try adding a few new rules.
@@ -342,6 +424,22 @@ able to view expenses, but no one outside the company will be able to:
     library. The **actor** value passed to oso is a Ruby string, and oso allows us
     to call any ``String`` method from Ruby's standard library on it.
 
+  .. group-tab:: Java
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-03-java.polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    .. |string_endsWith| replace:: the ``String#endsWith?`` method
+    .. _string_endsWith: https://www.w3schools.com/java/ref_string_endswith.asp
+
+    We bind the provided email to the ``actor`` variable in the rule head and then
+    perform the ``.endsWith("@example.com")`` check in the rule body. If you
+    noticed that the ``.endsWith`` call looks pretty familiar, you're right on ---
+    oso is actually calling out to |string_endsWith|_ defined in the Java standard
+    library. The **actor** value passed to oso is a Ruby string, and oso allows us
+    to call any ``String`` method from Java's standard library on it.
+
 Once we've added our new dynamic rule and restarted the web server, every user
 with an ``@example.com`` email should be allowed to view any expense:
 
@@ -374,9 +472,25 @@ expenses.
 
 To accomplish that, we can replace our existing rule with:
 
-.. literalinclude:: /examples/getting-started/polar/expenses-04.polar
-  :caption: :fa:`oso` expenses.polar
-  :class: copybutton
+.. tabs::
+
+  .. group-tab:: Python
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-04.polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+  .. group-tab:: Ruby
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-04.polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+  .. group-tab:: Java
+
+    .. literalinclude:: /examples/getting-started/polar/expenses-04-java.polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
 
 Behind the scenes, oso looks up the ``submitted_by`` field on the provided
 ``Expense`` instance and compares that value against the provided **actor**.
