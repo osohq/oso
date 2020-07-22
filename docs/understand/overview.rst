@@ -22,7 +22,7 @@ oso is designed to solve these problems based on 3 principles, which we'll descr
 3. **Authorization decisions and application data are inseparable.** Authorization decisions always rely on application context – like who a user is and her relationship to the data she's trying to access. The authorization system ought to be able to call directly into the application so you can write policies using the application's objects and data.
 
 What is oso
-----------
+-----------
 
 oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it. 
 
