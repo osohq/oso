@@ -232,6 +232,8 @@ public class Polar {
 
         } else if (value instanceof Predicate) {
             Predicate pred = (Predicate) value;
+            if (pred.args == null)
+                pred.args = new ArrayList<Object>();
             jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", javaListToPolar(pred.args))));
         } else if (value instanceof Variable) {
             jVal.put("Variable", value);
