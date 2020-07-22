@@ -121,11 +121,11 @@ returns all columns present in the expense.
 Policy evaluation points
 ========================
 
-Policy evaluation is performed by using the oso library to run a Polar query
-from within your application.  This query can be integrated anywhere during the
-request processing flow. We will discuss several possible points for each of the
-above access control types.  Which you choose depends on the structure of your
-application, and your authorization requirements.
+Policies are evaluated by making a query with oso in your application.  This
+query can be integrated anywhere during the request processing flow. We will
+discuss several possible points for each of the above access control types.
+Which you choose depends on the structure of your application, and your
+authorization requirements.
 
 There are several possible integration points for oso.  First some definitions:
 

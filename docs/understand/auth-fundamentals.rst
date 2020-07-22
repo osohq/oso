@@ -81,19 +81,9 @@ We could read this as:
 
   ``actor`` may perform ``action`` on ``resource``
 
-.. REVIEW ME: The Polar VM is doing the matching here, so it is the thing that
-   answers in this sentence.  This sentence is describing unification, which is
-   a behavior of Polar. Polar is probably the right term here.
-
 Polar answers an authorization query by matching the supplied ``actor``,
 ``action``, and ``resource`` arguments with the parameters of ``allow``
 rules specified in the policy.
-
-.. ALTERNATIVE PHRASING
-.. The ``oso.allow()`` method in the oso library executes a Polar query for to
-.. perform authorization. Polar matches the supplied ``actor``, ``action``, and
-.. ``resource`` arguments with the parameters of ``allow`` rules specified in the
-.. policy.
 
 .. _airport:
 

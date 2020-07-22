@@ -179,11 +179,9 @@ application roles (:polar:`"admin"`, :polar:`"accountant"`, and
 :polar:`"employee"`) into a hierarchy that extended the application's
 authorization system without requiring any changes to core application code.
 
-.. REVIEW ME: Ok here?
-
 The seasoned vets in the audience may have recognized the :polar:`actor.role`
 attribute lookup for what it is: a pinch of `attribute-based access control
 <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC)
 hiding amongst our RBAC policy. In the next section, we'll dive fully into
 attribute-based authorization and show how intuitive it is to write concise,
-flexible, and powerful ABAC rules in Polar.
+flexible, and powerful ABAC rules with oso.

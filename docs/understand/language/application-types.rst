@@ -86,13 +86,10 @@ of actor.  We write a new rule:
   allow(flight_attendant: FlightAttendant, "board", flight: Flight) if
     flight_attendant.airline = flight.airline;
 
-.. REVIEW ME: I think Polar is fine here, we are explaining how Polar executes
-   code.
-
 Notice the new syntax we have used in the rule head: ``param: Type``.
 This form indicates that that the rule will only be evaluated if the parameter
-has the type specified by ``Type``.  Polar will only evaluate this allow rule
-if the ``actor`` is a ``FlightAttendant``, and the resource is a ``Flight``.
+has the type specified by ``Type``.  This allow rule evaluates if the ``actor``
+is a ``FlightAttendant``, and the resource is a ``Flight``.
 
 Flight attendants are not the only type of employee that needs to board the
 flight.  We also need to let pilots aboard, with the same logic.  We have a
@@ -116,12 +113,9 @@ subclasses of ``AirlineEmployee``.
 Built-in types
 --------------
 
-.. REVIEW: We are talking about using methods on built ins here from within
-   Polar.
-
 Because your application objects probably use your language's built-in
 primitive types such as ``str``, ``dict``, and ``int``, Polar allows you
-to use methods on those types for its built-ins, too. That way you can use
+to use methods on those types for its built-ins too. That way you can use
 familiar methods like ``str.startswith()`` on strings regardless of whether
 they originated in your application or as a literal in your policy.
 This applies to all of the Polar :ref:`primitive types <basic-types>`:
