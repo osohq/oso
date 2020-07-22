@@ -87,7 +87,7 @@ name is specified before the dictionary::
   Person{first_name: "Yogi", last_name: "Bear"}
 
 Classes can be registered with the oso library to integrate with Polar.  See
-:doc:`/understand/language/application-types` for more information.
+:doc:`/using/policies/application-types` for more information.
 
 A class instance literal must be used either with the :ref:`operator-new` or
 as a :ref:`pattern`.
@@ -290,7 +290,7 @@ New
 ^^^
 
 The new operator is used to construct a new instance of an application class.
-See :doc:`/understand/language/application-types`. The single argument to the
+See :doc:`/using/policies/application-types`. The single argument to the
 new operator must be an instance literal::
 
     new Person{first_name: "yogi", last_name: "bear"}
@@ -394,7 +394,7 @@ Now, the ``first_name`` rule can be used with instances of the ``User`` or
 ``Person`` type.
 
 For more on this feature, see
-:doc:`/understand/language/application-types`.
+:doc:`/using/policies/application-types`.
 
 .. _pattern:
 

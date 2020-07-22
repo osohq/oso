@@ -10,4 +10,4 @@ Language Libraries
     python/index
     ruby/index
 
-    ../frameworks
+    ../frameworks/index

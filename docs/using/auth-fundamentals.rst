@@ -19,7 +19,7 @@ In oso, an **authorization query** takes the form:
 
     May **actor** perform **action** on **resource**?
 
-Queries are made using the :doc:`oso library </reference/libraries/index>`.
+Queries are made using the :doc:`oso library </using/libraries/index>`.
 
 .. _actors:
 
@@ -37,7 +37,7 @@ Resources
 ---------
 Resources are the objects of authorization queries. They represent the
 application components that we wish to protect. They might be designated by
-a URI or other string, or may be an :doc:`application type </understand/language/application-types>`.
+a URI or other string, or may be an :doc:`application type </using/policies/application-types>`.
 
 .. _actions:
 
@@ -56,12 +56,12 @@ Policies
 oso evaluates queries using authorization logic contained in **policies**.
 Policies are written as code in a logic programming language called Polar.
 Polar is designed to provide a simple but expressive syntax for authorization
-logic. For more information on Polar, see the :doc:`language documentation </understand/language/index>`,
+logic. For more information on Polar, see the :doc:`language documentation </using/polar-syntax>`,
 and for examples of different kinds of policies you can express with it,
-see the :doc:`authorization models </understand/policies/auth-models/index>` section.
+see the :doc:`/using/examples/index` section.
 
 Policies are stored in Polar files (extension ``.polar``), which are loaded
-into the authorization engine using the oso :doc:`/reference/libraries/index`.
+into the authorization engine using the oso :doc:`/using/libraries/index`.
 Once loaded, policies can be used to evaluate authorization queries.
 
 Policies are made up of :ref:`rules <polar-rules>`. Each rule defines
@@ -119,7 +119,7 @@ before allowing them to board. And what about flight attendants?
 We might want to write separate rules for their boarding permissions.
 All of this is possible, and easy to integrate with your
 application's data using
-:doc:`application types </understand/language/application-types>`.
+:doc:`application types </using/policies/application-types>`.
 
 Summary
 =======
@@ -130,4 +130,4 @@ Summary
   access from the ``oso.allow()`` method.
 
 For more detailed examples of oso in action, check out our
-:doc:`authorization model guides </understand/policies/auth-models/index>`.
+:doc:`authorization model guides </using/examples/index>`.

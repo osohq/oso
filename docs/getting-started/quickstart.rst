@@ -94,13 +94,13 @@ Adding oso
     .. group-tab:: Python
 
       .. code-block:: console
-        
+
         $ pip install oso
 
     .. group-tab:: Ruby
 
       .. code-block:: console
-        
+
         $ gem install oso-oso
 
 Now that we've installed oso, we can import it into our project and construct
@@ -151,7 +151,7 @@ perform the **action** ``"view"`` on the
 **resource** ``"expense"``.
 
 .. note:: For more on **actors**, **actions**, and **resources**, check out
-  :doc:`/understand/auth-fundamentals`.
+  :doc:`/using/auth-fundamentals`.
 
 oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
@@ -205,21 +205,21 @@ start a REPL session and follow along:
     We can add a rule explicitly allowing Alice to view expenses...
 
     .. code-block:: irb
-    
+
       irb(main):004:0> OSO.load_str 'allow("alice", "view", "expense");'
       => nil
 
     ...and now Alice has the power...
 
     .. code-block:: irb
-    
+
       irb(main):005:0> OSO.allow(actor: "alice", action: "view", resource: "expense")
       => true
 
     ...and everyone else is still denied:
 
     .. code-block:: irb
-    
+
       irb(main):006:0> OSO.allow(actor: "bhavik", action: "view", resource: "expense")
       => false
 
@@ -234,7 +234,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik"`` does not
 match the string ``"alice"``.
 
 .. note:: For a deeper introduction to writing authorization rules with oso,
-  see :doc:`/understand/auth-fundamentals`.
+  see :doc:`/using/auth-fundamentals`.
 
 Authorizing HTTP requests
 =========================
@@ -267,7 +267,7 @@ decision that we can use in our server's response logic:
       :filename: server.py
       :diff: server-02.py
       :class: copybutton
-    
+
     .. literalinclude:: expenses-01.pol
       :base_path: /examples/getting-started/polar/
       :caption: expenses.pol
@@ -422,7 +422,7 @@ as:
 - Does the expense's ``amount`` field contain a value less than $100.00?
 
 .. note:: For more on leveraging application data in an oso policy, check out
-  :doc:`/understand/language/application-types`.
+  :doc:`/using/policies/application-types`.
 
 
 Writing your access policy as declarative rules over your app's classes and
@@ -480,9 +480,9 @@ We just blitzed through a ton of stuff:
 * Writing authorization rules over static and dynamic application data.
 
 If you're interested in what sets oso apart from existing authorization
-solutions, check out :doc:`/understand/overview`. If you want to learn more about
-authorization in oso, including common patterns like :doc:`/understand/policies/auth-models/rbac`
-and :doc:`/understand/policies/auth-models/abac`, we recommend continuing on to the
-:doc:`/understand/auth-fundamentals` guide. For more details on the logic programming
+solutions, check out :doc:`/getting-started/overview`. If you want to learn more about
+authorization in oso, including common patterns like :doc:`/using/examples/rbac`
+and :doc:`/using/examples/abac`, we recommend continuing on to the
+:doc:`/using/auth-fundamentals` guide. For more details on the logic programming
 language we used to write our authorization policies, head on over to the
-:doc:`/understand/language/index` guide.
+:doc:`/understand/language/polar-fundamentals` guide.

@@ -22,7 +22,7 @@ Using oso, you can:
 To see this in action, :doc:`continue on to the Getting Started guide <getting-started/quickstart>`.
 
 To learn more about oso and the principles behind its design,
-:doc:`read the oso overview page <understand/overview>`.
+:doc:`read the oso overview page <getting-started/overview>`.
 
 -----
 
@@ -43,7 +43,7 @@ To learn more about oso and the principles behind its design,
 
    getting-started/quickstart
    getting-started/download/index
-   understand/overview
+   getting-started/overview
 
 .. ----------
 
@@ -56,16 +56,15 @@ To learn more about oso and the principles behind its design,
    :caption: Using oso
    :hidden:
 
-   understand/auth-fundamentals
+   using/auth-fundamentals
 
-   understand/application/index
-   understand/policies/index
-   Examples <understand/policies/auth-models/index>
-   reference/polar-syntax
+   using/application/index
+   using/policies/index
+   using/examples/index
+   using/polar-syntax
 
-   reference/libraries/index
-
-   reference/dev-tools/index
+   using/libraries/index
+   using/dev-tools/index
 
 .. ----------
 ..
@@ -78,9 +77,10 @@ To learn more about oso and the principles behind its design,
    :hidden:
 
    understand/use-cases
-   reference/performance
-   reference/security
-   reference/faq
+   understand/language/polar-fundamentals
+   understand/performance
+   understand/security
+   understand/faq
 
 ..  ----------
 ..
