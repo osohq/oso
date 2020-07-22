@@ -255,7 +255,7 @@ Depending on the implementation, one could easily imagine the ``employees()`` me
 being handled by somewhere as a SQL join statement.
 
 To use this information for authorization decisions means we either need to duplicate
-this logic elsewhere, or leverage the exising business logic we already have access to.
+this logic elsewhere, or leverage the existing business logic we already have access to.
 
 At its best, authorization logic weaves together discrete bits of business logic into a
 rich authorization tapestry. Striking a balance between using application data wherever

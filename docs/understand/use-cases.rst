@@ -13,7 +13,7 @@ Some typical authorization use cases are:
 * **User-configurable permissions.** For any application - SaaS, on-premise,
   open source, etc. - where users can freely customize permissions, how is
   this exposed to users?
-* **Infrastructure.** For infrastracture hosted in the cloud and in a company's
+* **Infrastructure.** For infrastructure hosted in the cloud and in a company's
   own data centers, how does an organization manage who is allowed to do what
   (e.g., provision new machines, access production)?
 
@@ -49,7 +49,7 @@ to non-developers, which in the future would make oso suitable for use as an
 way for teams to build and expose IAM-like functionality in their products.
 
 Regarding infrastructure: while one might be able to express their desired
-infrastrure policies using oso, in order to enforce those policies one would
+infrastructure policies using oso, in order to enforce those policies one would
 need to build your own access gateway, proxy, or integration points.
 Currently this is possible but not documented. For this reason,
 oso should not be seen as a replacement for
