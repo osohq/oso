@@ -1,7 +1,7 @@
 Use Cases
 =========
 
-..todo::
+.. todo::
     Move to its own (sidebar) section
 
     The three areas:

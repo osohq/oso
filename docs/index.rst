@@ -85,7 +85,7 @@ To learn more about oso and the principles behind its design,
 ..  Project-related information.
 
 .. todo::
-   Add links to Github + Issues
+   Add links to GitHub + Issues
 
 .. toctree::
    :maxdepth: 1
@@ -95,7 +95,7 @@ To learn more about oso and the principles behind its design,
 
 
    project/changelogs/index
-   Github <https://github.com/osohq/oso>
+   GitHub <https://github.com/osohq/oso>
 
 ..
 .. Indices and tables

@@ -69,7 +69,7 @@ employee expenses. We'll need authorization logic to restrict access to, for exa
 
 At first, having ``if`` statements is not that big a deal. But over time, across multiple
 files and multiple parts of the application, you end up with pieces of authorization logic
-sprinkled throughout your codebase. This creates an defacto permissions system that is hard to update
+sprinkled throughout your codebase. This creates an de facto permissions system that is hard to update
 or change.
 
 Splitting out authorization logic with oso might look as follows:
@@ -272,7 +272,7 @@ extricating it. Leaving us with the following options:
 
 At its best, authorization logic weaves together discrete bits of business logic into a
 rich authorization tapestry. Striking a balance between using application data wherever
-its needed to make decisions, while keeping the code clean, reusable, and maintanable.
+its needed to make decisions, while keeping the code clean, reusable, and maintainable.
 
 
 .. admonition:: What's next?

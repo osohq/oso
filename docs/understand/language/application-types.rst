@@ -105,7 +105,7 @@ This rule matches both a ``Pilot`` and ``FlightAttendant`` since they are both
 subclasses of ``AirlineEmployee``.
 
 .. todo::
-   (dhatch): This would be a great spot to intro groups.
+   This would be a great spot to intro groups.
 
 .. _built-in-types:
 
