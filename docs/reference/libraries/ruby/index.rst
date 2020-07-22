@@ -2,9 +2,9 @@
 Ruby Authorization Library
 ============================
 
-Oso currently provides an authorization library to integrate oso with Ruby applications.
+oso is packaged as a gem for use in Ruby applications.
 
-Code-level documentation is :doc:`here</ruby/index>`.
+API documentation for the gem lives :doc:`here</ruby/index>`.
 
 Working with Ruby Objects
 ===========================
