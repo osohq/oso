@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     import flask
 
 # oso version
-__version__ = "0.2.3"
+__version__ = "0.2.5"
 
 
 class OsoException(Exception):

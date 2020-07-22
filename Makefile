@@ -14,12 +14,17 @@ python-build: rust-build
 python-test: python-build
 	$(MAKE) -C languages/python test
 	python examples/expenses-py/app.py
+	cd test && python test.py
 
 ruby-test:
 	$(MAKE) -C languages/ruby test
 
 java-test:
-	$(MAKE) -C languages/java test
+	$(MAKE) -C languages/java package
+	cd test && \
+		javac -classpath "../languages/java/oso/target/*:." Test.java && \
+		java -classpath "../languages/java/oso/target/*:." Test
+
 
 docs-test: python-build
 	$(MAKE) -C docs test
