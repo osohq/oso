@@ -142,9 +142,8 @@ Summary
 In this guide, we saw an example of an application policy that could result in
 significant repetition.   We tried out a few strategies for representing common
 policy, but using it across many resource types.  First, we wrote a custom rule
-that moved duplicated logic into one place.  Then we used specializers &
+that moved duplicated logic into one place.  Then we used specializers and
 application types to condense our policy even further.
-further.
 
 .. TODO
   Finally, we saw how groups & inheritance can both be exploited to
