@@ -97,6 +97,11 @@ exclude_patterns = [
 html_copy_source = False
 html_show_sourcelink = False
 
+# add copy button to <pre> elements inside a div with class="copyable"
+copybutton_selector = "div.copybutton pre"
+copybutton_prompt_text = "\\[\\d*\\]: |\\.\\.\\.: "
+copybutton_prompt_is_regexp = True
+
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "borland"
 

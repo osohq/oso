@@ -12,7 +12,7 @@ nav.md-tabs {
 
 .literal-block-wrapper {
     background: #eee;
-    border: 1px solid #eee;
+    border: 1px solid #ddd;
     border-radius: 6px;
     margin: 0;
     font-weight: 600;
@@ -20,15 +20,16 @@ nav.md-tabs {
 }
 
 .highlight {
-    background: #fdfdfd;
-    border: 1px solid #ddd;
+    background: #fcfcfc;
+    /* border: 1px solid #ddd; */
     border-radius: 6px;
     margin: 0;
     /* box-shadow: 0 2px 2px 0 rgba(0,0,0,.14); */
 }
 
 .highlight-polar .highlight {
-    /* background: #f7f9ff; */
+    /* background: 
+    #f7f9ff; */
 }
 
 /* These are used to make the +/- in the diff view not selectable */
@@ -43,6 +44,13 @@ nav.md-tabs {
 .highlight .gdn {
     color: #000000;
     background-color: #ffdddd;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+/* Prompts and outputs are not selectable */
+.highlight .gp, .go {
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */

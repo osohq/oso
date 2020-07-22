@@ -27,12 +27,14 @@ Our web server contains some simple logic to filter out bad requests and not muc
   .. group-tab:: Python
 
     .. literalinclude:: /examples/getting-started/python/server.py
+      :class: copybutton
       :caption: Download: :download:`server.py </examples/getting-started/python/server.py>`
       :language: python
 
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/getting-started/ruby/server.rb
+      :class: copybutton
       :caption: Download: :download:`server.rb </examples/getting-started/ruby/server.rb>`
       :language: ruby
 
@@ -77,36 +79,29 @@ let's create an access policy with oso!
 Adding oso
 ==========
 
-In order to write our first authorization policy, we first need to add oso to
-our application. If you don't already have it :doc:`installed </getting-started/download/index>`, go ahead and
-do so now:
-
-.. todo::
-  replace the hard-coded version number in the below snippet with the current latest version on RubyGems... somehow.
-
-.. tabs::
-  .. group-tab:: Python
-
-    .. code-block:: console
-      
-      $ pip install oso==0.2
-      Collecting oso==0.2.2
-        Using cached https://files.pythonhosted.org/packages/c7/c6/7b47b251d1ea137b7c724cec63591c43083f37e0f8356e232d45ec785743/oso-0.2.2-cp38-cp38-manylinux2010_x86_64.whl
-      Requirement already satisfied: cffi==1.14.0 in /home/sam/work/oso/oso/languages/python/.eggs/cffi-1.14.0-py3.8-linux-x86_64.egg (from oso==0.2.2) (1.14.0)
-      Requirement already satisfied: pycparser in /home/sam/work/oso/oso/languages/python/.eggs/pycparser-2.20-py3.8.egg (from cffi==1.14.0->oso==0.2.2) (2.20)
-      Installing collected packages: oso
-      Successfully installed oso-0.2.2
 
 
+.. admonition:: Installation
 
-  .. group-tab:: Ruby
+  In order to write our first authorization policy, we first need to add oso to
+  our application. If you don't already have it :doc:`installed </getting-started/download/index>`, go ahead and
+  do so now:
 
-    .. code-block:: console
-      
-      $ gem install oso-oso
-      Fetching oso-oso-#.#.#.gem
-      Successfully installed oso-oso-#.#.#
-      1 gem installed
+  .. todo::
+    replace the hard-coded version number(s) in the below snippet with the current latest version on RubyGems... somehow.
+
+  .. tabs::
+    .. group-tab:: Python
+
+      .. code-block:: console
+        
+        $ pip install oso
+
+    .. group-tab:: Ruby
+
+      .. code-block:: console
+        
+        $ gem install oso-oso
 
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine:
@@ -258,7 +253,7 @@ decision that we can use in our server's response logic:
 .. tip::
   Try copying the patch, and applying it locally with:
 
-  .. code-block:: console
+  .. code-block::
 
       $ patch <<EOF <hit enter>
       > <paste contents>
@@ -271,7 +266,7 @@ decision that we can use in our server's response logic:
       :base_path: /examples/getting-started/python/
       :filename: server.py
       :diff: server-02.py
-
+      :class: copybutton
     
     .. literalinclude:: expenses-01.pol
       :base_path: /examples/getting-started/polar/
@@ -283,6 +278,7 @@ decision that we can use in our server's response logic:
       :base_path: /examples/getting-started/ruby/
       :filename: server.rb
       :diff: server-02.rb
+      :class: copybutton
 
     .. literalinclude:: expenses-01.pol
       :base_path: /examples/getting-started/polar/
@@ -311,7 +307,7 @@ Our first rule allows the actor ``"alice@example.com"`` to ``GET`` any expense:
 .. literalinclude:: expenses-02.pol
   :base_path: /examples/getting-started/polar/
   :caption: expenses.pol
-
+  :class: copybutton
 
 The rule will succeed if the **actor** and **action** match the strings
 ``"alice@example.com"`` and ``"GET"``, respectively. We capture the provided
@@ -355,6 +351,7 @@ able to view expenses, but no one outside the company will be able to:
     .. literalinclude:: expenses-03-py.pol
       :base_path: /examples/getting-started/polar/
       :caption: expenses.pol
+      :class: copybutton
 
     .. |str_endswith| replace:: the ``str.endswith`` method
     .. _str_endswith: https://docs.python.org/3/library/stdtypes.html#str.endswith
@@ -371,6 +368,7 @@ able to view expenses, but no one outside the company will be able to:
     .. literalinclude:: expenses-03-rb.pol
       :base_path: /examples/getting-started/polar/
       :caption: expenses.pol
+      :class: copybutton
 
     .. |string_end_with| replace:: the ``String#end_with?`` method
     .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
@@ -401,30 +399,30 @@ are denied access:
 And that's just the tip of the iceberg. You can register *any* application object with
 oso and then leverage it in your application's authorization policy.
 
-.. For
-.. example, if you have ``Expense`` and ``User`` classes defined in your
-.. application, you could write a policy rule in oso that says a ``User`` may
-.. approve an ``Expense`` if they manage the ``User`` who submitted the expense
-.. and the expense's amount is less than $100.00:
+For
+example, if you have ``Expense`` and ``User`` classes defined in your
+application, you could write a policy rule in oso that says a ``User`` may
+approve an ``Expense`` if they manage the ``User`` who submitted the expense
+and the expense's amount is less than $100.00:
 
 
-.. .. code-block:: polar
+.. code-block:: polar
 
-..   allow(approver, "approve", expense) if
-..       approver = expense.submitted_by.manager
-..       and expense.amount < 10000;
+  allow(approver, "approve", expense) if
+      approver = expense.submitted_by.manager
+      and expense.amount < 10000;
 
-.. In the process of evaluating that rule, the oso engine would call back into the
-.. application in order to make determinations that rely on application data, such
-.. as:
+In the process of evaluating that rule, the oso engine would call back into the
+application in order to make determinations that rely on application data, such
+as:
 
-.. - Which user submitted the expense in question?
-.. - Who is their manager?
-.. - Is their manager the approver?
-.. - Does the expense's ``amount`` field contain a value less than $100.00?
+- Which user submitted the expense in question?
+- Who is their manager?
+- Is their manager the approver?
+- Does the expense's ``amount`` field contain a value less than $100.00?
 
-.. .. note:: For more on leveraging application data in an oso policy, check out
-..   :doc:`/understand/language/application-types`.
+.. note:: For more on leveraging application data in an oso policy, check out
+  :doc:`/understand/language/application-types`.
 
 
 Writing your access policy as declarative rules over your app's classes and
@@ -445,6 +443,7 @@ To accomplish that, we can replace our existing rule with:
 .. literalinclude:: expenses-04.pol
   :base_path: /examples/getting-started/polar/
   :caption: expenses.pol
+  :class: copybutton
 
 Behind the scenes, oso looks up the ``submitted_by`` field on the provided
 ``Expense`` instance and compares that value against the provided **actor**.
