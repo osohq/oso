@@ -163,7 +163,7 @@ Summary
    otherwise.
 
 We started with the basics of RBAC by writing out a toy policy and assigning
-roles to actors within Polar. We saw how simple it is to construct arbitrary
+roles to actors in Polar. We saw how simple it is to construct arbitrary
 role hierarchies, and we added a few inline queries to test our policy.
 
 Things started to get really interesting when we added the
