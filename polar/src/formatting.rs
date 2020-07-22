@@ -302,6 +302,7 @@ pub mod to_polar {
                 Cut => "cut",
                 ForAll => "forall",
                 Debug => "debug",
+                Print => "print",
                 Isa => "matches",
             }
             .to_string()
@@ -315,6 +316,7 @@ pub mod to_polar {
             // Lets us spit out strings that would reparse to the same ast.
             match self.operator {
                 Debug => "debug()".to_owned(),
+                Print => format!("print({})", format_args(self.operator, &self.args, ", ")),
                 Cut => "cut()".to_owned(),
                 ForAll => format!(
                     "forall({}, {})",
