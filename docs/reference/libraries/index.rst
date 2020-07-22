@@ -1,6 +1,6 @@
-=========
-Libraries
-=========
+==================
+Language Libraries
+==================
 
 
 .. toctree::
@@ -9,3 +9,5 @@ Libraries
     java/index
     python/index
     ruby/index
+
+    ../frameworks

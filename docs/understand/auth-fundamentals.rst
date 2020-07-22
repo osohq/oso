@@ -1,6 +1,6 @@
-==========================
-Authorization Fundamentals
-==========================
+============
+Key Concepts
+============
 
 .. todo::
    Rework authorization fundamentals

@@ -1,6 +1,6 @@
-============
-Syntax Guide
-============
+==============
+Polar Language
+==============
 
 Polar is a Prolog based logic programming language, specialized for making
 authorization decisions and tightly integrating with your application's native

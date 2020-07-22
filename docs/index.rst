@@ -43,6 +43,7 @@ To learn more about oso and the principles behind its design,
 
    getting-started/quickstart
    getting-started/download/index
+   understand/overview
 
 .. ----------
 
@@ -52,15 +53,19 @@ To learn more about oso and the principles behind its design,
 
 .. toctree::
    :maxdepth: 1
-   :caption: Understand oso
+   :caption: Using oso
    :hidden:
 
-   understand/overview
-   understand/use-cases
    understand/auth-fundamentals
 
    understand/application/index
    understand/policies/index
+   Examples <understand/policies/auth-models/index>
+   reference/polar-syntax
+
+   reference/libraries/index
+
+   reference/dev-tools/index
 
 .. ----------
 ..
@@ -68,16 +73,13 @@ To learn more about oso and the principles behind its design,
 
 .. toctree::
    :maxdepth: 1
-   :caption: Reference
+   :caption: Understand oso
    :titlesonly:
    :hidden:
 
-   reference/libraries/index
-   reference/frameworks/index
-   reference/polar-syntax
-   reference/dev-tools/index
-
+   understand/use-cases
    reference/performance
+   reference/security
    reference/faq
 
 ..  ----------
