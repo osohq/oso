@@ -16,7 +16,7 @@ This document explains how different types of Java objects can be used in oso po
 .. TODO: make below note reference correct doc
 
 .. note::
-    More detailed examples of working with application classes can be found in :ref:`auth-models`.
+    More detailed examples of working with application classes can be found in :doc:`/using/examples/index`.
 
 Class Instances
 ^^^^^^^^^^^^^^^^
