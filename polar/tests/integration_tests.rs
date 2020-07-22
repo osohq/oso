@@ -999,14 +999,14 @@ fn test_in() {
 }
 
 #[test]
-fn test_isa() {
+fn test_matches() {
     let mut polar = Polar::new(None);
-    qnull(&mut polar, "x = 1 and y = 2 and x isa y");
-    qeval(&mut polar, "x = 1 and y = 1 and x isa y");
+    qnull(&mut polar, "x = 1 and y = 2 and x matches y");
+    qeval(&mut polar, "x = 1 and y = 1 and x matches y");
 
-    qeval(&mut polar, "x = {foo: 1} and x isa {foo: 1}");
-    qnull(&mut polar, "x = {foo: 1} and x isa {foo: 1, bar: 2}");
-    qnull(&mut polar, "x = {foo: 1} and x isa {foo: 2}");
+    qeval(&mut polar, "x = {foo: 1} and x matches {foo: 1}");
+    qnull(&mut polar, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
+    qnull(&mut polar, "x = {foo: 1} and x matches {foo: 2}");
 }
 
 #[test]
@@ -1178,4 +1178,27 @@ fn test_emoji_policy() {
         .unwrap();
     assert!(qeval(&mut polar, r#"allow("👩‍🦰","🛠","🚙")"#));
     assert!(qnull(&mut polar, r#"allow("🧟","🛠","🚙")"#));
+}
+
+#[test]
+/// Check that boolean expressions evaluate without requiring "= true".
+fn test_boolean_expression() {
+    let mut polar = Polar::new(None);
+
+    // Succeeds because t is true.
+    assert!(qeval(&mut polar, "a = {t: true, f: false} and a.t"));
+    // Fails because `f` is not true.
+    assert!(qnull(&mut polar, "a = {t: true, f: false} and a.f"));
+    // Fails because `f` is not true.
+    assert!(qnull(&mut polar, "a = {t: true, f: false} and a.f and a.t"));
+    // Succeeds because `t` is true.
+    assert!(qeval(
+        &mut polar,
+        "a = {t: true, f: false} and (a.f or a.t)"
+    ));
+
+    assert!(qeval(&mut polar, "true"));
+    assert!(qnull(&mut polar, "false"));
+    assert!(qeval(&mut polar, "a = true and a"));
+    assert!(qnull(&mut polar, "a = false and a"));
 }

@@ -12,7 +12,11 @@
 #
 import os
 import sys
+
 from sphinx.highlighting import lexers
+from sphinxcontrib.spelling.filters import ContractionFilter
+
+from enchant.tokenize import Filter
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
@@ -40,6 +44,27 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.githubpages",
     "sphinxcontrib.contentui",
+    "sphinxcontrib.spelling",
+]
+
+class HyphenatedWordFilter(Filter):
+    """Treat some hypthenated words as allowed due to made up words in our docs."""
+    # This cannot just be allowed words because hypthenated words are split.
+
+    words = {
+        'un-taken',
+        'un-run'
+    }
+
+    def _skip(self, word):
+        return word in self.words
+
+
+spelling_word_list_filename = "spelling_allowed_words.txt"
+spelling_filters = [
+    # Fix spell check of contractions
+    ContractionFilter,
+    HyphenatedWordFilter
 ]
 
 html_static_path = ["_static"]
@@ -50,7 +75,16 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build",
+                    "Thumbs.db",
+                    ".DS_Store",
+                    "changelogs/vNEXT.rst",
+                    "changelogs/vTEMPLATE.rst",
+                    "**.pytest_cache**",
+                    "integrations",
+                    "language/polar-classes.rst",
+                    "polar.rst",
+                    "ruby/README.md"]
 
 # Don't copy the source or show a link
 html_copy_source = False

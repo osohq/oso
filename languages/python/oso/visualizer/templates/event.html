@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('oso_visualizer.static', filename='graph.css') }}">
+{% endblock %}
+
+{% block content %}
+<div>
+    <form>
+        <div class="row">
+            <div class="col">
+                <h4>Actor</h4>
+                {{ actor }}
+            </div>
+            <div class="col">
+                <h4>Action</h4>
+                {{ action }}
+            </div>
+            <div class="col">
+                <h4>Resource</h4>
+                {{ resource }}
+            </div>
+        </div>
+    </form>
+    <br>
+    <br>
+    <div id="d3-graph"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('oso_visualizer.static', filename='graph.js') }}"></script>
+{% endblock %}

@@ -281,12 +281,12 @@ Suppose our app has a user, defined as:
 
 
       allow(actor, "read", "budget") if
-          actor.is_superuser = true;
+          actor.is_superuser;
 
     In this rule, we have used a body, indicated by the ``if`` operator. ``user``
     defines a variable, which is bound to the value of ``actor``. In a rule with a body,
     the portion of the rule before the ``if`` operator (called the **head**) must first match.
-    Then, the ``body`` portition is evaluated.
+    Then, the ``body`` portion is evaluated.
 
     This rule will allow any **actor** that is a superuser to ``read`` the ``budget`` resource.
 

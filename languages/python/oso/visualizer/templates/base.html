@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  {% block head %}
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  {% block styles %}
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href={{ url_for('oso_visualizer.static', filename='bootstrap.min.css') }} type="text/css">
+  {# {{ bootstrap.load_css() }} #}
+  {% endblock %}
+
+  <title>
+    {% if title %}
+    {{ title }}
+    {% else %}
+    oso
+    {% endif %}
+  </title>
+  {% endblock %}
+</head>
+
+<body>
+  {% block navbar %}
+  <header>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #011f4b;">
+      <a class="navbar-brand" href="/">
+        <img src={{ url_for('oso_visualizer.static', filename='oso_logo_text_white.png') }} width="66" height="50" alt="oso logo">
+      </a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+        aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNavDropdown">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-item nav-link" href={{ url_for('.event_index') }}>Audit</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+  {% endblock %}
+
+  <!-- Your page content -->
+  <div class="container pt-4">
+    <div class="row">
+      <div class="col">
+        <h1><b>{{ heading | safe }}</b></h1>
+      </div>
+    </div>
+    {% block content %}{% endblock %}
+  </div>
+
+  {% block scripts %}
+  <script src={{ url_for('oso_visualizer.static', filename='jquery.min.js') }}></script>
+  <script src={{ url_for('oso_visualizer.static', filename='popper.min.js') }}></script>
+  <script src={{ url_for('oso_visualizer.static', filename='bootstrap.min.js') }}></script>
+  <!-- Optional JavaScript -->
+  {# {{ bootstrap.load_js() }} #}
+  {% endblock %}
+</body>
+
+</html>

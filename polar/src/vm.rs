@@ -11,9 +11,8 @@ use super::lexer::{loc_to_pos, make_context};
 use super::types::*;
 use super::{PolarResult, ToPolarString};
 
-pub const MAX_CHOICES: usize = 10_000;
-pub const MAX_GOALS: usize = 10_000;
-pub const MAX_EXECUTED_GOALS: usize = 10_000;
+pub const MAX_STACK_SIZE: usize = 10_000;
+pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30);
 
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
@@ -151,11 +150,14 @@ pub struct PolarVirtualMachine {
     pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
+    query_start_time: Option<std::time::Instant>,
+    query_timeout: std::time::Duration,
+
+    /// Maximum size of goal stack
+    stack_limit: usize,
+
     /// Binding stack constant below here.
     csp: usize,
-
-    /// Executed goal counter.
-    goal_counter: usize,
 
     /// Interactive debugger.
     pub debugger: Debugger,
@@ -200,9 +202,11 @@ impl PolarVirtualMachine {
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             bindings: vec![],
+            query_start_time: None,
+            query_timeout: QUERY_TIMEOUT_S,
+            stack_limit: MAX_STACK_SIZE,
             csp: 0,
             choices: vec![],
-            goal_counter: 0,
             queries: vec![],
             trace_stack: vec![],
             trace: vec![],
@@ -218,6 +222,16 @@ impl PolarVirtualMachine {
         };
         vm.bind_constants(constants);
         vm
+    }
+
+    #[cfg(test)]
+    fn set_stack_limit(&mut self, limit: usize) {
+        self.stack_limit = limit;
+    }
+
+    #[cfg(test)]
+    fn set_query_timeout(&mut self, timeout_s: u64) {
+        self.query_timeout = std::time::Duration::from_secs(timeout_s);
     }
 
     pub fn new_id(&self) -> u64 {
@@ -239,7 +253,9 @@ impl PolarVirtualMachine {
         if self.log {
             self.print(&format!("{}", goal));
         }
-        self.goal_counter += 1;
+
+        self.check_timeout()?;
+
         match goal.as_ref() {
             Goal::Backtrack => self.backtrack()?,
             Goal::Cut { choice_index } => self.cut(*choice_index),
@@ -316,6 +332,10 @@ impl PolarVirtualMachine {
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
     pub fn run(&mut self) -> PolarResult<QueryEvent> {
+        if self.query_start_time.is_none() {
+            self.query_start_time = Some(std::time::Instant::now());
+        }
+
         if self.goals.is_empty() {
             if self.choices.is_empty() {
                 return Ok(QueryEvent::Done);
@@ -352,21 +372,13 @@ impl PolarVirtualMachine {
 
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
-        if self.goals.len() >= MAX_GOALS {
+        if self.goals.len() >= self.stack_limit {
             return Err(error::RuntimeError::StackOverflow {
-                msg: format!("Goal stack overflow! MAX_GOALS = {}", MAX_GOALS),
+                msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
             }
             .into());
         }
-        if self.goal_counter >= MAX_EXECUTED_GOALS {
-            return Err(error::RuntimeError::StackOverflow {
-                msg: format!(
-                    "Goal count exceeded! MAX_EXECUTED_GOALS = {}",
-                    MAX_EXECUTED_GOALS
-                ),
-            }
-            .into());
-        }
+
         self.goals.push(Rc::new(goal));
         Ok(())
     }
@@ -396,7 +408,7 @@ impl PolarVirtualMachine {
             .rev()
             .map(GoalStack::new_reversed)
             .collect();
-        assert!(self.choices.len() < MAX_CHOICES, "too many choices");
+        assert!(self.choices.len() < self.stack_limit, "too many choices");
         self.choices.push(Choice {
             alternatives,
             bsp: self.bsp(),
@@ -615,6 +627,26 @@ impl PolarVirtualMachine {
         }
         st
     }
+
+    fn check_timeout(&self) -> PolarResult<()> {
+        let now = std::time::Instant::now();
+        let start_time = self
+            .query_start_time
+            .expect("Query start time not recorded");
+
+        if now - start_time > self.query_timeout {
+            return Err(error::RuntimeError::QueryTimeout {
+                msg: format!(
+                    "Query running for {}. Exceeded query timeout of {} seconds",
+                    (now - start_time).as_secs(),
+                    self.query_timeout.as_secs()
+                ),
+            }
+            .into());
+        }
+
+        Ok(())
+    }
 }
 
 /// Implementations of instructions.
@@ -669,7 +701,10 @@ impl PolarVirtualMachine {
     }
 
     /// Interact with the debugger.
-    fn debug(&self, message: &str) -> QueryEvent {
+    fn debug(&mut self, message: &str) -> QueryEvent {
+        // Query start time is reset when a debug event occurs.
+        self.query_start_time.take();
+
         QueryEvent::Debug {
             message: message.to_string(),
         }
@@ -934,6 +969,7 @@ impl PolarVirtualMachine {
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
         self.trace.push(Rc::new(Trace {
             node: Node::Term(term.clone()),
+            polar_str: term.to_string(),
             children: vec![],
         }));
 
@@ -944,8 +980,9 @@ impl PolarVirtualMachine {
             Value::Expression(Operation { operator, args }) => {
                 return self.query_for_operation(&term, *operator, args.clone());
             }
-            v => {
-                return Err(self.type_error(&term, format!("can't query for: {}", v.to_polar())));
+            _ => {
+                let term = self.deref(term);
+                self.query_for_value(&term)?;
             }
         }
         Ok(QueryEvent::None)
@@ -1160,7 +1197,25 @@ impl PolarVirtualMachine {
         Ok(QueryEvent::None)
     }
 
-    /// Push goals for lookups and method calls.
+    /// Query for a value.  Succeeds if the value is 'truthy' or backtracks.
+    /// Currently only defined for boolean values.
+    fn query_for_value(&mut self, term: &Term) -> PolarResult<()> {
+        if let Value::Boolean(value) = term.value() {
+            if !value {
+                // Backtrack if the boolean is false.
+                self.push_goal(Goal::Backtrack)?;
+            }
+
+            Ok(())
+        } else {
+            Err(self.type_error(
+                &term,
+                format!("can't query for: {}", term.value().to_polar()),
+            ))
+        }
+    }
+
+    /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
         assert_eq!(args.len(), 3);
         let object = self.deref(&args[0]);
@@ -1646,6 +1701,7 @@ impl PolarVirtualMachine {
                 goals.push(Goal::TraceRule {
                     trace: Rc::new(Trace {
                         node: Node::Rule(rule.clone()),
+                        polar_str: rule.to_string(),
                         children: vec![],
                     }),
                 });
@@ -2518,5 +2574,35 @@ mod tests {
             vm.deref(&term!(Value::Variable(answer))),
             term!(value!(true))
         );
+    }
+
+    #[test]
+    fn test_timeout() {
+        let mut vm = PolarVirtualMachine::default();
+        vm.set_query_timeout(1);
+        // Turn this off so we don't hit it.
+        vm.set_stack_limit(std::usize::MAX);
+
+        loop {
+            vm.push_goal(Goal::Noop).unwrap();
+            vm.push_goal(Goal::UnifyExternal {
+                left_instance_id: 1,
+                right_instance_id: 1,
+            })
+            .unwrap();
+            let result = vm.run();
+            match result {
+                Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
+                Err(err) => {
+                    assert!(matches!(err, error::PolarError {
+                        kind: error::ErrorKind::Runtime(error::RuntimeError::QueryTimeout { .. }),
+                        ..
+                    }));
+
+                    // End test.
+                    break;
+                }
+            }
+        }
     }
 }

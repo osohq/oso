@@ -23,7 +23,12 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: 2.4
-          working-directory: 'languages/ruby'
+          working-directory: "languages/ruby"
+
+      - name: Install Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: "10"
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
@@ -45,5 +50,9 @@ jobs:
       - run: make test
       - name: Install yard (for doc build)
         run: gem install yard
+      - name: Install spelling check
+        run: sudo apt-get install -y libenchant-dev
       - name: Doc test
         run: make -C docs test
+      - name: Spelling
+        run: SPHINXOPTS="-W" make -C docs spelling

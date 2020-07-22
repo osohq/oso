@@ -1,24 +1,21 @@
-=====
+====
 NEXT
-=====
+====
 
 **Release date:** XXXX-XX-XX
 
 Breaking changes
 ================
 
-.. TODO remove warning and replace with "None" if no breaking
-   changes.
-
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-Breaking change 1
------------------
+isa operator replaced with matches
+----------------------------------
 
-- summary of breaking change
-
-Link to migration guide
+To improve readability of Polar policies, the ``isa`` operator has
+been replaced with ``matches`` (:ref:`operator-matches`). Any policies using the
+``isa`` operator will need to be migrated.
 
 
 New features
@@ -37,7 +34,6 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Boolean values can now be queried directly.  The statement ``x = true and x``
+  now tests for the truthiness of ``x`` as the second argument of the
+  conjunction. Previously this would be invalid.

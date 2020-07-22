@@ -25,12 +25,12 @@ class PolarRuntimeException(PolarException):
 
     def __init__(self, message, error=None):
         super().__init__(message, error)
+        self.stack_trace = None
         if error:
             self.kind = [*error][0]
             data = error[self.kind]
-            self.stack_trace = data["stack_trace"]
-        else:
-            self.stack_trace = None
+            if "stack_trace" in data:
+                self.stack_trace = data["stack_trace"]
 
     def __str__(self):
         return super(PolarException, self).__str__()

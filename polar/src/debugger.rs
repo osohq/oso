@@ -226,12 +226,12 @@ impl Debugger {
             }
             "n" | "next" | "over" => {
                 self.step = Some(Step::Over {
-                    snapshot: vm.queries[..vm.queries.len() - 1].to_vec(),
+                    snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
                 })
             }
             "out" => {
                 self.step = Some(Step::Out {
-                    snapshot: vm.queries[..vm.queries.len() - 3].to_vec(),
+                    snapshot: vm.queries[..vm.queries.len().saturating_sub(3)].to_vec(),
                 })
             }
             "stack" | "queries" => return Some(show(&vm.queries)),

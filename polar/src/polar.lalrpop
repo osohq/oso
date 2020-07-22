@@ -54,7 +54,6 @@ extern {
         "debug" => lexer::Token::Debug,
         "print" => lexer::Token::Print,
         "in" => lexer::Token::In,       // in
-        "isa" => lexer::Token::Isa,     // isa
         "forall" => lexer::Token::ForAll,     // forall
         "if" => lexer::Token::If,       // if
         "and" => lexer::Token::And,     // and
@@ -276,9 +275,9 @@ Exp9<T>: Term = {
     <exp10:Exp10<T>> => exp10
 };
 
-Matches = {"isa", "matches"};
+Matches = {"matches"};
 
-// in isa
+// in matches
 Exp8<T>: Term = {
     <start:@L> <left:Exp8<T>> "in" <right:Exp9<T>> => {
         let args = vec![left, right];

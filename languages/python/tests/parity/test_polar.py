@@ -202,8 +202,8 @@ def test_dictionaries(tell, qeval, qvar):
 
 
 def test_external_classes(tell, qeval, qvar, externals):
-    assert qeval("new Bar{} isa Foo")
-    assert not qeval("new Qux{} isa Foo")
+    assert qeval("new Bar{} matches Foo")
+    assert not qeval("new Qux{} matches Foo")
     assert qeval('new Foo{}.foo = "Foo!"')
     assert qeval('new Bar{}.foo = "Bar!"')
 
@@ -219,13 +219,13 @@ def test_unify_class_fields(tell, qeval, qvar, externals):
 
 
 def test_argument_patterns(tell, qeval, qvar, externals):
-    tell("isaFoo(name, foo: Foo) if name = foo.name")
+    tell("matchesFoo(name, foo: Foo) if name = foo.name")
 
-    assert qeval('isaFoo(sam, new Foo{name: "sam"})')
-    assert qeval('isaFoo(sam, new Bar{name: "sam"})')
-    assert not qeval('isaFoo("alex", new Foo{name: "sam"})')
-    assert not qeval('isaFoo("alex", new Bar{name: "sam"})')
-    assert not qeval('isaFoo("alex", new Qux{})')
+    assert qeval('matchesFoo(sam, new Foo{name: "sam"})')
+    assert qeval('matchesFoo(sam, new Bar{name: "sam"})')
+    assert not qeval('matchesFoo("alex", new Foo{name: "sam"})')
+    assert not qeval('matchesFoo("alex", new Bar{name: "sam"})')
+    assert not qeval('matchesFoo("alex", new Qux{})')
 
 
 @pytest.mark.skip(reason="No longer support external instance unification")
@@ -239,41 +239,40 @@ def test_keys_are_confusing(tell, qeval, qvar, externals):
     assert not qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2}")
 
 
-def test_isa(qeval, qvar, externals):
-    assert qeval("{} isa {}")
-    assert qeval("{x: 1} isa {}")
-    assert qeval("{x: 1} isa {x: 1}")
-    assert qeval("{x: 1, y: 2} isa {x: 1}")
-    assert qeval("{x: 1, y: 2} isa {x: 1, y: 2}")
-    assert qeval("{a: {x: 1, y: 2}} isa {a: {y: 2}}")
-    assert not qeval("{a: {x: 1, y: 2}} isa {b: {y: 2}}")
-    assert not qeval("{x: 1} isa {x: 1, y: 2}")
-    assert not qeval("{y: 2} isa {x: 1, y: 2}")
-    assert not qeval("{} isa {x: 1, y: 2}")
-    assert not qeval("{} isa {x: 1}")
+def test_matches(qeval, qvar, externals):
+    assert qeval("{} matches {}")
+    assert qeval("{x: 1} matches {}")
+    assert qeval("{x: 1} matches {x: 1}")
+    assert qeval("{x: 1, y: 2} matches {x: 1}")
+    assert qeval("{x: 1, y: 2} matches {x: 1, y: 2}")
+    assert qeval("{a: {x: 1, y: 2}} matches {a: {y: 2}}")
+    assert not qeval("{a: {x: 1, y: 2}} matches {b: {y: 2}}")
+    assert not qeval("{x: 1} matches {x: 1, y: 2}")
+    assert not qeval("{y: 2} matches {x: 1, y: 2}")
+    assert not qeval("{} matches {x: 1, y: 2}")
+    assert not qeval("{} matches {x: 1}")
 
-    assert qeval("new MyClass{x: 1, y: 2} isa {}")
-    assert qeval("new MyClass{x: 1, y: 2} isa {x: 1, y: 2}")
-    assert not qeval("{x: 1, y: 2} isa MyClass{x: 1, y: 2}")
+    assert qeval("new MyClass{x: 1, y: 2} matches {}")
+    assert qeval("new MyClass{x: 1, y: 2} matches {x: 1, y: 2}")
+    assert not qeval("{x: 1, y: 2} matches MyClass{x: 1, y: 2}")
 
-    assert qeval("new MyClass{x: 1, y: 2} isa MyClass{x: 1}")
-    assert not qeval("new MyClass{y: 2} isa MyClass{x: 1, y: 2}")
+    assert qeval("new MyClass{x: 1, y: 2} matches MyClass{x: 1}")
+    assert not qeval("new MyClass{y: 2} matches MyClass{x: 1, y: 2}")
 
-    assert qeval("new OurClass{x: 1, y: 2} isa YourClass")
-    assert qeval("new OurClass{x: 1, y: 2} isa MyClass{x: 1}")
-    assert qeval("new OurClass{x: 1, y: 2} isa MyClass{x: 1, y: 2}")
-    assert not qeval("new MyClass{x: 1, y: 2} isa OurClass{x: 1}")
-    assert not qeval("new MyClass{x: 1, y: 2} isa YourClass")
-    assert not qeval("new MyClass{x: 1, y: 2} isa YourClass{}")
+    assert qeval("new OurClass{x: 1, y: 2} matches YourClass")
+    assert qeval("new OurClass{x: 1, y: 2} matches MyClass{x: 1}")
+    assert qeval("new OurClass{x: 1, y: 2} matches MyClass{x: 1, y: 2}")
+    assert not qeval("new MyClass{x: 1, y: 2} matches OurClass{x: 1}")
+    assert not qeval("new MyClass{x: 1, y: 2} matches YourClass")
+    assert not qeval("new MyClass{x: 1, y: 2} matches YourClass{}")
 
 
-def test_nested_isa(qeval, qvar, externals):
-    # TODO Need instance literal pattern here.
+def test_nested_matches(qeval, qvar, externals):
     assert qeval(
-        "new MyClass{x: new MyClass{x: 1, y: 2}, y: 2} isa MyClass{x: MyClass{x: 1}}"
+        "new MyClass{x: new MyClass{x: 1, y: 2}, y: 2} matches MyClass{x: MyClass{x: 1}}"
     )
     assert not qeval(
-        "new MyClass{x: new MyClass{x: 1}, y: 2} isa MyClass{x: MyClass{y: 2}}"
+        "new MyClass{x: new MyClass{x: 1}, y: 2} matches MyClass{x: MyClass{y: 2}}"
     )
 
 
@@ -373,7 +372,7 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
     polar.register_class(Booler)
 
     result = qvar("new Booler{}.whats_up() = var", "var", one=True)
-    assert qeval("new Booler{}.whats_up() = true")
+    assert qeval("new Booler{}.whats_up()")
 
 
 def test_numbers_from_external_call(polar, qeval, qvar, query):

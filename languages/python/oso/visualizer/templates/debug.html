@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('oso_visualizer.static', filename='graph.css') }}">
+{% endblock %}
+
+{% block content %}
+<div>
+  <form>
+    <div class="row">
+      <div class="col">
+        <label for="actor-select">Actor</label>
+        <select class="form-control" name="actor" id="actor-select">
+          <option selected disabled hidden>Select an Actor</option>
+          {% for slug, actor in actors %}
+          <option value={{ slug }} {% if slug == selected_actor %} selected {% endif %}>{{ actor|safe }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <label for="resource-select">Resource</label>
+        <select class="form-control" name="resource" id="resource-select">
+          <option selected disabled hidden>Select a Resource</option>
+          {% for slug, resource in resources %}
+          <option value={{ slug }} {% if slug == selected_resource %} selected {% endif %}>{{ resource|safe }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <label for="action-select">Action</label>
+        <select class="form-control" name="action" id="action-select">
+          <option selected disabled hidden>Select an Action</option>
+          {% for slug, action in actions %}
+          <option value={{ slug }} {% if slug == selected_action %} selected {% endif %}>{{ action|safe }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <br>
+    <button type="submit" class="btn btn-primary">
+      Submit
+    </button>
+  </form>
+  <div id="d3-graph"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('oso_visualizer.static', filename='graph.js') }}"></script>
+{% endblock %}
