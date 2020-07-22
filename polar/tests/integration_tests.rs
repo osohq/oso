@@ -800,6 +800,27 @@ fn test_arithmetic() {
     assert!(qeval(&mut polar, "2 * 3 == 6"));
     assert!(qeval(&mut polar, "6 / 2 == 3"));
     assert!(qeval(&mut polar, "2 / 6 == 0.3333333333333333"));
+
+    polar
+        .load(
+            r#"even(0) if cut();
+               even(x) if x > 0 and odd(x - 1);
+               odd(1) if cut();
+               odd(x) if x > 0 and even(x - 1);"#,
+        )
+        .unwrap();
+
+    assert!(qeval(&mut polar, "even(0)"));
+    assert!(qnull(&mut polar, "even(1)"));
+    assert!(qeval(&mut polar, "even(2)"));
+    assert!(qnull(&mut polar, "even(3)"));
+    assert!(qeval(&mut polar, "even(4)"));
+
+    assert!(qnull(&mut polar, "odd(0)"));
+    assert!(qeval(&mut polar, "odd(1)"));
+    assert!(qnull(&mut polar, "odd(2)"));
+    assert!(qeval(&mut polar, "odd(3)"));
+    assert!(qnull(&mut polar, "odd(4)"));
 }
 
 #[test]
