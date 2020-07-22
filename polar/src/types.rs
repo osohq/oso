@@ -2,9 +2,11 @@
 //!
 //! Polar types
 
+use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
+use std::ops::{Add, Div, Mul, Sub};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -207,12 +209,100 @@ impl Pattern {
     }
 }
 
-pub type Float = ordered_float::OrderedFloat<f64>;
+pub type Float = OrderedFloat<f64>;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq)]
 pub enum Numeric {
     Integer(i64),
     Float(Float),
+}
+
+impl Add for Numeric {
+    type Output = Option<Self>;
+
+    fn add(self, other: Self) -> Option<Self> {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_add(b).map(Numeric::Integer),
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                Some(Numeric::Float(OrderedFloat(a as f64 + b.0)))
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                Some(Numeric::Float(OrderedFloat(a.0 + b as f64)))
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 + b.0))),
+        }
+    }
+}
+
+impl Sub for Numeric {
+    type Output = Option<Self>;
+
+    fn sub(self, other: Self) -> Option<Self> {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_sub(b).map(Numeric::Integer),
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                Some(Numeric::Float(OrderedFloat(a as f64 - b.0)))
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                Some(Numeric::Float(OrderedFloat(a.0 - b as f64)))
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 - b.0))),
+        }
+    }
+}
+
+impl Mul for Numeric {
+    type Output = Option<Self>;
+
+    fn mul(self, other: Self) -> Option<Self> {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_mul(b).map(Numeric::Integer),
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                Some(Numeric::Float(OrderedFloat(a as f64 * b.0)))
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                Some(Numeric::Float(OrderedFloat(a.0 * b as f64)))
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 * b.0))),
+        }
+    }
+}
+
+impl Div for Numeric {
+    type Output = Option<Self>;
+
+    fn div(self, other: Self) -> Option<Self> {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => {
+                if b == 0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a as f64 / b as f64)))
+                }
+            }
+            (Numeric::Integer(a), Numeric::Float(b)) => {
+                if b.0 == 0.0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a as f64 / b.0)))
+                }
+            }
+            (Numeric::Float(a), Numeric::Integer(b)) => {
+                if b == 0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a.0 / b as f64)))
+                }
+            }
+            (Numeric::Float(a), Numeric::Float(b)) => {
+                if b.0 == 0.0 {
+                    None
+                } else {
+                    Some(Numeric::Float(OrderedFloat(a.0 / b.0)))
+                }
+            }
+        }
+    }
 }
 
 impl PartialEq for Numeric {
