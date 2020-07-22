@@ -69,6 +69,18 @@ pub Number: Term = {
     },
     <start:@L> <f:"Float"> => {
         Term::new_from_parser(src_id, start, Value::Number(f.into()))
+    },
+    <start:@L> "+" <i:"Integer"> => {
+        Term::new_from_parser(src_id, start, Value::Number(i.into()))
+    },
+    <start:@L> "+" <f:"Float"> => {
+        Term::new_from_parser(src_id, start, Value::Number(f.into()))
+    },
+    <start:@L> "-" <i:"Integer"> => {
+        Term::new_from_parser(src_id, start, Value::Number((-i).into()))
+    },
+    <start:@L> "-" <f:"Float"> => {
+        Term::new_from_parser(src_id, start, Value::Number((-f).into()))
     }
 };
 

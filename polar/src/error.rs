@@ -203,6 +203,9 @@ impl fmt::Display for ParseError {
 // @TODO: Information about the context of the error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
+    ArithmeticError {
+        msg: String,
+    },
     Serialization {
         msg: String,
     },
@@ -229,6 +232,7 @@ pub enum RuntimeError {
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
             Self::TypeError {

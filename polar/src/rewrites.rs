@@ -15,6 +15,36 @@ fn and_wrap(a: &mut Term, b: Term) {
 /// and returns the rewritten expression.
 fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
     match term.value() {
+        // This will be much nicer with #![feature(or_patterns)]
+        Value::Expression(Operation {
+            operator: op @ Operator::Add,
+            args,
+        })
+        | Value::Expression(Operation {
+            operator: op @ Operator::Sub,
+            args,
+        })
+        | Value::Expression(Operation {
+            operator: op @ Operator::Mul,
+            args,
+        })
+        | Value::Expression(Operation {
+            operator: op @ Operator::Div,
+            args,
+        }) if args.len() == 2 => {
+            // Rewrite op(a, b) to op(a, b, x) with x a temporary.
+            let temp = Value::Variable(kb.gensym("op"));
+            let new_op = Value::Expression(Operation {
+                operator: *op,
+                args: vec![
+                    args[0].clone(),
+                    args[1].clone(),
+                    term.clone_with_value(temp.clone()),
+                ],
+            });
+            term.replace_value(temp);
+            Some(term.clone_with_value(new_op))
+        }
         Value::Expression(Operation {
             operator: Operator::Dot,
             args,
@@ -26,7 +56,7 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
                 args: vec![
                     args[0].clone(),
                     args[1].clone(),
-                    args[1].clone_with_value(temp.clone()),
+                    term.clone_with_value(temp.clone()),
                 ],
             });
             term.replace_value(temp);

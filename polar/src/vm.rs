@@ -1064,6 +1064,9 @@ impl PolarVirtualMachine {
             | op @ Operator::Neq => {
                 return self.comparison_op_helper(term, op, args);
             }
+            op @ Operator::Add | op @ Operator::Sub | op @ Operator::Mul | op @ Operator::Div => {
+                return self.arithmetic_op_helper(term, op, args);
+            }
             Operator::In => {
                 assert_eq!(args.len(), 2);
                 let item = &args[0];
@@ -1187,12 +1190,6 @@ impl PolarVirtualMachine {
                     term: double_negation,
                 })?;
             }
-            _ => {
-                return Err(self.type_error(
-                    &term,
-                    format!("can't query for: {}", term.value().to_polar()),
-                ));
-            }
         }
         Ok(QueryEvent::None)
     }
@@ -1258,7 +1255,49 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    /// Evaluate numerical comparisons
+    /// Evaluate arithmetic operations.
+    fn arithmetic_op_helper(
+        &mut self,
+        term: &Term,
+        op: Operator,
+        args: Vec<Term>,
+    ) -> PolarResult<QueryEvent> {
+        assert_eq!(args.len(), 3);
+        let left_term = self.deref(&args[0]);
+        let right_term = self.deref(&args[1]);
+        let result = &args[2];
+        assert!(matches!(result.value(), Value::Variable(_)));
+        match (left_term.value(), right_term.value()) {
+            (Value::Number(left), Value::Number(right)) => {
+                if let Some(answer) = match op {
+                    Operator::Add => *left + *right,
+                    Operator::Sub => *left - *right,
+                    Operator::Mul => *left * *right,
+                    Operator::Div => *left / *right,
+                    _ => {
+                        return Err(error::RuntimeError::Unsupported {
+                            msg: format!("numeric operation {}", op.to_polar()),
+                        }
+                        .into())
+                    }
+                } {
+                    self.push_goal(Goal::Unify {
+                        left: term.clone_with_value(Value::Number(answer)),
+                        right: result.clone(),
+                    })?;
+                } else {
+                    return Err(error::RuntimeError::ArithmeticError {
+                        msg: term.to_polar(),
+                    }
+                    .into());
+                }
+            }
+            (_, _) => todo!(),
+        }
+        Ok(QueryEvent::None)
+    }
+
+    /// Evaluate comparisons.
     fn comparison_op_helper(
         &mut self,
         term: &Term,
@@ -1268,22 +1307,31 @@ impl PolarVirtualMachine {
         assert_eq!(args.len(), 2);
         let left_term = self.deref(&args[0]);
         let right_term = self.deref(&args[1]);
-
         match (left_term.value(), right_term.value()) {
             (Value::Number(left), Value::Number(right)) => {
-                let result = match op {
+                if !match op {
                     Operator::Lt => left < right,
                     Operator::Leq => left <= right,
                     Operator::Gt => left > right,
                     Operator::Geq => left >= right,
                     Operator::Eq => left == right,
                     Operator::Neq => left != right,
-                    _ => unreachable!(
-                        "operator: {:?} should not be handled by this method, this is a bug",
-                        op
-                    ),
-                };
-                if !result {
+                    _ => unreachable!("{:?} is not a comparison operator", op),
+                } {
+                    self.push_goal(Goal::Backtrack)?;
+                }
+                Ok(QueryEvent::None)
+            }
+            (Value::String(left), Value::String(right)) => {
+                if !match op {
+                    Operator::Lt => left < right,
+                    Operator::Leq => left <= right,
+                    Operator::Gt => left > right,
+                    Operator::Geq => left >= right,
+                    Operator::Eq => left == right,
+                    Operator::Neq => left != right,
+                    _ => unreachable!("{:?} is not a comparison operator", op),
+                } {
                     self.push_goal(Goal::Backtrack)?;
                 }
                 Ok(QueryEvent::None)

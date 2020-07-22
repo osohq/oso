@@ -129,7 +129,10 @@ pub fn main() -> anyhow::Result<()> {
                     query.call_result(call_id, None).unwrap();
                 }
                 Ok(e) => println!("Unsupported event: {:?}", e),
-                Err(e) => println!("{}", e),
+                Err(e) => {
+                    println!("{}", e);
+                    break;
+                }
             }
         }
     }
