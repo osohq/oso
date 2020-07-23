@@ -75,6 +75,14 @@ We'll first start our server...
       [2020-07-15 00:35:52] INFO  ruby 2.4.10 (2020-03-31) [x86_64-linux]
       [2020-07-15 00:35:52] INFO  WEBrick::HTTPServer#start: pid=537647 port=5050
 
+  .. group-tab:: Java
+
+    .. code-block:: console
+
+        $ javac MyServer.java
+        $ java MyServer
+        MyServer running on /127.0.0.1:5050
+
 ...and then, in another terminal, make some requests to our running server:
 
 .. code-block:: console
@@ -133,7 +141,7 @@ highlighted:
       :language: python
       :class: copybutton
       :emphasize-lines: 3,5-6,31-32,39-42
-    
+
     And a new empty Polar policy file:
 
     .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
