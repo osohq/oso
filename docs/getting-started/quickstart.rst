@@ -79,8 +79,8 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac -cp oso-0.2.5.jar:. Server.java
-        $ java -cp oso-0.2.5.jar:. Server
+        $ javac Server.java
+        $ java Server
         Server running on /127.0.0.1:5050
 
 ...and then, in another terminal, make some requests to our running server:
@@ -126,6 +126,15 @@ Adding oso
       .. todo:: Java install
 
       Download :download:`oso-0.2.5.jar </examples/getting-started/java/lib/oso-0.2.5.jar>`.
+
+      Then build and run your server with:
+
+      .. code-block:: console
+
+        $ javac -cp oso-0.2.5.jar:. Server.java
+        $ java -cp oso-0.2.5.jar:. Server
+
+
 
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine.
