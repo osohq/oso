@@ -24,11 +24,15 @@ Polar has only a few primitive data types.
 Numbers
 -------
 
-Polar parses unquoted integers as numeric values. For example::
+Polar parses unquoted integers or floating point numbers as numeric values.
+For example::
 
   22
   43
-  7
+  -7
+  22.3
+  -22.31
+  2.0e9
 
 are all parsed as numbers.
 
