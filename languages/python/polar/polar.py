@@ -98,18 +98,35 @@ class Polar:
             host = self.host.copy()
         return Query(self.ffi_polar, host=host).run(query)
 
-    def repl(self):
+    def repl(self, load=True):
+        """Start an interactive REPL session."""
+        if load:
+            import sys
+
+            for f in sys.argv[1:]:
+                self.load_file(f)
         self._load_queued_files()
+
         while True:
-            query = lib.polar_query_from_repl(self.ffi_polar)
-            had_result = False
-            if is_null(query):
-                print("Query error: ", get_error())
-                break
-            for res in self.run(query):
-                had_result = True
-                print(f"Result: {res['bindings']}")
-            if not had_result:
+            try:
+                query = input("Query: ").strip(";")
+            except EOFError:
+                return
+            ffi_query = lib.polar_new_query(self.ffi_polar, to_c_str(query))
+            if is_null(ffi_query):
+                print("Parse error: ", get_error())
+                continue
+
+            result = False
+            try:
+                for res in self.run(ffi_query):
+                    result = True
+                    bindings = res["bindings"]
+                    print(f"True: {bindings}" if bindings else "True")
+            except PolarRuntimeException as e:
+                print(e)
+                continue
+            if not result:
                 print("False")
 
     def register_class(self, cls, *, name=None, from_polar=None):
