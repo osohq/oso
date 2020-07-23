@@ -79,7 +79,7 @@
       }
     },
     "not": {
-      "match": "(\\s?)(and)(\\s)",
+      "match": "(\\s?)(not)(\\s)",
       "captures": {
         "2": { "name": "constant.character" }
       }
