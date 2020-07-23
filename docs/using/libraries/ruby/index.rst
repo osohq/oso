@@ -90,7 +90,11 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
   :caption: app.rb
 
   class User
-    # ...
+    attr_reader :groups
+
+    def initialize(groups)
+      @groups = groups
+    end
 
     def has_groups(other)
       groups & other == other
