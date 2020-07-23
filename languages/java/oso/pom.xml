@@ -17,9 +17,15 @@
   </distributionManagement>
 
   <name>oso</name>
-  <description>A simple oso.</description>
-  <!-- FIXME change it to the project's website -->
-  <url>http://www.example.com</url>
+  <description>oso authorization library.</description>
+  <url>https://www.osohq.com</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0 (Apache-2.0)</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
