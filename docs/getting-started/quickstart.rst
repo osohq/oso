@@ -79,8 +79,8 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac Server.java
-        $ java Server
+        $ javac -cp oso-0.2.5.jar:. Server.java
+        $ java -cp oso-0.2.5.jar:. Server
         Server running on /127.0.0.1:5050
 
 ...and then, in another terminal, make some requests to our running server:
