@@ -13,7 +13,7 @@ oso's Python authorization library allows you to write policy rules over Python 
 This document explains how different types of Python objects can be used in oso policies.
 
 .. note::
-    More detailed examples of working with application classes can be found in :ref:`auth-models`.
+    More detailed examples of working with application classes can be found in :doc:`/using/examples/index`.
 
 Class Instances
 ^^^^^^^^^^^^^^^^
