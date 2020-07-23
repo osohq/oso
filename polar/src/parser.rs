@@ -244,9 +244,20 @@ mod tests {
     }
 
     #[test]
+    fn parse_integers() {
+        assert_eq!(parse_query("123"), term!(123));
+        assert_eq!(parse_query("0"), term!(0));
+        assert_eq!(parse_query("+123"), term!(123));
+        assert_eq!(parse_query("-123"), term!(-123));
+    }
+
+    #[test]
     fn parse_floats() {
         assert_eq!(parse_query("0.123"), term!(0.123));
         assert_eq!(parse_query("1.234"), term!(1.234));
+        assert_eq!(parse_query("+1.234"), term!(1.234));
+        assert_eq!(parse_query("-1.234"), term!(-1.234));
+        assert_eq!(parse_query("-1.234e-56"), term!(-1.234e-56));
     }
 
     #[test]

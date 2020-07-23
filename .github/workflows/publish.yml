@@ -1,0 +1,75 @@
+name: Publish Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version Number"
+        required: true
+jobs:
+  java:
+    name: Publish java jar to maven repository
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GithubToken: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: "v${{ github.event.inputs.version }}"
+      - run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-lib-${{ github.event.inputs.version }}.zip") | .url') --output oso-lib-${{ github.event.inputs.version }}.zip
+      - run: unzip oso-lib-${{ github.event.inputs.version }}.zip -d oso-lib-${{ github.event.inputs.version }}
+      - uses: actions/setup-java@v1
+        with:
+          java-version: "10"
+      - name: Copy libraries into resources.
+        run: |
+          mkdir -p languages/java/oso/src/main/resources/linux
+          cp -r oso-lib-${{ github.event.inputs.version }}/libpolar.so languages/java/oso/src/main/resources/linux/
+          mkdir -p languages/java/oso/src/main/resources/macos
+          cp -r oso-lib-${{ github.event.inputs.version }}/libpolar.dylib languages/java/oso/src/main/resources/macos/
+          mkdir -p languages/java/oso/src/main/resources/win
+          cp -r oso-lib-${{ github.event.inputs.version }}/polar.dll languages/java/oso/src/main/resources/win/
+      - run: |
+          mvn clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true -s settings.xml
+        working-directory: languages/java/oso
+  python:
+    name: Publish python package to pypi
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+      TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: "v${{ github.event.inputs.version }}"
+      - run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
+      - run: unzip oso-python-${{ github.event.inputs.version }}.zip -d oso-python-${{ github.event.inputs.version }}
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: "3.7"
+      - run: pip install twine
+      - run: twine upload oso-python-${{ github.event.inputs.version }}/*.whl --non-interactive
+  ruby:
+    name: Publish ruby gem to rubygems
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GEM_HOST_API_KEY: ${{ secrets.GEM_HOST_API_KEY }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: "v${{ github.event.inputs.version }}"
+      - run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-ruby-${{ github.event.inputs.version }}.zip") | .url') --output oso-ruby-${{ github.event.inputs.version }}.zip
+      - run: unzip oso-ruby-${{ github.event.inputs.version }}.zip -d oso-ruby-${{ github.event.inputs.version }}
+      - name: Set up ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "2.7"
+          working-directory: "languages/ruby"
+      - run: gem push oso-oso-${{ github.event.inputs.version }}.gem
+        working-directory: "oso-ruby-${{ github.event.inputs.version }}"

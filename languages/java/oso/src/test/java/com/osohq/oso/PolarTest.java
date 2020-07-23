@@ -149,6 +149,27 @@ public class PolarTest {
     }
 
     @Test
+    public void testArrayFFIRoundTrip() throws Exception {
+        int[] a1 = { 1, 2, 3, 4 };
+        JSONObject polar = p.toPolarTerm(a1);
+        Object java = p.toJava(polar);
+        assertEquals(List.of(1, 2, 3, 4), java);
+
+        double[] a2 = { 1.2, 3.5 };
+        polar = p.toPolarTerm(a2);
+        java = p.toJava(polar);
+
+        // TODO: adjust so precision isn't lost going from double -> float
+        assertEquals(List.of((float) 1.2, (float) 3.5), java);
+
+        String[] a3 = { "hello", "world" };
+        polar = p.toPolarTerm(a3);
+        java = p.toJava(polar);
+        assertEquals(List.of("hello", "world"), java);
+
+    }
+
+    @Test
     public void testDictFFIRoundTrip() throws Exception {
         Map<String, Integer> m = Map.of("a", 1, "b", 2);
         JSONObject polar = p.toPolarTerm(m);
@@ -241,13 +262,18 @@ public class PolarTest {
     @Test
     public void testStringMethods() throws Exception {
         p.loadStr("f(x) if x.length = 3;");
-        if (p.queryStr("f(\"oso\")").results().isEmpty()) {
-            throw new Exception();
-        }
+        assertFalse(p.queryStr("f(\"oso\")").results().isEmpty());
+        assertTrue(p.queryStr("f(\"notoso\")").results().isEmpty());
+    }
 
-        if (!p.queryStr("f(\"notoso\")").results().isEmpty()) {
-            throw new Exception();
-        }
+    @Test
+    public void testListMethods() throws Exception {
+        p.loadStr("f(x) if x.size() = 3;");
+        assertFalse(p.queryPred("f", List.of(new ArrayList(Arrays.asList(1, 2, 3)))).results().isEmpty());
+        assertTrue(p.queryPred("f", List.of(new ArrayList(Arrays.asList(1, 2, 3, 4)))).results().isEmpty());
+
+        assertFalse(p.queryPred("f", List.of(new int[] { 1, 2, 3 })).results().isEmpty());
+        assertTrue(p.queryPred("f", List.of(new int[] { 1, 2, 3, 4 })).results().isEmpty());
     }
 
     @Test
