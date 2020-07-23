@@ -91,8 +91,8 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
 
    	class User
 			# ...
-			def has_groups(groups)
-				groups.each {|g|
+			def has_groups(other)
+				other.each {|g|
 					if !groups.include? g
 					return false
 					end
