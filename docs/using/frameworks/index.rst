@@ -4,7 +4,7 @@ Framework Integrations
 
 **Coming soon**
 
-oso integrates directly with language specific web frameworks and ORMs to
+oso integrates directly with language-specific web frameworks and ORMs to
 streamline the process of adding oso to your application.
 
 .. Totally made up code snippet!
@@ -19,7 +19,8 @@ streamline the process of adding oso to your application.
     def secret_route():
         return "Hello world"
 
-In the meantime...
+We are working on updating our documentation with these integrations. In the
+meantime...
 
 - Vote & track your favorite framework integration at our `GitHub repository`_.
 - Checkout our `blog posts`_ on using oso in your app.
