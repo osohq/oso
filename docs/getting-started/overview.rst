@@ -17,18 +17,14 @@ These can be hard to express concisely, and over time what started as a small nu
 
 oso is designed to solve these problems based on 3 principles, which we'll describe briefly then in more detail below.
 
-1. **Separation of concerns.** Authorization logic is distinct from business logic. By separating the two, you can make changes to the policy which apply across the entire application, write reusable patterns, and get a single place to control, test and visualize access.
+1. **Separation of concerns.** Authorization logic is distinct from business logic, and by separating the two, you can make changes to your policies that apply across your entire application, write reusable patterns, and get a single place to control, test and visualize access.
 2. **Right tool for the job.** Authorization deals in facts and rules about who is allowed to do what in a system. Solutions to describe authorization logic ought to be declarative and have semantics that map to common domain concepts – like roles and relationships, or boolean conditions over the input attributes.
 3. **Authorization decisions and application data are inseparable.** Authorization decisions always rely on application context – like who a user is and her relationship to the data she's trying to access. The authorization system ought to be able to call directly into the application so you can write policies using the application's objects and data.
 
 What is oso
 -----------
 
-oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it.
-
-Here are some of the nuts and bolts.
-
-oso ships as a **library**.
+oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from the rest of your application code but which executes inside the application and can call directly into it. oso ships as a library with a debugger and a REPL.
 
 .. container:: left-col
 
