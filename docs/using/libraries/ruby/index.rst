@@ -29,7 +29,7 @@ Polar supports both integer and floating point numbers, as well as booleans (see
 
 Strings
 ^^^^^^^
-Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be accessed from policies:
+Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be called in policies:
 
 .. code-block:: polar
    :caption: policy.polar
