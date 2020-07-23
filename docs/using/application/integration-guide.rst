@@ -1,180 +1,320 @@
-===================
-oso design patterns
-===================
+==============================
+Adding oso to your application
+==============================
+
+.. role:: sql(code)
+   :language: psql
+   :class: highlight
 
 .. highlight:: polar
 
-oso is extremely flexible, and supports numerous authorization control points.  In this guide, we
-will cover:
+oso is extremely flexible, and supports numerous access control schemes.
+In this guide, we will cover:
 
 1. How to use oso to protect data access over three different dimensions:
-   - table or model
-   - row or attribute based
-   - column or field masking
+
+   - model (table)
+   - record (row)
+   - field (column)
+
 2. Where to integrate oso's policy evaluation in your application.
 
 
-Data access control levels
-==========================
+Access control dimensions
+=========================
 
 Authorization is fundamentally about controlling data access or modification
 based on properties of the actor. This is why ``actor`` and ``resource`` are
-primary concepts in oso's allow rules.
+:doc:`primary concepts </using/auth-fundamentals>` in oso.
 
 Control over data access is commonly exercised over several dimensions:
 
-- table or model level (an actor can access expense data, but not project data)
-- row or record level (an actor can access a particular expense, or an expense
+- **model** or table level (an actor can access expense data, but not project data)
+- **record** or row level (an actor can access a particular expense, or an expense
   matching certain conditions)
-- column or field level (an actor can access or update only certain fields of a
+- **field** or column level (an actor can access or update only certain fields of a
   record)
 
-oso permits the encoding of access control along each of these dimensions.
+An oso policy can restrict access along one or several of these dimensions.
 
-Model level
------------
+.. _first-record-level:
 
-Use an allow rule with no resource conditions to control access on a model level::
+.. code-block:: polar
 
-    allow(actor, "view", _: Expense);
+  allow(actor, "approve", expense: Expense) if
+      actor = expense.submitted_by.manager
+      and expense.amount < 10000;
 
-This rule permits any actor to perform the view action on an ``Expense``. The
-body could contain actor conditions & still be considered a model-level access
-rule.
+The below policy controls access to the Expense model on the **record level**.
+An actor can only approve an expense if they are the manager of the submitter
+and the expense amount is below a certain limit.
 
-::
+Primary and secondary authorization data
+----------------------------------------
 
-    allow(actor, "view", _: Expense) if
-        actor.superuser = true;
+This policy controls access to an ``Expense``, the **primary authorization
+data**.  It relies on other data to make the decision: the submitter of the
+expense (``expense.submitted_by``), and the manager of the submitter
+(``submitted_by.manager``).  This *other* data is called **secondary
+authorization data**.  An important class of secondary authorization data is
+**actor data**.  This data includes properties of the actor, like their role, or
+team membership that is often used in controlling access regardless of whether
+it is over rows, columns or fields.
 
-Alternatively, a string could be used as the resource name::
+Where the policy is evaluated
+-----------------------------
 
-    allow(actor, "view", "Expense");
+Where the policy is evaluated has a significant impact on the level of access
+control that is possible.  In the above example, we rely on the ``amount`` field
+of the expense. Therefore, the ``Expense`` (the **primary authorization data**)
+must be fetched from the application's store when the rule is evaluated.
 
-Attribute level
+.. _second-record-level:
+
+.. code-block:: python
+
+    def get_expense(user, expense_id):
+        expense = db.fetch(
+            "SELECT * FROM expenses WHERE id = %", expense_id)
+
+        if oso.allow(user, "view", expense):
+            # Process request
+            ...
+        else:
+            # Not authorized
+            return NotAuthorizedResponse()
+
+This **policy evaluation point** is **after primary data fetch**. An
+authorization decision is made after the primary data is fetched from the
+persistence layer (be it a SQL database, an ORM, or another service) and can be
+used to make an authorization decisions.
+
+Alternatively, we could have placed our policy evaluation point **before primary
+data fetch**. This would limit the power of our policy, since we would not be
+able to check the ``amount`` field of the ``Expense``. Keep reading to see how
+we would apply this technique to **model level** and **field level** access
+control.
+
+.. tip::
+
+    A best practice for this type of access control is to integrate the policy
+    evaluation point within the **data access layer** (the **M** in MVC).  This
+    ensures that the ``oso.allow`` call is made when an expense is accessed, no
+    matter where that access occurs in the application.
+
+.. todo::
+
+   Would be nice to be able to say here: "see this guide for an
+   example of how to do this..."
+
+Model level access control
+==========================
+
+Sometimes, access control does not rely on properties of the primary data.  This
+type of access control is called **model level**.
+
+.. code-block:: polar
+
+    allow(actor, "view", "expense") if actor.role = "accountant";
+    allow(actor, "modify", "team") if actor.role = "hr_admin";
+    allow(actor, "modify", "project") if actor.role = "hr_admin";
+    allow(actor, "modify", "organization") if actor.role = "hr_admin";
+
+This brief policy shows an example of model level access control:
+
+- An accountant can view expenses.
+- HR admins can modify teams, projects, and organizations.
+
+Notice that this policy does not rely on any **primary authorization data**.
+Therefore it can be evaluated either before or after the primary data fetch.
+Here's what it would look like before:
+
+.. code-block:: python
+
+    def get_expense(user, id):
+        # See if the user is allowed to access expenses at all.
+        if oso.allow(user, "view", "expense"):
+            expense = db.fetch(
+                "SELECT * FROM expenses WHERE id = %", expense_id)
+            # Process request
+        else:
+            # Not authorized
+            return NotAuthorizedResponse()
+
+.. note::
+
+    You may have noticed that this policy still accesses **actor data**.  This
+    is fine, since usually this data will be fetched prior to authorization as
+    part of the authentication flow.
+
+
+Record level access control, revisited
+======================================
+
+Our :ref:`first example <first-record-level>` was an example of record level
+access control. In general, record level access control must be performed
+**after primary data fetch**. This holds true for actions that fetch, edit, or
+delete primary data. (Our example above used the ``"approve"`` action, which
+would result in an edit). An exception to this rule is actions that create
+new data.
+
+Create requests
 ---------------
 
-Attribute level access control is a natural extension of model level access
-control. Simply add additional conditions to the rule body that restrict access
-on properties of the resource being accessed::
+.. code-block:: python
 
-    allow(actor, "view", expense: Expense) if
-        actor.superuser = true and expense.private = false;
+    def create_expense(user, expense_data):
+        # Create a new expense from the request.
+        expense = Expense.from_json(expense_data)
 
-Field level
------------
+        if oso.allow(user, "create", expense):
+            db.insert(expense)
+            # Process rest of expense
+        else:
+            # Not authorized.
+            return NotAuthorizedResponse()
 
-Field level access control is along a different dimension than row or model
-level access. There are several ways to structure this with oso.
+Here, we were able to evaluate the policy **before data fetch** (modification in
+this case). The data is already available from the user, before it is written to
+the database.  Alternatively, if we are using a transactional data store, we
+could evaluate the policy after inserting the data, as long as a rollback is
+performed if the authorization fails:
 
-**String actions**
+.. todo::
 
-The name of the column to read could be encoded as a string action::
+    Would it be better to use a different term so I don't need the
+    "(modification in this case)" phrase? Maybe before data access?
 
-    # Row & model rules
-    allow(actor, "view", _: Expense);
+.. code-block:: python
 
-    # Column rules
-    allow(actor, "amount", _: Expense);
-    allow(actor, "submitted_by", _: Expense);
+    def create_expense(user, expense_data):
+        # Create a new expense from the request.
+        expense = Expense.from_json(expense_data)
 
-Then, the application would make several ``oso.allow()`` calls before permitting
-access:
+        inserted_record = db.insert(expense)
+        if oso.allow(user, "create", inserted_record):
+            # Process rest of expense
+        else:
+            db.rollback()
+            # Not authorized.
+            return NotAuthorizedResponse()
 
-    - one for model or row access with the "view" action
-    - one *for each* column being accessed using the "view" action.
+.. todo:: Should this be paired with a policy?
 
-**Compound actions**
+This may be helpful to keep code consistent across route handlers, or if the
+database makes some transformation during insertion that impacts the
+authorization logic.
 
-This structure is simple, but does not allow us to encode more complex policies.
-For example, suppose we allow a column to be read but not updated by a user.
+.. todo::
 
-We could use a compound data structure (either a dictionary or an application
-class) to represent the action.  This would permit more fine-grained decisions::
+   Could write a section here on more complicated edit authorizations.
+   Like a user is only allowed to change the project of an expense if they are a
+   member of both the old and new project.
 
-    # Determine if columns in test are all in allowedColumns
-    intersection(test, allowedColumns) if
-        forall(column in test, test in allowedColumns);
+.. tip::
 
-    # A superuser can view any column.
-    # We do not check columns, and bind it to an undefined variable using
-    # pattern matching in the rule head.
-    allow(actor, _: {action: "view", columns: _}, expense: Expense) if
-        actor.superuser = true;
+    This rollback technique can be applied to any request that modifies data and
+    requires authorization. It may be particularly helpful for edit requests
+    that edit and return the new version of data in the same data store query.
+    (An :sql:`UPDATE ... RETURNING` query in SQL.)
 
-    # A regular user can only view the amount and location columns.
-    allow(actor, _: {action: "view", columns: columns}, expense: Expense) if
-        intersection(columns, ["amount", "location"]);
 
-**Resource attributes**
+Field level access control
+==========================
 
-Instead of encoding the columns in the action, we could encode them in the
-resource. This can be helpful depending upon how oso is integrated with your
-application::
+In contrast to record level access control, field level access control
+determines what portions of a given record can be accessed.
 
-    allow(actor, "view", expense: Expense{columns: columns}) if
-        intersection(columns, ["amount", "location"];
+.. code-block:: polar
 
-This requires the resource class ``Expense`` to have an attribute or method that
-returns all columns present in the expense.
+    allow_field(actor, "view", _: Expense, "submitted_by");
+    allow_field(actor, "view", expense: Expense, "amount") if
+        actor = expense.submitted_by;
+    allow_field(actor, "view", _: Expense, "amount") if
+        actor.role = "accountant";
 
-Policy evaluation points
-========================
+This policy uses a new rule, called ``allow_field`` to:
 
-Policies are evaluated by making a query with oso in your application.  This
-query can be integrated anywhere during the request processing flow. We will
-discuss several possible points for each of the above access control types.
-Which you choose depends on the structure of your application, and your
-authorization requirements.
+- Allow everyone to view the ``submitted_by`` field.
+- Allow the submitter of the expense to view the ``amount``.
+- Allow actors with the ``"accountant"`` role to view the ``amount`` of any
+  expense.
 
-There are several possible integration points for oso.  First some definitions:
+We can combine this access control with our record level access control
+:ref:`example <second-record-level>`:
 
-- *primary authorization data*: The data being requested or modified during the
-  course of the request.  Usually the request resource.
-- *secondary authorization data*: Contextual data required to make the
-  authorization decision that is not directly related to the particular request.
-  This could be relational data describing the relationship between the actor &
-  the resource, or information about the actor that is relevant to
-  authorization, for example its team memberships.
+.. code-block:: python
 
-Policy evaluation points:
+    def get_expense(user, expense_id):
+        expense = db.fetch(
+            "SELECT * FROM expenses WHERE id = %", expense_id)
 
-- **before primary data fetch**: An authorization decision is made before
-  primary data is fetched from the persistence layer. Primary data is not
-  available as context during the authorization decision.
-- **after primary data fetch**: An authorization data is made after the primary
-  data is fetched from the persistence layer and can be used to make an
-  authorization decisions.
+        # Record level authorization.
+        if oso.allow(user, "view", expense):
+            authorized_data = {}
 
-Table / model level
--------------------
+            for field, value in expense.items():
+                # Check if each field in the expense is allowed, and only
+                # include those that are in authorized_data.
+                if oso.query("allow_field", [actor, "view", expense, field]):
+                    authorized_data[field] = value
 
-This type of authorization is easy to do before data fetch, all that is required
-to make a decision is the model name to authorize.  It may also be performed
-after data fetch by checking the class name or a resource field that indicates
-the type of the data.
+            # Return only authorized_data to the user.
+            ...
+        else:
+            # Not authorized
+            return NotAuthorizedResponse()
 
-Row / attribute level
----------------------
+.. note::
 
-Row & attribute level access control by necessity requires access to the data
-being authorized. For most types of requests, this authorization must be
-performed after a primary data fetch. Authorizing a GET request for a single record
-requires that record's data before the authorization can be evaluated. An update
-or delete request requires the same data.  A create request is the exception
-to this rule, since it can be authorized on the basis of the data to be created
-before committing it to the data store.
+    We use the ``oso.query`` method in this example to query a rule other than
+    ``allow``.
 
-Column / field level
---------------------
+.. todo::
 
-Authorizing access to columns can be done before or after data access. If
-performed before, the columns to be accessed in a read query or updated can be
-authorized.  If performed after, the data could be masked based on the columns
-that are allowed to be read.
+    relevant link & this is incorrect with our API now!
+
+In this example, we evaluated both record & column level access control after
+data fetch.  However, it may be more efficient to use column level access
+control to only load the columns the user can access:
+
+.. code-block:: python
+
+    from oso.api import Variable
+
+    def get_expense(user, expense_id):
+        # Query oso for all fields allowed for this user.
+        allowed_fields = oso.query("allow_field",
+                                   [user, "view", expense, Variable("field")])
+        # Convert the returned query response into a list of fields
+        allowed_fields = [r["field"] for r in allowed_fields]
+        allowed_fields_sql = db.sql_escape(allowed_fields.join(", "))
+
+        expense = db.fetch(
+            f"SELECT {allowed_fields_sql} FROM expenses WHERE id = %",
+            expense_id)
+
+        # Record level authorization.
+        if oso.allow(user, "view", expense):
+            # Return only authorized_data to the user.
+            ...
+        else:
+            # Not authorized
+            return NotAuthorizedResponse()
+
+Now, we are using oso to tell us what fields to query for.  In this example, the
+policy is evaluated both **before and after data fetch** for greater efficiency.
+
+.. admonition:: Variables provide flexibility
+
+    Notice that we didn't have to change our policy file at all to make this
+    change from the previous example. We used the ``Variable`` class which
+    instructs oso to find all values of ``field`` that match the rules we defined
+    in our policy.  This flexibility derives directly from writing a
+    :doc:`declarative policy in Polar </understand/language/polar-fundamentals>`!
 
 Authorizing list endpoints
---------------------------
+==========================
 
 A list endpoint can be challenging to authorize since it deals with obtaining
 a collection of resources.  Often the filter used to obtain these resources will
@@ -400,7 +540,7 @@ in full control of authorization.  It can be modified independently from
 application code, without any duplication.
 
 Conclusion
-----------
+==========
 
 In this guide, we covered the various access control levels
 (model, attribute & field) and showed you how to integrate oso in your application
