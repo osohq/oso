@@ -19,7 +19,6 @@
           "polar"
         ],
         "extensions": [
-          ".pol",
           ".polar"
         ],
         "configuration": "./language-configuration.json"
