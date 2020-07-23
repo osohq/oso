@@ -449,3 +449,21 @@ The above example used the ``matches`` operator to describe the behavior of
 pattern matching.  This operator can be used anywhere within a rule body to
 perform a match.  The same operation is used by the engine to test whether a
 rule argument matches the specializer.
+
+.. _inline-queries:
+
+Inline queries (``?=``)
+-----------------------
+
+Queries can also be added to Polar files and will run when the file is loaded.
+Inline queries can be useful for testing a policy and confirming it behaves as
+expected.
+
+To add an inline query to a Polar file, use the ``?=`` operator::
+
+    # policy.polar
+    ?= allow("foo", "read", "bar")
+
+An inline query is only valid at the beginning of a line.
+
+Inline queries are particularly useful for testing policies.
