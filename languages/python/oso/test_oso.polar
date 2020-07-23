@@ -22,3 +22,6 @@ allow(actor: Actor, "create", resource: Company) if
 
 allow(actor: Actor, "frob", resource: Company) if
     actor.company.id = resource.id;
+
+allow(actor: Actor, "list", Company) if
+    actor.name = "auditor";

@@ -10,8 +10,10 @@ BUILDDIR      = _build
 
 export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
 export RUBY_DIR := $(abspath ../languages/ruby)
+export JAVA_DIR := $(abspath ../languages/java/oso)
 
 RUBY_FILES := $(wildcard ../languages/ruby/**/*.rb)
+JAVA_FILES := $(wildcard ../languages/java/**/*.java)
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -25,21 +27,26 @@ _api_docs/ruby: $(RUBY_FILES)
 	rm -rf _api_docs/ruby
 	cp -R $(RUBY_DIR)/doc _api_docs/ruby
 
-api-docs: _api_docs/ruby
+_api_docs/java: $(JAVA_FILES)
+	cd "$(JAVA_DIR)" && mvn javadoc:javadoc
+	rm -rf _api_docs/java
+	cp -R $(JAVA_DIR)/target/site/apidocs _api_docs/java
+
+api-docs: _api_docs/ruby _api_docs/java
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html doctest spelling clean: Makefile deps api-docs
+html doctest spelling: Makefile deps api-docs
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+clean:
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	rm -r _api_docs
+
 livehtml: deps api-docs
-	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -i *.tmp
 
 test: doctest
-	python3 run_doc_tests.py learn-queries.polar
-	python3 run_doc_tests.py externals-example/company.py externals-example/company.polar
-	cd externals-example && python3 -m pytest
-
 	cd examples/inheritance/python && pytest .
 	cd examples/abac/python && pytest .
 	cd examples/rbac/python && pytest .

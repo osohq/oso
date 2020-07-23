@@ -1,69 +1,117 @@
-===================
-Introduction to oso
-===================
+.. oso documentation master file, created by
+   sphinx-quickstart on Fri Mar 20 10:34:51 2020.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
 
-**oso** is an authorization system designed to make it easy for developers to
-express complex authorization logic naturally and concisely throughout an
-application.
 
-Why oso
--------
+Welcome to the oso documentation!
+==================================
 
-1. oso makes it easy to build, debug, and maintain your authorization code
-   using a declarative policy language, called Polar.
-   Polar allows you to express a wide variety of authorization patterns – 
-   including roles, attributes, hierarchies, integrations with identity providers,
-   and others – naturally and concisely.
-2. oso enables you to write rules directly over your application objects
-   because it is tightly integrated with your application.
-3. oso gives you the flexibility to write a policy in Polar and apply it to
-   multiple applications or shared services at once, including across
-   applications and services written in different languages.
+oso helps developers build authorization in their applications.
 
-Example
--------
+.. admonition:: What is oso?
 
-Let's look at a quick example of a Polar policy for an expense management
-application:
+    oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it. oso ships as a library with a debugger and a REPL.
 
-.. code-block:: polar
+Using oso, you can:
 
-  # An owner of a resource can always read it.
-  allow(user, "read", resource) if is_owner(user, resource);
+1. Separate authorization code from business logic
+2. Express policies concisely with a declarative language
+3. Write policies that call directly into your application
 
-  # Ownership is defined by resource properties.
-  is_owner(user: User, budget: Budget) if user.id = budget.owner_id;
-  is_owner(user: User, expense: Expense) if user.id = expense.owner_id;
+To see this in action, :doc:`continue on to the Getting Started guide <getting-started/quickstart>`.
 
-  # Ownership is hierarchical across expenses and budgets.
-  allow(user, "read", expense: Expense) if is_owner(user, expense.budget);
+To learn more about oso and the principles behind its design,
+:doc:`read the oso overview page <getting-started/overview>`.
 
-  # Accountants can approve budgets and expenses.
-  allow(user, "approve", Budget) if user.role = "accountant";
-  allow(user, "approve", Expense) if user.role = "accountant";
+-----
 
-This short policy encodes:
+.. toctree::
+    :maxdepth: 1
+    :titlesonly:
+    :hidden:
 
-1. Ownership semantics. Anyone who is an owner of a resource can read the resource. The definition
-   of ownership can vary depending on the resource type.
-2. A hierarchical relationship between resources. Anyone who is the owner of a
-   budget can read expenses associated with that budget.
-3. Role-based access. Users that are accountants can approve budgets.
+    Docs Home <self>
 
-Many authorization systems force developers to choose one of these models – like
-just roles or hierarchies or ownership semantics – but Polar's flexibility
-shines here, allowing the developer to use any or all of them.
+.. These guides contain a brief introduction to oso. This is a great
+.. starting point if you are new to **oso**.
 
-What it's like to use oso
--------------------------
+.. toctree::
+   :maxdepth: 1
+   :caption: Getting Started
+   :hidden:
 
-- Express your policy as code using the declarative :doc:`Polar language </language/index>`.
-- Maintain authorization across a variety of languages and environments with a cross-language
-  :doc:`authorization library </application-library/index>`.
-- :doc:`Use native application objects & data </application-library/application-types>`
-  directly in Polar policy.
-- Understand why policy decisions are made using the :doc:`Policy debugger </dev-tools/debugger>`.
-- :ref:`Write tests <testing>` over your policy to ensure correct behavior.
+   getting-started/quickstart
+   getting-started/download/index
+   getting-started/overview
 
-.. we don't support this yet:
-.. Integrations with common web frameworks and ORMs.
+.. ----------
+
+.. These guides contain narrative documentation and examples.
+.. This is a good place to go to learn more about implementing
+.. authorization in your application with oso.
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Using oso
+   :hidden:
+
+   using/key-concepts
+
+   using/add-oso
+   using/policies/index
+   using/examples/index
+   using/polar-syntax
+
+   using/libraries/index
+   using/dev-tools/index
+
+.. ----------
+..
+.. Reference material for concepts, terminology and language APIs.
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Understand oso
+   :titlesonly:
+   :hidden:
+
+   understand/use-cases
+   understand/language/polar-fundamentals
+   understand/performance
+   understand/security
+   understand/faq
+
+..  ----------
+..
+..  Project-related information.
+
+.. todo::
+   Add links to GitHub + Issues
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Project
+   :titlesonly:
+   :hidden:
+
+
+   project/changelogs/index
+   GitHub <https://github.com/osohq/oso>
+
+..
+.. Indices and tables
+.. ==================
+..
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
+
+
+
+.. ifconfig:: todo_include_todos
+
+    (Internal) List of TODOS
+    ------------------------
+
+.. todolist::

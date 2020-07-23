@@ -8,7 +8,7 @@ class PolarLexer(RegexLexer):
             (r"(\w[\w-]*)(\()", bygroups(token.Keyword, token.Punctuation)),
             (r"\w[\w-]*", token.Name),
             (r"\s", token.Text),
-            (r"=|\||:=|\?=|\!|\*", token.Operator),
+            (r"=|\||:=|\?=|\!|\*|<|<=|>|>=|==", token.Operator),
             (r"if|and|or|not", token.Operator.Word),
             (r",|\.|\(|\)|\{|\}|:|;|\[|\]", token.Punctuation),
             (r"\#.*$", token.Comment.Single),
