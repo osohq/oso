@@ -44,7 +44,6 @@ variables that make the query ``True``::
     action = "read"
 
 .. highlight:: polar
-.. _inline-queries:
 
 Inline queries
 --------------

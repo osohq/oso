@@ -42,6 +42,9 @@ in the same Polar file:
    :language: polar
    :lines: 33-39
 
+Inline queries run when the file is loaded, and check that the query after the
+``?=`` succeeds.
+
 We have a working RBAC system, but at this point it's not quite as flexible
 as we'd like. For example, Deirdre is in the Accounting department, but she's
 *also* an employee and should be able to submit her own expenses. We could

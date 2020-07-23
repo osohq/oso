@@ -6,6 +6,8 @@ oso is packaged as a :doc:`gem</getting-started/download/ruby>` for use in Ruby 
 
 API documentation for the gem lives :doc:`here</ruby/index>`.
 
+To install, see :doc:`installation instructions </getting-started/download/ruby>`.
+
 Working with Ruby Objects
 ===========================
 
