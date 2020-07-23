@@ -32,6 +32,8 @@ Polar parses unquoted integers as numeric values. For example::
 
 are all parsed as numbers.
 
+.. _strings:
+
 Strings
 -------
 
@@ -47,6 +49,8 @@ Compound Types
 
 To support more complex data, Polar includes the following compound data types.
 
+.. _lists:
+
 Lists
 ------
 
@@ -60,7 +64,7 @@ For example::
   ["polar", "lang", "oso"]
   ["oso", ["polar", "lang"]]
 
-Lists may have any length.
+Lists may have any length. List membership can be determined using :ref:`in-operator`.
 
 .. _dictionaries:
 
