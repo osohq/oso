@@ -21,13 +21,13 @@ public class Server implements HttpHandler {
         try {
             String[] request = exchange.getRequestURI().toString().split("/");
             if (!request[1].equals("expenses")) {
-                this.respond(exchange, "Not Found!", 401); return;
+                return respond(exchange, "Not Found!", 401);
             }
             Integer index = Integer.parseInt(request[2]) - 1;
             Expense resource = Server.EXPENSES[index];
-            this.respond(exchange, resource.toString(), 200);
+            respond(exchange, resource.toString(), 200);
         } catch (Exception e) {
-            this.respond(exchange, "Not Found!", 401); return;
+            respond(exchange, "Not Found!", 401);
         }
     }
 

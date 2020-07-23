@@ -29,17 +29,17 @@ public class Server implements HttpHandler {
             String action = exchange.getRequestMethod();
             String[] request = exchange.getRequestURI().toString().split("/");
             if (!request[1].equals("expenses")) {
-                this.respond(exchange, "Not Found!", 401);
+                respond(exchange, "Not Found!", 401);
                 return;
             }
             Integer index = Integer.parseInt(request[2]) - 1;
             Expense resource = Server.EXPENSES[index];
             if (!oso.allow(actor, action, resource)) {
-                this.respond(exchange, "Not Authorized!", 403);
+                respond(exchange, "Not Authorized!", 403);
             }
-            this.respond(exchange, resource.toString(), 200);
+            respond(exchange, resource.toString(), 200);
         } catch (Exception e) {
-            this.respond(exchange, "Not Found!", 401);
+            respond(exchange, "Not Found!", 401);
         }
     }
 

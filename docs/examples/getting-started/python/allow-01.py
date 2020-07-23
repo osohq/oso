@@ -10,4 +10,4 @@ oso = setup_oso()
 
 actor = "alice@example.com"
 resource = EXPENSES[1]
-oso.allow(actor, "view", resource)
+oso.allow(actor, "GET", resource)
