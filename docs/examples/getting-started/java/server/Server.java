@@ -1,7 +1,6 @@
 import java.io.*;
 import java.net.InetSocketAddress;
 import com.sun.net.httpserver.*;
-import java.util.concurrent.*;
 
 public class Server implements HttpHandler {
     public static Expense[] EXPENSES = {
@@ -34,10 +33,8 @@ public class Server implements HttpHandler {
 
     public static void main(String[] args) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 5050), 0);
-        ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
 
         server.createContext("/", new Server());
-        server.setExecutor(threadPoolExecutor);
         server.start();
         System.out.println("Server running on " + server.getAddress());
     }
