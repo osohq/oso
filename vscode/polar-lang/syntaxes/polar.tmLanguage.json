@@ -85,7 +85,7 @@
       }
     },
     "new": {
-      "match": "(\\s)(new)(\\s)",
+      "match": "(\\s?)(new)(\\s)",
       "captures": {
         "2": { "name": "constant.character" }
       }
