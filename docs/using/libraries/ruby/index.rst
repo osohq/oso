@@ -25,7 +25,7 @@ the ``#register_class`` method. An example of this can be found :ref:`here <appl
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
-Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`)
+Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`).
 
 Strings
 ^^^^^^^
