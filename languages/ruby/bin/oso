@@ -1,0 +1,6 @@
+#!/usr/bin/env -S bundle exec ruby
+#-*-ruby-*-
+
+require 'oso'
+
+Oso.new.repl(load: true)
