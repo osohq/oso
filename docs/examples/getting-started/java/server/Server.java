@@ -22,6 +22,7 @@ public class Server implements HttpHandler {
             String[] request = exchange.getRequestURI().toString().split("/");
             if (!request[1].equals("expenses")) {
                 respond(exchange, "Not Found!", 401);
+                return;
             }
             Integer index = Integer.parseInt(request[2]) - 1;
             Expense resource = Server.EXPENSES[index];

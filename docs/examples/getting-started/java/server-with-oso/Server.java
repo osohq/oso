@@ -36,6 +36,7 @@ public class Server implements HttpHandler {
             Expense resource = Server.EXPENSES[index];
             if (!oso.allow(actor, action, resource)) {
                 respond(exchange, "Not Authorized!", 403);
+                return;
             }
             respond(exchange, resource.toString(), 200);
         } catch (Exception e) {
