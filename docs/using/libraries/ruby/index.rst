@@ -55,7 +55,7 @@ Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be ca
 
 Lists
 ^^^^^
-Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`Lists <lists>`. Ruby's Array methods may be accessed from policies:
+Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`Lists <lists>`. Ruby's Array methods may be called in policies:
 
 .. code-block:: polar
    :caption: policy.polar
