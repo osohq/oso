@@ -79,9 +79,9 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac MyServer.java
-        $ java MyServer
-        MyServer running on /127.0.0.1:5050
+        $ javac Server.java
+        $ java Server
+        Server running on /127.0.0.1:5050
 
 ...and then, in another terminal, make some requests to our running server:
 
@@ -127,6 +127,15 @@ Adding oso
 
       Download :download:`oso-0.2.5.jar </examples/getting-started/java/lib/oso-0.2.5.jar>`.
 
+      Then build and run your server with:
+
+      .. code-block:: console
+
+        $ javac -cp oso-0.2.5.jar:. Server.java
+        $ java -cp oso-0.2.5.jar:. Server
+
+
+
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine.
 
@@ -166,7 +175,7 @@ highlighted:
       :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server-with-oso/Server.java>`
       :language: java
       :class: copybutton
-      :emphasize-lines: 4,10-15,37-39
+      :emphasize-lines: 4,10-15,37-41
 
     And a new empty Polar policy file:
 
