@@ -175,7 +175,7 @@ highlighted:
       :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server-with-oso/Server.java>`
       :language: java
       :class: copybutton
-      :emphasize-lines: 4,10-15,37-39
+      :emphasize-lines: 4,10-15,37-41
 
     And a new empty Polar policy file:
 
