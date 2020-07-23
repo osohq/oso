@@ -15,9 +15,13 @@ public class User {
         this.location = "NYC";
     }
 
-    public Enumeration<String> employees() {
+    public Enumeration<User> employees() {
+        List<User> employees = new ArrayList<User>();
         if (MANAGERS.containsKey(name)) {
-            return Collections.enumeration(MANAGERS.get(name));
+            for (String e : MANAGERS.get(name)) {
+                employees.add(new User(e));
+            }
+            return Collections.enumeration(employees);
         } else {
             return Collections.emptyEnumeration();
         }

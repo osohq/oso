@@ -2,9 +2,7 @@ import java.util.List;
 
 import com.osohq.oso.*;
 
-import jnr.ffi.Struct.pid_t;
-
-public class TestJava {
+public class TestAbac {
 
     // For testing
     public static Expense defaultExpense(String submittedBy) {
@@ -13,9 +11,11 @@ public class TestJava {
 
     public static Oso setupOso() throws Exception {
         Oso oso = new Oso();
-        oso.registerClass(Expense.class, (args) -> new Expense((Integer) args.get("amount"),
-                (String) args.get("submittedBy"), (String) args.get("location"), (Integer) args.get("projectId")));
+        oso.registerClass(Expense.class, (args) -> Expense.byId((Integer) args.get("id")));
         oso.registerClass(User.class, (args) -> new User((String) args.get("name")));
+        oso.registerClass(Project.class, (args) -> Project.byId((Integer) args.get("id")));
+        oso.registerClass(Team.class, (args) -> Team.byId((Integer) args.get("id")));
+        oso.registerClass(Organization.class, (args) -> Organization.byId((Integer) args.get("id")));
 
         return oso;
 
@@ -89,6 +89,7 @@ public class TestJava {
         testSimple01();
         testRbac02();
         testHierarchy03();
+        System.out.println("Java ABAC tests pass!");
     }
 
 }
