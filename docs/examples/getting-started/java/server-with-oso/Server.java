@@ -34,10 +34,11 @@ public class Server implements HttpHandler {
             }
             Integer index = Integer.parseInt(request[2]) - 1;
             Expense resource = Server.EXPENSES[index];
-            if (!oso.allow(actor, action, resource)) {
+            if (oso.allow(actor, action, resource)) {
+                respond(exchange, resource.toString(), 200);
+            } else {
                 respond(exchange, "Not Authorized!", 403);
             }
-            respond(exchange, resource.toString(), 200);
         } catch (Exception e) {
             respond(exchange, "Not Found!", 401);
         }
@@ -47,6 +48,6 @@ public class Server implements HttpHandler {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 5050), 0);
         server.createContext("/", new Server());
         server.start();
-        System.out.println("MyServer running on " + server.getAddress());
+        System.out.println("Server running on " + server.getAddress());
     }
 }
