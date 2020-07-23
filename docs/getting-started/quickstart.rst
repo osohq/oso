@@ -79,9 +79,9 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac MyServer.java
-        $ java MyServer
-        MyServer running on /127.0.0.1:5050
+        $ javac Server.java
+        $ java Server
+        Server running on /127.0.0.1:5050
 
 ...and then, in another terminal, make some requests to our running server:
 

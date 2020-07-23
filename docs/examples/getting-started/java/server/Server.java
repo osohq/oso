@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.InetSocketAddress;
 import com.sun.net.httpserver.*;
+import java.util.concurrent.*;
 
 public class Server implements HttpHandler {
     public static Expense[] EXPENSES = {
@@ -21,7 +22,7 @@ public class Server implements HttpHandler {
         try {
             String[] request = exchange.getRequestURI().toString().split("/");
             if (!request[1].equals("expenses")) {
-                return respond(exchange, "Not Found!", 401);
+                respond(exchange, "Not Found!", 401);
             }
             Integer index = Integer.parseInt(request[2]) - 1;
             Expense resource = Server.EXPENSES[index];
@@ -33,8 +34,11 @@ public class Server implements HttpHandler {
 
     public static void main(String[] args) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 5050), 0);
+        ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+
         server.createContext("/", new Server());
+        server.setExecutor(threadPoolExecutor);
         server.start();
-        System.out.println("MyServer running on " + server.getAddress());
+        System.out.println("Server running on " + server.getAddress());
     }
 }
