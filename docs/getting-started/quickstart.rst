@@ -46,6 +46,11 @@ Our web server contains some simple logic to filter out bad requests and not muc
       :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server/Server.java>`
       :language: java
 
+    .. literalinclude:: /examples/getting-started/java/server/Expense.java
+      :class: copybutton
+      :caption: :fab:`java` Expense.java :download:`(link) </examples/getting-started/java/server/Expense.java>`
+      :language: java
+
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
 ``"Not Found!"``.
@@ -112,7 +117,7 @@ Adding oso
 
       .. todo:: Java install
 
-      Download :download:`oso-0.2.5.jar </examples/getting-started/java/lib/oso-0.2.5.jar>`,
+      Download :download:`oso-0.2.5.jar </examples/getting-started/java/lib/oso-0.2.5.jar>`.
 
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine.
@@ -153,7 +158,7 @@ highlighted:
       :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server-with-oso/Server.java>`
       :language: java
       :class: copybutton
-      :emphasize-lines: 4,26-31,53-55
+      :emphasize-lines: 4,10-15,37-39
 
     And a new empty Polar policy file:
 
@@ -290,7 +295,7 @@ start a REPL session and follow along:
 
   .. group-tab:: Java
 
-    Run: ``jshell --class-path oso-0.2.1.jar Server.java``
+    Run: ``jshell --class-path oso-0.2.5.jar Server.java``
 
     .. code-block:: java
 
