@@ -480,7 +480,7 @@ def test_constructor(polar, qvar):
 
 def test_instance_cache(polar, qeval):
     class Counter:
-        count = False
+        count = 0
 
         def __init__(self):
             self.__class__.count += 1

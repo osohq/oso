@@ -115,8 +115,6 @@ class Query:
             # Call must be a generator so we turn anything else into one.
             if type(result) in NATIVE_TYPES or not isinstance(result, Iterable):
                 call = (i for i in [result])
-            elif result is None:
-                call = (_ for _ in [])
             else:
                 call = iter(result)
             self.calls[call_id] = call
