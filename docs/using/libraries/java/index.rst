@@ -24,7 +24,7 @@ You can pass an instance of any Java class into oso and access its methods and f
 
 Java instances can be constructed from inside an oso policy using the :ref:`operator-new` operator if the Java class has been **registered** using
 the ``registerClass()`` method. To register a class in Java, you must provide an implementation of ``Function<Map, Object>`` (see `Java's Function interface <https://docs.oracle.com/javase/8/docs/api/java/util/function/Function.html>`_).
-An example of this can be found :ref:`here <application-types>`).
+An example of this can be found :ref:`here <application-types>`.
 
 .. TODO: link to javadoc above
 

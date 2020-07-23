@@ -21,7 +21,7 @@ You can pass an instance of any Python class into oso and access its methods and
 
 Python instances can be constructed from inside an oso policy using the :ref:`operator-new` operator if the Python class has been **registered** using
 either the :py:meth:`~oso.Oso.register_class` method or the :py:func:`~oso.polar_class` decorator.
-An example of this can be found :ref:`here <application-types>`).
+An example of this can be found :ref:`here <application-types>`.
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^

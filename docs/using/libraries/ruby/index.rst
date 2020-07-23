@@ -20,7 +20,7 @@ Class Instances
 You can pass any Ruby instance into oso and access its methods and fields from your policy (see :ref:`application-types`).
 
 Ruby instances can be constructed from inside an oso policy using the :ref:`operator-new` operator if the Ruby class has been **registered** using
-the ``#register_class`` method. An example of this can be found :ref:`here <application-types>`).
+the ``#register_class`` method. An example of this can be found :ref:`here <application-types>`.
 
 
 Numbers and Booleans
