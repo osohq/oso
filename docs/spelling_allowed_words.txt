@@ -42,7 +42,10 @@ hoc
 quickstart
 GitHub
 OAuth
+GSuite
+IAM
 de
 facto
 boolean
 bodiless
+approver

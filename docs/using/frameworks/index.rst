@@ -21,14 +21,14 @@ streamline the process of adding oso to your application.
 
 In the meantime...
 
-- Vote & track your favorite framework integration at our `Github repository`_.
+- Vote & track your favorite framework integration at our `GitHub repository`_.
 - Checkout our `blog posts`_ on using oso in your app.
 - `Clone`_ an example app in your preferred language
 
-.. todo:: Add link to github issues or other for feedback on which framework
+.. todo:: Add link to GitHub issues or other for feedback on which framework
    integrations
 
-.. _Github repository: <TODO>
+.. _GitHub repository: <TODO>
 .. _blog posts: <TODO>
 .. _Clone: <TODO>
 

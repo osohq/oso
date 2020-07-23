@@ -246,27 +246,16 @@ Perhaps there are users and administrators, but otherwise all users are treated 
 However, any application that needs to control access to data needs to
 determine access based on *who* the user is and her *relation* to the data.
 
-That's why the policies you see on this page are all about those attributes - e.g.,
-"does the user's email match the email that submitted the expense?", "is the user
-a manager of the project the expense?"
+Looking through the examples we have on this page, we've accessed attributes like
+email addresses, who submitted an expense, and referenced methods like managers
+associated to a project, or employees associated to a manager.
 
-But all of this data is likewise core to the application, so there is no possibility of
-extricating it. Leaving us with the following options:
+All of these were core pieces of business logic, and won't be going away soon.
+Depending on the implementation, one could easily imagine the ``employees()`` method
+being handled by somewhere as a SQL join statement.
 
-.. todo:: Examples of these? How can we make these more concrete?
-
-* Build authorization as a separate consumer of the same application data.
-
-  * Now we have another system to keep in sync with potentially every other application, and possibly duplicate all of the classes and methods used to access data.
-
-* Synchronize relevant data into the authorization system.
-
-  *  How frequently should this be done? What data will be needed in the new system?
-
-* Leave authorization to the application.
-
-  *  Starting to sound pretty good right about now.
-
+To use this information for authorization decisions means we either need to duplicate
+this logic elsewhere, or leverage the existing business logic we already have access to.
 
 At its best, authorization logic weaves together discrete bits of business logic into a
 rich authorization tapestry. Striking a balance between using application data wherever
@@ -281,11 +270,11 @@ its needed to make decisions, while keeping the code clean, reusable, and mainta
     haven't already, or continue on to :doc:`/using/auth-fundamentals`.
 
 
-.. todo::
-    Move this to a different introductory section? Feels a bit misplaced here.
-
 Internals
 ---------
+
+.. todo::
+    Move this to a different introductory section? Feels a bit misplaced here.
 
 oso is supported in :doc:`a number of languages </using/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language.
 
