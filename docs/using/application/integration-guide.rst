@@ -8,7 +8,7 @@ Adding oso to your application
 
 .. highlight:: polar
 
-oso is extremely flexible, and supports numerous access control schemes.
+oso supports numerous access control schemes.
 In this guide, we will cover:
 
 1. How to use oso to protect data access over three different dimensions:
