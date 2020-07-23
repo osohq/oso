@@ -214,8 +214,8 @@ public class Exceptions {
     public static class InvalidCallError extends PolarRuntimeException {
         private static final long serialVersionUID = 1L;
 
-        public InvalidCallError(String callName, List<Class> argTypes) {
-            super("`" + callName + "`" + ", with argument types " + "`" + argTypes + "`");
+        public InvalidCallError(String className, String callName, List<Class> argTypes) {
+            super("`" + callName + "` on class " + className + ", with argument types " + "`" + argTypes + "`");
         }
 
         public InvalidCallError(String msg) {
