@@ -13,6 +13,9 @@ or added to your ``Gemfile``::
 
 and installed with `bundler`_.
 
+For more information on the oso Ruby library, see the
+:doc:`library documentation </using/libraries/ruby/index>`.
+
 Requirements
 ------------
 

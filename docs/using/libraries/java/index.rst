@@ -6,6 +6,8 @@ oso is available as a :doc:`package</getting-started/download/java>` for use in 
 
 Code-level documentation is :doc:`here</java/index>`.
 
+To install, see :doc:`installation instructions </getting-started/download/java>`.
+
 Working with Java Types
 =======================
 

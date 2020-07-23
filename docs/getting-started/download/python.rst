@@ -7,6 +7,9 @@ The Python version of oso is available on `PyPI`_ and can be installed using
 
     $ pip install oso
 
+For more information on the oso Python library, see the
+:doc:`library documentation </using/libraries/python/index>`.
+
 Requirements
 ------------
 
