@@ -276,7 +276,7 @@ Internals
 .. todo::
     Move this to a different introductory section? Feels a bit misplaced here.
 
-oso is supported in :doc:`a number of languages </reference/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language.
+oso is supported in :doc:`a number of languages </using/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language.
 
 The core of oso is an implementation of the **Polar language**. This handles
 parsing policy files, and executing queries in the form of a virtual machine.
