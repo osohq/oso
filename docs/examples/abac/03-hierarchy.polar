@@ -21,6 +21,7 @@ manages(manager: User, employee) if
     or manages(manager.employees(), employee);
 
 
-# Now Cora can view the expense because Cora manages Bhavik who manages Alice
+# Now this inline query confirms Cora can view the expense because Cora manages
+# Bhavik who manages Alice.
 ?= allow(new User { name: "cora"}, "view", new Expense { id: 0 });
 # end-hierarchy-rule

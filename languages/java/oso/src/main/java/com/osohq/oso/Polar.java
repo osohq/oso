@@ -192,7 +192,7 @@ public class Polar {
      *
      * @param name
      * @param value
-     * @throws OsoException
+     * @throws Exceptions.OsoException
      */
     protected void registerConstant(String name, Object value) throws Exceptions.OsoException {
         polarFfi.registerConstant(name, toPolarTerm(value).toString());
@@ -353,7 +353,7 @@ public class Polar {
      * Convert a JSONified Polar dictionary to a Java Map
      *
      * @param dict JSONObject
-     * @return HashMap<String, Object>
+     * @return
      * @throws Exceptions.UnregisteredInstanceError
      * @throws Exceptions.UnexpectedPolarTypeError
      */
@@ -370,7 +370,7 @@ public class Polar {
      * Convert a JSONified Polar List to a Java List
      *
      * @param list JSONArray
-     * @return List<Object>
+     * @return
      * @throws Exceptions.UnregisteredInstanceError
      * @throws Exceptions.UnexpectedPolarTypeError
      */
@@ -476,7 +476,6 @@ public class Polar {
         }
         Enumeration<Object> enumResult;
         if (result instanceof Enumeration) {
-            // TODO: test this
             enumResult = (Enumeration<Object>) result;
         } else {
             enumResult = Collections.enumeration(new ArrayList<Object>(Arrays.asList(result)));

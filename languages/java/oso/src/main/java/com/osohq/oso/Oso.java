@@ -96,7 +96,7 @@ public class Oso {
      *
      * @param name
      * @param value
-     * @throws OsoException
+     * @throws Exceptions.OsoException
      */
     public void registerConstant(String name, Object value) throws Exceptions.OsoException {
         polar.registerConstant(name, value);

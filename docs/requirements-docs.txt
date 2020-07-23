@@ -4,4 +4,7 @@ recommonmark
 msmb_theme==1.2.0
 sphinx_rtd_theme
 sphinxcontrib-contentui
+sphinx-tabs
 sphinxcontrib-spelling
+sphinx-copybutton
+sphinx-material

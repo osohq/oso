@@ -1,0 +1,76 @@
+======
+0.0.2
+======
+
+**Release date:** 2020-04-24
+
+Breaking changes
+================
+
+
+.. warning:: This release contains breaking changes. Be sure
+   to follow migration steps before upgrading.
+
+``@external_class`` decorator is now named ``@polar_class``
+-----------------------------------------------------------
+
+The :py:func:`oso.polar_class` decorator replaces ``external_class``.
+The decorator is now safe to use on classes that extend ``odoo.model.Model``.
+
+New features
+==============
+
+Comparison Operators
+--------------------
+
+Added operators for numerical comparisons.
+
+More info: :ref:`numerical-comparison`.
+
+Method return types
+-------------------
+
+When calling methods on application classes from Polar,
+the method return type no longer needs to be a generator.
+
+Define classes in Polar
+-----------------------
+
+.. warning:: This is an experimental feature.
+
+You can now define classes from with Polar. The syntax is:
+
+.. code-block:: polar
+
+  class Name(Super, ...) { field: type, ... }
+
+This defines a class called ``Name`` that inherits from ``Super, ...``
+and adds the given fields with type restrictions. Instances of such a
+class are created using the syntax ``Name{field: value, ...}``.
+
+Dictionary keys do not need to be quoted
+----------------------------------------
+
+The following:
+
+.. code-block:: polar
+
+  {key: "value", key2: "value2"}
+
+Is now valid Polar. Dictionary keys no longer need to be quoted. The unquoted
+form is recommended.
+
+Polar debugger
+--------------
+
+The Polar debugger allows interactive debugging of Polar rules. It can be helpful to see
+why a rule is behaving differently than expected.  Just add the
+``debug()`` predicate to your rule body to get started.
+
+More info: :doc:`/using/dev-tools/debugger`.
+
+Other bugs & improvements
+=========================
+
+- Variables used only once in a rule result in warnings.
+- Error messages are more clear, and potential missing semicolons are warned about.

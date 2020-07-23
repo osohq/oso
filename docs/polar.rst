@@ -1,5 +1,0 @@
-=====
-Polar
-=====
-
-.. automodule:: polar
