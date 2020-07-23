@@ -46,16 +46,26 @@ clean:
 livehtml: deps api-docs
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -i *.tmp
 
-test: doctest
+java-test:
+	$(MAKE) -C ../languages/java package
+	cd examples/abac/java && javac -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac.java && java -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac
+
+python-test:
 	cd examples/inheritance/python && pytest .
 	cd examples/abac/python && pytest .
 	cd examples/rbac/python && pytest .
 	cd examples/context/python && pytest .
 
+ruby-test:
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb
 	cd examples/rbac/ruby && bundle exec rspec test_spec.rb
 	cd examples/context/ruby && bundle exec rspec test_spec.rb
 	cd examples/inheritance/ruby && bundle exec rspec test_spec.rb
+
+test: doctest
+	$(MAKE) python-test
+	$(MAKE) ruby-test
+	$(MAKE) java-test
 
 deps:
 	pip3 install -r requirements-docs.txt
