@@ -122,7 +122,7 @@ Adding oso
 Now that we've installed oso, we can import it into our project and construct
 a new ``Oso`` instance that will serve as our authorization engine.
 
-Here's an updated version of our webserver code from before with the new lines
+Here's an updated version of our web server code from before with the new lines
 highlighted:
 
 .. tabs::
