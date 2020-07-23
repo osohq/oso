@@ -56,7 +56,7 @@ To learn more about oso and the principles behind its design,
    :caption: Using oso
    :hidden:
 
-   using/auth-fundamentals
+   using/key-concepts
 
    using/application/index
    using/policies/index

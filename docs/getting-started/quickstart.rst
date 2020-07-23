@@ -202,7 +202,7 @@ perform the **action** ``"GET"`` on the
 verb used in our server, but this could be anything.
 
 .. note:: For more on **actors**, **actions**, and **resources**, check out
-  :doc:`/using/auth-fundamentals`.
+  :doc:`/using/key-concepts`.
 
 oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
@@ -354,7 +354,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik@example.com"
 match the string ``"alice@example.com"``.
 
 .. note:: For a deeper introduction to writing authorization rules with oso,
-  see :doc:`/using/auth-fundamentals`.
+  see :doc:`/using/key-concepts`.
 
 Authorizing HTTP requests
 =========================
@@ -563,6 +563,6 @@ If you're interested in what sets oso apart from existing authorization
 solutions, check out :doc:`/getting-started/overview`. If you want to learn more about
 authorization in oso, including common patterns like :doc:`/using/examples/rbac`
 and :doc:`/using/examples/abac`, we recommend continuing on to the
-:doc:`/using/auth-fundamentals` guide. For more details on the logic programming
+:doc:`/using/key-concepts` guide. For more details on the logic programming
 language we used to write our authorization policies, head on over to the
 :doc:`/understand/language/polar-fundamentals` guide.

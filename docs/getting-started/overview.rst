@@ -263,7 +263,7 @@ its needed to make decisions, while keeping the code clean, reusable, and mainta
     Stay here and continue reading about what lies under the hood of the oso library.
 
     Head back to :doc:`/getting-started/quickstart` if you
-    haven't already, or continue on to :doc:`/using/auth-fundamentals`.
+    haven't already, or continue on to :doc:`/using/key-concepts`.
 
 
 Internals

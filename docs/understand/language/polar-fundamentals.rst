@@ -411,6 +411,6 @@ In this guide, we have explored:
 
 What we haven't explored here is how to use Polar to express
 particular authorization policies. Many examples can be found
-in the :doc:`Authorization Fundamentals </using/auth-fundamentals>`
+in the :doc:`Authorization Fundamentals </using/key-concepts>`
 and :doc:`Authorization Models </using/examples/index>` sections
 of the manual.
