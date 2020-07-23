@@ -1,0 +1,124 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Polar",
+  "patterns": [
+    {
+      "include": "#strings"
+    },
+    {
+      "name": "comment.line.number-sign",
+      "match": "#.*"
+    },
+    {
+      "name": "constant.numeric",
+      "match": "(\\-?[0-9]+)"
+    },
+    {
+      "match": "(and)",
+      "captures": {
+        "1": { "name": "keyword.control" }
+      }
+    },
+    {
+      "match": "(\\w[\\w-]*)(;)",
+      "captures": {
+        "1": { "name": "support.function" }
+      }
+    },
+    {
+      "begin": "(\\w[\\w-]*)(\\()",
+      "end": "(\\))",
+      "beginCaptures": {
+        "1": { "name": "support.function" }
+      },
+      "patterns": [
+        { "include": "#strings" },
+        {
+          "match": "([a-zA-Z_][\\w-]*)\\s*:*\\s*(\\w*[\\w-]*)",
+          "captures": {
+            "1": { "name": "support.variable" },
+            "2": { "name": "support.class" }
+          }
+        },
+        {
+          "name": "constant.numeric",
+          "match": "(\\-?[0-9]+)"
+        }
+      ]
+    },
+    {
+      "begin": "(if)",
+      "end": "(;)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control" }
+      },
+      "patterns": [
+        {
+          "name": "constant.numeric",
+          "match": "(\\-?[0-9]+)"
+        },
+        {
+          "begin": "(\\w[\\w-]*)({)",
+          "end": "(})",
+          "beginCaptures": {
+            "1": { "name": "support.function" }
+          }
+        },
+        {
+          "match": "(\\s)(matches)(\\s)",
+          "captures": {
+            "2": { "name": "constant.character" }
+          }
+        },
+        {
+          "match": "(not)(\\s)",
+          "captures": {
+            "1": { "name": "constant.character" }
+          }
+        },
+        {
+          "match": "(\\s)(and)(\\s)",
+          "captures": {
+            "2": { "name": "constant.character" }
+          }
+        },
+        {
+          "match": "(\\s)(or)(\\s)",
+          "captures": {
+            "2": { "name": "constant.character" }
+          }
+        },
+        {
+          "include": "#strings"
+        }
+      ]
+    },
+    {
+      "begin": "(\\?=)",
+      "end": "(;)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control" }
+      },
+      "patterns": [
+        {
+          "name": "constant.numeric",
+          "match": "(\\-?[0-9]+)"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "strings": {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    }
+  },
+  "scopeName": "source.polar"
+}

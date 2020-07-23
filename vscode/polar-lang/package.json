@@ -1,0 +1,36 @@
+{
+  "name": "polar-lang",
+  "publisher": "osohq",
+  "displayName": "Polar Lang",
+  "description": "Syntax highlighting for Polar lang",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.43.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "polar",
+        "aliases": [
+          "Polar",
+          "polar"
+        ],
+        "extensions": [
+          ".pol",
+          ".polar"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "polar",
+        "scopeName": "source.polar",
+        "path": "./syntaxes/polar.tmLanguage.json"
+      }
+    ]
+  }
+}

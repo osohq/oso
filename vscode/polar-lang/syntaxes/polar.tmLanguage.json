@@ -1,0 +1,119 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Polar",
+  "patterns": [
+    { "include": "#inline-query" },
+    { "include": "#rule-def-head" },
+    { "include": "#rule-def-body" },
+    { "include": "#comment" }
+  ],
+  "repository": {
+    "inline-query": {
+      "begin": "(\\?=)",
+      "end": "(;)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control" }
+      },
+      "patterns": [{ "include": "#expression" }]
+    },
+    "rule-def-head": {
+      "begin": "[\\s]*([\\w][\\w-]*)(\\()",
+      "end": "(\\))",
+      "beginCaptures": {
+        "1": { "name": "support.function" }
+      },
+      "patterns": [{ "include": "#string" }, { "include": "#number" }]
+    },
+    "rule-def-body": {
+      "begin": "(if)",
+      "end": "(;)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control" }
+      },
+      "patterns": [{ "include": "#expression" }]
+    },
+    "expression": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#number" },
+        { "include": "#and" },
+        { "include": "#or" },
+        { "include": "#not" },
+        { "include": "#new" },
+        { "include": "#unify" },
+        { "include": "#in" },
+        { "include": "#forall" },
+        { "include": "#matches" }
+      ]
+    },
+    "comment": {
+      "name": "comment.line.number-sign",
+      "match": "#.*"
+    },
+    "string": {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "number": {
+      "name": "constant.numeric",
+      "match": "[-]?[0-9]*\\.?[0-9]+"
+    },
+    "and": {
+      "match": "(\\s)(and)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "or": {
+      "match": "(\\s)(or)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "not": {
+      "match": "(\\s?)(and)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "new": {
+      "match": "(\\s)(new)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "unify": {
+      "match": "(\\s)(unify)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "in": {
+      "match": "(\\s)(in)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "forall": {
+      "match": "(\\s)(forall)(\\()",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "matches": {
+      "match": "(\\s)(matches)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    }
+  },
+  "scopeName": "source.polar"
+}
