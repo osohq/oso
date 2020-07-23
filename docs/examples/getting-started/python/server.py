@@ -36,5 +36,6 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 server_address = ("", 5050)
 httpd = HTTPServer(server_address, RequestHandler)
-print("running on port", httpd.server_port)
-httpd.serve_forever()
+if __name__ == "__main__":
+    print("running on port", httpd.server_port)
+    httpd.serve_forever()

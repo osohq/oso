@@ -43,7 +43,7 @@ def main():
             load_python(filename, polar)
 
     for filename in args.filename:
-        if filename.endswith(".polar") or filename.endswith(".pol"):
+        if filename.endswith(".polar"):
             load(filename, polar)
 
     # Trigger load
