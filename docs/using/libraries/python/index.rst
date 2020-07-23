@@ -6,6 +6,11 @@ oso is available as a :doc:`package</getting-started/download/python>` for use i
 
 Code-level documentation is :doc:`here<api>`.
 
+.. toctree::
+    :hidden:
+
+    api
+
 To install, see :doc:`installation instructions </getting-started/download/python>`.
 
 Working with Python Objects

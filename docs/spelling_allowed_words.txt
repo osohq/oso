@@ -49,3 +49,9 @@ facto
 boolean
 bodiless
 approver
+transactional
+boolean
+booleans
+autoboxed
+iterable
+iterables

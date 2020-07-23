@@ -87,8 +87,6 @@ evaluated on an ``Admin``, encoding an implicit ``if Admin`` condition.
 .. todo::
   ``else`` with ``cut``?
 
-.. _lists:
-
 List operations
 ===============
 

@@ -68,7 +68,7 @@ For example::
   ["polar", "lang", "oso"]
   ["oso", ["polar", "lang"]]
 
-Lists may have any length. List membership can be determined using :ref:`in-operator`.
+Lists may have any length. List membership can be determined using :ref:`operator-in`.
 
 .. _dictionaries:
 
