@@ -91,6 +91,7 @@ exclude_patterns = [
     "**.pytest_cache**",
     "ruby/README.md",
     "understand/language/polar-classes.rst",  # we don't currently have classes
+    "**/venv/**",
 ]
 
 # Don't copy the source or show a link

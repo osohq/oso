@@ -1,6 +1,6 @@
-==============================
-Adding oso to your application
-==============================
+===============
+Access Patterns
+===============
 
 .. role:: sql(code)
    :language: psql

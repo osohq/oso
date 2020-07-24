@@ -55,3 +55,4 @@ booleans
 autoboxed
 iterable
 iterables
+sqlite

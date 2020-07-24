@@ -27,28 +27,28 @@ Our web server contains some simple logic to filter out bad requests and not muc
 
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/python/server.py
+    .. literalinclude:: /examples/quickstart/python/server.py
       :class: copybutton
-      :caption: :fab:`python` server.py :download:`(link) </examples/getting-started/python/server.py>`
+      :caption: :fab:`python` server.py :download:`(link) </examples/quickstart/python/server.py>`
       :language: python
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/ruby/server.rb
+    .. literalinclude:: /examples/quickstart/ruby/server.rb
       :class: copybutton
-      :caption: :fas:`gem` server.rb :download:`(link) </examples/getting-started/ruby/server.rb>`
+      :caption: :fas:`gem` server.rb :download:`(link) </examples/quickstart/ruby/server.rb>`
       :language: ruby
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/java/server/Server.java
+    .. literalinclude:: /examples/quickstart/java/server/Server.java
       :class: copybutton
-      :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server/Server.java>`
+      :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/server/Server.java>`
       :language: java
 
-    .. literalinclude:: /examples/getting-started/java/server/Expense.java
+    .. literalinclude:: /examples/quickstart/java/server/Expense.java
       :class: copybutton
-      :caption: :fab:`java` Expense.java :download:`(link) </examples/getting-started/java/server/Expense.java>`
+      :caption: :fab:`java` Expense.java :download:`(link) </examples/quickstart/java/server/Expense.java>`
       :language: java
 
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
@@ -125,7 +125,7 @@ Adding oso
 
       .. todo:: Java install
 
-      Download :download:`oso-0.2.5.jar </examples/getting-started/java/lib/oso-0.2.5.jar>`.
+      Download :download:`oso-0.2.5.jar </examples/quickstart/java/lib/oso-0.2.5.jar>`.
 
       Then build and run your server with:
 
@@ -145,41 +145,41 @@ highlighted:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/python/server-with-oso.py
-      :caption: :fab:`python` server.py :download:`(link) </examples/getting-started/python/server-with-oso.py>`
+    .. literalinclude:: /examples/quickstart/python/server-with-oso.py
+      :caption: :fab:`python` server.py :download:`(link) </examples/quickstart/python/server-with-oso.py>`
       :language: python
       :class: copybutton
       :emphasize-lines: 3,5-6,31-32,39-42
 
     And a new empty Polar policy file:
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-01.polar
       :caption: :fa:`oso` expenses.polar
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/ruby/server-with-oso.rb
-      :caption: :fas:`gem` server.rb :download:`(link) </examples/getting-started/ruby/server-with-oso.rb>`
+    .. literalinclude:: /examples/quickstart/ruby/server-with-oso.rb
+      :caption: :fas:`gem` server.rb :download:`(link) </examples/quickstart/ruby/server-with-oso.rb>`
       :language: ruby
       :class: copybutton
       :emphasize-lines: 1,4-5,25-26,32-36
 
     And a new empty Polar policy file:
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-01.polar
       :caption: :fa:`oso` expenses.polar
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/java/server-with-oso/Server.java
-      :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server-with-oso/Server.java>`
+    .. literalinclude:: /examples/quickstart/java/server-with-oso/Server.java
+      :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/server-with-oso/Server.java>`
       :language: java
       :class: copybutton
       :emphasize-lines: 4,10-15,37-41
 
     And a new empty Polar policy file:
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-01.polar
       :caption: :fa:`oso` expenses.polar
 
 
@@ -196,19 +196,19 @@ arguments, **actor**, **action**, and **resource**:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/python/allow-01.py
+    .. literalinclude:: /examples/quickstart/python/allow-01.py
       :language: python
       :lines: 11-13
 
   .. group-tab:: Ruby
 
-      .. literalinclude:: /examples/getting-started/ruby/allow-01.rb
+      .. literalinclude:: /examples/quickstart/ruby/allow-01.rb
         :language: ruby
         :lines: 4-6
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/java/allow-01.java
+    .. literalinclude:: /examples/quickstart/java/allow-01.java
       :language: java
       :lines: 5-8
       :dedent: 8
@@ -243,7 +243,7 @@ start a REPL session and follow along:
 
     We can add a rule explicitly allowing Alice to GET expenses...
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -285,7 +285,7 @@ start a REPL session and follow along:
 
     We can add a rule explicitly allowing Alice to view expenses...
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -329,7 +329,7 @@ start a REPL session and follow along:
 
     We can add a rule explicitly allowing Alice to view expenses...
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -387,7 +387,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
 
 Assuming you added the rule from the previous step:
 
-.. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+.. literalinclude:: /examples/quickstart/polar/expenses-02.polar
   :caption: :fa:`oso` expenses.polar
   :class: copybutton
 
@@ -416,7 +416,7 @@ able to view expenses, but no one outside the company will be able to:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-03-py.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-py.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -432,7 +432,7 @@ able to view expenses, but no one outside the company will be able to:
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-03-rb.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-rb.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -448,7 +448,7 @@ able to view expenses, but no one outside the company will be able to:
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-03-java.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-java.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -498,19 +498,19 @@ To accomplish that, we can replace our existing rule with:
 
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-04.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-04.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-04-java.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-04-java.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
