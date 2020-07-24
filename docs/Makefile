@@ -12,6 +12,8 @@ export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
 export RUBY_DIR := $(abspath ../languages/ruby)
 export JAVA_DIR := $(abspath ../languages/java/oso)
 
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.2.1.jar
+
 RUBY_FILES := $(wildcard ../languages/ruby/**/*.rb)
 JAVA_FILES := $(wildcard ../languages/java/**/*.java)
 
@@ -46,9 +48,20 @@ clean:
 livehtml: deps api-docs
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -i *.tmp
 
-java-test:
+$(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C ../languages/java package
+
+java-test: $(JAVA_PACKAGE_JAR_PATH)
 	cd examples/abac/java && javac -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac.java && java -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac
+	# The way this test works for context is pretty sketchy.
+	# We can't set environment variables from within Java like the Python & Ruby
+	# tests, so instead we call the test twice, expecting it to fail for production.
+	cd examples/context/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext.java && ENV="development" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext
+	cd examples/context/java && (ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
+	@echo "Ignore that failure it actually worked!"
+
+test-env:
+	ENV="development" echo && ENV="development" java Test.java -- ENV
 
 python-test:
 	cd examples/inheritance/python && pytest .
