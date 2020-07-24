@@ -142,7 +142,7 @@ impl Query {
         self.vm.external_question_result(call_id, result)
     }
 
-    pub fn error(&mut self, message: String) -> PolarResult<()> {
+    pub fn error(&mut self, message: String) {
         self.vm.external_error(message)
     }
 

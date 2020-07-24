@@ -306,13 +306,8 @@ pub extern "C" fn polar_error(query_ptr: *mut Query, message: *mut c_char) -> i3
         } else {
             "".to_owned()
         };
-        match query.error(s) {
-            Ok(_) => POLAR_SUCCESS,
-            Err(e) => {
-                set_error(e);
-                POLAR_FAILURE
-            }
-        }
+        query.error(s);
+        POLAR_SUCCESS
     })
 }
 
