@@ -5,8 +5,6 @@ pub mod macros;
 #[macro_use]
 extern crate maplit;
 
-#[cfg(feature = "repl")]
-pub mod cli;
 mod debugger;
 pub mod error;
 mod formatting;
@@ -153,20 +151,6 @@ pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
         match polar.next_inline_query() {
             Some(query) => box_ptr!(query),
             None => null_mut(),
-        }
-    })
-}
-
-#[no_mangle]
-pub extern "C" fn polar_query_from_repl(polar_ptr: *mut Polar) -> *mut Query {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        match polar.new_query_from_repl() {
-            Ok(query) => box_ptr!(query),
-            Err(e) => {
-                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
-                null_mut()
-            }
         }
     })
 }

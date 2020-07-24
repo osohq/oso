@@ -15,7 +15,6 @@ module Oso
           attach_function :new_id, :polar_get_external_id, [FFI::Polar], :uint64
           attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string], FFI::Query
           attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string], FFI::Query
-          attach_function :new_query_from_repl, :polar_query_from_repl, [FFI::Polar], FFI::Query
           attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
           attach_function :free, :polar_free, [FFI::Polar], :int32
         end
@@ -71,15 +70,6 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term))
-          raise FFI::Error.get if query.null?
-
-          query
-        end
-
-        # @return [FFI::Query]
-        # @raise [FFI::Error] if the FFI call returns an error.
-        def new_query_from_repl
-          query = Rust.new_query_from_repl(self)
           raise FFI::Error.get if query.null?
 
           query
