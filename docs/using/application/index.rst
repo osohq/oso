@@ -210,7 +210,7 @@ we want to make sure only authorized expenses are submitted.
 .. literalinclude:: /examples/application/expenses-flask/app/expense.py
     :caption: :fab:`python` expense.py
     :language: python
-    :lines: 55-64
+    :lines: 55-63
 
 Right now you can see that anyone can submit an expense:
 
