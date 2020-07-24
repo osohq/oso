@@ -135,6 +135,7 @@ between users and the roles they've been assigned.
         .. literalinclude:: /examples/rbac/java/User.java
            :caption: User.java
            :language: java
+           :emphasize-lines: 16
 
         By registering our application class with oso, we can begin leveraging
         it from within our policy.

@@ -57,6 +57,32 @@ Recall that we had previously registered our user classes with oso:
          :start-after: expense-start
          :end-before: expense-end
 
+    .. group-tab:: Java
+
+        .. code-block:: java
+            :caption: User.Java
+
+            public class User {
+                ...
+                public static void main(String[] args) {
+                    oso.registerClass(User.class);
+                }
+            }
+
+        We can do the same with the resources being requested:
+
+        .. code-block:: java
+            :caption: Expense.Java
+            :emphasize-lines: 4
+
+            public class Expense {
+                ...
+                public static void main(String[] args) {
+                    oso.registerClass(Expense.class);
+                }
+            }
+
+
 
 An ``allow()`` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:
