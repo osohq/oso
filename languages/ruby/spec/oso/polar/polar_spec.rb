@@ -611,4 +611,17 @@ EOM
         end
       end
     end
+
+    it 'work for lookups' do
+      stub_const('Foo', Class.new do
+        def foo
+          'foo'
+        end
+      end)
+      subject.register_class(Foo)
+      expect(query(subject, 'new Foo{} = {bar: "bar"}')).to eq([])
+      expect { query(subject, 'new Foo{}.bar = "bar"') }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::PolarRuntimeError
+      end
+    end
 end
