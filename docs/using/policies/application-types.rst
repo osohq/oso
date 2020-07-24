@@ -98,6 +98,9 @@ Registering Application Types
 Instances of application types can be constructed from inside an oso policy using the :ref:`operator-new` operator if the class has been **registered**.
 Registering classes also makes it possible to use :ref:`specialization` and the :ref:`operator-matches` with the registered class.
 
+In our previous example, the **allow** rule expected the actor to be a ``User``, but couldn't actually check
+that type assumption in the policy. If we register the ``User`` class, we can write the following rule:
+
 .. tabs::
     .. group-tab:: Python
 
@@ -106,6 +109,11 @@ Registering classes also makes it possible to use :ref:`specialization` and the 
 
             allow(actor: User, action, resource) if actor matches User{name: "alice"};
 
+        This rule will only be evaluated when the actor is a ``User``. We're also able to use ``matches`` on the actor.
+
+        We can register the class using :py:meth:`oso.Oso.register_class` or the :py:func:`~oso.polar_class` decorator,
+        and then evaluate the rule:
+
         .. code-block:: python
             :caption: app.py
 
@@ -113,8 +121,8 @@ Registering classes also makes it possible to use :ref:`specialization` and the 
 
             user = User()
             user.name = "alice"
-            assert(OSO.allow(user, "foo", "bar))
-            assert(not OSO.allow("notauser", "foo", "bar"))
+            assert(oso.allow(user, "foo", "bar))
+            assert(not oso.allow("notauser", "foo", "bar"))
 
     .. group-tab:: Ruby
 
@@ -122,6 +130,11 @@ Registering classes also makes it possible to use :ref:`specialization` and the 
             :caption: policy.polar
 
             allow(actor: User, action, resource) if actor matches User{name: "alice", is_admin: true};
+
+        This rule will only be evaluated when the actor is a ``User``. We're also able to use ``matches`` on the actor.
+
+        We can register the class using ``register_class()``(see :doc:`/ruby/index`),
+        and then evaluate the rule:
 
         .. code-block:: ruby
             :caption: app.rb
@@ -140,16 +153,26 @@ Registering classes also makes it possible to use :ref:`specialization` and the 
 
             allow(actor: User, action, resource) if actor matches User{name: "alice", isAdmin: true};
 
+        This rule will only be evaluated when the actor is a ``User``. We're also able to use ``matches`` on the actor.
+
+        We can register the class using ``registerClass()`` (see :doc:`/java/index`),
+        and then evaluate the rule:
+
         .. code-block:: java
             :caption: User.java
 
             public static void main(String[] args) {
-                oso.registerClass(User, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+                oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
 
                 User user = new User("alice", true);
                 assert OSO.allow(user, "foo", "bar");
                 assert !OSO.allow("notauser", "foo", "bar");
             }
+
+.. note::
+    Type specializers automatically respect the
+    **inheritance** hierarchy of our application classes. See our :doc:`/using/examples/inheritance` guide for an
+    in-depth example of how this works.
 
 Once a class is registered, its static methods can also be called from oso policies:
 
@@ -213,9 +236,25 @@ Once a class is registered, its static methods can also be called from oso polic
             }
 
             public static void main(String[] args) {
-                oso.registerClass(User, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+                oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
 
                 User user = new User("alice", true);
                 assert OSO.allow(user, "foo", "bar");
             }
 
+Built-in types
+==============
+
+Methods called on Polar built-ins (``str``, ``dict``, ``number`` & ``list``)
+call methods on the corresponding language type. That way you can use
+familiar methods like ``str.startswith()`` on strings regardless of whether
+they originated in your application or as a literal in your policy.
+This applies to all of the Polar :ref:`supported types <basic-types>`:
+strings, lists, dictionaries, and numbers, in any supported application
+language. For examples using built-in types, see the :doc:`/using/libraries/index` guides.
+
+.. warning:: Do not attempt to mutate a literal using a method on it.
+  Literals in Polar are constant, and any changes made to such objects
+  by calling a method will not be persisted.
+
+.. todo:: more info on this, link to each language guide
