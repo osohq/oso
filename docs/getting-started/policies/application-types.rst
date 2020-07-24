@@ -29,7 +29,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
                     self.is_admin = is_admin
 
             user = User("alice", True)
-            assert(oso.allow(user, "foo", "bar))
+            assert(oso.is_allowed(user, "foo", "bar))
 
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
         called ``is_admin``, it is evaluated by the policy and found to be true.
@@ -42,7 +42,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
             allow(actor, action, resource) if actor.is_admin;
 
         The above rule expects the ``actor`` variable to be a Ruby instance with the attribute ``is_admin``.
-        The Ruby instance is passed into oso with a call to ``allow()``:
+        The Ruby instance is passed into oso with a call to ``Oso#allowed?``:
 
         .. code-block:: ruby
             :caption: :fas:`gem` app.rb
@@ -58,7 +58,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
             end
 
             user = User.new("alice", true)
-            raise "should be allowed" unless OSO.allow(user, "foo", "bar")
+            raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
 
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
         called ``is_admin``, it is evaluated by the policy and found to be true.
@@ -87,7 +87,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
 
                 public static void main(String[] args) {
                     User user = new User("alice", true);
-                    assert oso.allow(user, "foo", "bar");
+                    assert oso.isAllowed(user, "foo", "bar");
                 }
             }
 
@@ -185,8 +185,8 @@ We could also use ``matches`` to express the same logic:
             oso.register_class(User)
 
             user = User("alice", True)
-            assert(oso.allow(user, "foo", "bar))
-            assert(not oso.allow("notauser", "foo", "bar"))
+            assert(oso.is_allowed(user, "foo", "bar))
+            assert(not oso.is_allowed("notauser", "foo", "bar"))
 
     .. group-tab:: Ruby
 
@@ -197,8 +197,8 @@ We could also use ``matches`` to express the same logic:
 
             OSO.register_class(User)
             user = User.new("alice", true)
-            raise "should be allowed" unless OSO.allow(user, "foo", "bar")
-            raise "should not be allowed" unless not OSO.allow(user, "foo", "bar")
+            raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
+            raise "should not be allowed" unless not OSO.allowed?(user, "foo", "bar")
 
     .. group-tab:: Java
 
@@ -211,8 +211,8 @@ We could also use ``matches`` to express the same logic:
                 oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
 
                 User user = new User("alice", true);
-                assert oso.allow(user, "foo", "bar");
-                assert !oso.allow("notauser", "foo", "bar");
+                assert oso.isAllowed(user, "foo", "bar");
+                assert !oso.isAllowed("notauser", "foo", "bar");
             }
 
 
@@ -244,7 +244,7 @@ Once a class is registered, its static methods can also be called from oso polic
             oso.register_class(User)
 
             user = User("alice", True)
-            assert(oso.allow(user, "foo", "bar))
+            assert(oso.is_allowed(user, "foo", "bar))
 
     .. group-tab:: Ruby
 
@@ -266,7 +266,7 @@ Once a class is registered, its static methods can also be called from oso polic
             OSO.register_class(User)
 
         user = User.new("alice", true)
-        raise "should be allowed" unless OSO.allow(user, "foo", "bar")
+        raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
 
     .. group-tab:: Java
 
@@ -286,7 +286,7 @@ Once a class is registered, its static methods can also be called from oso polic
                 oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
 
                 User user = new User("alice", true);
-                assert oso.allow(user, "foo", "bar");
+                assert oso.isAllowed(user, "foo", "bar");
             }
 
 Built-in types

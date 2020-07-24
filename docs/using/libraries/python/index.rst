@@ -48,7 +48,7 @@ Python strings are mapped to Polar :ref:`strings`. Python's string methods may b
 
    user = User()
    user.username = "alice@example.com"
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 .. warning::
     Polar does not support methods that mutate strings in place. E.g. :py:meth:`capitalize()` will have no effect on
@@ -68,7 +68,7 @@ Python lists are mapped to Polar :ref:`Lists <lists>`. Python's list methods may
 
    user = User()
    user.groups = ["HR", "payroll"]
-   assert(oso.allow(user, "foo", "bar"))
+   assert(oso.is_allowed(user, "foo", "bar"))
 
 .. warning::
     Polar does not support methods that mutate lists in place. E.g. :py:meth:`reverse()` will have no effect on
@@ -94,7 +94,7 @@ Likewise, lists constructed in Polar may be passed into Python methods:
 
    user = User()
    user.groups = ["HR", "payroll"]
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 Dictionaries
 ^^^^^^^^^^^^
@@ -110,7 +110,7 @@ Python dictionaries are mapped to Polar :ref:`dictionaries`:
 
    user = User()
    user.roles = {"project1": "admin"}
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 Likewise, dictionaries constructed in Polar may be passed into Python methods.
 
@@ -133,7 +133,7 @@ object's elements one at a time. `Generator <https://docs.python.org/3/glossary.
          yield from ["HR", "payroll", "]
 
    user = User()
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
 ``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to :py:meth:`~oso.Oso.allow` will succeed.

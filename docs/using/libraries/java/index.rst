@@ -16,7 +16,7 @@ To install, see :doc:`installation instructions </getting-started/download/java>
 Working with Java Types
 =======================
 
-oso's Java authorization library allows you to write policy rules over Java objects directly.
+oso's Java authorization library lets you write policy rules over Java objects directly.
 This document explains how different types of Java objects can be used in oso policies.
 
 
@@ -81,7 +81,7 @@ Java Strings are mapped to Polar :ref:`strings`. Java's String methods may be ac
 
       public static void main(String[] args) {
          User user = new User("alice@example.com");
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
    }
 
@@ -107,11 +107,11 @@ mapped to Polar :ref:`Lists <lists>`. Java's ``List`` methods may be accessed fr
 
       public static void main(String[] args) {
          User user = new User(List.of("HR", "payroll"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
    }
 
-Note that the ``allow()`` call would also succeed if ``groups`` were an array.
+Note that the ``isAllowed()`` call would also succeed if ``groups`` were an array.
 
 .. warning::
     Polar does not support methods that mutate lists in place. E.g. ``add()`` will have no effect on
@@ -137,7 +137,7 @@ Likewise, lists constructed in Polar may be passed into Java methods:
 
       public static void main(String[] args) {
          User user = new User(List.of("HR", "payroll"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
 
 Maps
@@ -162,7 +162,7 @@ are mapped to Polar :ref:`dictionaries`:
 
       public static void main(String[] args) {
          User user = new User(Map.of("project1", "admin"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
    }
 
@@ -187,11 +187,11 @@ object's elements one at a time:
 
       public static void main(String[] args) {
          User user = new User(Map.of("project1", "admin"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
 
 In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``allow()`` will succeed.
+``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``isAllowed()`` will succeed.
 Note that if ``getGroup()`` returned a list, the rule would fail, as the evaluation would be ``["HR", "payroll"] = "payroll"``.
 
 Summary

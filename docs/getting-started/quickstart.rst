@@ -189,7 +189,7 @@ make authorization decisions!
 Decisions, decisions...
 =======================
 
-The ``Oso`` instance exposes an ``allow()`` method that takes three
+The ``Oso`` instance exposes a method to evaluate ``allow`` rules that takes three
 arguments, **actor**, **action**, and **resource**:
 
 
@@ -238,7 +238,7 @@ start a REPL session and follow along:
       <oso.Oso object at 0x7f267494dc70>
       >>> alice = "alice@example.com"
       >>> expense = EXPENSES[1]
-      >>> oso.allow(alice, "GET", expense)
+      >>> oso.is_allowed(alice, "GET", expense)
       False
 
     We can add a rule explicitly allowing Alice to GET expenses...
@@ -257,14 +257,14 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
-      >>> oso.allow(alice, "GET", expense)
+      >>> oso.is_allowed(alice, "GET", expense)
       True
 
     ...and everyone else is still denied:
 
     .. code-block:: pycon
 
-      >>> OSO.allow("bhavik", "GET", expense)
+      >>> OSO.is_allowed("bhavik", "GET", expense)
       False
 
 
@@ -280,7 +280,7 @@ start a REPL session and follow along:
         => "alice@example.com"
         irb(main):003:0> expense = EXPENSES[1]
         => #<Expense:0x00564efc19e640 @amount=500, @description="coffee", @submitted_by="alice@example.com">
-        irb(main):004:0> OSO.allow(actor: alice, action: "GET", resource: expense)
+        irb(main):004:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
         => false
 
     We can add a rule explicitly allowing Alice to view expenses...
@@ -300,14 +300,14 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allow(actor: "alice", action: "GET", resource: "expense")
+      irb(main):005:0> OSO.allowed?(actor: "alice", action: "GET", resource: "expense")
       => true
 
     ...and everyone else is still denied:
 
     .. code-block:: irb
 
-      irb(main):006:0> OSO.allow(actor: "bhavik", action: "GET", resource: "expense")
+      irb(main):006:0> OSO.allowed?(actor: "bhavik", action: "GET", resource: "expense")
       => false
 
   .. group-tab:: Java
@@ -324,7 +324,7 @@ start a REPL session and follow along:
         jshell> Expense expense = Server.EXPENSES[1]
         expense ==> Expense(5000, software, alice@example.com)
 
-        jshell> oso.allow(alice, "GET", expense)
+        jshell> oso.isAllowed(alice, "GET", expense)
         $12 ==> false
 
     We can add a rule explicitly allowing Alice to view expenses...
@@ -343,14 +343,14 @@ start a REPL session and follow along:
 
     .. code-block:: java
 
-      jshell> oso.allow(alice, "GET", expense)
+      jshell> oso.isAllowed(alice, "GET", expense)
       $14 ==> true
 
     ...and everyone else is still denied:
 
     .. code-block:: java
 
-      jshell> oso.allow("bhavik", "GET", expense)
+      jshell> oso.isAllowed("bhavik", "GET", expense)
       $15 ==> false
 
 .. note::
