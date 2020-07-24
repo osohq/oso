@@ -49,7 +49,7 @@ public class Polar {
                 .map(f -> f.substring(filename.lastIndexOf(".") + 1));
 
         // check file extension
-        if (!ext.isPresent() || !ext.get().startsWith("pol")) {
+        if (!ext.isPresent() || !ext.get().equals("polar")) {
             throw new Exceptions.PolarFileExtensionError();
         }
 
