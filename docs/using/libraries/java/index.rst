@@ -65,12 +65,12 @@ Strings
 Java Strings are mapped to Polar :ref:`strings`. Java's String methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.username.endsWith("example.com");
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
    public class User {
       public String username;
@@ -91,12 +91,12 @@ Java `Arrays <https://docs.oracle.com/javase/tutorial/java/nutsandbolts/arrays.h
 mapped to Polar :ref:`Lists <lists>`. Java's ``List`` methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.groups.contains("HR");
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
    public class User {
       public List<String> groups;
@@ -120,12 +120,12 @@ Note that the ``allow()`` call would also succeed if ``groups`` were an array.
 Likewise, lists constructed in Polar may be passed into Java methods:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
       public boolean hasGroups(List<String> groups) {
          for(String g : groups) {
@@ -146,12 +146,12 @@ Java objects that implement the `Map <https://docs.oracle.com/javase/8/docs/api/
 are mapped to Polar :ref:`dictionaries`:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
    public class User {
       public Map<String, String> roles;
@@ -174,12 +174,12 @@ Oso handles Java objects that implement the `Enumeration <https://docs.oracle.co
 object's elements one at a time:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.getGroup = "payroll";
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
       public Enumeration<String> getGroup() {
          return Collections.enumeration(List.of("HR", "payroll"));

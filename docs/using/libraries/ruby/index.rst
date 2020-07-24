@@ -39,12 +39,12 @@ Strings
 Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be called in policies:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.username.end_with?("example.com");
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :username
@@ -65,12 +65,12 @@ Lists
 Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`Lists <lists>`. Ruby's Array methods may be called in policies:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.groups.include?("HR");
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :groups
@@ -89,12 +89,12 @@ Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`
 Likewise, lists constructed in Polar may be passed into Ruby methods:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.has_groups?(["HR", "payroll"]);
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :groups
@@ -116,12 +116,12 @@ Hashes
 Ruby hashes are mapped to Polar :ref:`dictionaries`:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :roles
@@ -142,12 +142,12 @@ Oso handles Ruby `enumerators <https://ruby-doc.org/core/Enumerator.html>`_ by e
 yielded values one at a time.
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.get_group = "payroll";
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     def get_group(self)
@@ -166,8 +166,8 @@ Summary
 ^^^^^^^
 
 .. list-table:: Ruby -> Polar Types Summary
-    :width: 500 px
-    :header-rows: 1
+  :width: 500 px
+  :header-rows: 1
 
   * - Ruby type
     - Polar type

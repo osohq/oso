@@ -41,8 +41,8 @@ To learn more about oso and the principles behind its design,
    :caption: Getting Started
    :hidden:
 
-   getting-started/download/index
    getting-started/quickstart
+   getting-started/download/index
    getting-started/application/index
    Writing Policies <getting-started/policies/index>
 
