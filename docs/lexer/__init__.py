@@ -6,10 +6,10 @@ class PolarLexer(RegexLexer):
     tokens = {
         "root": [
             (r"(\w[\w-]*)(\()", bygroups(token.Keyword, token.Punctuation)),
-            (r"\w[\w-]*", token.Name),
+            (r"\sif\s|\sand\s|\sor\s|\snot\s|\smatches\s", token.Name.Function),
+            (r"\w[\w-]*", token.Text),
             (r"\s", token.Text),
-            (r"=|\||:=|\?=|\!|\*|<|<=|>|>=|==", token.Operator),
-            (r"if|and|or|not", token.Operator.Word),
+            (r"=|\?=|\*|<|<=|>|>=|==", token.Operator),
             (r",|\.|\(|\)|\{|\}|:|;|\[|\]", token.Punctuation),
             (r"\#.*$", token.Comment.Single),
             (r'"', token.String, "string"),
