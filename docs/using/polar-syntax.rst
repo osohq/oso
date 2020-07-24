@@ -38,6 +38,10 @@ are all parsed as numbers.
 
 .. _strings:
 
+Boolean
+-------
+Polar parses the keywords ``true`` and ``false`` as boolean values.
+
 Strings
 -------
 
