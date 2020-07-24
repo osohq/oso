@@ -25,7 +25,7 @@ Access control dimensions
 
 Authorization is fundamentally about controlling data access or modification
 based on properties of the actor. This is why ``actor`` and ``resource`` are
-:doc:`primary concepts </using/key-concepts>` in oso.
+:doc:`primary concepts </more/key-concepts>` in oso.
 
 Control over data access is commonly exercised over several dimensions:
 
@@ -311,7 +311,7 @@ policy is evaluated both **before and after data fetch** for greater efficiency.
     change from the previous example. We used the ``Variable`` class which
     instructs oso to find all values of ``field`` that match the rules we defined
     in our policy.  This flexibility derives directly from writing a
-    :doc:`declarative policy in Polar </understand/language/polar-foundations>`!
+    :doc:`declarative policy in Polar </more/language/polar-foundations>`!
 
 Authorizing list endpoints
 ==========================

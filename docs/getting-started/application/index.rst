@@ -92,7 +92,7 @@ email address in the request header.
     :language: python
     :lines: 52-53
 
-So we can use :doc:`type checking </using/policies/application-types>`
+So we can use :doc:`type checking </getting-started/policies/application-types>`
 to only allow the request when the user is a ``User``:
 
 .. literalinclude:: /examples/application/expenses-flask/app/authorization.polar
@@ -284,7 +284,7 @@ make it convenient to add data access controls to our route handlers.
 
     For more on access control patters, continue to :doc:`patterns`.
 
-    For more on writing authorization policies, head over to :doc:`/using/policies/index`.
+    For more on writing authorization policies, head over to :doc:`/getting-started/policies/index`.
 
 .. toctree::
     :hidden:

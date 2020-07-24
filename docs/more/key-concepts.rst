@@ -35,7 +35,7 @@ Resources
 ---------
 Resources are the objects of authorization queries. They represent the
 application components that we wish to protect. They might be designated by
-a URI or other string, or may be an :doc:`application type </using/policies/application-types>`.
+a URI or other string, or may be an :doc:`application type </getting-started/policies/application-types>`.
 
 .. _queries:
 
@@ -120,7 +120,7 @@ before allowing them to board. And what about flight attendants?
 We might want to write separate rules for their boarding permissions.
 All of this is possible, and easy to integrate with your
 application's data using
-:doc:`application types </using/policies/application-types>`.
+:doc:`application types </getting-started/policies/application-types>`.
 
 Summary
 =======

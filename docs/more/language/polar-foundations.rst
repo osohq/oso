@@ -173,7 +173,7 @@ Enough abstract nonsense—let's see some code! We'll start, as is
 traditional in logic programming, with a simple genealogy example.
 Suppose we are given the following fragment of a family tree:
 
-.. image:: /understand/language/olympians.svg
+.. image:: /more/language/olympians.svg
 
 We could represent the direct relations as the following facts in Polar::
 
@@ -411,6 +411,6 @@ In this guide, we have explored:
 
 What we haven't explored here is how to use Polar to express
 particular authorization policies. Many examples can be found
-in the :doc:`Authorization Fundamentals </using/key-concepts>`
+in the :doc:`Authorization Fundamentals </more/key-concepts>`
 and :doc:`Authorization Models </using/examples/index>` sections
 of the manual.

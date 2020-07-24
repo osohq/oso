@@ -4,9 +4,9 @@ Writing Policies
 
 If this is your first experience with writing declarative policies, welcome!
 As a reminder: oso policies are written in a language called Polar.
-There is a full :doc:`polar-syntax` guide which you can use as a reference
+There is a full :doc:`/using/polar-syntax` guide which you can use as a reference
 of all the available syntax, but here we'll give an overview of
-getting started with writign policies.
+getting started with writing policies.
 
 The syntax might feel a bit foreign at first, but fear not: almost
 anything you can express in imperative code can equally be expressed in Polar
@@ -162,8 +162,8 @@ in Polar. Any time a rule body contains a **predicate** like this, it is perform
 another query. I.e. it will try and find all *matching* rules called "role" with
 two inputs.
 
-You can also either use the :doc:`/using/dev-tools/repl` or the ``oso.query_predicate``
-method to interact with this directly. For example, 
+You can also either use the :doc:`/more/dev-tools/repl` or the ``oso.query_predicate``
+method to interact with this directly. For example:
 
 .. code-block:: python
   :caption: :fab:`python` user.py
@@ -197,7 +197,7 @@ logic, and the core idea of matching.
   like RBAC and ABAC in the :doc:`/using/examples/index` section.
 
   And finally, if you want a reference of all possible syntax,there is the
-  :doc:`polar-syntax` page.
+  :doc:`/using/polar-syntax` page.
 
 
 .. toctree::
