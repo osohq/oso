@@ -198,7 +198,7 @@ Summary
 ^^^^^^^
 
 .. list-table:: Java -> Polar Types Summary
-   :widths: 500 500
+   :width: 500 px
    :header-rows: 1
 
    * - Java type
