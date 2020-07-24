@@ -401,6 +401,22 @@ public class PolarTest {
         assertTrue(p.query("f(x)").results().isEmpty());
     }
 
+    public static class Foo {
+        public String foo;
+
+        public Foo() {
+            this.foo = "foo";
+        }
+    }
+
+    @Test
+    public void testLookupErrors() throws Exception {
+        p.registerClass(Foo.class, m -> new Foo(), "Foo");
+        assertEquals(List.of(), p.queryStr("new Foo{} = {bar: \"bar\"}").results());
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryStr("new Foo{}.bar = \"bar\""),
+                "Expected error.");
+    }
+
     /*** TEST OSO ***/
     @Test
     public void testPathMapper() throws Exception {
