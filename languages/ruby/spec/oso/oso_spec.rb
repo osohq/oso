@@ -75,7 +75,7 @@ RSpec.describe Oso::Oso do
           allow(actor, "get", _: Http{path: path}) if
               new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
               allow(actor, "get", new Widget{id: id});
-          allow(_actor, "get", widget) if widget.id = "12";
+          allow(_actor, "get", widget: Widget{}) if widget.id = "12";
         POLAR
         widget12 = Oso::Http.new(path: '/widget/12')
         allowed = subject.allowed?(actor: 'sam', action: 'get', resource: widget12)
