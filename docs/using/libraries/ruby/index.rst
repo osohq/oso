@@ -166,8 +166,8 @@ Summary
 ^^^^^^^
 
 .. list-table:: Ruby -> Polar Types Summary
-  :widths: 500 500
-  :header-rows: 1
+    :width: 500 px
+    :header-rows: 1
 
   * - Ruby type
     - Polar type
