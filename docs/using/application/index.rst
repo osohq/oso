@@ -231,7 +231,7 @@ lines:
 .. literalinclude:: /examples/application/expenses-flask/app/expense.py
     :caption: :fab:`python` expense.py
     :language: python
-    :lines: 55-64
+    :lines: 55-63
     :emphasize-lines: 8-9
 
 We could change the first highlighted line to:
