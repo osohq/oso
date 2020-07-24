@@ -127,6 +127,18 @@ between users and the roles they've been assigned.
            :start-after: user-start
            :end-before: user-end
 
+    .. group-tab:: Java
+
+        Our Java application has the following :py:class:`User` model that can
+        look up its assigned roles from the database:
+
+        .. literalinclude:: /examples/rbac/java/User.java
+           :caption: User.java
+           :language: java
+           :emphasize-lines: 16
+
+        By registering our application class with oso, we can begin leveraging
+        it from within our policy.
 
 Our policy currently expects actors to be simple strings, but we can write
 policy over our existing domain model by adding the :polar:`User` :ref:`type
@@ -165,6 +177,8 @@ Summary
 We started with the basics of RBAC by writing out a toy policy and assigning
 roles to actors in Polar. We saw how simple it is to construct arbitrary
 role hierarchies, and we added a few inline queries to test our policy.
+
+.. todo:: Below paragraph needs rephrasing.
 
 Things started to get really interesting when we added the
 :py:func:`oso.polar_class` decorator to the :py:class:`User` model, with that
