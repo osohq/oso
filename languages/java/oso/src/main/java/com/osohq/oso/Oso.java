@@ -7,8 +7,11 @@ import java.util.function.Function;
 public class Oso extends Polar {
     public Oso() throws Exceptions.OsoException {
         super();
-        registerClass(Http.class, (m) -> new Http((String) m.get("hostname"), (String) m.get("path"),
-                (Map<String, String>) m.get("query")), "Http");
+        registerClass(Http.class,
+                      (m) -> new Http((String) m.get("hostname"),
+                                      (String) m.get("path"),
+                                      (Map<String, String>) m.get("query")),
+                      "Http");
         registerClass(PathMapper.class, (m) -> new PathMapper((String) m.get("template")), "PathMapper");
     }
 

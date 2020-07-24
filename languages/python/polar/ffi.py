@@ -23,7 +23,7 @@ class Predicate:
     args: Sequence[Any]
 
     def __str__(self):
-        return f'{self.name}({self.args.join(", ")})'
+        return f'{self.name}({", ".join(self.args)})'
 
     def __eq__(self, other):
         if not isinstance(other, Predicate):

@@ -1,5 +1,5 @@
 import os
-from polar import polar_class
+from oso import polar_class
 
 @polar_class
 class Env:

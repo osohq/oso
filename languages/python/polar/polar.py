@@ -108,7 +108,7 @@ class Polar:
                 break
             for res in self.run(query):
                 had_result = True
-                print(f"Result: {res}")
+                print(f"Result: {res['bindings']}")
             if not had_result:
                 print("False")
 

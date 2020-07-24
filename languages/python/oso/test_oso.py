@@ -15,10 +15,7 @@ from polar.test_helpers import public_key, private_key
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
-actors = {
-    "guest": "1",
-    "president": "1",
-}
+actors = {"guest": "1", "president": "1"}
 
 
 class Actor:
@@ -32,7 +29,6 @@ class Actor:
         yield Company(id=actors[self.name])  # real, will pass
 
 
-# example of registering a non-dataclass class
 class Widget:
     # Data fields.
     id: str = ""

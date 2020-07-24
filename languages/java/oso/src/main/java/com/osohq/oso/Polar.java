@@ -22,7 +22,7 @@ public class Polar {
      *
      * @throws Exceptions.OsoException
      */
-    protected void clear() throws Exceptions.OsoException {
+    public void clear() throws Exceptions.OsoException {
         loadQueue.clear();
         ffiPolar = Ffi.get().polarNew();
     }
@@ -80,7 +80,7 @@ public class Polar {
      * @param queryStr Query string
      * @return Query object (Enumeration of resulting variable bindings).
      */
-    protected Query query(String query) throws Exceptions.OsoException {
+    public Query query(String query) throws Exceptions.OsoException {
         loadQueuedFiles();
         return new Query(ffiPolar.newQueryFromStr(query), host.clone());
     }
@@ -93,7 +93,7 @@ public class Polar {
      * @return Query object (Enumeration of resulting variable bindings).
      * @throws Exceptions.OsoException
      */
-    protected Query query(String predicate, List<Object> args) throws Exceptions.OsoException {
+    public Query query(String predicate, List<Object> args) throws Exceptions.OsoException {
         loadQueuedFiles();
         Host new_host = host.clone();
         String pred = new_host.toPolarTerm(new Predicate(predicate, args)).toString();
@@ -105,7 +105,7 @@ public class Polar {
      *
      * @throws Exceptions.OsoException
      */
-    protected void repl() throws Exceptions.OsoException {
+    public void repl() throws Exceptions.OsoException {
         loadQueuedFiles();
         while (true) {
             Query query = new Query(ffiPolar.newQueryFromRepl(), host);
@@ -130,7 +130,7 @@ public class Polar {
      * @throws Exceptions.DuplicateClassAliasError if class has already been
      *                                             registered.
      */
-    protected void registerClass(Class cls, Function<Map, Object> fromPolar)
+    public void registerClass(Class cls, Function<Map, Object> fromPolar)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         registerClass(cls, fromPolar, cls.getName());
     }
@@ -147,7 +147,7 @@ public class Polar {
      * @throws Exceptions.DuplicateClassAliasError if a class has already been
      *                                             registered with the given alias.
      */
-    protected void registerClass(Class cls, Function<Map, Object> fromPolar, String name)
+    public void registerClass(Class cls, Function<Map, Object> fromPolar, String name)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
         host.cacheClass(cls, fromPolar, name);
         registerConstant(name, cls);
@@ -160,7 +160,7 @@ public class Polar {
      * @param value
      * @throws Exceptions.OsoException
      */
-    protected void registerConstant(String name, Object value) throws Exceptions.OsoException {
+    public void registerConstant(String name, Object value) throws Exceptions.OsoException {
         ffiPolar.registerConstant(name, host.toPolarTerm(value).toString());
     }
 
