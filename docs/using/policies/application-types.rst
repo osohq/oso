@@ -23,9 +23,13 @@ make it possible to take advantage of an app's existing domain model. For exampl
         .. code-block:: python
             :caption: app.py
 
-            user = User()
-            user.is_admin = True
-            assert(OSO.allow(user, "foo", "bar))
+            class User:
+                def __init__(self, name, is_admin):
+                    self.name = name
+                    self.is_admin = is_admin
+
+            user = User("alice", True)
+            assert(oso.allow(user, "foo", "bar))
 
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
         called ``is_admin``, it is evaluated by the policy and found to be true.
@@ -83,58 +87,110 @@ make it possible to take advantage of an app's existing domain model. For exampl
 
                 public static void main(String[] args) {
                     User user = new User("alice", true);
-                    assert OSO.allow(user, "foo", "bar");
+                    assert oso.allow(user, "foo", "bar");
                 }
             }
 
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has a field
         called ``isAdmin``, it is evaluated by the Polar rule and found to be true.
 
+.. note::
+    You can also call methods on application instances in a policy. If the method takes arguments, the method must be called
+    with `ordered arguments`, even if the method is defined to take keyword arguments.
+
 
 
 Registering Application Types
 ==============================
 
-Instances of application types can be constructed from inside an oso policy using the :ref:`operator-new` operator if the class has been **registered**.
-Registering classes also makes it possible to use :ref:`specialization` and the :ref:`operator-matches` with the registered class.
-
-In our previous example, the **allow** rule expected the actor to be a ``User``, but couldn't actually check
-that type assumption in the policy. If we register the ``User`` class, we can write the following rule:
+Instances of application types can be constructed from inside an oso policy using the :ref:`operator-new` operator if the class has been **registered**:
 
 .. tabs::
     .. group-tab:: Python
-
-        .. code-block:: polar
-            :caption: policy.polar
-
-            allow(actor: User, action, resource) if actor matches User{name: "alice"};
-
-        This rule will only be evaluated when the actor is a ``User``. We're also able to use ``matches`` on the actor.
-
-        We can register the class using :py:meth:`oso.Oso.register_class` or the :py:func:`~oso.polar_class` decorator,
-        and then evaluate the rule:
+        We can register a Python class using :py:meth:`oso.Oso.register_class` or the :py:func:`~oso.polar_class` decorator:
 
         .. code-block:: python
             :caption: app.py
 
             oso.register_class(User)
 
-            user = User()
-            user.name = "alice"
+        Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
+
+        .. code-block:: polar
+            :caption: policy.polar
+
+            ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
+
+    .. group-tab:: Ruby
+        Ruby classes are registered using ``register_class()``(see :doc:`/ruby/index`):
+
+        .. code-block:: ruby
+            :caption: app.rb
+
+            OSO.register_class(User)
+
+        Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
+
+        .. code-block:: polar
+            :caption: policy.polar
+
+            ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
+
+    .. group-tab:: Java
+        To register a Java class, you must provide a lambda function to ``registerClass()`` that takes a map of arguments:
+
+        .. code-block:: java
+            :caption: User.java
+
+            public static void main(String[] args) {
+                oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+            }
+
+        Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
+
+        .. code-block:: polar
+            :caption: policy.polar
+
+            ?= allow(new User{name: "alice", isAdmin: true}, "foo", "bar");
+
+
+
+Registering classes also makes it possible to use :ref:`specialization` and the :ref:`operator-matches` with the registered class.
+
+In our previous example, the **allow** rule expected the actor to be a ``User``, but we couldn't actually check
+that type assumption in the policy. If we register the ``User`` class, we can write the following rule:
+
+.. code-block:: polar
+    :caption: policy.polar
+
+    allow(actor: User, action, resource) if actor.name = "alice";
+
+
+This rule will only be evaluated when the actor is a ``User``.
+We could also use ``matches`` to express the same logic:
+
+.. code-block:: polar
+    :caption: policy.polar
+
+    allow(actor, action, resource) if matches User{name: "alice"};
+
+.. tabs::
+    .. group-tab:: Python
+
+        We can then evaluate the rule:
+
+        .. code-block:: python
+            :caption: app.py
+
+            oso.register_class(User)
+
+            user = User("alice", True)
             assert(oso.allow(user, "foo", "bar))
             assert(not oso.allow("notauser", "foo", "bar"))
 
     .. group-tab:: Ruby
 
-        .. code-block:: polar
-            :caption: policy.polar
-
-            allow(actor: User, action, resource) if actor matches User{name: "alice", is_admin: true};
-
-        This rule will only be evaluated when the actor is a ``User``. We're also able to use ``matches`` on the actor.
-
-        We can register the class using ``register_class()``(see :doc:`/ruby/index`),
-        and then evaluate the rule:
+        We can then evaluate the rule:
 
         .. code-block:: ruby
             :caption: app.rb
@@ -146,17 +202,7 @@ that type assumption in the policy. If we register the ``User`` class, we can wr
 
     .. group-tab:: Java
 
-        Classes in Java are registered using the ``Oso.registerClass()`` method:
-
-        .. code-block:: polar
-            :caption: policy.polar
-
-            allow(actor: User, action, resource) if actor matches User{name: "alice", isAdmin: true};
-
-        This rule will only be evaluated when the actor is a ``User``. We're also able to use ``matches`` on the actor.
-
-        We can register the class using ``registerClass()`` (see :doc:`/java/index`),
-        and then evaluate the rule:
+        We can then evaluate the rule:
 
         .. code-block:: java
             :caption: User.java
@@ -165,9 +211,10 @@ that type assumption in the policy. If we register the ``User`` class, we can wr
                 oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
 
                 User user = new User("alice", true);
-                assert OSO.allow(user, "foo", "bar");
-                assert !OSO.allow("notauser", "foo", "bar");
+                assert oso.allow(user, "foo", "bar");
+                assert !oso.allow("notauser", "foo", "bar");
             }
+
 
 .. note::
     Type specializers automatically respect the
@@ -188,6 +235,7 @@ Once a class is registered, its static methods can also be called from oso polic
             :caption: app.py
 
             class User:
+                ...
                 @classmethod
                 def superusers(cls):
                     """ Class method to return list of superusers. """
@@ -195,9 +243,8 @@ Once a class is registered, its static methods can also be called from oso polic
 
             oso.register_class(User)
 
-            user = User()
-            user.name = "alice"
-            assert(OSO.allow(user, "foo", "bar))
+            user = User("alice", True)
+            assert(oso.allow(user, "foo", "bar))
 
     .. group-tab:: Ruby
 
@@ -239,7 +286,7 @@ Once a class is registered, its static methods can also be called from oso polic
                 oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
 
                 User user = new User("alice", true);
-                assert OSO.allow(user, "foo", "bar");
+                assert oso.allow(user, "foo", "bar");
             }
 
 Built-in types
