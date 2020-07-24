@@ -311,7 +311,7 @@ policy is evaluated both **before and after data fetch** for greater efficiency.
     change from the previous example. We used the ``Variable`` class which
     instructs oso to find all values of ``field`` that match the rules we defined
     in our policy.  This flexibility derives directly from writing a
-    :doc:`declarative policy in Polar </understand/language/polar-fundamentals>`!
+    :doc:`declarative policy in Polar </understand/language/polar-foundations>`!
 
 Authorizing list endpoints
 ==========================

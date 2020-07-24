@@ -55,7 +55,7 @@ Policies
 ========
 
 oso evaluates queries using authorization logic contained in **policies**.
-Policies are written as code in a logic programming language called Polar.
+Policies are written as code in a declarative policy language called Polar.
 Polar is designed to provide a simple but expressive syntax for authorization
 logic. For more information on Polar, see the :doc:`language documentation </using/polar-syntax>`,
 and for examples of different kinds of policies you can express with it,

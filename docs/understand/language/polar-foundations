@@ -1,6 +1,6 @@
-==================
-Polar Fundamentals
-==================
+=================
+Polar Foundations
+=================
 
 The **oso** authorization library uses the **Polar** programming language
 to express authorization logic and policies. This guide is meant to serve
