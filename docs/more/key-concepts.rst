@@ -9,8 +9,9 @@ to help you accomplish this goal.
 
 .. _actors:
 
+
 Actors
-------
+======
 Actors are the **subjects** of authorization queries. Actors will often be
 application end-users, but could also represent service users, API clients,
 or other internal systems. They may be represented by simple strings
@@ -20,7 +21,7 @@ like a JWT.
 .. _actions:
 
 Actions
--------
+=======
 Actions are the **verbs** of authorization queries. They distinguish between
 different kinds of queries for a given resource by indicating what the
 actor is attempting to do. For a web application, the action might be an
@@ -29,7 +30,7 @@ HTTP request method like ``GET`` or ``POST``.
 .. _resources:
 
 Resources
----------
+=========
 Resources are the **objects** of authorization queries. They represent the
 application components that we wish to protect. They might be designated by
 a URI or other string, or may be an :doc:`application type </getting-started/policies/application-types>`.
