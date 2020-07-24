@@ -85,9 +85,7 @@ module Oso
       #
       # @raise [Error] if the FFI call raises one.
       def repl(load: false) # rubocop:disable Metrics/MethodLength
-        if load
-          ARGV.map { |f| load_file(f) }
-        end
+        ARGV.map { |f| load_file(f) } if load
         load_queued_files
 
         loop do
