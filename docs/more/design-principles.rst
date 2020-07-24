@@ -1,9 +1,9 @@
 .. role:: polar(code)
    :language: prolog
 
-============
-Overview
-============
+=================
+Design Principles
+=================
 
 oso helps developers build authorization into their applications. Authorization typically starts simple – perhaps a few `if` statements in your code – but can  grow complex as you add:
 
@@ -128,7 +128,7 @@ Splitting out authorization logic with oso might look as follows:
                     user.email = expense.submitted_by;
 
 .. note::
-    Want to see how this policy works? Check out the :doc:`guide for writing policies </using/policies/index>`.
+    Want to see how this policy works? Check out the :doc:`guide for writing policies </getting-started/policies/index>`.
 
 The ``oso.query`` call can be made anywhere. So even if we have developer APIs
 and multiple different backend server calls -- which all require checking the
@@ -150,7 +150,7 @@ If we need to extend the permissions to make ``download`` stricter,  we just add
 adds more conditions: :polar:`allow(user, "download", expense) if allow(user, "read", expense) and user.has_mfa_enabled()`;
 
 Furthermore, by conforming to a standardized approach to authorization, we can leverage
-tooling built around the standard. For oso, this means access to :doc:`a policy debugger and interactive REPL </using/dev-tools/index>`.
+tooling built around the standard. For oso, this means access to :doc:`a policy debugger and interactive REPL </more/dev-tools/index>`.
 
 Right tool for the job
 ----------------------
@@ -263,7 +263,7 @@ its needed to make decisions, while keeping the code clean, reusable, and mainta
     Stay here and continue reading about what lies under the hood of the oso library.
 
     Head back to :doc:`/getting-started/quickstart` if you
-    haven't already, or continue on to :doc:`/using/key-concepts`.
+    haven't already, or continue on to :doc:`/more/key-concepts`.
 
 
 Internals

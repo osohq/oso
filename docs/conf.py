@@ -90,7 +90,7 @@ exclude_patterns = [
     "project/changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
-    "understand/language/polar-classes.rst",  # we don't currently have classes
+    "more/language/polar-classes.rst",  # we don't currently have classes
     "**/venv/**",
 ]
 

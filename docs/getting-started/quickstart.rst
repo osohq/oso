@@ -219,7 +219,7 @@ perform the **action** ``"GET"`` on the
 verb used in our server, but this could be anything.
 
 .. note:: For more on **actors**, **actions**, and **resources**, check out
-  :doc:`/using/key-concepts`.
+  :doc:`/more/key-concepts`.
 
 oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
@@ -371,7 +371,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik@example.com"
 match the string ``"alice@example.com"``.
 
 .. note:: For a deeper introduction to writing authorization rules with oso,
-  see :doc:`/using/key-concepts`.
+  see :doc:`/more/key-concepts`.
 
 Authorizing HTTP requests
 =========================
@@ -563,7 +563,7 @@ as:
 - Does the expense's ``amount`` field contain a value less than $100.00?
 
 .. note:: For more on leveraging application data in an oso policy, check out
-  :doc:`/using/policies/application-types`.
+  :doc:`/getting-started/policies/application-types`.
 
 
 
