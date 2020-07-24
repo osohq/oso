@@ -15,7 +15,7 @@ jobs:
           github_ref: ${{ github.ref }}
         run: echo "::set-env name=oso_version::${github_ref/refs\/tags\/v/}"
       - name: Check python version matches
-        run: grep "__version__ = \"$oso_version\"" oso/__init__.py
+        run: grep "__version__ = \"$oso_version\"" oso/oso.py
         working-directory: languages/python
       - name: Check ruby version matches
         run: grep "VERSION = '$oso_version'" lib/oso/version.rb
