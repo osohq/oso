@@ -59,7 +59,7 @@ To learn more about oso and the principles behind its design,
    using/key-concepts
 
    using/application/index
-   using/policies/index
+   Writing Policies <using/policies/index>
    using/examples/index
    using/polar-syntax
 
