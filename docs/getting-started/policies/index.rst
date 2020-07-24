@@ -44,56 +44,6 @@ But if we replace ``action`` with a concrete type:
 
 the rule will now only be evaluated if the second input exactly matches the string ``"read"``.
 
-.. .. _airport:
-
-.. For instance, let's imagine we are using oso to write an authorization system
-.. for an airport. We'll start with a very simple policy: suppose that passengers
-.. Alice and Bob are allowed to board any flight. One simple way to represent such
-.. a policy in Polar would be::
-
-..    allow("alice", "board", "flight");
-..    allow("bob", "board", "flight");
-
-.. Now an authorization query where ``actor`` is the string ``"bob"``,
-.. ``action`` is the string ``"board"``, and resource is the string ``"flight"``
-.. would be evaluated as follows: the first rule would fail to match (since
-.. ``"bob" != "alice"``), but the second matches all three arguments with
-.. the rule parameters, so the authorization query completes successfully,
-.. and access is granted.
-
-.. Now, what happens if an actor named ``"charlie"`` tries to board a flight?
-.. In that case, no matching rules will be found, so the authorization query
-.. fails and access is denied. Thus we see that policies are "deny by
-.. default".
-
-
-.. Matching
-.. ========
-
-.. One of the core concepts to understand when writing oso policies, is that it
-.. is all based around matching.
-
-.. Take the basic ``allow`` rule that we use as a convention for where policy
-.. decision start:
-
-.. .. code-block:: polar
-
-..     allow(actor, action, resource) if ...
-
-.. When we use ``oso.allow``, we are making a ``Polar`` query, and asking it to
-.. find all rules that match (a) on the rule name "allow", and (b) on all the inputs.
-
-.. In the above, ``actor``, ``action``, and ``resource`` were all simple parameter names.
-.. I.e. these are new variables. These will match *anything*.
-
-.. But we can replace one for a concrete type:
-
-.. .. code-block:: polar
-
-..     allow(actor, "read", resource) if ...
-
-.. Which is instead making sure the second input will match exactly with the string ``"read"``.
-
 .. _if_statement:
 
 ``if`` statements
