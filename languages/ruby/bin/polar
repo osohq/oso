@@ -1,6 +1,0 @@
-#!/usr/bin/env -S bundle exec ruby
-#-*-ruby-*-
-
-require 'oso'
-
-Oso::Polar.new.repl(load: true)
