@@ -27,6 +27,7 @@ def authorize(action, resource):
 
 def init_app(app):
     from .expense import Expense
+    from .organization import Organization
     from .user import Actor, Guest, User
 
     oso = Oso()
@@ -34,6 +35,7 @@ def init_app(app):
     oso.register_class(Guest)
     oso.register_class(User)
     oso.register_class(Expense)
+    oso.register_class(Organization)
 
     for policy in app.config.get("OSO_POLICIES", []):
         oso.load_file(policy)

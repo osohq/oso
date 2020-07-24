@@ -7,7 +7,7 @@ from .authorization import authorize
 from .db import query_db
 from .user import User
 
-bp = Blueprint("expense", __name__, url_prefix="/expense")
+bp = Blueprint("expense", __name__, url_prefix="/expenses")
 
 
 @dataclass
@@ -43,9 +43,7 @@ class Expense:
         )
         if record is None:
             raise NotFound()
-        expense = cls(**record)
-        expense.id = id
-        return authorize("read", expense)
+        return cls(**record)
 
 
 @bp.route("/<int:id>", methods=["GET"])
@@ -59,12 +57,7 @@ def submit_expense():
     expense_data = request.get_json(force=True)
     if not expense_data:
         raise BadRequest()
-    expense_data["user_id"] = g.current_user.id
-    expense = authorize("create", Expense(**expense_data))
+    # if no user id supplied, assume it is for the current user
+    expense_data.setdefault("user_id", g.current_user.id)
     expense.save()
-    return str(authorize("read", expense))
-
-
-def get_project(id):
-    project = Project.lookup(id)
-    return str(authorize("read", project))
+    return str(expense)

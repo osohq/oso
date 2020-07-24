@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from flask import g, request, Blueprint
+from flask import current_app, g, request, Blueprint
 from werkzeug.exceptions import Unauthorized
 
 from .db import query_db
@@ -23,9 +23,6 @@ class User(Actor):
     location_id: int
     organization_id: int
     manager_id: int
-
-    def __str__(self):
-        return self.email
 
     @classmethod
     def get(cls, id: int):
@@ -67,7 +64,8 @@ def set_current_user():
         if email:
             try:
                 g.current_user = User.lookup(email)
-            except Exception:
+            except Exception as e:
+                current_app.logger.exception(e)
                 return Unauthorized("user not found")
         else:
             g.current_user = Guest()
