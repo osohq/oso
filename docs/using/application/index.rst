@@ -11,7 +11,7 @@ examples in the context of a more realistic Python application.
 Our sample expenses application is built with Flask. To follow along, or
 dig into the code, clone it from here:
 
-.. todo:: Insert little github snippet box + actually have a real link
+.. todo:: Insert little GitHub snippet box + actually have a real link
 
 :fab:`github` `osohq/oso-flask-tutorial <https://github.com/osohq/oso-flask-tutorial>`_
 
