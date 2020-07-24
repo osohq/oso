@@ -14,7 +14,9 @@ export JAVA_DIR := $(abspath ../languages/java/oso)
 
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
-RUBY_FILES := $(wildcard ../languages/ruby/**/*.rb)
+
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.2.1.jar
+
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
 
@@ -50,16 +52,37 @@ clean:
 livehtml: deps _api_docs
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -i *.tmp
 
-test: doctest
+$(JAVA_PACKAGE_JAR_PATH):
+	$(MAKE) -C ../languages/java package
+
+java-test: $(JAVA_PACKAGE_JAR_PATH)
+	cd examples/abac/java && javac -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac.java && java -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac
+	# The way this test works for context is pretty sketchy.
+	# We can't set environment variables from within Java like the Python & Ruby
+	# tests, so instead we call the test twice, expecting it to fail for production.
+	cd examples/context/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext.java && ENV="development" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext
+	cd examples/context/java && (ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
+	@echo "Ignore that failure it actually worked!"
+
+test-env:
+	ENV="development" echo && ENV="development" java Test.java -- ENV
+
+python-test:
 	cd examples/inheritance/python && pytest .
 	cd examples/abac/python && pytest .
 	cd examples/rbac/python && pytest .
 	cd examples/context/python && pytest .
 
+ruby-test:
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb
 	cd examples/rbac/ruby && bundle exec rspec test_spec.rb
 	cd examples/context/ruby && bundle exec rspec test_spec.rb
 	cd examples/inheritance/ruby && bundle exec rspec test_spec.rb
+
+test: doctest
+	$(MAKE) python-test
+	$(MAKE) ruby-test
+	$(MAKE) java-test
 
 deps:
 	pip3 install -r requirements-docs.txt
