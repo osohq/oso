@@ -10,6 +10,12 @@ The Python version of oso is available on `PyPI`_ and can be installed using
 For more information on the oso Python library, see the
 :doc:`library documentation </using/libraries/python/index>`.
 
+.. admonition:: What's next
+    :class: tip
+
+    After you've installed oso, check out the
+    :doc:`/getting-started/quickstart`.
+
 Requirements
 ------------
 
