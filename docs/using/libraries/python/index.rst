@@ -39,12 +39,12 @@ Strings
 Python strings are mapped to Polar :ref:`strings`. Python's string methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.username.endswith("example.com");
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    user = User()
    user.username = "alice@example.com"
@@ -59,12 +59,12 @@ Lists
 Python lists are mapped to Polar :ref:`Lists <lists>`. Python's list methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.groups.index("HR") == 0;
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    user = User()
    user.groups = ["HR", "payroll"]
@@ -77,12 +77,12 @@ Python lists are mapped to Polar :ref:`Lists <lists>`. Python's list methods may
 Likewise, lists constructed in Polar may be passed into Python methods:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    class User:
       def has_groups(self, groups):
@@ -101,12 +101,12 @@ Dictionaries
 Python dictionaries are mapped to Polar :ref:`dictionaries`:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    user = User()
    user.roles = {"project1": "admin"}
@@ -120,12 +120,12 @@ Oso handles non-list/dictionary `iterable <https://docs.python.org/3/glossary.ht
 object's elements one at a time. `Generator <https://docs.python.org/3/glossary.html#term-generator>`_ methods are a common use case for passing iterables into oso:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.get_group = "payroll";
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    class User:
       def get_group(self):

@@ -27,7 +27,8 @@ policy to express this logic.
         Let's start by defining Python classes to represent customers and internal users:
 
         .. literalinclude:: /examples/user_types/python/01-user_classes.py
-            :caption: user_types.py
+            :caption: :fab:`python` user_types.py
+            :language: python
             :start-after: classes-start
             :end-before: classes-end
 
@@ -36,10 +37,14 @@ policy to express this logic.
         Let's start by defining Ruby classes to represent customers and internal users:
 
         .. literalinclude:: /examples/user_types/ruby/01-user_classes.rb
-            :caption: user_types.rb
+            :caption: :fas:`gem` user_types.rb
             :language: ruby
             :start-after: classes-start
             :end-before: classes-end
+
+    .. group-tab:: Java
+
+        Java example coming soon.
 
 Note that if we already had classes in our application that represented customers and internal users,
 we could have simply decorated them with :py:func:`oso.polar_class`.
@@ -47,7 +52,7 @@ we could have simply decorated them with :py:func:`oso.polar_class`.
 We can now write a simple policy over these Actor types:
 
 .. literalinclude:: /examples/user_types/user_policy.polar
-    :caption: user_types.polar
+    :caption: :fa:`oso` user_types.polar
     :language: polar
     :start-after: simple-start
     :end-before: simple-end
@@ -67,17 +72,21 @@ For our example, making a request might look like this:
     .. group-tab:: Python
 
         .. literalinclude:: /examples/user_types/python/01-user_classes.py
-            :caption: user_types.py
+            :caption: :fab:`python` user_types.py
             :start-after: app-start
             :end-before: app-end
 
     .. group-tab:: Ruby
 
         .. literalinclude:: /examples/user_types/ruby/01-user_classes.rb
-            :caption: user_types.rb
+            :caption: :fas:`gem` user_types.rb
             :language: ruby
             :start-after: app-start
             :end-before: app-end
+
+    .. group-tab:: Java
+
+        Java example coming soon.
 
 Hooray, our customer and internal dashboards are now secure!
 
@@ -96,23 +105,27 @@ We can add a ``role`` attribute to our ``InternalUser`` class:
     .. group-tab:: Python
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
-            :caption: user_types.py
+            :caption: :fab:`python` user_types.py
             :start-after: internal-start
             :end-before: internal-end
 
     .. group-tab:: Ruby
 
         .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
-            :caption: user_types.rb
+            :caption: :fas:`gem` user_types.rb
             :language: ruby
             :start-after: internal-start
             :end-before: internal-end
+
+    .. group-tab:: Java
+
+        Java example coming soon.
 
 
 Then add the following rule to our policy:
 
 .. literalinclude:: /examples/user_types/user_policy.polar
-    :caption: user_types.polar
+    :caption: :fa:`oso` user_types.polar
     :language: polar
     :start-after: rbac-start
     :end-before: rbac-end
@@ -133,17 +146,21 @@ attributes:
     .. group-tab:: Python
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
-            :caption: user_types.py
+            :caption: :fab:`python` user_types.py
             :start-after: account-start
             :end-before: account-end
 
     .. group-tab:: Ruby
 
         .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
-            :caption: user_types.rb
+            :caption: :fas:`gem` user_types.rb
             :language: ruby
             :start-after: account-start
             :end-before: account-end
+
+    .. group-tab:: Java
+
+        Java example coming soon.
 
 Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
 This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :ref:`inheritance`).
@@ -151,7 +168,7 @@ This means that our rules that specialize on ``InternalUser`` will still execute
 Let's add the following lines to our policy:
 
 .. literalinclude:: /examples/user_types/user_policy.polar
-    :caption: user_types.polar
+    :caption: :fa:`oso` user_types.polar
     :language: polar
     :start-after: manager-start
     :end-before: manager-end
@@ -168,17 +185,21 @@ We can update our application code slightly to generate ``AccountManager`` users
     .. group-tab:: Python
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
-            :caption: user_types.py
+            :caption: :fab:`python` user_types.py
             :start-after: account-end
             :emphasize-lines: 5-6
 
     .. group-tab:: Ruby
 
         .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
-            :caption: user_types.rb
+            :caption: :fas:`gem` user_types.rb
             :language: ruby
             :start-after: account-end
             :emphasize-lines: 5-7
+
+    .. group-tab:: Java
+
+        Java example coming soon.
 
 We've now successfully secured all three dashboards and customer account data.
 

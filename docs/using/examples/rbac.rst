@@ -21,7 +21,7 @@ Representing roles in our policy is as simple as creating :polar:`role()`
    Update the below snippet once we can represent set membership.
 
 .. literalinclude:: /examples/rbac/01-simple.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 6-20
 
@@ -30,7 +30,7 @@ on the :polar:`actor`'s name to assign them the appropriate role. Let's write
 some :polar:`allow()` rules that leverage our new roles:
 
 .. literalinclude:: /examples/rbac/01-simple.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 21-32
 
@@ -38,7 +38,7 @@ To test that the roles are working, we can write a few :ref:`inline queries <inl
 in the same Polar file:
 
 .. literalinclude:: /examples/rbac/01-simple.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 33-39
 
@@ -55,7 +55,7 @@ business domain. Since accountants are also employees, we can extend our
 :polar:`role(actor, "employee")` rule as follows:
 
 .. literalinclude:: /examples/rbac/02-simple.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 6-11
    :emphasize-lines: 6
@@ -64,7 +64,7 @@ Administrators should be able to do anything that accountants and employees can,
 and we can grant them those permissions through the same inheritance structure:
 
 .. literalinclude:: /examples/rbac/02-simple.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 13-19
    :emphasize-lines: 6
@@ -72,7 +72,7 @@ and we can grant them those permissions through the same inheritance structure:
 Now we can write a few more tests to ensure everything is hooked up correctly:
 
 .. literalinclude:: /examples/rbac/02-simple.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 36-
 
@@ -97,14 +97,14 @@ between users and the roles they've been assigned.
         look up its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/python/03-external.py
-           :caption: rbac.py
+           :caption: :fab:`python` rbac.py
            :language: python
 
         By registering our application class with oso, we can begin leveraging
         it from within our policy:
 
         .. literalinclude:: /examples/rbac/python/04-external.py
-           :caption: rbac.py
+           :caption: :fab:`python` rbac.py
            :language: python
            :emphasize-lines: 1
 
@@ -114,14 +114,14 @@ between users and the roles they've been assigned.
         look up its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/ruby/03-external.rb
-           :caption: rbac.rb
+           :caption: :fas:`gem` rbac.rb
            :language: ruby
 
         By registering our application class with oso, we can begin leveraging
         it from within our policy:
 
         .. literalinclude:: /examples/rbac/ruby/04-external.rb
-           :caption: rbac.rb
+           :caption: :fas:`gem` rbac.rb
            :language: ruby
            :emphasize-lines: 7
            :start-after: user-start
@@ -133,7 +133,7 @@ between users and the roles they've been assigned.
         look up its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/java/User.java
-           :caption: User.java
+           :caption: :fab:`java` User.java
            :language: java
            :emphasize-lines: 16
 
@@ -145,7 +145,7 @@ policy over our existing domain model by adding the :polar:`User` :ref:`type
 specializer <inheritance>` to our :polar:`role()` rules:
 
 .. literalinclude:: /examples/rbac/05-external.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 13-29
 
@@ -158,7 +158,7 @@ We're still mapping users to roles in the policy despite having access to the
 existing mappings through the :py:meth:`User.role` method. Let's amend that:
 
 .. literalinclude:: /examples/rbac/06-external.polar
-   :caption: rbac.polar
+   :caption: :fa:`oso` rbac.polar
    :language: polar
    :lines: 1-10
 

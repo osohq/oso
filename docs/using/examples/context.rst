@@ -18,7 +18,7 @@ Context
 For example, let's say you have a policy like this:
 
 .. literalinclude:: /examples/context/01-context.polar
-    :caption: context.polar
+    :caption: :fa:`oso` context.polar
     :language: polar
     :lines: 6-7
 
@@ -38,21 +38,21 @@ variables.
     .. group-tab:: Python
 
         .. literalinclude:: /examples/context/python/02-context.py
-            :caption: context.py
+            :caption: :fab:`python` context.py
             :language: python
             :lines: 1-7
 
     .. group-tab:: Ruby
 
         .. literalinclude:: /examples/context/ruby/02-context.rb
+           :caption: :fas:`gem` context.rb
            :language: ruby
-           :caption: context.rb
 
     .. group-tab:: Java
 
         .. literalinclude:: /examples/context/java/Env.java
+           :caption: :fab:`java` Env.java
            :language: java
-           :caption: Env.java
 
 
 The above class exposes a `var` method that reads the application's environment
@@ -63,7 +63,7 @@ We can add a new allow rule that allows an actor to access a resource if the
 application is in development mode.
 
 .. literalinclude:: /examples/context/01-context.polar
-    :caption: context.polar
+    :caption: :fa:`oso` context.polar
     :language: polar
     :lines: 7-8
 
