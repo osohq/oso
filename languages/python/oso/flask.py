@@ -1,6 +1,7 @@
 from typing import Any, Callable, List
-from . import Oso
-from polar.api import Http, Predicate
+from polar import Predicate
+from .oso import Oso
+from .extras import Http
 
 
 class OsoFlask(Oso):
@@ -29,7 +30,7 @@ class OsoFlask(Oso):
         action = request.method.lower()
         resource = Http(path=request.path, hostname=hostname)
         query = Predicate(name="allow", args=(credentials, action, resource))
-        return list(f(r) for r in self._query_pred(query, single=True).results if f(r))
+        return list(f(r) for r in self.query(query, single=True).results if f(r))
 
     def verify_flask_request(
         self,
@@ -49,4 +50,4 @@ class OsoFlask(Oso):
         action = request.method.lower()
         resource = Http(path=request.path, hostname=hostname)
         query = Predicate(name="allow", args=(credentials, action, resource))
-        return self._query_pred(query, single=True).success
+        return self.query(query, single=True).success

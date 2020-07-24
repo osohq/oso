@@ -12,14 +12,17 @@ export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
 export RUBY_DIR := $(abspath ../languages/ruby)
 export JAVA_DIR := $(abspath ../languages/java/oso)
 
+
+rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 RUBY_FILES := $(wildcard ../languages/ruby/**/*.rb)
-JAVA_FILES := $(wildcard ../languages/java/**/*.java)
+RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
+JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
 
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile api-docs html doctest
+.PHONY: help Makefile html doctest
 
 _api_docs/ruby: $(RUBY_FILES)
 	mkdir -p _api_docs
@@ -28,22 +31,23 @@ _api_docs/ruby: $(RUBY_FILES)
 	cp -R $(RUBY_DIR)/doc _api_docs/ruby
 
 _api_docs/java: $(JAVA_FILES)
+	mkdir -p _api_docs
 	cd "$(JAVA_DIR)" && mvn javadoc:javadoc
 	rm -rf _api_docs/java
 	cp -R $(JAVA_DIR)/target/site/apidocs _api_docs/java
 
-api-docs: _api_docs/ruby _api_docs/java
+_api_docs: _api_docs/ruby _api_docs/java
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html doctest spelling: Makefile deps api-docs
+html doctest spelling: Makefile deps _api_docs
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	rm -r _api_docs
 
-livehtml: deps api-docs
+livehtml: deps _api_docs
 	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -i *.tmp
 
 test: doctest
