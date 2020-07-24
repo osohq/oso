@@ -4,7 +4,6 @@
 
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
-
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::ops::{Add, Div, Mul, Sub};
@@ -680,6 +679,7 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Trace {
     pub node: Node,
+    pub polar_str: String,
     pub children: Vec<Rc<Trace>>,
 }
 
@@ -863,5 +863,14 @@ mod tests {
         };
         let err: crate::PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());
+        let rule = Rule {
+            name: Symbol::new("foo"),
+            params: vec![],
+            body: Term::new_temporary(Value::Expression(Operation {
+                operator: Operator::And,
+                args: vec![dict.clone(), dict.clone(), dict],
+            })),
+        };
+        eprintln!("{}", rule);
     }
 }

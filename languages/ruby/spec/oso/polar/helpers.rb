@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
+# Test helpers.
 module Helpers
   def query(polar, query)
-    polar.send(:query_str, query).to_a
+    polar.query(query).to_a
   end
 
   def qvar(polar, query, var, one: false)

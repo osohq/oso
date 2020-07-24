@@ -2,6 +2,7 @@
 
 require 'oso/polar/errors'
 require 'oso/polar/ffi'
+require 'oso/polar/host'
 require 'oso/polar/polar'
 require 'oso/polar/predicate'
 require 'oso/polar/query'

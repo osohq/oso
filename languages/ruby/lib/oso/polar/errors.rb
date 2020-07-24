@@ -40,6 +40,7 @@ module Oso
     class DuplicateInstanceRegistrationError < PolarRuntimeError; end
     class InvalidCallError < PolarRuntimeError; end
     class InvalidConstructorError < PolarRuntimeError; end
+    class InvalidQueryTypeError < PolarRuntimeError; end
     class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end

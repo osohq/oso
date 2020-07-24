@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import pytest
 import os
 
-from polar.api import Polar
+from polar import Polar
 
 
 # DEFINED So pytests have same interface.
@@ -52,7 +52,7 @@ def query(polar):
     """ Query something and return the results as a list """
 
     def _query(q):
-        return list(polar._query_str(q))
+        return polar.query(q).results
 
     return _query
 
@@ -75,12 +75,8 @@ def qvar(polar, query):
     def _qvar(q, v, one=False):
         results = query(q)
         if one:
-            if len(results) == 1:
-                return results[0][v]
-            else:
-                raise Exception(
-                    f"Received {len(results)} result, expected {len(results)}."
-                )
+            assert len(results) == 1, "expected one result"
+            return results[0][v]
         return [env[v] for env in results]
 
     return _qvar

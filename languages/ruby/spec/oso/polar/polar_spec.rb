@@ -51,25 +51,46 @@ RSpec.describe Oso::Polar::Polar do
     it 'converts predicates in both directions' do
       subject.load_str('f(x) if x = pred(1, 2);')
       expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Polar::Predicate.new('pred', args: [1, 2])])
-      expect(subject.query_pred('f', args: [Oso::Polar::Predicate.new('pred', args: [1, 2])]).to_a).to eq([{}])
+      expect(subject.query_predicate('f', Oso::Polar::Predicate.new('pred', args: [1, 2])).to_a).to eq([{}])
     end
 
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
-      expect(subject.to_ruby(subject.to_polar_term(actor))).to eq(actor)
+      expect(subject.host.to_ruby(subject.host.to_polar_term(actor))).to eq(actor)
     end
 
     it 'returns Ruby instances from external calls' do
       actor = Actor.new('sam')
       widget = Widget.new(1)
       subject.load_str('allow(actor, resource) if actor.widget.id = resource.id;')
-      expect(subject.query_pred('allow', args: [actor, widget]).to_a.length).to eq 1
+      expect(subject.query_predicate('allow', actor, widget).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
       subject.load_str('widgets(actor, x) if x = actor.widgets.id;')
-      expect(subject.query_pred('widgets', args: [actor, Oso::Polar::Variable.new('x')]).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
+      expect(subject.query_predicate('widgets', actor, Oso::Polar::Variable.new('x')).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
+    end
+
+    it 'caches instances and does not leak them' do
+      stub_const('Counter', Class.new do
+                   @count = 0
+                   class << self
+                     attr_accessor :count
+                   end
+
+                   def initialize()
+                     self.class.count += 1
+                   end
+                 end)
+      subject.register_class(Counter)
+      subject.load_str('f(c: Counter) if c.class.count > 0;')
+      expect(Counter.count).to be 0
+      c = Counter.new
+      expect(Counter.count).to be 1
+      expect(subject.query_predicate('f', c).to_a).to eq([{}])
+      expect(Counter.count).to be 1
+      expect(subject.host.instance?(c)).to be false
     end
   end
 
@@ -118,6 +139,18 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
+  context '#query' do
+    it 'is able to make basic queries' do
+      subject.load_str('f(1);');
+      expect(subject.query('f(1)').to_a).to eq([{}])
+      expect(subject.query_predicate('f', 1).to_a).to eq([{}])
+    end
+
+    it 'raises an error when given an invalid query' do
+      expect { subject.query(1) }.to raise_error Oso::Polar::InvalidQueryTypeError
+    end
+  end
+
   context '#make_instance' do
     context 'when using the default constructor' do
       it 'handles keyword args' do
@@ -129,10 +162,10 @@ RSpec.describe Oso::Polar::Polar do
           end
         end)
         subject.register_class(Foo)
-        one = subject.to_polar_term(1)
-        two = subject.to_polar_term(2)
-        id = subject.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
-        instance = subject.get_instance(id)
+        one = subject.host.to_polar_term(1)
+        two = subject.host.to_polar_term(2)
+        id = subject.host.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
         expect(instance.baz).to eq(2)
@@ -143,8 +176,8 @@ RSpec.describe Oso::Polar::Polar do
           def initialize; end
         end)
         subject.register_class(Foo)
-        id = subject.make_instance('Foo', fields: {}, id: 1)
-        instance = subject.get_instance(id)
+        id = subject.host.make_instance('Foo', fields: {}, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
     end
@@ -165,10 +198,10 @@ RSpec.describe Oso::Polar::Polar do
         end)
         constructor = ->(**args) { Foo.new(**args) }
         subject.register_class(Foo, from_polar: constructor)
-        one = subject.to_polar_term(1)
-        two = subject.to_polar_term(2)
-        id = subject.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
-        instance = subject.get_instance(id)
+        one = subject.host.to_polar_term(1)
+        two = subject.host.to_polar_term(2)
+        id = subject.host.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
         expect(instance.baz).to eq(2)
@@ -177,8 +210,8 @@ RSpec.describe Oso::Polar::Polar do
       it 'handles no args' do
         stub_const('Foo', Class.new)
         subject.register_class(Foo, from_polar: -> { Foo.new })
-        id = subject.make_instance('Foo', fields: {}, id: 1)
-        instance = subject.get_instance(id)
+        id = subject.host.make_instance('Foo', fields: {}, id: 1)
+        instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
     end
@@ -545,12 +578,12 @@ RSpec.describe Oso::Polar::Polar do
 
     it 'can return a list' do
       subject.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
-      expect(subject.query_pred('allow', args: [Actor.new, 'join', 'party']).to_a).to eq([{}])
+      expect(subject.query_predicate('allow', Actor.new, 'join', 'party').to_a).to eq([{}])
     end
 
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
-      expect(subject.query_pred('f', args: [Oso::Polar::Variable.new('a')]).to_a).to eq(
+      expect(subject.query_predicate('f', Oso::Polar::Variable.new('a')).to_a).to eq(
         [{ 'a' => 1 }, { 'a' => 2 }, { 'a' => 3 }]
       )
     end

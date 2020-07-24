@@ -4,7 +4,9 @@ import pytest
 
 from oso import Oso
 import os
-import imp
+from runpy import run_path
+
+run_path("02-context.py")
 
 
 @pytest.fixture
@@ -22,8 +24,6 @@ def load(oso):
 
 def test_policy(oso, load):
     load("01-context.polar")
-    imp.load_source("context", "02-context.py")
-    oso._load_queued_files()
 
     os.environ["ENV"] = "production"
     assert not oso.allow("steve", "test", "policy")

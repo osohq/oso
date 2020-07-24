@@ -8,19 +8,14 @@ import pprint
 import pytest
 from dataclasses import dataclass
 
-import oso
 from oso import Oso, polar_class
 from oso.jwt import Jwt
-from polar import api
-from polar.api import Polar, Predicate
+from polar import Polar, Predicate
 from polar.test_helpers import public_key, private_key
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
-actors = {
-    "guest": "1",
-    "president": "1",
-}
+actors = {"guest": "1", "president": "1"}
 
 
 class Actor:
@@ -34,7 +29,6 @@ class Actor:
         yield Company(id=actors[self.name])  # real, will pass
 
 
-# example of registering a non-dataclass class
 class Widget:
     # Data fields.
     id: str = ""
@@ -73,16 +67,14 @@ class Company:
 
 @pytest.fixture(scope="module")
 def test_oso():
-    _oso = Oso()
-    _oso.register_class(Jwt)
-    _oso.register_class(Actor)
-    _oso.register_class(Widget, from_polar="from_polar")
-    _oso.register_class(Company)
+    oso = Oso()
+    oso.register_class(Jwt)
+    oso.register_class(Actor)
+    oso.register_class(Widget, from_polar="from_polar")
+    oso.register_class(Company)
+    oso.load_file(Path(__file__).parent / "test_oso.polar")
 
-    # import the test policy
-    _oso.load_file(Path(__file__).parent / "test_oso.polar")
-
-    return _oso
+    return oso
 
 
 def test_sanity(test_oso):
@@ -93,7 +85,7 @@ def test_decorators(test_oso):
     actor = Actor(name="president")
     action = "create"
     resource = Company(id="1")
-    assert test_oso._query_pred(
+    assert test_oso.query(
         Predicate(name="allow", args=(actor, action, resource))
     ).success
 

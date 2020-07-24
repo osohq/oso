@@ -3,7 +3,7 @@ from pathlib import Path
 import importlib
 import sys
 
-from polar.api import Polar
+from polar import Polar
 
 
 def path_to_module_name(filename):

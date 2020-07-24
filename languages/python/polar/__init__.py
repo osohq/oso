@@ -1,4 +1,6 @@
 import json
 from pathlib import Path
 
-from .api import Polar, Predicate, Variable
+from .ffi import Predicate, Variable
+from .polar import Polar, polar_class
+from .query import Query, QueryResult

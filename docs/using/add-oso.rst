@@ -445,8 +445,8 @@ request filter.
             ("location_id", "=", user.location_id)
         ]
 
-        # Use ``query_pred`` to evaluate a rule that authorizes the filter.
-        if not oso.query_pred("allow_filter", user, "view", Expense, auth_filters):
+        # Use ``query_predicate`` to evaluate a rule that authorizes the filter.
+        if not oso.query_predicate("allow_filter", user, "view", Expense, auth_filters):
             return NotAuthorizedResponse()
 
         # This function converts our structured filter into a SQL WHERE statement
@@ -517,7 +517,7 @@ Now, in our app:
 
     def get_expenses(user):
         # Get authorization filters from oso
-        filters = oso.query_pred(
+        filters = oso.query_predicate(
             "allow_with_filter", actor, "view", resource, Variable("filters"))
 
         # There may be multiple allow rules that matched, so we iterate over all

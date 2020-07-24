@@ -1,6 +1,8 @@
 # External class definitions for use in `test_api.py` tests
 from dataclasses import dataclass
 
+from polar import polar_class
+
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
 actors = {
@@ -21,7 +23,7 @@ def set_frobbed(f):
     frobbed = f
 
 
-# example of registering a non-dataclass class
+@polar_class
 class Widget:
     # Data fields.
     id: str = ""
@@ -46,12 +48,14 @@ class Widget:
         return Widget(id, name)
 
 
+@polar_class
 class DooDad(Widget):
     def from_polar(id, name=""):
         return DooDad(id, name)
 
 
-@dataclass  # NOTE: These are now optional, but here for compat
+@dataclass
+@polar_class
 class Actor:
     name: str = ""
     id: int = 0
@@ -69,6 +73,7 @@ class Actor:
 
 
 @dataclass(frozen=True)
+@polar_class
 class Company:
     # Data fields.
     id: str = ""

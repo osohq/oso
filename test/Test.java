@@ -57,18 +57,18 @@ class Test {
             }
             if (!throwsException)
                 throw new Exception();
-            boolean passes = !o.queryPredicate("specializers", List.of(new D("hello"), new BC("hello"))).isEmpty()
-                    && !o.queryPredicate("floatLists", null).isEmpty()
-                    && !o.queryPredicate("intDicts", null).isEmpty()
-                    && !o.queryPredicate("comparisons", null).isEmpty()
-                    && !o.queryPredicate("testForall", null).isEmpty()
-                    && !o.queryPredicate("testRest", null).isEmpty()
-                    && !o.queryPredicate("testMatches", List.of(new A("hello"))).isEmpty()
-                    && !o.queryPredicate("testMethodCalls", List.of(new A("hello"), new BC("hello"))).isEmpty()
-                    && !o.queryPredicate("testOr", null).isEmpty()
+            boolean passes = !o.query("specializers", List.of(new D("hello"), new BC("hello"))).results().isEmpty()
+                    && !o.query("floatLists", null).results().isEmpty()
+                    && !o.query("intDicts", null).results().isEmpty()
+                    && !o.query("comparisons", null).results().isEmpty()
+                    && !o.query("testForall", null).results().isEmpty()
+                    && !o.query("testRest", null).results().isEmpty()
+                    && !o.query("testMatches", List.of(new A("hello"))).results().isEmpty()
+                    && !o.query("testMethodCalls", List.of(new A("hello"), new BC("hello"))).results().isEmpty()
+                    && !o.query("testOr", null).results().isEmpty()
                     // Test that cut doesn't return anything.
-                    && o.queryPredicate("testCut", null).isEmpty()
-                    && !o.queryPredicate("testHttpAndPathMapper", null).isEmpty();
+                    && o.query("testCut", null).results().isEmpty()
+                    && !o.query("testHttpAndPathMapper", null).results().isEmpty();
             if (!passes)
                 throw new Exception();
 
