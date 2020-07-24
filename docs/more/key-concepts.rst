@@ -71,6 +71,8 @@ a statement that is either true or false.
 In oso, one such rule is distinguished, and used to drive the authorization
 decision: the ``allow`` rule.
 
+.. _allow-rules:
+
 Allow rules
 ===========
 

@@ -2,12 +2,7 @@
 Writing Policies
 ================
 
-.. todo::
-
-    This intro text could use some work, but not quite sure how to
-    rephrase.
-
-If this is your first experience with writing declarative policies, welcome!
+Policies are the source of truth for the authorization logic used to evaluate queries in oso.
 As a reminder: oso policies are written in a language called Polar.
 There is a full :doc:`/using/polar-syntax` guide which you can use as a reference
 of all the available syntax, but here we'll give an overview of
@@ -18,33 +13,86 @@ anything you can express in imperative code can equally be expressed in Polar
 --- often more concisely and closer to how you might explain the logic in
 natural language.
 
+.. note::
+    Policies are stored in Polar files (extension ``.polar``), which are loaded
+    into the authorization engine using the oso :doc:`/using/libraries/index`.
 
-Matching
-========
+Rule Basics
+===========
 
-One of the core concepts to understand when writing oso policies, is that it
-is all based around matching.
-
-Take the basic ``allow`` rule that we use as a convention for where policy
-decision start:
+Policies are made up of :ref:`rules <polar-rules>`. Each rule defines
+a statement that is either `true` or `false`. oso answers queries by evaluating rules that match the
+query name and parameters. Let's take a basic :ref:`allow rule<allow-rules>` as an example:
 
 .. code-block:: polar
 
     allow(actor, action, resource) if ...
 
-When we use ``oso.allow``, we are making a ``Polar`` query, and asking it to
-find all rules that match (a) on the rule name "allow", and (b) on all the inputs.
 
-In the above, ``actor``, ``action``, and ``resource`` were all simple parameter names.
-I.e. these are new variables. These will match *anything*.
+When we use :py:meth:`~oso.Oso.is_allowed()` (or equivalent), we are making a query that asks oso to
+evaluate all rules that match *(a)* on the rule name ``"allow"``, and *(b)* on all the inputs.
 
-But we can replace one for a concrete type:
+In the rule above, ``actor``, ``action``, and ``resource`` are simply the parameter names,
+i.e. they are variables that will match *anything*.
+
+
+But if we replace ``action`` with a concrete type:
 
 .. code-block:: polar
 
-    allow(actor, "read", resource) if ...
+    allow(actor, "read", resource) if ...;
 
-Which is instead making sure the second input will match exactly with the string ``"read"``.
+the rule will now only be evaluated if the second input exactly matches the string ``"read"``.
+
+.. .. _airport:
+
+.. For instance, let's imagine we are using oso to write an authorization system
+.. for an airport. We'll start with a very simple policy: suppose that passengers
+.. Alice and Bob are allowed to board any flight. One simple way to represent such
+.. a policy in Polar would be::
+
+..    allow("alice", "board", "flight");
+..    allow("bob", "board", "flight");
+
+.. Now an authorization query where ``actor`` is the string ``"bob"``,
+.. ``action`` is the string ``"board"``, and resource is the string ``"flight"``
+.. would be evaluated as follows: the first rule would fail to match (since
+.. ``"bob" != "alice"``), but the second matches all three arguments with
+.. the rule parameters, so the authorization query completes successfully,
+.. and access is granted.
+
+.. Now, what happens if an actor named ``"charlie"`` tries to board a flight?
+.. In that case, no matching rules will be found, so the authorization query
+.. fails and access is denied. Thus we see that policies are "deny by
+.. default".
+
+
+.. Matching
+.. ========
+
+.. One of the core concepts to understand when writing oso policies, is that it
+.. is all based around matching.
+
+.. Take the basic ``allow`` rule that we use as a convention for where policy
+.. decision start:
+
+.. .. code-block:: polar
+
+..     allow(actor, action, resource) if ...
+
+.. When we use ``oso.allow``, we are making a ``Polar`` query, and asking it to
+.. find all rules that match (a) on the rule name "allow", and (b) on all the inputs.
+
+.. In the above, ``actor``, ``action``, and ``resource`` were all simple parameter names.
+.. I.e. these are new variables. These will match *anything*.
+
+.. But we can replace one for a concrete type:
+
+.. .. code-block:: polar
+
+..     allow(actor, "read", resource) if ...
+
+.. Which is instead making sure the second input will match exactly with the string ``"read"``.
 
 .. _if_statement:
 
@@ -147,7 +195,7 @@ Our initial version might look like:
 
     allow(user: User, "read", expense: Expense) if
       user.role = "accountant";
-      
+
 This would be fine, but if, for example, we wanted to allow the CFO to
 do whatever an accountant can do, we would need to duplicate all the rules.
 Or if we want to change how an application determines roles we would need
