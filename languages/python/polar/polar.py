@@ -109,7 +109,7 @@ class Polar:
 
         while True:
             try:
-                query = input("Query: ").strip(";")
+                query = input("> ").strip(";")
             except EOFError:
                 return
             ffi_query = lib.polar_new_query(self.ffi_polar, to_c_str(query))
