@@ -17,3 +17,6 @@ test: rust
 
 package: rust
 	cd oso && mvn clean package
+
+repl: rust
+	cd oso && mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="$(ARGS)"

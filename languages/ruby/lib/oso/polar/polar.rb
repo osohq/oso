@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'pp'
 require 'set'
 
 module Oso
@@ -84,16 +85,41 @@ module Oso
       # Start a REPL session.
       #
       # @raise [Error] if the FFI call raises one.
-      def repl # rubocop:disable Metrics/MethodLength
+      def repl(load: false) # rubocop:disable Metrics/MethodLength
+        ARGV.map { |f| load_file(f) } if load
         load_queued_files
+
         loop do
-          query = Query.new(ffi_polar.new_query_from_repl, host: host)
-          results = query.results.to_a
+          print('> ')
+          begin
+            query = STDIN.readline.chomp.chomp(';')
+          rescue EOFError
+            return
+          end
+
+          begin
+            ffi_query = ffi_polar.new_query_from_str(query)
+          rescue ParseError => e
+            puts("Parse error: " + e.to_s)
+            next
+          end
+
+          begin
+            results = Query.new(ffi_query, host: host).results.to_a
+          rescue PolarRuntimeError => e
+            puts(e.to_s)
+            next
+          end
+
           if results.empty?
-            puts 'False'
+            pp false
           else
             results.each do |result|
-              puts result
+              if result.empty?
+                pp true
+              else
+                pp result
+              end
             end
           end
         end

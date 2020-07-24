@@ -20,3 +20,7 @@ fmt:
 
 package:
 	python setup.py sdist bdist_wheel
+
+repl:
+	python -m oso
+
