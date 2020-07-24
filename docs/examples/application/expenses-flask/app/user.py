@@ -28,6 +28,18 @@ class User(Actor):
         return self.email
 
     @classmethod
+    def get(cls, id: int):
+        record = query_db(
+            "select id, email, title, location_id, organization_id, manager_id from users where email  = ?",
+            [id],
+            one=True,
+        )
+        if record:
+            return cls(**record)
+        else:
+            raise Exception("user not found")
+
+    @classmethod
     def lookup(cls, email: str):
         record = query_db(
             "select id, email, title, location_id, organization_id, manager_id from users where email  = ?",

@@ -1,12 +1,31 @@
+# Top-level rules
+
 allow(_user, "GET", http_request) if
     http_request.path = "/";
 
 allow(_user: User, "GET", http_request) if
     http_request.path = "/whoami";
 
-allow(user: User, "GET", http_request) if
-    http_request.path.split("/") = [_, *rest]
-    and allow(user, http_request.method, rest);
+# Allow by path segment
+allow(user, action, http_request) if
+    http_request.path.split("/") = [_, stem, *rest]
+    and allow(user, action, stem, rest);
 
-allow(user: User, "GET", ["expenses", expense_id]) if
-    user.id = Expense.lookup(expense_id).user_id.__str__();
+### Expenses rules
+
+# by HTTP method
+allow(_user, "GET", "expense", _rest);
+allow(_user, "PUT", "expense", "submit");
+
+allow(user: User, "read", expense) if
+    submitted(user, expense);
+
+allow(user, "create", expense: Expense) if
+    submitted(user, expense);
+
+submitted(user: User, expense: Expense) if
+    user.id = expense.user_id;
+
+### Organization rules
+allow(user: User, _action, "organization", organization_id) if
+    user.organization_id = organization_id;
