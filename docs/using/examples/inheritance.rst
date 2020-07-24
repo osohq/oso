@@ -28,7 +28,7 @@ Let's start by considering a basic policy controlling access to these three
 resources:
 
 .. literalinclude:: /examples/inheritance/01-polar.polar
-    :caption: inheritance.polar
+    :caption: :fa:`oso` inheritance.polar
     :language: polar
 
 Let's take a look at the first rule in the policy. This ``allow`` rule permits
@@ -53,7 +53,7 @@ Our policy doesn't just need to contain ``allow`` rules.  We can write any
 rules we'd like, and compose them as needed to express our policy!
 
 .. literalinclude:: /examples/inheritance/02-nested-rule.polar
-    :caption: inheritance.polar
+    :caption: :fa:`oso` inheritance.polar
     :language: polar
 
 Now, we've taken the repeated logic and expressed it as the
@@ -71,7 +71,7 @@ We can combine this idea with our first policy to make sure only our three
 patient data resources use the ``can_read_patient_data`` rule.
 
 .. literalinclude:: /examples/inheritance/03-specializer.polar
-    :caption: inheritance.polar
+    :caption: :fa:`oso` inheritance.polar
     :language: polar
     :start-after: ## START MARKER ##
 
@@ -87,19 +87,23 @@ We haven't talked about the application side of this yet.  So far, we've assumed
 
     Here's how our application classes might be implemented:
 
-    .. group-tab:: python
+    .. group-tab:: Python
 
         .. literalinclude:: /examples/inheritance/python/inheritance_external.py
-           :caption: inheritance.py
+           :caption: :fab:`python` inheritance.py
            :language: python
            :start-after: ## START MARKER ##
 
-    .. group-tab:: ruby
+    .. group-tab:: Ruby
 
         .. literalinclude:: /examples/inheritance/ruby/inheritance_external.rb
            :language: ruby
-           :caption: inheritance.rb
+           :caption: :fas:`gem` inheritance.rb
            :start-after: ## START MARKER ##
+
+    .. group-tab:: Java
+
+        Java example coming soon.
 
 
 We used inheritance to capture some of the common
@@ -109,7 +113,7 @@ would probably be ORM models.
 We can use the same idea to shorten our policy even further!
 
 .. literalinclude:: /examples/inheritance/04-one-specializer.polar
-    :caption: inheritance.polar
+    :caption: :fa:`oso` inheritance.polar
     :language: polar
 
 Now, this ``allow`` rule will be evaluated for any instance that is a subclass
