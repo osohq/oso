@@ -11,7 +11,7 @@ module Oso
       register_class(PathMapper, name: 'PathMapper')
     end
 
-    def allow(actor:, action:, resource:)
+    def allowed?(actor:, action:, resource:)
       query_predicate('allow', actor, action, resource).next
       true
     rescue StopIteration

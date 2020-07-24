@@ -71,7 +71,7 @@ def test_register_class(polar, load_policy):
     assert polar.query(Predicate(name="allow", args=(actor, action, resource))).success
 
 
-def test_allow(polar, load_policy):
+def test_is_allowed(polar, load_policy):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"

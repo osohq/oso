@@ -20,7 +20,7 @@ class InternalUser:
 def customer_dashboard_handler(request):
     oso = get_oso()
     actor = user_from_id(request.id)
-    allowed = oso.allow(actor=actor, action="view", resource="customer_dashboard")
+    allowed = oso.is_allowed(actor=actor, action="view", resource="customer_dashboard")
 
 
 def user_from_id(id):

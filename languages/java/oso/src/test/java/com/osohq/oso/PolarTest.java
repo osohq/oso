@@ -415,8 +415,8 @@ public class PolarTest {
                 + "allow(actor, \"get\", new MyClass{id: id});\n"
                 + "allow(actor, \"get\", myclass: MyClass) if myclass.id = 12;");
         Http http12 = new Http(null, "/myclass/12", null);
-        assertTrue(oso.allow("sam", "get", http12), "Failed to correctly map HTTP resource");
+        assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");
         Http http13 = new Http(null, "/myclass/13", null);
-        assertFalse(oso.allow("sam", "get", http13), "Failed to correctly map HTTP resource");
+        assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
     }
 }

@@ -40,8 +40,8 @@ class Test {
             o.registerClass(A.class, m -> new A((String) m.get("x")), "A");
             o.registerClass(BC.class, m -> new BC((String) m.get("y")), "C");
             o.loadFile("test.polar");
-            o.allow("a", "b", "c");
-            
+            o.isAllowed("a", "b", "c");
+
             // Test that a built in string method can be called.
             o.loadStr("?= x = \"hello world!\" and x.endsWith(\"world!\");");
 

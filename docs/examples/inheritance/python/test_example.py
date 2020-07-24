@@ -88,9 +88,9 @@ def test_loads(oso, policy, load):
 def test_rule_for_med_staff(oso, load, policy, med_staff, order, lab, test):
     """Test that rule matches for medical staff."""
     load(policy)
-    assert oso.allow(med_staff, "read", order)
-    assert oso.allow(med_staff, "read", lab)
-    assert oso.allow(med_staff, "read", test)
+    assert oso.is_allowed(med_staff, "read", order)
+    assert oso.is_allowed(med_staff, "read", lab)
+    assert oso.is_allowed(med_staff, "read", test)
 
 
 @pytest.mark.parametrize(
@@ -111,9 +111,9 @@ def test_rule_for_med_staff_bad_patient(
     """Test that rule doesn't match for medical staff that did not treat the
     same patient as the resource."""
     load(policy)
-    assert not oso.allow(med_staff_bad_patient, "read", order)
-    assert not oso.allow(med_staff_bad_patient, "read", lab)
-    assert not oso.allow(med_staff_bad_patient, "read", test)
+    assert not oso.is_allowed(med_staff_bad_patient, "read", order)
+    assert not oso.is_allowed(med_staff_bad_patient, "read", lab)
+    assert not oso.is_allowed(med_staff_bad_patient, "read", test)
 
 
 @pytest.mark.parametrize(
@@ -131,6 +131,6 @@ def test_rule_for_med_staff_bad_patient(
 def test_rule_for_reg_staff(oso, load, policy, reg_staff, order, lab, test):
     """Test that rule doesn't match for not medical staff."""
     load(policy)
-    assert not oso.allow(reg_staff, "read", order)
-    assert not oso.allow(reg_staff, "read", lab)
-    assert not oso.allow(reg_staff, "read", test)
+    assert not oso.is_allowed(reg_staff, "read", order)
+    assert not oso.is_allowed(reg_staff, "read", lab)
+    assert not oso.is_allowed(reg_staff, "read", test)

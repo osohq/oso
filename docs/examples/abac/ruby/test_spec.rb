@@ -19,10 +19,10 @@ RSpec.describe "example" do
     oso = load_file("01-simple.polar")
 
     expense = Expense.new(**EXPENSES_DEFAULT, submitted_by: "sam")
-    expect(oso.allow(actor: User.new(name: "sam"), action: "view", resource: expense)).to be true
+    expect(oso.allowed?(actor: User.new(name: "sam"), action: "view", resource: expense)).to be true
 
     expense = Expense.new(**EXPENSES_DEFAULT, submitted_by: "steve")
-    expect(oso.allow(actor: User.new(name: "sam"), action: "view", resource: expense)).to be false
+    expect(oso.allowed?(actor: User.new(name: "sam"), action: "view", resource: expense)).to be false
 
 
     # 02-rbac
@@ -30,15 +30,15 @@ RSpec.describe "example" do
     oso.load_str('role(_: User { name: "sam" }, "admin", __: Project { id: 2 });')
 
     expense = Expense.new(location: "NYC", amount: 50, project_id: 0, submitted_by: "steve")
-    expect(oso.allow(actor: User.new(name: "sam"), action: "view", resource: expense)).to be false
+    expect(oso.allowed?(actor: User.new(name: "sam"), action: "view", resource: expense)).to be false
 
     expense = Expense.new(location: "NYC", amount: 50, project_id: 2, submitted_by: "steve")
-    expect(oso.allow(actor: User.new(name: "sam"), action: "view", resource: expense)).to be true
+    expect(oso.allowed?(actor: User.new(name: "sam"), action: "view", resource: expense)).to be true
 
     # 03-hierarchy
     oso = load_file("03-hierarchy.polar")
 
-    expect(oso.allow(actor: User.new(name: "bhavik"),
+    expect(oso.allowed?(actor: User.new(name: "bhavik"),
                      action: "view",
                      resource: Expense.new(**EXPENSES_DEFAULT, submitted_by: "alice"))).to be true
   end

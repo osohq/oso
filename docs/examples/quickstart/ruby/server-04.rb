@@ -29,7 +29,7 @@ server.mount_proc "/" do |req, res|
 
   if resource_type != "expenses" || resource.nil?
     res.body = "Not Found!"
-  elsif OSO.allow(actor: actor, action: action, resource: resource)
+  elsif OSO.allowed?(actor: actor, action: action, resource: resource)
     res.body = resource.inspect
   else
     res.body = "Not Authorized!"

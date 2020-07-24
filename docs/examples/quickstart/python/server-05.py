@@ -19,7 +19,7 @@ from oso import Oso
 
 oso = Oso()
 oso.load_str(
-    """allow(actor, "GET", _expense) if
+    """is_allowed(actor, "GET", _expense) if
            actor.endswith("@example.com");"""
 )
 
@@ -40,7 +40,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             if resource_type != "expenses":
                 return self._respond("Not Found!", 404)
             resource = EXPENSES[int(resource_id)]
-            if oso.allow(actor, action, resource):
+            if oso.is_allowed(actor, action, resource):
                 self._respond(resource)
             else:
                 self._respond("Not Authorized!", 403)
