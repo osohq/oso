@@ -395,6 +395,18 @@ def test_runtime_errors(polar):
 Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 2, column 17"""        
     )
 
+def test_lookup_errors(polar):
+    class Foo:
+        def foo(self):
+            return "foo"
+    polar.register_class(Foo)
+
+    # Unify with an invalid field doesn't error.
+    list(polar._query_str('new Foo{} = {bar: "bar"}'))
+    # Dot op with an invalid field does error.
+    with pytest.raises(exceptions.PolarRuntimeException) as e:
+        list(polar._query_str('new Foo{}.bar = "bar"'))
+    assert ("Application error: 'Foo' object has no attribute 'bar'" in str(e.value))
 
 def test_predicate(polar, qvar):
     """Test that predicates can be converted to and from python."""
