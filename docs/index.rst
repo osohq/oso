@@ -77,7 +77,7 @@ To learn more about oso and the principles behind its design,
    :hidden:
 
    understand/use-cases
-   understand/language/polar-fundamentals
+   understand/language/polar-foundations
    understand/performance
    understand/security
    understand/faq

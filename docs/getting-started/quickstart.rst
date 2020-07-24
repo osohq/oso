@@ -576,10 +576,25 @@ We just blitzed through a ton of stuff:
 * Setting up our app to enforce the policy decisions made by oso.
 * Writing authorization rules over static and dynamic application data.
 
-If you're interested in what sets oso apart from existing authorization
-solutions, check out :doc:`/getting-started/overview`. If you want to learn more about
-authorization in oso, including common patterns like :doc:`/using/examples/rbac`
-and :doc:`/using/examples/abac`, we recommend continuing on to the
-:doc:`/using/key-concepts` guide. For more details on the logic programming
-language we used to write our authorization policies, head on over to the
-:doc:`/understand/language/polar-fundamentals` guide.
+.. todo::
+    Make these actual links.
+
+Next:
+
+* Check out how to write a policy
+* See how oso integrates into an example app
+* Explore the design principles behind oso
+
+------------------------
+
+.. admonition:: Sign up for our newsletter!
+
+    .. raw:: html
+
+        <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/shell.js"></script>
+        <script>
+          hbspt.forms.create({
+            portalId: "8091225",
+            formId: "109f461f-8b3a-4dfa-a942-fd40b6f6e27f"
+        });
+        </script>
