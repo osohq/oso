@@ -13,7 +13,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
     .. group-tab:: Python
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             allow(actor, action, resource) if actor.is_admin;
 
@@ -21,7 +21,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
         The Python instance is passed into oso with a call to :py:meth:`~oso.Oso.allow`:
 
         .. code-block:: python
-            :caption: app.py
+            :caption: :fab:`python` app.py
 
             class User:
                 def __init__(self, name, is_admin):
@@ -37,7 +37,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
     .. group-tab:: Ruby
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             allow(actor, action, resource) if actor.is_admin;
 
@@ -45,7 +45,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
         The Ruby instance is passed into oso with a call to ``allow()``:
 
         .. code-block:: ruby
-            :caption: app.rb
+            :caption: :fas:`gem` app.rb
 
             class User
                 attr_reader :name
@@ -66,7 +66,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
     .. group-tab:: Java
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             allow(actor, action, resource) if actor.isAdmin;
 
@@ -74,7 +74,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
         The Java instance is passed into oso with a call to ``Oso.allow``:
 
         .. code-block:: java
-            :caption: User.java
+            :caption: :fab:`java` User.java
 
             public class User {
                 public boolean isAdmin;
@@ -110,14 +110,14 @@ Instances of application types can be constructed from inside an oso policy usin
         We can register a Python class using :py:meth:`oso.Oso.register_class` or the :py:func:`~oso.polar_class` decorator:
 
         .. code-block:: python
-            :caption: app.py
+            :caption: :fab:`python` app.py
 
             oso.register_class(User)
 
         Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
 
@@ -125,14 +125,14 @@ Instances of application types can be constructed from inside an oso policy usin
         Ruby classes are registered using ``register_class()``(see :doc:`/ruby/index`):
 
         .. code-block:: ruby
-            :caption: app.rb
+            :caption: :fas:`gem` app.rb
 
             OSO.register_class(User)
 
         Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
 
@@ -140,7 +140,7 @@ Instances of application types can be constructed from inside an oso policy usin
         To register a Java class, you must provide a lambda function to ``registerClass()`` that takes a map of arguments:
 
         .. code-block:: java
-            :caption: User.java
+            :caption: :fab:`java` User.java
 
             public static void main(String[] args) {
                 oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
@@ -149,7 +149,7 @@ Instances of application types can be constructed from inside an oso policy usin
         Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             ?= allow(new User{name: "alice", isAdmin: true}, "foo", "bar");
 
@@ -161,7 +161,7 @@ In our previous example, the **allow** rule expected the actor to be a ``User``,
 that type assumption in the policy. If we register the ``User`` class, we can write the following rule:
 
 .. code-block:: polar
-    :caption: policy.polar
+    :caption: :fa:`oso` policy.polar
 
     allow(actor: User, action, resource) if actor.name = "alice";
 
@@ -170,7 +170,7 @@ This rule will only be evaluated when the actor is a ``User``.
 We could also use ``matches`` to express the same logic:
 
 .. code-block:: polar
-    :caption: policy.polar
+    :caption: :fa:`oso` policy.polar
 
     allow(actor, action, resource) if matches User{name: "alice"};
 
@@ -180,7 +180,7 @@ We could also use ``matches`` to express the same logic:
         We can then evaluate the rule:
 
         .. code-block:: python
-            :caption: app.py
+            :caption: :fab:`python` app.py
 
             oso.register_class(User)
 
@@ -193,7 +193,7 @@ We could also use ``matches`` to express the same logic:
         We can then evaluate the rule:
 
         .. code-block:: ruby
-            :caption: app.rb
+            :caption: :fas:`gem` app.rb
 
             OSO.register_class(User)
             user = User.new("alice", true)
@@ -205,7 +205,7 @@ We could also use ``matches`` to express the same logic:
         We can then evaluate the rule:
 
         .. code-block:: java
-            :caption: User.java
+            :caption: :fab:`java` User.java
 
             public static void main(String[] args) {
                 oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
@@ -227,12 +227,12 @@ Once a class is registered, its static methods can also be called from oso polic
     .. group-tab:: Python
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             allow(actor: User, action, resource) if actor.name in User.superusers();
 
         .. code-block:: python
-            :caption: app.py
+            :caption: :fab:`python` app.py
 
             class User:
                 ...
@@ -249,12 +249,12 @@ Once a class is registered, its static methods can also be called from oso polic
     .. group-tab:: Ruby
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             allow(actor: User, action, resource) if actor.name in User.superusers();
 
         .. code-block:: ruby
-            :caption: app.rub
+            :caption: :fas:`gem` app.rb
 
             class User
                 # ...
@@ -271,12 +271,12 @@ Once a class is registered, its static methods can also be called from oso polic
     .. group-tab:: Java
 
         .. code-block:: polar
-            :caption: policy.polar
+            :caption: :fa:`oso` policy.polar
 
             allow(actor: User, action, resource) if actor.name in User.superusers();
 
         .. code-block:: java
-            :caption: User.java
+            :caption: :fab:`java` User.java
 
             public static List<String> superusers() {
                 return List.of("alice", "bhavik", "clarice");

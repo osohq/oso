@@ -94,6 +94,7 @@ As specializers in a rule head
 Given the following application class structure...
 
 .. code-block:: python
+  :caption: :fab:`python`
 
   class User:
       ...

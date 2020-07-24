@@ -40,6 +40,7 @@ An oso policy can restrict access along one or several of these dimensions.
 .. _first-record-level:
 
 .. code-block:: polar
+  :caption: :fa:`oso`
 
   allow(actor, "approve", expense: Expense) if
       actor = expense.submitted_by.manager
@@ -72,6 +73,7 @@ must be fetched from the application's store when the rule is evaluated.
 .. _second-record-level:
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def get_expense(user, expense_id):
         expense = db.fetch(
@@ -114,6 +116,7 @@ Sometimes, access control does not rely on properties of the primary data.  This
 type of access control is called **model level**.
 
 .. code-block:: polar
+    :caption: :fa:`oso`
 
     allow(actor, "view", "expense") if actor.role = "accountant";
     allow(actor, "modify", "team") if actor.role = "hr_admin";
@@ -130,6 +133,7 @@ Therefore it can be evaluated either before or after the primary data fetch.
 Here's what it would look like before:
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def get_expense(user, id):
         # See if the user is allowed to access expenses at all.
@@ -162,6 +166,7 @@ Create requests
 ---------------
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def create_expense(user, expense_data):
         # Create a new expense from the request.
@@ -186,6 +191,7 @@ performed if the authorization fails:
     "(modification in this case)" phrase? Maybe before data access?
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def create_expense(user, expense_data):
         # Create a new expense from the request.
@@ -226,6 +232,7 @@ In contrast to record level access control, field level access control
 determines what portions of a given record can be accessed.
 
 .. code-block:: polar
+    :caption: :fa:`oso`
 
     allow_field(actor, "view", _: Expense, "submitted_by");
     allow_field(actor, "view", expense: Expense, "amount") if
@@ -244,6 +251,7 @@ We can combine this access control with our record level access control
 :ref:`example <second-record-level>`:
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def get_expense(user, expense_id):
         expense = db.fetch(
@@ -279,6 +287,7 @@ data fetch.  However, it may be more efficient to use column level access
 control to only load the columns the user can access:
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     from oso.api import Variable
 
@@ -319,7 +328,10 @@ Authorizing list endpoints
 A list endpoint can be challenging to authorize since it deals with obtaining
 a collection of resources.  Often the filter used to obtain these resources will
 be related to the authorization policy.  For example, suppose we have the following
-access control rule in our policy::
+access control rule in our policy:
+
+.. code-block:: polar
+    :caption: :fa:`oso`
 
     # Accountants can view expenses from their location
     allow(actor: User, "view", resource: Expense) if
@@ -355,6 +367,7 @@ organization.  We could apply this filter, then further restrict access using os
 
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def get_expenses(user):
         records = db.fetch(
@@ -388,6 +401,7 @@ in your application.
     rule (only an instance will).
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def get_expenses(user):
         # Check that user is authorized to list responses.
@@ -411,7 +425,10 @@ in your application.
 
                 raise NotAuthorizedResponse()
 
-For the above example, we add the following to our policy::
+For the above example, we add the following to our policy:
+
+.. code-block:: polar
+    :caption: :fa:`oso`
 
     # Accountants can list expenses
     allow(actor: User, "list", resource: Expense) if
@@ -432,6 +449,7 @@ Instead of duplicating logic in oso and our application, we could authorize the
 request filter.
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def get_expenses(user):
         # Check that user is authorized to list responses.
@@ -467,7 +485,10 @@ request filter.
     by Polar for "view" queries, but that would require some complicated
     metaprogramming type stuff, or at least a getattr style predicate.
 
-To support this structure, our policy would look something like::
+To support this structure, our policy would look something like:
+
+.. code-block:: polar
+    :caption: :fa:`oso`
 
     # Accountants can list expenses
     allow(actor: User, "list", resource: Expense) if
@@ -491,6 +512,7 @@ allows for filters that are conditional on other attributes. For example, our
 policy for "view" could contain the additional rule
 
 .. code-block:: polar
+    :caption: :fa:`oso:
     :emphasize-lines: 1-3
 
     # Users can view expenses they submitted
@@ -502,7 +524,10 @@ policy for "view" could contain the additional rule
         role(actor, "accountant") and
         actor.location = resource.location;
 
-We could instead refactor these rules so that they operate on filters::
+We could instead refactor these rules so that they operate on filters:
+
+.. code-block:: polar
+    :caption: :fa:`oso`
 
     allow_with_filter(actor: User, "view", resource: Expense, filters) if
         filters = ["submitted_by", "=", actor.name];
@@ -514,6 +539,7 @@ We could instead refactor these rules so that they operate on filters::
 Now, in our app:
 
 .. code-block:: python
+    :caption: :fab:`python`
 
     def get_expenses(user):
         # Get authorization filters from oso
