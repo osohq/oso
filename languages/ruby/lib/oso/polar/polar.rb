@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'pp'
 require 'set'
 
 module Oso
@@ -111,13 +112,13 @@ module Oso
           end
 
           if results.empty?
-            puts 'false'
+            pp false
           else
             results.each do |result|
               if result.empty?
-                puts 'true'
+                pp true
               else
-                puts 'true: ' + result.to_s
+                pp result
               end
             end
           end

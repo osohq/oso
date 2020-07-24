@@ -147,7 +147,7 @@ public class Polar {
             } else {
                 do {
                     HashMap<String, Object> result = query.nextElement();
-                    System.out.println(result.size() > 0 ? "true: " + result.toString() : "true");
+                    System.out.println(result.size() > 0 ? result.toString() : "true");
                 } while (query.hasMoreElements());
             }
         }

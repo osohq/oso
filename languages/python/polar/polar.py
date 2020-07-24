@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 from pathlib import Path
+from pprint import pprint
 
 from _polar_lib import lib
 
@@ -122,12 +123,12 @@ class Polar:
                 for res in self.run(ffi_query):
                     result = True
                     bindings = res["bindings"]
-                    print(f"True: {bindings}" if bindings else "True")
+                    pprint(bindings if bindings else True)
             except PolarRuntimeException as e:
-                print(e)
+                pprint(e)
                 continue
             if not result:
-                print("False")
+                pprint(False)
 
     def register_class(self, cls, *, name=None, from_polar=None):
         """Register `cls` as a class accessible by Polar. `from_polar` can
