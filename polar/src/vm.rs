@@ -1402,6 +1402,30 @@ impl PolarVirtualMachine {
         self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
     }
 
+    /// Handle an error coming from outside the vm.
+    pub fn external_error(&mut self, message: String) -> PolarResult<()> {
+        let trace = self.trace.last().unwrap();
+        let term = match &trace.node {
+            Node::Term(t) => Some(t),
+            _ => None,
+        }
+        .unwrap();
+        let source = self.kb.read().unwrap().sources.get_source(term);
+        let context = if let Some(source) = source {
+            make_context(&source, term.offset())
+        } else {
+            None
+        };
+        let stack_trace = self.stack_trace();
+        let error = error::RuntimeError::Application {
+            msg: message,
+            loc: term.offset(),
+            context,
+            stack_trace: Some(stack_trace),
+        };
+        Err(error.into())
+    }
+
     /// Unify `left` and `right` terms.
     ///
     /// Outcomes of a unification are:
