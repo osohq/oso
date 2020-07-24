@@ -34,7 +34,6 @@ public class Host implements Cloneable {
      * Get a registered Java class.
      *
      * @param name
-     * @return
      * @throws Exceptions.UnregisteredClassError
      */
     public Class getClass(String name) throws Exceptions.UnregisteredClassError {
@@ -49,8 +48,7 @@ public class Host implements Cloneable {
      * Store a Java class in the cache by name.
      *
      * @param name
-     * @return
-     * @throws Exceptions.UnregisteredClassError
+     * @throws Exceptions.DuplicateClassAliasError If the class is already registered.
      */
     public String cacheClass(Class cls, Function<Map, Object> constructor, String name)
             throws Exceptions.DuplicateClassAliasError {
@@ -66,7 +64,6 @@ public class Host implements Cloneable {
      * Get a cached Java instance.
      *
      * @param instanceId
-     * @return
      * @throws Exceptions.UnregisteredInstanceError
      */
     public Object getInstance(long instanceId) throws Exceptions.UnregisteredInstanceError {
@@ -81,7 +78,6 @@ public class Host implements Cloneable {
      * Determine if a Java instance has been cached.
      *
      * @param instanceId
-     * @return
      */
     public boolean hasInstance(long instanceId) {
         return instances.containsKey(instanceId);
@@ -92,7 +88,6 @@ public class Host implements Cloneable {
      *
      * @param instance
      * @param id
-     * @return Long
      * @throws Exceptions.OsoException
      */
     public Long cacheInstance(Object instance, Long id) throws Exceptions.OsoException {
@@ -110,7 +105,6 @@ public class Host implements Cloneable {
      * @param clsName
      * @param fields
      * @param id
-     * @return Object
      */
     public Object makeInstance(String clsName, Map fields, long id) throws Exceptions.OsoException {
         Function<Map, Object> constructor = constructors.get(clsName);
@@ -280,7 +274,6 @@ public class Host implements Cloneable {
      *
      * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _,
      *             "value": _}}
-     * @return Object
      * @throws Exceptions.UnregisteredInstanceError
      * @throws Exceptions.UnexpectedPolarTypeError
      */
@@ -319,7 +312,6 @@ public class Host implements Cloneable {
      * Convert a JSONified Polar dictionary to a Java Map
      *
      * @param dict JSONObject
-     * @return HashMap<String, Object>
      * @throws Exceptions.UnregisteredInstanceError
      * @throws Exceptions.UnexpectedPolarTypeError
      */
@@ -336,9 +328,6 @@ public class Host implements Cloneable {
      * Convert a JSONified Polar List to a Java List
      *
      * @param list JSONArray
-     * @return List<Object>
-     * @throws Exceptions.UnregisteredInstanceError
-     * @throws Exceptions.UnexpectedPolarTypeError
      */
     public List<Object> polarListToJava(JSONArray list)
             throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {

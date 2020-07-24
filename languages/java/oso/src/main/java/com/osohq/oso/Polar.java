@@ -77,7 +77,7 @@ public class Polar {
     /**
      * Query for a predicate, parsing it first.
      *
-     * @param queryStr Query string
+     * @param query String string
      * @return Query object (Enumeration of resulting variable bindings).
      */
     public Query query(String query) throws Exceptions.OsoException {
@@ -88,7 +88,7 @@ public class Polar {
     /**
      * Query for a predicate.
      *
-     * @param name Predicate name, e.g. "f" for predicate "f(x)".
+     * @param predicate Predicate name, e.g. "f" for predicate "f(x)".
      * @param args List of predicate arguments.
      * @return Query object (Enumeration of resulting variable bindings).
      * @throws Exceptions.OsoException
