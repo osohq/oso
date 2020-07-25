@@ -227,6 +227,12 @@ pub enum RuntimeError {
     QueryTimeout {
         msg: String,
     },
+    Application {
+        msg: String,
+        loc: usize,
+        context: Option<ErrorContext>,
+        stack_trace: Option<String>,
+    },
 }
 
 impl fmt::Display for RuntimeError {
@@ -236,8 +242,14 @@ impl fmt::Display for RuntimeError {
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
             Self::TypeError {
-                msg, loc, context, ..
+                msg,
+                loc,
+                context,
+                stack_trace,
             } => {
+                if let Some(stack_trace) = stack_trace {
+                    writeln!(f, "{}", stack_trace)?;
+                }
                 write!(f, "Type error: {}", msg)?;
                 if let Some(context) = context {
                     write!(f, "{}", context)
@@ -248,6 +260,22 @@ impl fmt::Display for RuntimeError {
             Self::UnboundVariable { sym } => write!(f, "{} is an unbound variable", sym.0),
             Self::StackOverflow { msg } => write!(f, "Hit a stack limit: {}", msg),
             Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
+            Self::Application {
+                msg,
+                loc,
+                context,
+                stack_trace,
+            } => {
+                if let Some(stack_trace) = stack_trace {
+                    writeln!(f, "{}", stack_trace)?;
+                }
+                write!(f, "Application error: {}", msg)?;
+                if let Some(context) = context {
+                    write!(f, "{}", context)
+                } else {
+                    write!(f, " at location {}", loc)
+                }
+            }
         }
     }
 }

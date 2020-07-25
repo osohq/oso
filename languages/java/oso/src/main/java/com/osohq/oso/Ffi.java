@@ -86,6 +86,10 @@ public class Ffi {
             return checkResult(polarLib.polar_call_result(ptr, call_id, value));
         }
 
+        protected int applicationError(String message) throws Exceptions.OsoException {
+            return checkResult(polarLib.polar_application_error(ptr, message));
+        }
+
         protected QueryEvent nextEvent() throws Exceptions.OsoException {
             return new QueryEvent(checkResult(polarLib.polar_next_query_event(ptr)));
         }
@@ -164,6 +168,8 @@ public class Ffi {
 
         int polar_call_result(Pointer query_ptr, long call_id, String value);
 
+        int polar_application_error(Pointer query_ptr, String message);
+
         int query_free(Pointer query);
 
         int string_free(Pointer s);
@@ -208,12 +214,12 @@ public class Ffi {
         }
     }
 
-	protected static Ffi get() {
+    protected static Ffi get() {
         if (ffi == null) {
             ffi = new Ffi();
         }
         return ffi;
-	}
+    }
 
     protected Polar polarNew() throws Exceptions.OsoException {
         return new Polar(checkResult(polarLib.polar_new()));

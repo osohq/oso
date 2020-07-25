@@ -5,6 +5,7 @@ from .exceptions import PolarApiException
 from .ffi import (
     external_answer,
     external_call,
+    application_error,
     ffi_deserialize,
     ffi_serialize,
     load_str,
@@ -100,10 +101,9 @@ class Query:
             # Lookup the attribute on the instance.
             try:
                 attr = getattr(instance, attribute)
-            except AttributeError:
+            except AttributeError as e:
+                application_error(query, str(e))
                 external_call(query, call_id, None)
-                # @TODO: polar line numbers in errors once polar errors are better.
-                # raise PolarRuntimeException(f"Error calling {attribute}")
                 return
 
             if callable(attr):  # If it's a function, call it with the args.

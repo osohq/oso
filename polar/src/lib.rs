@@ -298,6 +298,20 @@ pub extern "C" fn polar_question_result(query_ptr: *mut Query, call_id: u64, res
 }
 
 #[no_mangle]
+pub extern "C" fn polar_application_error(query_ptr: *mut Query, message: *mut c_char) -> i32 {
+    ffi_try!({
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let s = if !message.is_null() {
+            unsafe { ffi_string!(message) }.to_string()
+        } else {
+            "".to_owned()
+        };
+        query.application_error(s);
+        POLAR_SUCCESS
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar) -> u64 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };

@@ -50,6 +50,7 @@ pub enum Goal {
         call_id: u64,
         instance: Term,
         field: Term,
+        check_errors: bool,
     },
     MakeExternal {
         literal: InstanceLiteral,
@@ -63,6 +64,7 @@ pub enum Goal {
         left_instance_id: u64,
         right_instance_id: u64,
     },
+    CheckError,
     Noop,
     Query {
         term: Term,
@@ -150,6 +152,9 @@ pub struct PolarVirtualMachine {
     pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
+    // Errors from outside the vm.
+    pub external_error: Option<String>,
+
     query_start_time: Option<std::time::Instant>,
     query_timeout: std::time::Duration,
 
@@ -210,6 +215,7 @@ impl PolarVirtualMachine {
             queries: vec![],
             trace_stack: vec![],
             trace: vec![],
+            external_error: None,
             debugger: Debugger::default(),
             kb,
             call_id_symbols: HashMap::new(),
@@ -276,7 +282,8 @@ impl PolarVirtualMachine {
                 call_id,
                 instance,
                 field,
-            } => return self.lookup_external(*call_id, instance, field),
+                check_errors,
+            } => return self.lookup_external(*call_id, instance, field, *check_errors),
             Goal::IsaExternal {
                 instance_id,
                 literal,
@@ -289,6 +296,7 @@ impl PolarVirtualMachine {
                 literal,
                 instance_id,
             } => return Ok(self.make_external(literal, *instance_id)),
+            Goal::CheckError => return self.check_error(),
             Goal::Noop => {}
             Goal::Query { term } => {
                 let result = self.query(term);
@@ -347,7 +355,10 @@ impl PolarVirtualMachine {
         while let Some(goal) = self.goals.pop() {
             match self.next(goal.clone())? {
                 QueryEvent::None => (),
-                event => return Ok(event),
+                event => {
+                    self.external_error = None;
+                    return Ok(event);
+                }
             }
             self.maybe_break(DebugEvent::Goal(goal.clone()))?;
         }
@@ -781,6 +792,7 @@ impl PolarVirtualMachine {
                             name: field.clone(),
                             args: vec![],
                         })),
+                        check_errors: false,
                     };
                     let isa = Goal::Isa {
                         left: left.clone_with_value(Value::Variable(left_value)),
@@ -889,6 +901,7 @@ impl PolarVirtualMachine {
         call_id: u64,
         instance: &Term,
         field: &Term,
+        check_errors: bool,
     ) -> PolarResult<QueryEvent> {
         let (field_name, args) = match &field.value() {
             Value::Call(Predicate { name, args }) => (
@@ -897,11 +910,17 @@ impl PolarVirtualMachine {
             ),
             _ => unreachable!("call must be a predicate"),
         };
+
         self.push_choice(vec![vec![Goal::LookupExternal {
             call_id,
             instance: instance.clone(),
             field: field.clone(),
+            check_errors,
         }]]);
+
+        if check_errors {
+            self.push_goal(Goal::CheckError)?;
+        }
 
         Ok(QueryEvent::ExternalCall {
             call_id,
@@ -955,6 +974,33 @@ impl PolarVirtualMachine {
         QueryEvent::MakeExternal {
             instance_id,
             instance: literal.clone(),
+        }
+    }
+
+    pub fn check_error(&self) -> PolarResult<QueryEvent> {
+        if let Some(error) = &self.external_error {
+            let trace = self.trace.last().unwrap();
+            let term = match &trace.node {
+                Node::Term(t) => Some(t),
+                _ => None,
+            }
+            .unwrap();
+            let source = self.kb.read().unwrap().sources.get_source(term);
+            let context = if let Some(source) = source {
+                make_context(&source, term.offset())
+            } else {
+                None
+            };
+            let stack_trace = self.stack_trace();
+            let error = error::RuntimeError::Application {
+                msg: error.clone(),
+                loc: term.offset(),
+                context,
+                stack_trace: Some(stack_trace),
+            };
+            Err(error.into())
+        } else {
+            Ok(QueryEvent::None)
         }
     }
 
@@ -1240,6 +1286,7 @@ impl PolarVirtualMachine {
                     call_id,
                     instance: object.clone(),
                     field: field.clone(),
+                    check_errors: true,
                 })?;
             }
             _ => {
@@ -1388,10 +1435,24 @@ impl PolarVirtualMachine {
             // No more results. Clean up, cut out the retry alternative,
             // and backtrack.
             self.call_id_symbols.remove(&call_id).expect("bad call ID");
+
+            let check_error = if let Some(goal) = self.goals.last() {
+                match *(*goal) {
+                    Goal::CheckError => true,
+                    _ => false,
+                }
+            } else {
+                false
+            };
+
             self.push_goal(Goal::Backtrack)?;
             self.push_goal(Goal::Cut {
                 choice_index: self.choices.len() - 1,
             })?;
+
+            if check_error {
+                self.push_goal(Goal::CheckError)?;
+            }
         }
         Ok(())
     }
@@ -1400,6 +1461,11 @@ impl PolarVirtualMachine {
     pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
         self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
+    }
+
+    /// Handle an error coming from outside the vm.
+    pub fn external_error(&mut self, message: String) {
+        self.external_error = Some(message);
     }
 
     /// Unify `left` and `right` terms.
