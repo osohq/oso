@@ -278,7 +278,7 @@ to make requests to certain routes. We also used a new ``authorize`` method to
 make it convenient to add data access controls to our route handlers.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * To explore integrating oso in your app in more depth continue to
       :doc:`/getting-started/application/patterns`.

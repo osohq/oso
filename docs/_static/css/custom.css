@@ -70,3 +70,18 @@
 .with-columns footer {
     width: 100% !important;
 }
+
+/* Button tweaks */
+article .matter-button-contained {
+    text-align: center;
+    min-width: 96px;
+    height: 54px;
+    font-size: 16pt;
+    margin: 1rem;
+}
+
+.md-typeset .admonition.whats-next > .admonition-title::before {
+    content: "\f5a0";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+}

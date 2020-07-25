@@ -323,7 +323,7 @@ Summary
   and dictionaries, exactly as if they were application types.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * Explore how to implement common authorization models in oso, like
       **role-based** and **attribute-based access control**:

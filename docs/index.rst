@@ -3,15 +3,34 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-
 Welcome to the oso documentation!
-==================================
+=================================
 
-oso helps developers build authorization in their applications.
+oso is an **open source policy engine for authorization** that's embedded in your application.
+It provides a declarative policy language for expressing authorization logic,
+which you define separately from the rest of your application code but which executes inside the
+application and can call directly into it.
+oso ships as a library with a debugger and a REPL.
 
-.. admonition:: What is oso?
+.. container:: left-col
 
-    oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from your application code but which executes inside the application and can call directly into it. oso ships as a library with a debugger and a REPL.
+    .. code-block:: python
+        :caption: :fab:`python` app.py
+
+        if oso.is_allowed(user, "view", expense):
+            # ...
+
+.. container:: right-col
+
+    .. code-block:: polar
+        :caption: :fa:`oso` expense.polar
+
+        allow(user, "read", expense) if
+            user.email = expense.submitted_by;
+
+You write policies to define authorization logic. You tell it things like who should access what, based
+on what you know about them and their relationship to what they are trying to access.
+Policies are written in a declarative policy language called Polar, then they are loaded into oso.
 
 Using oso, you can:
 
@@ -19,19 +38,24 @@ Using oso, you can:
 2. Express policies concisely with a declarative language
 3. Write policies that call directly into your application
 
-To see this in action, :doc:`continue on to the Getting Started guide <getting-started/quickstart>`.
+.. button::
+    :link: /getting-started/quickstart
+    :text: Get Started
 
-To learn more about oso and the principles behind its design,
-:doc:`read the oso overview page <more/design-principles>`.
+.. button::
+    :link: /more/design-principles
+    :text: Learn More
+    :class: matter-success
+.. options: matter-primary, matter-secondary, matter-error, matter-warning, matter-success
 
------
+.. -----
 
 .. toctree::
     :maxdepth: 1
     :titlesonly:
     :hidden:
 
-    Docs Home <self>
+    Home <self>
 
 .. These guides contain a brief introduction to oso. This is a great
 .. starting point if you are new to **oso**.
@@ -77,6 +101,7 @@ To learn more about oso and the principles behind its design,
    more/performance
    more/language/polar-foundations
    more/security
+   more/internals
    project/changelogs/index
 
 ..
