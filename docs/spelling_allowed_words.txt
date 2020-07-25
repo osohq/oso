@@ -57,3 +57,6 @@ iterable
 iterables
 sqlite
 lookups
+classpath
+Github
+javac
