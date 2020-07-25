@@ -39,12 +39,12 @@ Strings
 Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be called in policies:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.username.end_with?("example.com");
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :username
@@ -55,7 +55,7 @@ Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be ca
   end
 
   user = User.new("alice@example.com")
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 .. warning::
   Polar does not support methods that mutate strings in place.
@@ -65,12 +65,12 @@ Lists
 Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`Lists <lists>`. Ruby's Array methods may be called in policies:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.groups.include?("HR");
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :groups
@@ -81,7 +81,7 @@ Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`
   end
 
   user = User.new(["HR", "payroll"])
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 .. warning::
   Polar does not support methods that mutate lists in place, unless the list is also returned from the method.
@@ -89,12 +89,12 @@ Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`
 Likewise, lists constructed in Polar may be passed into Ruby methods:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.has_groups?(["HR", "payroll"]);
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :groups
@@ -109,19 +109,19 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
   end
 
   user = User.new(["HR", "payroll"])
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 Hashes
 ^^^^^^
 Ruby hashes are mapped to Polar :ref:`dictionaries`:
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     attr_reader :roles
@@ -132,7 +132,7 @@ Ruby hashes are mapped to Polar :ref:`dictionaries`:
   end
 
   user = User.new({"project1" => "admin"})
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
 
@@ -142,12 +142,12 @@ Oso handles Ruby `enumerators <https://ruby-doc.org/core/Enumerator.html>`_ by e
 yielded values one at a time.
 
 .. code-block:: polar
-  :caption: policy.polar
+  :caption: :fa:`oso` policy.polar
 
   allow(actor, action, resource) if actor.get_group = "payroll";
 
 .. code-block:: ruby
-  :caption: app.rb
+  :caption: :fas:`gem` app.rb
 
   class User
     def get_group(self)
@@ -156,7 +156,7 @@ yielded values one at a time.
   end
 
   user = User.new
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 In the policy above, the body of the `allow` rule will first evaluate ``"HR" = "payroll"`` and then
 ``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``Oso#allow`` will succeed.
@@ -166,7 +166,7 @@ Summary
 ^^^^^^^
 
 .. list-table:: Ruby -> Polar Types Summary
-  :widths: 500 500
+  :width: 500 px
   :header-rows: 1
 
   * - Ruby type

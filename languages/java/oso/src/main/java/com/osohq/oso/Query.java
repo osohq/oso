@@ -201,7 +201,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     Field field = cls.getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException e) {
-                    throw new Exceptions.InvalidCallError(attrName, argTypes);
+                    throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
                 }
             }
         } catch (IllegalAccessException e) {

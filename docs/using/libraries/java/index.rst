@@ -16,7 +16,7 @@ To install, see :doc:`installation instructions </getting-started/download/java>
 Working with Java Types
 =======================
 
-oso's Java authorization library allows you to write policy rules over Java objects directly.
+oso's Java authorization library lets you write policy rules over Java objects directly.
 This document explains how different types of Java objects can be used in oso policies.
 
 
@@ -65,12 +65,12 @@ Strings
 Java Strings are mapped to Polar :ref:`strings`. Java's String methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.username.endsWith("example.com");
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
    public class User {
       public String username;
@@ -81,7 +81,7 @@ Java Strings are mapped to Polar :ref:`strings`. Java's String methods may be ac
 
       public static void main(String[] args) {
          User user = new User("alice@example.com");
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
    }
 
@@ -91,12 +91,12 @@ Java `Arrays <https://docs.oracle.com/javase/tutorial/java/nutsandbolts/arrays.h
 mapped to Polar :ref:`Lists <lists>`. Java's ``List`` methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.groups.contains("HR");
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
    public class User {
       public List<String> groups;
@@ -107,11 +107,11 @@ mapped to Polar :ref:`Lists <lists>`. Java's ``List`` methods may be accessed fr
 
       public static void main(String[] args) {
          User user = new User(List.of("HR", "payroll"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
    }
 
-Note that the ``allow()`` call would also succeed if ``groups`` were an array.
+Note that the ``isAllowed()`` call would also succeed if ``groups`` were an array.
 
 .. warning::
     Polar does not support methods that mutate lists in place. E.g. ``add()`` will have no effect on
@@ -120,12 +120,12 @@ Note that the ``allow()`` call would also succeed if ``groups`` were an array.
 Likewise, lists constructed in Polar may be passed into Java methods:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
       public boolean hasGroups(List<String> groups) {
          for(String g : groups) {
@@ -137,7 +137,7 @@ Likewise, lists constructed in Polar may be passed into Java methods:
 
       public static void main(String[] args) {
          User user = new User(List.of("HR", "payroll"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
 
 Maps
@@ -146,12 +146,12 @@ Java objects that implement the `Map <https://docs.oracle.com/javase/8/docs/api/
 are mapped to Polar :ref:`dictionaries`:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
    public class User {
       public Map<String, String> roles;
@@ -162,7 +162,7 @@ are mapped to Polar :ref:`dictionaries`:
 
       public static void main(String[] args) {
          User user = new User(Map.of("project1", "admin"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
    }
 
@@ -174,12 +174,12 @@ Oso handles Java objects that implement the `Enumeration <https://docs.oracle.co
 object's elements one at a time:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.getGroup = "payroll";
 
 .. code-block:: java
-   :caption: User.java
+   :caption: :fab:`java` User.java
 
       public Enumeration<String> getGroup() {
          return Collections.enumeration(List.of("HR", "payroll"));
@@ -187,18 +187,18 @@ object's elements one at a time:
 
       public static void main(String[] args) {
          User user = new User(Map.of("project1", "admin"));
-         assert oso.allow(user, "foo", "bar");
+         assert oso.isAllowed(user, "foo", "bar");
       }
 
 In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``allow()`` will succeed.
+``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``isAllowed()`` will succeed.
 Note that if ``getGroup()`` returned a list, the rule would fail, as the evaluation would be ``["HR", "payroll"] = "payroll"``.
 
 Summary
 ^^^^^^^
 
 .. list-table:: Java -> Polar Types Summary
-   :widths: 500 500
+   :width: 500 px
    :header-rows: 1
 
    * - Java type

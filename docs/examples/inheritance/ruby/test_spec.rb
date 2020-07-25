@@ -39,19 +39,19 @@ RSpec.describe do
       end
 
       it "allows medical staff" do
-        expect(@oso.allow(
+        expect(@oso.allowed?(
           actor: @med_staff,
           action: "read",
           resource: @order
         )).to be true
 
-        expect(@oso.allow(
+        expect(@oso.allowed?(
           actor: @med_staff,
           action: "read",
           resource: @lab
         )).to be true
 
-        expect(@oso.allow(
+        expect(@oso.allowed?(
           actor: @med_staff,
           action: "read",
           resource: @test
@@ -59,19 +59,19 @@ RSpec.describe do
       end
 
       it "denies for mismatched patient" do
-        expect(@oso.allow(
+        expect(@oso.allowed?(
           actor: @med_staff_bad_patient,
           action: "read",
           resource: @order
         )).to be false
 
-        expect(@oso.allow(
+        expect(@oso.allowed?(
           actor: @med_staff_bad_patient,
           action: "read",
           resource: @lab
         )).to be false
 
-        expect(@oso.allow(
+        expect(@oso.allowed?(
           actor: @med_staff_bad_patient,
           action: "read",
           resource: @test
@@ -79,19 +79,19 @@ RSpec.describe do
       end
 
       it "denies for regular staff" do
-          expect(@oso.allow(
+          expect(@oso.allowed?(
             actor: @reg_staff,
             action: "read",
             resource: @order
           )).to be false
 
-          expect(@oso.allow(
+          expect(@oso.allowed?(
             actor: @reg_staff,
             action: "read",
             resource: @lab
           )).to be false
 
-          expect(@oso.allow(
+          expect(@oso.allowed?(
             actor: @reg_staff,
             action: "read",
             resource: @test

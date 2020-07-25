@@ -26,6 +26,6 @@ def test_policy(oso, load):
     load("01-context.polar")
 
     os.environ["ENV"] = "production"
-    assert not oso.allow("steve", "test", "policy")
+    assert not oso.is_allowed("steve", "test", "policy")
     os.environ["ENV"] = "development"
-    assert oso.allow("steve", "test", "policy")
+    assert oso.is_allowed("steve", "test", "policy")

@@ -52,23 +52,23 @@ RSpec.describe do
     end
 
     it "works" do
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "employee"),
         action: "submit",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "admin"),
         action: "approve",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "employee"),
         action: "approve",
         resource: "expense")).to be false
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "accountant"),
         action: "view",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(name: "greta"),
         action: "approve",
         resource: "expense")).to be true
@@ -86,41 +86,41 @@ RSpec.describe do
     end
 
     it "works" do
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "employee"),
         action: "submit",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "employee"),
         action: "view",
         resource: "expense")).to be false
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "employee"),
         action: "approve",
         resource: "expense")).to be false
 
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "accountant"),
         action: "submit",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "accountant"),
         action: "view",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "accountant"),
         action: "approve",
         resource: "expense")).to be false
 
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "admin"),
         action: "submit",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "admin"),
         action: "view",
         resource: "expense")).to be true
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: User.new(role: "admin"),
         action: "approve",
         resource: "expense")).to be true

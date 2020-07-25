@@ -166,3 +166,6 @@ cython_debug/
 
 # Generated C files
 *.c
+
+# Java class files
+*.class

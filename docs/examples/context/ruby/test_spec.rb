@@ -15,13 +15,13 @@ RSpec.describe do
 
     it "works" do
       ENV["ENV"] = "production"
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: "steve",
         action: "test",
         "resource": "policy")).to be false
 
       ENV["ENV"] = "development"
-      expect(@oso.allow(
+      expect(@oso.allowed?(
         actor: "steve",
         action: "test",
         "resource": "policy")).to be true

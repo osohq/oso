@@ -39,10 +39,10 @@ EXPENSES_DEFAULT = {"location": "NYC", "amount": 50, "project_id": 2}
 def test_simple_01(oso, load):
     load("01-simple.polar")
 
-    assert oso.allow(
+    assert oso.is_allowed(
         User("sam"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="sam")
     )
-    assert not oso.allow(
+    assert not oso.is_allowed(
         User("sam"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="steve")
     )
 
@@ -52,29 +52,29 @@ def test_rbac_02(oso, load):
 
     oso.load_str('role(_: User { name: "sam" }, "admin", __: Project { id: 2 });')
     expense = Expense(location="NYC", amount=50, project_id=0, submitted_by="steve")
-    assert not oso.allow(User("sam"), "view", expense)
+    assert not oso.is_allowed(User("sam"), "view", expense)
     expense = Expense(location="NYC", amount=50, project_id=2, submitted_by="steve")
-    assert oso.allow(User("sam"), "view", expense)
+    assert oso.is_allowed(User("sam"), "view", expense)
 
 
 def test_hierarchy_03(oso, load):
     load("03-hierarchy.polar")
 
-    assert oso.allow(
+    assert oso.is_allowed(
         User("bhavik"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="alice")
     )
-    assert oso.allow(
+    assert oso.is_allowed(
         User("cora"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="alice")
     )
-    assert oso.allow(
+    assert oso.is_allowed(
         User("cora"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="bhavik")
     )
-    assert not oso.allow(
+    assert not oso.is_allowed(
         User("bhavik"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="cora")
     )
-    assert not oso.allow(
+    assert not oso.is_allowed(
         User("alice"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="cora")
     )
-    assert not oso.allow(
+    assert not oso.is_allowed(
         User("alice"), "view", Expense(**EXPENSES_DEFAULT, submitted_by="bhavik")
     )

@@ -7,7 +7,7 @@ Python API
 Classes
 =======
 .. autoclass:: oso.Oso
-   :members: allow, load_str, load_file, register_class
+   :members: is_allowed, load_str, load_file, register_class
 
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
