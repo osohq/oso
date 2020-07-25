@@ -5,7 +5,7 @@ class Allow {
         Oso oso = new Oso();
         String actor = "alice@example.com";
         Expense resource = EXPENSES[1];
-        boolean allowed = oso.allow(actor, "GET", resource);
+        boolean allowed = oso.isAllowed(actor, "GET", resource);
     }
 
 }

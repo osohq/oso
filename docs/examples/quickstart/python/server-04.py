@@ -18,7 +18,7 @@ EXPENSES = {
 from oso import Oso
 
 oso = Oso()
-oso.load_str('allow("alice@example.com", "GET", _expense);')
+oso.load_str('is_allowed("alice@example.com", "GET", _expense);')
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -37,7 +37,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             if resource_type != "expenses":
                 return self._respond("Not Found!", 404)
             resource = EXPENSES[int(resource_id)]
-            if oso.allow(actor, action, resource):
+            if oso.is_allowed(actor, action, resource):
                 self._respond(resource)
             else:
                 self._respond("Not Authorized!", 403)

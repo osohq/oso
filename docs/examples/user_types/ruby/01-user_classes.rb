@@ -23,7 +23,7 @@ OSO.register_class(InternalUser)
 # app-start
 def customer_dashboard_handler(request)
   actor = user_from_id(request.id)
-  allowed = OSO.allow(
+  allowed = OSO.allowed?(
     actor: actor,
     action: "view",
     resource: "customer_dashboard")

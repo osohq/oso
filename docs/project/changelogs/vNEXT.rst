@@ -10,6 +10,15 @@ Breaking changes
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
+allow() method renamed in oso libraries
+---------------------------------------
+
+To eliminate ambiguity, the ``allow()`` method of the oso library has been renamed to:
+
+- ``is_allowed()`` in Python,
+- ``#allowed?`` in Ruby, and
+- ``isAllowed()`` in Java
+
 isa operator replaced with matches
 ----------------------------------
 

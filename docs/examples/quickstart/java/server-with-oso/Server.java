@@ -34,7 +34,7 @@ public class Server implements HttpHandler {
             }
             Integer index = Integer.parseInt(request[2]) - 1;
             Expense resource = Server.EXPENSES[index];
-            if (oso.allow(actor, action, resource)) {
+            if (oso.isAllowed(actor, action, resource)) {
                 respond(exchange, resource.toString(), 200);
             } else {
                 respond(exchange, "Not Authorized!", 403);
