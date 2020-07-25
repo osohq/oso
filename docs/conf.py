@@ -50,6 +50,7 @@ extensions = [
     "sphinx.ext.ifconfig",
     "sphinxcontrib.spelling",
     "sphinx_copybutton",
+    "button",
     "fontawesome",
 ]
 
@@ -135,7 +136,7 @@ html_theme_options = {
     "base_url": "https://docs.osohq.com/",
     # Set the color and the accent color
     "color_primary": "#0E024E",
-    "color_accent": "#0E024E",
+    "color_accent": "#FFFFFF",
     # Set the repo location to get a badge with stats
     "repo_url": "https://github.com/osohq/oso/",
     "repo_name": "oso",
@@ -150,16 +151,15 @@ html_theme_options = {
 
 version_dropdown = True
 version_info = {"release": "/", "devel": "/devel"}
-html_sidebars = {
-    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
-}
+html_sidebars = {"**": ["globaltoc.html", "localtoc.html"]}
 
 html_logo = "oso_logo_resized.png"
 html_js_files = [
-    "js/custom.js",
+    # "js/custom.js",
 ]
 html_css_files = [
     "css/custom.css",
+    "css/matter.css",
 ]
 
 html_favicon = "favicon.ico"

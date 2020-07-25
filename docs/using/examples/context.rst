@@ -76,7 +76,7 @@ lets you expose any kind of data you want to use in your policy, not just
 :polar:`Actor` and :polar:`Resource` classes.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * :doc:`Download oso </getting-started/download/index>` to try out
       authorizing requests with context in your app.

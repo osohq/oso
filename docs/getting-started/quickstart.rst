@@ -580,7 +580,7 @@ We just blitzed through a ton of stuff:
     Make these actual links.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * Explore how to :doc:`/getting-started/application/index`.
     * Dig deeper on :doc:`/getting-started/policies/index`.

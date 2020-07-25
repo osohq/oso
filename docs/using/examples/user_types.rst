@@ -211,7 +211,7 @@ that specialized on the type of Actor, and even added attributes to some actor t
 We also demonstrated how inheritance can be used to match rules to multiple types of Actors.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * :doc:`Download oso </getting-started/download/index>` to apply this
       technique in your app.
