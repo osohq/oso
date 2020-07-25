@@ -15,7 +15,7 @@ export JAVA_DIR := $(abspath ../languages/java/oso)
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.2.1.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.2.5.jar
 
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
@@ -56,7 +56,7 @@ $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C ../languages/java package
 
 java-test: $(JAVA_PACKAGE_JAR_PATH)
-	cd examples/abac/java && javac -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac.java && java -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac
+	cd examples/abac/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac.java && java -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac
 	# The way this test works for context is pretty sketchy.
 	# We can't set environment variables from within Java like the Python & Ruby
 	# tests, so instead we call the test twice, expecting it to fail for production.
