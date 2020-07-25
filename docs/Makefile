@@ -12,7 +12,7 @@ export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
 export RUBY_DIR := $(abspath ../languages/ruby)
 export JAVA_DIR := $(abspath ../languages/java/oso)
 
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.2.1.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.2.5.jar
 
 RUBY_FILES := $(wildcard ../languages/ruby/**/*.rb)
 JAVA_FILES := $(wildcard ../languages/java/**/*.java)
@@ -52,7 +52,7 @@ $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C ../languages/java package
 
 java-test: $(JAVA_PACKAGE_JAR_PATH)
-	cd examples/abac/java && javac -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac.java && java -cp ../../../../languages/java/oso/target/oso-0.2.1.jar:. TestAbac
+	cd examples/abac/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac.java && java -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac
 	# The way this test works for context is pretty sketchy.
 	# We can't set environment variables from within Java like the Python & Ruby
 	# tests, so instead we call the test twice, expecting it to fail for production.
