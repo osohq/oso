@@ -86,3 +86,6 @@ test: doctest
 
 deps:
 	pip3 install -r requirements-docs.txt
+
+_static/css/style.css: scss/*.scss
+	sass --load-path scss scss/style.scss $@

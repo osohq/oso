@@ -5,7 +5,9 @@
 Design Principles
 =================
 
-oso helps developers build authorization into their applications. Authorization typically starts simple – perhaps a few `if` statements in your code – but can  grow complex as you add:
+oso helps developers build authorization into their applications.
+Authorization typically starts simple – perhaps a few `if` statements in your code
+– but can grow complex as you add:
 
 - More roles
 - Dynamic permissions
@@ -17,58 +19,41 @@ These can be hard to express concisely, and over time what started as a small nu
 
 oso is designed to solve these problems based on 3 principles, which we'll describe briefly then in more detail below.
 
-1. **Separation of concerns.** Authorization logic is distinct from business logic, and by separating the two, you can make changes to your policies that apply across your entire application, write reusable patterns, and get a single place to control, test and visualize access.
-2. **Right tool for the job.** Authorization deals in facts and rules about who is allowed to do what in a system. Solutions to describe authorization logic ought to be declarative and have semantics that map to common domain concepts – like roles and relationships, or boolean conditions over the input attributes.
-3. **Authorization decisions and application data are inseparable.** Authorization decisions always rely on application context – like who a user is and her relationship to the data she's trying to access. The authorization system ought to be able to call directly into the application so you can write policies using the application's objects and data.
+1. **Separation of concerns, but not data.** Authorization logic is distinct
+from business logic, and by separating the two, you can make changes to your
+policies that apply across your application, write reusable patterns, and get
+one place to control, test and visualize access. But, authorization decisions
+always rely on application context – like who a user is and her relationship to
+the data she's trying to access. So, policies still ought to be able to call
+directly into the application and use application objects and data natively.
 
-What is oso
------------
+2. **Right tool for the job.** Authorization deals in facts and rules about who
+is allowed to do what in a system. Solutions to describe authorization logic
+ought to be declarative and have semantics that map to common domain concepts –
+like roles and relationships, or boolean conditions over the input attributes.
 
-oso is an open source policy engine for authorization that's embedded in your application. It provides a declarative policy language for expressing authorization logic, which you define separately from the rest of your application code but which executes inside the application and can call directly into it. oso ships as a library with a debugger and a REPL.
+3. **Easy to get started, powerful when you need it.** No two
+authorization problems are the same, because no two applications are the same.
+And so while many authorization problems can be made to fit a general pattern
+like roles, the model's fit typically degrades as you add more – and more
+complex – requirements. An authorization system should provide simple,
+opinionated building blocks to start but should not force developers to bend
+their requirements to the capabilities of the system. Instead, it should give
+them the ability to extend the system to solve for the use case at hand.
 
-.. container:: left-col
+Separation of concerns, but not data
+------------------------------------
 
-    .. code-block:: python
-        :caption: :fab:`python` app.py
+Let's imagine we're building a SaaS app that allows organizations to manage
+their employees' expenses. We need authorization logic to ensure that, for
+example, employees can only view their own expenses, and to ensure that their
+managers can view and approve their team's expenses.
 
-        if oso.query_predicate("allow", user, "view", expense):
-            # ...
-
-.. container:: right-col
-
-    .. code-block:: polar
-        :caption: :fa:`oso` expense.polar
-
-        allow(user, "read", expense) if
-            user.email = expense.submitted_by;
-
-You write policies to define authorization logic. You tell it things like who should access what, based
-on what you know about them and their relationship to what they are trying to access.
-Policies are written in a declarative policy language called Polar, then they are loaded into oso.
-
-You can use oso to query the policies and pass in relevant application data as inputs.
-
-.. todo:: Wording
-
-The oso policy engine answers queries by evaluating the policy, and calls into the application to
-read attributes off of application data, to check types or to look up class methods.
-
-oso also ships with a debugger and a REPL.
-
-Let's return to our three principles in more detail.
-
-.. _separation-of-concerns:
-
-Separation of Concerns
-----------------------
-
-Let's imagine we're building a SaaS app that allows organizations to manage their
-employees' expenses. We need authorization logic to ensure that, for example, employees can only view their own expenses, and to ensure that their managers can view and approve their team's expenses.
-
-At first, having ``if`` statements to represent this logic is not that big a deal. But over time, across multiple
-files and multiple parts of the application, we end up with pieces of authorization logic
-sprinkled throughout our codebase. This creates a de facto permissions system that can be hard to keep track of
-or change.
+At first, having ``if`` statements to represent this logic is not that big a
+deal. But over time, across multiple files and multiple parts of the
+application, we end up with pieces of authorization logic sprinkled throughout
+our codebase. This creates a de facto permissions system that can be hard to
+keep track of or change.
 
 Splitting out authorization logic with oso might look as follows:
 
@@ -99,15 +84,15 @@ Splitting out authorization logic with oso might look as follows:
                 :caption: :fab:`python` expense.py
 
                 def show(expense):
-                    if oso.query_predicate("allow", user, "read", expense):
+                    if oso.is_allowed(user, "read", expense):
                         return str(expense)
 
                 def download(expense):
-                    if oso.query_predicate("allow", user, "read", expense):
+                    if oso.is_allowed(user, "read", expense):
                         return expense.to_json()
 
                 def approve(expense):
-                    if oso.query_predicate("allow", user, "approve", expense):
+                    if oso.is_allowed(user, "approve", expense):
                         expense.approve()
 
         .. container:: right-col
@@ -127,30 +112,33 @@ Splitting out authorization logic with oso might look as follows:
                 submitted(user, expense) if
                     user.email = expense.submitted_by;
 
-.. note::
-    Want to see how this policy works? Check out the :doc:`guide for writing policies </getting-started/policies/index>`.
+.. tip::
+    Want to see how this policy works? Check out the
+    :doc:`guide for writing policies </getting-started/policies/index>`.
 
-The ``oso.query`` call can be made anywhere. So even if we have developer APIs
+The ``oso.is_allowed`` call can be made anywhere. So even if we have developer APIs
 and multiple different backend server calls -- which all require checking the
 user's permissions for viewing an expense -- the actual logic is all in one place.
 
-By taking this approach, the logic becomes more maintainable. For example, we can
-extract out common patterns into reusable code. We can write a rule :polar:`submitted(user, expense) if user.email = expense.submitted_by`, which we then use in multiple places.
-If we wanted to change this logic by instead looking up the user ID,
-we only need to change this one line.
+By taking this approach, the logic becomes more maintainable. For example, we
+can extract out common patterns into reusable code. We can write a rule
+:polar:`submitted(user, expense) if user.email = expense.submitted_by`, which we
+then use in multiple places. If we wanted to change this logic by instead
+looking up the user ID, we only need to change this one line.
 
-Similarly, creating or modifying permissions means making changes to just the policy file, and having them applied throughout the application. Meaning we are less likely
-to either break a workflow by forgetting to update permissions somewhere, and less
-likely to introduce a security hole.
+Similarly, creating or modifying permissions means making changes to just the
+policy file, and having them applied throughout the application. Meaning we are
+less likely to either break a workflow by forgetting to update permissions
+somewhere, and less likely to introduce a security hole.
 
-For example, we ensure that if you can see an expense in the UI (the ``show`` method), then you can download it as JSON.
-Any modifications to the ``allow`` rule for reading an expense will be consistent across the two of them.
+For example, we ensure that if you can see an expense in the UI (the ``show``
+method), then you can download it as JSON. Any modifications to the ``allow``
+rule for reading an expense will be consistent across the two of them.
 
-If we need to extend the permissions to make ``download`` stricter,  we just add a rule that inherits from ``read`` and
-adds more conditions: :polar:`allow(user, "download", expense) if allow(user, "read", expense) and user.has_mfa_enabled()`;
+If we need to extend the permissions to make ``download`` stricter,  we just add
+a rule that inherits from ``read`` and adds more conditions:
+:polar:`allow(user, "download", expense) if allow(user, "read", expense) and user.has_mfa_enabled()`;
 
-Furthermore, by conforming to a standardized approach to authorization, we can leverage
-tooling built around the standard. For oso, this means access to :doc:`a policy debugger and interactive REPL </more/dev-tools/index>`.
 
 Right tool for the job
 ----------------------
@@ -264,34 +252,3 @@ its needed to make decisions, while keeping the code clean, reusable, and mainta
 
     Head back to :doc:`/getting-started/quickstart` if you
     haven't already, or continue on to :doc:`/more/key-concepts`.
-
-
-Internals
----------
-
-.. todo::
-    Move this to a different introductory section? Feels a bit misplaced here.
-
-oso is supported in :doc:`a number of languages </using/libraries/index>`, but the `core of oso <https://github.com/osohq/oso>`_ is written in Rust, with bindings for each specific language.
-
-The core of oso is an implementation of the **Polar language**. This handles
-parsing policy files, and executing queries in the form of a virtual machine.
-oso was designed from the outset to be able to be natively embedded in different
-languages. It exposes a foreign function interface (FFI) to allow the calling
-language to drive the execution of its virtual machine.
-
-
-.. todo::
-    better wording for "in the form of a virtual machine"
-
-oso can read files with the ``.polar`` suffix, which are policy files written in Polar syntax.
-These are parsed and loaded into a *knowledge base*, which can be thought of an
-in-memory cache of the rules in the file.
-
-Applications using oso can tell it relevant information, for example registering
-classes to be used with policies, which are similarly stored in the knowledge base.
-The oso implementation can now be seen as a bridge between the policy code and the application classes.
-
-The oso library is responsible for converting types between oso primitive types
-(like strings, numbers, and lists), and native application types (e.g. Python's ``str``,
-``int``, and ``list`` classes), as well as keeping track of instances of application classes. When executing a query like ``oso.query_predicate("allow", user, "view", expense)`` oso creates a new virtual machine to execute the query. The virtual machine executes, returning to the native library whenever some application-specific information is needed.

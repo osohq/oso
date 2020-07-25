@@ -70,3 +70,12 @@
 .with-columns footer {
     width: 100% !important;
 }
+
+/* Button tweaks */
+article .matter-button-contained {
+    text-align: center;
+    min-width: 96px;
+    height: 54px;
+    font-size: 16pt;
+    margin: 1rem;
+}
