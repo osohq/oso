@@ -156,7 +156,7 @@ application types to condense our policy even further.
   write flexible policies that accurately model our application's domain model.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * :doc:`Download oso </getting-started/download/index>` to apply this
       technique in your app.

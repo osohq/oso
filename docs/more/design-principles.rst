@@ -230,7 +230,7 @@ them together in the necessary order to make a decision.
 
 
 Easy to start, powerful when you need it
--------------------------------------
+----------------------------------------
 
 Some applications may never need to go beyond basic role-based access control
 (RBAC). Perhaps users belong to organizations, and all users fit into one of

@@ -79,3 +79,9 @@ article .matter-button-contained {
     font-size: 16pt;
     margin: 1rem;
 }
+
+.md-typeset .admonition.whats-next > .admonition-title::before {
+    content: "\f5a0";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+}
