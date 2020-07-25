@@ -308,8 +308,20 @@ language. For examples using built-in types, see the :doc:`/using/libraries/inde
 Summary
 =======
 
-- **Application types** and their associated application data are available within policies.
-- Types can be **registered** with oso, in order to:
-    - Create instances of application types in policies
-    - Leverage the inheritance structure of application types with **specialized rules**, supporting more sophisticated access control models.
-- You can use **built-in methods** on primitive types & literals like strings and dictionaries, exactly as if they were application types.
+* **Application types** and their associated application data are available
+  within policies.
+* Types can be **registered** with oso, in order to:
+    * Create instances of application types in policies
+    * Leverage the inheritance structure of application types with **specialized
+      rules**, supporting more sophisticated access control models.
+* You can use **built-in methods** on primitive types & literals like strings
+  and dictionaries, exactly as if they were application types.
+
+.. admonition:: What's next
+    :class: tip
+
+    * Explore how to implement common authorization models in oso, like
+      **role-based** and **attribute-based access control**:
+      :doc:`/using/examples/index`.
+    * Learn more about using application types with your language in:
+      :doc:`/using/libraries/index`.

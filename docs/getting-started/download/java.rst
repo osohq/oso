@@ -7,6 +7,12 @@ Java
 For more information on the oso Java library, see the
 :doc:`library documentation </using/libraries/java/index>`.
 
+.. admonition:: What's next
+    :class: tip
+
+    After you've installed oso, check out the
+    :doc:`/getting-started/quickstart`.
+
 ------------------------
 
 .. admonition:: Sign up for our newsletter!
