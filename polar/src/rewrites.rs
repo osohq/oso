@@ -347,7 +347,7 @@ mod tests {
         rewrite_term(&mut term, &mut kb);
         pretty_assertions::assert_eq!(
             term.to_polar(),
-            "not(.(foo, x(), _value_1) and _value_1 = 1)"
+            "not (.(foo, x(), _value_1) and _value_1 = 1)"
         )
     }
 }

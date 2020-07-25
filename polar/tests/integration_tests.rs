@@ -460,7 +460,7 @@ fn test_not() {
     assert!(qeval(
         &mut polar,
         "
-        d = {x: 1} and not d.x = 1
+        d = {x: 1} and not d.x = 2
     "
     ));
 }
