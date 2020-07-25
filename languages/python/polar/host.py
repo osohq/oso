@@ -153,7 +153,12 @@ class Host:
         elif isinstance(v, Variable):
             val = {"Variable": v}
         else:
-            val = {"ExternalInstance": {"instance_id": self.cache_instance(v)}}
+            val = {
+                "ExternalInstance": {
+                    "instance_id": self.cache_instance(v),
+                    "repr": repr(v),
+                }
+            }
         term = {"value": val}
         return term
 

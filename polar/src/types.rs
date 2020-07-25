@@ -90,6 +90,7 @@ impl InstanceLiteral {
 pub struct ExternalInstance {
     pub instance_id: u64,
     pub literal: Option<InstanceLiteral>,
+    pub repr: Option<String>,
 }
 
 // Context stored somewhere by id.
@@ -848,6 +849,7 @@ mod tests {
         let external = Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
             literal: None,
+            repr: None,
         }));
         let list_of = Term::new_from_test(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());

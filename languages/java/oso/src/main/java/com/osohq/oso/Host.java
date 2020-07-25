@@ -198,7 +198,10 @@ public class Host implements Cloneable {
         } else if (value instanceof Variable) {
             jVal.put("Variable", value);
         } else {
-            jVal.put("ExternalInstance", new JSONObject().put("instance_id", cacheInstance(value, null)));
+            JSONObject attrs = new JSONObject();
+            attrs.put("instance_id", cacheInstance(value, null));
+            attrs.put("repr", value.toString());
+            jVal.put("ExternalInstance", attrs);
         }
 
         // Build Polar term
