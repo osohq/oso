@@ -355,7 +355,10 @@ impl PolarVirtualMachine {
         while let Some(goal) = self.goals.pop() {
             match self.next(goal.clone())? {
                 QueryEvent::None => (),
-                event => return Ok(event),
+                event => {
+                    self.external_error = None;
+                    return Ok(event);
+                }
             }
             self.maybe_break(DebugEvent::Goal(goal.clone()))?;
         }
@@ -919,7 +922,6 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::CheckError)?;
         }
 
-        self.external_error = None;
         Ok(QueryEvent::ExternalCall {
             call_id,
             instance: Some(instance.clone()),
@@ -941,7 +943,6 @@ impl PolarVirtualMachine {
             right: Term::new_temporary(Value::Boolean(true)),
         })?;
 
-        self.external_error = None;
         Ok(QueryEvent::ExternalIsa {
             call_id,
             instance_id,
@@ -962,7 +963,6 @@ impl PolarVirtualMachine {
             right: Term::new_temporary(Value::Boolean(true)),
         })?;
 
-        self.external_error = None;
         Ok(QueryEvent::ExternalUnify {
             call_id,
             left_instance_id,
