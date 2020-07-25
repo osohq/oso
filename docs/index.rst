@@ -48,7 +48,7 @@ Using oso, you can:
     :class: matter-success
 .. options: matter-primary, matter-secondary, matter-error, matter-warning, matter-success
 
------
+.. -----
 
 .. toctree::
     :maxdepth: 1
