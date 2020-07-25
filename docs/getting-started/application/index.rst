@@ -284,7 +284,7 @@ make it convenient to add data access controls to our route handlers.
       :doc:`/getting-started/application/patterns`.
     * For a deeper introduction to policy syntax see:
       :doc:`/getting-started/policies/index`.
-    * For ieference on using oso with your language, see
+    * For reference on using oso with your language, see
       :doc:`/using/libraries/index`.
 
 

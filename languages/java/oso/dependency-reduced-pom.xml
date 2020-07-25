@@ -4,7 +4,7 @@
   <groupId>com.osohq.oso</groupId>
   <artifactId>oso</artifactId>
   <name>oso</name>
-  <version>0.2.1</version>
+  <version>0.2.5</version>
   <description>A simple oso.</description>
   <url>http://www.example.com</url>
   <build>
@@ -71,6 +71,13 @@
       </plugin>
     </plugins>
   </reporting>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>Github osohq Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/osohq/oso</url>
+    </repository>
+  </distributionManagement>
   <properties>
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.source>1.8</maven.compiler.source>

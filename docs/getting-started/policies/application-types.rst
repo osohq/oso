@@ -265,8 +265,8 @@ Once a class is registered, its static methods can also be called from oso polic
 
             OSO.register_class(User)
 
-        user = User.new("alice", true)
-        raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
+            user = User.new("alice", true)
+            raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
 
     .. group-tab:: Java
 

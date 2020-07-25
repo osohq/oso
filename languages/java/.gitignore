@@ -1,2 +1,5 @@
 *.dylib
-dependency-reduced-pom.xml
+
+*.class
+
+oso/dependency-reduced-pom.xml

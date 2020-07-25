@@ -512,7 +512,7 @@ allows for filters that are conditional on other attributes. For example, our
 policy for "view" could contain the additional rule
 
 .. code-block:: polar
-    :caption: :fa:`oso:
+    :caption: :fa:`oso`
     :emphasize-lines: 1-3
 
     # Users can view expenses they submitted
