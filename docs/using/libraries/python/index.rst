@@ -136,7 +136,7 @@ object's elements one at a time. `Generator <https://docs.python.org/3/glossary.
    assert(oso.is_allowed(user, "foo", "bar))
 
 In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to :py:meth:`~oso.Oso.allow` will succeed.
+``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to :py:meth:`~oso.Oso.is_allowed` will succeed.
 Note that if :py:meth:`get_group` returned a list, the rule would fail, as the evaluation would be ``["HR", "payroll"] = "payroll"``.
 
 Summary

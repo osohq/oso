@@ -56,7 +56,7 @@ We can now write a simple policy over these Actor types:
     :start-after: simple-start
     :end-before: simple-end
 
-This policy uses :ref:`specialized rules <inheritance>` to control rules execution based on
+This policy uses :ref:`specialized rules <specializer>` to control rules execution based on
 the Actor types that is passed into the authorization request.
 
 
@@ -162,7 +162,7 @@ attributes:
         Java example coming soon.
 
 Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
-This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :ref:`inheritance`).
+This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :doc:`inheritance`).
 
 Let's add the following lines to our policy:
 

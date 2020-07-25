@@ -106,7 +106,7 @@ Given the following application class structure...
       ...
 
 ...we can modify our original bodiless rule to only allow ``Admin`` users to
-approve any expense report by adding a :ref:`specializer <inheritance>` to the
+approve any expense report by adding a :ref:`specializer <specializer>` to the
 rule head:
 
 .. code-block:: polar

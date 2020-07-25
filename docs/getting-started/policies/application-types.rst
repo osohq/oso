@@ -1,6 +1,8 @@
 
 .. JAVA EXAMPLES
 
+.. _application-types:
+
 =================
 Application types
 =================
@@ -18,7 +20,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
             allow(actor, action, resource) if actor.is_admin;
 
         The above rule expects the ``actor`` variable to be a Python instance with the attribute ``is_admin``.
-        The Python instance is passed into oso with a call to :py:meth:`~oso.Oso.allow`:
+        The Python instance is passed into oso with a call to :py:meth:`~oso.Oso.is_allowed`:
 
         .. code-block:: python
             :caption: :fab:`python` app.py
@@ -99,6 +101,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
     with `ordered arguments`, even if the method is defined to take keyword arguments.
 
 
+.. _specializer:
 
 Registering Application Types
 ==============================
@@ -288,6 +291,8 @@ Once a class is registered, its static methods can also be called from oso polic
                 User user = new User("alice", true);
                 assert oso.isAllowed(user, "foo", "bar");
             }
+
+.. _built-in-types:
 
 Built-in types
 ==============

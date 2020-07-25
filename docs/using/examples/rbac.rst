@@ -142,7 +142,7 @@ between users and the roles they've been assigned.
 
 Our policy currently expects actors to be simple strings, but we can write
 policy over our existing domain model by adding the :polar:`User` :ref:`type
-specializer <inheritance>` to our :polar:`role()` rules:
+specializer <specializer>` to our :polar:`role()` rules:
 
 .. literalinclude:: /examples/rbac/05-external.polar
    :caption: :fa:`oso` rbac.polar
