@@ -119,7 +119,7 @@ public class Polar {
         Query query;
         String input;
         while (true) {
-            System.out.print("> ");
+            System.out.print("query> ");
             input = in.readLine();
             if (input == null) {
                 return;

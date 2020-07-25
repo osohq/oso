@@ -150,8 +150,12 @@ module Oso
               question_result(answer, call_id: event.data['call_id'])
             when 'Debug'
               puts event.data['message'] if event.data['message']
-              print '> '
-              input = $stdin.gets.chomp!
+              print 'debug> '
+              begin
+                input = STDIN.readline.chomp.chomp(';')
+              rescue EOFError
+                next
+              end
               command = JSON.dump(host.to_polar_term(input))
               ffi_query.debug_command(command)
             else

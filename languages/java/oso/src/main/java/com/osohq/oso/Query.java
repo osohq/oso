@@ -145,11 +145,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                         System.out.println(message);
                     }
                     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-                    System.out.print("> ");
+                    System.out.print("debug> ");
                     try {
                         String input = br.readLine();
-                        if (input == "")
-                            input = " ";
+                        if (input == null)
+                            break;
                         String command = host.toPolarTerm(input).toString();
                         ffiQuery.debugCommand(command);
                     } catch (IOException e) {

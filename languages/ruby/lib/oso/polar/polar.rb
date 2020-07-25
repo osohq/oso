@@ -90,7 +90,7 @@ module Oso
         load_queued_files
 
         loop do
-          print('> ')
+          print('query> ')
           begin
             query = STDIN.readline.chomp.chomp(';')
           rescue EOFError

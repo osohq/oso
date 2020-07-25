@@ -157,6 +157,9 @@ class Query:
     def handle_debug(self, query, data):
         if data["message"]:
             print(data["message"])
-        command = input("> ")
+        try:
+            command = input("debug> ").strip(";")
+        except EOFError:
+            command = "continue"
         stringified = ffi_serialize(self.host.to_polar_term(command))
         check_result(lib.polar_debug_command(query, stringified))
