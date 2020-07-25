@@ -1,5 +1,6 @@
 package com.osohq.oso;
 
+import java.io.IOException;
 import java.util.*;
 
 public class Oso extends Polar {
@@ -21,5 +22,9 @@ public class Oso extends Polar {
      */
     public boolean isAllowed(Object actor, Object action, Object resource) throws Exceptions.OsoException {
         return query("allow", List.of(actor, action, resource)).hasMoreElements();
+    }
+
+    public static void main(String[] args) throws Exceptions.OsoException, IOException {
+        new Oso().repl(args);
     }
 }
