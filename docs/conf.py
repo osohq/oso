@@ -139,7 +139,7 @@ html_theme_options = {
     "color_accent": "#FFFFFF",
     # Set the repo location to get a badge with stats
     "repo_url": "https://github.com/osohq/oso/",
-    "repo_name": "oso",
+    "repo_name": "osohq/oso",
     # Visible levels of the global TOC; -1 means unlimited
     "globaltoc_depth": 3,
     # If False, expand all TOC entries
