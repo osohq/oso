@@ -6,9 +6,9 @@ The Java version of oso is available on Github. Go to the `Maven Repository <htt
 
 To use it, add it to the classpath for your project.
 
-    $ javac -classpath "oso-x.x.x.jar:." MyProject.java
+    $ javac -classpath "oso-|release|.jar:." MyProject.java
 
-    $ java -classpath "oso-x.x.x.jar:." MyProject
+    $ java -classpath "oso-|release|.jar:." MyProject
 
 For more information on the oso Java library, see the
 :doc:`library documentation </using/libraries/java/index>`.
