@@ -77,6 +77,15 @@ module Oso
         host.to_polar_term(calls[id].next)
       end
 
+      # Send result of predicate check across FFI boundary.
+      #
+      # @param result [Boolean]
+      # @param call_id [Integer]
+      # @raise [Error] if the FFI call raises one.
+      def application_error(message)
+        ffi_query.application_error(message)
+      end
+
       # Fetch the next result from calling a Ruby method and prepare it for
       # transmission across the FFI boundary.
       #
@@ -89,10 +98,11 @@ module Oso
         register_call(method, call_id: call_id, instance: instance, args: args)
         result = JSON.dump(next_call_result(call_id))
         call_result(result, call_id: call_id)
-      rescue InvalidCallError, StopIteration
+      rescue InvalidCallError => e
+        application_error(e.message)
         call_result(nil, call_id: call_id)
-        # @TODO: polar line numbers in errors once polar errors are better.
-        # raise PolarRuntimeError(f"Error calling {attribute}")
+      rescue StopIteration
+        call_result(nil, call_id: call_id)
       end
 
       # Create a generator that can be polled to advance the query loop.

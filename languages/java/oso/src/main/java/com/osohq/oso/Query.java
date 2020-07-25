@@ -68,7 +68,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     private void handleCall(String attrName, JSONArray jArgs, JSONObject polarInstance, long callId)
             throws Exceptions.OsoException {
         List<Object> args = host.polarListToJava(jArgs);
-        registerCall(attrName, args, callId, polarInstance);
+        try {
+            registerCall(attrName, args, callId, polarInstance);
+        } catch (Exceptions.InvalidCallError e) {
+            ffiQuery.applicationError(e.getMessage());
+        }
         String result;
         try {
             result = nextCallResult(callId).toString();
