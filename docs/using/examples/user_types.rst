@@ -209,3 +209,10 @@ It is common to require different authorization logic for different types of app
 we showed how to use different Actor types to represent different users in oso. We wrote policies with rules
 that specialized on the type of Actor, and even added attributes to some actor types that we used in the policy.
 We also demonstrated how inheritance can be used to match rules to multiple types of Actors.
+
+.. admonition:: What's next
+    :class: tip
+
+    * :doc:`Download oso </getting-started/download/index>` to apply this
+      technique in your app.
+    * Check out other :doc:`index`.

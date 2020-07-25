@@ -152,3 +152,10 @@ application types to condense our policy even further.
 .. TODO
   Finally, we saw how groups & inheritance can both be exploited to
   write flexible policies that accurately model our application's domain model.
+
+.. admonition:: What's next
+    :class: tip
+
+    * :doc:`Download oso </getting-started/download/index>` to apply this
+      technique in your app.
+    * Check out other :doc:`index`.
