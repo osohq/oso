@@ -57,3 +57,4 @@ iterable
 iterables
 sqlite
 lookups
+coroutine
