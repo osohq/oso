@@ -98,7 +98,7 @@ def external_answer(query, call_id, answer):
     check_result(lib.polar_question_result(query, call_id, answer))
 
 
-def application_error(polar, query, message):
+def application_error(query, message):
     """Pass an error back to polar to get stack trace and other info."""
     message = to_c_str(message)
     check_result(lib.polar_error(query, message))

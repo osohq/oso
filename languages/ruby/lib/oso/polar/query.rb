@@ -83,7 +83,7 @@ module Oso
       # @param call_id [Integer]
       # @raise [Error] if the FFI call raises one.
       def application_error(message)
-        ffi_instance.application_error(message)
+        ffi_query.application_error(message)
       end
 
       # Fetch the next result from calling a Ruby method and prepare it for

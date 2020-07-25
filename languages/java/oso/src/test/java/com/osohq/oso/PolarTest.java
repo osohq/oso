@@ -412,8 +412,8 @@ public class PolarTest {
     @Test
     public void testLookupErrors() throws Exception {
         p.registerClass(Foo.class, m -> new Foo(), "Foo");
-        assertEquals(List.of(), p.queryStr("new Foo{} = {bar: \"bar\"}").results());
-        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryStr("new Foo{}.bar = \"bar\""),
+        assertEquals(List.of(), p.query("new Foo{} = {bar: \"bar\"}").results());
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.query("new Foo{}.bar = \"bar\""),
                 "Expected error.");
     }
 
