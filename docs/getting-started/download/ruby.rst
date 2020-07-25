@@ -16,6 +16,12 @@ and installed with `bundler`_.
 For more information on the oso Ruby library, see the
 :doc:`library documentation </using/libraries/ruby/index>`.
 
+.. admonition:: What's next
+    :class: tip
+
+    After you've installed oso, check out the
+    :doc:`/getting-started/quickstart`.
+
 Requirements
 ------------
 

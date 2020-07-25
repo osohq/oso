@@ -6,9 +6,10 @@ ABAC
    :language: prolog
 
 Whereas RBAC allows you to group users and permissions into predefined buckets,
-you may also want to represent fine-grained or dynamic permissions based on *who* the user is and her relation to
-the resource she wants to access. This is known as `attribute-based access
-control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
+you may also want to represent fine-grained or dynamic permissions based on
+*who* the user is and her relation to the resource she wants to access. This is
+known as `attribute-based access control
+<https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
 
 
 .. _abac-basics:
@@ -185,3 +186,10 @@ then we need to make sure this logic is evaluated recursively:
    :end-before: end-hierarchy-rule
 
 .. TODO: Summary
+
+.. admonition:: What's next
+    :class: tip
+
+    * :doc:`Download oso </getting-started/download/index>` to try out ABAC in your app.
+    * See what a :doc:`RBAC-only <rbac>` policy would look like with oso.
+    * Check out other :doc:`index`.

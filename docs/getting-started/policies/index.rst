@@ -2,6 +2,11 @@
 Writing Policies
 ================
 
+.. todo::
+
+    This intro text could use some work, but not quite sure how to
+    rephrase.
+
 If this is your first experience with writing declarative policies, welcome!
 As a reminder: oso policies are written in a language called Polar.
 There is a full :doc:`/using/polar-syntax` guide which you can use as a reference
@@ -189,16 +194,14 @@ Summary
 We covered some of the basics of policies, how to represent conditional
 logic, and the core idea of matching.
 
-.. tip:: 
+.. admonition:: What's next
+    :class: tip
 
-  Interested in understanding more about leveraging application types for
-  specializers and attribute lookups? Continue on to :doc:`application-types`.
-
-  To see more policy examples, we have guides oriented around specific models
-  like RBAC and ABAC in the :doc:`/using/examples/index` section.
-
-  And finally, if you want a reference of all possible syntax,there is the
-  :doc:`/using/polar-syntax` page.
+    * Interested in understanding more about leveraging application types for
+      specializers and attribute lookups? Continue on to :doc:`application-types`.
+    * To see more policy examples---including guides oriented around specific models
+      like role-based or attribute-based access control---see :doc:`/using/examples/index`.
+    * To continue learning policy syntax, go on to :doc:`/using/polar-syntax`.
 
 
 .. toctree::

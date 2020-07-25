@@ -579,11 +579,13 @@ We just blitzed through a ton of stuff:
 .. todo::
     Make these actual links.
 
-Next:
+.. admonition:: What's next
+    :class: tip
 
-* Check out how to write a policy
-* See how oso integrates into an example app
-* Explore the design principles behind oso
+    * Explore how to :doc:`/getting-started/application/index`.
+    * Dig deeper on :doc:`/getting-started/policies/index`.
+    * Check out oso in action: :doc:`/using/examples/index`.
+    * Explore the :doc:`/more/design-principles` behind oso.
 
 ------------------------
 

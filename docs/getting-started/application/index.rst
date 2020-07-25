@@ -272,19 +272,21 @@ also authorized to view the *returned* expense, by adding another
 Summary
 -------
 
-In this guide, we showed a few example of how to add oso to an more realistic
+In this guide, we showed a few example of how to add oso to a more realistic
 application. We added some route-level authorization to control who is allowed
 to make requests to certain routes. We also used a new ``authorize`` method to
 make it convenient to add data access controls to our route handlers.
 
+.. admonition:: What's next
+    :class: tip
 
-.. tip::
-    We still only scratched the surface of different patterns for authorizing
-    data access, and the kinds of policies you can write with oso.
+    * To explore integrating oso in your app in more depth continue to
+      :doc:`/getting-started/application/patterns`.
+    * For a deeper introduction to policy syntax see:
+      :doc:`/getting-started/policies/index`.
+    * For ieference on using oso with your language, see
+      :doc:`/using/libraries/index`.
 
-    For more on access control patters, continue to :doc:`patterns`.
-
-    For more on writing authorization policies, head over to :doc:`/getting-started/policies/index`.
 
 .. toctree::
     :hidden:
