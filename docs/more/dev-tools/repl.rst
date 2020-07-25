@@ -1,58 +1,160 @@
 .. _repl:
 
-==============
-The Polar REPL
-==============
+========
+The REPL
+========
 
-.. todo::
-    Update the REPL guide
+The usual way to query an oso knowledge base is through the API in your
+application's language. But especially during development and debugging,
+it can be useful to interactively query a knowledge base. So oso provides
+a simple REPL (Read, Evaluate, Print, Loop). To run it, first make sure
+that you have :doc:`installed oso </getting-started/download/index>`.
 
-Developers can query Polar knowledge bases from the command line using the
-Polar REPL (Read, Evaluate, Print, Loop). To run the REPL, first make sure
-you have :doc:`installed oso </getting-started/download/index>`.
+Once oso is installed, launch the REPL from the terminal:
 
-Once oso is installed, we can launch the REPL from the terminal::
+.. tabs::
+    .. group-tab:: Python
 
-    python3 -m polar.parser --interactive <policy files>
+        .. code-block:: console
+            :caption: :fab:`python` Launch the REPL
 
-.. Both Python and Polar files can be loaded into the REPL.
+            $ python -m oso
+            query>
 
+    .. group-tab:: Ruby
 
-Let's start by loading a simple Polar policy::
+        .. code-block:: console
+            :caption: :fas:`gem` Launch the REPL
 
-    # policy.polar
-    allow(actor, "read", resource) if owns(actor, resource);
-    owns("foo", "bar");
+            $ bundle exec oso
+            query>
 
+    .. group-tab:: Java
 
-.. highlight:: text
+        .. code-block:: console
+            :caption: :fab:`java` Launch the REPL
 
-From the terminal, run::
+            $ mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso"
+            query>
 
-    python3 -m polar.parser --interactive policy.polar
+At the ``query>`` prompt, type a Polar expression and press ``Enter``.
+The system responds with an answer, then prints the ``query>`` prompt
+again, allowing an interactive dialog:
 
-We can now interactively query the Polar knowledge base.
-For example, the query::
+.. code-block:: polar
 
-    >> allow(actor, action, resource)
+    query> 1 = 1
+    true
+    query> 1 = 2
+    false
+    query> x = 1 and y = 2
+    {x=1, y=2}
+    query> x = 1 or x = 2
+    {x=1}
+    {x=2}
+    query> x = 1 and x = 2
+    false
+    query>
 
-will display the bindings for the ``actor``, ``action``, and ``resource``
-variables that make the query ``True``::
+If the query can not be satisfied with the current knowledge base,
+the response is ``false``. If the query is unconditionally true, then
+the response is ``true``. Otherwise, each set of bindings that *makes*
+it true is printed; e.g., the third example above has one such set,
+the fourth has two.
 
-    resource = "bar"
-    actor = "foo"
-    action = "read"
+Loading Policy and Application Code
+===================================
 
-.. highlight:: polar
+To query for predicates defined in a policy, we'll need to load the
+policy files. For instance, suppose we had just one ``allow`` rule for
+Alice, say, in the file ``alice.polar``:
 
-Inline queries
---------------
-Queries can also be added to Polar files and will run when the file is loaded.
-Failed/false queries will prevent the REPL from launching, or the file from
-loading, but nothing is printed for successful queries. To add an inline query
-to a Polar file, use the ``?=`` operator::
+.. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+    :caption: :fa:`oso` alice.polar
+    :class: copybutton
 
-    # policy.polar
-    ?= allow("foo", "read", "bar")
+Then we can run the REPL, passing that filename (and any others we need)
+on the command line:
 
-Inline queries are particularly useful for testing policies.
+.. tabs::
+    .. group-tab:: Python
+
+        .. code-block:: console
+            :caption: :fab:`python` Load files and launch the REPL 
+
+            $ python -m oso alice.polar
+
+    .. group-tab:: Ruby
+
+        .. code-block:: console
+            :caption: :fas:`gem` Load files and launch the REPL
+
+            $ bundle exec oso alice.polar
+
+    .. group-tab:: Java
+
+        .. code-block:: console
+            :caption: :fab:`java` Load files and launch the REPL
+
+            $ mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="alice.polar"
+
+And now we can use the rule that was loaded:
+
+.. code-block:: polar
+
+    query> allow("alice@example.com", "GET", "expense")
+    true
+
+We can also use application objects in the REPL, but we have to load
+and register the defining modules before we launch the REPL. The easiest
+way to do that is to write a script that imports the necessary modules,
+plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
+ 
+.. tabs::
+    .. group-tab:: Python
+
+        .. code-block:: python
+            :caption: :fab:`python` app_repl.py
+
+            from app import Expense, User
+
+            from oso import Oso
+
+            oso = Oso()
+            oso.register_class(Expense)
+            oso.register_class(User)
+            oso.repl()
+
+    .. group-tab:: Ruby
+
+        .. code-block:: ruby
+            :caption: :fas:`gem` app_repl.rb
+
+            require 'expense'
+            require 'user'
+
+            require 'oso'
+
+            OSO ||= Oso.new
+            OSO.register_class(Expense)
+            OSO.register_class(User)
+            OSO.repl
+
+    .. group-tab:: Java
+
+        .. code-block:: java
+            :caption: :fab:`java` AppRepl.java
+
+            import com.example.Expense;
+            import com.example.User;
+
+            import com.osohq.oso.*;
+
+            public class AppRepl {
+                public static void main(String[] args) throws OsoException, IOException {
+                    Oso oso = new Oso();
+                    oso.registerClass(Expense.class, () -> new Expense());
+                    oso.registerClass(User.class, () -> new User());
+                    oso.repl(args)
+                }
+            }
