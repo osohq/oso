@@ -31,7 +31,7 @@ oso is an open source policy engine for authorization that's embedded in your ap
     .. code-block:: python
         :caption: :fab:`python` app.py
 
-        if oso.query("allow", [user, "view", expense]):
+        if oso.query_predicate("allow", user, "view", expense):
             # ...
 
 .. container:: right-col
@@ -99,15 +99,15 @@ Splitting out authorization logic with oso might look as follows:
                 :caption: :fab:`python` expense.py
 
                 def show(expense):
-                    if oso.query("allow", [user, "read", expense]):
+                    if oso.query_predicate("allow", user, "read", expense):
                         return str(expense)
 
                 def download(expense):
-                    if oso.query("allow", [user, "read", expense]):
+                    if oso.query_predicate("allow", user, "read", expense):
                         return expense.to_json()
 
                 def approve(expense):
-                    if oso.query("allow", [user, "approve", expense]):
+                    if oso.query_predicate("allow", user, "approve", expense):
                         expense.approve()
 
         .. container:: right-col
@@ -294,4 +294,4 @@ The oso implementation can now be seen as a bridge between the policy code and t
 
 The oso library is responsible for converting types between oso primitive types
 (like strings, numbers, and lists), and native application types (e.g. Python's ``str``,
-``int``, and ``list`` classes), as well as keeping track of instances of application classes. When executing a query like ``oso.query("allow", [user, "view", expense])`` oso creates a new virtual machine to execute the query. The virtual machine executes, returning to the native library whenever some application-specific information is needed.
+``int``, and ``list`` classes), as well as keeping track of instances of application classes. When executing a query like ``oso.query_predicate("allow", user, "view", expense)`` oso creates a new virtual machine to execute the query. The virtual machine executes, returning to the native library whenever some application-specific information is needed.
