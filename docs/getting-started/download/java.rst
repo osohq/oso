@@ -2,7 +2,7 @@
 Java
 ====
 
-The Java version of oso is available on Github. Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_ and download the latest jar.
+The Java version of oso is available on GitHub. Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_ and download the latest jar.
 
 To use it, add it to the classpath for your project.
 

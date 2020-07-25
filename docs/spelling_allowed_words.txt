@@ -58,5 +58,5 @@ iterables
 sqlite
 lookups
 classpath
-Github
+GitHub
 javac
