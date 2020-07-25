@@ -16,7 +16,7 @@ public class TestContext {
         Oso oso = setupOso();
         oso.loadFile("../01-context.polar");
 
-        if (!oso.allow("steve", "test", "policy")) {
+        if (!oso.isAllowed("steve", "test", "policy")) {
             throw new Exception("test context failed!");
         }
     }

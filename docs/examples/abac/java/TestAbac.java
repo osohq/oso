@@ -26,7 +26,7 @@ public class TestAbac {
         Oso oso = setupOso();
         for (String policy : policies) {
             oso.loadFile(policy);
-            oso.queryPredicate("test", null); // just to force the load
+            oso.query("test", null); // just to force the load
         }
     }
 
@@ -34,11 +34,11 @@ public class TestAbac {
         Oso oso = setupOso();
         oso.loadFile("01-simple.polar");
 
-        if (!oso.allow(new User("sam"), "view", defaultExpense("sam"))) {
+        if (!oso.isAllowed(new User("sam"), "view", defaultExpense("sam"))) {
             throw new Exception("ABAC docs test failed!");
         }
 
-        if (oso.allow(new User("sam"), "view", defaultExpense("steve"))) {
+        if (oso.isAllowed(new User("sam"), "view", defaultExpense("steve"))) {
             throw new Exception("ABAC docs test failed!");
         }
 
@@ -50,12 +50,12 @@ public class TestAbac {
         oso.loadStr("role(_: User { name: \"sam\" }, \"admin\", __: Project { id: 2 });");
 
         Expense expense = new Expense(50, "steve", "NYC", 0);
-        if (oso.allow(new User("sam"), "view", expense)) {
+        if (oso.isAllowed(new User("sam"), "view", expense)) {
             throw new Exception("ABAC docs test failed!");
         }
         expense = new Expense(50, "steve", "NYC", 2);
 
-        if (!oso.allow(new User("sam"), "view", expense)) {
+        if (!oso.isAllowed(new User("sam"), "view", expense)) {
             throw new Exception("ABAC docs test failed!");
         }
     }
@@ -64,22 +64,22 @@ public class TestAbac {
         Oso oso = setupOso();
         oso.loadFile("03-hierarchy.polar");
 
-        if (!oso.allow(new User("bhavik"), "view", defaultExpense("alice"))) {
+        if (!oso.isAllowed(new User("bhavik"), "view", defaultExpense("alice"))) {
             throw new Exception("ABAC docs test failed!");
         }
-        if (!oso.allow(new User("cora"), "view", defaultExpense("alice"))) {
+        if (!oso.isAllowed(new User("cora"), "view", defaultExpense("alice"))) {
             throw new Exception("ABAC docs test failed!");
         }
-        if (!oso.allow(new User("cora"), "view", defaultExpense("bhavik"))) {
+        if (!oso.isAllowed(new User("cora"), "view", defaultExpense("bhavik"))) {
             throw new Exception("ABAC docs test failed!");
         }
-        if (oso.allow(new User("bhavik"), "view", defaultExpense("cora"))) {
+        if (oso.isAllowed(new User("bhavik"), "view", defaultExpense("cora"))) {
             throw new Exception("ABAC docs test failed!");
         }
-        if (oso.allow(new User("alice"), "view", defaultExpense("cora"))) {
+        if (oso.isAllowed(new User("alice"), "view", defaultExpense("cora"))) {
             throw new Exception("ABAC docs test failed!");
         }
-        if (oso.allow(new User("alice"), "view", defaultExpense("bhavik"))) {
+        if (oso.isAllowed(new User("alice"), "view", defaultExpense("bhavik"))) {
             throw new Exception("ABAC docs test failed!");
         }
     }
