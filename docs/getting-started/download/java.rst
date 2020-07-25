@@ -2,11 +2,12 @@
 Java
 ====
 
-The Java version of oso is available on Github. Go to the `maven repository <https://github.com/osohq/oso/packages/321403>` and download the latest jar.
+The Java version of oso is available on Github. Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_ and download the latest jar.
 
 To use it, add it to the classpath for your project.
 
     $ javac -classpath "oso-x.x.x.jar:." MyProject.java
+
     $ java -classpath "oso-x.x.x.jar:." MyProject
 
 For more information on the oso Java library, see the
@@ -17,6 +18,15 @@ For more information on the oso Java library, see the
 
     After you've installed oso, check out the
     :doc:`/getting-started/quickstart`.
+
+Requirements
+------------
+
+- Java version 10 or greater
+- Supported platforms:
+    - Linux
+    - OS X
+    - Windows (coming soon)
 
 ------------------------
 
