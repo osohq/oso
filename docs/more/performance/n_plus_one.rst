@@ -1,22 +1,3 @@
-===========
-Performance
-===========
-
-
-.. todo:: 
-    add performance numbers
-    
-.. Performance of oso
-.. ------------------
-.. 
-.. The performance of oso depends almost entirely on two things:
-.. the structure of your policy, and the time to lookup application data.
-.. 
-.. At the time of writing, for some typical policies, the time
-.. to evaluate a query takes TODO: fill me in.
-.. 
-.. For looking up application data, oso adds about 2us of overhead, per datum returned.
-.. In most cases, the lookup itself will be the most costly part.
 
 The "N+1 Problem"
 -----------------
@@ -33,11 +14,12 @@ variants of the
 For example, given the following policy:
 
 .. code-block:: polar
+    :caption: :fa:`oso` children.polar
 
-  has_grandchild_called(grandparent: Person, name) if
-      child in grandparent.children and
-      grandchild in child.children and
-      grandchild.name = name;
+    has_grandchild_called(grandparent: Person, name) if
+        child in grandparent.children and
+        grandchild in child.children and
+        grandchild.name = name;
 
 This can potentially exhibit this N+1 behavior. It will first call
 the `Person.children` method on the input grandparent, expecting a
@@ -60,23 +42,26 @@ Here we will show how these patterns can be leveraged in oso.
 For example:
 
 .. code-block:: python
+    :caption: :fab:`python` person.py
 
     class Person:
         @classmethod
         def batch_lookup_children(cls, people: List[Person]):
             parent_ids = [p.id for p in people]
             children = db.query(
-                "select id, name from people, children where people.id = chlidren.child_id, children.parent_id in ?", 
+                "select id, name from people, children \
+                    where people.id = children.child_id, children.parent_id in ?", 
                 parent_ids
             )
             return children
 
 .. code-block:: polar
+    :caption: :fa:`oso` children.polar
 
     has_grandchild_called(grandparent: Person, name) if
-        children = grandparent.children and # gets the _list_ of children
-        grandchild in Person.batch_lookup_children(children) and
-        grandchild.name = name;
+        children = grandparent.children # gets the _list_ of children
+        and grandchild in Person.batch_lookup_children(children)
+        and grandchild.name = name;
 
 This has the benefit of being the simplest, and most explicit. But does not
 leverage any data access abstractions. Any optimization method works fine here,
@@ -94,11 +79,12 @@ locally stored the `child.children` attribute.
 For example, in a Django application you might write:
 
 .. code-block:: polar
+    :caption: :fa:`oso` children.polar
 
     has_grandchild_called(grandparent: Person, name) if
-        child in grandparent.children.prefetch_related("children") and
-        grandchild in child.children.all() and
-        grandchild.name = name;
+        child in grandparent.children.prefetch_related("children")
+        and grandchild in child.children.all()
+        and grandchild.name = name;
 
 Since oso is able to work directly with native objects, using the
 existing Django methods to prefetch the grandchildren in this case
