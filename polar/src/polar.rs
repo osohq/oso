@@ -142,7 +142,7 @@ impl Query {
         self.vm.external_question_result(call_id, result)
     }
 
-    pub fn error(&mut self, message: String) {
+    pub fn application_error(&mut self, message: String) {
         self.vm.external_error(message)
     }
 

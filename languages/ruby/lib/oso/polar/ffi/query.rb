@@ -12,7 +12,7 @@ module Oso
           attach_function :debug_command, :polar_debug_command, [FFI::Query, :string], :int32
           attach_function :call_result, :polar_call_result, [FFI::Query, :uint64, :string], :int32
           attach_function :question_result, :polar_question_result, [FFI::Query, :uint64, :int32], :int32
-          attach_function :error, :polar_error, [FFI::Query, :string], :int32
+          attach_function :application_error, :polar_application_error, [FFI::Query, :string], :int32
           attach_function :next_event, :polar_next_query_event, [FFI::Query], FFI::QueryEvent
           attach_function :free, :query_free, [FFI::Query], :int32
         end
@@ -46,7 +46,7 @@ module Oso
         # @param call_id [Integer]
         # @raise [FFI::Error] if the FFI call returns an error.
         def application_error(message)
-          res = Rust.error(self, message)
+          res = Rust.application_error(self, message)
           raise FFI::Error.get if res.zero?
         end
 

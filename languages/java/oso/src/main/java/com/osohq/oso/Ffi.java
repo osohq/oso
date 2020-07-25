@@ -87,7 +87,7 @@ public class Ffi {
         }
 
         protected int applicationError(String message) throws Exceptions.OsoException {
-            return checkResult(polarLib.polar_error(ptr, message));
+            return checkResult(polarLib.polar_application_error(ptr, message));
         }
 
         protected QueryEvent nextEvent() throws Exceptions.OsoException {
@@ -168,7 +168,7 @@ public class Ffi {
 
         int polar_call_result(Pointer query_ptr, long call_id, String value);
 
-        int polar_error(Pointer query_ptr, String message);
+        int polar_application_error(Pointer query_ptr, String message);
 
         int query_free(Pointer query);
 

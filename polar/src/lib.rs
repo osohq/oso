@@ -298,7 +298,7 @@ pub extern "C" fn polar_question_result(query_ptr: *mut Query, call_id: u64, res
 }
 
 #[no_mangle]
-pub extern "C" fn polar_error(query_ptr: *mut Query, message: *mut c_char) -> i32 {
+pub extern "C" fn polar_application_error(query_ptr: *mut Query, message: *mut c_char) -> i32 {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         let s = if !message.is_null() {
@@ -306,7 +306,7 @@ pub extern "C" fn polar_error(query_ptr: *mut Query, message: *mut c_char) -> i3
         } else {
             "".to_owned()
         };
-        query.error(s);
+        query.application_error(s);
         POLAR_SUCCESS
     })
 }
