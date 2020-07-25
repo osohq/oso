@@ -82,7 +82,7 @@ We can register our user classes with oso:
 
 
 
-An ``allow()`` rule that checks that the user reading the
+An ``allow`` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:
 
 .. literalinclude:: /examples/abac/01-simple.polar

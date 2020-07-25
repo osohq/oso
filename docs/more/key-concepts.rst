@@ -128,7 +128,7 @@ Summary
 - In oso, authorization begins with a **query**, which is evaluated against a
   **policy** written in the **Polar** language.
 - Policies are made up of **rules**, and ``allow`` rules are used to grant
-  access from the ``oso.allow()`` method.
+  access from the ``oso.is_allowed()`` method.
 
 For more detailed examples of oso in action, check out our
 :doc:`authorization model guides </using/examples/index>`.

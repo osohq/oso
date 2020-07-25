@@ -79,7 +79,7 @@ must be fetched from the application's store when the rule is evaluated.
         expense = db.fetch(
             "SELECT * FROM expenses WHERE id = %", expense_id)
 
-        if oso.allow(user, "view", expense):
+        if oso.is_allowed(user, "view", expense):
             # Process request
             ...
         else:
@@ -137,7 +137,7 @@ Here's what it would look like before:
 
     def get_expense(user, id):
         # See if the user is allowed to access expenses at all.
-        if oso.allow(user, "view", "expense"):
+        if oso.is_allowed(user, "view", "expense"):
             expense = db.fetch(
                 "SELECT * FROM expenses WHERE id = %", expense_id)
             # Process request
@@ -172,7 +172,7 @@ Create requests
         # Create a new expense from the request.
         expense = Expense.from_json(expense_data)
 
-        if oso.allow(user, "create", expense):
+        if oso.is_allowed(user, "create", expense):
             db.insert(expense)
             # Process rest of expense
         else:
@@ -198,7 +198,7 @@ performed if the authorization fails:
         expense = Expense.from_json(expense_data)
 
         inserted_record = db.insert(expense)
-        if oso.allow(user, "create", inserted_record):
+        if oso.is_allowed(user, "create", inserted_record):
             # Process rest of expense
         else:
             db.rollback()
@@ -258,7 +258,7 @@ We can combine this access control with our record level access control
             "SELECT * FROM expenses WHERE id = %", expense_id)
 
         # Record level authorization.
-        if oso.allow(user, "view", expense):
+        if oso.is_allowed(user, "view", expense):
             authorized_data = {}
 
             for field, value in expense.items():
@@ -304,7 +304,7 @@ control to only load the columns the user can access:
             expense_id)
 
         # Record level authorization.
-        if oso.allow(user, "view", expense):
+        if oso.is_allowed(user, "view", expense):
             # Return only authorized_data to the user.
             ...
         else:
@@ -378,7 +378,7 @@ organization.  We could apply this filter, then further restrict access using os
 
         # Use oso.allow to filter records that are not authorized.
         for record in records:
-            if not oso.allow(actor=user, action="view", resource=record):
+            if not oso.is_allowed(actor=user, action="view", resource=record):
                 continue
 
             authorized_records.append(record)
@@ -405,7 +405,7 @@ in your application.
 
     def get_expenses(user):
         # Check that user is authorized to list responses.
-        if not oso.allow(actor=user, "list", resource=Expense):
+        if not oso.is_allowed(actor=user, "list", resource=Expense):
            return NotAuthorizedResponse()
 
         # Apply location filter for authorization, as well as other
@@ -416,7 +416,7 @@ in your application.
 
         # Use oso.allow to *confirm* that records are authorized.
         for record in records:
-            if not oso.allow(actor=user, action="view", resource=record):
+            if not oso.is_allowed(actor=user, action="view", resource=record):
                 if DEBUG:
                     # In debug mode, this is a programming error.
                     # The logic in oso should be kept in sync with the filters
@@ -437,7 +437,7 @@ For the above example, we add the following to our policy:
 This takes the role check portion from the ``view`` rule and allows us to apply
 it separately, before we authorize the query. This means we don't need to fetch
 expenses when the request would ultimately be denied because the role is not
-allowed to list expenses.  The second ``oso.allow()`` call confirms that the
+allowed to list expenses.  The second ``oso.is_allowed()`` call confirms that the
 filter applied in the database fetch produces records that are allowed by the
 access policy.  With this approach, the policy and database fetch logic is
 duplicative and must be manually kept in sync by developer.  To aid with this,
@@ -453,7 +453,7 @@ request filter.
 
     def get_expenses(user):
         # Check that user is authorized to list responses.
-        if not oso.allow(actor=user, "list", resource=Expense):
+        if not oso.is_allowed(actor=user, "list", resource=Expense):
            return NotAuthorizedResponse()
 
         # Structured format representing WHERE clauses.
@@ -500,7 +500,7 @@ To support this structure, our policy would look something like:
         ["location_id", "=", actor.location_id] in filters;
 
 While we have abstracted the policy slightly further and no longer need
-as many ``oso.allow()`` checks to complete the request, so must keep
+as many ``oso.is_allowed()`` checks to complete the request, so must keep
 the filter in sync between oso and our code. Instead, we can make oso the
 authoritative source query filters that perform authorization.
 

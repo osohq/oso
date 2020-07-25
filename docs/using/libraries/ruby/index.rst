@@ -55,7 +55,7 @@ Ruby strings are mapped to Polar :ref:`strings`. Ruby's string methods may be ca
   end
 
   user = User.new("alice@example.com")
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 .. warning::
   Polar does not support methods that mutate strings in place.
@@ -81,7 +81,7 @@ Ruby `Arrays <https://ruby-doc.org/core/Array.html>`_ are mapped to Polar :ref:`
   end
 
   user = User.new(["HR", "payroll"])
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 .. warning::
   Polar does not support methods that mutate lists in place, unless the list is also returned from the method.
@@ -109,7 +109,7 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
   end
 
   user = User.new(["HR", "payroll"])
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 Hashes
 ^^^^^^
@@ -132,7 +132,7 @@ Ruby hashes are mapped to Polar :ref:`dictionaries`:
   end
 
   user = User.new({"project1" => "admin"})
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
 
@@ -156,7 +156,7 @@ yielded values one at a time.
   end
 
   user = User.new
-  raise "should be allowed" unless oso.allow(user, "foo", "bar")
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 In the policy above, the body of the `allow` rule will first evaluate ``"HR" = "payroll"`` and then
 ``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``Oso#allow`` will succeed.

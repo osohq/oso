@@ -27,7 +27,7 @@ Representing roles in our policy is as simple as creating :polar:`role()`
 
 In the above snippet of Polar, we create three :polar:`role()` rules and match
 on the :polar:`actor`'s name to assign them the appropriate role. Let's write
-some :polar:`allow()` rules that leverage our new roles:
+some **allow** rules that leverage our new roles:
 
 .. literalinclude:: /examples/rbac/01-simple.polar
    :caption: :fa:`oso` rbac.polar
@@ -48,7 +48,7 @@ Inline queries run when the file is loaded, and check that the query after the
 We have a working RBAC system, but at this point it's not quite as flexible
 as we'd like. For example, Deirdre is in the Accounting department, but she's
 *also* an employee and should be able to submit her own expenses. We could
-define a second :polar:`allow()` rule enabling accountants to :polar:`"submit"`
+define a second **allow** rule enabling accountants to :polar:`"submit"`
 expenses, but it would be better to avoid that duplication and write our
 policy in a way that accurately mirrors the role relationships of our
 business domain. Since accountants are also employees, we can extend our
