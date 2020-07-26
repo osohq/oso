@@ -130,7 +130,7 @@ html_theme_options = {
     # Set the name of the project to appear in the navigation.
     "nav_title": "Documentation",
     # Set you GA account ID to enable tracking
-    "google_analytics_account": "UA-XXXXX",
+    "google_analytics_account": "UA-139858805-1",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
     "base_url": "https://docs.osohq.com/",
