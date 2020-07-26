@@ -247,7 +247,7 @@ So most authorization can be reduced to something simple like:
 
     allow(user, action, path) if
         user.role = "user"
-        not path.starts_with("/admin/");
+        and not path.starts_with("/admin/");
 
 But for many applications, over time, new features get added that don't quite
 fit the same model. Maybe a user can now belong to multiple organizations, so
