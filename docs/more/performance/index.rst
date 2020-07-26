@@ -63,7 +63,7 @@ The `current implementation <https://github.com/osohq/oso>`_  of oso has not
 been aggressively performance optimized. It uses Rust's built in
 reference-counting to clean up any values creating in the execution of a query.
 
-You can see our benchmarking suite in the
+You can see our benchmark suite in the
 `repository <https://github.com/osohq/oso/tree/main/polar/benches>`_,
 along with instructions on how to run them.
 
@@ -77,19 +77,33 @@ At its core, answering queries against a declarative policy is a depth-first
 search problem. Where nodes correspond to rules, and nodes are connected if a
 rule references another rule :ref:`in its body <combining_rules>`.
 
-However, our implementation has a few algorithmic crucial optimizations: rule
-filtering and sorting.
 
-Rule filtering does a quick pass through all of the target rules to filter out
-any rules which do no match in one of the input arguments. This means, for
-example, that if you have many, many ``allow`` rules for different actions, or
-different resources, that this initial pass will be filtered down to just those
-rules.
+As a result, the algorithmic complexity of a policy is *in theory* very large —
+exponential in the number of rules. However, *in practice* there shouldn't be
+that many distinct paths that need to be taken to make a policy decision. oso
+filters out rules that cannot be applied to the inputs early on in the
+execution. What this means is that if you are hitting a scaling issue you can
+make your policies perform better either by splitting up rules to limit the
+number of possibilities, or by adding more qualifiers to a rule such.
 
-Rule sorting is a crucial part of the language semantics: like method resolution
-order, we evaluate rules in order of most-to-least specific. When combined with
-the filtering above, this can often be a performance win as well: since a more
-specific rule is more likely to contain the desired logic.
+For example, if you have 20 different resources, ``ResourceA``, ``ResourceB``, ...,
+and each has 10 or so ``allow(actor, action, resource: ResourceA)`` rules. The
+performance of evaluating a rule with input of type `ResourceA` will primarily
+depend on those 10 related rules, and not the other 190 rules. In addition, you
+might consider refactoring this rule to ``allow(actor, action, resource:
+ResourceA) if allowResourceA(actor, action, resource)`` . This means there are
+only 20 ``allow`` rules to sort through, and for a given resource only one of
+these will even need to be evaluated.
+
+The performance of evaluating policies is usually independent of the number of
+users or resources in the application when fetching data is handled by your
+application. However, if a large amount of data is returned to oso for making a
+policy decision, it's potentially very costly.
+
+For example, if you have a method ``User.expenses()`` that returns a list of the
+user's expenses, and you want to check ``expense in user.expenses()``, this will
+be an ``O(n)`` operation, in terms of Polar VM instructions. It would be better to
+avoid this by reworking this, e.g. ``expense.user_id = user.id``.
 
 
 .. toctree::
