@@ -2,7 +2,7 @@
 Quickstart
 ==========
 
-If you don't know what oso is, head back to :doc:`the introduction </index>`. If you've
+oso helps developers build authorization into their applications. If you've
 never used oso before and want to get up-and-running quickly, this guide is for
 you.
 
