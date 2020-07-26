@@ -39,7 +39,7 @@ For any performance issues caused by slow database queries or too many database 
 application. See, for example, our guidance on :doc:`n_plus_one`.
 
 Internals and Micro-benchmarks
-----------
+------------------------------
 
 The core of oso is Polar. This is written in Rust, and creates a virtual machine to
 execute queries (for more on this, see :doc:`/more/internals`).
@@ -53,7 +53,7 @@ to check if the input matches an application type, or looking up application
 data need a few more.
 
 The `current implementation <https://github.com/osohq/oso>`_  of oso has not yet
- been aggressively performance optimized. It uses Rust's built-in
+been aggressively performance optimized. It uses Rust's built-in
 reference-counting to clean up any values created in the execution of a query.
 
 You can see our benchmark suite in the
@@ -61,7 +61,7 @@ You can see our benchmark suite in the
 along with instructions on how to run them.
 
 We would be delighted to accept any example queries that people would like to
-see profiled. Please feel free to email us at :ref:`engineering@osohq.com <mailto:engineering@osohq.com>`.
+see profiled. Please feel free to email us at :email:`engineering@osohq.com`.
 
 Scaling
 -------
@@ -69,7 +69,6 @@ Scaling
 At its core, answering queries against a declarative policy is a depth-first
 search problem. Where nodes correspond to rules, and nodes are connected if a
 rule references another rule :ref:`in its body <combining_rules>`.
-
 
 As a result, the algorithmic complexity of a policy is *in theory* very large —
 exponential in the number of rules. However, *in practice* there shouldn't be
@@ -93,7 +92,7 @@ users or resources in the application when fetching data is handled by your
 application. However, if a large amount of data is returned to oso for making a
 policy decision, it's potentially very costly.
 
-For example, if you have a method ``User.expenses()`` that returns a list of the
+For example, if you have a method ``user.expenses()`` that returns a list of the
 user's expenses, and you want to check ``expense in user.expenses()``, this will
 be an ``O(n)`` operation, in terms of Polar VM instructions. It would be better to
 avoid this by reworking this, e.g. ``expense.user_id = user.id``.
