@@ -62,6 +62,8 @@ the response is ``true``. Otherwise, each set of bindings that *makes*
 it true is printed; e.g., the third example above has one such set,
 the fourth has two.
 
+To exit the REPL, type ``Ctrl-D`` (EOF).
+
 Loading Policy and Application Code
 ===================================
 
