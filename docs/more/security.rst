@@ -24,7 +24,7 @@ Some problems are reported as warnings, when the problem *may* be a logic
 bug. An example of this is :ref:`singletons (unused variables) <singletons>`.
 
 We additionally recommend the use of :ref:`inline-queries` as simple policy unit
-tests. Since oso is accessible as a library, you should authorization as
+tests. Since oso is accessible as a library, you should test authorization as
 part of your application test suite.
 
 Change Management
@@ -54,7 +54,7 @@ Code
 ----
 
 The core of oso is written in Rust, which vastly reduces the risk of memory
-unsafety relative to many other low-level and embeddable languages (e.g., C, C++). The oso engineering team codes defensively – we makes extensive use of types, validate inputs,
+unsafety relative to many other low-level and embeddable languages (e.g., C, C++). The oso engineering team codes defensively – we make extensive use of types, validate inputs,
 and handle errors safely.
 
 All source code is available at `our GitHub repository <https://github.com/osohq/oso>`_.
