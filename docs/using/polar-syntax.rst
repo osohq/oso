@@ -290,7 +290,7 @@ engine to the enclosing rule definition, and refuses to consider any others. Any
 definitions that have already run are not "un-run", though, or avoided by using
 cut; it just ensures that no *others* will run. Such "other" rule definitions
 are often less specific rules, and the use of `cut()` can be used, e.g., to
-override an ``allow`` method on a less-specific class.
+override an ``allow`` rule for a less-specific class.
 
 ``cut()`` can appear anywhere in a rule body, but terms that
 proceed it must succeed in order for it to be reached, so it
