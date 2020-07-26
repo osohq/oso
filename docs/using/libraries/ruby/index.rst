@@ -159,7 +159,7 @@ yielded values one at a time.
   raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 In the policy above, the body of the `allow` rule will first evaluate ``"HR" = "payroll"`` and then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``Oso#allow`` will succeed.
+``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``Oso#allowed?`` will succeed.
 Note that if ``#get_group`` returned an array instead of an enumerator, the rule would fail because it would be comparing an array (``["HR", "payroll"]``) against a string (``"payroll"``).
 
 Summary
