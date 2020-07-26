@@ -52,7 +52,6 @@ Using oso, you can:
 
 .. toctree::
     :maxdepth: 1
-    :titlesonly:
     :hidden:
 
     Home <self>
