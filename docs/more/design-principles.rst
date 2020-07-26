@@ -37,14 +37,14 @@ is allowed to do what in a system. Solutions to describe authorization logic
 ought to be declarative and have semantics that map to common domain concepts –
 like roles and relationships, or boolean conditions over the input attributes.
 
-**3. Easy to start, powerful when you need it.** No two
-authorization problems are the same, because no two applications are the same.
-And so while many authorization problems can be made to fit a general pattern
-like roles, the model's fit typically degrades as you add more – and more
-complex – requirements. An authorization system should provide simple,
-opinionated building blocks to start but should not force developers to bend
-their requirements to the capabilities of the system. Instead, it should give
-them the ability to extend the system to solve the use case at hand.
+**3. Freedom to extend.** No two authorization problems are the same,
+because no two applications are the same. And so while many authorization
+problems can be made to fit a general pattern like roles, the model's fit
+typically degrades as you add more – and more complex – requirements.
+An authorization system should provide simple, opinionated building blocks
+to start but should not force developers to bend their requirements to the
+capabilities of the system. Instead, it should give them the ability to
+extend the system to solve the use case at hand.
 
 Separation of concerns, but not data
 ------------------------------------
@@ -159,14 +159,20 @@ Right tool for the job
 
 If you ask someone to describe the permissions a user should have in a system
 using natural language, you will generally find they have no problem doing so.
-What often happens, however, is the authorization system used makes it hard
-to take an intuitive concept and implement it.
+What often happens, however, is that authorization systems make it hard to
+take an intuitive concept and implement it as a concrete security policy.
 
-oso policies are written using a declarative language, designed specifically
-for expressing authorization logic in applications. This means that you write what you want the outcome to be, and oso worries about things like the order in which to run operations, and how to achieve the desired end goal.
+oso policies are written using a declarative language designed specifically
+for expressing authorization logic in applications. This means that you write
+permissions as simple logical statements, and oso performs the necessary
+inferences to go from what you have (application objects and information
+about the request you're trying to authorize) to a yes/no authorization
+decision. Rule ordering, access to application objects, and other such
+ancillary tasks are handled transparently by the system.
 
-Let's take a slightly more complex example continuing from above. Suppose we now
-have two different user types who can approve expenses. With oso, that might look like:
+Let's illustrate this by continuing our example from above.
+Suppose that we now have two different user types who can approve expenses:
+direct managers, and project managers. With oso, that might look like this:
 
 .. container:: left-col
 
@@ -180,15 +186,14 @@ have two different user types who can approve expenses. With oso, that might loo
 
         # project managers can approve project expenses
         allow(user, "approve", expense) if
-            role(user, "manager",
-                Project.lookup_by_id(expense.project_id));
+            role(user, "manager", Project.lookup_by_id(expense.project_id));
 
 .. container:: right-col
 
     .. code-block:: polar
         :caption: :fa:`oso` organization.polar
 
-        # manages user or managers users' manager
+        # manages user or manages users' manager
         manages(manager, user) if
             employee in manager.employees()
             and employee = user
@@ -199,73 +204,63 @@ have two different user types who can approve expenses. With oso, that might loo
             user in project.managers();
 
 .. tip::
-    For full examples of the patterns used here, check out the following guides:
+    For full examples of the patterns used here, see the following guides:
 
     - :ref:`abac-basics`
     - :ref:`abac-hierarchies`
     - :ref:`abac-rbac`
 
-These two policies capture a lot of authorization logic, without sacrificing
-ease of understanding. The *declarative* nature of this matches well with the
-problem at hand: we are declaring new properties about our system – like what
-it means to have submitted an expense or to manage someone – and then we combine
-these into new statements that declare what users can do in the system.
-
 The policy stays short and relatively flat because oso handles the evaluation.
 You don't need to specify *how* to apply these rules. If we query oso using the
 above policy to see if a user can read an expense, oso will handle everything
-from determining which rules it needs to apply, and their relative ordering, to
+from determining which rules it needs to apply and their relative ordering, to
 calling into the host application to lookup the email field on the user object.
 You give oso all the ingredients, then oso searches through everything and puts
 them together in the necessary order to make a decision.
 
-Easy to start, powerful when you need it
-----------------------------------------
+Freedom to Extend
+-----------------
 
 Some applications may never need to go beyond basic role-based access control
-(RBAC). Perhaps users belong to organizations, and all users fit into one of
-several roles. So most access can be reduced to checking the user has the right
-role for the URL they are accessing.
+(RBAC). You can :doc:`express that in oso easily </using/examples/rbac>`.
+And likewise :doc:`ABAC </using/examples/abac>`,
+and :doc:`inheritance </using/examples/inheritance>`, etc.
+oso is purposefully agnostic to the *kind* of authorization logic
+that you need; its job is to make expressing simple policies easy,
+and complex policies possible.
 
-So most authorization can be reduced to something simple like:
+Because the oso policy engine is an interpreter for a Turing-complete
+domain specific language, it is not limited to a fixed set of configuration
+parameters, or prescribed authorization structures. And because it offers
+direct integration with your application's data and methods, it is not
+limited to just the data you choose to "package up" for it and ship
+across a wire, nor does it force you to duplicate application logic
+in policy code. Instead, it acts as an *extension of your application*
+that encapsulates, but does not limit, your authorization logic.
 
-.. code-block:: polar
-    :caption: :fa:`oso`
+.. kill this paragraph?
 
-    allow(user, action, path) if
-        user.role = "admin";
+As we developed oso, we talked to a lot of organizations with a lot
+of different kinds of authorization requirements. Internally-facing,
+customer-facing, subject to stringent regulations, dependent on data
+that lives in a foreign system, etc. Endless variations. Most of the
+ones with even moderately complex requirements ended up investing
+heavily in custom code and frameworks, either up front, before the
+complexity exploded (rare) or after the fact (much more common, and
+much more costly).
 
-    allow(user, action, path) if
-        user.role = "user"
-        and not path.starts_with("/admin/");
+oso helps you tame complex authorization problems by *abstraction*
+and *extension*. By abstracting away from, and yet fully supporting:
 
-But for many applications, over time, new features get added that don't quite
-fit the same model. Maybe a user can now belong to multiple organizations, so
-you need to check whether they are the specific role for the organization they
-are accessing. Or maybe a user can have their own private data separate to the
-data shared with the rest of their organization. Perhaps support staff need to
-have full access to a limited amount of data, so an exception case is made.
+* specific application languages and frameworks
+* specific authorization schemes
+* rigid network-based interfaces
 
-And in time, the number of roles grows... The number of different permissions
-combined with the number of roles leads to an exploding number of combinations.
-
-The goal of oso is to make easy things *easy*, and hard things *possible*.
-In our various :doc:`examples </using/examples/index>`, we take you from
-:doc:`simple roles </using/examples/rbac>`, up to more complex versions.
-Combining :doc:`roles with attributes </using/examples/abac>`,
-applying :doc:`inheritance structure </using/examples/inheritance>` and
-:ref:`hierarchies <abac-hierarchies>`. Each of these guides building
-up from a simple access model, and then adding in complexity
-while leaning on the data that already exists in your system.
-
-And this authorization logic can be woven in throughout the application.
-In our :doc:`guide to adding oso </getting-started/application/index>`
-we show how to do authorization at the API layer, and in the controller code.
-But if that doesn't match your needs, underneath all of this is a system
-that is powerful to adapt to :doc:`many other patterns </getting-started/application/patterns>`.
-
-Overall, our answer for how to best use oso is dependent on what's best
-for you.
+You can adapt oso to meet even the most complex authorization requirements,
+because you extend the built-in system to encapsulate them, and then
+embed the whole engine in your application -- extending your application --
+so that it can make decisions that are intrinsically coupled to the data
+and behaviors that reside there.
 
 .. admonition:: What's next?
     :class: tip whats-next
