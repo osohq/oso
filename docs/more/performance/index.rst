@@ -6,7 +6,7 @@ This page explores the performance of oso across three main axes
 to help you understand the expected performance of oso:
 
 - **In practice**. How does oso perform under typical workloads?
-- **Microbenchmarks**. How is oso built? What are the microbenchmarks?
+- **Benchmarks**. How is oso built? What are the micro-benchmarks?
 - **Scaling**. What is the theoretical complexity of a query?
   How do the performance numbers scale across orders of magnitude?
 
@@ -37,7 +37,7 @@ priority on our roadmap.
 
 There is a maximum execution time set to 30s. If you hit this, it likely means
 that either you have many expensive lookups, or have created an infinite
-loop/recusive call in your policy.
+loop/recursive call in your policy.
 
 For any performance issues caused by slow or too many database queries, our
 recommendation is to solve these issues at the data access layer -- in the
