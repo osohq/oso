@@ -85,3 +85,7 @@ article .matter-button-contained {
     font-family: "Font Awesome 5 Free";
     font-weight: 900;
 }
+
+.md-typeset h1, .md-typeset h2 {
+    font-weight: 400;
+}

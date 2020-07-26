@@ -98,7 +98,7 @@ Using oso, you can:
    more/dev-tools/index
    more/faq
    more/use-cases
-   more/performance
+   more/performance/index
    more/language/polar-foundations
    more/security
    more/internals

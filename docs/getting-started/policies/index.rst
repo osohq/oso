@@ -126,6 +126,8 @@ matches the expected type - in this case, an ``Admin``.
     you don't accidentally allow access to an unrelated resource which happens
     to have matching fields.
 
+.. _combining_rules:
+
 Combining Rules
 ===============
 
