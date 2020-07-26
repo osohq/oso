@@ -42,18 +42,19 @@ sys.path.append(os.path.abspath("./_ext"))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "button",
+    "email_role",
+    "fontawesome",
+    "recommonmark",
+    "sphinx_copybutton",
+    "sphinx_tabs.tabs",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
-    "recommonmark",
-    "sphinx.ext.todo",
     "sphinx.ext.githubpages",
-    "sphinxcontrib.contentui",
-    "sphinx_tabs.tabs",
     "sphinx.ext.ifconfig",
+    "sphinx.ext.todo",
+    "sphinxcontrib.contentui",
     "sphinxcontrib.spelling",
-    "sphinx_copybutton",
-    "button",
-    "fontawesome",
 ]
 
 
