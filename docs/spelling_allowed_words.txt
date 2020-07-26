@@ -47,6 +47,7 @@ javac
 coroutine
 namespace
 unsafety
+middleware
 
 ## Product names
 sqlite
