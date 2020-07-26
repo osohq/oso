@@ -52,3 +52,9 @@ def html_visit_button_node(self, node):
 def setup(app):
     app.add_node(button_node, html=(html_visit_button_node, None))
     app.add_directive("button", ButtonDirective)
+
+    return {
+        "version": (0, 0, 1),
+        "parallel_read_safe": True,
+        "parallel_write_safe": True,
+    }

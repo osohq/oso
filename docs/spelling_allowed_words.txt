@@ -62,6 +62,7 @@ Casbin
 Okta
 Rego
 Hashicorp
+JShell
 
 ## Misc terms
 roadmap
