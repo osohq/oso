@@ -169,3 +169,4 @@ html_favicon = "favicon.ico"
 doctest_test_doctest_blocks = ""
 
 lexers["polar"] = lexer.PolarLexer()
+lexers["jshell"] = lexer.JShellLexer()
