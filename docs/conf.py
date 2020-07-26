@@ -34,6 +34,8 @@ release = "0.2.5"
 
 # -- General configuration ---------------------------------------------------
 
+release_mode = os.environ.get("DOCS_RELEASE", "") == "1"
+
 master_doc = "index"
 
 sys.path.append(os.path.abspath("./_ext"))
@@ -133,7 +135,7 @@ html_theme_options = {
     # Set the name of the project to appear in the navigation.
     "nav_title": "Documentation",
     # Set you GA account ID to enable tracking
-    "google_analytics_account": "UA-139858805-1",
+    "google_analytics_account": "UA-139858805-1" if release_mode else "",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
     "base_url": "https://docs.osohq.com/",
@@ -150,6 +152,8 @@ html_theme_options = {
     # If True, show hidden TOC entries
     "globaltoc_includehidden": True,
     # "heroes": {"index": "Welcome to the home of the oso documentation!",},
+    "html_minify": release_mode,
+    "css_minify": release_mode,
 }
 
 version_dropdown = True

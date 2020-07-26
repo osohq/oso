@@ -2,6 +2,15 @@
     background: #343131;
 } */
 
+/*** Set our own custom colours ***/
+
+/* Sidebar colour on mobile */
+@media only screen and (max-width:76.1875em){
+    .md-nav--primary .md-nav__title--site {
+        background-color: #0E024E !important; 
+    }
+}
+
 .md-header {
     background-color: #0E024E;
 }
@@ -9,6 +18,8 @@
 .md-tabs {
     background-color: #0E024E;
 }
+
+/*** End of custom colours ***/
 
 .literal-block-wrapper {
     background: #eee;
