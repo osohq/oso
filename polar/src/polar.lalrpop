@@ -313,94 +313,92 @@ Exp8<T>: Term = {
     <exp9:Exp9<T>> => exp9
 }
 
-// !
-Not = {"not"};
-Exp7<T>: Term = {
-    <start:@L> Not <exp8:Exp8<T>> => {
-        let args = vec![exp8];
-        let op = Operation{operator: Operator::Not, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    // TODO (dhatch): Maybe a different type here
-    <exp8:Exp8<T>> => exp8
-}
-
 // * /
-Exp6<T>: Term = {
-    <start:@L> <exp6:Exp6<T>> "*" <exp7:Exp7<T>> => {
-        let args = vec![exp6, exp7];
+Exp7<T>: Term = {
+    <start:@L> <exp7:Exp7<T>> "*" <exp8:Exp8<T>> => {
+        let args = vec![exp7, exp8];
         let op = Operation{operator: Operator::Mul, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
-    <start:@L> <exp6:Exp6<T>> "/" <exp7:Exp7<T>> => {
-        let args = vec![exp6, exp7];
+    <start:@L> <exp7:Exp7<T>> "/" <exp8:Exp8<T>> => {
+        let args = vec![exp7, exp8];
         let op = Operation{operator: Operator::Div, args};
+        Term::new_from_parser(src_id, start, Value::Expression(op))
+    },
+    <exp8:Exp8<T>> => exp8
+}
+
+// + -
+Exp6<T>: Term = {
+    <start:@L> <exp6:Exp6<T>> "+" <exp7:Exp7<T>> => {
+        let args = vec![exp6, exp7];
+        let op = Operation{operator: Operator::Add, args};
+        Term::new_from_parser(src_id, start, Value::Expression(op))
+    },
+    <start:@L> <exp6:Exp6<T>> "-" <exp7:Exp7<T>> => {
+        let args = vec![exp6, exp7];
+        let op = Operation{operator: Operator::Sub, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp7:Exp7<T>> => exp7
 }
 
-// + -
+// == != <= < >= >
 Exp5<T>: Term = {
-    <start:@L> <exp5:Exp5<T>> "+" <exp6:Exp6<T>> => {
+    <start:@L> <exp5:Exp5<T>> "==" <exp6:Exp6<T>> => {
         let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Add, args};
+        let op = Operation{operator: Operator::Eq, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
-    <start:@L> <exp5:Exp5<T>> "-" <exp6:Exp6<T>> => {
+    <start:@L> <exp5:Exp5<T>> "!=" <exp6:Exp6<T>> => {
         let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Sub, args};
+        let op = Operation{operator: Operator::Neq, args};
+        Term::new_from_parser(src_id, start, Value::Expression(op))
+    },
+    <start:@L> <exp5:Exp5<T>> "<=" <exp6:Exp6<T>> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator: Operator::Leq, args};
+        Term::new_from_parser(src_id, start, Value::Expression(op))
+    },
+    <start:@L> <exp5:Exp5<T>> ">=" <exp6:Exp6<T>> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator: Operator::Geq, args};
+        Term::new_from_parser(src_id, start, Value::Expression(op))
+    },
+    <start:@L> <exp5:Exp5<T>> "<" <exp6:Exp6<T>> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator: Operator::Lt, args};
+        Term::new_from_parser(src_id, start, Value::Expression(op))
+    },
+    <start:@L> <exp5:Exp5<T>> ">" <exp6:Exp6<T>> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator: Operator::Gt, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
     <exp6:Exp6<T>> => exp6
 }
 
-// == != <= < >= >
-Exp4<T>: Term = {
-    <start:@L> <exp4:Exp4<T>> "==" <exp5:Exp5<T>> => {
-        let args = vec![exp4, exp5];
-        let op = Operation{operator: Operator::Eq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp4:Exp4<T>> "!=" <exp5:Exp5<T>> => {
-        let args = vec![exp4, exp5];
-        let op = Operation{operator: Operator::Neq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp4:Exp4<T>> "<=" <exp5:Exp5<T>> => {
-        let args = vec![exp4, exp5];
-        let op = Operation{operator: Operator::Leq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp4:Exp4<T>> ">=" <exp5:Exp5<T>> => {
-        let args = vec![exp4, exp5];
-        let op = Operation{operator: Operator::Geq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp4:Exp4<T>> "<" <exp5:Exp5<T>> => {
-        let args = vec![exp4, exp5];
-        let op = Operation{operator: Operator::Lt, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp4:Exp4<T>> ">" <exp5:Exp5<T>> => {
-        let args = vec![exp4, exp5];
-        let op = Operation{operator: Operator::Gt, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <exp5:Exp5<T>> => exp5
-}
-
 // =
-Exp3<T>: Term = {
-    <start:@L> <exp3:Exp3<T>> "=" <exp4:Exp4<T>> => {
-        let args = vec![exp3, exp4];
+Exp4<T>: Term = {
+    <start:@L> <exp4:Exp4<T>> "=" <exp5:Exp5<T>> => {
+        let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Unify, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
     },
-     <exp4:Exp4<T>> => exp4
+     <exp5:Exp5<T>> => exp5
  }
 
-
+ // !
+Not = {"not"};
+Exp3<T>: Term = {
+    <start:@L> Not <exp4:Exp4<T>> => {
+        let args = vec![exp4];
+        let op = Operation{operator: Operator::Not, args};
+        Term::new_from_parser(src_id, start, Value::Expression(op))
+    },
+    // TODO (dhatch): Maybe a different type here
+    <exp4:Exp4<T>> => exp4
+}
 
 Or = {"or"};
 Exp2<T>: Term = {
@@ -451,7 +449,7 @@ Exp<T>: Term = {
 }
 
 Parameter: Parameter = {
-    <param:Exp5<"Term">> => {
+    <param:Exp6<"Term">> => {
         Parameter{parameter: Some(param), specializer: None}
     },
     // parenthesized specializers do not have symbol translation to class names applied

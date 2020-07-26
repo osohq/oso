@@ -337,4 +337,17 @@ mod tests {
             "rule_test(_instance_1) if new (Foo{a: 1, b: 2}, _instance_1);"
         )
     }
+
+    #[test]
+    fn rewrite_not_with_lookup() {
+        let mut kb = KnowledgeBase::new();
+        let mut term = parse_query("not foo.x = 1");
+        assert_eq!(term.to_polar(), "not foo.x = 1");
+
+        rewrite_term(&mut term, &mut kb);
+        pretty_assertions::assert_eq!(
+            term.to_polar(),
+            "not (.(foo, x(), _value_1) and _value_1 = 1)"
+        )
+    }
 }
