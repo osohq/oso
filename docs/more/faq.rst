@@ -31,7 +31,7 @@ that it sees, but it clears these when the query finishes.
 
 oso *does not*, for example, store any data about the users, what groups they
 are in, or what permissions have been assigned to them. The expectation is that
-this data lives :doc:`in your application <design-principles>`, and that oso accesses it as needed oso when evaluating queries.
+this data lives :doc:`in your application <design-principles>`, and that oso accesses it as needed when evaluating queries.
 
 Because of this, it is rare to need to change policies while the application
 is running. For example, if you need to revoke a user's access because they leave
@@ -67,7 +67,7 @@ concrete application instance.)
 What happens next depends on the specific language, but it will use some form of
 dynamic lookup -- e.g., a simple ``getattr`` in Python, or reflection in Java.
 
-The applicaation returns the result to the policy engine, and execution continues.
+The application returns the result to the policy engine, and execution continues.
 
 -------------------------------------------------------------------------------------------------
 What is the best practice for managing policy files in a way that's maintainable in the long-run? 
@@ -121,7 +121,7 @@ For support pricing, please `contact us <https://osohq.com/company/contact-us>`_
 License
 -------
 
-oso licensed under the _`Apache 2.0 license <https://github.com/osohq/oso/blob/master/LICENSE>`_.
+oso licensed under the *`Apache 2.0 license <https://github.com/osohq/oso/blob/master/LICENSE>`_*.
 
 ---------------------------------------------
 What languages and frameworks do you support?
