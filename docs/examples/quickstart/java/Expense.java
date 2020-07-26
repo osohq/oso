@@ -1,4 +1,3 @@
-
 public class Expense {
     public int amount;
     public String description;

@@ -63,11 +63,15 @@ Adding oso
   .. tabs::
     .. group-tab:: Python
 
+      oso supports Python versions **>= 3.6**
+
       .. code-block:: console
 
         $ pip install oso
 
     .. group-tab:: Ruby
+
+      oso supports Ruby versions **>= 2.4**
 
       .. code-block:: console
 
@@ -75,11 +79,12 @@ Adding oso
 
     .. group-tab:: Java
 
-      .. todo:: Java install
+      oso supports Java versions **>= 9**
 
       Download :download:`oso-0.2.5.jar </examples/quickstart/java/lib/oso-0.2.5.jar>`.
 
       Either add this to your Java project libraries,
+      load using your IDE,
       or build from the command line with:
 
       .. code-block:: console
@@ -169,7 +174,7 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
-      >>> OSO.is_allowed("bhavik", "GET", expense)
+      >>> OSO.is_allowed("bhavik@example.com", "GET", expense)
       False
 
 
@@ -213,7 +218,7 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):006:0> OSO.allowed?(actor: "bhavik", action: "GET", resource: "expense")
+      irb(main):006:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: "expense")
       => false
 
   .. group-tab:: Java
@@ -223,48 +228,93 @@ start a REPL session and follow along:
 
     Run: ``jshell --class-path oso-0.2.5.jar Expense.java``
 
-    .. code-block:: jshell
+    .. tabs::
+      .. group-tab:: Java main
 
-        jshell> import com.osohq.oso.Oso;
+          .. code-block:: java
+            :caption: :fab:`java` Expense.java
 
-        jshell> Oso oso = new Oso();
-        oso ==> com.osohq.oso.Oso@55b699ef
+            import com.osohq.oso.Oso;
 
-        jshell> String alice = "alice@example.com"
-        alice ==> "alice@example.com"
+            public class Expense { 
+                // ...
 
-        jshell> Expense expense = Expense.EXPENSES[1]
-        expense ==> Expense(amount=5000, description=software, submittedBy=alice@example.com)
+                public static void main(String[] args) throws Exception {
+                    Oso oso = new Oso();
+                    String alice = "alice@example.com";
+                    Expense expense = Expense.EXPENSES[1];
+                    System.out.println(oso.isAllowed(alice, "GET", expense));
+                }
+            }
 
-        jshell> oso.isAllowed(alice, "GET", expense)
-        $12 ==> false
+          Should output:
 
-    We can create a new policy file, and
-    explicitly allow Alice to view expenses...
+          .. code-block:: console
+
+            false
+
+      .. group-tab:: JShell
+
+        .. code-block:: jshell
+
+            jshell> import com.osohq.oso.Oso;
+
+            jshell> Oso oso = new Oso();
+            oso ==> com.osohq.oso.Oso@55b699ef
+
+            jshell> String alice = "alice@example.com"
+            alice ==> "alice@example.com"
+
+            jshell> Expense expense = Expense.EXPENSES[1]
+            expense ==> Expense(amount=5000, description=software, submittedBy=alice@example.com)
+
+            jshell> oso.isAllowed(alice, "GET", expense)
+            $12 ==> false
+
+    We can create a new policy file, and explicitly allow Alice to view
+    expenses
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
-    ...which we can load into our oso instance:
+    We can load into our oso instance, and then see that Alice has the power and
+    everyone else is still denied:
 
-    .. code-block:: jshell
+    .. tabs::
+      .. group-tab:: Java main
 
-      jshell> oso.loadFile("expenses.polar")
+        .. code-block:: java
+            :caption: :fab:`java` Expense.java
 
-    ...and now Alice has the power...
+            public static void main(String[] args) throws Exception {
+                Oso oso = new Oso();
+                oso.loadFile("expenses.polar");
+                String alice = "alice@example.com";
+                String bhavik = "bhavik@example.com";
+                Expense expense = Expense.EXPENSES[1];
+                System.out.println(oso.isAllowed(alice, "GET", expense));
+                System.out.println(oso.isAllowed(bhavik, "GET", expense));
+            }
 
-    .. code-block:: jshell
+        Should output:
 
-      jshell> oso.isAllowed(alice, "GET", expense)
-      $14 ==> true
+        .. code-block:: console
 
-    ...and everyone else is still denied:
+          true
+          false
 
-    .. code-block:: jshell
+      .. group-tab:: JShell
 
-      jshell> oso.isAllowed("bhavik", "GET", expense)
-      $15 ==> false
+        .. code-block:: jshell
+
+          jshell> oso.loadFile("expenses.polar")
+
+          jshell> oso.isAllowed(alice, "GET", expense)
+          $14 ==> true
+
+          jshell> oso.isAllowed("bhavik@example.com", "GET", expense)
+          $15 ==> false
 
 .. note::
   Each time you load a file, it will load the policy
@@ -283,8 +333,6 @@ When we pass in ``"bhavik@example.com"`` as
 the actor, the rule no longer succeeds because the string ``"bhavik@example.com"`` does not
 match the string ``"alice@example.com"``.
 
-.. note:: For a deeper introduction to writing authorization rules with oso,
-  see :doc:`/more/key-concepts`.
 
 Authorizing HTTP requests
 =========================
@@ -323,7 +371,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
 
     .. literalinclude:: /examples/quickstart/java/Server.java
       :class: copybutton
-      :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/server/Server.java>`
+      :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/Server.java>`
       :language: java
       :emphasize-lines: 34-38
     
@@ -355,7 +403,7 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac Server.java
+        $ javac -cp oso-0.2.5.jar:. Server.java
         $ java Server
         Server running on /127.0.0.1:5050
 
@@ -466,7 +514,7 @@ are denied access:
 
 .. code-block:: console
 
-  $ curl -H "user: bhavik@example.org" localhost:5050/expenses/1
+  $ curl -H "user: bhavik@foo.com" localhost:5050/expenses/1
   Not Authorized!
 
 

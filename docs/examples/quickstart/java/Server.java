@@ -26,7 +26,7 @@ public class Server implements HttpHandler {
             String action = exchange.getRequestMethod();
             String[] request = exchange.getRequestURI().toString().split("/");
             if (!request[1].equals("expenses")) {
-                respond(exchange, "Not Found!", 401);
+                respond(exchange, "Not Found!", 404);
                 return;
             }
             Integer index = Integer.parseInt(request[2]) - 1;
@@ -37,7 +37,7 @@ public class Server implements HttpHandler {
                 respond(exchange, "Not Authorized!", 403);
             }
         } catch (Exception e) {
-            respond(exchange, "Not Found!", 401);
+            respond(exchange, "Not Found!", 404);
         }
     }
 
