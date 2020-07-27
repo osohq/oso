@@ -44,13 +44,9 @@ class Query:
 
     def run(self):
         """Run the event loop and yield results."""
-        if ffi_query is None:
-            ffi_query = self.ffi_query
-        else:
-            self.ffi_query = ffi_query
-        assert ffi_query, "no query to run"
+        assert self.ffi_query, "no query to run"
         while True:
-            event_s = lib.polar_next_query_event(ffi_query)
+            event_s = lib.polar_next_query_event(self.ffi_query)
             event = ffi_deserialize(event_s)
             if event == "Done":
                 break
@@ -60,17 +56,17 @@ class Query:
             if kind == "MakeExternal":
                 self.handle_make_external(data)
             if kind == "ExternalCall":
-                self.handle_external_call(ffi_query, data)
+                self.handle_external_call(self.ffi_query, data)
             if kind == "ExternalOp":
-                self.handle_external_op(ffi_query, data)
+                self.handle_external_op(self.ffi_query, data)
             if kind == "ExternalIsa":
-                self.handle_external_isa(ffi_query, data)
+                self.handle_external_isa(self.ffi_query, data)
             if kind == "ExternalUnify":
-                self.handle_external_unify(ffi_query, data)
+                self.handle_external_unify(self.ffi_query, data)
             if kind == "ExternalIsSubSpecializer":
-                self.handle_external_is_subspecializer(ffi_query, data)
+                self.handle_external_is_subspecializer(self.ffi_query, data)
             if kind == "Debug":
-                self.handle_debug(ffi_query, data)
+                self.handle_debug(self.ffi_query, data)
             if kind == "Result":
                 bindings = {
                     k: self.host.to_python(v) for k, v in data["bindings"].items()
