@@ -84,7 +84,7 @@ pub enum Token {
     Define,    // :=
     Query,     // ?=
     In,        // in
-    Cut,       // cut()
+    Cut,       // cut
     Debug,     // debug()
     Print,     // print()
     Isa,       // isa

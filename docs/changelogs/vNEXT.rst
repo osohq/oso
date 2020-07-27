@@ -26,6 +26,12 @@ To improve readability of Polar policies, the ``isa`` operator has
 been replaced with ``matches`` (:ref:`operator-matches`). Any policies using the
 ``isa`` operator will need to be migrated.
 
+cut() predicate replaced with cut keyword
+-----------------------------------------
+
+The Polar "cut" operator was previously parsed like a predicate, but
+it isn't one. The new syntax ``cut`` (without the empty parentheses)
+emphasizes its role as a keyword.
 
 New features
 ==============

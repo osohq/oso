@@ -285,17 +285,17 @@ will compare the value of the variable age with 10 and unify if it's less than 1
 Cut
 ^^^
 
-The *cut* operator, which in Polar is written as ``cut()``, commits the query
-engine to the enclosing rule definition, and refuses to consider any others. Any
-definitions that have already run are not "un-run", though, or avoided by using
-cut; it just ensures that no *others* will run. Such "other" rule definitions
-are often less specific rules, and the use of `cut()` can be used, e.g., to
-override an ``allow`` rule for a less-specific class.
+The ``cut`` operator the query engine to the enclosing rule definition,
+and refuses to consider any others. Rules that have already run are not
+"un-run", though, or avoided by using cut; it just ensures that no
+*others* will run. Such "other" rule definitions are often less specific
+rules, and `cut` can be used, e.g., to override an ``allow`` rule for a
+less specific class.
 
-``cut()`` can appear anywhere in a rule body, but terms that
+``cut`` can appear anywhere in a rule body, but terms that
 proceed it must succeed in order for it to be reached, so it
 frequently appears at the end of the body: **if** so-and-so is true,
-then **cut** out all other alternatives.  ``cut()`` should be
+then **cut** out all other alternatives.  ``cut`` should be
 used sparingly.
 
 .. _operator-new:
