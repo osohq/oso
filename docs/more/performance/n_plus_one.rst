@@ -89,26 +89,3 @@ For example, in a Django application you might write:
 Since oso is able to work directly with native objects, using the
 existing Django methods to prefetch the grandchildren in this case
 can be applied directly where it's used.
-
-.. todo::
-    Use oso for SQL queries?
-.. 3. *Coming soon*: Polar SQL query builder
-.. 
-.. One way to avoid this is to directly connect Polar to your SQL database
-.. and allow it to optimise the queries.
-.. 
-.. See: https://www.cs.cmu.edu/afs/cs/project/ai-repository/ai/lang/prolog/code/io/pl2sql/0.html
-
-
-.. todo::
-    Add section for detecting performance issues
-
-.. Detecting performance issues
-.. ----------------------------
-.. 
-.. In order to facilitate understanding and debugging performance
-.. issues like the above, oso includes simple profiling functionality.
-.. On making a query, add the `profile=True` paramter. When a trace is
-.. returned for a query, you can see where the majority of time was spent.
-.. 
-.. This information can be viewed with the oso trace viewer.
