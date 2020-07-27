@@ -50,6 +50,7 @@ coroutine
 namespace
 unsafety
 middleware
+url
 
 ## Product names
 sqlite
