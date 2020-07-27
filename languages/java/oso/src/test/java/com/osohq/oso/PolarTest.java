@@ -428,12 +428,11 @@ public class PolarTest {
     }
 
     public void testReturnNull() throws Exception {
-        p.registerClass(Foo.class, m -> new Foo(), "Foo");
         p.loadStr("f(x) if x.myReturnNull = 1;");
-        assertTrue(p.queryRule("f", new Foo()).results().isEmpty());
+        assertTrue(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
 
         p.loadStr("f(x) if x.myReturnNull.badCall = 1;");
-        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryRule("f", new Foo()).results());
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryRule("f", new MyClass("test", 1)).results());
 
     }
 
