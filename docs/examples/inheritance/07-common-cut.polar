@@ -1,6 +1,6 @@
 ## Policies where cut is common. ##
 
-# Using cut() occasionally is okay, but it isn't ideal for a policy that has many
+# Using cut occasionally is okay, but it isn't ideal for a policy that has many
 # exceptions.  If we want, we can make exceptions an explicit part of our policy
 # with the negation operator.
 
@@ -23,7 +23,7 @@ exception(actor: Actor, "read", resource: Lab) if
 
 # Not actually sure if this works... needs some testing. If it doesn't work
 # we should think if there is some way to incorporate something like this, because
-# cut() is not ideal if it is common. (Although not sure if the idea of
+# cut is not ideal if it is common. (Although not sure if the idea of
 # exception is much better). Instead we almost want an ALL operator which
 # would change the matching for a given predicate call, ensuring that all
 # match (instead of just one) before returning a true result.
