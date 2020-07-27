@@ -428,7 +428,7 @@ It's nice that Alice can view expenses, but it would be really onerous if
 we had to write a separate rule for every single actor we wanted to authorize.
 Luckily, we don't!
 
-Let's replace our static rule checking that the provided email matches
+Let's **replace** our static rule checking that the provided email matches
 ``"alice@example.com"`` with a dynamic one that checks that the provided email
 ends in ``"@example.com"``. That way, everyone at Example.com, Inc. will be
 able to view expenses, but no one outside the company will be able to:
@@ -528,7 +528,7 @@ our access policy that allows all employees to see each other's expenses. They
 would like us to modify the policy such that employees can only see their own
 expenses.
 
-To accomplish that, we can replace our existing rule with:
+To accomplish that, we can **replace** our existing rule with:
 
 .. tabs::
 
