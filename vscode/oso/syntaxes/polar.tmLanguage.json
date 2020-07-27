@@ -37,7 +37,8 @@
         { "include": "#comment" },
         { "include": "#string" },
         { "include": "#number" },
-        { "include": "#keyword" }
+        { "include": "#keyword" },
+        { "include": "#operator" }
       ]
     },
     "comment": {
@@ -141,9 +142,9 @@
       }
     },
     "operator": {
-      "match": "(+|-|*|/|<|>|=|!)",
+      "match": "(\\+|-|\\*|\\/|<|>|=|!)",
       "captures": {
-        "2": { "name": "keyword.operator" }
+        "1": { "name": "keyword.control" }
       }
     }
   },
