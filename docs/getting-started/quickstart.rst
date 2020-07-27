@@ -76,7 +76,7 @@ Adding oso
 
     .. group-tab:: Java
 
-      oso v{release} supports Java versions **>= 9**
+      oso v{release} supports Java versions **>= 10**
 
       Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_
       and download the latest jar.
@@ -90,8 +90,8 @@ Adding oso
         $ javac -cp {JAR}:. Expense.java
 
 
-Now that we've installed oso, we can import it into our project and construct
-a new ``Oso`` instance that will serve as our authorization engine.
+Now that we've installed oso, let's see how to make some basic authorization
+decisions.
 
 Decisions, decisions...
 =======================
@@ -140,16 +140,16 @@ start a REPL session and follow along:
     .. code-block:: pycon
 
 
-      >>> from server import *
-      >>> oso
-      <oso.Oso object at 0x7f267494dc70>
+      >>> from expense import *
+      >>> from oso import Oso
+      >>> oso = Oso()
       >>> alice = "alice@example.com"
       >>> expense = EXPENSES[1]
       >>> oso.is_allowed(alice, "GET", expense)
       False
 
     We can create a new policy file, and
-    explicitly allow Alice to GET expenses...
+    explicitly allow Alice to GET any expense...
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
@@ -172,7 +172,7 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
-      >>> OSO.is_allowed("bhavik@example.com", "GET", expense)
+      >>> oso.is_allowed("bhavik@example.com", "GET", expense)
       False
 
 
@@ -182,17 +182,21 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-        irb(main):001:0> require "./server"
+        irb(main):001:0> require './expense'
         => true
-        irb(main):002:0> alice = "alice@example.com"
+        irb(main):002:0> require 'oso'
+        => true
+        irb(main):003:0> OSO = Oso.new
+        => #<Oso::Oso:0x00007ffc9c8c6b58>
+        irb(main):004:0> alice = "alice@example.com"
         => "alice@example.com"
-        irb(main):003:0> expense = EXPENSES[1]
-        => #<Expense:0x00564efc19e640 @amount=500, @description="coffee", @submitted_by="alice@example.com">
-        irb(main):004:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
+        irb(main):005:0> expense = EXPENSES[1]
+        => #<Expense:0x00007ffc9c916388 @amount=500, @description="coffee", @submitted_by="alice@example.com">
+        irb(main):006:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
         => false
 
     We can create a new policy file, and
-    explicitly allow Alice to view expenses...
+    explicitly allow Alice to GET any expense...
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
@@ -339,7 +343,7 @@ Now that we are confident we can control access to our expense data,
 let's see what it would look like in a web server.
 Our web server contains some simple logic to filter out bad requests and not much else.
 
-In lieu of setting up real identity and authentication systems, we'll used a
+In lieu of setting up real identity and authentication systems, we'll use a
 custom HTTP header to indicate that a request is "authenticated" as a particular
 user. The header value will be an email address, e.g., ``"alice@example.com"``.
 We'll pass it to ``allow`` as the **actor** and we'll use the HTTP method as the
@@ -602,14 +606,11 @@ as:
 Summary
 =======
 
-We just blitzed through a ton of stuff:
+We just went through a ton of stuff:
 
 * Installing oso.
 * Setting up our app to enforce the policy decisions made by oso.
 * Writing authorization rules over static and dynamic application data.
-
-.. todo::
-    Make these actual links.
 
 .. admonition:: What's next
     :class: tip whats-next

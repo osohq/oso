@@ -224,7 +224,7 @@ We could also use ``matches`` to express the same logic:
     **inheritance** hierarchy of our application classes. See our :doc:`/using/examples/inheritance` guide for an
     in-depth example of how this works.
 
-Once a class is registered, its static methods can also be called from oso policies:
+Once a class is registered, its class methods can also be called from oso policies:
 
 .. tabs::
     .. group-tab:: Python

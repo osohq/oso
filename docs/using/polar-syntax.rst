@@ -343,7 +343,7 @@ The ``in`` operator generates *alternatives* for each element of the list.
 For all
 ^^^^^^^
 
-The ``forall`` predicate is often useful in conjunction with the ``in`` operator.
+The ``forall`` operator is often useful in conjunction with the ``in`` operator.
 ``forall(condition, action)`` checks that ``action`` succeeds for every alternative
 produced by ``condition``.
 
@@ -369,7 +369,7 @@ by an application method.
 
 
 Any bindings made inside a ``forall`` (``role`` or ``x`` in the example above)
-cannot be accessed after the ``forall`` predicate.
+cannot be accessed after the ``forall`` operator.
 
 .. _operator-rest:
 
