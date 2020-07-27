@@ -31,20 +31,28 @@ language called Polar, then they are loaded into oso.
 Using oso, you can:
 
 1. Separate authorization code from business logic, but keep
-data where it is
+   data where it is
+
 2. Express policies concisely with a declarative language
+
 3. Start from simple building blocks, then extend the system
-as needed
+   as needed
 
-.. button::
-    :link: /getting-started/quickstart
-    :text: Get Started
 
-.. button::
-    :link: /more/design-principles
-    :text: Learn More
-    :class: matter-success
-.. options: matter-primary, matter-secondary, matter-error, matter-warning, matter-success
+
+.. container:: cta
+
+    **oso is now in Developer Preview**
+
+    .. button::
+        :link: /getting-started/quickstart
+        :text: Try oso
+        :class: get-started
+
+    .. button::
+        :link: /more/design-principles
+        :text: Learn More
+        :class: learn-more
 
 .. toctree::
    :maxdepth: 1

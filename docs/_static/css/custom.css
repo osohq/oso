@@ -2,12 +2,57 @@
     background: #343131;
 } */
 
+/* Colours */
+
+:root {
+    --oso-primary:#0E024E;
+    --oso-primary-2:#392396;
+    --oso-accent: #e3f6f5;
+    --oso-secondary: #ffd803;
+    --oso-secondary-accent: #bae8e8;
+    --oso-gray-1: #141414;
+    --oso-gray-2: #ebebec;
+    --oso-gray-3: #f8f8f8;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Light.ttf");
+    font-weight: 300;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Regular.ttf");
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Medium.ttf");
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-SemiBold.ttf");
+    font-weight: 600;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Bold.ttf");
+    font-weight: 700;
+}
+
+
+
 /*** Set our own custom colours ***/
 
 /* Sidebar colour on mobile */
 @media only screen and (max-width:76.1875em){
     .md-nav--primary .md-nav__title--site {
-        background-color: #0E024E !important; 
+        background-color: var(--oso-primary) !important; 
     }
     .navheader .nav-dev-preview {
         display: none;
@@ -18,10 +63,10 @@
     }
 
     .nav-dev-preview {
-        background-color: #453e71;
+        background-color: var(--oso-primary-2);
         border-radius: 20% 5%;
         color: #ffffffbb;
-        font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-family: "Space Grotesk", sans-serif;
         font-weight: 600;
     }
 
@@ -32,12 +77,12 @@
 }
 
 .md-header {
-    background-color: #0E024E;
+    background-color: var(--oso-primary);
     height: 3.2rem;
 }
 
 .md-footer-nav {
-    background-color: rgb(251, 251, 251);
+    background-color: var(--oso-accent);
     color: black;
 }
 
@@ -50,37 +95,34 @@
 }
 
 .nav-dev-preview {
-    background-color: #453e71;
+    /* background-color: #453e71; */
     border-radius: 20% 5%;
     color: #ffffffbb;
     margin: 2px;
-    padding: 5px 8px;
-    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    padding: 6px 9px;
+    font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+.md-header-nav__source {
+	width: 15.7rem;
+    max-width: 15.7rem;
+    padding-top: 8px;
 }
 
 
-
-.md-header-nav__source button {
-    vertical-align: middle;
-    margin: 8px 6px;
-    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 12pt;
-    background-color: #352b70;
-}
 
 .md-footer-meta {
     padding-top: 1rem;
     padding-bottom: 1rem;
 }
 
-button.download-button {
-    background-color: #ecd450;
-    color: #222;
-}
 
 .md-tabs {
-    background-color: #0E024E;
+    background-color: var(--oso-primary);
 }
 
 /*** End of custom colours ***/
@@ -160,12 +202,67 @@ button.download-button {
 }
 
 /* Button tweaks */
-article a .matter-button-contained {
+.cta .matter-button-contained {
     text-align: center;
     min-width: 96px;
-    height: 54px;
     font-size: 16pt;
     margin: 1rem;
+    width: 150px;
+    box-shadow: none;
+    height: 54px;
+    font-weight: 600;
+}
+
+button.github {
+    vertical-align: middle;
+    margin: 8px 6px;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 12pt;
+    /* background-color: #352b70; */
+    background-color: transparent;
+    min-width: 128px;
+    border: 1px var(--oso-gray-1) solid;
+}
+
+button.download {
+    background-color: var(--oso-secondary);
+    color: var(--oso-gray-1);
+}
+
+button.get-started {
+    background-color: var(--oso-primary-2);
+}
+
+button.learn-more {
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgba(20, 20, 20, 0.1);
+    background-color: transparent;
+    color: #141414;
+}
+
+button.subscribe {
+    background-color: var(--oso-primary-2);
+    height: 38px;
+}
+
+.cta {
+    padding-top: 10pt;
+    text-align: center;
+    font-size: 16pt;
+}
+
+code.literal {
+	padding: .2em .4em;
+	margin: 0;
+	font-size: 85%;
+	background-color: rgba(27,31,35,.05);
+    border-radius: 6px;
+    font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,monospace;
+}
+
+.admonition.tip > .admonition-title {
+    background-color: var(--oso-accent) !important;
 }
 
 .md-typeset .admonition.whats-next > .admonition-title::before {
@@ -187,6 +284,7 @@ article a .matter-button-contained {
 /* For the footer form */
 footer .subscribe-form {
     text-align: center;
+    padding: 0 25%;
 }
 
 .subscribe-form .fab {
@@ -204,6 +302,10 @@ footer .subscribe-form {
     border-top: solid 6px transparent !important;
 }
 
-.matter-button-contained.button-dark {
-    background-color: #3e337c;
+.md-footer-copyright {
+	margin: 4.0rem .6rem 0 0;
+}
+
+body {
+    font-family: "Space Grotesk", sans-serif;
 }

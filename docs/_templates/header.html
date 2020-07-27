@@ -1,0 +1,47 @@
+<header class="md-header" data-md-component="header">
+    <nav class="md-header-nav md-grid">
+        <div class="md-flex navheader">
+            <div class="md-flex__cell md-flex__cell--shrink">
+                <a href="https://osohq.com" title="{{ docstitle|e }}" class="md-header-nav__button md-logo">
+                    <img src="{{ pathto('_static/' ~ logo, 1) }}" height="56" alt="Go to osohq.com">
+                </a>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+                <div class="nav-dev-preview">
+                    Preview
+                </div>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+                <label class="md-icon md-icon--menu md-header-nav__button" for="__drawer"></label>
+            </div>
+            <div class="md-flex__cell md-flex__cell--stretch">
+                <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
+                    <span class="md-header-nav__topic">{{ theme_nav_title or shorttitle }}</span>
+                    <span class="md-header-nav__topic"> {{ title|striptags|e }} </span>
+                </div>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+                <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
+                {% include "searchbox.html" %}
+            </div>
+            {% if theme_repo_url %}
+            <div class="md-flex__cell md-flex__cell--shrink">
+                <div class="md-header-nav__source">
+                    <!-- {% include "repo.html" %} -->
+                    <a href="https://github.com/osohq/oso">
+                        <button class="matter-button-contained github">
+                            <em class="fab fa-github" aria-hidden="true"></em>
+                            &nbsp;GitHub</button>
+                    </a>
+                    <a href="/download/">
+                        <button class="matter-button-contained download">
+                            <em class="fas fa-download" aria-hidden="true"></em>
+                            Download</button>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% include "version_dropdown.html" %}
+        </div>
+    </nav>
+</header>
