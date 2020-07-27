@@ -213,6 +213,6 @@ We also demonstrated how inheritance can be used to match rules to multiple type
 .. admonition:: What's next
     :class: tip whats-next
 
-    * :doc:`Download oso </download/index>` to apply this
+    * :doc:`Download oso </download>` to apply this
       technique in your app.
     * Check out other :doc:`index`.

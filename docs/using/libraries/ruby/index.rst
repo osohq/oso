@@ -2,7 +2,7 @@
 Ruby Authorization Library
 ============================
 
-oso is packaged as a :doc:`gem</download/index>` for use in Ruby applications.
+oso is packaged as a :doc:`gem</download>` for use in Ruby applications.
 
 API documentation for the gem lives :doc:`here</ruby/index>`.
 
@@ -11,7 +11,7 @@ API documentation for the gem lives :doc:`here</ruby/index>`.
 
     /ruby/index
 
-To install, see :doc:`installation instructions </download/index>`.
+To install, see :doc:`installation instructions </download>`.
 
 Working with Ruby Objects
 ===========================

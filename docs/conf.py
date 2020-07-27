@@ -93,8 +93,8 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "theme/**",
-    "project/changelogs/vNEXT.rst",
-    "project/changelogs/vTEMPLATE.rst",
+    "changelogs/vNEXT.rst",
+    "changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
     "more/language/polar-classes.rst",  # we don't currently have classes

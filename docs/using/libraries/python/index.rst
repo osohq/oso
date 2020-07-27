@@ -2,7 +2,7 @@
 Python Authorization Library
 ============================
 
-oso is available as a :doc:`package</download/index>` for use in Python applications.
+oso is available as a :doc:`package</download>` for use in Python applications.
 
 Code-level documentation is :doc:`here<api>`.
 
@@ -11,7 +11,7 @@ Code-level documentation is :doc:`here<api>`.
 
     api
 
-To install, see :doc:`installation instructions </download/index>`.
+To install, see :doc:`installation instructions </download>`.
 
 Working with Python Objects
 ===========================

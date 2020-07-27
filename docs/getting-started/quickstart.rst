@@ -54,7 +54,7 @@ Adding oso
 .. admonition:: Installation
 
   In order to write our first authorization policy, we first need to add oso to
-  our application. If you don't already have it :doc:`installed </download/index>`, go ahead and
+  our application. If you don't already have it :doc:`installed </download>`, go ahead and
   do so now:
 
   .. todo::

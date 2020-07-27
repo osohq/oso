@@ -205,5 +205,5 @@ flexible, and powerful ABAC rules with oso.
 
     * Continue on to learn how RBAC fits in with an implementation of
       :doc:`attribute-based access control <abac>`.
-    * :doc:`Download oso </download/index>` and try out RBAC for
+    * :doc:`Download oso </download>` and try out RBAC for
       yourself.

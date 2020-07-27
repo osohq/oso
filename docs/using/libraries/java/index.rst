@@ -2,7 +2,7 @@
 Java Authorization Library
 ============================
 
-oso is available as a :doc:`package</download/index>` for use in Java applications.
+oso is available as a :doc:`package</download>` for use in Java applications.
 
 Code-level documentation is :doc:`here</java/index>`.
 
@@ -11,7 +11,7 @@ Code-level documentation is :doc:`here</java/index>`.
 
     /java/index
 
-To install, see :doc:`installation instructions </download/index>`.
+To install, see :doc:`installation instructions </download>`.
 
 Working with Java Types
 =======================
