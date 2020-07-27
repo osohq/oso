@@ -26,7 +26,7 @@ import lexer
 # -- Project information -----------------------------------------------------
 
 project = "oso"
-copyright = "2020, oso"
+copyright = "2020 Oso Security, Inc."
 author = "oso"
 version = "0.2"
 release = "0.2.5"
@@ -46,6 +46,7 @@ sys.path.append(os.path.abspath("./_ext"))
 extensions = [
     "button",
     "email_role",
+    "form_role",
     "fontawesome",
     "recommonmark",
     "sphinx_copybutton",
@@ -132,8 +133,10 @@ html_extra_path = ["_api_docs"]
 html_theme = "sphinx_material"
 # html_theme_options = {"logo_only": True}
 html_theme_options = {
+    # Include the master document at the top of the page in the breadcrumb bar.
+    "master_doc": False,
     # Set the name of the project to appear in the navigation.
-    "nav_title": "Documentation",
+    "nav_title": "oso Documentation",
     # Set you GA account ID to enable tracking
     "google_analytics_account": "UA-139858805-1" if release_mode else "",
     # Specify a base_url used to generate sitemap.xml. If not
@@ -154,13 +157,14 @@ html_theme_options = {
     # "heroes": {"index": "Welcome to the home of the oso documentation!",},
     "html_minify": release_mode,
     "css_minify": release_mode,
+    "nav_links": False,
 }
-
+html_show_sphinx = False
 version_dropdown = True
 version_info = {"release": "/", "devel": "/devel"}
 html_sidebars = {"**": ["globaltoc.html", "localtoc.html"]}
 
-html_logo = "oso_logo_resized.png"
+html_logo = "oso_logo_trimmed.png"
 html_js_files = [
     # "js/custom.js",
 ]

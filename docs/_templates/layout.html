@@ -6,5 +6,29 @@
 {% block footer %} {{ super() }}
 <!-- Start of HubSpot Embed Code -->
 <script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/8091225.js"></script>
-<!-- End of HubSpot Embed Code -->s
+<!-- End of HubSpot Embed Code -->
 {% endblock %}
+
+{%- block extrafooter %}
+<div class="subscribe-form align-right newsletter-footer w-form">
+    <form id="subscribe-form-docs" name="subscribe-form-docs">
+        <label class="matter-textfield-filled">
+            <input type="email" maxlength="256" name="Email-Address" id="Email-Address" required=True
+                placeholder="Email Address">
+        </label>
+        <input type="submit" value="Subscribe" data-wait="Churning..." class="matter-button-contained button-dark">
+    </form>
+</div>
+<div class="subscribe-form">
+    <a href="https://github.com/osohq/">
+        <em class="fab fa-github" aria-hidden="true"></em>
+    </a>
+    <a href="https://oso-oss.slack.com/">
+        <em class="fab fa-slack" aria-hidden="true"></em>
+    </a>
+    <a href="https://twitter.com/osohq">
+        <em class="fab fa-twitter" aria-hidden="true"></em>
+    </a>
+</div>
+{{ super() }}
+{%- endblock %}

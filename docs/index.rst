@@ -1,10 +1,5 @@
-.. oso documentation master file, created by
-   sphinx-quickstart on Fri Mar 20 10:34:51 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to the oso documentation!
-=================================
+oso Documentation
+=================
 
 oso is an **open source policy engine for authorization** that's embedded in your application.
 It provides a declarative policy language for expressing authorization logic,
@@ -28,15 +23,18 @@ oso ships as a library with a debugger and a REPL.
         allow(user, "read", expense) if
             user.email = expense.submitted_by;
 
-You write policies to define authorization logic. You tell it things like who should access what, based
-on what you know about them and their relationship to what they are trying to access.
-Policies are written in a declarative policy language called Polar, then they are loaded into oso.
+You write policies to define authorization logic. You tell oso things like who
+should access what, based on what you know about them and their relationship to
+what they are trying to access. Policies are written in a declarative policy
+language called Polar, then they are loaded into oso.
 
 Using oso, you can:
 
-1. Separate authorization code from business logic
+1. Separate authorization code from business logic, but keep
+data where it is
 2. Express policies concisely with a declarative language
-3. Write policies that call directly into your application
+3. Start from simple building blocks, then extend the system
+as needed
 
 .. button::
     :link: /getting-started/quickstart
@@ -48,32 +46,14 @@ Using oso, you can:
     :class: matter-success
 .. options: matter-primary, matter-secondary, matter-error, matter-warning, matter-success
 
-.. -----
-
-.. toctree::
-    :maxdepth: 1
-    :hidden:
-
-    Home <self>
-
-.. These guides contain a brief introduction to oso. This is a great
-.. starting point if you are new to **oso**.
-
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
    :hidden:
 
    getting-started/quickstart
-   getting-started/download/index
    getting-started/application/index
    Writing Policies <getting-started/policies/index>
-
-.. ----------
-
-.. These guides contain narrative documentation and examples.
-.. This is a good place to go to learn more about implementing
-.. authorization in your application with oso.
 
 .. toctree::
    :maxdepth: 1
@@ -83,8 +63,7 @@ Using oso, you can:
    using/examples/index
    using/polar-syntax
    using/libraries/index
-
-.. ----------
+   more/dev-tools/index
 
 .. toctree::
    :maxdepth: 1
@@ -93,24 +72,13 @@ Using oso, you can:
    :hidden:
 
    more/design-principles
-   more/key-concepts
-   more/dev-tools/index
+   more/glossary
    more/faq
    more/use-cases
    more/performance/index
-   more/language/polar-foundations
    more/security
+   more/language/polar-foundations
    more/internals
-   project/changelogs/index
-
-..
-.. Indices and tables
-.. ==================
-..
-.. * :ref:`genindex`
-.. * :ref:`modindex`
-.. * :ref:`search`
-
 
 
 .. ifconfig:: todo_include_todos

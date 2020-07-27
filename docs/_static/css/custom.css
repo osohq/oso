@@ -9,10 +9,74 @@
     .md-nav--primary .md-nav__title--site {
         background-color: #0E024E !important; 
     }
+    .navheader .nav-dev-preview {
+        display: none;
+    }
+
+    .logo-sidebar {
+        display: unset !important;
+    }
+
+    .nav-dev-preview {
+        background-color: #453e71;
+        border-radius: 20% 5%;
+        color: #ffffffbb;
+        font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-weight: 600;
+    }
+
+}
+
+.logo-sidebar {
+    display: none;
 }
 
 .md-header {
     background-color: #0E024E;
+    height: 3.2rem;
+}
+
+.md-footer-nav {
+    background-color: rgb(251, 251, 251);
+    color: black;
+}
+
+.md-footer-nav__direction {
+    color: black;
+}
+
+.md-header-nav__title {
+    line-height: 3.2rem;
+}
+
+.nav-dev-preview {
+    background-color: #453e71;
+    border-radius: 20% 5%;
+    color: #ffffffbb;
+    margin: 2px;
+    padding: 5px 8px;
+    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 600;
+}
+
+
+
+.md-header-nav__source button {
+    vertical-align: middle;
+    margin: 8px 6px;
+    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 12pt;
+    background-color: #352b70;
+}
+
+.md-footer-meta {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+button.download-button {
+    background-color: #ecd450;
+    color: #222;
 }
 
 .md-tabs {
@@ -20,6 +84,21 @@
 }
 
 /*** End of custom colours ***/
+
+/* Logo/Nav */
+
+.md-header-nav__button.md-logo {
+    padding: 0 !important;
+}
+
+.md-nav span.caption {
+    padding-top: 0.3rem;
+}
+
+/* End Logo/Nav */
+
+
+/* Code formatting */
 
 .literal-block-wrapper {
     background: #eee;
@@ -32,15 +111,9 @@
 
 .highlight {
     background: #fcfcfc;
-    /* border: 1px solid #ddd; */
     border-radius: 6px;
-    margin: 0;
-    /* box-shadow: 0 2px 2px 0 rgba(0,0,0,.14); */
-}
+    margin: 0;}
 
-/* .highlight-polar .highlight {
-    background: #f7f9ff;
-} */
 
 /* Prompts and outputs are not selectable */
 .highlight .gp, .go {
@@ -61,6 +134,17 @@
     margin-left: 0.5rem;
 }
 
+/* Our pretend version of a fontawesome icon for oso */
+.fa-oso {
+    content: url("oso_logo.png");
+    filter: opacity(75%);
+    height: 1rem;
+    vertical-align: middle;
+}
+
+
+/* End code formatting */
+
 .ui.segment {
     padding: 2% !important;
     font-size: inherit !important;
@@ -70,20 +154,13 @@
     font-size: 0.8rem;
 }
 
-/* Our pretend version of a fontawesome icon for oso */
-.fa-oso {
-    content: url("oso_logo.png");
-    filter: opacity(75%);
-    height: 1rem;
-    vertical-align: middle;
-}
 
 .with-columns footer {
     width: 100% !important;
 }
 
 /* Button tweaks */
-article .matter-button-contained {
+article a .matter-button-contained {
     text-align: center;
     min-width: 96px;
     height: 54px;
@@ -97,6 +174,36 @@ article .matter-button-contained {
     font-weight: 900;
 }
 
+.md-typeset .admonition.subscribe > .admonition-title::before {
+    content: "\f0e0";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+}
+
 .md-typeset h1, .md-typeset h2 {
     font-weight: 400;
+}
+
+/* For the footer form */
+footer .subscribe-form {
+    text-align: center;
+}
+
+.subscribe-form .fab {
+    padding:  20px 2px 0px;
+    font-size: 24pt;
+}
+
+.matter-textfield-filled {
+    background-color: white !important;
+    border-radius: 4px !important;
+    border-bottom: none !important;
+}
+
+.matter-textfield-filled > input {
+    border-top: solid 6px transparent !important;
+}
+
+.matter-button-contained.button-dark {
+    background-color: #3e337c;
 }

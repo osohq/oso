@@ -25,7 +25,7 @@ Access control dimensions
 
 Authorization is fundamentally about controlling data access or modification
 based on properties of the actor. This is why ``actor`` and ``resource`` are
-:doc:`primary concepts </more/key-concepts>` in oso.
+:doc:`primary concepts </more/glossary>` in oso.
 
 Control over data access is commonly exercised over several dimensions:
 

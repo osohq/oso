@@ -266,4 +266,4 @@ and behaviors that reside there.
     :class: tip whats-next
 
     Head back to :doc:`/getting-started/quickstart` if you
-    haven't already, or continue on to :doc:`/more/key-concepts`.
+    haven't already, or continue on to :doc:`/more/glossary`.

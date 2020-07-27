@@ -8,7 +8,7 @@ The usual way to query an oso knowledge base is through the API in your
 application's language. But especially during development and debugging,
 it can be useful to interactively query a knowledge base. So oso provides
 a simple REPL (Read, Evaluate, Print, Loop). To run it, first make sure
-that you have :doc:`installed oso </getting-started/download/index>`.
+that you have :doc:`installed oso </download/index>`.
 
 Once oso is installed, launch the REPL from the terminal:
 

@@ -54,7 +54,7 @@ Adding oso
 .. admonition:: Installation
 
   In order to write our first authorization policy, we first need to add oso to
-  our application. If you don't already have it :doc:`installed </getting-started/download/index>`, go ahead and
+  our application. If you don't already have it :doc:`installed </download/index>`, go ahead and
   do so now:
 
   .. todo::
@@ -128,7 +128,7 @@ perform the **action** ``"GET"`` on the
 verb used in our server, but this could be anything.
 
 .. note:: For more on **actors**, **actions**, and **resources**, check out
-  :doc:`/more/key-concepts`.
+  :doc:`/more/glossary`.
 
 oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
@@ -623,14 +623,4 @@ We just blitzed through a ton of stuff:
 
 ------------------------
 
-.. admonition:: Sign up for our newsletter!
-
-    .. raw:: html
-
-        <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/shell.js"></script>
-        <script>
-          hbspt.forms.create({
-            portalId: "8091225",
-            formId: "109f461f-8b3a-4dfa-a942-fd40b6f6e27f"
-        });
-        </script>
+.. include:: /newsletter.rst
