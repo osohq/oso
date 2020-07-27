@@ -51,5 +51,8 @@ class Oso(Polar):
 
         :return: ``True`` if the request is allowed, ``False`` otherwise.
         """
-        result = self.query_predicate("allow", actor, action, resource, single=True)
-        return result.success
+        try:
+            next(self.query_rule("allow", actor, action, resource))
+            return True
+        except StopIteration:
+            return False

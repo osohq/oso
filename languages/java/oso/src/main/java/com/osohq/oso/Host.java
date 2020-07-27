@@ -48,7 +48,8 @@ public class Host implements Cloneable {
      * Store a Java class in the cache by name.
      *
      * @param name
-     * @throws Exceptions.DuplicateClassAliasError If the class is already registered.
+     * @throws Exceptions.DuplicateClassAliasError If the class is already
+     *                                             registered.
      */
     public String cacheClass(Class cls, Function<Map, Object> constructor, String name)
             throws Exceptions.DuplicateClassAliasError {
@@ -100,7 +101,8 @@ public class Host implements Cloneable {
     }
 
     /**
-     * Make an instance of a Java class from a {@code Map<String, Object>} of fields.
+     * Make an instance of a Java class from a {@code Map<String, Object>} of
+     * fields.
      *
      * @param clsName
      * @param fields
@@ -170,37 +172,38 @@ public class Host implements Cloneable {
      * Convert Java Objects to Polar (JSON) terms.
      *
      * @param value Java Object to be converted to Polar.
-     * @return JSONObject Polar term of form: {@code {"id": _, "offset": _, "value": _}}.
+     * @return JSONObject Polar term of form: {@code {"id": _, "offset": _, "value":
+     *         _}}.
      */
     public JSONObject toPolarTerm(Object value) throws Exceptions.OsoException {
         // Build Polar value
         JSONObject jVal = new JSONObject();
-        if (value.getClass() == Boolean.class) {
+        if (value != null && value.getClass() == Boolean.class) {
             jVal.put("Boolean", value);
-        } else if (value.getClass() == Integer.class) {
+        } else if (value != null && value.getClass() == Integer.class) {
             jVal.put("Number", Map.of("Integer", value));
-        } else if (value.getClass() == Float.class || value.getClass() == Double.class) {
+        } else if (value != null && (value.getClass() == Float.class || value.getClass() == Double.class)) {
             jVal.put("Number", Map.of("Float", value));
-        } else if (value.getClass() == String.class) {
+        } else if (value != null && value.getClass() == String.class) {
             jVal.put("String", value);
-        } else if (value.getClass().isArray()) {
+        } else if (value != null && value.getClass().isArray()) {
             jVal.put("List", javaArrayToPolar(value));
-        } else if (value instanceof List) {
+        } else if (value != null && value instanceof List) {
             jVal.put("List", javaListToPolar((List<Object>) value));
-        } else if (value instanceof Map) {
+        } else if (value != null && value instanceof Map) {
             Map<String, JSONObject> jMap = javaMaptoPolar((Map<Object, Object>) value);
             jVal.put("Dictionary", new JSONObject().put("fields", jMap));
-        } else if (value instanceof Predicate) {
+        } else if (value != null && value instanceof Predicate) {
             Predicate pred = (Predicate) value;
             if (pred.args == null)
                 pred.args = new ArrayList<Object>();
             jVal.put("Call", new JSONObject(Map.of("name", pred.name, "args", javaListToPolar(pred.args))));
-        } else if (value instanceof Variable) {
+        } else if (value != null && value instanceof Variable) {
             jVal.put("Variable", value);
         } else {
             JSONObject attrs = new JSONObject();
             attrs.put("instance_id", cacheInstance(value, null));
-            attrs.put("repr", value.toString());
+            attrs.put("repr", value == null ? "null" : value.toString());
             jVal.put("ExternalInstance", attrs);
         }
 

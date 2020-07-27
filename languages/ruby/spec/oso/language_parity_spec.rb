@@ -55,21 +55,21 @@ rescue Oso::Polar::ParseError::UnrecognizedEOF => e
 end
 raise unless exception_thrown
 
-oso.query_predicate('specializers', D.new(x: 'hello'), B::C.new('hello')).next
-oso.query_predicate('floatLists').next
-oso.query_predicate('intDicts').next
-oso.query_predicate('comparisons').next
-oso.query_predicate('testForall').next
-oso.query_predicate('testRest').next
-oso.query_predicate('testMatches', A.new(x: 'hello')).next
-oso.query_predicate('testMethodCalls', A.new(x: 'hello'), B::C.new('hello')).next
-oso.query_predicate('testOr').next
-oso.query_predicate('testHttpAndPathMapper').next
+oso.query_rule('specializers', D.new(x: 'hello'), B::C.new('hello')).next
+oso.query_rule('floatLists').next
+oso.query_rule('intDicts').next
+oso.query_rule('comparisons').next
+oso.query_rule('testForall').next
+oso.query_rule('testRest').next
+oso.query_rule('testMatches', A.new(x: 'hello')).next
+oso.query_rule('testMethodCalls', A.new(x: 'hello'), B::C.new('hello')).next
+oso.query_rule('testOr').next
+oso.query_rule('testHttpAndPathMapper').next
 
 # Test that cut doesn't return anything.
 exception_thrown = false
 begin
-  oso.query_predicate('testCut').next
+  oso.query_rule('testCut').next
 rescue StopIteration
   exception_thrown = true
 end

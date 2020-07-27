@@ -515,7 +515,13 @@ impl PolarVirtualMachine {
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
-                self.value(&symbol).map_or(term.clone(), |t| self.deref(t))
+                self.value(&symbol).map_or(term.clone(), |t| {
+                    if t == term {
+                        t.clone()
+                    } else {
+                        self.deref(t)
+                    }
+                })
             }
             _ => term.clone(),
         }

@@ -29,8 +29,11 @@ class OsoFlask(Oso):
             credentials = {}
         action = request.method.lower()
         resource = Http(path=request.path, hostname=hostname)
-        query = Predicate(name="allow", args=(credentials, action, resource))
-        return list(f(r) for r in self.query(query, single=True).results if f(r))
+        return list(
+            f(r)
+            for r in self.query_rule("allow", credentials, action, resource)
+            if f(r)
+        )
 
     def verify_flask_request(
         self,
@@ -49,5 +52,4 @@ class OsoFlask(Oso):
             credentials = {}
         action = request.method.lower()
         resource = Http(path=request.path, hostname=hostname)
-        query = Predicate(name="allow", args=(credentials, action, resource))
-        return self.query(query, single=True).success
+        return len(list(self.query("allow", credentials, action, resource))) > 0
