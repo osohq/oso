@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "oso",
+  "name": "polar",
   "patterns": [
     { "include": "#inline-query" },
     { "include": "#rule-def-head" },
@@ -139,7 +139,13 @@
       "captures": {
         "2": { "name": "constant.character" }
       }
+    },
+    "operator": {
+      "match": "(+|-|*|/|<|>|=|!)",
+      "captures": {
+        "2": { "name": "keyword.operator" }
+      }
     }
   },
-  "scopeName": "source.oso"
+  "scopeName": "source.polar"
 }

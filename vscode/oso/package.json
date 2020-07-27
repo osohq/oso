@@ -14,10 +14,10 @@
   "contributes": {
     "languages": [
       {
-        "id": "oso",
+        "id": "polar",
         "aliases": [
-          "Oso",
-          "oso"
+          "Polar",
+          "polar"
         ],
         "extensions": [
           ".polar"
@@ -27,9 +27,9 @@
     ],
     "grammars": [
       {
-        "language": "oso",
-        "scopeName": "source.oso",
-        "path": "./syntaxes/oso.tmLanguage.json"
+        "language": "polar",
+        "scopeName": "source.polar",
+        "path": "./syntaxes/polar.tmLanguage.json"
       }
     ]
   }
