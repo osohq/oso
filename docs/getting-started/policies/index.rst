@@ -93,12 +93,12 @@ in a single rule body:
 
 .. tip::
 
-    In these rules we declared some variables with leading understores
+    In these rules we declared some variables with leading underscores
     (``_report``, ``_actor``).  A leading underscore indicates that the variable
     will only be used once (Polar does not distinguish between definition and
     use). These variables are called *singleton variables*, and will match any
     value.  To help prevent errors, a warning will be emitted if a singleton variable
-    is not preceeded by an underscore.
+    is not preceded by an underscore.
 
 As specializers in a rule head
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

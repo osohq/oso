@@ -280,8 +280,8 @@ we want to make sure only authorized expenses are submitted.
 .. tip::
 
     The ``allow_by_path`` rule is a custom rule in our policy that operates
-    on an actor, action, first url path fragement, and the remaining path
-    framements.  A ``PUT /expenses/submit`` request would try to authorize using
+    on an actor, action, first url path fragment, and the remaining path
+    fragment.  A ``PUT /expenses/submit`` request would try to authorize using
     the ``allow_by_path(actor, "PUT", "expenses", ["submit"])`` rule. See
     `our policy`_ for more detail.
 

@@ -93,7 +93,7 @@ Adding oso
 
 
 Now that we've installed oso, let's see how to make some basic authorization
-decsions.
+decisions.
 
 Decisions, decisions...
 =======================
