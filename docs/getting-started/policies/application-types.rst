@@ -73,7 +73,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
             allow(actor, action, resource) if actor.isAdmin;
 
         The above rule expects the ``actor`` variable to be a Java instance with the field ``isAdmin``.
-        The Java instance is passed into oso with a call to ``Oso.allow``:
+        The Java instance is passed into oso with a call to ``Oso.isAllowed``:
 
         .. code-block:: java
             :caption: :fab:`java` User.java
@@ -323,7 +323,7 @@ Summary
   and dictionaries, exactly as if they were application types.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * Explore how to implement common authorization models in oso, like
       **role-based** and **attribute-based access control**:

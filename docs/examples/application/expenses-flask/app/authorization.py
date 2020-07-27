@@ -9,23 +9,19 @@ bp = Blueprint("authorization", __name__)
 @bp.before_app_request
 def authorize_request():
     """Authorize the incoming request"""
-    try:
-        if not current_app.oso.allow(g.current_user, request.method, request):
-            return Forbidden("Not Authorized!")
-    except OsoException as e:
-        current_app.logger.exception(e)
-        return BadRequest(e)
+    if not current_app.oso.is_allowed(g.current_user, request.method, request):
+        return Forbidden("Not Authorized!")
 
 
 def authorize(action, resource):
     """Authorize whether the current user can perform `action` on `resource`"""
-    if current_app.oso.allow(g.current_user, action, resource):
+    if current_app.oso.is_allowed(g.current_user, action, resource):
         return resource
     else:
         raise Forbidden("Not Authorized!")
 
 
-def init_app(app):
+def init_oso(app):
     from .expense import Expense
     from .organization import Organization
     from .user import Actor, Guest, User
@@ -40,6 +36,4 @@ def init_app(app):
     for policy in app.config.get("OSO_POLICIES", []):
         oso.load_file(policy)
 
-    # force load to check for errors
-    oso._load_queued_files()
     app.oso = oso

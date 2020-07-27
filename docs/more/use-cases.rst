@@ -56,5 +56,5 @@ things like AWS IAM or VPN tunnels.
 
 oso has meaningful ambitions to address the full spectrum of authorization use
 cases for users. In the meantime, if you have questions or particular areas
-of interest, we welcome feedback at `engineering@osohq.com <mailto:engineering@osohq.com>`_, or you can
+of interest, we welcome feedback at :email:`engineering@osohq.com`, or you can
 talk to our engineering team directly through the chat widget on this page.

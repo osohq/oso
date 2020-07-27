@@ -126,6 +126,8 @@ matches the expected type - in this case, an ``Admin``.
     you don't accidentally allow access to an unrelated resource which happens
     to have matching fields.
 
+.. _combining_rules:
+
 Combining Rules
 ===============
 
@@ -193,7 +195,7 @@ We covered some of the basics of policies, how to represent conditional
 logic, and the core idea of matching.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * Interested in understanding more about leveraging application types for
       specializers and attribute lookups? Continue on to :doc:`application-types`.
