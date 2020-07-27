@@ -646,4 +646,3 @@ def test_return_none(polar, qeval):
     assert str(e.value).find(
         "Application error: 'NoneType' object has no attribute 'bad_call'"
     )
-
