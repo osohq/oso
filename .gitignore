@@ -169,3 +169,7 @@ cython_debug/
 
 # Java class files
 *.class
+
+.ruby-version
+languages/java/oso/dependency-reduced-pom.xml
+languages/java/oso/src/main/resources/*
