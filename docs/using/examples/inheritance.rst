@@ -158,6 +158,6 @@ application types to condense our policy even further.
 .. admonition:: What's next
     :class: tip whats-next
 
-    * :doc:`Download oso </getting-started/download/index>` to apply this
+    * :doc:`Download oso </download/index>` to apply this
       technique in your app.
     * Check out other :doc:`index`.

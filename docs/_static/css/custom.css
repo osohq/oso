@@ -2,13 +2,145 @@
     background: #343131;
 } */
 
-.md-header {
-    background-color: #0E024E;
+/* Colours */
+
+:root {
+    --oso-primary:#0E024E;
+    --oso-primary-2:#392396;
+    --oso-accent: #e3f6f5;
+    --oso-secondary: #ffd803;
+    --oso-secondary-accent: #bae8e8;
+    --oso-gray-1: #141414;
+    --oso-gray-2: #ebebec;
+    --oso-gray-3: #f8f8f8;
 }
 
-.md-tabs {
-    background-color: #0E024E;
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Light.ttf");
+    font-weight: 300;
 }
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Regular.ttf");
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Medium.ttf");
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-SemiBold.ttf");
+    font-weight: 600;
+}
+
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("./SpaceGrotesk-Bold.ttf");
+    font-weight: 700;
+}
+
+
+
+/*** Set our own custom colours ***/
+
+/* Sidebar colour on mobile */
+@media only screen and (max-width:76.1875em){
+    .md-nav--primary .md-nav__title--site {
+        background-color: var(--oso-primary) !important; 
+    }
+    .navheader .nav-dev-preview {
+        display: none;
+    }
+
+    .logo-sidebar {
+        display: unset !important;
+    }
+
+    .nav-dev-preview {
+        background-color: var(--oso-primary-2);
+        border-radius: 20% 5%;
+        color: #ffffffbb;
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 600;
+    }
+
+}
+
+.logo-sidebar {
+    display: none;
+}
+
+.md-header {
+    background-color: var(--oso-primary);
+    height: 3.2rem;
+}
+
+.md-footer-nav {
+    background-color: var(--oso-accent);
+    color: black;
+}
+
+.md-footer-nav__direction {
+    color: black;
+}
+
+.md-header-nav__title {
+    line-height: 3.2rem;
+}
+
+.nav-dev-preview {
+    /* background-color: #453e71; */
+    border-radius: 20% 5%;
+    color: #ffffffbb;
+    margin: 2px;
+    padding: 6px 9px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+.md-header-nav__source {
+	width: 15.7rem;
+    max-width: 15.7rem;
+    padding-top: 8px;
+}
+
+
+
+.md-footer-meta {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+
+.md-tabs {
+    background-color: var(--oso-primary);
+}
+
+/*** End of custom colours ***/
+
+/* Logo/Nav */
+
+.md-header-nav__button.md-logo {
+    padding: 0 !important;
+}
+
+.md-nav span.caption {
+    padding-top: 0.3rem;
+}
+
+/* End Logo/Nav */
+
+
+/* Code formatting */
 
 .literal-block-wrapper {
     background: #eee;
@@ -21,15 +153,9 @@
 
 .highlight {
     background: #fcfcfc;
-    /* border: 1px solid #ddd; */
     border-radius: 6px;
-    margin: 0;
-    /* box-shadow: 0 2px 2px 0 rgba(0,0,0,.14); */
-}
+    margin: 0;}
 
-/* .highlight-polar .highlight {
-    background: #f7f9ff;
-} */
 
 /* Prompts and outputs are not selectable */
 .highlight .gp, .go {
@@ -50,6 +176,17 @@
     margin-left: 0.5rem;
 }
 
+/* Our pretend version of a fontawesome icon for oso */
+.fa-oso {
+    content: url("oso_logo.png");
+    filter: opacity(75%);
+    height: 1rem;
+    vertical-align: middle;
+}
+
+
+/* End code formatting */
+
 .ui.segment {
     padding: 2% !important;
     font-size: inherit !important;
@@ -59,25 +196,73 @@
     font-size: 0.8rem;
 }
 
-/* Our pretend version of a fontawesome icon for oso */
-.fa-oso {
-    content: url("oso_logo.png");
-    filter: opacity(75%);
-    height: 1rem;
-    vertical-align: middle;
-}
 
 .with-columns footer {
     width: 100% !important;
 }
 
 /* Button tweaks */
-article .matter-button-contained {
+.cta .matter-button-contained {
     text-align: center;
     min-width: 96px;
-    height: 54px;
     font-size: 16pt;
     margin: 1rem;
+    width: 150px;
+    box-shadow: none;
+    height: 54px;
+    font-weight: 600;
+}
+
+button.github {
+    vertical-align: middle;
+    margin: 8px 6px;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 12pt;
+    /* background-color: #352b70; */
+    background-color: transparent;
+    min-width: 128px;
+    border: 1px var(--oso-gray-1) solid;
+}
+
+button.download {
+    background-color: var(--oso-secondary);
+    color: var(--oso-gray-1);
+}
+
+button.get-started {
+    background-color: var(--oso-primary-2);
+}
+
+button.learn-more {
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgba(20, 20, 20, 0.1);
+    background-color: transparent;
+    color: #141414;
+}
+
+button.subscribe {
+    background-color: var(--oso-primary-2);
+    height: 38px;
+}
+
+.cta {
+    padding-top: 10pt;
+    text-align: center;
+    font-size: 16pt;
+}
+
+code.literal {
+	padding: .2em .4em;
+	margin: 0;
+	font-size: 85%;
+	background-color: rgba(27,31,35,.05);
+    border-radius: 6px;
+    font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,monospace;
+}
+
+.admonition.tip > .admonition-title {
+    background-color: var(--oso-accent) !important;
 }
 
 .md-typeset .admonition.whats-next > .admonition-title::before {
@@ -86,6 +271,41 @@ article .matter-button-contained {
     font-weight: 900;
 }
 
+.md-typeset .admonition.subscribe > .admonition-title::before {
+    content: "\f0e0";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+}
+
 .md-typeset h1, .md-typeset h2 {
     font-weight: 400;
+}
+
+/* For the footer form */
+footer .subscribe-form {
+    text-align: center;
+    padding: 0 25%;
+}
+
+.subscribe-form .fab {
+    padding:  20px 2px 0px;
+    font-size: 24pt;
+}
+
+.matter-textfield-filled {
+    background-color: white !important;
+    border-radius: 4px !important;
+    border-bottom: none !important;
+}
+
+.matter-textfield-filled > input {
+    border-top: solid 6px transparent !important;
+}
+
+.md-footer-copyright {
+	margin: 4.0rem .6rem 0 0;
+}
+
+body {
+    font-family: "Space Grotesk", sans-serif;
 }

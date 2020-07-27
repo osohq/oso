@@ -1,6 +1,6 @@
-==================
-Install & Download
-==================
+============
+Installation
+============
 
 oso is available as a library in several languages:
 
@@ -99,20 +99,6 @@ oso is available as a library in several languages:
 - JavaScript
 - Rust
 
-
-.. admonition:: Sign up for our newsletter!
-
-    .. raw:: html
-
-        <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/shell.js"></script>
-        <script>
-          hbspt.forms.create({
-            portalId: "8091225",
-            formId: "109f461f-8b3a-4dfa-a942-fd40b6f6e27f"
-        });
-        </script>
-
-
 Source code
 -----------
 
@@ -120,3 +106,18 @@ The source code for oso is hosted on GitHub.
 
 .. todo::
   Link to GitHub
+
+
+Releases
+--------
+.. toctree::
+    :maxdepth: 1
+    :caption: See below for release notes:
+
+    v0.2.0 <changelogs/0.2.0>
+    v0.1.0 <changelogs/0.1.0>
+    v0.0.4 <changelogs/0.0.4>
+    v0.0.3 <changelogs/0.0.3>
+    v0.0.2 <changelogs/0.0.2>
+
+.. include:: /newsletter.rst

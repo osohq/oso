@@ -60,3 +60,42 @@ class JShellLexer(Lexer):
                 insertions, javalexer.get_tokens_unprocessed(curcode)
             ):
                 yield item
+
+
+class OsoLexer(Lexer):
+    name = "oso session"
+    aliases = ["oso"]
+    mimetypes = ["text/x-polar-doctest"]
+
+    def get_tokens_unprocessed(self, text):
+        polarlexer = PolarLexer(**self.options)
+
+        curcode = ""
+        insertions = []
+
+        qprompt = u"query> "
+        rprompt = u"debug> "
+
+        prompt_len = len(qprompt)
+
+        for match in line_re.finditer(text):
+            line = match.group()
+            if line.startswith(qprompt) or line.startswith(rprompt):
+                insertions.append(
+                    (len(curcode), [(0, token.Generic.Prompt, line[:prompt_len])])
+                )
+                curcode += line[prompt_len:]
+            else:
+                if curcode:
+                    for item in do_insertions(
+                        insertions, polarlexer.get_tokens_unprocessed(curcode)
+                    ):
+                        yield item
+                    curcode = ""
+                    insertions = []
+                yield match.start(), token.Generic.Output, line
+        if curcode:
+            for item in do_insertions(
+                insertions, polarlexer.get_tokens_unprocessed(curcode)
+            ):
+                yield item

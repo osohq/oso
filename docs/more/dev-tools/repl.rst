@@ -8,7 +8,7 @@ The usual way to query an oso knowledge base is through the API in your
 application's language. But especially during development and debugging,
 it can be useful to interactively query a knowledge base. So oso provides
 a simple REPL (Read, Evaluate, Print, Loop). To run it, first make sure
-that you have :doc:`installed oso </getting-started/download/index>`.
+that you have :doc:`installed oso </download/index>`.
 
 Once oso is installed, launch the REPL from the terminal:
 
@@ -41,7 +41,7 @@ At the ``query>`` prompt, type a Polar expression and press ``Enter``.
 The system responds with an answer, then prints the ``query>`` prompt
 again, allowing an interactive dialog:
 
-.. code-block:: polar
+.. code-block:: oso
 
     query> 1 = 1
     true
@@ -102,7 +102,7 @@ on the command line:
 
 And now we can use the rule that was loaded:
 
-.. code-block:: polar
+.. code-block:: oso
 
     query> allow("alice@example.com", "GET", "expense")
     true
