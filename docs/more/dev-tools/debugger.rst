@@ -20,13 +20,13 @@ a rule:
 
 You can also query for it directly from the REPL:
 
-.. code-block:: console
+.. code-block:: oso
 
     query> debug()
 
 When evaluation hits a ``debug()``, the ``debug>`` prompt will appear:
 
-.. code-block:: console
+.. code-block:: oso
 
   Welcome to the debugger!
   debug>
@@ -48,7 +48,7 @@ Help
 
 Print the debugger command reference.
 
-.. code-block:: console
+.. code-block:: oso
 
   debug> help
   Debugger Commands
@@ -89,7 +89,7 @@ The Polar file used in the following examples looks like this:
 
 Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
 
-.. code-block:: console
+.. code-block:: oso
 
   debug> line
   003: c() if debug();
@@ -107,7 +107,7 @@ Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
 
 Continue evaluation after the ``debug()`` predicate.
 
-.. code-block:: console
+.. code-block:: oso
 
   debug> line
   001: a() if debug() and b() and c() and d();
@@ -120,7 +120,7 @@ Continue evaluation after the ``debug()`` predicate.
 
 Continue evaluation until the next query.
 
-.. code-block:: console
+.. code-block:: oso
 
   Welcome to the debugger!
   debug> line
@@ -149,7 +149,7 @@ Continue evaluation until the next query.
 Evaluate goals through the end of the current parent query and stop at the next
 sibling of the parent query (if one exists).
 
-.. code-block:: console
+.. code-block:: oso
 
   Welcome to the debugger!
   debug> line
@@ -183,7 +183,7 @@ The Polar file used in the following examples looks like this:
 
 Print current stack of goals.
 
-.. code-block:: console
+.. code-block:: oso
 
   Welcome to the debugger!
   debug> line
@@ -203,7 +203,7 @@ Print current stack of goals.
 For the current stop point, print the corresponding Polar line and ``<n>``
 lines of additional context above and below it.
 
-.. code-block:: console
+.. code-block:: oso
 
   debug> line
   003: c() if debug();
@@ -220,7 +220,7 @@ lines of additional context above and below it.
 
 Print current stack of queries.
 
-.. code-block:: console
+.. code-block:: oso
 
   debug> line
   001: a() if debug() and b() and c() and d();
@@ -250,7 +250,7 @@ the current scope, print ``<unbound>``.
           available under the names used in the Polar file. ``var`` with no
           argument will list variable names in the current scope.
 
-.. code-block:: console
+.. code-block:: oso
 
   debug> line
   001: a() if x = y and y = z and z = 3 and debug();
@@ -269,7 +269,7 @@ the current scope, print ``<unbound>``.
 
 Print all variable bindings in the current scope.
 
-.. code-block:: console
+.. code-block:: oso
 
   debug> line
   001: a() if x = y and y = z and z = 3 and debug();

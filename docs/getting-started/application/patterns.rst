@@ -25,7 +25,7 @@ Access control dimensions
 
 Authorization is fundamentally about controlling data access or modification
 based on properties of the actor. This is why ``actor`` and ``resource`` are
-:doc:`primary concepts </more/key-concepts>` in oso.
+:doc:`primary concepts </more/glossary>` in oso.
 
 Control over data access is commonly exercised over several dimensions:
 
@@ -101,7 +101,7 @@ control.
 
     A best practice for this type of access control is to integrate the policy
     evaluation point within the **data access layer** (the **M** in MVC).  This
-    ensures that the ``oso.allow`` call is made when an expense is accessed, no
+    ensures that the ``oso.is_allowed`` call is made when an expense is accessed, no
     matter where that access occurs in the application.
 
 .. todo::
@@ -376,7 +376,7 @@ organization.  We could apply this filter, then further restrict access using os
 
         authorized_records = []
 
-        # Use oso.allow to filter records that are not authorized.
+        # Use oso.is_allowed to filter records that are not authorized.
         for record in records:
             if not oso.is_allowed(actor=user, action="view", resource=record):
                 continue
@@ -414,7 +414,7 @@ in your application.
             "SELECT * FROM expenses WHERE location_id = %s AND is_active = 't'",
             user.location_id)
 
-        # Use oso.allow to *confirm* that records are authorized.
+        # Use oso.is_allowed to *confirm* that records are authorized.
         for record in records:
             if not oso.is_allowed(actor=user, action="view", resource=record):
                 if DEBUG:

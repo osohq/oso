@@ -26,13 +26,15 @@ import lexer
 # -- Project information -----------------------------------------------------
 
 project = "oso"
-copyright = "2020, oso"
+copyright = "2020 Oso Security, Inc"
 author = "oso"
 version = "0.2"
 release = "0.2.5"
 
 
 # -- General configuration ---------------------------------------------------
+
+release_mode = os.environ.get("DOCS_RELEASE", "") == "1"
 
 master_doc = "index"
 
@@ -42,17 +44,20 @@ sys.path.append(os.path.abspath("./_ext"))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "button",
+    "email_role",
+    "form_role",
+    "fontawesome",
+    "recommonmark",
+    "sphinx_copybutton",
+    "sphinx_tabs.tabs",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
-    "recommonmark",
-    "sphinx.ext.todo",
     "sphinx.ext.githubpages",
-    "sphinxcontrib.contentui",
-    "sphinx_tabs.tabs",
     "sphinx.ext.ifconfig",
+    "sphinx.ext.todo",
+    "sphinxcontrib.contentui",
     "sphinxcontrib.spelling",
-    "sphinx_copybutton",
-    "fontawesome",
 ]
 
 
@@ -88,8 +93,8 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "theme/**",
-    "project/changelogs/vNEXT.rst",
-    "project/changelogs/vTEMPLATE.rst",
+    "changelogs/vNEXT.rst",
+    "changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
     "more/language/polar-classes.rst",  # we don't currently have classes
@@ -128,19 +133,21 @@ html_extra_path = ["_api_docs"]
 html_theme = "sphinx_material"
 # html_theme_options = {"logo_only": True}
 html_theme_options = {
+    # Include the master document at the top of the page in the breadcrumb bar.
+    "master_doc": False,
     # Set the name of the project to appear in the navigation.
-    "nav_title": "Documentation",
+    "nav_title": "oso Documentation",
     # Set you GA account ID to enable tracking
-    "google_analytics_account": "UA-XXXXX",
+    "google_analytics_account": "UA-139858805-1" if release_mode else "",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
     "base_url": "https://docs.osohq.com/",
     # Set the color and the accent color
     "color_primary": "#0E024E",
-    "color_accent": "#0E024E",
+    "color_accent": "#FFFFFF",
     # Set the repo location to get a badge with stats
     "repo_url": "https://github.com/osohq/oso/",
-    "repo_name": "oso",
+    "repo_name": "osohq/oso",
     # Visible levels of the global TOC; -1 means unlimited
     "globaltoc_depth": 3,
     # If False, expand all TOC entries
@@ -148,20 +155,22 @@ html_theme_options = {
     # If True, show hidden TOC entries
     "globaltoc_includehidden": True,
     # "heroes": {"index": "Welcome to the home of the oso documentation!",},
+    "html_minify": release_mode,
+    "css_minify": release_mode,
+    "nav_links": False,
 }
-
+html_show_sphinx = False
 version_dropdown = True
 version_info = {"release": "/", "devel": "/devel"}
-html_sidebars = {
-    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
-}
+html_sidebars = {"**": ["globaltoc.html", "localtoc.html"]}
 
-html_logo = "oso_logo_resized.png"
+html_logo = "oso_logo_trimmed.png"
 html_js_files = [
-    "js/custom.js",
+    # "js/custom.js",
 ]
 html_css_files = [
     "css/custom.css",
+    "css/matter.css",
 ]
 
 html_favicon = "favicon.ico"
@@ -171,3 +180,5 @@ html_favicon = "favicon.ico"
 doctest_test_doctest_blocks = ""
 
 lexers["polar"] = lexer.PolarLexer()
+lexers["jshell"] = lexer.JShellLexer()
+lexers["oso"] = lexer.OsoLexer()

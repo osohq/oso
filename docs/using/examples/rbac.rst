@@ -201,9 +201,9 @@ attribute-based authorization and show how intuitive it is to write concise,
 flexible, and powerful ABAC rules with oso.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
     * Continue on to learn how RBAC fits in with an implementation of
       :doc:`attribute-based access control <abac>`.
-    * :doc:`Download oso </getting-started/download/index>` and try out RBAC for
+    * :doc:`Download oso </download>` and try out RBAC for
       yourself.

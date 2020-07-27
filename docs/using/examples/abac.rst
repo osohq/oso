@@ -188,8 +188,8 @@ then we need to make sure this logic is evaluated recursively:
 .. TODO: Summary
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
-    * :doc:`Download oso </getting-started/download/index>` to try out ABAC in your app.
+    * :doc:`Download oso </download>` to try out ABAC in your app.
     * See what a :doc:`RBAC-only <rbac>` policy would look like with oso.
     * Check out other :doc:`index`.

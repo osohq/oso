@@ -1,19 +1,10 @@
-from dataclasses import dataclass
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from oso import Oso
 
+from .expense import Expense, EXPENSES
 
-@dataclass
-class Expense:
-    amount: int
-    description: str
-    submitted_by: str
-
-
-EXPENSES = {
-    1: Expense(500, "coffee", "alice@example.com"),
-    2: Expense(5000, "software", "alice@example.com"),
-    3: Expense(50000, "flight", "bhavik@example.com"),
-}
+oso = Oso()
+oso.load_file("expenses.polar")
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -24,12 +15,18 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"\n")
 
     def do_GET(self):
+        actor = self.headers.get("user", None)
+        action = "GET"
+
         try:
             _, resource_type, resource_id = self.path.split("/")
             if resource_type != "expenses":
                 return self._respond("Not Found!", 404)
             resource = EXPENSES[int(resource_id)]
-            self._respond(resource)
+            if oso.is_allowed(actor, action, resource):
+                self._respond(resource)
+            else:
+                self._respond("Not Authorized!", 403)
         except (KeyError, ValueError) as e:
             self._respond("Not Found!", 404)
 
