@@ -317,7 +317,7 @@ impl PartialOrd for Numeric {
         // compare the integer `i` and the float `f`
         // if `swap` then do `f.partial_cmp(i)` otherwise do `i.partial_cmp(f)`
         let cmp_and_swap = |i: i64, f: Float, swap: bool| {
-            if let Ok(i) = u32::try_from(i) {
+            if let Ok(i) = i32::try_from(i) {
                 // integer and float are equal if they are within Ɛ of each other
                 if (f.into_inner() - f64::from(i)).abs() <= f64::EPSILON {
                     Some(std::cmp::Ordering::Equal)
