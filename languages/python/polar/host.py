@@ -182,7 +182,6 @@ class Host:
                 args=[self.to_python(v) for v in value[tag]["args"]],
             )
         elif tag == "Variable":
-            raise PolarRuntimeException(
-                f"variable: {value} is unbound. make sure the value is set before using it in a method call"
-            )
+            return Variable(value[tag])
+
         raise PolarRuntimeException(f"cannot convert {value} to Python")

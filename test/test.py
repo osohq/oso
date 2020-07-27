@@ -61,23 +61,22 @@ except UnrecognizedEOF as e:
     )
 assert exception_thrown
 
-assert oso.query_predicate("specializers", D("hello"), B.C("hello")).success
-assert oso.query_predicate("floatLists").success
-assert oso.query_predicate("intDicts").success
-assert oso.query_predicate("comparisons").success
-assert oso.query_predicate("testForall").success
-assert oso.query_predicate("testRest").success
-assert oso.query_predicate("testMatches", A("hello")).success
-assert oso.query_predicate("testMethodCalls", A("hello"), B.C("hello")).success
-assert oso.query_predicate("testOr").success
-assert oso.query_predicate("testHttpAndPathMapper").success
+assert list(oso.query_rule("specializers", D("hello"), B.C("hello")))
+assert list(oso.query_rule("floatLists"))
+assert list(oso.query_rule("intDicts"))
+assert list(oso.query_rule("comparisons"))
+assert list(oso.query_rule("testForall"))
+assert list(oso.query_rule("testRest"))
+assert list(oso.query_rule("testMatches", A("hello")))
+assert list(oso.query_rule("testMethodCalls", A("hello"), B.C("hello")))
+assert list(oso.query_rule("testOr"))
+assert list(oso.query_rule("testHttpAndPathMapper"))
 
 # Test that cut doesn't return anything.
-assert oso.query_predicate("testCut").success is False
+assert not list(oso.query_rule("testCut"))
 
 import math
 
 # Test that a constant can be called.
 oso.register_constant("Math", math)
 oso.load_str("?= Math.factorial(5) == 120;")
-

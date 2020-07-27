@@ -22,12 +22,16 @@ class Polar:
 
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
         self.ffi_polar = lib.polar_new()
-        self.host = Host(self.ffi_polar, classes=classes, constructors=constructors)
+        self.host = Host(self.ffi_polar)
         self.load_queue = []
 
         # Register built-in classes.
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
+
+        # Pre-registered classes.
+        for name, cls in classes.items():
+            self.register_class(cls, name=name, from_polar=constructors[name])
 
     def __del__(self):
         del self.host
@@ -52,9 +56,20 @@ class Polar:
 
     def load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
-        load_str(self.ffi_polar, string, None, self.run)
+        load_str(self.ffi_polar, string, None)
 
-    def query(self, query, single=False):
+        # check inline queries
+        while True:
+            query = lib.polar_next_inline_query(self.ffi_polar)
+            if is_null(query):  # Load is done
+                break
+            else:
+                try:
+                    next(Query(query, host=self.host.copy()).run())
+                except StopIteration:
+                    raise PolarRuntimeException("Inline query in file failed.")
+
+    def query(self, query):
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
@@ -76,28 +91,18 @@ class Polar:
         else:
             raise PolarApiException(f"Can not query for {query}")
 
-        results = []
-        for result in self.run(query, host=host):
-            results.append(result)
-            if single:
-                break
-        return QueryResult(results)
+        for res in Query(query, host=host).run():
+            yield res["bindings"]
 
-    def query_predicate(self, name, *args, **kwargs):
-        """Query for predicate with name ``name`` and args ``args``.
+    def query_rule(self, name, *args):
+        """Query for rule with name ``name`` and args ``args``.
 
         :param name: The name of the predicate to query.
         :param args: Arguments for the predicate.
 
         :return: The result of the query.
         """
-        return self.query(Predicate(name=name, args=args), **kwargs)
-
-    def run(self, query, host=None):
-        """Send an FFI query object to a new Query object for evaluation."""
-        if host is None:
-            host = self.host.copy()
-        return Query(self.ffi_polar, host=host).run(query)
+        return self.query(Predicate(name=name, args=args))
 
     def repl(self, load=True):
         """Start an interactive REPL session."""
@@ -120,7 +125,8 @@ class Polar:
 
             result = False
             try:
-                for res in self.run(ffi_query):
+                query = Query(ffi_query, host=self.host.copy()).run()
+                for res in query:
                     result = True
                     bindings = res["bindings"]
                     pprint(bindings if bindings else True)
@@ -148,7 +154,7 @@ class Polar:
         while self.load_queue:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
-                load_str(self.ffi_polar, file.read(), filename, self.run)
+                load_str(self.ffi_polar, file.read(), filename)
 
 
 def polar_class(_cls=None, *, name=None, from_polar=None):

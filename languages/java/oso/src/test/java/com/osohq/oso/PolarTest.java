@@ -43,6 +43,10 @@ public class PolarTest {
         public static String myStaticMethod() {
             return "hello world";
         }
+
+        public String myReturnNull() {
+            return null;
+        }
     }
 
     public static class MySubClass extends MyClass {
@@ -91,18 +95,17 @@ public class PolarTest {
     public void testBasicQueryPred() throws Exception {
         // test basic query
         p.loadStr("f(a, b) if a = b;");
-        assertFalse(p.query("f", List.of(1, 1)).results().isEmpty(), "Basic predicate query failed.");
-        assertTrue(p.query("f", List.of(1, 2)).results().isEmpty(),
-                "Basic predicate query expected to fail but didn't.");
+        assertFalse(p.queryRule("f", 1, 1).results().isEmpty(), "Basic predicate query failed.");
+        assertTrue(p.queryRule("f", 1, 2).results().isEmpty(), "Basic predicate query expected to fail but didn't.");
     }
 
     @Test
     public void testQueryPredWithObject() throws Exception {
         // test query with Java Object
         p.loadStr("g(x) if x.id = 1;");
-        assertFalse(p.query("g", List.of(new MyClass("test", 1))).results().isEmpty(),
+        assertFalse(p.queryRule("g", new MyClass("test", 1)).results().isEmpty(),
                 "Predicate query with Java Object failed.");
-        assertTrue(p.query("g", List.of(new MyClass("test", 2))).results().isEmpty(),
+        assertTrue(p.queryRule("g", new MyClass("test", 2)).results().isEmpty(),
                 "Predicate query with Java Object expected to fail but didn't.");
     }
 
@@ -110,7 +113,7 @@ public class PolarTest {
     public void testQueryPredWithVariable() throws Exception {
         // test query with Variable
         p.loadStr("f(a, b) if a = b;");
-        assertTrue(p.query("f", List.of(1, new Variable("result"))).results().equals(List.of(Map.of("result", 1))),
+        assertTrue(p.queryRule("f", 1, new Variable("result")).results().equals(List.of(Map.of("result", 1))),
                 "Predicate query with Variable failed.");
     }
 
@@ -250,14 +253,14 @@ public class PolarTest {
     public void testReturnJavaInstanceFromCall() throws Exception {
         MyClass c = new MyClass("test", 1);
         p.loadStr("test(c: MyClass) if x = c.mySubClass(c.name, c.id) and x.id = c.id;");
-        assertFalse(p.query("test", List.of(c)).results().isEmpty());
+        assertFalse(p.queryRule("test", c).results().isEmpty());
     }
 
     @Test
     public void testEnumerationCallResults() throws Exception {
         MyClass c = new MyClass("test", 1);
         p.loadStr("test(c: MyClass, x) if x = c.myEnumeration;");
-        List<HashMap<String, Object>> results = p.query("test", List.of(c, new Variable("x"))).results();
+        List<HashMap<String, Object>> results = p.queryRule("test", c, new Variable("x")).results();
         assertTrue(results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world"))));
     }
 
@@ -271,41 +274,39 @@ public class PolarTest {
     @Test
     public void testListMethods() throws Exception {
         p.loadStr("f(x) if x.size() = 3;");
-        assertFalse(p.query("f", List.of(new ArrayList(Arrays.asList(1, 2, 3)))).results().isEmpty());
-        assertTrue(p.query("f", List.of(new ArrayList(Arrays.asList(1, 2, 3, 4)))).results().isEmpty());
+        assertFalse(p.queryRule("f", new ArrayList(Arrays.asList(1, 2, 3))).results().isEmpty());
+        assertTrue(p.queryRule("f", new ArrayList(Arrays.asList(1, 2, 3, 4))).results().isEmpty());
 
-        assertFalse(p.query("f", List.of(new int[] { 1, 2, 3 })).results().isEmpty());
-        assertTrue(p.query("f", List.of(new int[] { 1, 2, 3, 4 })).results().isEmpty());
+        assertFalse(p.queryRule("f", new int[] { 1, 2, 3 }).results().isEmpty());
+        assertTrue(p.queryRule("f", new int[] { 1, 2, 3, 4 }).results().isEmpty());
     }
 
     @Test
     public void testExternalIsa() throws Exception {
         p.loadStr("f(a: MyClass, x) if x = a.id;");
-        List<HashMap<String, Object>> result = p.query("f", List.of(new MyClass("test", 1), new Variable("x")))
-                .results();
+        List<HashMap<String, Object>> result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
         assertTrue(result.equals(List.of(Map.of("x", 1))));
         p.clear();
 
         p.loadStr("f(a: MySubClass, x) if x = a.id;");
-        result = p.query("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
+        result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
         assertTrue(result.isEmpty(), "Failed to filter rules by specializers.");
         p.clear();
 
         p.loadStr("f(a: OtherClass, x) if x = a.id;");
         assertThrows(Exceptions.UnregisteredClassError.class,
-                () -> p.query("f", List.of(new MyClass("test", 1), new Variable("x"))).results());
+                () -> p.queryRule("f", new MyClass("test", 1), new Variable("x")).results());
     }
 
     @Test
     public void testExternalIsSubSpecializer() throws Exception {
         p.loadStr("f(a: MySubClass, x) if x = 1;");
         p.loadStr("f(a: MyClass, x) if x = 2;");
-        List<HashMap<String, Object>> result = p.query("f", List.of(new MySubClass("test", 1), new Variable("x")))
-                .results();
+        List<HashMap<String, Object>> result = p.queryRule("f", new MySubClass("test", 1), new Variable("x")).results();
         assertTrue(result.equals(List.of(Map.of("x", 1), Map.of("x", 2))),
                 "Failed to order rules based on specializers.");
 
-        result = p.query("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
+        result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
         assertTrue(result.equals(List.of(Map.of("x", 2))), "Failed to order rules based on specializers.");
     }
 
@@ -313,7 +314,7 @@ public class PolarTest {
     public void testReturnListFromCall() throws Exception {
         p.loadStr("test(c: MyClass) if \"hello\" in c.myList;");
         MyClass c = new MyClass("test", 1);
-        assertFalse(p.query("test", List.of(c)).results().isEmpty());
+        assertFalse(p.queryRule("test", c).results().isEmpty());
     }
 
     @Test
@@ -417,6 +418,24 @@ public class PolarTest {
                 "Expected error.");
     }
 
+    @Test
+    public void testUnboundVariable() throws Exception {
+        p.loadStr("rule(x, y) if y = 1;");
+        List<HashMap<String, Object>> results = p.query("rule(x, y)").results();
+        HashMap<String, Object> result = results.get(0);
+        assertTrue(result.get("x") instanceof Variable);
+        assertEquals(result.get("y"), 1);
+    }
+
+    public void testReturnNull() throws Exception {
+        p.loadStr("f(x) if x.myReturnNull = 1;");
+        assertTrue(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
+
+        p.loadStr("f(x) if x.myReturnNull.badCall = 1;");
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryRule("f", new MyClass("test", 1)).results());
+
+    }
+
     /*** TEST OSO ***/
     @Test
     public void testPathMapper() throws Exception {
@@ -435,4 +454,5 @@ public class PolarTest {
         Http http13 = new Http(null, "/myclass/13", null);
         assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
     }
+
 }
