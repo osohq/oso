@@ -306,6 +306,8 @@ public class Host implements Cloneable {
             case "Call":
                 List<Object> args = polarListToJava(value.getJSONObject(tag).getJSONArray("args"));
                 return new Predicate(value.getJSONObject(tag).getString("name"), args);
+            case "Variable":
+                return new Variable(value.getString(tag));
             default:
                 throw new Exceptions.UnexpectedPolarTypeError(tag);
         }
