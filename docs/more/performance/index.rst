@@ -2,101 +2,116 @@
 Performance
 ===========
 
-This page explores the performance of oso across three main axes
-to help you understand the topic:
+This page explores the performance of oso across three main axes:
 
-- **In practice**. How does oso perform under typical workloads?
-- **Internals and Microbenchmarks**. How is oso built? What are the micro-benchmarks?
-- **Scaling**. What is the theoretical complexity of a query?
+**1. In practice**. How does oso perform under typical workloads?
+
+**2. Internals and Microbenchmarks**. How is oso built? What are the micro-benchmarks?
+
+**3. Scaling**. What is the theoretical complexity of a query?
 
 
 In Practice
 -----------
 
-There are two main areas consider when measuring the
-performance of oso queries: the time to evaluate a policy, and the time to
-fetch application data.
+There are two main areas to consider when measuring the performance
+of oso queries: the time to evaluate a query relative to a policy,
+and the time needed to fetch application data.
 
-Within a complex policy, the time it takes to run a single query depends on the
-complexity of the *answer*. For example, if we have a simple rule that says
-anyone can "GET" the path "/", this will execute in **less than 1 ms**. On the other hand, if the rule you are querying makes use of: HTTP path mapping,
-resource lookups, roles, inheritance, etc. this can take *approximately*
-**1-20 ms**. These numbers are based on queries executing with a local sqlite instance to isolate oso's performance as best as possible from the time to perform database
-queries.
+In a complex policy, the time it takes to run a single query depends on the
+complexity of the *answer*. For example, a simple rule that says anyone can
+"GET" the path "/" will execute in **less than 1 ms**. On the other hand,
+rules that use HTTP path mapping, resource lookups, roles, inheritance, etc.
+can take *approximately* **1-20 ms**. (These numbers are based on queries
+executing against a local sqlite instance to isolate oso's performance from
+the time to perform database queries.)
 
-The time to fetch application data is, of course, dependent on your specific environment and independent of oso.
+The time needed to fetch application data is, of course, dependent on your
+specific environment and independent of oso. Aggressive caching can be used
+to reduce some of the effect of such latencies.
 
 **Profiling**
 
-oso does not currently have built-in profiling tools, but this is a high-priority item
-priority on our near-term roadmap.
+oso does not currently have built-in profiling tools, but this is a
+high-priority item on our near-term roadmap. Our benchmark suite uses
+Rust's statistical profiling package, but is currently better suited to
+optimizing the implementation than to optimizing a specific policy.
 
-oso has a default maximum execution time set to 30s. If you hit this maximum, it likely means
-that either you have many expensive lookups, or have created an infinite
-loop / recursive call in your policy.
+oso has a default maximum query execution time of 30s. If you hit this maximum,
+it likely means that you have created an infinite loop in your policy. You
+can use the :doc:`Polar debugger </more/dev-tools/debugger>` to help track
+down such bugs.
 
-For any performance issues caused by slow database queries or too many database queries, we recommend that you address these issues at the data access layer, i.e., in the
-application. See, for example, our guidance on :doc:`n_plus_one`.
+For performance issues caused by slow database queries or too many database
+queries, we recommend that you address these issues at the data access layer,
+i.e., in the application. See, for example, our guidance on :doc:`n_plus_one`.
 
 Internals and Micro-benchmarks
 ------------------------------
 
-The core of oso is Polar. This is written in Rust, and creates a virtual machine to
-execute queries (for more on this, see :doc:`/more/internals`).
+The core of oso is the Polar virtual machine, which is written in Rust.
+(For more on the architecture and implementation, see :doc:`/more/internals`.)
+A single step of the virtual machine takes approximately **1-2 us**, depending
+on the instruction or *goal*. Simple operations like comparisons and assignment
+typically take just a few instructions, whereas more complex operations like
+pattern matching against an application type or looking up application data
+need a few more. The debugger can show you the VM instructions remaining to
+be executed during a query using the ``goals`` command.
 
-A single step of the virtual machine takes approximately **1-2 us** (depending on
-the instruction).
+The `current implementation <https://github.com/osohq/oso>`_  of oso has
+not yet been aggressively optimized for performance, but several low-hanging
+opportunities for optimizations (namely, caches and indices) are on our
+near-term roadmap. We do ensure that all memory allocated during a query
+is reclaimed by its end, and our use of Rust ensures that the implementation
+is not vulnerable to many common classes of memory errors and leaks.
 
-Simple operations like comparisons and assignment typically need just a
-few instructions, whereas more complex operations like using specializers
-to check if the input matches an application type, or looking up application
-data need a few more.
-
-The `current implementation <https://github.com/osohq/oso>`_  of oso has not yet
-been aggressively performance optimized. It uses Rust's built-in
-reference-counting to clean up any values created in the execution of a query.
-
-You can see our benchmark suite in the
+You can check out our current benchmark suite in the
 `repository <https://github.com/osohq/oso/tree/main/polar/benches>`_,
-along with instructions on how to run them.
-
-We would be delighted to accept any example queries that people would like to
-see profiled. Please feel free to email us at :email:`engineering@osohq.com`.
+along with instructions on how to run it. We would be delighted to accept
+any example queries that you would like to see profiled; please feel free
+to email us at :email:`engineering@osohq.com`.
 
 Scaling
 -------
 
 At its core, answering queries against a declarative policy is a depth-first
-search problem. Where nodes correspond to rules, and nodes are connected if a
+search problem: nodes correspond to rules, and nodes are connected if a
 rule references another rule :ref:`in its body <combining_rules>`.
 
 As a result, the algorithmic complexity of a policy is *in theory* very large —
 exponential in the number of rules. However, *in practice* there shouldn't be
 that many distinct paths that need to be taken to make a policy decision. oso
 filters out rules that cannot be applied to the inputs early on in the
-execution. What this means is that if you are hitting a scaling issue you can
-make your policies perform better either by splitting up rules to limit the
-number of possibilities, or by adding more qualifiers to a rule such.
+execution. What this means is that if you are hitting a scaling issue, you can
+make your policies perform better by either by splitting up your rules to limit
+the number of possibilities, or by adding more specializers to your rule heads.
 
-For example, if you have 20 different resources, ``ResourceA``, ``ResourceB``, ...,
-and each has 10 or so ``allow(actor, action, resource: ResourceA)`` rules. The
-performance of evaluating a rule with input of type `ResourceA` will primarily
-depend on those 10 related rules, and not the other 190 rules. In addition, you
-might consider refactoring this rule to ``allow(actor, action, resource:
-ResourceA) if allowResourceA(actor, action, resource)`` . This means there are
-only 20 ``allow`` rules to sort through, and for a given resource only one of
-these will even need to be evaluated.
+For example, suppose you have 20 different resources, ``ResourceA``, ``ResourceB``,
+..., and each has 10 or so ``allow(actor, action, resource: ResourceA)`` rules.
+The performance of evaluating a rule with input of type `ResourceA` will primarily
+depend on those 10 specific rules, and not the other 190 rules. In addition,
+you might consider refactoring this rule to ``allow(actor, action, resource:
+ResourceA) if allowResourceA(actor, action, resource)``. This would mean there
+are only 20 ``allow`` rules to sort through, and for a given resource only one
+of them will ever need to be evaluated.
 
-The performance of evaluating policies is usually independent of the number of
-users or resources in the application when fetching data is handled by your
-application. However, if a large amount of data is returned to oso for making a
-policy decision, it's potentially very costly.
+The performance of evaluating policies is usually independent of the number
+of users or resources in the application when fetching data is handled by your
+application. However, as in any programming system, you need to be on the
+lookout for linear and super-linear searches. For example, if you have a method
+``user.expenses()`` that returns a list of the user's expenses, the check
+``expense in user.expenses()`` will require `O(n)` VM instructions, where `n`
+is the length of the list. It would be better to replace the linear search
+with a single comparison, e.g. ``expense.user_id = user.id``. Be especially
+careful when nesting such rules.
 
-For example, if you have a method ``user.expenses()`` that returns a list of the
-user's expenses, and you want to check ``expense in user.expenses()``, this will
-be an ``O(n)`` operation, in terms of Polar VM instructions. It would be better to
-avoid this by reworking this, e.g. ``expense.user_id = user.id``.
-
+Summary
+-------
+oso typically answers simple authorization queries in **less than 1 ms**,
+but may take (much) longer depending on the complexity of your rules, the
+latency of application data access, and algorithmic choices. Some simple
+solutions such as caching and refactoring may be used to improve performance
+where needed.
 
 .. toctree::
     :hidden:

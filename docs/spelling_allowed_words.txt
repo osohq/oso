@@ -24,6 +24,7 @@ disambiguated
 instantiation
 precompiled
 arities
+latencies
 superclass
 pseudocode
 performant
