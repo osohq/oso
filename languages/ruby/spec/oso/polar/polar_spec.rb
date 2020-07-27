@@ -245,6 +245,22 @@ RSpec.describe Oso::Polar::Polar do
     it 'on dicts' do
       expect(query(subject, 'd = {a: 1} and d.fetch("a") = 1 and d.fetch("b", 2) = 2').length).to be 1
     end
+
+    it 'that return nil' do
+        stub_const('Foo', Class.new do
+          def this_is_nil
+            nil
+          end
+        end)
+
+        subject.register_class(Foo, from_polar: -> { Foo.new })
+        subject.load_str("f(x) if x.this_is_nil = 1;")
+        expect(subject.query_predicate('f', Foo.new).to_a).to eq([])
+
+        subject.load_str("f(x) if x.this_is_nil.bad_call = 1;")
+        expect { subject.query_predicate('f', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
+    end
+
   end
 
   context '#register_class' do

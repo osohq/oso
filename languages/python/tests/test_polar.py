@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from polar import polar_class
 from polar import exceptions, Polar, Predicate, Query, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
-from polar.exceptions import ParserException
+from polar.exceptions import ParserException, PolarRuntimeException
 
 import pytest
 
@@ -628,3 +628,22 @@ def test_unbound_variable(polar, query):
 
     # x should be unbound
     assert isinstance(first["x"], Variable)
+
+
+def test_return_none(polar, qeval):
+    class Foo:
+        def this_is_none(self):
+            return None
+
+    polar.register_class(Foo)
+    polar.load_str("f(x) if x.this_is_none = 1;")
+    assert not list(polar.query_rule("f", Foo()))
+
+    polar.load_str("f(x) if x.this_is_none.bad_call = 1;")
+
+    with pytest.raises(exceptions.PolarRuntimeException) as e:
+        list(polar.query_rule("f", Foo()))
+    assert str(e.value).find(
+        "Application error: 'NoneType' object has no attribute 'bad_call'"
+    )
+

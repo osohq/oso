@@ -43,6 +43,10 @@ public class PolarTest {
         public static String myStaticMethod() {
             return "hello world";
         }
+
+        public String myReturnNull() {
+            return null;
+        }
     }
 
     public static class MySubClass extends MyClass {
@@ -416,11 +420,21 @@ public class PolarTest {
 
     @Test
     public void testUnboundVariable() throws Exception {
-      p.loadStr("rule(x, y) if y = 1;");
-      List<HashMap<String, Object>> results = p.query("rule(x, y)").results();
-      HashMap<String, Object> result = results.get(0);
-      assertTrue(result.get("x") instanceof Variable);
-      assertEquals(result.get("y"), 1);
+        p.loadStr("rule(x, y) if y = 1;");
+        List<HashMap<String, Object>> results = p.query("rule(x, y)").results();
+        HashMap<String, Object> result = results.get(0);
+        assertTrue(result.get("x") instanceof Variable);
+        assertEquals(result.get("y"), 1);
+    }
+
+    public void testReturnNull() throws Exception {
+        p.registerClass(Foo.class, m -> new Foo(), "Foo");
+        p.loadStr("f(x) if x.myReturnNull = 1;");
+        assertTrue(p.queryRule("f", new Foo()).results().isEmpty());
+
+        p.loadStr("f(x) if x.myReturnNull.badCall = 1;");
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryRule("f", new Foo()).results());
+
     }
 
     /*** TEST OSO ***/
@@ -441,4 +455,5 @@ public class PolarTest {
         Http http13 = new Http(null, "/myclass/13", null);
         assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
     }
+
 }
