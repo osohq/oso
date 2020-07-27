@@ -464,7 +464,7 @@ request filter.
             ("location_id", "=", user.location_id)
         ]
 
-        # Use ``query_predicate`` to evaluate a rule that authorizes the filter.
+        # Use ``query_rule`` to evaluate a rule that authorizes the filter.
         if not oso.query_rule("allow_filter", user, "view", "expense", auth_filters):
             return NotAuthorizedResponse()
 
