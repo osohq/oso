@@ -12,7 +12,7 @@ module Oso
     end
 
     def allowed?(actor:, action:, resource:)
-      query_predicate('allow', actor, action, resource).next
+      query_rule('allow', actor, action, resource).next
       true
     rescue StopIteration
       false

@@ -504,7 +504,7 @@ def test_instance_cache(polar, qeval):
     assert Counter.count == 0
     c = Counter()
     assert Counter.count == 1
-    assert polar.query_predicate("f", c).success
+    assert polar.query_rule("f", c).success
     assert Counter.count == 1
     assert c not in polar.host.instances.values()
 

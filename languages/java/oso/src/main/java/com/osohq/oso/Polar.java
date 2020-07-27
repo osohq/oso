@@ -85,23 +85,23 @@ public class Polar {
      * @param query String string
      * @return Query object (Enumeration of resulting variable bindings).
      */
-    public Query query(String query) throws Exceptions.OsoException {
+    public Query queryStr(String query) throws Exceptions.OsoException {
         loadQueuedFiles();
         return new Query(ffiPolar.newQueryFromStr(query), host.clone());
     }
 
     /**
-     * Query for a predicate.
+     * Query for a rule.
      *
-     * @param predicate Predicate name, e.g. "f" for predicate "f(x)".
-     * @param args List of predicate arguments.
+     * @param rule Rule name, e.g. "f" for rule "f(x)".
+     * @param args List of rule arguments.
      * @return Query object (Enumeration of resulting variable bindings).
      * @throws Exceptions.OsoException
      */
-    public Query query(String predicate, List<Object> args) throws Exceptions.OsoException {
+    public Query queryRule(String rule, List<Object> args) throws Exceptions.OsoException {
         loadQueuedFiles();
         Host new_host = host.clone();
-        String pred = new_host.toPolarTerm(new Predicate(predicate, args)).toString();
+        String pred = new_host.toPolarTerm(new Predicate(rule, args)).toString();
         return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
     }
 

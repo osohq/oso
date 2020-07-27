@@ -52,7 +52,13 @@ def query(polar):
     """ Query something and return the results as a list """
 
     def _query(q):
-        return polar.query(q).results
+        if isinstance(q, str):
+            res = polar.query_str(q)
+        elif isinstance(q, Predicate):
+            res = polar.query_rule(q.name, q.args)
+        else:
+            raise PolarApiException(f"Can not query for {query}")
+        return res.results
 
     return _query
 

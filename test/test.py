@@ -61,19 +61,19 @@ except UnrecognizedEOF as e:
     )
 assert exception_thrown
 
-assert oso.query_predicate("specializers", D("hello"), B.C("hello")).success
-assert oso.query_predicate("floatLists").success
-assert oso.query_predicate("intDicts").success
-assert oso.query_predicate("comparisons").success
-assert oso.query_predicate("testForall").success
-assert oso.query_predicate("testRest").success
-assert oso.query_predicate("testMatches", A("hello")).success
-assert oso.query_predicate("testMethodCalls", A("hello"), B.C("hello")).success
-assert oso.query_predicate("testOr").success
-assert oso.query_predicate("testHttpAndPathMapper").success
+assert oso.query_rule("specializers", D("hello"), B.C("hello")).success
+assert oso.query_rule("floatLists").success
+assert oso.query_rule("intDicts").success
+assert oso.query_rule("comparisons").success
+assert oso.query_rule("testForall").success
+assert oso.query_rule("testRest").success
+assert oso.query_rule("testMatches", A("hello")).success
+assert oso.query_rule("testMethodCalls", A("hello"), B.C("hello")).success
+assert oso.query_rule("testOr").success
+assert oso.query_rule("testHttpAndPathMapper").success
 
 # Test that cut doesn't return anything.
-assert oso.query_predicate("testCut").success is False
+assert oso.query_rule("testCut").success is False
 
 import math
 

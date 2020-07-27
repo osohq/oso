@@ -72,11 +72,7 @@ class Polar:
         if isinstance(query, str):
             query = check_result(lib.polar_new_query(self.ffi_polar, to_c_str(query)))
         elif isinstance(query, Predicate):
-            query = check_result(
-                lib.polar_new_query_from_term(
-                    self.ffi_polar, ffi_serialize(host.to_polar_term(query))
-                )
-            )
+
         else:
             raise PolarApiException(f"Can not query for {query}")
 
@@ -87,15 +83,19 @@ class Polar:
                 break
         return QueryResult(results)
 
-    def query_predicate(self, name, *args, **kwargs):
-        """Query for predicate with name ``name`` and args ``args``.
+    def query_rule(self, name, *args, **kwargs):
+        """Query for rule with name ``name`` and args ``args``.
 
         :param name: The name of the predicate to query.
         :param args: Arguments for the predicate.
 
         :return: The result of the query.
         """
-        return self.query(Predicate(name=name, args=args), **kwargs)
+        return check_result(
+            lib.polar_new_query_from_term(
+                self.ffi_polar, ffi_serialize(host.to_polar_term(Predicate(name=name, args=args))
+            )
+        )
 
     def run(self, query, host=None):
         """Send an FFI query object to a new Query object for evaluation."""

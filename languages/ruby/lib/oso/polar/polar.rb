@@ -73,12 +73,12 @@ module Oso
         Query.new(ffi_query, host: new_host).results
       end
 
-      # Query for a predicate.
+      # Query for a rule.
       #
       # @param name [String]
       # @param args [Array<Object>]
       # @raise [Error] if the FFI call raises one.
-      def query_predicate(name, *args)
+      def query_rule(name, *args)
         query(Predicate.new(name, args: args))
       end
 
