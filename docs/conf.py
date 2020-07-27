@@ -181,3 +181,4 @@ doctest_test_doctest_blocks = ""
 
 lexers["polar"] = lexer.PolarLexer()
 lexers["jshell"] = lexer.JShellLexer()
+lexers["oso"] = lexer.OsoLexer()

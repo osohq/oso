@@ -41,7 +41,7 @@ At the ``query>`` prompt, type a Polar expression and press ``Enter``.
 The system responds with an answer, then prints the ``query>`` prompt
 again, allowing an interactive dialog:
 
-.. code-block:: polar
+.. code-block:: oso
 
     query> 1 = 1
     true
@@ -102,7 +102,7 @@ on the command line:
 
 And now we can use the rule that was loaded:
 
-.. code-block:: polar
+.. code-block:: oso
 
     query> allow("alice@example.com", "GET", "expense")
     true
