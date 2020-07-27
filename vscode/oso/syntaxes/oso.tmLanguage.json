@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "Polar",
+  "name": "oso",
   "patterns": [
     { "include": "#inline-query" },
     { "include": "#rule-def-head" },
@@ -37,14 +37,7 @@
         { "include": "#comment" },
         { "include": "#string" },
         { "include": "#number" },
-        { "include": "#and" },
-        { "include": "#or" },
-        { "include": "#not" },
-        { "include": "#new" },
-        { "include": "#unify" },
-        { "include": "#in" },
-        { "include": "#forall" },
-        { "include": "#matches" }
+        { "include": "#keyword" }
       ]
     },
     "comment": {
@@ -64,16 +57,31 @@
     },
     "number": {
       "name": "constant.numeric",
-      "match": "[-]?[0-9]*\\.?[0-9]+"
+      "match": "-?[0-9]*.?[0-9]+([eE][-+]?[0-9]+)?"
+    },
+    "keyword": {
+      "patterns": [
+        { "include": "#and" },
+        { "include": "#or" },
+        { "include": "#not" },
+        { "include": "#new" },
+        { "include": "#unify" },
+        { "include": "#in" },
+        { "include": "#matches" },
+        { "include": "#forall" },
+        { "include": "#debug" },
+        { "include": "#print" },
+        { "include": "#cut" }
+      ]
     },
     "and": {
-      "match": "(\\s)(and)(\\s)",
+      "match": "(\\s?)(and)(\\s)",
       "captures": {
         "2": { "name": "constant.character" }
       }
     },
     "or": {
-      "match": "(\\s)(or)(\\s)",
+      "match": "(\\s?)(or)(\\s)",
       "captures": {
         "2": { "name": "constant.character" }
       }
@@ -91,29 +99,47 @@
       }
     },
     "unify": {
-      "match": "(\\s)(unify)(\\s)",
+      "match": "(\\s?)(unify)(\\s)",
       "captures": {
         "2": { "name": "constant.character" }
       }
     },
     "in": {
-      "match": "(\\s)(in)(\\s)",
-      "captures": {
-        "2": { "name": "constant.character" }
-      }
-    },
-    "forall": {
-      "match": "(\\s)(forall)(\\()",
+      "match": "(\\s?)(in)(\\s)",
       "captures": {
         "2": { "name": "constant.character" }
       }
     },
     "matches": {
-      "match": "(\\s)(matches)(\\s)",
+      "match": "(\\s?)(matches)(\\s)",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "forall": {
+      "match": "(\\s?)(forall)(\\s|\\()",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "debug": {
+      "match": "(\\s?)(debug)(\\s|\\()",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "print": {
+      "match": "(\\s?)(print)(\\s|\\()",
+      "captures": {
+        "2": { "name": "constant.character" }
+      }
+    },
+    "cut": {
+      "match": "(\\s?)(cut)",
       "captures": {
         "2": { "name": "constant.character" }
       }
     }
   },
-  "scopeName": "source.polar"
+  "scopeName": "source.oso"
 }
