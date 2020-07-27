@@ -19,12 +19,9 @@ public class PolarTest {
         return p.queryStr(query);
     }
 
-
     public Query query(String rule, List<Object> args) throws Exceptions.OsoException {
-        retrun p.queryRule(rule, args);
+        return p.queryRule(rule, args);
     }
-
-
 
     public static class MyClass {
         public String name;
@@ -103,8 +100,7 @@ public class PolarTest {
         // test basic query
         p.loadStr("f(a, b) if a = b;");
         assertFalse(query("f", List.of(1, 1)).results().isEmpty(), "Basic predicate query failed.");
-        assertTrue(query("f", List.of(1, 2)).results().isEmpty(),
-                "Basic predicate query expected to fail but didn't.");
+        assertTrue(query("f", List.of(1, 2)).results().isEmpty(), "Basic predicate query expected to fail but didn't.");
     }
 
     @Test
@@ -292,8 +288,7 @@ public class PolarTest {
     @Test
     public void testExternalIsa() throws Exception {
         p.loadStr("f(a: MyClass, x) if x = a.id;");
-        List<HashMap<String, Object>> result = query("f", List.of(new MyClass("test", 1), new Variable("x")))
-                .results();
+        List<HashMap<String, Object>> result = query("f", List.of(new MyClass("test", 1), new Variable("x"))).results();
         assertTrue(result.equals(List.of(Map.of("x", 1))));
         p.clear();
 
@@ -383,8 +378,7 @@ public class PolarTest {
         w.write(";");
         w.close();
         p.loadFile(tempFile.getPath());
-        assertThrows(Exceptions.ParseError.class, () -> query("f(1)"),
-                "Failed to pass filename across FFI boundary.");
+        assertThrows(Exceptions.ParseError.class, () -> query("f(1)"), "Failed to pass filename across FFI boundary.");
         tempFile.deleteOnExit();
     }
 
@@ -424,8 +418,7 @@ public class PolarTest {
     public void testLookupErrors() throws Exception {
         p.registerClass(Foo.class, m -> new Foo(), "Foo");
         assertEquals(List.of(), query("new Foo{} = {bar: \"bar\"}").results());
-        assertThrows(Exceptions.PolarRuntimeException.class, () -> query("new Foo{}.bar = \"bar\""),
-                "Expected error.");
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> query("new Foo{}.bar = \"bar\""), "Expected error.");
     }
 
     @Test
