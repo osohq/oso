@@ -1,6 +1,6 @@
-=================
-Polar Foundations
-=================
+================
+Polar Background
+================
 
 The **oso** authorization library uses the **Polar** programming language
 to express authorization logic and policies. This guide is meant to serve
@@ -411,6 +411,6 @@ In this guide, we have explored:
 
 What we haven't explored here is how to use Polar to express
 particular authorization policies. Many examples can be found
-in the :doc:`Authorization Fundamentals </more/key-concepts>`
+in the :doc:`Authorization Fundamentals </more/glossary>`
 and :doc:`Authorization Models </using/examples/index>` sections
 of the manual.

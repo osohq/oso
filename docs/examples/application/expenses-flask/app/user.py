@@ -15,7 +15,7 @@ class Actor:
 
 @dataclass
 class User(Actor):
-    """ "logged in" user - has an email address"""
+    """Logged in user. Has an email address."""
 
     id: int
     email: str
@@ -50,7 +50,7 @@ class User(Actor):
 
 
 class Guest(Actor):
-    """unknown user"""
+    """Anonymous user."""
 
     def __str__(self):
         return "Guest"

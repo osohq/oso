@@ -9,7 +9,9 @@
         {% else %}
         {% if item.current %}
         <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+        {% if item.children %}
         <label class="md-nav__link md-nav__link--active" for="__toc"> {{ item.contents }} </label>
+        {% endif %}
         {% endif %}
         <a href="{{ item.href|e }}"
             class="md-nav__link{% if item.current %} md-nav__link--active{% endif %}">{{ item.contents }}</a>

@@ -10,7 +10,7 @@ authorization logic.
 In this guide, we'll walk through a policy for an application with two Actor types: **Customers** and
 **Internal Users**.
 
-.. note:: This guide assumes you are familiar with oso's :doc:`/more/key-concepts`.
+.. note:: This guide assumes you are familiar with oso's :doc:`/more/glossary`.
 
 
 A Tale of Two Actors
@@ -211,8 +211,8 @@ that specialized on the type of Actor, and even added attributes to some actor t
 We also demonstrated how inheritance can be used to match rules to multiple types of Actors.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
-    * :doc:`Download oso </getting-started/download/index>` to apply this
+    * :doc:`Download oso </download>` to apply this
       technique in your app.
     * Check out other :doc:`index`.

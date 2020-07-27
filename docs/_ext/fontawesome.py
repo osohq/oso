@@ -26,4 +26,8 @@ def setup(app):
     app.add_role("fas", fa_global(style="fas"))
     app.add_role("fab", fa_global(style="fab"))
 
-    return {"version": (0, 0, 1)}
+    return {
+        "version": (0, 0, 1),
+        "parallel_read_safe": True,
+        "parallel_write_safe": True,
+    }

@@ -1,3 +1,5 @@
+.. _inheritance:
+
 ========================================
 Resources with Inheritance
 ========================================
@@ -154,8 +156,8 @@ application types to condense our policy even further.
   write flexible policies that accurately model our application's domain model.
 
 .. admonition:: What's next
-    :class: tip
+    :class: tip whats-next
 
-    * :doc:`Download oso </getting-started/download/index>` to apply this
+    * :doc:`Download oso </download>` to apply this
       technique in your app.
     * Check out other :doc:`index`.
