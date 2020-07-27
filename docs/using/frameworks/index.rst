@@ -27,4 +27,4 @@ meantime, **let us know your preferred framework/ORM** by using our chat on the 
 to send us a Slack message.
 
 .. todo:: Add link to blog posts about using oso with a framework.
-.. todo:: Add link to cloneable example app.
+.. todo:: Add link to example app.
