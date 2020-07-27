@@ -1,6 +1,6 @@
 {
   "name": "oso",
-  "publisher": "osohq",
+  "publisher": "Oso Security, Inc.",
   "displayName": "oso",
   "description": "Syntax highlighting for .polar files as used by oso.",
   "icon": "oso_logo.png",
