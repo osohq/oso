@@ -616,6 +616,7 @@ def test_register_constants_with_decorator():
     )
     assert next(p.query_rule("foo_class_attr", Variable("y")))["y"] == 1
 
+
 def test_unbound_variable(polar, query):
     """Test that unbound variable is returned."""
     polar.load_str("rule(x, y) if y = 1;")
