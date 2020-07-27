@@ -28,3 +28,4 @@ The Polar debugger is for debugging policies.
 
 :doc:`IDE Support <ide>`
 ==========================
+oso's provides the following IDE (Integrated Development Environment) integrations, which include syntax highlighting for ``.polar`` files:
