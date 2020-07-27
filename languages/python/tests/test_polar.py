@@ -599,6 +599,7 @@ def test_host_methods(polar, qeval):
     assert qeval("l = [1, 2, 3] and l.index(3) = 2 and l.copy() = [1, 2, 3]")
     assert qeval('d = {a: 1} and d.get("a") = 1 and d.get("b", 2) = 2')
 
+
 def test_register_constants_with_decorator():
     @polar_class
     class RegisterDecoratorTest:
@@ -625,6 +626,7 @@ def test_register_constants_with_decorator():
         == 1
     )
     assert p.query_predicate("foo_class_attr", Variable("y")).results[0]["y"] == 1
+
 
 def test_unbound_variable(polar, query):
     """Test that unbound variable is returned."""
