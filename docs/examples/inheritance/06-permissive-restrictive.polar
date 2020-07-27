@@ -17,13 +17,13 @@ allow(actor: Actor, "read", resource: Order) if
 # lab technicians and doctors to be able to read the Lab resource.
 
 allow(actor: Actor, "read", resource: Lab) if
-    cut() and
+    cut and
     (actor.medical_role = "lab_tech" or actor.medical_role = "doctor") and
     actor.treated(resource.patient);
 
 # This rule relies on two features of Polar:
 # 1. Rule order is defined based on specializers. A rule over a subclass (Lab)
 #    will execute before a rule defined for a superclass (PatientData). More details in [LINK].
-# 2. The cut() operator stops the Polar engine from running additional rules.
+# 2. The cut operator stops the Polar engine from running additional rules.
 #    We need this since Polar by default will execute all rules that match a
 #    given operation.
