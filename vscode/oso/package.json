@@ -1,0 +1,36 @@
+{
+  "name": "oso",
+  "publisher": "osohq",
+  "displayName": "oso",
+  "description": "Syntax highlighting for .polar files as used by oso.",
+  "icon": "oso_logo.png",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.43.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "polar",
+        "aliases": [
+          "Polar",
+          "polar"
+        ],
+        "extensions": [
+          ".polar"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "polar",
+        "scopeName": "source.polar",
+        "path": "./syntaxes/polar.tmLanguage.json"
+      }
+    ]
+  }
+}
