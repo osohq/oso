@@ -29,7 +29,7 @@ def create_app(test_config=None):
     app.register_blueprint(organization.bp)
     # register authorization handlers
     app.register_blueprint(authorization.bp)
-    authorization.init_app(app)
+    authorization.init_oso(app)
 
     #### Simple test route
     @app.route("/")

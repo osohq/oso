@@ -1,6 +1,6 @@
-============
-Key Concepts
-============
+========
+Glossary
+========
 
 **oso** is an authorization system: its purpose is to allow you
 to selectively control access to certain application resources.
