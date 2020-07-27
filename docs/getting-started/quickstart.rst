@@ -57,32 +57,29 @@ Adding oso
   our application. If you don't already have it :doc:`installed </download>`, go ahead and
   do so now:
 
-  .. todo::
-    replace the hard-coded version number(s) in the below snippet with the
-    current latest versions
-
   .. tabs::
     .. group-tab:: Python
 
-      oso supports Python versions **>= 3.6**
+      oso v{release} supports Python versions **>= 3.6**
 
       .. code-block:: console
 
-        $ pip install oso
+        $ pip install oso=={release}
 
     .. group-tab:: Ruby
 
-      oso supports Ruby versions **>= 2.4**
+      oso v{release} supports Ruby versions **>= 2.4**
 
       .. code-block:: console
 
-        $ gem install oso-oso
+        $ gem install oso-oso -v {release}
 
     .. group-tab:: Java
 
-      oso supports Java versions **>= 10**
+      oso v{release} supports Java versions **>= 10**
 
-      Download :download:`oso-0.2.5.jar </examples/quickstart/java/lib/oso-0.2.5.jar>`.
+      Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_
+      and download the latest jar.
 
       Either add this to your Java project libraries,
       load using your IDE,
@@ -90,7 +87,7 @@ Adding oso
 
       .. code-block:: console
 
-        $ javac -cp oso-0.2.5.jar:. Expense.java
+        $ javac -cp {JAR}:. Expense.java
 
 
 Now that we've installed oso, let's see how to make some basic authorization
@@ -216,7 +213,7 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allowed?(actor: "alice", action: "GET", resource: "expense")
+      irb(main):005:0> OSO.allowed?(actor: alice, action: "GET", resource: "expense")
       => true
 
     ...and everyone else is still denied:
@@ -231,7 +228,7 @@ start a REPL session and follow along:
     To follow along, either try using ``jshell`` (requires Java version >= 9)
     or copy the follow code into a ``main`` method in ``Expense.java``.
 
-    Run: ``jshell --class-path oso-0.2.5.jar Expense.java``
+    Run: ``jshell --class-path {JAR} Expense.java``
 
     .. tabs::
       .. group-tab:: Java main
@@ -408,8 +405,8 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac -cp oso-0.2.5.jar:. Server.java
-        $ java Server
+        $ javac -cp {JAR}:. Server.java
+        $ java -cp {JAR}:. Server
         Server running on /127.0.0.1:5050
 
 ...and then, in another terminal, we can test everything works by making some requests:
@@ -431,7 +428,7 @@ It's nice that Alice can view expenses, but it would be really onerous if
 we had to write a separate rule for every single actor we wanted to authorize.
 Luckily, we don't!
 
-Let's replace our static rule checking that the provided email matches
+Let's **replace** our static rule checking that the provided email matches
 ``"alice@example.com"`` with a dynamic one that checks that the provided email
 ends in ``"@example.com"``. That way, everyone at Example.com, Inc. will be
 able to view expenses, but no one outside the company will be able to:
@@ -531,7 +528,7 @@ our access policy that allows all employees to see each other's expenses. They
 would like us to modify the policy such that employees can only see their own
 expenses.
 
-To accomplish that, we can replace our existing rule with:
+To accomplish that, we can **replace** our existing rule with:
 
 .. tabs::
 
