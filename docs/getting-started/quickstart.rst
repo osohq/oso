@@ -79,7 +79,7 @@ Adding oso
 
     .. group-tab:: Java
 
-      oso supports Java versions **>= 9**
+      oso supports Java versions **>= 10**
 
       Download :download:`oso-0.2.5.jar </examples/quickstart/java/lib/oso-0.2.5.jar>`.
 
