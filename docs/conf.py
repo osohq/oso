@@ -26,7 +26,7 @@ import lexer
 # -- Project information -----------------------------------------------------
 
 project = "oso"
-copyright = "2020 Oso Security, Inc."
+copyright = "2020 Oso Security, Inc"
 author = "oso"
 version = "0.2"
 release = "0.2.5"
