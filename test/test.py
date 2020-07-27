@@ -80,4 +80,3 @@ import math
 # Test that a constant can be called.
 oso.register_constant("Math", math)
 oso.load_str("?= Math.factorial(5) == 120;")
-
