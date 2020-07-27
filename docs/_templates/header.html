@@ -27,14 +27,28 @@
             {% if theme_repo_url %}
             <div class="md-flex__cell md-flex__cell--shrink">
                 <div class="md-header-nav__source">
-                    <!-- {% include "repo.html" %} -->
+                    <a href="https://oso-oss.slack.com/">
+                        <button class="matter-button-contained slack">
+                            <span class="matter-tooltip"><span id="slack-tooltip" aria-hidden="true">
+                                    Join our community on Slack
+                                </span></span>
+                            <em class="fab fa-slack" aria-hidden="true"></em>
+                            &nbsp;Slack</button>
+                    </a>
                     <a href="https://github.com/osohq/oso">
                         <button class="matter-button-contained github">
+                            <span class="matter-tooltip"><span id="github-tooltip" aria-hidden="true">
+                                    Clone oso on GitHub
+                                </span></span>
                             <em class="fab fa-github" aria-hidden="true"></em>
-                            &nbsp;GitHub</button>
+                            &nbsp;GitHub
+                        </button>
                     </a>
                     <a href="/download.html">
                         <button class="matter-button-contained download">
+                            <span class="matter-tooltip"><span id="download-tooltip" aria-hidden="true">
+                                    Find the latest releases of oso
+                                </span></span>
                             <em class="fas fa-download" aria-hidden="true"></em>
                             Download</button>
                     </a>

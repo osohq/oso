@@ -108,8 +108,8 @@
 }
 
 .md-header-nav__source {
-	width: 15.7rem;
-    max-width: 15.7rem;
+	width: 20rem;
+    max-width: 20rem;
     padding-top: 8px;
 }
 
@@ -213,14 +213,15 @@
     font-weight: 600;
 }
 
-button.github {
+.md-header-nav__source button {
     vertical-align: middle;
-    margin: 8px 6px;
+    margin: 8px 0px;
     font-family: "Space Grotesk", sans-serif;
     font-size: 12pt;
-    /* background-color: #352b70; */
+}
+
+button.github,button.slack {
     background-color: transparent;
-    min-width: 128px;
     border: 1px var(--oso-gray-1) solid;
 }
 
