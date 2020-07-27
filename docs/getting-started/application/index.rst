@@ -143,7 +143,7 @@ The latter corresponds to users who have authenticated.
     :language: python
     :lines: 52-53
 
-So we can use :ref:`specializer rules <specializer>` to only allow the request
+We can use :ref:`specializer rules <specializer>` to only allow the request
 when the actor is an instance of a ``User``:
 
 .. literalinclude:: /examples/application/expenses-flask/app/authorization.polar
