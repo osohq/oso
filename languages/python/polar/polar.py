@@ -94,7 +94,7 @@ class Polar:
         for res in Query(query, host=host).run():
             yield res["bindings"]
 
-    def query_rule(self, name, *args, **kwargs):
+    def query_rule(self, name, *args):
         """Query for rule with name ``name`` and args ``args``.
 
         :param name: The name of the predicate to query.
