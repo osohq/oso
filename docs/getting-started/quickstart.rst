@@ -406,7 +406,7 @@ We'll first start our server...
     .. code-block:: console
 
         $ javac -cp {JAR}:. Server.java
-        $ java Server
+        $ java -cp {JAR}:. Server
         Server running on /127.0.0.1:5050
 
 ...and then, in another terminal, we can test everything works by making some requests:
