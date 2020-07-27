@@ -122,8 +122,12 @@ rule head:
 
   allow(_actor: Admin, "approve", _report);
 
-The rule will only evaluate when the actor is an ``Admin``, encoding an implicit
-``if Admin`` condition.
+The rule will fail when evaluated on a regular ``User`` and succeed when
+evaluated on an ``Admin``, encoding an implicit ``if Admin`` condition.
+
+This is another example of the rule matching process: instead of matching against
+a concrete value, we are instead checking to make sure the type of the input
+matches the expected type - in this case, an ``Admin``.
 
 .. tip::
 
@@ -167,6 +171,12 @@ So instead, we can refactor the role check into its own rule:
 
     role(user, role_name) if user.role = role_name;
 
+
+The ``role(user, "accountant")`` is yet another example of matching happening
+in Polar. Any time a rule body contains a **predicate** like this, it is performing
+another query. I.e. it will try and find all *matching* rules called "role" with
+two inputs.
+
 You can also either use the :doc:`/more/dev-tools/repl` or the ``oso.query_predicate``
 method to interact with this directly. For example:
 
@@ -191,7 +201,7 @@ Summary
 =======
 
 We covered some of the basics of policies, how to represent conditional
-logic, and how to refactor policies into multiple rules.
+logic, and the core idea of matching.
 
 .. admonition:: What's next
     :class: tip whats-next
