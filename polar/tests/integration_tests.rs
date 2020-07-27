@@ -733,52 +733,75 @@ fn test_infinite_loop() {
 fn test_comparisons() {
     let mut polar = Polar::new(None);
 
-    // "<"
-    polar
-        .load("lt(x, y) if x < y; f(x) if x = 1; g(x) if x = 2;")
-        .unwrap();
+    // <
+    polar.load("lt(x, y) if x < y;").unwrap();
+    assert!(qnull(&mut polar, "lt(1,1)"));
     assert!(qeval(&mut polar, "lt(1,2)"));
-    assert!(qnull(&mut polar, "lt(2,2)"));
+    assert!(qnull(&mut polar, "lt(2,1)"));
+    assert!(qnull(&mut polar, "lt(+1,-1)"));
+    assert!(qeval(&mut polar, "lt(-1,+1)"));
+    assert!(qnull(&mut polar, "lt(-1,-1)"));
+    assert!(qeval(&mut polar, "lt(-2,-1)"));
     assert!(qeval(&mut polar, "lt(\"aa\",\"ab\")"));
     assert!(qnull(&mut polar, "lt(\"aa\",\"aa\")"));
-    assert!(qeval(&mut polar, "lt({a: 1}.a,{a: 2}.a)"));
-    assert!(qeval(&mut polar, "f(x) and g(y) and lt(x,y)"));
 
-    // "<="
+    // <=
     polar.load("leq(x, y) if x <= y;").unwrap();
     assert!(qeval(&mut polar, "leq(1,1)"));
     assert!(qeval(&mut polar, "leq(1,2)"));
     assert!(qnull(&mut polar, "leq(2,1)"));
+    assert!(qnull(&mut polar, "leq(+1,-1)"));
+    assert!(qeval(&mut polar, "leq(-1,+1)"));
+    assert!(qeval(&mut polar, "leq(-1,-1)"));
+    assert!(qeval(&mut polar, "leq(-2,-1)"));
     assert!(qeval(&mut polar, "leq(\"aa\",\"aa\")"));
     assert!(qeval(&mut polar, "leq(\"aa\",\"ab\")"));
     assert!(qnull(&mut polar, "leq(\"ab\",\"aa\")"));
 
-    // ">"
+    // >
     polar.load("gt(x, y) if x > y;").unwrap();
+    assert!(qnull(&mut polar, "gt(1,1)"));
+    assert!(qnull(&mut polar, "gt(1,2)"));
     assert!(qeval(&mut polar, "gt(2,1)"));
-    assert!(qnull(&mut polar, "gt(2,2)"));
+    assert!(qeval(&mut polar, "gt(+1,-1)"));
+    assert!(qnull(&mut polar, "gt(-1,+1)"));
+    assert!(qnull(&mut polar, "gt(-1,-1)"));
+    assert!(qeval(&mut polar, "gt(-1,-2)"));
     assert!(qeval(&mut polar, "gt(\"ab\",\"aa\")"));
     assert!(qnull(&mut polar, "gt(\"aa\",\"aa\")"));
 
-    // ">="
+    // >=
     polar.load("geq(x, y) if x >= y;").unwrap();
     assert!(qeval(&mut polar, "geq(1,1)"));
-    assert!(qeval(&mut polar, "geq(2,1)"));
     assert!(qnull(&mut polar, "geq(1,2)"));
+    assert!(qeval(&mut polar, "geq(2,1)"));
+    assert!(qeval(&mut polar, "geq(2,1)"));
+    assert!(qeval(&mut polar, "geq(+1,-1)"));
+    assert!(qnull(&mut polar, "geq(-1,+1)"));
+    assert!(qeval(&mut polar, "geq(-1,-1)"));
+    assert!(qeval(&mut polar, "geq(-1,-1.0)"));
     assert!(qeval(&mut polar, "geq(\"ab\",\"aa\")"));
     assert!(qeval(&mut polar, "geq(\"aa\",\"aa\")"));
 
-    // "=="
+    // ==
     polar.load("eq(x, y) if x == y;").unwrap();
     assert!(qeval(&mut polar, "eq(1,1)"));
+    assert!(qnull(&mut polar, "eq(1,2)"));
     assert!(qnull(&mut polar, "eq(2,1)"));
+    assert!(qnull(&mut polar, "eq(-1,+1)"));
+    assert!(qeval(&mut polar, "eq(-1,-1)"));
+    assert!(qeval(&mut polar, "eq(-1,-1.0)"));
     assert!(qeval(&mut polar, "eq(\"aa\", \"aa\")"));
     assert!(qnull(&mut polar, "eq(\"ab\", \"aa\")"));
 
-    // "!="
+    // !=
     polar.load("neq(x, y) if x != y;").unwrap();
-    assert!(qeval(&mut polar, "neq(1,2)"));
     assert!(qnull(&mut polar, "neq(1,1)"));
+    assert!(qeval(&mut polar, "neq(1,2)"));
+    assert!(qeval(&mut polar, "neq(2,1)"));
+    assert!(qeval(&mut polar, "neq(-1,+1)"));
+    assert!(qnull(&mut polar, "neq(-1,-1)"));
+    assert!(qnull(&mut polar, "neq(-1,-1.0)"));
     assert!(qnull(&mut polar, "neq(\"aa\", \"aa\")"));
     assert!(qeval(&mut polar, "neq(\"ab\", \"aa\")"));
 
