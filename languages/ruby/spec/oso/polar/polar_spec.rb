@@ -255,10 +255,10 @@ RSpec.describe Oso::Polar::Polar do
 
         subject.register_class(Foo, from_polar: -> { Foo.new })
         subject.load_str("f(x) if x.this_is_nil = 1;")
-        expect(subject.query_predicate('f', Foo.new).to_a).to eq([])
+        expect(subject.query_rule('f', Foo.new).to_a).to eq([])
 
         subject.load_str("f(x) if x.this_is_nil.bad_call = 1;")
-        expect { subject.query_predicate('f', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
+        expect { subject.query_rule('f', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
     end
 
   end
