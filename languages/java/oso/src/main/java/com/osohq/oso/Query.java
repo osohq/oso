@@ -68,7 +68,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     private void handleCall(String attrName, JSONArray jArgs, JSONObject polarInstance, long callId)
             throws Exceptions.OsoException {
         List<Object> args = host.polarListToJava(jArgs);
-        registerCall(attrName, args, callId, polarInstance);
+        try {
+            registerCall(attrName, args, callId, polarInstance);
+        } catch (Exceptions.InvalidCallError e) {
+            ffiQuery.applicationError(e.getMessage());
+        }
         String result;
         try {
             result = nextCallResult(callId).toString();
@@ -141,11 +145,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                         System.out.println(message);
                     }
                     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-                    System.out.print("> ");
+                    System.out.print("debug> ");
                     try {
                         String input = br.readLine();
-                        if (input == "")
-                            input = " ";
+                        if (input == null)
+                            break;
                         String command = host.toPolarTerm(input).toString();
                         ffiQuery.debugCommand(command);
                     } catch (IOException e) {
@@ -201,7 +205,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     Field field = cls.getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException e) {
-                    throw new Exceptions.InvalidCallError(attrName, argTypes);
+                    throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
                 }
             }
         } catch (IllegalAccessException e) {

@@ -47,11 +47,11 @@ def test_external_policy(oso, load):
 
     oso._load_queued_files()
 
-    assert oso.allow(User(role="employee"), "submit", "expense")
-    assert oso.allow(User(role="admin"), "approve", "expense")
-    assert not oso.allow(User(role="employee"), "approve", "expense")
-    assert oso.allow(User(role="accountant"), "view", "expense")
-    assert oso.allow(User(name="greta"), "approve", "expense")
+    assert oso.is_allowed(User(role="employee"), "submit", "expense")
+    assert oso.is_allowed(User(role="admin"), "approve", "expense")
+    assert not oso.is_allowed(User(role="employee"), "approve", "expense")
+    assert oso.is_allowed(User(role="accountant"), "view", "expense")
+    assert oso.is_allowed(User(name="greta"), "approve", "expense")
 
 
 def test_external_policy(oso, load):
@@ -66,14 +66,14 @@ def test_external_policy(oso, load):
 
     oso._load_queued_files()
 
-    assert oso.allow(User(role="employee"), "submit", "expense")
-    assert not oso.allow(User(role="employee"), "view", "expense")
-    assert not oso.allow(User(role="employee"), "approve", "expense")
+    assert oso.is_allowed(User(role="employee"), "submit", "expense")
+    assert not oso.is_allowed(User(role="employee"), "view", "expense")
+    assert not oso.is_allowed(User(role="employee"), "approve", "expense")
 
-    assert oso.allow(User(role="accountant"), "view", "expense")
-    assert oso.allow(User(role="accountant"), "submit", "expense")
-    assert not oso.allow(User(role="accountant"), "approve", "expense")
+    assert oso.is_allowed(User(role="accountant"), "view", "expense")
+    assert oso.is_allowed(User(role="accountant"), "submit", "expense")
+    assert not oso.is_allowed(User(role="accountant"), "approve", "expense")
 
-    assert oso.allow(User(role="admin"), "submit", "expense")
-    assert oso.allow(User(role="admin"), "view", "expense")
-    assert oso.allow(User(role="admin"), "approve", "expense")
+    assert oso.is_allowed(User(role="admin"), "submit", "expense")
+    assert oso.is_allowed(User(role="admin"), "view", "expense")
+    assert oso.is_allowed(User(role="admin"), "approve", "expense")

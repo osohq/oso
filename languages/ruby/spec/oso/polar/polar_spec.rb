@@ -597,8 +597,7 @@ RSpec.describe Oso::Polar::Polar do
         subject.load_str(rule)
         expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
           expect(e).to be_an Oso::Polar::PolarTypeError
-          expect(e.message).to eq('Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13')
-          stack_trace = <<-EOM.chomp
+          error = <<-EOM.chomp
 trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1, 2)
@@ -606,9 +605,23 @@ trace (most recent evaluation last):
     _a_3 in _b_4
   in rule foo at line 1, column 13
     _a_3 in _b_4
+Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13
 EOM
-          expect(e.stack_trace).to eq(stack_trace)
+          expect(e.message).to eq(error)
         end
+      end
+    end
+
+    it 'work for lookups' do
+      stub_const('Foo', Class.new do
+        def foo
+          'foo'
+        end
+      end)
+      subject.register_class(Foo)
+      expect(query(subject, 'new Foo{} = {bar: "bar"}')).to eq([])
+      expect { query(subject, 'new Foo{}.bar = "bar"') }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::PolarRuntimeError
       end
     end
 end

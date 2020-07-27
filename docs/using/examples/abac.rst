@@ -6,9 +6,10 @@ ABAC
    :language: prolog
 
 Whereas RBAC allows you to group users and permissions into predefined buckets,
-you may also want to represent fine-grained or dynamic permissions based on *who* the user is and her relation to
-the resource she wants to access. This is known as `attribute-based access
-control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
+you may also want to represent fine-grained or dynamic permissions based on
+*who* the user is and her relation to the resource she wants to access. This is
+known as `attribute-based access control
+<https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
 
 
 .. _abac-basics:
@@ -16,18 +17,15 @@ control <https://en.wikipedia.org/wiki/Attribute-based_access_control>`_ (ABAC).
 ABAC basics
 -----------
 
-.. todo:: This should not mention "previously"
+Suppose we want to allow employees to view *their own* expenses.
 
-Continuing from the RBAC examples, suppose we want to allow employees
-to view *their own* expenses.
-
-Recall that we had previously registered our user classes with oso:
+We can register our user classes with oso:
 
 .. tabs::
     .. group-tab:: Python
 
      .. literalinclude:: /examples/abac/python/01-simple.py
-        :caption: abac.py
+        :caption: :fab:`python` abac.py
         :language: python
         :start-after: user-class-start
         :end-before: user-class-end
@@ -35,7 +33,7 @@ Recall that we had previously registered our user classes with oso:
      We can do the same with the resources being requested:
 
      .. literalinclude:: /examples/abac/python/01-simple.py
-        :caption: abac.py
+        :caption: :fab:`python` abac.py
         :language: python
         :start-after: expense-class-start
         :end-before: expense-class-end
@@ -43,7 +41,7 @@ Recall that we had previously registered our user classes with oso:
     .. group-tab:: Ruby
 
       .. literalinclude:: /examples/rbac/ruby/04-external.rb
-         :caption: abac.rb
+         :caption: :fas:`gem` abac.rb
          :language: ruby
          :start-after: user-start
          :end-before: user-end
@@ -51,18 +49,44 @@ Recall that we had previously registered our user classes with oso:
       We can do the same with the resources being requested:
 
       .. literalinclude:: /examples/rbac/ruby/04-external.rb
-         :caption: abac.rb
+         :caption: :fas:`gem` abac.rb
          :language: ruby
          :emphasize-lines: 5
          :start-after: expense-start
          :end-before: expense-end
 
+    .. group-tab:: Java
 
-An ``allow()`` rule that checks that the user reading the
+        .. code-block:: java
+            :caption: :fab:`java` User.Java
+
+            public class User {
+                ...
+                public static void main(String[] args) {
+                    oso.registerClass(User.class);
+                }
+            }
+
+        We can do the same with the resources being requested:
+
+        .. code-block:: java
+            :caption: :fab:`java` Expense.Java
+            :emphasize-lines: 4
+
+            public class Expense {
+                ...
+                public static void main(String[] args) {
+                    oso.registerClass(Expense.class);
+                }
+            }
+
+
+
+An ``allow`` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:
 
 .. literalinclude:: /examples/abac/01-simple.polar
-   :caption: abac.polar
+   :caption: :fa:`oso` abac.polar
    :language: polar
    :start-after: rule-start
    :end-before: rule-end
@@ -94,7 +118,7 @@ only view expenses from their own locations. We can combine our previous roles
 with some simple ABAC conditions to achieve this:
 
 .. literalinclude:: /examples/abac/02-rbac.polar
-   :caption: abac.polar
+   :caption: :fa:`oso` abac.polar
    :language: polar
    :start-after: simple-rule-start
    :end-before: simple-rule-end
@@ -108,7 +132,7 @@ For example, an employee might be an administrator of a *project*,
 and therefore is allowed to see all expenses related to that project.
 
 .. literalinclude:: /examples/abac/02-rbac.polar
-   :caption: abac.polar
+   :caption: :fa:`oso` abac.polar
    :language: polar
    :start-after: project-rule-start
    :end-before: project-rule-end
@@ -120,7 +144,7 @@ might be team-, or organization- specific roles.
 And these can also follow inheritance patterns like we saw with regular roles.
 
 .. literalinclude:: /examples/abac/02-rbac.polar
-   :caption: abac.polar
+   :caption: :fa:`oso` abac.polar
    :language: polar
    :start-after: role-inherit-start
    :end-before: role-inherit-end
@@ -139,7 +163,7 @@ policy.
 Starting out with a simple example, suppose managers can view employees' expenses:
 
 .. literalinclude:: /examples/abac/03-hierarchy.polar
-   :caption: abac.polar
+   :caption: :fa:`oso` abac.polar
    :language: polar
    :lines: 7-9
    :emphasize-lines: 2-3
@@ -147,7 +171,7 @@ Starting out with a simple example, suppose managers can view employees' expense
 First thing we can do, is extract out the logic for checking whether the user manages someone:
 
 .. literalinclude:: /examples/abac/03-hierarchy.polar
-   :caption: abac.polar
+   :caption: :fa:`oso` abac.polar
    :language: polar
    :start-after: start-manages-rule
    :end-before: end-manages-rule
@@ -156,9 +180,16 @@ Now if we want this logic to apply for managers, and managers' managers, and so 
 then we need to make sure this logic is evaluated recursively:
 
 .. literalinclude:: /examples/abac/03-hierarchy.polar
-   :caption: abac.polar
+   :caption: :fa:`oso` abac.polar
    :language: polar
    :start-after: start-hierarchy-rule
    :end-before: end-hierarchy-rule
 
 .. TODO: Summary
+
+.. admonition:: What's next
+    :class: tip
+
+    * :doc:`Download oso </getting-started/download/index>` to try out ABAC in your app.
+    * See what a :doc:`RBAC-only <rbac>` policy would look like with oso.
+    * Check out other :doc:`index`.

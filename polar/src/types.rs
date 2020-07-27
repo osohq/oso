@@ -90,6 +90,7 @@ impl InstanceLiteral {
 pub struct ExternalInstance {
     pub instance_id: u64,
     pub literal: Option<InstanceLiteral>,
+    pub repr: Option<String>,
 }
 
 // Context stored somewhere by id.
@@ -164,18 +165,18 @@ impl Operator {
             Operator::Dot => 9,
             Operator::In => 8,
             Operator::Isa => 8,
-            Operator::Not => 7,
-            Operator::Mul => 6,
-            Operator::Div => 6,
-            Operator::Add => 5,
-            Operator::Sub => 5,
-            Operator::Eq => 4,
-            Operator::Geq => 4,
-            Operator::Leq => 4,
-            Operator::Neq => 4,
-            Operator::Gt => 4,
-            Operator::Lt => 4,
-            Operator::Unify => 3,
+            Operator::Mul => 7,
+            Operator::Div => 7,
+            Operator::Add => 6,
+            Operator::Sub => 6,
+            Operator::Eq => 5,
+            Operator::Geq => 5,
+            Operator::Leq => 5,
+            Operator::Neq => 5,
+            Operator::Gt => 5,
+            Operator::Lt => 5,
+            Operator::Unify => 4,
+            Operator::Not => 3,
             Operator::Or => 2,
             Operator::And => 1,
         }
@@ -316,7 +317,7 @@ impl PartialOrd for Numeric {
         // compare the integer `i` and the float `f`
         // if `swap` then do `f.partial_cmp(i)` otherwise do `i.partial_cmp(f)`
         let cmp_and_swap = |i: i64, f: Float, swap: bool| {
-            if let Ok(i) = u32::try_from(i) {
+            if let Ok(i) = i32::try_from(i) {
                 // integer and float are equal if they are within Ɛ of each other
                 if (f.into_inner() - f64::from(i)).abs() <= f64::EPSILON {
                     Some(std::cmp::Ordering::Equal)
@@ -848,6 +849,7 @@ mod tests {
         let external = Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
             literal: None,
+            repr: None,
         }));
         let list_of = Term::new_from_test(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());

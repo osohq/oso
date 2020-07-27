@@ -5,8 +5,6 @@ pub mod macros;
 #[macro_use]
 extern crate maplit;
 
-#[cfg(feature = "repl")]
-pub mod cli;
 mod debugger;
 pub mod error;
 mod formatting;
@@ -158,20 +156,6 @@ pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
 }
 
 #[no_mangle]
-pub extern "C" fn polar_query_from_repl(polar_ptr: *mut Polar) -> *mut Query {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        match polar.new_query_from_repl() {
-            Ok(query) => box_ptr!(query),
-            Err(e) => {
-                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
-                null_mut()
-            }
-        }
-    })
-}
-
-#[no_mangle]
 pub extern "C" fn polar_new_query_from_term(
     polar_ptr: *mut Polar,
     query_term: *const c_char,
@@ -309,6 +293,20 @@ pub extern "C" fn polar_question_result(query_ptr: *mut Query, call_id: u64, res
         let query = unsafe { ffi_ref!(query_ptr) };
         let result = result != POLAR_FAILURE;
         query.question_result(call_id, result);
+        POLAR_SUCCESS
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_application_error(query_ptr: *mut Query, message: *mut c_char) -> i32 {
+    ffi_try!({
+        let query = unsafe { ffi_ref!(query_ptr) };
+        let s = if !message.is_null() {
+            unsafe { ffi_string!(message) }.to_string()
+        } else {
+            "".to_owned()
+        };
+        query.application_error(s);
         POLAR_SUCCESS
     })
 }

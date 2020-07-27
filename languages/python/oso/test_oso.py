@@ -107,22 +107,22 @@ def token(name):
     return token.decode("utf-8")
 
 
-def test_allow(test_oso):
+def test_is_allowed(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert test_oso.allow(actor, action, resource)
-    assert test_oso.allow({"username": "guest"}, action, resource)
-    assert test_oso.allow("guest", action, resource)
+    assert test_oso.is_allowed(actor, action, resource)
+    assert test_oso.is_allowed({"username": "guest"}, action, resource)
+    assert test_oso.is_allowed("guest", action, resource)
     Jwt.add_key(public_key)
-    assert test_oso.allow(token("guest"), action, resource)
+    assert test_oso.is_allowed(token("guest"), action, resource)
 
     actor = Actor(name="president")
     action = "create"
     resource = Company(id="1")
-    assert test_oso.allow(actor, action, resource)
-    assert test_oso.allow({"username": "president"}, action, resource)
-    assert test_oso.allow(token("president"), action, resource)
+    assert test_oso.is_allowed(actor, action, resource)
+    assert test_oso.is_allowed({"username": "president"}, action, resource)
+    assert test_oso.is_allowed(token("president"), action, resource)
 
 
 def test_query_predicate(test_oso):
@@ -136,26 +136,26 @@ def test_fail(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "not_allowed"
-    assert not test_oso.allow(actor, action, resource)
-    assert not test_oso.allow({"username": "guest"}, action, resource)
+    assert not test_oso.is_allowed(actor, action, resource)
+    assert not test_oso.is_allowed({"username": "guest"}, action, resource)
     Jwt.add_key(public_key)
-    assert not test_oso.allow(token("guest"), action, resource)
+    assert not test_oso.is_allowed(token("guest"), action, resource)
 
 
 def test_instance_from_external_call(test_oso):
     user = Actor(name="guest")
     resource = Company(id="1")
-    assert test_oso.allow(user, "frob", resource)
-    assert test_oso.allow({"username": "guest"}, "frob", resource)
+    assert test_oso.is_allowed(user, "frob", resource)
+    assert test_oso.is_allowed({"username": "guest"}, "frob", resource)
     Jwt.add_key(public_key)
-    assert test_oso.allow(token("guest"), "frob", resource)
+    assert test_oso.is_allowed(token("guest"), "frob", resource)
 
 
 def test_allow_model(test_oso):
     """ Test user auditor can list companies but not widgets"""
     user = Actor(name="auditor")
-    assert not test_oso.allow(user, "list", Widget)
-    assert test_oso.allow(user, "list", Company)
+    assert not test_oso.is_allowed(user, "list", Widget)
+    assert test_oso.is_allowed(user, "list", Company)
 
 
 if __name__ == "__main__":

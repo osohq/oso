@@ -142,6 +142,10 @@ impl Query {
         self.vm.external_question_result(call_id, result)
     }
 
+    pub fn application_error(&mut self, message: String) {
+        self.vm.external_error(message)
+    }
+
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         self.vm.debug_command(command)
     }
@@ -291,24 +295,6 @@ impl Polar {
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query], Some(self.output.clone()));
         Query { done: false, vm }
-    }
-
-    #[cfg(not(feature = "repl"))]
-    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
-        Err(error::RuntimeError::Unsupported {
-            msg: "The REPL is not supported in this build.".to_string(),
-        }
-        .into())
-    }
-
-    #[cfg(feature = "repl")]
-    pub fn new_query_from_repl(&self) -> PolarResult<Query> {
-        let mut repl = crate::cli::repl::Repl::new();
-        let s = repl.polar_input("Enter query:");
-        match s {
-            Ok(s) => self.new_query(&s),
-            Err(_) => Err(error::OperationalError::Unknown.into()),
-        }
     }
 
     // @TODO: Direct load_rules endpoint.

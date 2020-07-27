@@ -401,6 +401,22 @@ public class PolarTest {
         assertTrue(p.query("f(x)").results().isEmpty());
     }
 
+    public static class Foo {
+        public String foo;
+
+        public Foo() {
+            this.foo = "foo";
+        }
+    }
+
+    @Test
+    public void testLookupErrors() throws Exception {
+        p.registerClass(Foo.class, m -> new Foo(), "Foo");
+        assertEquals(List.of(), p.query("new Foo{} = {bar: \"bar\"}").results());
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.query("new Foo{}.bar = \"bar\""),
+                "Expected error.");
+    }
+
     /*** TEST OSO ***/
     @Test
     public void testPathMapper() throws Exception {
@@ -415,8 +431,8 @@ public class PolarTest {
                 + "allow(actor, \"get\", new MyClass{id: id});\n"
                 + "allow(actor, \"get\", myclass: MyClass) if myclass.id = 12;");
         Http http12 = new Http(null, "/myclass/12", null);
-        assertTrue(oso.allow("sam", "get", http12), "Failed to correctly map HTTP resource");
+        assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");
         Http http13 = new Http(null, "/myclass/13", null);
-        assertFalse(oso.allow("sam", "get", http13), "Failed to correctly map HTTP resource");
+        assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
     }
 }

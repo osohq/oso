@@ -1,8 +1,8 @@
-==============
-Polar Language
-==============
+============
+Polar Syntax
+============
 
-Polar is a Prolog based logic programming language, specialized for making
+Polar is a declarative logic programming language, specialized for making
 authorization decisions and tightly integrating with your application's native
 language.
 
@@ -12,7 +12,7 @@ Each Polar file defines a set of rules.  When a Polar file is loaded into the
 authorization engine, all rules are added to the engine's knowledge base.
 
 The knowledge base may be queried.  The behavior of queries is described further
-in :doc:`/understand/language/polar-fundamentals`.
+in :doc:`/more/language/polar-foundations`.
 
 .. _basic-types:
 
@@ -37,6 +37,10 @@ For example::
 are all parsed as numbers.
 
 .. _strings:
+
+Boolean
+-------
+Polar parses the keywords ``true`` and ``false`` as boolean values.
 
 Strings
 -------
@@ -95,7 +99,7 @@ name is specified before the dictionary::
   Person{first_name: "Yogi", last_name: "Bear"}
 
 Classes can be registered with the oso library to integrate with Polar.  See
-:doc:`/using/policies/application-types` for more information.
+:doc:`/getting-started/policies/application-types` for more information.
 
 A class instance literal must be used either with the :ref:`operator-new` or
 as a :ref:`pattern`.
@@ -116,7 +120,8 @@ where ``HEAD`` must be a *fact* and ``BODY`` any number of *terms*.
 The meaning of a rule is that ``HEAD`` is true **if** each of the ``BODY``
 terms is true. There may be multiple rules with the same head; each
 ``BODY`` will be tried in turn, and any or all may succeed. For more
-on how rules are defined and applied see :doc:`/understand/language/polar-fundamentals`.
+on how rules are defined and applied see
+:doc:`/more/language/polar-foundations`.
 
 The following is an example of a rule::
 
@@ -218,7 +223,8 @@ bound to ``1`` or unbound.
 
 Unification is also used to determine if queries match rule ``HEAD`` s,
 and if the ``BODY`` of rules match other facts in the knowledge base.
-We will cover unification further in :doc:`/understand/language/polar-fundamentals`.
+We will cover unification further in
+:doc:`/more/language/polar-foundations`.
 
 .. todo::
    add a little table with unification examples, esp. w/dictionaries.
@@ -298,7 +304,7 @@ New
 ^^^
 
 The new operator is used to construct a new instance of an application class.
-See :doc:`/using/policies/application-types`. The single argument to the
+See :doc:`/getting-started/policies/application-types`. The single argument to the
 new operator must be an instance literal::
 
     new Person{first_name: "yogi", last_name: "bear"}
@@ -402,7 +408,7 @@ Now, the ``first_name`` rule can be used with instances of the ``User`` or
 ``Person`` type.
 
 For more on this feature, see
-:doc:`/using/policies/application-types`.
+:doc:`/getting-started/policies/application-types`.
 
 .. _pattern:
 

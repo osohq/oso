@@ -37,7 +37,7 @@ class Oso(Polar):
         self.register_class(PathMapper)
 
     # TODO (dhatch): should we name this 'is_allowed'?
-    def allow(self, actor, action, resource) -> bool:
+    def is_allowed(self, actor, action, resource) -> bool:
         """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
 
         Uses allow rules in the Polar policy to determine whether a request is

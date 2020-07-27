@@ -8,3 +8,6 @@ install: rust
 
 test: install
 	bundle exec rake spec
+
+repl:
+	bundle exec oso

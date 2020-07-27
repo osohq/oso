@@ -15,23 +15,23 @@ fn runner_from_query(q: &str) -> Runner {
 }
 
 pub fn simple_queries(c: &mut Criterion) {
-    c.bench_function("simple 1=1", |b| {
+    c.bench_function("1=1", |b| {
         b.iter_batched(
             || runner_from_query("1=1"),
             |mut runner| runner.run(),
             criterion::BatchSize::SmallInput,
         )
     });
-    c.bench_function("simple 1=1,2=2", |b| {
+    c.bench_function("1=1 and 2=2", |b| {
         b.iter_batched(
-            || runner_from_query("1=1,2=2"),
+            || runner_from_query("1=1 and 2=2"),
             |mut runner| runner.run(),
             criterion::BatchSize::SmallInput,
         )
     });
 }
 
-/// Bench: create `TARGET` rules of the form `f(i) := f(i-1)`
+/// Bench: create `TARGET` rules of the form `f(i) if f(i-1)`
 /// and measure the time to compute `f(TARGET)`
 /// This basically measures the performance of the rule sorting
 pub fn too_many_predicates(c: &mut Criterion) {
@@ -40,13 +40,13 @@ pub fn too_many_predicates(c: &mut Criterion) {
         let mut runner = runner_from_query(&format!("f({})", TARGET));
         runner.load("f(0);").unwrap();
         for i in 1..=TARGET {
-            runner.load(&format!("f({}) := f({});", i, i - 1)).unwrap();
+            runner.load(&format!("f({}) if f({});", i, i - 1)).unwrap();
         }
         runner.expected_result(Bindings::new());
         runner
     }
 
-    c.bench_function("many_rules f(N) := f(N-1) := ... := f(0)", |b| {
+    c.bench_function("many_rules f(N) if f(N-1) if ... if f(0)", |b| {
         b.iter_batched(
             make_runner,
             |mut runner| runner.run(),
@@ -62,9 +62,9 @@ pub fn too_many_predicates(c: &mut Criterion) {
 /// database lookups.
 pub fn n_plus_one_queries(c: &mut Criterion) {
     let policy = "
-        has_grandchild_called(grandparent: Person, name) :=
-            child in grandparent.children,
-            grandchild in child.childern,
+        has_grandchild_called(grandparent: Person, name) if
+            child in grandparent.children and
+            grandchild in child.childern and
             grandchild.name = name;
     ";
 
@@ -215,22 +215,14 @@ impl Runner {
         self.query.call_result(call_id, result).unwrap();
     }
 
-    #[cfg(not(feature = "repl"))]
     fn handle_debug(&mut self, _: String) {}
-
-    #[cfg(feature = "repl")]
-    fn handle_debug(&mut self, message: String) {
-        let mut repl = crate::cli::repl::Repl::new();
-        println!("{}", message);
-        let input = repl.plain_input("> ").unwrap();
-        self.query.debug_command(&input).unwrap();
-    }
 
     fn make_external(&mut self, literal: InstanceLiteral) -> Term {
         let instance_id = self.polar.get_external_id();
         Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id,
             literal: Some(literal),
+            repr: None,
         }))
     }
 }

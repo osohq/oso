@@ -1,10 +1,15 @@
 package com.osohq.oso;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
+
+import com.osohq.oso.Exceptions.ParseError;
+import com.osohq.oso.Exceptions.PolarRuntimeException;
 
 public class Polar {
     private Ffi.Polar ffiPolar;
@@ -105,19 +110,62 @@ public class Polar {
      *
      * @throws Exceptions.OsoException
      */
-    public void repl() throws Exceptions.OsoException {
+    public void repl() throws Exceptions.OsoException, IOException {
+        repl(new String[0]);
+    }
+
+    /**
+     * Load the given files and start the Polar REPL.
+     *
+     * @throws Exceptions.OsoException
+     */
+    public void repl(String[] files) throws Exceptions.OsoException, IOException {
+        for (String file : files) {
+            loadFile(file);
+        }
         loadQueuedFiles();
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        Ffi.Query ffiQuery;
+        Query query;
+        String input;
         while (true) {
-            Query query = new Query(ffiPolar.newQueryFromRepl(), host);
-            if (!query.hasMoreElements()) {
-                System.out.println("False");
-            } else {
-                do {
-                    System.out.println(query.nextElement());
-                } while (query.hasMoreElements());
+            System.out.print("query> ");
+            input = in.readLine();
+            if (input == null) {
+                return;
+            }
+            for (int n = input.length() - 1; n > 0 && input.charAt(n) == ';'; n--) {
+                input = input.substring(0, n);
             }
 
+            try {
+                ffiQuery = ffiPolar.newQueryFromStr(input);
+            } catch (ParseError e) {
+                System.out.println("Parse error: " + e.toString());
+                continue;
+            }
+
+            try {
+                query = new Query(ffiQuery, host);
+            } catch (PolarRuntimeException e) {
+                System.out.println(e.toString());
+                continue;
+            }
+
+            if (!query.hasMoreElements()) {
+                System.out.println("false");
+            } else {
+                do {
+                    HashMap<String, Object> result = query.nextElement();
+                    System.out.println(result.size() > 0 ? result.toString() : "true");
+                } while (query.hasMoreElements());
+            }
         }
+    }
+
+    public static void main(String[] args) throws Exceptions.OsoException, IOException {
+        new Polar().repl(args);
     }
 
     /**

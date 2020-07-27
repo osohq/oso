@@ -2,7 +2,7 @@
 Python Authorization Library
 ============================
 
-oso is available as a :doc:`package</getting-started/download/python>` for use in Python applications.
+oso is available as a :doc:`package</getting-started/download/index>` for use in Python applications.
 
 Code-level documentation is :doc:`here<api>`.
 
@@ -11,7 +11,7 @@ Code-level documentation is :doc:`here<api>`.
 
     api
 
-To install, see :doc:`installation instructions </getting-started/download/python>`.
+To install, see :doc:`installation instructions </getting-started/download/index>`.
 
 Working with Python Objects
 ===========================
@@ -39,16 +39,16 @@ Strings
 Python strings are mapped to Polar :ref:`strings`. Python's string methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.username.endswith("example.com");
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    user = User()
    user.username = "alice@example.com"
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 .. warning::
     Polar does not support methods that mutate strings in place. E.g. :py:meth:`capitalize()` will have no effect on
@@ -59,16 +59,16 @@ Lists
 Python lists are mapped to Polar :ref:`Lists <lists>`. Python's list methods may be accessed from policies:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.groups.index("HR") == 0;
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    user = User()
    user.groups = ["HR", "payroll"]
-   assert(oso.allow(user, "foo", "bar"))
+   assert(oso.is_allowed(user, "foo", "bar"))
 
 .. warning::
     Polar does not support methods that mutate lists in place. E.g. :py:meth:`reverse()` will have no effect on
@@ -77,12 +77,12 @@ Python lists are mapped to Polar :ref:`Lists <lists>`. Python's list methods may
 Likewise, lists constructed in Polar may be passed into Python methods:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    class User:
       def has_groups(self, groups):
@@ -94,23 +94,23 @@ Likewise, lists constructed in Polar may be passed into Python methods:
 
    user = User()
    user.groups = ["HR", "payroll"]
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 Dictionaries
 ^^^^^^^^^^^^
 Python dictionaries are mapped to Polar :ref:`dictionaries`:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.roles.project1 = "admin";
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    user = User()
    user.roles = {"project1": "admin"}
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 Likewise, dictionaries constructed in Polar may be passed into Python methods.
 
@@ -120,12 +120,12 @@ Oso handles non-list/dictionary `iterable <https://docs.python.org/3/glossary.ht
 object's elements one at a time. `Generator <https://docs.python.org/3/glossary.html#term-generator>`_ methods are a common use case for passing iterables into oso:
 
 .. code-block:: polar
-   :caption: policy.polar
+   :caption: :fa:`oso` policy.polar
 
    allow(actor, action, resource) if actor.get_group = "payroll";
 
 .. code-block:: python
-   :caption: app.py
+   :caption: :fab:`python` app.py
 
    class User:
       def get_group(self):
@@ -133,17 +133,17 @@ object's elements one at a time. `Generator <https://docs.python.org/3/glossary.
          yield from ["HR", "payroll", "]
 
    user = User()
-   assert(oso.allow(user, "foo", "bar))
+   assert(oso.is_allowed(user, "foo", "bar))
 
 In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to :py:meth:`~oso.Oso.allow` will succeed.
+``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to :py:meth:`~oso.Oso.is_allowed` will succeed.
 Note that if :py:meth:`get_group` returned a list, the rule would fail, as the evaluation would be ``["HR", "payroll"] = "payroll"``.
 
 Summary
 ^^^^^^^
 
 .. list-table:: Python -> Polar Types Summary
-   :widths: 500 500
+   :width: 500 px
    :header-rows: 1
 
    * - Python type

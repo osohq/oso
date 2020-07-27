@@ -27,28 +27,28 @@ Our web server contains some simple logic to filter out bad requests and not muc
 
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/python/server.py
+    .. literalinclude:: /examples/quickstart/python/server.py
       :class: copybutton
-      :caption: :fab:`python` server.py :download:`(link) </examples/getting-started/python/server.py>`
+      :caption: :fab:`python` server.py :download:`(link) </examples/quickstart/python/server.py>`
       :language: python
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/ruby/server.rb
+    .. literalinclude:: /examples/quickstart/ruby/server.rb
       :class: copybutton
-      :caption: :fas:`gem` server.rb :download:`(link) </examples/getting-started/ruby/server.rb>`
+      :caption: :fas:`gem` server.rb :download:`(link) </examples/quickstart/ruby/server.rb>`
       :language: ruby
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/java/server/Server.java
+    .. literalinclude:: /examples/quickstart/java/server/Server.java
       :class: copybutton
-      :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server/Server.java>`
+      :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/server/Server.java>`
       :language: java
 
-    .. literalinclude:: /examples/getting-started/java/server/Expense.java
+    .. literalinclude:: /examples/quickstart/java/server/Expense.java
       :class: copybutton
-      :caption: :fab:`java` Expense.java :download:`(link) </examples/getting-started/java/server/Expense.java>`
+      :caption: :fab:`java` Expense.java :download:`(link) </examples/quickstart/java/server/Expense.java>`
       :language: java
 
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
@@ -125,7 +125,7 @@ Adding oso
 
       .. todo:: Java install
 
-      Download :download:`oso-0.2.5.jar </examples/getting-started/java/lib/oso-0.2.5.jar>`.
+      Download :download:`oso-0.2.5.jar </examples/quickstart/java/lib/oso-0.2.5.jar>`.
 
       Then build and run your server with:
 
@@ -145,41 +145,41 @@ highlighted:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/python/server-with-oso.py
-      :caption: :fab:`python` server.py :download:`(link) </examples/getting-started/python/server-with-oso.py>`
+    .. literalinclude:: /examples/quickstart/python/server-with-oso.py
+      :caption: :fab:`python` server.py :download:`(link) </examples/quickstart/python/server-with-oso.py>`
       :language: python
       :class: copybutton
       :emphasize-lines: 3,5-6,31-32,39-42
 
     And a new empty Polar policy file:
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-01.polar
       :caption: :fa:`oso` expenses.polar
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/ruby/server-with-oso.rb
-      :caption: :fas:`gem` server.rb :download:`(link) </examples/getting-started/ruby/server-with-oso.rb>`
+    .. literalinclude:: /examples/quickstart/ruby/server-with-oso.rb
+      :caption: :fas:`gem` server.rb :download:`(link) </examples/quickstart/ruby/server-with-oso.rb>`
       :language: ruby
       :class: copybutton
       :emphasize-lines: 1,4-5,25-26,32-36
 
     And a new empty Polar policy file:
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-01.polar
       :caption: :fa:`oso` expenses.polar
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/java/server-with-oso/Server.java
-      :caption: :fab:`java` Server.java :download:`(link) </examples/getting-started/java/server-with-oso/Server.java>`
+    .. literalinclude:: /examples/quickstart/java/server-with-oso/Server.java
+      :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/server-with-oso/Server.java>`
       :language: java
       :class: copybutton
       :emphasize-lines: 4,10-15,37-41
 
     And a new empty Polar policy file:
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-01.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-01.polar
       :caption: :fa:`oso` expenses.polar
 
 
@@ -189,26 +189,26 @@ make authorization decisions!
 Decisions, decisions...
 =======================
 
-The ``Oso`` instance exposes an ``allow()`` method that takes three
+The ``Oso`` instance exposes a method to evaluate ``allow`` rules that takes three
 arguments, **actor**, **action**, and **resource**:
 
 
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/python/allow-01.py
+    .. literalinclude:: /examples/quickstart/python/allow-01.py
       :language: python
       :lines: 11-13
 
   .. group-tab:: Ruby
 
-      .. literalinclude:: /examples/getting-started/ruby/allow-01.rb
+      .. literalinclude:: /examples/quickstart/ruby/allow-01.rb
         :language: ruby
         :lines: 4-6
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/java/allow-01.java
+    .. literalinclude:: /examples/quickstart/java/allow-01.java
       :language: java
       :lines: 5-8
       :dedent: 8
@@ -219,7 +219,7 @@ perform the **action** ``"GET"`` on the
 verb used in our server, but this could be anything.
 
 .. note:: For more on **actors**, **actions**, and **resources**, check out
-  :doc:`/using/key-concepts`.
+  :doc:`/more/key-concepts`.
 
 oso's authorization system is deny-by-default. Since we haven't yet written any
 policy code, Alice is not allowed to view expenses. To see that in action,
@@ -238,12 +238,12 @@ start a REPL session and follow along:
       <oso.Oso object at 0x7f267494dc70>
       >>> alice = "alice@example.com"
       >>> expense = EXPENSES[1]
-      >>> oso.allow(alice, "GET", expense)
+      >>> oso.is_allowed(alice, "GET", expense)
       False
 
     We can add a rule explicitly allowing Alice to GET expenses...
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -257,14 +257,14 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
-      >>> oso.allow(alice, "GET", expense)
+      >>> oso.is_allowed(alice, "GET", expense)
       True
 
     ...and everyone else is still denied:
 
     .. code-block:: pycon
 
-      >>> OSO.allow("bhavik", "GET", expense)
+      >>> OSO.is_allowed("bhavik", "GET", expense)
       False
 
 
@@ -280,12 +280,12 @@ start a REPL session and follow along:
         => "alice@example.com"
         irb(main):003:0> expense = EXPENSES[1]
         => #<Expense:0x00564efc19e640 @amount=500, @description="coffee", @submitted_by="alice@example.com">
-        irb(main):004:0> OSO.allow(actor: alice, action: "GET", resource: expense)
+        irb(main):004:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
         => false
 
     We can add a rule explicitly allowing Alice to view expenses...
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -300,14 +300,14 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allow(actor: "alice", action: "GET", resource: "expense")
+      irb(main):005:0> OSO.allowed?(actor: "alice", action: "GET", resource: "expense")
       => true
 
     ...and everyone else is still denied:
 
     .. code-block:: irb
 
-      irb(main):006:0> OSO.allow(actor: "bhavik", action: "GET", resource: "expense")
+      irb(main):006:0> OSO.allowed?(actor: "bhavik", action: "GET", resource: "expense")
       => false
 
   .. group-tab:: Java
@@ -324,12 +324,12 @@ start a REPL session and follow along:
         jshell> Expense expense = Server.EXPENSES[1]
         expense ==> Expense(5000, software, alice@example.com)
 
-        jshell> oso.allow(alice, "GET", expense)
+        jshell> oso.isAllowed(alice, "GET", expense)
         $12 ==> false
 
     We can add a rule explicitly allowing Alice to view expenses...
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -343,14 +343,14 @@ start a REPL session and follow along:
 
     .. code-block:: java
 
-      jshell> oso.allow(alice, "GET", expense)
+      jshell> oso.isAllowed(alice, "GET", expense)
       $14 ==> true
 
     ...and everyone else is still denied:
 
     .. code-block:: java
 
-      jshell> oso.allow("bhavik", "GET", expense)
+      jshell> oso.isAllowed("bhavik", "GET", expense)
       $15 ==> false
 
 .. note::
@@ -371,7 +371,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik@example.com"
 match the string ``"alice@example.com"``.
 
 .. note:: For a deeper introduction to writing authorization rules with oso,
-  see :doc:`/using/key-concepts`.
+  see :doc:`/more/key-concepts`.
 
 Authorizing HTTP requests
 =========================
@@ -387,7 +387,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
 
 Assuming you added the rule from the previous step:
 
-.. literalinclude:: /examples/getting-started/polar/expenses-02.polar
+.. literalinclude:: /examples/quickstart/polar/expenses-02.polar
   :caption: :fa:`oso` expenses.polar
   :class: copybutton
 
@@ -416,7 +416,7 @@ able to view expenses, but no one outside the company will be able to:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-03-py.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-py.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -432,7 +432,7 @@ able to view expenses, but no one outside the company will be able to:
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-03-rb.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-rb.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -448,7 +448,7 @@ able to view expenses, but no one outside the company will be able to:
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-03-java.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-java.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -498,19 +498,19 @@ To accomplish that, we can replace our existing rule with:
 
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-04.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-04.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Java
 
-    .. literalinclude:: /examples/getting-started/polar/expenses-04-java.polar
+    .. literalinclude:: /examples/quickstart/polar/expenses-04-java.polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -563,7 +563,7 @@ as:
 - Does the expense's ``amount`` field contain a value less than $100.00?
 
 .. note:: For more on leveraging application data in an oso policy, check out
-  :doc:`/using/policies/application-types`.
+  :doc:`/getting-started/policies/application-types`.
 
 
 
@@ -576,10 +576,27 @@ We just blitzed through a ton of stuff:
 * Setting up our app to enforce the policy decisions made by oso.
 * Writing authorization rules over static and dynamic application data.
 
-If you're interested in what sets oso apart from existing authorization
-solutions, check out :doc:`/getting-started/overview`. If you want to learn more about
-authorization in oso, including common patterns like :doc:`/using/examples/rbac`
-and :doc:`/using/examples/abac`, we recommend continuing on to the
-:doc:`/using/key-concepts` guide. For more details on the logic programming
-language we used to write our authorization policies, head on over to the
-:doc:`/understand/language/polar-fundamentals` guide.
+.. todo::
+    Make these actual links.
+
+.. admonition:: What's next
+    :class: tip
+
+    * Explore how to :doc:`/getting-started/application/index`.
+    * Dig deeper on :doc:`/getting-started/policies/index`.
+    * Check out oso in action: :doc:`/using/examples/index`.
+    * Explore the :doc:`/more/design-principles` behind oso.
+
+------------------------
+
+.. admonition:: Sign up for our newsletter!
+
+    .. raw:: html
+
+        <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/shell.js"></script>
+        <script>
+          hbspt.forms.create({
+            portalId: "8091225",
+            formId: "109f461f-8b3a-4dfa-a942-fd40b6f6e27f"
+        });
+        </script>

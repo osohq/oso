@@ -28,6 +28,8 @@ import lexer
 project = "oso"
 copyright = "2020, oso"
 author = "oso"
+version = "0.2"
+release = "0.2.5"
 
 
 # -- General configuration ---------------------------------------------------
@@ -90,7 +92,8 @@ exclude_patterns = [
     "project/changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
-    "understand/language/polar-classes.rst",  # we don't currently have classes
+    "more/language/polar-classes.rst",  # we don't currently have classes
+    "**/venv/**",
 ]
 
 # Don't copy the source or show a link

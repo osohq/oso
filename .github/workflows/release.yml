@@ -23,6 +23,9 @@ jobs:
       - name: Check java version matches
         run: grep "<version>$oso_version</version>" pom.xml
         working-directory: languages/java/oso
+      - name: Check docs release matches
+        run: grep "release = \"$oso_version\"" conf.py
+        working-directory: docs
 
   build_dylib:
     name: Build release dylib on ${{ matrix.os }}

@@ -2,16 +2,12 @@ package com.osohq.oso;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Function;
 
 public class Oso extends Polar {
     public Oso() throws Exceptions.OsoException {
         super();
-        registerClass(Http.class,
-                      (m) -> new Http((String) m.get("hostname"),
-                                      (String) m.get("path"),
-                                      (Map<String, String>) m.get("query")),
-                      "Http");
+        registerClass(Http.class, (m) -> new Http((String) m.get("hostname"), (String) m.get("path"),
+                (Map<String, String>) m.get("query")), "Http");
         registerClass(PathMapper.class, (m) -> new PathMapper((String) m.get("template")), "PathMapper");
     }
 
@@ -24,7 +20,11 @@ public class Oso extends Polar {
      * @return
      * @throws Exceptions.OsoException
      */
-    public boolean allow(Object actor, Object action, Object resource) throws Exceptions.OsoException {
+    public boolean isAllowed(Object actor, Object action, Object resource) throws Exceptions.OsoException {
         return query("allow", List.of(actor, action, resource)).hasMoreElements();
+    }
+
+    public static void main(String[] args) throws Exceptions.OsoException, IOException {
+        new Oso().repl(args);
     }
 }

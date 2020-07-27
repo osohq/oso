@@ -299,7 +299,11 @@ pub mod to_polar {
 
     impl ToPolarString for ExternalInstance {
         fn to_polar(&self) -> String {
-            format!("^{{id: {}}}", self.instance_id)
+            if let Some(ref repr) = self.repr {
+                repr.clone()
+            } else {
+                format!("^{{id: {}}}", self.instance_id)
+            }
         }
     }
 

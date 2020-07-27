@@ -55,3 +55,7 @@ booleans
 autoboxed
 iterable
 iterables
+sqlite
+lookups
+classpath
+javac

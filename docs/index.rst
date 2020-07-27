@@ -22,7 +22,7 @@ Using oso, you can:
 To see this in action, :doc:`continue on to the Getting Started guide <getting-started/quickstart>`.
 
 To learn more about oso and the principles behind its design,
-:doc:`read the oso overview page <getting-started/overview>`.
+:doc:`read the oso overview page <more/design-principles>`.
 
 -----
 
@@ -43,7 +43,8 @@ To learn more about oso and the principles behind its design,
 
    getting-started/quickstart
    getting-started/download/index
-   getting-started/overview
+   getting-started/application/index
+   Writing Policies <getting-started/policies/index>
 
 .. ----------
 
@@ -56,48 +57,27 @@ To learn more about oso and the principles behind its design,
    :caption: Using oso
    :hidden:
 
-   using/key-concepts
-
-   using/add-oso
-   using/policies/index
    using/examples/index
    using/polar-syntax
-
    using/libraries/index
-   using/dev-tools/index
 
 .. ----------
-..
-.. Reference material for concepts, terminology and language APIs.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Understand oso
+   :caption: More
    :titlesonly:
    :hidden:
 
-   understand/use-cases
-   understand/language/polar-fundamentals
-   understand/performance
-   understand/security
-   understand/faq
-
-..  ----------
-..
-..  Project-related information.
-
-.. todo::
-   Add links to GitHub + Issues
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Project
-   :titlesonly:
-   :hidden:
-
-
+   more/design-principles
+   more/key-concepts
+   more/dev-tools/index
+   more/faq
+   more/use-cases
+   more/performance
+   more/language/polar-foundations
+   more/security
    project/changelogs/index
-   GitHub <https://github.com/osohq/oso>
 
 ..
 .. Indices and tables
