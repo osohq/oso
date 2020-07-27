@@ -12,5 +12,5 @@ Supported IDEs
 Want support for your IDE of choice?
 ------------------------------------
 
-Let us know by using our livechat to send us a slack message.
+Let us know by using our chat on the bottom right to send us a Slack message.
 
