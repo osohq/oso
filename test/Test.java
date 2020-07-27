@@ -57,18 +57,16 @@ class Test {
             }
             if (!throwsException)
                 throw new Exception();
-            boolean passes = !o.queryRule("specializers", List.of(new D("hello"), new BC("hello"))).results().isEmpty()
-                    && !o.queryRule("floatLists", null).results().isEmpty()
-                    && !o.queryRule("intDicts", null).results().isEmpty()
-                    && !o.queryRule("comparisons", null).results().isEmpty()
-                    && !o.queryRule("testForall", null).results().isEmpty()
-                    && !o.queryRule("testRest", null).results().isEmpty()
-                    && !o.queryRule("testMatches", List.of(new A("hello"))).results().isEmpty()
-                    && !o.queryRule("testMethodCalls", List.of(new A("hello"), new BC("hello"))).results().isEmpty()
-                    && !o.queryRule("testOr", null).results().isEmpty()
+            boolean passes = !o.queryRule("specializers", new D("hello"), new BC("hello")).results().isEmpty()
+                    && !o.queryRule("floatLists").results().isEmpty() && !o.queryRule("intDicts").results().isEmpty()
+                    && !o.queryRule("comparisons").results().isEmpty() && !o.queryRule("testForall").results().isEmpty()
+                    && !o.queryRule("testRest").results().isEmpty()
+                    && !o.queryRule("testMatches", new A("hello")).results().isEmpty()
+                    && !o.queryRule("testMethodCalls", new A("hello"), new BC("hello")).results().isEmpty()
+                    && !o.queryRule("testOr").results().isEmpty()
                     // Test that cut doesn't return anything.
-                    && o.queryRule("testCut", null).results().isEmpty()
-                    && !o.queryRule("testHttpAndPathMapper", null).results().isEmpty();
+                    && o.queryRule("testCut").results().isEmpty()
+                    && !o.queryRule("testHttpAndPathMapper").results().isEmpty();
             if (!passes)
                 throw new Exception();
 

@@ -85,23 +85,36 @@ public class Polar {
      * @param query String string
      * @return Query object (Enumeration of resulting variable bindings).
      */
-    public Query queryStr(String query) throws Exceptions.OsoException {
+    public Query query(String query) throws Exceptions.OsoException {
         loadQueuedFiles();
         return new Query(ffiPolar.newQueryFromStr(query), host.clone());
+    }
+
+    /**
+     * Query for a predicate.
+     *
+     * @param query as a Predicate
+     * @return Query object (Enumeration of resulting variable bindings).
+     */
+    public Query query(Predicate query) throws Exceptions.OsoException {
+        loadQueuedFiles();
+        Host new_host = host.clone();
+        String pred = new_host.toPolarTerm(query).toString();
+        return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
     }
 
     /**
      * Query for a rule.
      *
      * @param rule Rule name, e.g. "f" for rule "f(x)".
-     * @param args List of rule arguments.
+     * @param args Variable list of rule arguments.
      * @return Query object (Enumeration of resulting variable bindings).
      * @throws Exceptions.OsoException
      */
-    public Query queryRule(String rule, List<Object> args) throws Exceptions.OsoException {
+    public Query queryRule(String rule, Object... args) throws Exceptions.OsoException {
         loadQueuedFiles();
         Host new_host = host.clone();
-        String pred = new_host.toPolarTerm(new Predicate(rule, args)).toString();
+        String pred = new_host.toPolarTerm(new Predicate(rule, Arrays.asList(args))).toString();
         return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
     }
 
@@ -190,8 +203,8 @@ public class Polar {
      * @param fromPolar lambda function to convert from a
      *                  {@code Map<String, Object>} of parameters to an instance of
      *                  the Java class.
-     * @param name     name to register the class under, which is how the class is
-     *                 accessed from Polar.
+     * @param name      name to register the class under, which is how the class is
+     *                  accessed from Polar.
      * @throws Exceptions.DuplicateClassAliasError if a class has already been
      *                                             registered with the given alias.
      */

@@ -21,7 +21,7 @@ public class Oso extends Polar {
      * @throws Exceptions.OsoException
      */
     public boolean isAllowed(Object actor, Object action, Object resource) throws Exceptions.OsoException {
-        return queryRule("allow", List.of(actor, action, resource)).hasMoreElements();
+        return queryRule("allow", actor, action, resource).hasMoreElements();
     }
 
     public static void main(String[] args) throws Exceptions.OsoException, IOException {
