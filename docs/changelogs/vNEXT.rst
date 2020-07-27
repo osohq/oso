@@ -31,7 +31,7 @@ cut() predicate replaced with cut keyword
 
 The Polar "cut" operator was previously parsed like a predicate, but
 it isn't one. The new syntax ``cut`` (without the empty parentheses)
-emphasizes its role as a keyword.
+emphasizes its role as an operator.
 
 New features
 ==============
