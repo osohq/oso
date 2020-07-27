@@ -57,32 +57,29 @@ Adding oso
   our application. If you don't already have it :doc:`installed </download>`, go ahead and
   do so now:
 
-  .. todo::
-    replace the hard-coded version number(s) in the below snippet with the
-    current latest versions
-
   .. tabs::
     .. group-tab:: Python
 
-      oso supports Python versions **>= 3.6**
+      oso v{release} supports Python versions **>= 3.6**
 
       .. code-block:: console
 
-        $ pip install oso
+        $ pip install oso=={release}
 
     .. group-tab:: Ruby
 
-      oso supports Ruby versions **>= 2.4**
+      oso v{release} supports Ruby versions **>= 2.4**
 
       .. code-block:: console
 
-        $ gem install oso-oso
+        $ gem install oso-oso -v {release}
 
     .. group-tab:: Java
 
-      oso supports Java versions **>= 10**
+      oso v{release} supports Java versions **>= 10**
 
-      Download :download:`oso-0.2.5.jar </examples/quickstart/java/lib/oso-0.2.5.jar>`.
+      Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_
+      and download the latest jar.
 
       Either add this to your Java project libraries,
       load using your IDE,
@@ -90,7 +87,7 @@ Adding oso
 
       .. code-block:: console
 
-        $ javac -cp oso-0.2.5.jar:. Expense.java
+        $ javac -cp {JAR}:. Expense.java
 
 
 Now that we've installed oso, let's see how to make some basic authorization
@@ -231,7 +228,7 @@ start a REPL session and follow along:
     To follow along, either try using ``jshell`` (requires Java version >= 9)
     or copy the follow code into a ``main`` method in ``Expense.java``.
 
-    Run: ``jshell --class-path oso-0.2.5.jar Expense.java``
+    Run: ``jshell --class-path {JAR} Expense.java``
 
     .. tabs::
       .. group-tab:: Java main
@@ -408,7 +405,7 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac -cp oso-0.2.5.jar:. Server.java
+        $ javac -cp {JAR}:. Server.java
         $ java Server
         Server running on /127.0.0.1:5050
 
