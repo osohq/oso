@@ -693,7 +693,8 @@ fn test_load_with_query() {
 
 #[test]
 fn test_externals_instantiated() {
-    let polar = Polar::new(None);
+    let mut polar = Polar::new(None);
+    polar.register_constant(sym!("Foo"), term!(true));
     polar
         .load("f(x, foo: Foo) if foo.bar(new Bar{x: x}) = 1;")
         .unwrap();
@@ -958,8 +959,10 @@ fn test_anonymous_vars() {
 fn test_singleton_vars() {
     let (mut read, write) = pipe();
     spawn(move || {
-        let polar = Polar::new(Some(Box::new(write)));
-        polar.load("f(x,y,z) if z = z;").unwrap();
+        let mut polar = Polar::new(Some(Box::new(write)));
+        polar.register_constant(sym!("X"), term!(true));
+        polar.register_constant(sym!("Y"), term!(true));
+        polar.load("f(x:X,y:Y,z:Z) if z = z;").unwrap();
     });
 
     let mut out = String::new();
@@ -968,11 +971,14 @@ fn test_singleton_vars() {
         &out,
         indoc!(
             r#"Singleton variable x
-               001: f(x,y,z) if z = z;
+               001: f(x:X,y:Y,z:Z) if z = z;
                       ^
                Singleton variable y
-               001: f(x,y,z) if z = z;
-                        ^
+               001: f(x:X,y:Y,z:Z) if z = z;
+                          ^
+               Unknown specializer Z
+               001: f(x:X,y:Y,z:Z) if z = z;
+                                ^
                "#
         )
     );
@@ -1129,7 +1135,7 @@ fn test_keyword_bug() {
 /// Test that rule heads work correctly when unification or specializers are used.
 #[test]
 fn test_unify_rule_head() {
-    let polar = Polar::new(None);
+    let mut polar = Polar::new(None);
     assert!(matches!(
         polar
             .load("f(Foo{a: 1});")
@@ -1158,6 +1164,7 @@ fn test_unify_rule_head() {
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
+    polar.register_constant(sym!("Foo"), term!(true));
     polar.load("f(_: Foo{a: 1}, x) if x = 1;").unwrap();
     polar.load("g(_: Foo{a: Foo{a: 1}}, x) if x = 1;").unwrap();
 

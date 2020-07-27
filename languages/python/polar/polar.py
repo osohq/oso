@@ -22,12 +22,16 @@ class Polar:
 
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
         self.ffi_polar = lib.polar_new()
-        self.host = Host(self.ffi_polar, classes=classes, constructors=constructors)
+        self.host = Host(self.ffi_polar)
         self.load_queue = []
 
         # Register built-in classes.
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
+
+        # Pre-registered classes.
+        for name, cls in classes.items():
+            self.register_class(cls, name=name, from_polar=constructors[name])
 
     def __del__(self):
         del self.host

@@ -212,11 +212,15 @@ impl Polar {
         Ok(())
     }
 
-    /// Warn about singleton variables in a rule, except those whose names start with `_`.
+    /// Warn about singleton variables and unknown specializers in a rule,
+    /// except those whose names start with `_`.
     pub fn check_singletons(&self, rule: &Rule, kb: &KnowledgeBase) {
         let mut singletons = HashMap::<Symbol, Option<Term>>::new();
         let mut check_term = |term: &Term| {
-            if let Value::Variable(sym) | Value::RestVariable(sym) = term.value() {
+            if let Value::Variable(sym)
+            | Value::RestVariable(sym)
+            | Value::Pattern(Pattern::Instance(InstanceLiteral { tag: sym, .. })) = term.value()
+            {
                 if !sym.0.starts_with('_') && !kb.is_constant(sym) {
                     match singletons.entry(sym.clone()) {
                         Entry::Occupied(mut o) => {
@@ -248,7 +252,11 @@ impl Polar {
         for (sym, singleton) in singletons {
             if let Some(term) = singleton {
                 let mut writer = self.output.write().unwrap();
-                let _ = writeln!(&mut writer, "Singleton variable {}", sym);
+                let _ = if let Value::Pattern(..) = term.value() {
+                    writeln!(&mut writer, "Unknown specializer {}", sym)
+                } else {
+                    writeln!(&mut writer, "Singleton variable {}", sym)
+                };
                 if let Some(ref source) = kb.sources.get_source(&term) {
                     let _ = writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0));
                 }
