@@ -42,7 +42,7 @@ class Query:
         del self.host
         lib.query_free(self.ffi_query)
 
-    def run(self, ffi_query=None):
+    def run(self):
         """Run the event loop and yield results."""
         if ffi_query is None:
             ffi_query = self.ffi_query
