@@ -79,7 +79,7 @@ Adding oso
       oso v{release} supports Java versions **>= 9**
 
       Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_
-      and download the latest jar
+      and download the latest jar.
 
       Either add this to your Java project libraries,
       load using your IDE,
