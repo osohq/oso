@@ -2,7 +2,7 @@
   "name": "oso",
   "publisher": "osohq",
   "displayName": "oso",
-  "description": "Syntax highlighting for oso .polar files",
+  "description": "Syntax highlighting for .polar files as used by oso.",
   "icon": "oso_logo.png",
   "version": "0.1.0",
   "engines": {
