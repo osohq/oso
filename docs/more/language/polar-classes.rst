@@ -96,7 +96,7 @@ in left-to-right order. This is important if a rule includes a
 ``cut`` operator; e.g.::
 
   allow(user: Invited, action: Frob, resource: DooDad) if
-    cut();
+    cut;
 
 This says that an ``Invited`` user may ``Frob`` a ``DooDad``,
 and no less specific rule (i.e., one whose first parameter is

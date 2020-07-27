@@ -403,7 +403,7 @@ def test_arities(tell, qeval):
 
 
 def test_rule_ordering(tell, qeval, externals):
-    tell("f(_: Foo{}) if cut() and 1 = 2;")
+    tell("f(_: Foo{}) if cut and 1 = 2;")
     tell('f(_: Foo{name: "test"});')
 
     assert qeval('f(new Foo{ name: "test" }) ')
