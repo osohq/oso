@@ -231,7 +231,7 @@ Exp11<T>: Term = {
 Exp10<T>: Term = {
     // A pattern cannot contain a new operator
     <new:New> if T == "Term" => new,
-    <start:@L> "cut" ( "(" ")" )? => {
+    <start:@L> "cut" => {
         let args = vec![];
         let op = Operation{operator: Operator::Cut, args};
         Term::new_from_parser(src_id, start, Value::Expression(op))
