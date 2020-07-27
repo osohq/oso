@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime, timedelta
 
+from polar import polar_class
 from polar import exceptions, Polar, Predicate, Query, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserException
@@ -597,3 +598,31 @@ def test_host_methods(polar, qeval):
     assert qeval('f = 3.14159 and f.hex() = "0x1.921f9f01b866ep+1"')
     assert qeval("l = [1, 2, 3] and l.index(3) = 2 and l.copy() = [1, 2, 3]")
     assert qeval('d = {a: 1} and d.get("a") = 1 and d.get("b", 2) = 2')
+
+
+def test_register_constants_with_decorator():
+    @polar_class
+    class RegisterDecoratorTest:
+        x = 1
+
+    p = Polar()
+    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
+    assert (
+        p.query_predicate("foo_rule", RegisterDecoratorTest(), Variable("y")).results[
+            0
+        ]["y"]
+        == 1
+    )
+    assert p.query_predicate("foo_class_attr", Variable("y")).results[0]["y"] == 1
+
+    p = Polar()
+    p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
+    p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
+    assert (
+        p.query_predicate("foo_rule", RegisterDecoratorTest(), Variable("y")).results[
+            0
+        ]["y"]
+        == 1
+    )
+    assert p.query_predicate("foo_class_attr", Variable("y")).results[0]["y"] == 1
