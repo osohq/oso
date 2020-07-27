@@ -626,3 +626,16 @@ def test_register_constants_with_decorator():
         == 1
     )
     assert p.query_predicate("foo_class_attr", Variable("y")).results[0]["y"] == 1
+
+
+def test_unbound_variable(polar, query):
+    """Test that unbound variable is returned."""
+    polar.load_str("rule(x, y) if y = 1;")
+
+    first = query("rule(x, y)")[0]
+
+    # y will be bound to 1
+    first["y"] = 1
+
+    # x should be unbound
+    assert isinstance(first["x"], Variable)

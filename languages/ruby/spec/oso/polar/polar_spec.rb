@@ -624,4 +624,16 @@ EOM
         expect(e).to be_an Oso::Polar::PolarRuntimeError
       end
     end
+
+  context 'unbound variable' do
+    it 'returns unbound properly' do
+      subject.load_str("rule(x, y) if y = 1;")
+
+      results = query(subject, "rule(x, y)")
+      first = results[0]
+
+      expect(first['y']).to be 1
+      expect(first['x']).to be_instance_of(Oso::Polar::Variable)
+    end
+  end
 end

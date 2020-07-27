@@ -417,6 +417,15 @@ public class PolarTest {
                 "Expected error.");
     }
 
+    @Test
+    public void testUnboundVariable() throws Exception {
+      p.loadStr("rule(x, y) if y = 1;");
+      List<HashMap<String, Object>> results = p.query("rule(x, y)").results();
+      HashMap<String, Object> result = results.get(0);
+      assertTrue(result.get("x") instanceof Variable);
+      assertEquals(result.get("y"), 1);
+    }
+
     /*** TEST OSO ***/
     @Test
     public void testPathMapper() throws Exception {

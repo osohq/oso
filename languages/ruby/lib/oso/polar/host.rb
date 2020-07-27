@@ -226,6 +226,8 @@ module Oso
           get_instance(value['instance_id'])
         when 'Call'
           Predicate.new(value['name'], args: value['args'].map { |a| to_ruby(a) })
+        when 'Variable'
+          Variable.new(value['name'])
         else
           raise UnexpectedPolarTypeError, tag
         end
