@@ -970,10 +970,10 @@ fn test_singleton_vars() {
     assert_eq!(
         &out,
         indoc!(
-            r#"Singleton variable x
+            r#"Singleton variable x is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>
                001: f(x:X,y:Y,z:Z) if z = z;
                       ^
-               Singleton variable y
+               Singleton variable y is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>
                001: f(x:X,y:Y,z:Z) if z = z;
                           ^
                Unknown specializer Z

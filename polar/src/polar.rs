@@ -255,7 +255,7 @@ impl Polar {
                 let _ = if let Value::Pattern(..) = term.value() {
                     writeln!(&mut writer, "Unknown specializer {}", sym)
                 } else {
-                    writeln!(&mut writer, "Singleton variable {}", sym)
+                    writeln!(&mut writer, "Singleton variable {} is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>", sym)
                 };
                 if let Some(ref source) = kb.sources.get_source(&term) {
                     let _ = writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0));
