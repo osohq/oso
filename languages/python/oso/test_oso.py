@@ -85,9 +85,7 @@ def test_decorators(test_oso):
     actor = Actor(name="president")
     action = "create"
     resource = Company(id="1")
-    assert test_oso.query(
-        Predicate(name="allow", args=(actor, action, resource))
-    ).success
+    assert list(test_oso.query(Predicate(name="allow", args=(actor, action, resource))))
 
 
 @polar_class
@@ -129,7 +127,7 @@ def test_query_rule(test_oso):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert test_oso.query_rule("allow", actor, action, resource).success
+    assert list(test_oso.query_rule("allow", actor, action, resource))
 
 
 def test_fail(test_oso):

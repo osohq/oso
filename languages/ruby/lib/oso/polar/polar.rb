@@ -59,6 +59,10 @@ module Oso
       end
 
       # Query for a predicate, parsing it if necessary.
+      #
+      # @param query [String or Predicate]
+      # @return Enumerator of resulting bindings
+      # @raise [Error] if the FFI call raises one.
       def query(query)
         load_queued_files
         new_host = host.dup

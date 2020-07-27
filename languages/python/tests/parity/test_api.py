@@ -7,6 +7,7 @@ from pathlib import Path
 from polar import Polar
 from polar.exceptions import PolarRuntimeException, PolarApiException
 from oso import Http, PathMapper
+from polar.ffi import Predicate
 
 from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
 
@@ -18,19 +19,6 @@ except ImportError:
     pass
 
 from polar.test_helpers import tell, qvar, query, oso_monkeypatch as polar_monkeypatch
-
-# WOWHACK until API stabilizes.
-if not os.getenv("OSO_COMPAT"):
-    from polar import Predicate
-else:
-    from polar.api import Query as Predicate
-
-    setattr(Polar, "register_class", Polar.register_python_class)
-    setattr(Polar, "_to_python", Polar.to_python)
-    setattr(Polar, "_to_polar_term", Polar.to_polar)
-    setattr(Polar, "_load_queued_files", Polar._kb_load)
-    setattr(Polar, "_query_pred", Polar.query)
-
 
 # Set if running tests against old code
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
@@ -64,59 +52,51 @@ def actor_in_role(polar_monkeypatch):
 ## TESTS ##
 
 
-def test_register_class(polar, load_policy):
+def test_register_class(polar, load_policy, query):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(Predicate(name="allow", args=(actor, action, resource))).success
+    assert query(Predicate(name="allow", args=(actor, action, resource)))
 
 
-def test_is_allowed(polar, load_policy):
+def test_is_allowed(polar, load_policy, query):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
+    assert query(Predicate(name="allow", args=[actor, action, resource]))
     actor = Actor(name="president")
-    assert polar.query(
-        Predicate(name="actorInRole", args=[actor, "admin", resource])
-    ).success
-    assert polar.query(
-        Predicate(name="allowRole", args=["admin", "create", resource])
-    ).success
+    assert query(Predicate(name="actorInRole", args=[actor, "admin", resource]))
+    assert query(Predicate(name="allowRole", args=["admin", "create", resource]))
 
 
-def test_method_resolution_order(polar, load_policy):
+def test_method_resolution_order(polar, load_policy, query):
     set_frobbed([])
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
+    assert query(Predicate(name="allow", args=[actor, action, resource]))
     assert get_frobbed() == ["Widget"]
     set_frobbed([])
     resource = DooDad(id="2")
-    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
+    assert query(Predicate(name="allow", args=[actor, action, resource]))
     assert get_frobbed() == ["DooDad", "Widget"]
 
 
-def test_cut(polar, load_policy):
+def test_cut(polar, load_policy, query):
     set_frobbed([])
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "get"
-    assert polar.query(
-        Predicate(name="allow_with_cut", args=[actor, action, resource])
-    ).success
+    assert query(Predicate(name="allow_with_cut", args=[actor, action, resource]))
     assert get_frobbed() == ["Widget"]
     set_frobbed([])
     resource = DooDad(id="2")
-    assert polar.query(
-        Predicate(name="allow_with_cut", args=[actor, action, resource])
-    ).success
+    assert query(Predicate(name="allow_with_cut", args=[actor, action, resource]))
     assert get_frobbed() == ["DooDad"]
 
 
-def test_querystring_resource_map(polar, load_policy):
-    assert polar.query(
+def test_querystring_resource_map(polar, load_policy, query):
+    assert query(
         Predicate(
             name="allow",
             args=[
@@ -125,15 +105,15 @@ def test_querystring_resource_map(polar, load_policy):
                 Http(path="/widget/12", query={"param": "foo"}),
             ],
         )
-    ).success
-    assert not polar.query(
+    )
+    assert not query(
         Predicate(
             name="allow", args=[Actor(name="sam"), "what", Http(path="/widget/12")]
         )
-    ).success
+    )
 
 
-def test_resource_mapping(polar, load_policy):
+def test_resource_mapping(polar, load_policy, query):
     # from flask import Flask, request, Response, g
     try:
         from flask import Flask, request, Response, g
@@ -148,23 +128,23 @@ def test_resource_mapping(polar, load_policy):
 
     @app.route("/widget/<int:id>")
     def get_widget(id):
-        if not polar.query(
+        if not query(
             Predicate(
                 name="allow",
                 args=[g.user, request.method.lower(), Http(path=request.path)],
             )
-        ).success:
+        ):
             return Response("Denied", status=403)
         return Response("Ok", status=204)
 
     @app.route("/widget/", methods=["POST"])
     def create_widget():
-        if not polar.query(
+        if not query(
             Predicate(
                 name="allow",
                 args=[g.user, request.method.lower(), Http(path=request.path)],
             )
-        ).success:
+        ):
             return Response("Denied", status=403)
         return Response("Ok", status=204)
 
@@ -179,19 +159,19 @@ def test_resource_mapping(polar, load_policy):
         assert resp.status_code == 204
 
 
-def test_patching(polar, widget_in_company, actor_in_role, load_policy):
+def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
     user = Actor("test")
-    assert not polar.query(
+    assert not query(
         Predicate(name="actorInRole", args=[user, "admin", Widget(id="1")])
-    ).success
+    )
     with widget_in_company:
         with actor_in_role("admin"):
-            assert polar.query(
+            assert query(
                 Predicate(name="actorInRole", args=[user, "admin", Widget(id="1")])
-            ).success
-    assert not polar.query(
+            )
+    assert not query(
         Predicate(name="actorInRole", args=[user, "admin", Widget(id="1")])
-    ).success
+    )
 
 
 ## Instance Caching tests (move these somewhere else eventually)
@@ -216,18 +196,16 @@ def test_instance_initialization(polar, query, qvar):
     assert polar.host.to_python(env["returned_user"]) == user
 
 
-def test_instance_from_external_call(polar, load_policy):
+def test_instance_from_external_call(polar, load_policy, query):
     user = Actor(name="guest")
     resource = Widget(id="1", name="name")
-    assert polar.query(Predicate(name="allow", args=[user, "frob", resource])).success
+    assert query(Predicate(name="allow", args=[user, "frob", resource]))
 
     resource = Widget(id="2", name="name")
-    assert not polar.query(
-        Predicate(name="allow", args=[user, "frob", resource])
-    ).success
+    assert not query(Predicate(name="allow", args=[user, "frob", resource]))
 
 
-def test_load_input_checking(polar):
+def test_load_input_checking(polar, query):
     with pytest.raises(PolarApiException):
         polar.load_file("unreal.py")
     with pytest.raises(PolarApiException):
@@ -244,29 +222,27 @@ def test_load_input_checking(polar):
     EXPECT_XFAIL_PASS,
     reason="Lists are no longer converted to generators, but are returned as true lists.",
 )
-def test_return_list(polar, load_policy):
+def test_return_list(polar, load_policy, query):
     actor = Actor(name="guest")
     resource = Widget(id="1")
     action = "invite"
-    assert polar.query(Predicate(name="allow", args=[actor, action, resource])).success
+    assert query(Predicate(name="allow", args=[actor, action, resource]))
 
 
-def test_type_fields(polar, load_policy):
+def test_type_fields(polar, load_policy, query):
     resource = Widget(id=1, name="goldfish")
     actor = Actor(name="elmo", id=1, widget=resource)
-    assert polar.query(Predicate(name="allow", args=[actor, "keep", resource])).success
+    assert query(Predicate(name="allow", args=[actor, "keep", resource]))
 
 
-def test_iter_fields(polar, load_policy):
+def test_iter_fields(polar, load_policy, query):
     resource = Widget(id=1, name="stapler")
     actor = Actor(name="milton", id=1)
-    assert polar.query(
-        Predicate(name="allow", args=[actor, "can_have", resource])
-    ).success
+    assert query(Predicate(name="allow", args=[actor, "can_have", resource]))
 
 
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Test relies on internal classes.")
-def test_clear(polar, load_policy):
+def test_clear(polar, load_policy, query):
     old = Path(__file__).parent / "policies" / "load.pol"
     fails = Path(__file__).parent / "policies" / "reload_fail.pol"
     new = Path(__file__).parent / "policies" / "reload.pol"
@@ -276,12 +252,10 @@ def test_clear(polar, load_policy):
 
     actor = Actor(name="milton", id=1)
     resource = Widget(id=1, name="thingy")
-    assert polar.query(Predicate(name="allow", args=[actor, "make", resource])).success
-    assert polar.query(Predicate(name="allow", args=[actor, "get", resource])).success
-    assert polar.query(Predicate(name="allow", args=[actor, "edit", resource])).success
-    assert polar.query(
-        Predicate(name="allow", args=[actor, "delete", resource])
-    ).success
+    assert query(Predicate(name="allow", args=[actor, "make", resource]))
+    assert query(Predicate(name="allow", args=[actor, "get", resource]))
+    assert query(Predicate(name="allow", args=[actor, "edit", resource]))
+    assert query(Predicate(name="allow", args=[actor, "delete", resource]))
 
     # raises exception because new policy file specifies on a class defined in the old file,
     # but not in the new file
@@ -292,16 +266,10 @@ def test_clear(polar, load_policy):
 
     polar.clear()
     polar.load_file(new)
-    assert polar.query(Predicate(name="allow", args=[actor, "make", resource])).success
-    assert not polar.query(
-        Predicate(name="allow", args=[actor, "get", resource])
-    ).success
-    assert not polar.query(
-        Predicate(name="allow", args=[actor, "edit", resource])
-    ).success
-    assert not polar.query(
-        Predicate(name="allow", args=[actor, "delete", resource])
-    ).success
+    assert query(Predicate(name="allow", args=[actor, "make", resource]))
+    assert not query(Predicate(name="allow", args=[actor, "get", resource]))
+    assert not query(Predicate(name="allow", args=[actor, "edit", resource]))
+    assert not query(Predicate(name="allow", args=[actor, "delete", resource]))
 
 
 if __name__ == "__main__":

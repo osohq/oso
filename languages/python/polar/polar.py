@@ -56,9 +56,20 @@ class Polar:
 
     def load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
-        load_str(self.ffi_polar, string, None, self.run)
+        load_str(self.ffi_polar, string, None)
 
-    def query(self, query, single=False):
+        # check inline queries
+        while True:
+            query = lib.polar_next_inline_query(self.ffi_polar)
+            if is_null(query):  # Load is done
+                break
+            else:
+                try:
+                    next(Query(query, host=self.host.copy()).run())
+                except StopIteration:
+                    raise PolarRuntimeException("Inline query in file failed.")
+
+    def query(self, query):
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
@@ -72,16 +83,16 @@ class Polar:
         if isinstance(query, str):
             query = check_result(lib.polar_new_query(self.ffi_polar, to_c_str(query)))
         elif isinstance(query, Predicate):
-
+            query = check_result(
+                lib.polar_new_query_from_term(
+                    self.ffi_polar, ffi_serialize(host.to_polar_term(query))
+                )
+            )
         else:
             raise PolarApiException(f"Can not query for {query}")
 
-        results = []
-        for result in self.run(query, host=host):
-            results.append(result)
-            if single:
-                break
-        return QueryResult(results)
+        for res in Query(query, host=host).run():
+            yield res["bindings"]
 
     def query_rule(self, name, *args, **kwargs):
         """Query for rule with name ``name`` and args ``args``.
@@ -91,17 +102,7 @@ class Polar:
 
         :return: The result of the query.
         """
-        return check_result(
-            lib.polar_new_query_from_term(
-                self.ffi_polar, ffi_serialize(host.to_polar_term(Predicate(name=name, args=args))
-            )
-        )
-
-    def run(self, query, host=None):
-        """Send an FFI query object to a new Query object for evaluation."""
-        if host is None:
-            host = self.host.copy()
-        return Query(self.ffi_polar, host=host).run(query)
+        return self.query(Predicate(name=name, args=args))
 
     def repl(self, load=True):
         """Start an interactive REPL session."""
@@ -124,7 +125,8 @@ class Polar:
 
             result = False
             try:
-                for res in self.run(ffi_query):
+                query = Query(ffi_query, host=self.host.copy()).run()
+                for res in query:
                     result = True
                     bindings = res["bindings"]
                     pprint(bindings if bindings else True)
@@ -152,7 +154,7 @@ class Polar:
         while self.load_queue:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
-                load_str(self.ffi_polar, file.read(), filename, self.run)
+                load_str(self.ffi_polar, file.read(), filename)
 
 
 def polar_class(_cls=None, *, name=None, from_polar=None):

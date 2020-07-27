@@ -52,13 +52,7 @@ def query(polar):
     """ Query something and return the results as a list """
 
     def _query(q):
-        if isinstance(q, str):
-            res = polar.query_str(q)
-        elif isinstance(q, Predicate):
-            res = polar.query_rule(q.name, q.args)
-        else:
-            raise PolarApiException(f"Can not query for {query}")
-        return res.results
+        return list(polar.query(q))
 
     return _query
 
@@ -68,7 +62,7 @@ def qeval(polar, query):
     """ Query something and return if there's exactly 1 result """
 
     def _qeval(q):
-        result = query(q)
+        result = list(query(q))
         return len(result) == 1
 
     return _qeval
