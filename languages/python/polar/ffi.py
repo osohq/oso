@@ -63,22 +63,11 @@ def ffi_deserialize(string):
             lib.string_free(string)
 
 
-def load_str(polar, string, filename, do_query):
+def load_str(polar, string, filename):
     """Load a Polar string, checking that all inline queries succeed."""
     string = to_c_str(string)
     filename = to_c_str(str(filename)) if filename else ffi.NULL
     check_result(lib.polar_load(polar, string, filename))
-
-    # check inline queries
-    while True:
-        query = lib.polar_next_inline_query(polar)
-        if is_null(query):  # Load is done
-            break
-        else:
-            try:
-                next(do_query(query))
-            except StopIteration:
-                raise PolarRuntimeException("Inline query in file failed.")
 
 
 def new_id(polar):

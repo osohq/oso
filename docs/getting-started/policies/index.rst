@@ -168,7 +168,7 @@ in Polar. Any time a rule body contains a **predicate** like this, it is perform
 another query. I.e. it will try and find all *matching* rules called "role" with
 two inputs.
 
-You can also either use the :doc:`/more/dev-tools/repl` or the ``oso.query_predicate``
+You can also either use the :doc:`/more/dev-tools/repl` or the ``oso.query_rule``
 method to interact with this directly. For example:
 
 .. code-block:: python
@@ -186,7 +186,7 @@ method to interact with this directly. For example:
   oso.load_str("role(user, role_name) if user.role = role_name;")
 
   alice = User("alice", "accountant")
-  assert oso.query_predicate("role", alice, "accountant")
+  assert oso.query_rule("role", alice, "accountant")
 
 Summary
 =======
