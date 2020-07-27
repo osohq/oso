@@ -104,10 +104,9 @@ oso is available as a library in several languages:
 Source code
 -----------
 
-The source code for oso is hosted on GitHub.
+The source code for oso is hosted on GitHub:
 
-.. todo::
-  Link to GitHub
+:fab:`github` `osohq/oso <https://github.com/osohq/oso>`_
 
 
 Releases

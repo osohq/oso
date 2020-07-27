@@ -10,6 +10,14 @@ Breaking changes
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
+oso.query_predicate() renamed in oso libraries
+----------------------------------------------
+
+To improve our API & better match documentation, ``oso.query_predicate()``
+has been renamed ``oso.query_rule()``. The Python API now returns
+a generator instead of a ``QueryResult`` object to improve consistency
+across libraries.
+
 allow() method renamed in oso libraries
 ---------------------------------------
 
