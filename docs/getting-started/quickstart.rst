@@ -58,7 +58,8 @@ Adding oso
   do so now:
 
   .. todo::
-    replace the hard-coded version number(s) in the below snippet with the current latest version on RubyGems... somehow.
+    replace the hard-coded version number(s) in the below snippet with the
+    current latest versions
 
   .. tabs::
     .. group-tab:: Python
