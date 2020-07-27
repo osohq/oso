@@ -224,16 +224,6 @@ for us to use throughout the application:
     :language: python
     :lines: 49-52
 
-.. tip::
-
-    We *could* implement this in our request layer authorization that we already have. We could
-    even call the ``Expense.lookup`` class method to get the expense so we can check attributes
-    for the authorization decision.
-    There are a few reasons that may not be the best idea, which we wont cover here but
-    those interested could go read about this in **TODO**.
-
-    .. todo:: Add a document?
-
 Let's give it a try!
 
 .. code-block:: console
@@ -279,13 +269,23 @@ Your turn
 =========
 
 We currently have a route with no authorization - the submit endpoint.
-We have a rule stating that anyone can PUT to the submit endpoint, but
+We have a rule that allows anyone to PUT to the submit endpoint, but
 we want to make sure only authorized expenses are submitted.
 
 
 .. literalinclude:: /examples/application/expenses-flask/app/authorization.polar
     :caption: :fa:`oso` authorization.polar
     :lines: 18
+
+.. tip::
+
+    The ``allow_by_path`` rule is a custom rule in our policy that operates
+    on an actor, action, first url path fragement, and the remaining path
+    framements.  A ``PUT /expenses/submit`` request would try to authorize using
+    the ``allow_by_path(actor, "PUT", "expenses", ["submit"])`` rule. See
+    `our policy`_ for more detail.
+
+.. _`our policy`: https://github.com/osohq/oso-flask-tutorial/blob/ecc39c601057bcfdb952e35da616fe2e1ea00a22/app/authorization.polar#L10
 
 .. literalinclude:: /examples/application/expenses-flask/app/expense.py
     :caption: :fab:`python` expense.py
@@ -345,14 +345,10 @@ Once you have it working, you can test it by verifying as follows:
     <h1>Forbidden</h1>
     <p>Not Authorized!</p>
 
-We might even consider going a step further and checking that the user is
-also authorized to view the *returned* expense, by adding another
-``authorize`` check on ``"read"`` for the returned expense.
-
 Summary
 =======
 
-In this guide, we showed a few example of how to add oso to a more realistic
+In this guide, we showed a few examples of how to add oso to a more realistic
 application. We added some route-level authorization to control who is allowed
 to make requests to certain routes. We also used a new ``authorize`` method to
 make it convenient to add data access controls to our route handlers.
@@ -366,7 +362,9 @@ make it convenient to add data access controls to our route handlers.
       :doc:`/getting-started/policies/index`.
     * For reference on using oso with your language, see
       :doc:`/using/libraries/index`.
+    * Clone this example on `GitHub`_ to check it out further.
 
+.. _`GitHub`: https://github.com/osohq/oso-flask-tutorial
 
 .. toctree::
     :hidden:

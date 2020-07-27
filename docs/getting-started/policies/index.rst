@@ -3,7 +3,7 @@ Writing Policies
 ================
 
 Policies are the source of truth for the authorization logic used to evaluate queries in oso.
-As a reminder: oso policies are written in a language called Polar.
+As a reminder: oso policies are written in a declarative language called Polar.
 There is a full :doc:`/using/polar-syntax` guide which you can use as a reference
 of all the available syntax, but here we'll give an overview of
 getting started with writing policies.
@@ -40,7 +40,7 @@ But if we replace ``action`` with a concrete type:
 
 .. code-block:: polar
 
-    allow(actor, "read", resource) if ...;
+    allow(actor, "read", resource);
 
 the rule will now only be evaluated if the second input exactly matches the string ``"read"``.
 
@@ -54,7 +54,7 @@ There are several ways to represent imperative ``if`` logic in Polar.
 In a rule body
 ^^^^^^^^^^^^^^
 
-The most obvious way to write an ``if`` statement in Polar is to add a body to
+The most common way to write an ``if`` statement in Polar is to add a body to
 a rule. The following rule allows **any** actor to approve **any** expense report:
 
 .. code-block:: polar
@@ -91,6 +91,15 @@ in a single rule body:
       actor.is_admin = true
       or actor.title = "CFO";
 
+.. tip::
+
+    In these rules we declared some variables with leading understores
+    (``_report``, ``_actor``).  A leading underscore indicates that the variable
+    will only be used once (Polar does not distinguish between definition and
+    use). These variables are called *singleton variables*, and will match any
+    value.  To help prevent errors, a warning will be emitted if a singleton variable
+    is not preceeded by an underscore.
+
 As specializers in a rule head
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -113,12 +122,8 @@ rule head:
 
   allow(_actor: Admin, "approve", _report);
 
-The rule will fail when evaluated on a regular ``User`` and succeed when
-evaluated on an ``Admin``, encoding an implicit ``if Admin`` condition.
-
-This is another example of the matching process: instead of matching against
-a concrete value, we are instead checking to make sure the type of the input
-matches the expected type - in this case, an ``Admin``.
+The rule will only evaluate when the actor is an ``Admin``, encoding an implicit
+``if Admin`` condition.
 
 .. tip::
 
@@ -162,12 +167,6 @@ So instead, we can refactor the role check into its own rule:
 
     role(user, role_name) if user.role = role_name;
 
-
-The ``role(user, "accountant")`` is yet another example of matching happening
-in Polar. Any time a rule body contains a **predicate** like this, it is performing
-another query. I.e. it will try and find all *matching* rules called "role" with
-two inputs.
-
 You can also either use the :doc:`/more/dev-tools/repl` or the ``oso.query_predicate``
 method to interact with this directly. For example:
 
@@ -192,7 +191,7 @@ Summary
 =======
 
 We covered some of the basics of policies, how to represent conditional
-logic, and the core idea of matching.
+logic, and how to refactor policies into multiple rules.
 
 .. admonition:: What's next
     :class: tip whats-next

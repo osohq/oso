@@ -46,7 +46,7 @@ An oso policy can restrict access along one or several of these dimensions.
       actor = expense.submitted_by.manager
       and expense.amount < 10000;
 
-The below policy controls access to the Expense model on the **record level**.
+The above policy controls access to the Expense model on the **record level**.
 An actor can only approve an expense if they are the manager of the submitter
 and the expense amount is below a certain limit.
 
@@ -65,10 +65,11 @@ it is over rows, columns or fields.
 Where the policy is evaluated
 -----------------------------
 
-Where the policy is evaluated has a significant impact on the level of access
-control that is possible.  In the above example, we rely on the ``amount`` field
-of the expense. Therefore, the ``Expense`` (the **primary authorization data**)
-must be fetched from the application's store when the rule is evaluated.
+Where the policy is evaluated has a significant impact on the granularity of
+access control that is possible.  In the above example, we rely on the
+``amount`` field of the expense. Therefore, the ``Expense`` (the **primary
+authorization data**) must be fetched from the application's store when the rule
+is evaluated.
 
 .. _second-record-level:
 
@@ -100,7 +101,7 @@ control.
 .. tip::
 
     A best practice for this type of access control is to integrate the policy
-    evaluation point within the **data access layer** (the **M** in MVC).  This
+    evaluation point within the **data access layer**.  This
     ensures that the ``oso.is_allowed`` call is made when an expense is accessed, no
     matter where that access occurs in the application.
 
@@ -240,14 +241,14 @@ determines what portions of a given record can be accessed.
     allow_field(actor, "view", _: Expense, "amount") if
         actor.role = "accountant";
 
-This policy uses a new rule, called ``allow_field`` to:
+This policy uses a new :ref:`rule <polar-rules>`, called ``allow_field`` to:
 
 - Allow everyone to view the ``submitted_by`` field.
 - Allow the submitter of the expense to view the ``amount``.
 - Allow actors with the ``"accountant"`` role to view the ``amount`` of any
   expense.
 
-We can combine this access control with our record level access control
+We can combine field access control with our record level access control
 :ref:`example <second-record-level>`:
 
 .. code-block:: python
@@ -317,16 +318,16 @@ policy is evaluated both **before and after data fetch** for greater efficiency.
 .. admonition:: Variables provide flexibility
 
     Notice that we didn't have to change our policy file at all to make this
-    change from the previous example. We used the ``Variable`` class which
-    instructs oso to find all values of ``field`` that match the rules we defined
-    in our policy.  This flexibility derives directly from writing a
+    change from the previous example. We passed in a ``Variable`` which
+    instructs oso to find all values of ``field`` that match the rules we
+    defined in our policy.  This flexibility derives directly from writing a
     :doc:`declarative policy in Polar </more/language/polar-foundations>`!
 
 Authorizing list endpoints
 ==========================
 
 A list endpoint can be challenging to authorize since it deals with obtaining
-a collection of resources.  Often the filter used to obtain these resources will
+a collection of resources.  Often, the filter used to obtain these resources will
 be related to the authorization policy.  For example, suppose we have the following
 access control rule in our policy:
 
@@ -348,12 +349,12 @@ layer, then authorized. Usually a filter must be applied when querying for
 multiple records for performance reasons. We have a few options to perform
 authorization:
 
-    1. Apply a less restrictive filter in application code (or no filter) and
-       individually authorize every record.
-    2. Duplicate our filtering in both places (application and policy).
-    3. Authorize the filter to be applied to the query before data fetch,
-       instead of the resource.
-    4. Have oso output the filter to be applied to the query before data fetch.
+1. Apply a less restrictive filter in application code (or no filter) and
+   individually authorize every record.
+2. Duplicate our filtering in both places (application and policy).
+3. Authorize the filter to be applied to the query before data fetch,
+   instead of the resource.
+4. Have oso output the filter to be applied to the query before data fetch.
 
 Let's see an example of how each of these would work. We will use Python
 pseudocode for this example, but the same concepts translate to any web application.
@@ -439,9 +440,9 @@ it separately, before we authorize the query. This means we don't need to fetch
 expenses when the request would ultimately be denied because the role is not
 allowed to list expenses.  The second ``oso.is_allowed()`` call confirms that the
 filter applied in the database fetch produces records that are allowed by the
-access policy.  With this approach, the policy and database fetch logic is
-duplicative and must be manually kept in sync by developer.  To aid with this,
-we add an assertion in debug mode.
+access policy.  With this approach, the policy duplicates database fetch logic
+and must be manually kept in sync by developer.  To aid with this, we add an
+assertion in debug mode.
 
 **Authorizing the filter to be applied, instead of the resource**
 
@@ -464,7 +465,7 @@ request filter.
         ]
 
         # Use ``query_predicate`` to evaluate a rule that authorizes the filter.
-        if not oso.query_predicate("allow_filter", user, "view", Expense, auth_filters):
+        if not oso.query_predicate("allow_filter", user, "view", "expense", auth_filters):
             return NotAuthorizedResponse()
 
         # This function converts our structured filter into a SQL WHERE statement
@@ -496,18 +497,18 @@ To support this structure, our policy would look something like:
 
     # A set of filters is allowed for a view request as long as it
     # restricts the location id properly.
-    allow_filter(actor, "view", resource_type: Expense, filters) if
+    allow_filter(actor, "view", "expense", filters) if
         ["location_id", "=", actor.location_id] in filters;
 
 While we have abstracted the policy slightly further and no longer need
-as many ``oso.is_allowed()`` checks to complete the request, so must keep
+as many ``oso.is_allowed()`` checks to complete the request, we still must keep
 the filter in sync between oso and our code. Instead, we can make oso the
-authoritative source query filters that perform authorization.
+authoritative source of query filters that perform authorization.
 
 **Have oso output the filter**
 
 This is a similar structure to above, but instead the authorization filter is
-contained in the policy.  This structure can simplify application code, and
+contained only in the policy.  This structure can simplify application code, and
 allows for filters that are conditional on other attributes. For example, our
 policy for "view" could contain the additional rule
 
@@ -529,10 +530,10 @@ We could instead refactor these rules so that they operate on filters:
 .. code-block:: polar
     :caption: :fa:`oso`
 
-    allow_with_filter(actor: User, "view", resource: Expense, filters) if
+    allow_with_filter(actor: User, "view", "expense", filters) if
         filters = ["submitted_by", "=", actor.name];
 
-    allow_with_filter(actor: User, "view", resource: Expense, filters) if
+    allow_with_filter(actor: User, "view", "expense", filters) if
         role(actor, "accountant") and
         filters = ["location", "=", actor.location];
 
@@ -544,7 +545,7 @@ Now, in our app:
     def get_expenses(user):
         # Get authorization filters from oso
         filters = oso.query_predicate(
-            "allow_with_filter", actor, "view", resource, Variable("filters"))
+            "allow_with_filter", actor, "view", "expense", Variable("filters"))
 
         # There may be multiple allow rules that matched, so we iterate over all
         # of them.  In the above example, every user can view expenses they submitted,
@@ -565,14 +566,18 @@ This approach results in simpler authorization code, and the policy is truly
 in full control of authorization.  It can be modified independently from
 application code, without any duplication.
 
-Conclusion
-==========
+Summary
+=======
 
 In this guide, we covered the various access control levels
 (model, attribute & field) and showed you how to integrate oso in your application
-at various spots. We then covered list endpoints -- which are often difficult to
-write complex authorization for -- in detail. We discussed several potential
+at various spots. We then covered list endpoints --- which are often difficult to
+write complex authorization for --- in detail. We discussed several potential
 techniques for structuring a policy that handles these types of requests.
 
-.. todo::
-    what to read next
+.. admonition:: What's next
+    :class: tip whats-next
+
+    * Explore :doc:`/using/examples/index` in depth.
+    * Read more about writing oso policies:
+      :doc:`/getting-started/policies/index`.
