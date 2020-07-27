@@ -26,6 +26,7 @@ precompiled
 arities
 latencies
 superclass
+superclasses
 pseudocode
 performant
 duplicative
