@@ -198,7 +198,7 @@ module Oso
                   # This is supported so that we can query for unbound variables
                   { 'Variable' => value }
                 else
-                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value) } }
+                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value), 'repr' => value.to_s } }
                 end
         { 'value' => value }
       end

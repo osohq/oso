@@ -1,7 +1,6 @@
 package com.osohq.oso;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -112,6 +111,18 @@ public class Polar {
      * @throws Exceptions.OsoException
      */
     public void repl() throws Exceptions.OsoException, IOException {
+        repl(new String[0]);
+    }
+
+    /**
+     * Load the given files and start the Polar REPL.
+     *
+     * @throws Exceptions.OsoException
+     */
+    public void repl(String[] files) throws Exceptions.OsoException, IOException {
+        for (String file : files) {
+            loadFile(file);
+        }
         loadQueuedFiles();
 
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -119,7 +130,7 @@ public class Polar {
         Query query;
         String input;
         while (true) {
-            System.out.print("> ");
+            System.out.print("query> ");
             input = in.readLine();
             if (input == null) {
                 return;
@@ -154,11 +165,7 @@ public class Polar {
     }
 
     public static void main(String[] args) throws Exceptions.OsoException, IOException {
-        Polar polar = new Polar();
-        for (String file : args) {
-            polar.loadFile(file);
-        }
-        polar.repl();
+        new Polar().repl(args);
     }
 
     /**

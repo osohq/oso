@@ -222,6 +222,7 @@ impl Runner {
         Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id,
             literal: Some(literal),
+            repr: None,
         }))
     }
 }

@@ -1174,6 +1174,7 @@ impl PolarVirtualMachine {
                 literal_term.replace_value(Value::ExternalInstance(ExternalInstance {
                     instance_id,
                     literal: Some(literal_value.clone()),
+                    repr: Some(literal_value.to_polar()),
                 }));
 
                 // A goal is used here in case the result is already bound to some external
@@ -2609,6 +2610,7 @@ mod tests {
         let external_instance = Value::ExternalInstance(ExternalInstance {
             literal: None,
             instance_id: 1,
+            repr: None,
         });
 
         let mut vm = PolarVirtualMachine::new(
@@ -2666,6 +2668,7 @@ mod tests {
         let arg = term!(Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
             literal: None,
+            repr: None,
         }));
         let left = term!(value!(Pattern::Instance(InstanceLiteral {
             tag: sym!("Any"),

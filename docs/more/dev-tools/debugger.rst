@@ -5,39 +5,40 @@ Debugger
 The Polar debugger allows debugging of policy rules. It can be helpful to see
 why a rule is behaving differently than expected.
 
-.. highlight:: polar
-
 ********************
 Running the debugger
 ********************
 
-The debugger can be entered through two mechanisms:
+The debugger is entered through the ``debug()`` predicate. It acts like
+a break point: when the VM tries to query for that predicate, it stops
+instead and enters the debugger. You may put it anywhere in the body of
+a rule:
 
-  1. Add the ``debug()`` predicate in the body of the rule you want to debug in
-     your Polar file. The debugger will be entered when that rule body is
-     evaluated by the Polar VM. For example::
+.. code-block:: polar
 
-       myRule() if debug() and 1 = 0;
+     some_rule(x) if debug(x) and 1 = 0;
 
-  2. In the REPL, issue a query of the form: ``debug() and <query>``. This will
-     enter the debugger before starting the query.
+You can also query for it directly from the REPL:
 
-Entering the debugger will pause evaluation of the policy, and a command prompt
-will appear:
+.. code-block:: console
+
+    query> debug()
+
+When evaluation hits a ``debug()``, the ``debug>`` prompt will appear:
 
 .. code-block:: console
 
   Welcome to the debugger!
-  >
+  debug>
 
-Since Polar is declarative, execution does not always flow sequentially through
-a rule's body. Entering the debugger allows us to navigate through the
-evaluation of a policy and interrogate the current state of the engine at every
-step along the way.
+The debugger operates as a simple command-driven REPL, much like other
+low-level debuggers such as GDB, LLDB, or JDB. You can exit the debugger
+at any time by typing ``continue`` or ``quit`` followed by ``Enter``,
+or by typing ``Ctrl-D`` (EOF).
 
-************************
-Available debug commands
-************************
+*****************
+Debugger Commands
+*****************
 
 Help
 ====
@@ -49,7 +50,7 @@ Print the debugger command reference.
 
 .. code-block:: console
 
-  > help
+  debug> help
   Debugger Commands
     bindings                Print current binding stack.
     c[ontinue]              Continue evaluation.
@@ -71,6 +72,9 @@ Print the debugger command reference.
 Navigation
 ==========
 
+The debugger allows you to navigate through the evaluation of a policy and
+interrogate the current state of the engine at every step along the way.
+
 The Polar file used in the following examples looks like this:
 
 .. code-block:: polar
@@ -87,28 +91,28 @@ Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
 
 .. code-block:: console
 
-  > line
+  debug> line
   003: c() if debug();
               ^
-  > step
+  debug> step
   PopQuery(debug)
-  > step
+  debug> step
   PopQuery(debug)
-  > line
+  debug> line
   001: a() if debug() and b() and c() and d();
                                   ^
 
 ``c[ontinue]`` or ``q[uit]``
 ----------------------------
 
-Continue evaluation.
+Continue evaluation after the ``debug()`` predicate.
 
 .. code-block:: console
 
-  > line
+  debug> line
   001: a() if debug() and b() and c() and d();
                                   ^
-  > continue
+  debug> continue
   [exit]
 
 ``over`` or ``n[ext]``
@@ -119,24 +123,24 @@ Continue evaluation until the next query.
 .. code-block:: console
 
   Welcome to the debugger!
-  > line
+  debug> line
   001: a() if debug() and b() and c() and d();
               ^
-  > over
+  debug> over
   001: a() if debug() and b() and c() and d();
                           ^
-  > over
+  debug> over
   001: a() if debug() and b() and c() and d();
                                   ^
-  > over
+  debug> over
   Welcome to the debugger!
-  > line
+  debug> line
   003: c() if debug();
               ^
-  > over
+  debug> over
   001: a() if debug() and b() and c() and d();
                                           ^
-  > over
+  debug> over
   [exit]
 
 ``out``
@@ -148,18 +152,18 @@ sibling of the parent query (if one exists).
 .. code-block:: console
 
   Welcome to the debugger!
-  > line
+  debug> line
   001: a() if debug() and b() and c() and d();
               ^
-  > out
+  debug> out
   Welcome to the debugger!
-  > line
+  debug> line
   003: c() if debug();
               ^
-  > out
+  debug> out
   001: a() if debug() and b() and c() and d();
                                           ^
-  > out
+  debug> out
   [exit]
 
 Context
@@ -182,10 +186,10 @@ Print current stack of goals.
 .. code-block:: console
 
   Welcome to the debugger!
-  > line
+  debug> line
   001: a() if debug() and b() and c() and d();
               ^
-  > goals
+  debug> goals
   PopQuery(a())
   PopQuery(debug(), b(), c(), d())
   Query(d())
@@ -201,10 +205,10 @@ lines of additional context above and below it.
 
 .. code-block:: console
 
-  > line
+  debug> line
   003: c() if debug();
               ^
-  > line 2
+  debug> line 2
   001: a() if debug() and b() and c() and d();
   002: b();
   003: c() if debug();
@@ -218,10 +222,10 @@ Print current stack of queries.
 
 .. code-block:: console
 
-  > line
+  debug> line
   001: a() if debug() and b() and c() and d();
               ^
-  > queries
+  debug> queries
   a()
   debug() and b() and c() and d()
   debug()
@@ -248,15 +252,15 @@ the current scope, print ``<unbound>``.
 
 .. code-block:: console
 
-  > line
+  debug> line
   001: a() if x = y and y = z and z = 3 and debug();
                                    ^
-  > var
+  debug> var
   _y_22, _x_21, _z_23
-  > var _x_21 _z_23
+  debug> var _x_21 _z_23
   _x_21 = 3
   _z_23 = 3
-  > var foo
+  debug> var foo
   foo = <unbound>
 
 
@@ -267,10 +271,10 @@ Print all variable bindings in the current scope.
 
 .. code-block:: console
 
-  > line
+  debug> line
   001: a() if x = y and y = z and z = 3 and debug();
                                             ^
-  > bindings
+  debug> bindings
   _x_21 = _y_22
   _y_22 = _z_23
   _z_23 = 3
