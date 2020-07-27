@@ -26,7 +26,7 @@ public class TestAbac {
         Oso oso = setupOso();
         for (String policy : policies) {
             oso.loadFile(policy);
-            oso.query("test", null); // just to force the load
+            oso.queryRule("test", null); // just to force the load
         }
     }
 
