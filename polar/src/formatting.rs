@@ -352,7 +352,7 @@ pub mod to_polar {
             match self.operator {
                 Debug => "debug()".to_owned(),
                 Print => format!("print({})", format_args(self.operator, &self.args, ", ")),
-                Cut => "cut()".to_owned(),
+                Cut => "cut".to_owned(),
                 ForAll => format!(
                     "forall({}, {})",
                     self.args[0].to_polar(),

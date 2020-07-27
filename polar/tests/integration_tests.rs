@@ -832,9 +832,9 @@ fn test_arithmetic() {
 
     polar
         .load(
-            r#"even(0) if cut();
+            r#"even(0) if cut;
                even(x) if x > 0 and odd(x - 1);
-               odd(1) if cut();
+               odd(1) if cut;
                odd(x) if x > 0 and even(x - 1);"#,
         )
         .unwrap();
@@ -1176,15 +1176,15 @@ fn test_cut() {
     let mut polar = Polar::new(None);
     polar.load("a(x) if x = 1 or x = 2;").unwrap();
     polar.load("b(x) if x = 3 or x = 4;").unwrap();
-    polar.load("bcut(x) if x = 3 or x = 4 and cut();").unwrap();
+    polar.load("bcut(x) if x = 3 or x = 4 and cut;").unwrap();
 
-    polar.load("c(a, b) if a(a) and b(b) and cut();").unwrap();
+    polar.load("c(a, b) if a(a) and b(b) and cut;").unwrap();
     polar.load("c_no_cut(a, b) if a(a) and b(b);").unwrap();
     polar
         .load("c_partial_cut(a, b) if a(a) and bcut(b);")
         .unwrap();
     polar
-        .load("c_another_partial_cut(a, b) if a(a) and cut() and b(b);")
+        .load("c_another_partial_cut(a, b) if a(a) and cut and b(b);")
         .unwrap();
 
     // Ensure we return multiple results without a cut.
@@ -1209,7 +1209,7 @@ fn test_cut() {
         vec![vec![value!(1), value!(3)], vec![value!(1), value!(4)]]
     );
 
-    polar.load("f(x) if (x = 1 and cut()) or x = 2;").unwrap();
+    polar.load("f(x) if (x = 1 and cut) or x = 2;").unwrap();
     assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1)]);
     assert!(qeval(&mut polar, "f(1)"));
     assert!(qeval(&mut polar, "f(2)"));

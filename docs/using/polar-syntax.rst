@@ -285,25 +285,35 @@ will compare the value of the variable age with 10 and unify if it's less than 1
 Cut
 ^^^
 
-The *cut* operator, which in Polar is written as ``cut()``, commits the query
-engine to the enclosing rule definition, and refuses to consider any others. Any
-definitions that have already run are not "un-run", though, or avoided by using
-cut; it just ensures that no *others* will run. Such "other" rule definitions
-are often less specific rules, and the use of `cut()` can be used, e.g., to
-override an ``allow`` rule for a less-specific class.
+By default, Polar runs all of the definitions for a given rule that are
+applicable to the given set of arguments (i.e., whose specializers are
+matched). The ``cut`` operator overrides this behavior by *committing* to
+the enclosing rule definition: the query engine will not run any others.
+Rule definitions that have already run are not "un-run", though, or avoided
+by using cut; it just ensures that no *others* will run.
 
-``cut()`` can appear anywhere in a rule body, but terms that
-proceed it must succeed in order for it to be reached, so it
-frequently appears at the end of the body: **if** so-and-so is true,
-then **cut** out all other alternatives.  ``cut()`` should be
-used sparingly.
+Because Polar runs rules in most-to-least-specific order, these "other"
+rule definitions are always *less specific* than the current one; i.e.,
+they may have specializers that are superclasses (and therefore less specific)
+of those in the current rule. This allows ``cut`` to override a rule that
+is specialized on a less specific class. You can think of ``cut`` as a sort
+of dual to ``super()`` in other object-oriented languages (e.g., Python):
+in Polar, the behavior of "methods" (rules) is to implicitly call the
+next method, but ``cut`` overrides that behavior; it says *not* to call
+any more methods (rules).
+
+``cut`` can appear anywhere in a rule body, but terms before it must
+succeed for it to be reached, so it frequently appears at the end of
+the body: **if** so-and-so is true, then **cut** out all other alternatives.
+
+``cut`` should be used sparingly.
 
 .. _operator-new:
 
 New
 ^^^
 
-The new operator is used to construct a new instance of an application class.
+The ``new`` operator is used to construct a new instance of an application class.
 See :doc:`/getting-started/policies/application-types`. The single argument to the
 new operator must be an instance literal::
 
