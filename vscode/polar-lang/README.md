@@ -1,3 +1,3 @@
-# Oso
+# oso
 
-Syntax hilighting for `.polar` files as used by [Oso](https://osohq.com)
+Syntax hilighting for `.polar` files as used by [oso](https://osohq.com)
