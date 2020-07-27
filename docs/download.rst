@@ -101,7 +101,7 @@ oso is available as a library in several languages:
 - JavaScript
 - Rust
 
-Source code
+Source Code
 -----------
 
 The source code for oso is hosted on GitHub:
