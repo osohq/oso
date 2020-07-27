@@ -264,7 +264,7 @@ We can combine this access control with our record level access control
             for field, value in expense.items():
                 # Check if each field in the expense is allowed, and only
                 # include those that are in authorized_data.
-                if oso.query_predicate("allow_field", actor, "view", expense, field):
+                if oso.query_rule("allow_field", actor, "view", expense, field):
                     authorized_data[field] = value
 
             # Return only authorized_data to the user.
@@ -293,7 +293,7 @@ control to only load the columns the user can access:
 
     def get_expense(user, expense_id):
         # Query oso for all fields allowed for this user.
-        allowed_fields = oso.query_predicate("allow_field",
+        allowed_fields = oso.query_rule("allow_field",
                                    user, "view", expense, Variable("field"))
         # Convert the returned query response into a list of fields
         allowed_fields = [r["field"] for r in allowed_fields]
@@ -463,8 +463,8 @@ request filter.
             ("location_id", "=", user.location_id)
         ]
 
-        # Use ``query_predicate`` to evaluate a rule that authorizes the filter.
-        if not oso.query_predicate("allow_filter", user, "view", Expense, auth_filters):
+        # Use ``query_rule`` to evaluate a rule that authorizes the filter.
+        if not oso.query_rule("allow_filter", user, "view", Expense, auth_filters):
             return NotAuthorizedResponse()
 
         # This function converts our structured filter into a SQL WHERE statement
@@ -543,7 +543,7 @@ Now, in our app:
 
     def get_expenses(user):
         # Get authorization filters from oso
-        filters = oso.query_predicate(
+        filters = oso.query_rule(
             "allow_with_filter", actor, "view", resource, Variable("filters"))
 
         # There may be multiple allow rules that matched, so we iterate over all

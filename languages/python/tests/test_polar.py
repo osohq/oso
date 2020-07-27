@@ -9,14 +9,13 @@ from polar.exceptions import ParserException
 import pytest
 
 
-def test_anything_works():
-    p = Polar()
-    p.load_str("f(1);")
-    results = p.query("f(x)").results
+def test_anything_works(polar, query):
+    polar.load_str("f(1);")
+    results = query("f(x)")
     assert results[0]["x"] == 1
-    results = p.query("f(y)").results
+
+    results = query("f(y)")
     assert results[0]["y"] == 1
-    del p
 
 
 def test_helpers(polar, load_file, query, qeval, qvar):
@@ -25,7 +24,7 @@ def test_helpers(polar, load_file, query, qeval, qvar):
     assert qvar("f(x)", "x") == [1, 2, 3]
 
 
-def test_data_conversions(polar, qvar):
+def test_data_conversions(polar, qvar, query):
     polar.load_str('a(1);b("two");c(true);d([1,"two",true]);')
     assert qvar("a(x)", "x", one=True) == 1
     assert qvar("b(x)", "x", one=True) == "two"
@@ -377,13 +376,13 @@ def test_parser_errors(polar):
     # ExtraToken -- not sure what causes this
 
 
-def test_runtime_errors(polar):
+def test_runtime_errors(polar, query):
     rules = """
     foo(a,b) := a in b;
     """
     polar.load_str(rules)
     with pytest.raises(exceptions.PolarRuntimeException) as e:
-        list(polar.query("foo(1,2)"))
+        query("foo(1,2)")
     assert (
         str(e.value)
         == """trace (most recent evaluation last):
@@ -397,7 +396,7 @@ Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at lin
     )
 
 
-def test_lookup_errors(polar):
+def test_lookup_errors(polar, query):
     class Foo:
         def foo(self):
             return "foo"
@@ -405,24 +404,22 @@ def test_lookup_errors(polar):
     polar.register_class(Foo)
 
     # Unify with an invalid field doesn't error.
-    assert polar.query('new Foo{} = {bar: "bar"}').results == []
+    assert query('new Foo{} = {bar: "bar"}') == []
     # Dot op with an invalid field does error.
     with pytest.raises(exceptions.PolarRuntimeException) as e:
-        polar.query('new Foo{}.bar = "bar"').results == []
+        query('new Foo{}.bar = "bar"') == []
     assert "Application error: 'Foo' object has no attribute 'bar'" in str(e.value)
 
 
-def test_predicate(polar, qvar):
+def test_predicate(polar, qvar, query):
     """Test that predicates can be converted to and from python."""
     polar.load_str("f(x) if x = pred(1, 2);")
     assert qvar("f(x)", "x") == [Predicate("pred", [1, 2])]
 
-    assert polar.query(
-        Predicate(name="f", args=[Predicate("pred", [1, 2])])
-    ).results == [{}]
+    assert query(Predicate(name="f", args=[Predicate("pred", [1, 2])])) == [{}]
 
 
-def test_return_list(polar):
+def test_return_list(polar, query):
     class Actor:
         def groups(self):
             return ["engineering", "social", "admin"]
@@ -432,16 +429,16 @@ def test_return_list(polar):
     # for testing lists
     polar.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
 
-    assert polar.query(Predicate(name="allow", args=[Actor(), "join", "party"])).success
+    assert query(Predicate(name="allow", args=[Actor(), "join", "party"]))
 
 
-def test_query(load_file, polar):
+def test_query(load_file, polar, query):
     """Test that queries work with variable arguments"""
 
     load_file(Path(__file__).parent / "test_file.polar")
     # plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
-    assert polar.query(Predicate(name="f", args=[Variable("a")])).results == [
+    assert query(Predicate(name="f", args=[Variable("a")])) == [
         {"a": 1},
         {"a": 2},
         {"a": 3},
@@ -491,7 +488,7 @@ def test_constructor(polar, qvar):
     )
 
 
-def test_instance_cache(polar, qeval):
+def test_instance_cache(polar, qeval, query):
     class Counter:
         count = 0
 
@@ -504,7 +501,7 @@ def test_instance_cache(polar, qeval):
     assert Counter.count == 0
     c = Counter()
     assert Counter.count == 1
-    assert polar.query_predicate("f", c).success
+    assert query(Predicate(name="f", args=[c]))
     assert Counter.count == 1
     assert c not in polar.host.instances.values()
 
@@ -533,7 +530,7 @@ def test_unify(polar, qeval):
     assert qeval("foo()")
 
 
-def test_external_op(polar):
+def test_external_op(polar, query):
     class A:
         def __init__(self, a):
             self.a = a
@@ -554,12 +551,12 @@ def test_external_op(polar):
 
     polar.load_str("lt(a, b) if a < b;")
     polar.load_str("gt(a, b) if a > b;")
-    assert polar.query(Predicate("lt", [a1, a2])).success
-    assert not polar.query(Predicate("lt", [a2, a1])).success
-    assert polar.query(Predicate("gt", [a2, a1])).success
+    assert query(Predicate("lt", [a1, a2]))
+    assert not query(Predicate("lt", [a2, a1]))
+    assert query(Predicate("gt", [a2, a1]))
 
 
-def test_datetime(polar):
+def test_datetime(polar, query):
 
     # test datetime comparison
     t1 = datetime(2020, 5, 25)
@@ -568,31 +565,29 @@ def test_datetime(polar):
     t4 = datetime(2020, 5, 26)
 
     polar.load_str("lt(a, b) if a < b;")
-    assert polar.query(Predicate("lt", [t1, t2])).success
-    assert not polar.query(Predicate("lt", [t2, t1])).success
+    assert query(Predicate("lt", [t1, t2]))
+    assert not query(Predicate("lt", [t2, t1]))
 
     # test creating datetime from polar
     polar.load_str("dt(x) if x = new Datetime{year: 2020, month: 5, day: 25};")
-    assert polar.query(Predicate("dt", [Variable("x")])).results == [
-        {"x": datetime(2020, 5, 25)}
-    ]
+    assert query(Predicate("dt", [Variable("x")])) == [{"x": datetime(2020, 5, 25)}]
     polar.load_str("ltnow(x) if x < Datetime.now();")
-    assert polar.query(Predicate("ltnow", [t1])).success
-    assert not polar.query(Predicate("ltnow", [t3])).success
+    assert query(Predicate("ltnow", [t1]))
+    assert not query(Predicate("ltnow", [t3]))
 
     polar.load_str(
         "timedelta(a: Datetime, b: Datetime) if a.__sub__(b) == new Timedelta{days: 1};"
     )
-    assert polar.query(Predicate("timedelta", [t4, t1])).success
+    assert query(Predicate("timedelta", [t4, t1]))
 
 
-def test_other_constants(polar, qvar):
+def test_other_constants(polar, qvar, query):
     d = {"a": 1}
     polar.register_constant("d", d)
     assert qvar("x = d.a", "x") == [1]
 
 
-def test_host_methods(polar, qeval):
+def test_host_methods(polar, qeval, query):
     assert qeval('x = "abc" and x.startswith("a") = true and x.find("bc") = 1')
     assert qeval("i = 4095 and i.bit_length() = 12")
     assert qeval('f = 3.14159 and f.hex() = "0x1.921f9f01b866ep+1"')
@@ -609,23 +604,17 @@ def test_register_constants_with_decorator():
     p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
-        p.query_predicate("foo_rule", RegisterDecoratorTest(), Variable("y")).results[
-            0
-        ]["y"]
-        == 1
+        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))["y"] == 1
     )
-    assert p.query_predicate("foo_class_attr", Variable("y")).results[0]["y"] == 1
+    assert next(p.query_rule("foo_class_attr", Variable("y")))["y"] == 1
 
     p = Polar()
     p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
-        p.query_predicate("foo_rule", RegisterDecoratorTest(), Variable("y")).results[
-            0
-        ]["y"]
-        == 1
+        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))["y"] == 1
     )
-    assert p.query_predicate("foo_class_attr", Variable("y")).results[0]["y"] == 1
+    assert next(p.query_rule("foo_class_attr", Variable("y")))["y"] == 1
 
 
 def test_unbound_variable(polar, query):

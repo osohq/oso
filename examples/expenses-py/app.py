@@ -135,14 +135,11 @@ def load_oso():
 
 if __name__ == "__main__":
     """Loads and checks the policy.
-    
+
     Run example with `python app.py repl` to run the REPL after loading
     the policy.
     """
     oso = load_oso()
-    # WOWHACK until API stabilizes.
-    if os.getenv("OSO_COMPAT"):
-        setattr(oso, "_load_queued_files", oso._kb_load)
     oso._load_queued_files()
     print("Policy loaded OK")
 
