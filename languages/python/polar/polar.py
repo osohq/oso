@@ -14,20 +14,22 @@ from .query import Query, QueryResult
 
 
 CLASSES = {}
-CONSTRUCTORS = {}
-
 
 class Polar:
     """Polar API"""
 
-    def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
+    def __init__(self):
         self.ffi_polar = lib.polar_new()
-        self.host = Host(self.ffi_polar, classes=classes, constructors=constructors)
+        self.host = Host(self.ffi_polar)
         self.load_queue = []
 
         # Register built-in classes.
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
+
+        # Register globally registered classes.
+        for name, (cls, constructor) in CLASSES.items():
+            self.register_class(cls, name=name, from_polar=constructor)
 
     def __del__(self):
         del self.host
@@ -161,8 +163,7 @@ def polar_class(_cls=None, *, name=None, from_polar=None):
 
     def wrap(cls):
         cls_name = cls.__name__ if name is None else name
-        CLASSES[cls_name] = cls
-        CONSTRUCTORS[cls_name] = from_polar or cls
+        CLASSES[cls_name] = (cls, from_polar or cls)
         return cls
 
     if _cls is None:
