@@ -323,8 +323,8 @@ start a REPL session and follow along:
 
 .. note::
   Each time you load a file, it will load the policy
-  **without** clearing what is already loaded in. Be sure to
-  clear oso using ``Oso.clear`` or create a new instance if you want
+  **without** clearing previously loaded rules. Be sure to
+  clear oso using the ``clear`` method or create a new instance if you want
   to try adding a few new rules.
 
 When we ask oso for a policy decision via ``allow``, the oso engine
