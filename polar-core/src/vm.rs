@@ -1113,6 +1113,26 @@ impl PolarVirtualMachine {
                 ];
                 self.choose(alternatives)?;
             }
+            Operator::Assign => {
+                assert_eq!(args.len(), 2);
+                let right = args.pop().unwrap();
+                let left = args.pop().unwrap();
+                match (left.value(), right.value()) {
+                    (Value::Variable(var), _) => match self.value(var) {
+                        None => self.push_goal(Goal::Unify { left, right })?,
+                        Some(value) => {
+                            return Err(self.type_error( &left, format!("Can only assign to unbound variables, {} is bound to value {}.", var.to_polar(), value.to_polar())));
+                        }
+                    },
+                    _ => {
+                        return Err(self.type_error(
+                            &left,
+                            format!("Cannot assign to type {}.", left.to_polar()),
+                        ))
+                    }
+                }
+            }
+
             Operator::Unify => {
                 // Push a `Unify` goal
                 assert_eq!(args.len(), 2);
