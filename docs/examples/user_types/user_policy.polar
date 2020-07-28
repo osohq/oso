@@ -11,7 +11,7 @@ allow(actor: Customer, "view", "customer_dashboard");
 # rbac-start
 # Internal users can access the accounts dashboard if
 # they are an account manager
-allow(actor: InternalUser, "view", "accounts_dashboard") :=
+allow(actor: InternalUser, "view", "accounts_dashboard") if
     actor.role = "account_manager";
 # rbac-end
 
