@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.osohq</groupId>
   <artifactId>oso</artifactId>
-  <version>0.3.0-SNAPSHOT</version>
+  <version>0.3.0</version>
 
   <scm>
     <connection>scm:git:git://github.com/osohq/oso.git</connection>
     <developerConnection>scm:git:git@github.com:osohq/oso.git</developerConnection>
     <url>https://github.com/osohq/oso</url>
-    <tag>HEAD</tag>
+    <tag>oso-0.3.0</tag>
   </scm>
   
   <distributionManagement>
@@ -91,7 +90,7 @@
         <localCheckout>true</localCheckout>
         <pushChanges>false</pushChanges>
         <mavenExecutorId>forked-path</mavenExecutorId>
-        <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
+        <arguments>-Dgpg.passphrase=${env.GPGPassphrase}</arguments>
         </configuration>
         <dependencies>
           <dependency>
@@ -114,10 +113,10 @@
         </configuration>
       </plugin>
 
-      <plugin>
+      <!-- <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>3.0.1</version>
+        <version>3.2.0</version>
         <executions>
         <execution>
         <id>attach-sources</id>
@@ -126,7 +125,7 @@
         </goals>
         </execution>
         </executions>
-      </plugin>
+      </plugin> -->
 
 
       <plugin>
