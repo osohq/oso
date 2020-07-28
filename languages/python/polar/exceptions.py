@@ -18,7 +18,7 @@ class ParserException(PolarException):
 
 
 class PolarRuntimeException(PolarException):
-    """Exception occuring at runtime (during query tell or evaluation)."""
+    """Exception occurring at runtime (during query tell or evaluation)."""
 
     def __init__(self, message, error=None):
         super().__init__(message, error)
@@ -34,7 +34,7 @@ class PolarRuntimeException(PolarException):
 
 
 class PolarOperationalException(PolarException):
-    """Exceptions from polar that are not necessesarily the user's fault. OOM etc..."""
+    """Exceptions from polar that are not necessarily the user's fault. OOM etc..."""
 
     pass
 

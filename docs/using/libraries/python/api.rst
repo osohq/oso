@@ -20,7 +20,6 @@ Exceptions
 ==========
 .. TODO: add exceptions here once Alex's refactor branch is merged
 
-.. autoclass:: oso.OsoException
-
 .. automodule:: polar.exceptions
     :members:
+    :show-inheritance:
