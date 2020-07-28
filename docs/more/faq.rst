@@ -145,7 +145,7 @@ oso is licensed under |apache2|_.
 How does pricing work?
 ----------------------
 
-oso is freely available as an open source product and will always be open source. 
+oso is freely available as an open source product and will always be free and open source. 
 
 We are also working on an enterprise product that extends the open source core with
 additional features. If you are interested in support for oso or enterprise
@@ -155,7 +155,7 @@ features, please `contact us <https://osohq.com/company/contact-us>`_.
 Who builds and maintains oso
 ----------------------------
 
-oso is built by oso! We are headquartered in New York City with engineers across 3 time zones, and we are
+oso is built by `oso <https://www.osohq.com/company/about-us>`_! We are headquartered in New York City with engineers across 3 time zones, and we are
 hard at work on new features and improvements. If you have feedback or ideas about
 how we can make the product better, we would be delighted to hear from you.
 Please feel free to reach out to us at :email:`engineering@osohq.com`.
