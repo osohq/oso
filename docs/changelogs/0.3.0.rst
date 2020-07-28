@@ -39,6 +39,13 @@ To eliminate ambiguity, the ``allow()`` method of the oso library has been renam
 - ``#allowed?`` in Ruby, and
 - ``isAllowed()`` in Java
 
+``print()`` predicate in policies
+---------------------------------
+
+You can now use the ``print`` predicate in a policy to print the values passed
+in to stderr. ``print`` accepts any number of arguments, and will return the
+values of variables.
+
 ``isa`` operator replaced with ``matches``
 ------------------------------------------
 
