@@ -39,8 +39,8 @@ To eliminate ambiguity, the ``allow()`` method of the oso library has been renam
 - ``#allowed?`` in Ruby, and
 - ``isAllowed()`` in Java
 
-isa operator replaced with matches
-----------------------------------
+``isa`` operator replaced with ``matches``
+------------------------------------------
 
 To improve readability of Polar policies, the ``isa`` operator has
 been replaced with ``matches`` (:ref:`operator-matches`). Any policies using the
@@ -56,8 +56,21 @@ emphasizes its role as an operator.
 New features
 ==============
 
+Basic Arithmetic
+----------------
+
+You can now evaluate basic arithmetic in your policies:
+
+.. code-block:: console
+
+    $ python -m oso
+    > x = 1 + 1
+    {'x': 2}
+
+See :ref:`numbers` for more.
+
 Debugger
-========
+--------
 
 The :doc:`Polar debugger </more/dev-tools/debugger>` will now
 display the host language representation of class instances.
@@ -68,7 +81,7 @@ display the host language representation of class instances.
    _expense_1 = Expense(amount=500, description=coffee, submitted_by=alice@example.com)
 
 Error Traces
-============
+------------
 
 Some runtime errors will not return a trace of the policy location where it happened.
 For example:
@@ -92,8 +105,6 @@ For example:
         from irb:1:in `each'
         from irb:1:in `each'
         from irb:1:in `each'
-
-
 
 
 Other bugs & improvements
