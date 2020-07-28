@@ -57,32 +57,29 @@ Adding oso
   our application. If you don't already have it :doc:`installed </download>`, go ahead and
   do so now:
 
-  .. todo::
-    replace the hard-coded version number(s) in the below snippet with the
-    current latest versions
-
   .. tabs::
     .. group-tab:: Python
 
-      oso supports Python versions **>= 3.6**
+      oso v{release} supports Python versions **>= 3.6**
 
       .. code-block:: console
 
-        $ pip install oso
+        $ pip install oso=={release}
 
     .. group-tab:: Ruby
 
-      oso supports Ruby versions **>= 2.4**
+      oso v{release} supports Ruby versions **>= 2.4**
 
       .. code-block:: console
 
-        $ gem install oso-oso
+        $ gem install oso-oso -v {release}
 
     .. group-tab:: Java
 
-      oso supports Java versions **>= 9**
+      oso v{release} supports Java versions **>= 10**
 
-      Download :download:`oso-0.2.5.jar </examples/quickstart/java/lib/oso-0.2.5.jar>`.
+      Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_
+      and download the latest jar.
 
       Either add this to your Java project libraries,
       load using your IDE,
@@ -90,11 +87,11 @@ Adding oso
 
       .. code-block:: console
 
-        $ javac -cp oso-0.2.5.jar:. Expense.java
+        $ javac -cp {JAR}:. Expense.java
 
 
-Now that we've installed oso, we can import it into our project and construct
-a new ``Oso`` instance that will serve as our authorization engine.
+Now that we've installed oso, let's see how to make some basic authorization
+decisions.
 
 Decisions, decisions...
 =======================
@@ -143,18 +140,19 @@ start a REPL session and follow along:
     .. code-block:: pycon
 
 
-      >>> from server import *
-      >>> oso
-      <oso.Oso object at 0x7f267494dc70>
+      >>> from expense import *
+      >>> from oso import Oso
+      >>> oso = Oso()
       >>> alice = "alice@example.com"
       >>> expense = EXPENSES[1]
       >>> oso.is_allowed(alice, "GET", expense)
       False
 
     We can create a new policy file, and
-    explicitly allow Alice to GET expenses...
+    explicitly allow Alice to GET any expense...
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -175,7 +173,7 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
-      >>> OSO.is_allowed("bhavik@example.com", "GET", expense)
+      >>> oso.is_allowed("bhavik@example.com", "GET", expense)
       False
 
 
@@ -185,19 +183,24 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-        irb(main):001:0> require "./server"
+        irb(main):001:0> require './expense'
         => true
-        irb(main):002:0> alice = "alice@example.com"
+        irb(main):002:0> require 'oso'
+        => true
+        irb(main):003:0> OSO = Oso.new
+        => #<Oso::Oso:0x00007ffc9c8c6b58>
+        irb(main):004:0> alice = "alice@example.com"
         => "alice@example.com"
-        irb(main):003:0> expense = EXPENSES[1]
-        => #<Expense:0x00564efc19e640 @amount=500, @description="coffee", @submitted_by="alice@example.com">
-        irb(main):004:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
+        irb(main):005:0> expense = EXPENSES[1]
+        => #<Expense:0x00007ffc9c916388 @amount=500, @description="coffee", @submitted_by="alice@example.com">
+        irb(main):006:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
         => false
 
     We can create a new policy file, and
-    explicitly allow Alice to view expenses...
+    explicitly allow Alice to GET any expense...
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -212,7 +215,7 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allowed?(actor: "alice", action: "GET", resource: "expense")
+      irb(main):005:0> OSO.allowed?(actor: alice, action: "GET", resource: "expense")
       => true
 
     ...and everyone else is still denied:
@@ -227,7 +230,7 @@ start a REPL session and follow along:
     To follow along, either try using ``jshell`` (requires Java version >= 9)
     or copy the follow code into a ``main`` method in ``Expense.java``.
 
-    Run: ``jshell --class-path oso-0.2.5.jar Expense.java``
+    Run: ``jshell --class-path {JAR} Expense.java``
 
     .. tabs::
       .. group-tab:: Java main
@@ -237,7 +240,7 @@ start a REPL session and follow along:
 
             import com.osohq.oso.Oso;
 
-            public class Expense { 
+            public class Expense {
                 // ...
 
                 public static void main(String[] args) throws Exception {
@@ -276,6 +279,7 @@ start a REPL session and follow along:
     expenses
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -335,14 +339,14 @@ the actor, the rule no longer succeeds because the string ``"bhavik@example.com"
 match the string ``"alice@example.com"``.
 
 
-Authorizing HTTP requests
+Authorizing HTTP Requests
 =========================
 
 Now that we are confident we can control access to our expense data,
 let's see what it would look like in a web server.
 Our web server contains some simple logic to filter out bad requests and not much else.
 
-In lieu of setting up real identity and authentication systems, we'll used a
+In lieu of setting up real identity and authentication systems, we'll use a
 custom HTTP header to indicate that a request is "authenticated" as a particular
 user. The header value will be an email address, e.g., ``"alice@example.com"``.
 We'll pass it to ``allow`` as the **actor** and we'll use the HTTP method as the
@@ -375,7 +379,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
       :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/Server.java>`
       :language: java
       :emphasize-lines: 34-38
-    
+
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
 ``"Not Found!"``.
@@ -404,8 +408,8 @@ We'll first start our server...
 
     .. code-block:: console
 
-        $ javac -cp oso-0.2.5.jar:. Server.java
-        $ java Server
+        $ javac -cp {JAR}:. Server.java
+        $ java -cp {JAR}:. Server
         Server running on /127.0.0.1:5050
 
 ...and then, in another terminal, we can test everything works by making some requests:
@@ -420,14 +424,14 @@ We'll first start our server...
 If you aren't seeing the same thing, make sure you created your policy
 correctly in ``expenses.polar``.
 
-Rules over dynamic data
+Rules Over Dynamic Data
 -----------------------
 
 It's nice that Alice can view expenses, but it would be really onerous if
 we had to write a separate rule for every single actor we wanted to authorize.
 Luckily, we don't!
 
-Let's replace our static rule checking that the provided email matches
+Let's **replace** our static rule checking that the provided email matches
 ``"alice@example.com"`` with a dynamic one that checks that the provided email
 ends in ``"@example.com"``. That way, everyone at Example.com, Inc. will be
 able to view expenses, but no one outside the company will be able to:
@@ -436,6 +440,7 @@ able to view expenses, but no one outside the company will be able to:
   .. group-tab:: Python
 
     .. literalinclude:: /examples/quickstart/polar/expenses-03-py.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -459,6 +464,7 @@ able to view expenses, but no one outside the company will be able to:
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/quickstart/polar/expenses-03-rb.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -482,6 +488,7 @@ able to view expenses, but no one outside the company will be able to:
   .. group-tab:: Java
 
     .. literalinclude:: /examples/quickstart/polar/expenses-03-java.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -519,7 +526,7 @@ are denied access:
   Not Authorized!
 
 
-Writing authorization policy over application data
+Writing Authorization Policy Over Application Data
 ==================================================
 
 At this point, the higher-ups at Example.com, Inc. are still not satisfied with
@@ -527,25 +534,28 @@ our access policy that allows all employees to see each other's expenses. They
 would like us to modify the policy such that employees can only see their own
 expenses.
 
-To accomplish that, we can replace our existing rule with:
+To accomplish that, we can **replace** our existing rule with:
 
 .. tabs::
 
   .. group-tab:: Python
 
     .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Java
 
     .. literalinclude:: /examples/quickstart/polar/expenses-04-java.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -605,14 +615,11 @@ as:
 Summary
 =======
 
-We just blitzed through a ton of stuff:
+We just went through a ton of stuff:
 
 * Installing oso.
 * Setting up our app to enforce the policy decisions made by oso.
 * Writing authorization rules over static and dynamic application data.
-
-.. todo::
-    Make these actual links.
 
 .. admonition:: What's next
     :class: tip whats-next

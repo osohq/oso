@@ -3,7 +3,7 @@ Writing Policies
 ================
 
 Policies are the source of truth for the authorization logic used to evaluate queries in oso.
-As a reminder: oso policies are written in a language called Polar.
+As a reminder: oso policies are written in a declarative language called Polar.
 There is a full :doc:`/using/polar-syntax` guide which you can use as a reference
 of all the available syntax, but here we'll give an overview of
 getting started with writing policies.
@@ -40,21 +40,21 @@ But if we replace ``action`` with a concrete type:
 
 .. code-block:: polar
 
-    allow(actor, "read", resource) if ...;
+    allow(actor, "read", resource);
 
 the rule will now only be evaluated if the second input exactly matches the string ``"read"``.
 
 .. _if_statement:
 
-``if`` statements
+``if`` Statements
 =================
 
 There are several ways to represent imperative ``if`` logic in Polar.
 
-In a rule body
+In a Rule Body
 ^^^^^^^^^^^^^^
 
-The most obvious way to write an ``if`` statement in Polar is to add a body to
+The most common way to write an ``if`` statement in Polar is to add a body to
 a rule. The following rule allows **any** actor to approve **any** expense report:
 
 .. code-block:: polar
@@ -91,7 +91,16 @@ in a single rule body:
       actor.is_admin = true
       or actor.title = "CFO";
 
-As specializers in a rule head
+.. tip::
+
+    In these rules we declared some variables with leading underscores
+    (``_report``, ``_actor``).  A leading underscore indicates that the variable
+    will only be used once (Polar does not distinguish between definition and
+    use). These variables are called *singleton variables*, and will match any
+    value.  To help prevent errors, a warning will be emitted if a singleton variable
+    is not preceded by an underscore.
+
+As Specializers in a Rule Head
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Given the following application class structure...
@@ -116,7 +125,7 @@ rule head:
 The rule will fail when evaluated on a regular ``User`` and succeed when
 evaluated on an ``Admin``, encoding an implicit ``if Admin`` condition.
 
-This is another example of the matching process: instead of matching against
+This is another example of the rule matching process: instead of matching against
 a concrete value, we are instead checking to make sure the type of the input
 matches the expected type - in this case, an ``Admin``.
 

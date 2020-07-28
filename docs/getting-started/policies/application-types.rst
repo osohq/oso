@@ -4,7 +4,7 @@
 .. _application-types:
 
 =================
-Application types
+Application Types
 =================
 
 Any type defined in an application can be passed into oso, and its
@@ -224,7 +224,7 @@ We could also use ``matches`` to express the same logic:
     **inheritance** hierarchy of our application classes. See our :doc:`/using/examples/inheritance` guide for an
     in-depth example of how this works.
 
-Once a class is registered, its static methods can also be called from oso policies:
+Once a class is registered, its class methods can also be called from oso policies:
 
 .. tabs::
     .. group-tab:: Python
@@ -294,7 +294,7 @@ Once a class is registered, its static methods can also be called from oso polic
 
 .. _built-in-types:
 
-Built-in types
+Built-in Types
 ==============
 
 Methods called on Polar built-ins (``str``, ``dict``, ``number`` & ``list``)

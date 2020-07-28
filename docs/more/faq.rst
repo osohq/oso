@@ -47,7 +47,7 @@ Can I query oso arbitrarily?
 Absolutely, you can!
 
 We use ``allow`` as convention to make it easy to get started with oso.
-However, all oso libraries additionally expose a ``query_predicate`` method,
+However, all oso libraries additionally expose a ``query_rule`` method,
 which enables you to query any rule you want.
 
 Beyond this, you can even query using inputs that are not yet set by

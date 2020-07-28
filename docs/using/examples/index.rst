@@ -17,7 +17,7 @@ might represent and build these in oso.
     user_types
     inheritance
 
-:doc:`Role-based access control (RBAC) <rbac>`
+:doc:`Role-based Access Control (RBAC) <rbac>`
 ==============================================
 
 Role-based access control (RBAC) assigns each actor a role.  Instead of granting
@@ -25,7 +25,7 @@ permissions to individual actors, they are granted to roles.
 
 :doc:`Read on <rbac>` to see how to implement RBAC with oso.
 
-:doc:`Attribute-based access control (ABAC) <abac>`
+:doc:`Attribute-based Access Control (ABAC) <abac>`
 ===================================================
 
 Attribute-based access control relies on rich attributes associated with each
@@ -34,7 +34,7 @@ not expressive enough, and is a natural extension of RBAC when using oso.
 
 :doc:`Read on <abac>` to see how to implement ABAC with oso.
 
-:doc:`Using contextual information in authorization <context>`
+:doc:`Using Contextual Information in Authorization <context>`
 ==============================================================
 
 Sometimes an authorization decision will require context beyond the
@@ -44,7 +44,7 @@ request, or the environment the application is running in.
 :doc:`Read on <context>` to see how to access contextual information within
 oso policies.
 
-:doc:`Sharing authorization rules across related resources <inheritance>`
+:doc:`Sharing Authorization Rules Across Related Resources <inheritance>`
 =========================================================================
 
 Some applications have common authorization rules that apply to many different
@@ -53,7 +53,7 @@ related resource types, and override them as needed.
 
 See how to use :doc:`inheritance` to implement extensible policies with oso.
 
-:doc:`Supporting external and internal users <user_types>`
+:doc:`Supporting External and Internal Users <user_types>`
 ==========================================================
 
 Applications may have multiple types of users.  Frequently, internal user

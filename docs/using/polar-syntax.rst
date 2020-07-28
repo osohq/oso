@@ -258,7 +258,7 @@ its left **or** its right operand is true. Disjunctions can always
 be replaced by multiple rules with identical heads but different bodies
 (the operands), but may help simplify writing rules with alternatives.
 
-Dictionary key access
+Dictionary Key Access
 ^^^^^^^^^^^^^^^^^^^^^
 
 The dot ``.`` operator can be used to access the value associated with
@@ -345,10 +345,10 @@ The ``in`` operator generates *alternatives* for each element of the list.
 
 .. _operator-forall:
 
-For all
+For All
 ^^^^^^^
 
-The ``forall`` predicate is often useful in conjunction with the ``in`` operator.
+The ``forall`` operator is often useful in conjunction with the ``in`` operator.
 ``forall(condition, action)`` checks that ``action`` succeeds for every alternative
 produced by ``condition``.
 
@@ -374,11 +374,11 @@ by an application method.
 
 
 Any bindings made inside a ``forall`` (``role`` or ``x`` in the example above)
-cannot be accessed after the ``forall`` predicate.
+cannot be accessed after the ``forall`` operator.
 
 .. _operator-rest:
 
-``*rest`` operator
+``*rest`` Operator
 ^^^^^^^^^^^^^^^^^^
 
 The rest operator (``*``) can be used to destructure a list. For example::
@@ -396,7 +396,7 @@ tail]``) is invalid. Any number of elements can come before the rest operator.
 The rest operator is only useful when combined with a unification operation that
 assigns a value to it.
 
-Patterns and matching
+Patterns and Matching
 ----------------------
 
 Polar has powerful pattern matching facilities that are useful to control which
@@ -463,7 +463,7 @@ subclass of ``Person`` would match ``Person{x: 1}``.
 
 .. _operator-matches:
 
-Matches operator
+Matches Operator
 ^^^^^^^^^^^^^^^^
 
 The above example used the ``matches`` operator to describe the behavior of
@@ -473,7 +473,7 @@ rule argument matches the specializer.
 
 .. _inline-queries:
 
-Inline queries (``?=``)
+Inline Queries (``?=``)
 -----------------------
 
 Queries can also be added to Polar files and will run when the file is loaded.

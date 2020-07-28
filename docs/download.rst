@@ -12,7 +12,7 @@ oso is available as a library in several languages:
         The Python version of oso is available on `PyPI`_ and can be installed using
         ``pip``::
 
-            $ pip install oso
+            $ pip install oso=={release}
 
         For more information on the oso Python library, see the
         :doc:`library documentation </using/libraries/python/index>`.
@@ -39,11 +39,11 @@ oso is available as a library in several languages:
         The Ruby version of oso is available on RubyGems_ and can be installed using
         ``gem``::
 
-            $ gem install oso-oso
+            $ gem install oso-oso -v {release}
 
         or added to your ``Gemfile``::
 
-            gem 'oso-oso', '~> 0.2.2'
+            gem 'oso-oso', '~> {release}'
 
         and installed with `bundler`_.
 
@@ -74,9 +74,9 @@ oso is available as a library in several languages:
 
         To use it, add it to the classpath for your project::
 
-            $ javac -classpath "oso-|release|.jar:." MyProject.java
+            $ javac -classpath "{JAR}:." MyProject.java
 
-            $ java -classpath "oso-|release|.jar:." MyProject
+            $ java -classpath "{JAR}:." MyProject
 
         For more information on the oso Java library, see the
         :doc:`library documentation </using/libraries/java/index>`.
@@ -101,7 +101,7 @@ oso is available as a library in several languages:
 - JavaScript
 - Rust
 
-Source code
+Source Code
 -----------
 
 The source code for oso is hosted on GitHub:

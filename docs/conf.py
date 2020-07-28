@@ -53,6 +53,7 @@ extensions = [
     "sphinx_tabs.tabs",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
+    "sphinx.ext.extlinks",
     "sphinx.ext.githubpages",
     "sphinx.ext.ifconfig",
     "sphinx.ext.todo",
@@ -182,3 +183,29 @@ doctest_test_doctest_blocks = ""
 lexers["polar"] = lexer.PolarLexer()
 lexers["jshell"] = lexer.JShellLexer()
 lexers["oso"] = lexer.OsoLexer()
+
+
+#### Subsitutions
+
+extlinks = {
+    "gh-oso": ("https://github.com/osohq/oso", None),
+}
+
+
+def ultimate_replace(app, docname, source):
+    result = source[0]
+    for key in app.config.ultimate_replacements:
+        result = result.replace(key, app.config.ultimate_replacements[key])
+    source[0] = result
+
+
+ultimate_replacements = {
+    "{JAR}": f"oso-{release}.jar",
+    "{version}": f"{version}",
+    "{release}": f"{release}",
+}
+
+
+def setup(app):
+    app.add_config_value("ultimate_replacements", {}, True)
+    app.connect("source-read", ultimate_replace)
