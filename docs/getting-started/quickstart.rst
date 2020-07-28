@@ -215,14 +215,14 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allowed?(actor: alice, action: "GET", resource: "expense")
+      irb(main):005:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
       => true
 
     ...and everyone else is still denied:
 
     .. code-block:: irb
 
-      irb(main):006:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: "expense")
+      irb(main):006:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: expense)
       => false
 
   .. group-tab:: Java
@@ -323,8 +323,8 @@ start a REPL session and follow along:
 
 .. note::
   Each time you load a file, it will load the policy
-  **without** clearing what is already loaded in. Be sure to
-  clear oso using ``Oso.clear`` or create a new instance if you want
+  **without** clearing previously loaded rules. Be sure to
+  clear oso using the ``clear`` method or create a new instance if you want
   to try adding a few new rules.
 
 When we ask oso for a policy decision via ``allow``, the oso engine
@@ -354,6 +354,9 @@ We'll pass it to ``allow`` as the **actor** and we'll use the HTTP method as the
 
 Finally, the **resource** is the expense retrieved from our stored expenses.
 
+Here is the code for our web server. The highlighted lines show where we added
+oso:
+
 .. tabs::
 
   .. group-tab:: Python
@@ -362,7 +365,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
       :class: copybutton
       :caption: :fab:`python` server.py :download:`(link) </examples/quickstart/python/server.py>`
       :language: python
-      :emphasize-lines: 26-29
+      :emphasize-lines: 2,6-7,26-29
 
   .. group-tab:: Ruby
 
@@ -370,7 +373,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
       :class: copybutton
       :caption: :fas:`gem` server.rb :download:`(link) </examples/quickstart/ruby/server.rb>`
       :language: ruby
-      :emphasize-lines: 18-21
+      :emphasize-lines: 1,6-7,18-21
 
   .. group-tab:: Java
 
@@ -378,7 +381,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
       :class: copybutton
       :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/Server.java>`
       :language: java
-      :emphasize-lines: 34-38
+      :emphasize-lines: 4,7-12,34-38
 
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return

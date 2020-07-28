@@ -199,6 +199,7 @@ In the :doc:`/getting-started/quickstart`, our main objective was to
 determine who could "GET" expenses. Our final policy looked like:
 
 .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+    :language: polar
     :caption: :fa:`oso` expenses.polar
 
 In our expenses sample application, we have something similar,
@@ -207,6 +208,7 @@ to change the logic in the future.
 
 .. literalinclude:: /examples/application/expenses-flask/app/authorization.polar
     :caption: :fa:`oso` authorization.polar
+    :language: polar
     :lines: 21-25
 
 To handle authorizing access to data, we've implemented a little helper method

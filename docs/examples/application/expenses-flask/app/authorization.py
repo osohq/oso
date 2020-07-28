@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from flask import current_app, g, request, Blueprint
 from oso import Oso, OsoException
+from oso.extras import Http
 from werkzeug.exceptions import BadRequest, Forbidden
 
 bp = Blueprint("authorization", __name__)
@@ -9,7 +10,8 @@ bp = Blueprint("authorization", __name__)
 @bp.before_app_request
 def authorize_request():
     """Authorize the incoming request"""
-    if not current_app.oso.is_allowed(g.current_user, request.method, request):
+    http = Http(path=request.path)
+    if not current_app.oso.is_allowed(g.current_user, request.method, http):
         return Forbidden("Not Authorized!")
 
 

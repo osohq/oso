@@ -39,13 +39,15 @@ For example::
 are all parsed as numbers.
 
 You can also perform basic arithmetic on numbers with the operators
-``+,-,*,/``.
+``+``, ``-``, ``*``, and ``/``.
 
-.. _strings:
+.. _booleans:
 
 Boolean
 -------
 Polar parses the keywords ``true`` and ``false`` as boolean values.
+
+.. _strings:
 
 Strings
 -------
