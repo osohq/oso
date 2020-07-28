@@ -53,14 +53,14 @@ make it possible to take advantage of an app's existing domain model. For exampl
                 attr_reader :name
                 attr_reader :is_admin
 
-                def initialize(name, is_admin)
+                def initialize(name:, is_admin:)
                     @name = name
                     @is_admin = is_admin
                 end
             end
 
-            user = User.new("alice", true)
-            raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
+            user = User.new(name: "alice", is_admin: true)
+            raise "should be allowed" unless OSO.allowed?(actor: user, action: "foo", resource: "bar")
 
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
         called ``is_admin``, it is evaluated by the policy and found to be true.
@@ -175,7 +175,7 @@ We could also use ``matches`` to express the same logic:
 .. code-block:: polar
     :caption: :fa:`oso` policy.polar
 
-    allow(actor, action, resource) if matches User{name: "alice"};
+    allow(actor, action, resource) if actor matches User{name: "alice"};
 
 .. tabs::
     .. group-tab:: Python
@@ -188,8 +188,8 @@ We could also use ``matches`` to express the same logic:
             oso.register_class(User)
 
             user = User("alice", True)
-            assert(oso.is_allowed(user, "foo", "bar))
-            assert(not oso.is_allowed("notauser", "foo", "bar"))
+            assert oso.is_allowed(user, "foo", "bar")
+            assert not oso.is_allowed("notauser", "foo", "bar")
 
     .. group-tab:: Ruby
 
@@ -199,9 +199,9 @@ We could also use ``matches`` to express the same logic:
             :caption: :fas:`gem` app.rb
 
             OSO.register_class(User)
-            user = User.new("alice", true)
-            raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
-            raise "should not be allowed" unless not OSO.allowed?(user, "foo", "bar")
+            user = User.new(name: "alice", is_admin: true)
+            raise "should be allowed" unless OSO.allowed?(actor: user, action: "foo", resource: "bar")
+            raise "should not be allowed" unless not OSO.allowed?(actor: user, action: "foo", resource: "bar")
 
     .. group-tab:: Java
 
@@ -268,8 +268,8 @@ Once a class is registered, its class methods can also be called from oso polici
 
             OSO.register_class(User)
 
-            user = User.new("alice", true)
-            raise "should be allowed" unless OSO.allowed?(user, "foo", "bar")
+            user = User.new(name: "alice", is_admin: true)
+            raise "should be allowed" unless OSO.allowed?(actor: user, action: "foo", resource: "bar")
 
     .. group-tab:: Java
 
