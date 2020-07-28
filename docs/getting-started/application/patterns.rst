@@ -290,7 +290,7 @@ control to only load the columns the user can access:
 .. code-block:: python
     :caption: :fab:`python`
 
-    from oso.api import Variable
+    from oso import Variable
 
     def get_expense(user, expense_id):
         # Query oso for all fields allowed for this user.
