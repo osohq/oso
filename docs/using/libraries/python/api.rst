@@ -2,12 +2,15 @@
 Python API
 ==========
 
-.. automodule:: oso
-
 Classes
 =======
+
 .. autoclass:: oso.Oso
-   :members: is_allowed, load_str, load_file, register_class
+   :members: is_allowed, load_str, load_file, register_class, query_rule, query, clear
+
+.. autoclass:: oso.Variable
+
+.. autoclass:: oso.Predicate
 
 Decorator Functions
 ^^^^^^^^^^^^^^^^^^^
@@ -15,4 +18,7 @@ Decorator Functions
 
 Exceptions
 ==========
-.. TODO: add exceptions here once Alex's refactor branch is merged
+
+.. automodule:: polar.exceptions
+    :members:
+    :show-inheritance:

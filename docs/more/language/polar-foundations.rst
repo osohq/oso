@@ -303,6 +303,8 @@ parent of ``x`` *or* they are an ancestor of a parent ``p`` of ``x``::
   ancestor = "Leto"
   True
 
+.. _search-procedure:
+
 The Search Procedure
 --------------------
 

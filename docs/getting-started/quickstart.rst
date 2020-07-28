@@ -9,7 +9,7 @@ you.
 In general, it takes less than 5 minutes to add oso to an existing application
 and begin writing an authorization policy.
 
-In the next 15 minutes, we're going to add oso to our project, write our first policy,
+In this guide, we're going to add oso to our project, write our first policy,
 create a simple web server with no authorization, and write some rules for it.
 We encourage you to code along in your local environment!
 
@@ -152,6 +152,7 @@ start a REPL session and follow along:
     explicitly allow Alice to GET any expense...
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -199,6 +200,7 @@ start a REPL session and follow along:
     explicitly allow Alice to GET any expense...
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -238,7 +240,7 @@ start a REPL session and follow along:
 
             import com.osohq.oso.Oso;
 
-            public class Expense { 
+            public class Expense {
                 // ...
 
                 public static void main(String[] args) throws Exception {
@@ -277,6 +279,7 @@ start a REPL session and follow along:
     expenses
 
     .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -336,7 +339,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik@example.com"
 match the string ``"alice@example.com"``.
 
 
-Authorizing HTTP requests
+Authorizing HTTP Requests
 =========================
 
 Now that we are confident we can control access to our expense data,
@@ -376,7 +379,7 @@ Finally, the **resource** is the expense retrieved from our stored expenses.
       :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/Server.java>`
       :language: java
       :emphasize-lines: 34-38
-    
+
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
 ``"Not Found!"``.
@@ -421,7 +424,7 @@ We'll first start our server...
 If you aren't seeing the same thing, make sure you created your policy
 correctly in ``expenses.polar``.
 
-Rules over dynamic data
+Rules Over Dynamic Data
 -----------------------
 
 It's nice that Alice can view expenses, but it would be really onerous if
@@ -437,6 +440,7 @@ able to view expenses, but no one outside the company will be able to:
   .. group-tab:: Python
 
     .. literalinclude:: /examples/quickstart/polar/expenses-03-py.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -460,6 +464,7 @@ able to view expenses, but no one outside the company will be able to:
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/quickstart/polar/expenses-03-rb.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -483,6 +488,7 @@ able to view expenses, but no one outside the company will be able to:
   .. group-tab:: Java
 
     .. literalinclude:: /examples/quickstart/polar/expenses-03-java.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
@@ -520,7 +526,7 @@ are denied access:
   Not Authorized!
 
 
-Writing authorization policy over application data
+Writing Authorization Policy Over Application Data
 ==================================================
 
 At this point, the higher-ups at Example.com, Inc. are still not satisfied with
@@ -535,18 +541,21 @@ To accomplish that, we can **replace** our existing rule with:
   .. group-tab:: Python
 
     .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
   .. group-tab:: Java
 
     .. literalinclude:: /examples/quickstart/polar/expenses-04-java.polar
+      :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 

@@ -12,7 +12,7 @@ Each Polar file defines a set of rules.  When a Polar file is loaded into the
 authorization engine, all rules are added to the engine's knowledge base.
 
 The knowledge base may be queried.  The behavior of queries is described further
-in :doc:`/more/language/polar-foundations`.
+:ref:`here <search-procedure>`.
 
 .. _basic-types:
 
@@ -20,6 +20,8 @@ Primitive Types
 ================
 
 Polar has only a few primitive data types.
+
+.. _numbers:
 
 Numbers
 -------
@@ -35,6 +37,9 @@ For example::
   2.0e9
 
 are all parsed as numbers.
+
+You can also perform basic arithmetic on numbers with the operators
+``+,-,*,/``.
 
 .. _strings:
 
@@ -72,7 +77,7 @@ For example::
   ["polar", "lang", "oso"]
   ["oso", ["polar", "lang"]]
 
-Lists may have any length. List membership can be determined using :ref:`operator-in`.
+Lists may have any length. List membership can be determined using the :ref:`in operator <operator-in>`.
 
 .. _dictionaries:
 
@@ -101,8 +106,8 @@ name is specified before the dictionary::
 Classes can be registered with the oso library to integrate with Polar.  See
 :doc:`/getting-started/policies/application-types` for more information.
 
-A class instance literal must be used either with the :ref:`operator-new` or
-as a :ref:`pattern`.
+A class instance literal must be used either with the :ref:`new operator <operator-new>` or
+as a :ref:`pattern <pattern>`.
 
 .. _polar-rules:
 
@@ -118,7 +123,7 @@ A rule in Polar takes the form::
 
 where ``HEAD`` must be a *fact* and ``BODY`` any number of *terms*.
 The meaning of a rule is that ``HEAD`` is true **if** each of the ``BODY``
-terms is true. There may be multiple rules with the same head; each
+terms is true. If there are be multiple rules with the same head, each
 ``BODY`` will be tried in turn, and any or all may succeed. For more
 on how rules are defined and applied see
 :doc:`/more/language/polar-foundations`.
@@ -160,6 +165,9 @@ This rule says that **if** there is a person with some name,
 
 .. _singletons:
 
+Singletons
+^^^^^^^^^^
+
 If a variable occurs only once, then its value can't be used
 for anything. Such variables are called *singletons*, and Polar
 will warn you if they occur in a rule; e.g., if you try to load
@@ -169,7 +177,7 @@ the rule::
 
 Polar will say::
 
-  Singleton variable first
+  Singleton variable first is unused or undefined
   001: user(first, last) if person("George", last);
             ^
 
@@ -223,8 +231,7 @@ bound to ``1`` or unbound.
 
 Unification is also used to determine if queries match rule ``HEAD`` s,
 and if the ``BODY`` of rules match other facts in the knowledge base.
-We will cover unification further in
-:doc:`/more/language/polar-foundations`.
+We will cover unification further in :ref:`search-procedure`.
 
 .. todo::
    add a little table with unification examples, esp. w/dictionaries.
@@ -253,7 +260,7 @@ its left **or** its right operand is true. Disjunctions can always
 be replaced by multiple rules with identical heads but different bodies
 (the operands), but may help simplify writing rules with alternatives.
 
-Dictionary key access
+Dictionary Key Access
 ^^^^^^^^^^^^^^^^^^^^^
 
 The dot ``.`` operator can be used to access the value associated with
@@ -340,7 +347,7 @@ The ``in`` operator generates *alternatives* for each element of the list.
 
 .. _operator-forall:
 
-For all
+For All
 ^^^^^^^
 
 The ``forall`` operator is often useful in conjunction with the ``in`` operator.
@@ -373,7 +380,7 @@ cannot be accessed after the ``forall`` operator.
 
 .. _operator-rest:
 
-``*rest`` operator
+``*rest`` Operator
 ^^^^^^^^^^^^^^^^^^
 
 The rest operator (``*``) can be used to destructure a list. For example::
@@ -391,7 +398,7 @@ tail]``) is invalid. Any number of elements can come before the rest operator.
 The rest operator is only useful when combined with a unification operation that
 assigns a value to it.
 
-Patterns and matching
+Patterns and Matching
 ----------------------
 
 Polar has powerful pattern matching facilities that are useful to control which
@@ -458,7 +465,7 @@ subclass of ``Person`` would match ``Person{x: 1}``.
 
 .. _operator-matches:
 
-Matches operator
+Matches Operator
 ^^^^^^^^^^^^^^^^
 
 The above example used the ``matches`` operator to describe the behavior of
@@ -468,7 +475,7 @@ rule argument matches the specializer.
 
 .. _inline-queries:
 
-Inline queries (``?=``)
+Inline Queries (``?=``)
 -----------------------
 
 Queries can also be added to Polar files and will run when the file is loaded.

@@ -101,7 +101,7 @@ oso is available as a library in several languages:
 - JavaScript
 - Rust
 
-Source code
+Source Code
 -----------
 
 The source code for oso is hosted on GitHub:
@@ -115,6 +115,7 @@ Releases
     :maxdepth: 1
     :caption: See below for release notes:
 
+    v0.3.0 <changelogs/0.3.0>
     v0.2.0 <changelogs/0.2.0>
     v0.1.0 <changelogs/0.1.0>
     v0.0.4 <changelogs/0.0.4>

@@ -1,0 +1,126 @@
+=====
+0.3.0
+=====
+
+**Release date:** 2020-07-28
+
+
+Major news
+==========
+
+
+Java support
+------------
+
+Java support for version >= 10 Linux and Mac OS X are now published in our
+ `Maven Repository <https://github.com/osohq/oso/packages/321403>`_.
+
+
+Breaking changes
+================
+
+.. warning:: This release contains breaking changes. Be sure
+   to follow migration steps before upgrading.
+
+oso.query_predicate() renamed in oso libraries
+----------------------------------------------
+
+To improve our API & better match documentation, ``oso.query_predicate()``
+has been renamed ``oso.query_rule()``. The Python API now returns
+a generator instead of a ``QueryResult`` object to improve consistency
+across libraries.
+
+allow() method renamed in oso libraries
+---------------------------------------
+
+To eliminate ambiguity, the ``allow()`` method of the oso library has been renamed to:
+
+- ``is_allowed()`` in Python,
+- ``#allowed?`` in Ruby, and
+- ``isAllowed()`` in Java
+
+``print()`` predicate in policies
+---------------------------------
+
+You can now use the ``print`` predicate in a policy to print the values passed
+in to stderr. ``print`` accepts any number of arguments, and will return the
+values of variables.
+
+``isa`` operator replaced with ``matches``
+------------------------------------------
+
+To improve readability of Polar policies, the ``isa`` operator has
+been replaced with ``matches`` (:ref:`operator-matches`). Any policies using the
+``isa`` operator will need to be migrated.
+
+cut() predicate replaced with cut keyword
+-----------------------------------------
+
+The Polar "cut" operator was previously parsed like a predicate, but
+it isn't one. The new syntax ``cut`` (without the empty parentheses)
+emphasizes its role as an operator.
+
+New features
+==============
+
+Basic Arithmetic
+----------------
+
+You can now evaluate basic arithmetic in your policies:
+
+.. code-block:: console
+
+    $ python -m oso
+    > x = 1 + 1
+    {'x': 2}
+
+See :ref:`numbers` for more.
+
+Debugger
+--------
+
+The :doc:`Polar debugger </more/dev-tools/debugger>` will now
+display the host language representation of class instances.
+
+.. code-block:: oso
+
+   debug> bindings
+   _expense_1 = Expense(amount=500, description=coffee, submitted_by=alice@example.com)
+
+Error Traces
+------------
+
+Some runtime errors will now return a trace of the policy location where it happened.
+For example:
+
+.. code-block:: irb
+
+    irb(main):020:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
+    Oso::Polar::PolarRuntimeError: trace (most recent evaluation last):
+          allow("alice@example.com", "GET", Expense(amount=500, description=coffee, submitted_by=alice@example.com))
+      in rule allow at line 2, column 2 in file expenses.polar
+        .(_expense_4, missing_attribute(), _value_1_5) and _value_1_5
+      in rule allow at line 2, column 2 in file expenses.polar
+        .(_expense_4, missing_attribute(), _value_1_5) and _value_1_5
+      in rule allow at line 2, column 2 in file expenses.polar
+        .(_expense_4, missing_attribute(), _value_1_5)
+    Application error: Oso::Polar::InvalidCallError at line 2, column 2 in file expenses.polar
+        from /home/sam/.rbenv/versions/2.4.0/lib/ruby/gems/2.4.0/gems/oso-oso-0.3.0/lib/oso/polar/ffi/query.rb:57:in `next_event'
+        from /home/sam/.rbenv/versions/2.4.0/lib/ruby/gems/2.4.0/gems/oso-oso-0.3.0/lib/oso/polar/query.rb:116:in `block (2 levels) in start'
+        from /home/sam/.rbenv/versions/2.4.0/lib/ruby/gems/2.4.0/gems/oso-oso-0.3.0/lib/oso/polar/query.rb:115:in `loop'
+        from /home/sam/.rbenv/versions/2.4.0/lib/ruby/gems/2.4.0/gems/oso-oso-0.3.0/lib/oso/polar/query.rb:115:in `block in start'
+        from irb:1:in `each'
+        from irb:1:in `each'
+        from irb:1:in `each'
+
+
+Other bugs & improvements
+=========================
+
+- Boolean values can now be queried directly.  The statement ``x = true and x``
+  now tests for the truthiness of ``x`` as the second argument of the
+  conjunction. Previously this would be invalid.
+- Fixes for comparing numbers
+- Comparing a variable to itself no longer loops infinitely
+- Allow unbound variables to be returned from queries
+- Additional warnings for singletons
