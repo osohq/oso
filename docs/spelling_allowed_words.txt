@@ -51,6 +51,7 @@ namespace
 unsafety
 middleware
 url
+stderr
 
 ## Product names
 sqlite
