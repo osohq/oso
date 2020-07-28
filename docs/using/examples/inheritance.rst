@@ -48,7 +48,7 @@ class and the ``resource`` parameter must be an instance of the ``Order`` class.
 This policy meets our goal above. We have expressed the same rule for the three
 types of patient data, but it is a bit repetitive.  Let's try to improve it.
 
-Using a rule to express common behavior
+Using a Rule to Express Common Behavior
 ----------------------------------------
 
 Our policy doesn't just need to contain ``allow`` rules.  We can write any
@@ -66,7 +66,7 @@ Unfortunately, we've lost one property of our last policy: the specializers.
 This rule would be evaluated for any type of resource, not just our three
 examples of patient data above. That's not what we want.
 
-Bringing back specializers
+Bringing Back Specializers
 --------------------------
 
 We can combine this idea with our first policy to make sure only our three
@@ -79,7 +79,7 @@ patient data resources use the ``can_read_patient_data`` rule.
 
 Now, we still have three rules, but the body isn't repeated anymore.
 
-One rule to rule them all
+One Rule to Rule Them All
 -------------------------
 
 We haven't talked about the application side of this yet.  So far, we've assumed

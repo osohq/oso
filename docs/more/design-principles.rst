@@ -46,7 +46,7 @@ to start but should not force developers to bend their requirements to the
 capabilities of the system. Instead, it should give them the ability to
 extend the system to solve the use case at hand.
 
-Separation of concerns, but not data
+Separation of Concerns, but not Data
 ------------------------------------
 
 Let's imagine we're building a SaaS app that allows organizations to manage
@@ -154,7 +154,7 @@ native objects to make its authorization decisions, while at the same time
 keeping authorization logic separate from application logic.
 
 
-Right tool for the job
+Right Tool for the Job
 ----------------------
 
 If you ask someone to describe the permissions a user should have in a system

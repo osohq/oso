@@ -46,12 +46,12 @@ the rule will now only be evaluated if the second input exactly matches the stri
 
 .. _if_statement:
 
-``if`` statements
+``if`` Statements
 =================
 
 There are several ways to represent imperative ``if`` logic in Polar.
 
-In a rule body
+In a Rule Body
 ^^^^^^^^^^^^^^
 
 The most common way to write an ``if`` statement in Polar is to add a body to
@@ -100,7 +100,7 @@ in a single rule body:
     value.  To help prevent errors, a warning will be emitted if a singleton variable
     is not preceded by an underscore.
 
-As specializers in a rule head
+As Specializers in a Rule Head
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Given the following application class structure...

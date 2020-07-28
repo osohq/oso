@@ -20,7 +20,7 @@ In this guide, we will cover:
 2. Where to integrate oso's policy evaluation in your application.
 
 
-Access control dimensions
+Access Control Dimensions
 =========================
 
 Authorization is fundamentally about controlling data access or modification
@@ -50,7 +50,7 @@ The above policy controls access to the Expense model on the **record level**.
 An actor can only approve an expense if they are the manager of the submitter
 and the expense amount is below a certain limit.
 
-Primary and secondary authorization data
+Primary and Secondary Authorization Data
 ----------------------------------------
 
 This policy controls access to an ``Expense``, the **primary authorization
@@ -62,7 +62,7 @@ authorization data**.  An important class of secondary authorization data is
 team membership that is often used in controlling access regardless of whether
 it is over rows, columns or fields.
 
-Where the policy is evaluated
+Where the Policy is Evaluated
 -----------------------------
 
 Where the policy is evaluated has a significant impact on the granularity of
@@ -110,7 +110,7 @@ control.
    Would be nice to be able to say here: "see this guide for an
    example of how to do this..."
 
-Model level access control
+Model Level Access Control
 ==========================
 
 Sometimes, access control does not rely on properties of the primary data.  This
@@ -153,7 +153,7 @@ Here's what it would look like before:
     part of the authentication flow.
 
 
-Record level access control, revisited
+Record Level Access Control, Revisited
 ======================================
 
 Our :ref:`first example <first-record-level>` was an example of record level
@@ -163,7 +163,7 @@ delete primary data. (Our example above used the ``"approve"`` action, which
 would result in an edit). An exception to this rule is actions that create
 new data.
 
-Create requests
+Create Requests
 ---------------
 
 .. code-block:: python
@@ -226,7 +226,7 @@ authorization logic.
     (An :sql:`UPDATE ... RETURNING` query in SQL.)
 
 
-Field level access control
+Field Level Access Control
 ==========================
 
 In contrast to record level access control, field level access control
@@ -323,7 +323,7 @@ policy is evaluated both **before and after data fetch** for greater efficiency.
     defined in our policy.  This flexibility derives directly from writing a
     :doc:`declarative policy in Polar </more/language/polar-foundations>`!
 
-Authorizing list endpoints
+Authorizing List Endpoints
 ==========================
 
 A list endpoint can be challenging to authorize since it deals with obtaining
@@ -464,7 +464,7 @@ request filter.
             ("location_id", "=", user.location_id)
         ]
 
-        # Use ``query_predicate`` to evaluate a rule that authorizes the filter.
+        # Use ``query_rule`` to evaluate a rule that authorizes the filter.
         if not oso.query_rule("allow_filter", user, "view", "expense", auth_filters):
             return NotAuthorizedResponse()
 
