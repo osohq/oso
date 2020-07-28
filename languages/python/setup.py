@@ -45,9 +45,9 @@ setup(
     long_description_content_type="text/markdown",
     author="Oso Security, Inc.",
     classifiers=[
-        "Development Status :: 5 - Production/Stable",
+        "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3.6",
-        "License :: OSI Approved :: Apache-2.0 License",
+        "License :: OSI Approved :: Apache Software License",
     ],
     packages=find_packages(),
     python_requires=">=3.6",
