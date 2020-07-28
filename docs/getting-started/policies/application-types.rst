@@ -4,7 +4,7 @@
 .. _application-types:
 
 =================
-Application types
+Application Types
 =================
 
 Any type defined in an application can be passed into oso, and its
@@ -294,7 +294,7 @@ Once a class is registered, its class methods can also be called from oso polici
 
 .. _built-in-types:
 
-Built-in types
+Built-in Types
 ==============
 
 Methods called on Polar built-ins (``str``, ``dict``, ``number`` & ``list``)
