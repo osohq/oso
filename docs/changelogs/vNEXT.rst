@@ -1,45 +1,25 @@
-====
+=====
 NEXT
-====
+=====
 
 **Release date:** XXXX-XX-XX
 
 Breaking changes
 ================
 
+.. TODO remove warning and replace with "None" if no breaking
+   changes.
+
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-oso.query_predicate() renamed in oso libraries
-----------------------------------------------
+Breaking change 1
+-----------------
 
-To improve our API & better match documentation, ``oso.query_predicate()``
-has been renamed ``oso.query_rule()``. The Python API now returns
-a generator instead of a ``QueryResult`` object to improve consistency
-across libraries.
+- summary of breaking change
 
-allow() method renamed in oso libraries
----------------------------------------
+Link to migration guide
 
-To eliminate ambiguity, the ``allow()`` method of the oso library has been renamed to:
-
-- ``is_allowed()`` in Python,
-- ``#allowed?`` in Ruby, and
-- ``isAllowed()`` in Java
-
-isa operator replaced with matches
-----------------------------------
-
-To improve readability of Polar policies, the ``isa`` operator has
-been replaced with ``matches`` (:ref:`operator-matches`). Any policies using the
-``isa`` operator will need to be migrated.
-
-cut() predicate replaced with cut keyword
------------------------------------------
-
-The Polar "cut" operator was previously parsed like a predicate, but
-it isn't one. The new syntax ``cut`` (without the empty parentheses)
-emphasizes its role as an operator.
 
 New features
 ==============
@@ -57,6 +37,7 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- Boolean values can now be queried directly.  The statement ``x = true and x``
-  now tests for the truthiness of ``x`` as the second argument of the
-  conjunction. Previously this would be invalid.
+- bulleted list
+- improvements
+- of smaller
+- potentially with doc links
