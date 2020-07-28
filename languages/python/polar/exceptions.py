@@ -1,7 +1,4 @@
 """Exceptions used within polar.
-
-assert statements should be avoided unless the violation indicates a
-programming error on our part.
 """
 # @TODO: Should we just generate these from the rust code?
 
