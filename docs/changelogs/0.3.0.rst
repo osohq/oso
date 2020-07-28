@@ -90,7 +90,7 @@ display the host language representation of class instances.
 Error Traces
 ------------
 
-Some runtime errors will not return a trace of the policy location where it happened.
+Some runtime errors will now return a trace of the policy location where it happened.
 For example:
 
 .. code-block:: irb
