@@ -215,14 +215,14 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allowed?(actor: alice, action: "GET", resource: "expense")
+      irb(main):005:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
       => true
 
     ...and everyone else is still denied:
 
     .. code-block:: irb
 
-      irb(main):006:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: "expense")
+      irb(main):006:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: expense)
       => false
 
   .. group-tab:: Java
