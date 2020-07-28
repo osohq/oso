@@ -172,4 +172,3 @@ cython_debug/
 
 .ruby-version
 languages/java/oso/dependency-reduced-pom.xml
-languages/java/oso/src/main/resources/*
