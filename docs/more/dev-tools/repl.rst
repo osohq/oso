@@ -44,9 +44,9 @@ again, allowing an interactive dialog:
 .. code-block:: oso
 
     query> 1 = 1
-    true
+    True
     query> 1 = 2
-    false
+    False
     query> x = 1 and y = 2
     {x=1, y=2}
     query> x = 1 or x = 2
@@ -82,7 +82,7 @@ on the command line:
     .. group-tab:: Python
 
         .. code-block:: console
-            :caption: :fab:`python` Load files and launch the REPL 
+            :caption: :fab:`python` Load files and launch the REPL
 
             $ python -m oso alice.polar
 
@@ -111,7 +111,7 @@ We can also use application objects in the REPL, but we have to load
 and register the defining modules before we launch the REPL. The easiest
 way to do that is to write a script that imports the necessary modules,
 plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
- 
+
 .. tabs::
     .. group-tab:: Python
 

@@ -95,7 +95,7 @@ class Polar:
             yield res["bindings"]
 
     def query_rule(self, name, *args):
-        """Query for rule with name ``name`` and args ``args``.
+        """Query for rule with name ``name`` and arguments ``args``.
 
         :param name: The name of the predicate to query.
         :param args: Arguments for the predicate.

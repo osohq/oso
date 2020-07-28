@@ -12,7 +12,7 @@ Each Polar file defines a set of rules.  When a Polar file is loaded into the
 authorization engine, all rules are added to the engine's knowledge base.
 
 The knowledge base may be queried.  The behavior of queries is described further
-in :doc:`/more/language/polar-foundations`.
+:ref:`here <search-procedure>`.
 
 .. _basic-types:
 
@@ -72,7 +72,7 @@ For example::
   ["polar", "lang", "oso"]
   ["oso", ["polar", "lang"]]
 
-Lists may have any length. List membership can be determined using :ref:`operator-in`.
+Lists may have any length. List membership can be determined using the :ref:`in operator <operator-in>`.
 
 .. _dictionaries:
 
@@ -101,8 +101,8 @@ name is specified before the dictionary::
 Classes can be registered with the oso library to integrate with Polar.  See
 :doc:`/getting-started/policies/application-types` for more information.
 
-A class instance literal must be used either with the :ref:`operator-new` or
-as a :ref:`pattern`.
+A class instance literal must be used either with the :ref:`new operator <operator-new>` or
+as a :ref:`pattern <pattern>`.
 
 .. _polar-rules:
 
@@ -118,7 +118,7 @@ A rule in Polar takes the form::
 
 where ``HEAD`` must be a *fact* and ``BODY`` any number of *terms*.
 The meaning of a rule is that ``HEAD`` is true **if** each of the ``BODY``
-terms is true. There may be multiple rules with the same head; each
+terms is true. If there are be multiple rules with the same head, each
 ``BODY`` will be tried in turn, and any or all may succeed. For more
 on how rules are defined and applied see
 :doc:`/more/language/polar-foundations`.
@@ -160,6 +160,9 @@ This rule says that **if** there is a person with some name,
 
 .. _singletons:
 
+Singletons
+^^^^^^^^^^
+
 If a variable occurs only once, then its value can't be used
 for anything. Such variables are called *singletons*, and Polar
 will warn you if they occur in a rule; e.g., if you try to load
@@ -169,7 +172,7 @@ the rule::
 
 Polar will say::
 
-  Singleton variable first
+  Singleton variable first is unused or undefined
   001: user(first, last) if person("George", last);
             ^
 
@@ -223,8 +226,7 @@ bound to ``1`` or unbound.
 
 Unification is also used to determine if queries match rule ``HEAD`` s,
 and if the ``BODY`` of rules match other facts in the knowledge base.
-We will cover unification further in
-:doc:`/more/language/polar-foundations`.
+We will cover unification further in :ref:`search-procedure`.
 
 .. todo::
    add a little table with unification examples, esp. w/dictionaries.
