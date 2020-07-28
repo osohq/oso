@@ -59,5 +59,6 @@ def submit_expense():
         raise BadRequest()
     # if no user id supplied, assume it is for the current user
     expense_data.setdefault("user_id", g.current_user.id)
+    expense = Expense(**expense_data)
     expense.save()
     return str(expense)

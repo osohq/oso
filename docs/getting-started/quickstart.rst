@@ -9,7 +9,7 @@ you.
 In general, it takes less than 5 minutes to add oso to an existing application
 and begin writing an authorization policy.
 
-In the next 15 minutes, we're going to add oso to our project, write our first policy,
+In this guide, we're going to add oso to our project, write our first policy,
 create a simple web server with no authorization, and write some rules for it.
 We encourage you to code along in your local environment!
 

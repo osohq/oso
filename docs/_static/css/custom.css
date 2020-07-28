@@ -332,3 +332,9 @@ footer .subscribe-form {
 body {
     font-family: "Space Grotesk", sans-serif;
 }
+
+@media only screen and (max-width:44.9375em) {
+    .md-typeset pre {
+    margin: 0;
+    }
+}
