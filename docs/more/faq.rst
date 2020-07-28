@@ -110,19 +110,6 @@ given oso's focus on application integration there are some use cases that are
 currently a more natural fit than others. For a more detailed discussion of this
 topic, please see our :doc:`use cases page <use-cases>`.
 
--------
-Pricing
--------
-
-oso is freely available as an open source product.
-For support pricing, please `contact us <https://osohq.com/company/contact-us>`_.
-
--------
-License
--------
-
-oso licensed under the *`Apache 2.0 license <https://github.com/osohq/oso/blob/master/LICENSE>`_*.
-
 ---------------------------------------------
 What languages and frameworks do you support?
 ---------------------------------------------
@@ -131,7 +118,9 @@ We currently support Python, Ruby and Java, and are actively working on supporti
 We are also in the process of writing documentation for native framework support.
 
 Vote & track your favorite language and framework integrations at our 
-`Github repository <https://github.com/osohq/oso>`_.
+`Github repository <https://github.com/osohq/oso>`_,
+and sign up for our newsletter in the footer anywhere on our docs if you'd like
+to stay up to speed on the latest product updates.
 
 --------------------------------------
 What operating systems do you support?
@@ -140,4 +129,34 @@ What operating systems do you support?
 We currently support Linux and Mac OS X.
 We have initial Windows support, and expect publish a release for Windows soon.
 
-Sign up for our Newsletter if you'd like to stay up to speed on the latest product updates.
+Sign up for our newsletter in the footer anywhere on our docs if you'd like to
+stay up to speed on the latest product updates.
+
+--------------------------
+What license does oso use?
+--------------------------
+
+.. |apache2| replace:: the *Apache 2.0 license*
+.. _apache2: https://github.com/osohq/oso/blob/master/LICENSE
+
+oso licensed under |apache2|_.
+
+----------------------
+How does pricing work?
+----------------------
+
+oso is freely available as an open source product and will always be open source. 
+
+We are also working on an enterprise product, based on oso, which will come with
+additional features. If you are interested in support for oso or enterprise
+features, please `contact us <https://osohq.com/company/contact-us>`_.
+
+----------------------------
+Who builds and maintains oso
+----------------------------
+
+oso is built by the eponymous company, oso. We are a Sequoia-backed company
+headquartered in New York City, with engineers across 3 time zones, and we are
+hard at work on new features and improvements. If you have feedback or ideas on
+ways we can make the product better, we would be delighted to hear from you.
+Please feel free to reach out to us at :email:`engineering@osohq.com`.
