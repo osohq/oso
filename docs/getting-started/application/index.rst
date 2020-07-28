@@ -265,7 +265,7 @@ the ``Expense.lookup`` method, then anywhere our application wants to retrieve
 an expense, we are assured that the user does indeed have access to it.
 
 
-Your turn
+Your Turn
 =========
 
 We currently have a route with no authorization - the submit endpoint.

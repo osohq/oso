@@ -11,7 +11,7 @@ general thesis of RBAC is that the set of permissions for a system --- a
 permission being the ability to perform an :ref:`action <actions>`
 on a :ref:`resource <resources>` --- can be grouped into roles.
 
-RBAC basics
+RBAC Basics
 -----------
 
 Representing roles in our policy is as simple as creating :polar:`role()`
@@ -76,7 +76,7 @@ Now we can write a few more tests to ensure everything is hooked up correctly:
    :language: polar
    :lines: 36-
 
-RBAC with existing roles
+RBAC with Existing Roles
 ------------------------
 
 Our accounting firm's authorization scheme is flexible, hierarchical, and ---

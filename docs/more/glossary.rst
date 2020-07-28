@@ -71,7 +71,7 @@ decision: the ``allow`` rule.
 
 .. _allow-rules:
 
-Allow rules
+Allow Rules
 ===========
 
 A basic ``allow`` rule has the form::

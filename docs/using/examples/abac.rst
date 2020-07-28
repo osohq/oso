@@ -14,7 +14,7 @@ known as `attribute-based access control
 
 .. _abac-basics:
 
-ABAC basics
+ABAC Basics
 -----------
 
 Suppose we want to allow employees to view *their own* expenses.

@@ -6,7 +6,7 @@ The Polar debugger allows debugging of policy rules. It can be helpful to see
 why a rule is behaving differently than expected.
 
 ********************
-Running the debugger
+Running the Debugger
 ********************
 
 The debugger is entered through the ``debug()`` predicate. It acts like
