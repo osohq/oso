@@ -5,14 +5,16 @@ require_relative 'lib/oso/version'
 Gem::Specification.new do |spec|
   spec.name          = 'oso-oso'
   spec.version       = Oso::VERSION
-  spec.authors       = ['Oso Security']
+  spec.authors       = ['Oso Security, Inc.']
   spec.email         = ['support@osohq.com']
-
-  spec.summary       = 'Oso authorization API.'
+  spec.licenses      = ['Apache-2.0']
+  spec.summary       = 'oso authorization library.'
   spec.homepage      = 'https://www.osohq.com/'
+
   spec.required_ruby_version = Gem::Requirement.new('>= 2.4.0')
 
   spec.metadata['homepage_uri'] = spec.homepage
+  spec.metadata['source_code_uri'] = 'https://github.com/osohq/oso'
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.

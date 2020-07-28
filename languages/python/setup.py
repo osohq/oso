@@ -1,9 +1,3 @@
-"""A setuptools based setup module.
-See:
-https://packaging.python.org/guides/distributing-packages-using-setuptools/
-https://github.com/pypa/sampleproject
-"""
-
 import codecs
 import os
 import sys
@@ -14,7 +8,7 @@ here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 try:
-    with open(path.join(here, "README.md"), encoding="utf-8") as f:
+    with open(path.join(here, "../../README.md"), encoding="utf-8") as f:
         long_description = f.read()
 except IOError:
     long_description = ""
@@ -46,17 +40,14 @@ def get_version(rel_path):
 setup(
     name="oso",
     version=get_version("oso/oso.py"),
-    description="oso auth library",  # Optional
-    long_description=long_description,  # Optional
-    long_description_content_type="text/markdown",  # Optional (see note above)
-    author="oso",  # Optional
-    classifiers=[  # Optional
-        # How mature is this project? Common values are
-        #   3 - Alpha
-        #   4 - Beta
-        #   5 - Production/Stable
-        "Development Status :: 3 - Alpha",
+    description="oso authorization library.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    author="Oso Security, Inc.",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 3.6",
+        "License :: OSI Approved :: Apache-2.0 License",
     ],
     packages=find_packages(),
     python_requires=">=3.6",
