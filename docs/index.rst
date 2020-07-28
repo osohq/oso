@@ -1,11 +1,11 @@
 oso Documentation
 =================
 
-oso is an **open source policy engine for authorization** that's embedded in your application.
-It provides a declarative policy language for expressing authorization logic,
-which you define separately from the rest of your application code but which executes inside the
-application and can call directly into it.
-oso ships as a library with a debugger and a REPL.
+oso is an **open source policy engine for authorization** that's embedded in your
+application. It provides a declarative policy language for expressing
+authorization logic. You define this logic separately from the rest of your
+application code, but it executes inside the application and can call directly
+into it. oso ships as a library with a debugger and a REPL.
 
 .. container:: left-col
 
