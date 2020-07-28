@@ -70,8 +70,10 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
 
     /// Constructs `N` external results
     fn n_results(runner: &mut Runner, n: usize) {
-        // make some instances. The literals dont change anything, but is convenient for
-        // us to track things
+        runner.register_pseudo_class("Person");
+
+        // Make some instances. The literals dont change anything, but is convenient for
+        // us to track things.
         let child = runner.make_external(instance!("Person"));
         let grandchild = runner.make_external(instance!("Person"));
 
@@ -113,6 +115,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                         || {
                             let mut runner =
                                 runner_from_query("has_grandchild_called(new Person{}, \"bert\")");
+                            runner.register_pseudo_class("Person");
                             runner.load(policy).unwrap();
                             n_results(&mut runner, *n);
                             runner.external_cost = Some(std::time::Duration::new(0, *delay));
@@ -224,6 +227,11 @@ impl Runner {
             literal: Some(literal),
             repr: None,
         }))
+    }
+
+    pub fn register_pseudo_class(&mut self, name: &str) {
+        self.polar
+            .register_constant(Symbol::new(name), Term::new_temporary(Value::Boolean(true)));
     }
 }
 
