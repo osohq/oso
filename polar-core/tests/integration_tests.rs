@@ -1052,7 +1052,7 @@ fn test_rest_vars() {
     polar
         .load(
             r#"member(x, [x, *_rest]);
-               member(x, [_first, *rest]) := member(x, rest);"#,
+               member(x, [_first, *rest]) if member(x, rest);"#,
         )
         .unwrap();
     assert!(qeval(&mut polar, "member(1, [1,2,3])"));
@@ -1066,7 +1066,7 @@ fn test_rest_vars() {
     polar
         .load(
             r#"append([], x, x);
-               append([first, *rest], x, [first, *tail]) := append(rest, x, tail);"#,
+               append([first, *rest], x, [first, *tail]) if append(rest, x, tail);"#,
         )
         .unwrap();
     assert!(qeval(&mut polar, "append([], [], [])"));

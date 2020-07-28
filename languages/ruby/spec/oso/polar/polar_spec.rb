@@ -608,7 +608,7 @@ RSpec.describe Oso::Polar::Polar do
   context 'runtime errors' do
     it 'include a stack trace' do
         rule = <<~POLAR
-        foo(a,b) := a in b;
+        foo(a,b) if a in b;
         POLAR
         subject.load_str(rule)
         expect { query(subject, 'foo(1,2)') }.to raise_error do |e|

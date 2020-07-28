@@ -757,9 +757,9 @@ impl PolarVirtualMachine {
     /// Comparison operator that essentially performs partial unification.
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         // TODO (dhatch): These errors could potentially be caused by the user.
-        // rule(foo) :=
-        //    x = {a: 1},
-        //    foo isa x
+        // rule(foo) if
+        //    x = {a: 1} and
+        //    foo matches x
         assert!(
             !matches!(&right.value(), Value::InstanceLiteral(_)),
             "Called isa with bare instance lit!"
@@ -1599,8 +1599,8 @@ impl PolarVirtualMachine {
             //
             // External instances can unify if they are the same instance, i.e., have the same
             // instance ID. This is necessary for the case where an instance appears multiple times
-            // in the same rule head. For example, `f(foo, foo) := ...` or `isa(x, y, x: y) := ...`
-            // or `max(x, y, x) := x > y;`.
+            // in the same rule head. For example, `f(foo, foo) if ...` or `isa(x, y, x: y) if ...`
+            // or `max(x, y, x) if x > y;`.
             (
                 Value::ExternalInstance(ExternalInstance {
                     instance_id: left_instance,
