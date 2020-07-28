@@ -151,9 +151,9 @@ We are also working on an enterprise product that extends the open source core w
 additional features. If you are interested in support for oso or enterprise
 features, please `contact us <https://osohq.com/company/contact-us>`_.
 
-----------------------------
-Who builds and maintains oso
-----------------------------
+-----------------------------
+Who builds and maintains oso?
+-----------------------------
 
 oso is built by `oso <https://www.osohq.com/company/about-us>`_! We are headquartered in New York City with engineers across 3 time zones, and we are
 hard at work on new features and improvements. If you have feedback or ideas about
