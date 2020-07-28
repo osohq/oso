@@ -4,7 +4,56 @@
                           https://maven.apache.org/xsd/settings-1.0.0.xsd">
 
   <servers>
-    <server>
+  <server>
+    <id>ossrh</id>
+    <username>saolsen</username>
+    <password>${env.JiraPassword}</password>
+  </server>
+
+
+  <profiles>
+    <profile>
+    <id>osohq</id>
+    <activation>
+    <activeByDefault>true</activeByDefault>
+    </activation>
+    <properties>
+    <gpg.passphrase>${env.GPGPassphrase}</gpg.passphrase>
+    </properties>
+    </profile>
+
+
+    <profile>
+      <id>release-sign-artifacts</id>
+      <activation>
+      <property>
+      <name>performRelease</name>
+      <value>true</value>
+      </property>
+      </activation>
+      <build>
+      <plugins>
+      <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-gpg-plugin</artifactId>
+      <version>1.6</version>
+      <executions>
+      <execution>
+      <id>sign-artifacts</id>
+      <phase>verify</phase>
+      <goals>
+      <goal>sign</goal>
+      </goals>
+      </execution>
+      </executions>
+      </plugin>
+      </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+
+    <!-- <server>
       <id>github</id>
       <configuration>
         <httpHeaders>
@@ -14,6 +63,6 @@
           </property>
         </httpHeaders>
       </configuration>
-    </server>
+    </server> -->
   </servers>
 </settings>

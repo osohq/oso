@@ -4,15 +4,25 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.osohq.oso</groupId>
+  <groupId>com.osohq</groupId>
   <artifactId>oso</artifactId>
-  <version>0.3.0</version>
+  <version>0.3.0-SNAPSHOT</version>
+
+  <scm>
+    <connection>scm:git:git://github.com/osohq/oso.git</connection>
+    <developerConnection>scm:git:git@github.com:osohq/oso.git</developerConnection>
+    <url>https://github.com/osohq/oso</url>
+    <tag>HEAD</tag>
+  </scm>
   
   <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
     <repository>
-      <id>github</id>
-      <name>Github osohq Apache Maven Packages</name>
-      <url>https://maven.pkg.github.com/osohq/oso</url>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
     </repository>
   </distributionManagement>
 
@@ -71,6 +81,70 @@
           </execution>
         </executions>
       </plugin>
+
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.5.3</version>
+        <configuration>
+        <localCheckout>true</localCheckout>
+        <pushChanges>false</pushChanges>
+        <mavenExecutorId>forked-path</mavenExecutorId>
+        <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-provider-gitexe</artifactId>
+            <version>1.9.5</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.7</version>
+        <extensions>true</extensions>
+        <configuration>
+        <serverId>ossrh</serverId>
+        <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+        <autoReleaseAfterClose>true</autoReleaseAfterClose>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.0.1</version>
+        <executions>
+        <execution>
+        <id>attach-sources</id>
+        <goals>
+        <goal>jar</goal>
+        </goals>
+        </execution>
+        </executions>
+      </plugin>
+
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.10.4</version>
+        <configuration>
+        <encoding>UTF-8</encoding>
+        </configuration>
+        <executions>
+        <execution>
+        <id>attach-javadoc</id>
+        <goals>
+        </goals>
+        </execution>
+        </executions>
+      </plugin>
+
     </plugins>
 
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
@@ -111,6 +185,15 @@
         <plugin>
           <artifactId>maven-deploy-plugin</artifactId>
           <version>2.8.2</version>
+          <executions>
+            <execution>
+              <id>default-deploy</id>
+              <phase>deploy</phase>
+              <goals>
+                <goal>deploy</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
