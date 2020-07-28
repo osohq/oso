@@ -21,6 +21,8 @@ Primitive Types
 
 Polar has only a few primitive data types.
 
+.. _numbers:
+
 Numbers
 -------
 
@@ -35,6 +37,9 @@ For example::
   2.0e9
 
 are all parsed as numbers.
+
+You can also perform basic arithmetic on numbers with the operators
+``+,-,*,/``.
 
 .. _strings:
 
