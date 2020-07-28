@@ -339,7 +339,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik@example.com"
 match the string ``"alice@example.com"``.
 
 
-Authorizing HTTP requests
+Authorizing HTTP Requests
 =========================
 
 Now that we are confident we can control access to our expense data,
@@ -424,7 +424,7 @@ We'll first start our server...
 If you aren't seeing the same thing, make sure you created your policy
 correctly in ``expenses.polar``.
 
-Rules over dynamic data
+Rules Over Dynamic Data
 -----------------------
 
 It's nice that Alice can view expenses, but it would be really onerous if
@@ -526,7 +526,7 @@ are denied access:
   Not Authorized!
 
 
-Writing authorization policy over application data
+Writing Authorization Policy Over Application Data
 ==================================================
 
 At this point, the higher-ups at Example.com, Inc. are still not satisfied with
