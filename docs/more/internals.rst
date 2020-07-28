@@ -7,8 +7,8 @@ but the `oso core <https://github.com/osohq/oso>`_ is written in Rust,
 with bindings for each specific language.
 
 At the core of oso is the **Polar language**. This handles parsing
-policy files, and executing queries in the form of a virtual machine. oso was
-designed from the outset to be able to be natively embedded in different
+policy files and executing queries in the form of a virtual machine. oso was
+designed from the outset to be natively embedded in different
 languages. It exposes a foreign function interface (FFI) to allow the calling
 language to drive the execution of its virtual machine.
 

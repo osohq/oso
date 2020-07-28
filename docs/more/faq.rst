@@ -139,7 +139,7 @@ What license does oso use?
 .. |apache2| replace:: the *Apache 2.0 license*
 .. _apache2: https://github.com/osohq/oso/blob/master/LICENSE
 
-oso licensed under |apache2|_.
+oso is licensed under |apache2|_.
 
 ----------------------
 How does pricing work?
@@ -147,7 +147,7 @@ How does pricing work?
 
 oso is freely available as an open source product and will always be open source. 
 
-We are also working on an enterprise product, based on oso, which will come with
+We are also working on an enterprise product that extends the open source core with
 additional features. If you are interested in support for oso or enterprise
 features, please `contact us <https://osohq.com/company/contact-us>`_.
 
@@ -155,8 +155,7 @@ features, please `contact us <https://osohq.com/company/contact-us>`_.
 Who builds and maintains oso
 ----------------------------
 
-oso is built by the eponymous company, oso. We are a Sequoia-backed company
-headquartered in New York City, with engineers across 3 time zones, and we are
-hard at work on new features and improvements. If you have feedback or ideas on
-ways we can make the product better, we would be delighted to hear from you.
+oso is built by oso! We are headquartered in New York City with engineers across 3 time zones, and we are
+hard at work on new features and improvements. If you have feedback or ideas about
+how we can make the product better, we would be delighted to hear from you.
 Please feel free to reach out to us at :email:`engineering@osohq.com`.
