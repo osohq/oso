@@ -18,7 +18,6 @@ Decorator Functions
 
 Exceptions
 ==========
-.. TODO: add exceptions here once Alex's refactor branch is merged
 
 .. automodule:: polar.exceptions
     :members:
