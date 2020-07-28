@@ -17,7 +17,7 @@ class PolarLexer(RegexLexer):
             (r"\w[\w-]*", token.Text),
             (r"\s", token.Text),
             (r"=|\?=|\*|<|<=|>|>=|==", token.Operator),
-            (r",|\.|\(|\)|\{|\}|:|;|\[|\]", token.Punctuation),
+            (r",|\.|\(|\)|\{|\}|:|;|\[|\]|\^", token.Punctuation),
             (r"\#.*$", token.Comment.Single),
             (r'"', token.String, "string"),
         ],
