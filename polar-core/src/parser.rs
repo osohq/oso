@@ -73,9 +73,9 @@ pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
 }
 
 #[cfg(test)]
-pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
+pub fn parse_rules(src_id: u64, src: &str) -> PolarResult<Vec<Rule>> {
     RULES_PARSER
-        .parse(0, Lexer::new(src))
+        .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
 
@@ -85,8 +85,16 @@ mod tests {
     use crate::formatting::ToPolarString;
     use pretty_assertions::assert_eq;
 
+    fn parse_term(src: &str) -> Term {
+        super::parse_term(src).unwrap()
+    }
+
     fn parse_query(src: &str) -> Term {
         super::parse_query(0, src).unwrap()
+    }
+
+    fn parse_rule(src: &str) -> Rule {
+        super::parse_rules(0, src).unwrap().pop().unwrap()
     }
 
     fn parse_lines(src: &str) -> Vec<Line> {
@@ -94,105 +102,29 @@ mod tests {
     }
 
     #[test]
-    fn try_it() {
-        let int = polar::NumberParser::new()
-            .parse(0, Lexer::new(" 123"))
-            .unwrap();
-        assert_eq!(int.to_polar(), "123");
-        assert_eq!(int.offset(), 1);
-        let s = polar::PolarStringParser::new()
-            .parse(0, Lexer::new(r#""string literal""#))
-            .unwrap();
-        assert_eq!(s.to_polar(), r#""string literal""#);
-        let t = polar::BooleanParser::new()
-            .parse(0, Lexer::new(r#"true"#))
-            .unwrap();
-        assert_eq!(t.to_polar(), r#"true"#);
-        let sym = polar::SymbolParser::new()
-            .parse(0, Lexer::new(r#"foo_qwe"#))
-            .unwrap();
-        assert_eq!(sym.to_polar(), r#"foo_qwe"#);
-        let l = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"[foo, bar, baz]"#))
-            .unwrap();
-        assert_eq!(l.to_polar(), r#"[foo, bar, baz]"#);
-        let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"foo(a, b(c), "d")"#))
-            .unwrap();
-        assert_eq!(exp.to_polar(), r#"foo(a, b(c), "d")"#);
-        let exp2 = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"foo.bar(a, b(c.d(e, [f, g])))"#))
-            .unwrap();
-        assert_eq!(exp2.to_polar(), r#"foo.bar(a, b(c.d(e, [f, g])))"#);
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x) if g(x);"#))
-            .unwrap();
-        assert_eq!(rule.to_polar(), r#"f(x) if g(x);"#);
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x);"#))
-            .unwrap();
-        assert_eq!(rule.to_polar(), r#"f(x);"#);
-        let _instance = polar::InstanceLiteralTermParser::new()
-            .parse(0, Lexer::new(r#"Foo{bar: 1, baz: y, biz: "hi"}"#))
-            .unwrap();
-        // This won't work. There's no ordering to fields. Need to use sam macros.
-        // println!("{}", instance.to_polar());
-        // assert_eq!(instance.to_polar(), r#"Foo{baz: y, biz: "hi", bar: 1}"#);
-        let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"not foo"#))
-            .unwrap();
-        assert_eq!(exp.to_polar(), r#"not foo"#);
-        let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"not foo"#))
-            .unwrap();
-        assert_eq!(exp.to_polar(), r#"not foo"#);
-        let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"not a and b or c = d == (e + f) / g.h(i)"#))
-            .unwrap();
-        assert_eq!(
-            exp.to_polar(),
-            r#"not a and b or c = d == (e + f) / g.h(i)"#
-        );
-    }
-
-    #[test]
     fn try_it_with_macros() {
-        let int = polar::TermParser::new()
-            .parse(0, Lexer::new(" 123"))
-            .unwrap();
+        let int = parse_term(" 123");
         assert_eq!(int, term!(123));
         assert_eq!(int.offset(), 1);
-        let s = polar::TermParser::new()
-            .parse(0, Lexer::new(r#""string literal""#))
-            .unwrap();
+        let s = parse_term(r#""string literal""#);
         assert_eq!(s, term!("string literal"));
 
-        let t = polar::TermParser::new()
-            .parse(0, Lexer::new(r#"true"#))
-            .unwrap();
+        let t = parse_term(r#"true"#);
         assert_eq!(t, term!(true));
 
-        let sym = polar::TermParser::new()
-            .parse(0, Lexer::new(r#"foo_qwe"#))
-            .unwrap();
+        let sym = parse_term(r#"foo_qwe"#);
         assert_eq!(sym, term!(sym!("foo_qwe")));
 
-        let l = polar::TermParser::new()
-            .parse(0, Lexer::new(r#"[foo, bar, baz]"#))
-            .unwrap();
+        let l = parse_term(r#"[foo, bar, baz]"#);
         assert_eq!(l, term!([sym!("foo"), sym!("bar"), sym!("baz")]));
 
-        let exp = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"foo(a, b(c), "d")"#))
-            .unwrap();
+        let exp = parse_term(r#"foo(a, b(c), "d")"#);
         assert_eq!(
             exp,
             term!(pred!("foo", [sym!("a"), pred!("b", [sym!("c")]), "d"]))
         );
 
-        let exp2 = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"foo.a(b)"#))
-            .unwrap();
+        let exp2 = parse_term(r#"foo.a(b)"#);
         assert_eq!(
             exp2,
             term!(op!(Dot, term!(sym!("foo")), term!(pred!("a", [sym!("b")])))),
@@ -200,9 +132,7 @@ mod tests {
             exp2.to_polar()
         );
 
-        let exp3 = polar::TermExpParser::new()
-            .parse(0, Lexer::new(r#"foo.bar(a, b(c.d(e,[f,g])))"#))
-            .unwrap();
+        let exp3 = parse_term(r#"foo.bar(a, b(c.d(e,[f,g])))"#);
         assert_eq!(
             exp3,
             term!(op!(
@@ -226,13 +156,9 @@ mod tests {
             "{}",
             exp3.to_polar()
         );
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x) if g(x);"#))
-            .unwrap();
+        let rule = parse_rule(r#"f(x) if g(x);"#);
         assert_eq!(rule, rule!("f", [sym!("x")] => pred!("g", [sym!("x")])));
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x);"#))
-            .unwrap();
+        let rule = parse_rule(r#"f(x);"#);
         assert_eq!(rule, rule!("f", [sym!("x")]));
     }
 
@@ -262,29 +188,21 @@ mod tests {
 
     #[test]
     fn test_parse_specializers() {
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x: 1);"#))
-            .unwrap();
+        let rule = parse_rule(r#"f(x: 1);"#);
         assert_eq!(rule, rule!("f", ["x"; 1]));
 
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x: 1, y: [x]) if y = 2;"#))
-            .unwrap();
+        let rule = parse_rule(r#"f(x: 1, y: [x]) if y = 2;"#);
         assert_eq!(
             rule,
             rule!("f", ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
         );
 
         // parenthesized => parse as a symbol
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x: (y));"#))
-            .unwrap();
+        let rule = parse_rule(r#"f(x: (y));"#);
         assert_eq!(rule, rule!("f", ["x"; value!(sym!("y"))]));
 
         // not parenthesized => parse as a type
-        let rule = polar::RuleParser::new()
-            .parse(0, Lexer::new(r#"f(x: y);"#))
-            .unwrap();
+        let rule = parse_rule(r#"f(x: y);"#);
         assert_eq!(rule, rule!("f", ["x"; value!(instance!("y"))]));
     }
 
@@ -293,7 +211,7 @@ mod tests {
         let f = r#"
         a(1);b(2);c(3);
         "#;
-        let results = parse_rules(f).unwrap();
+        let results = parse_rules(0, f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(1);"#);
         assert_eq!(results[1].to_polar(), r#"b(2);"#);
         assert_eq!(results[2].to_polar(), r#"c(3);"#);
@@ -318,7 +236,7 @@ mod tests {
         let f = r#"
         a(x) if x = new Foo{a: 1};
         "#;
-        let results = parse_rules(f).unwrap();
+        let results = parse_rules(0, f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo{a: 1};"#);
     }
 

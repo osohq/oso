@@ -185,7 +185,7 @@ mod tests {
     }
 
     fn parse_rules(src: &str) -> Rules {
-        crate::parser::parse_rules(src).unwrap()
+        crate::parser::parse_rules(0, src).unwrap()
     }
 
     #[test]

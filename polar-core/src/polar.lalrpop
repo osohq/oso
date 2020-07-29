@@ -63,40 +63,50 @@ extern {
     }
 }
 
-pub Number: Term = {
-    <start:@L> <i:"Integer"> => {
-        Term::new_from_parser(src_id, start, Value::Number(i.into()))
-    },
-    <start:@L> <f:"Float"> => {
-        Term::new_from_parser(src_id, start, Value::Number(f.into()))
-    },
-    <start:@L> "+" <i:"Integer"> => {
-        Term::new_from_parser(src_id, start, Value::Number(i.into()))
-    },
-    <start:@L> "+" <f:"Float"> => {
-        Term::new_from_parser(src_id, start, Value::Number(f.into()))
-    },
-    <start:@L> "-" <i:"Integer"> => {
-        Term::new_from_parser(src_id, start, Value::Number((-i).into()))
-    },
-    <start:@L> "-" <f:"Float"> => {
-        Term::new_from_parser(src_id, start, Value::Number((-f).into()))
-    }
+
+// ****** Values ******* //
+
+Integer: i64 = {
+    <"Integer">,
+"+" <"Integer">,
+"-" <i:"Integer"> => -i
+}
+
+Float: f64 = {
+    <"Float">,
+"+" <"Float">,
+"-" <f:"Float"> => -f
+}
+
+
+Number: Value = {
+    <Integer> => Value::Number(<>.into()),
+    <Float> => Value::Number(<>.into()),
 };
 
 
-pub PolarString: Term = <start:@L> <s:"String"> => {
-    Term::new_from_parser(src_id, start, Value::String(s))
+PolarString: Value = <s:"String"> => {
+    Value::String(s)
 };
 
-pub Boolean: Term = <start:@L> <b:"Boolean"> => {
-    Term::new_from_parser(src_id, start, Value::Boolean(b))
+Boolean: Value = <b:"Boolean"> => {
+    Value::Boolean(b)
 };
 
 Name: Symbol = <s:"Symbol"> => s;
 
-pub Symbol: Term  = <start:@L> <n:Name> => {
-    Term::new_from_parser(src_id, start, Value::Variable(n))
+Variable: Value  = <n:Name> => {
+    Value::Variable(n)
+};
+
+Predicate: Value = {
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Call(Predicate{name, args})
+    }
 };
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -120,79 +130,42 @@ Object<T>: BTreeMap<Symbol, Term> = {
     }
 };
 
-Dictionary<T>: Term = <start:@L> <fields:Object<T>> => {
+// ****** Strange Values ******* //
+
+DictionaryTerm: Value = <fields:Object<Exp5<"Term">>> => {
     let dict = Dictionary{fields};
-    Term::new_from_parser(src_id, start, Value::Dictionary(dict))
+    Value::Dictionary(dict)
 };
-
-DictionaryTerm: Term = <Dictionary<Exp5<"Term">>> => <>;
 // Pattern dictionaries cannot contain any operators.
-DictionaryPattern: Term = <Dictionary<Exp9<"Pattern">>> => <>;
+DictionaryPattern: Value = <fields:Object<Exp9<"Pattern">>> => {
+    let dict = Dictionary{fields};
+    Value::Pattern(Pattern::Dictionary(dict))
+};
 
-InstanceLiteral<T>: Term = <start:@L> <tag:Name> <fields:Object<T>> => {
+InstanceLiteralTerm: Value = <tag:Name> <fields:Object<Exp5<"Term">>> => {
     let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
-    Term::new_from_parser(src_id, start, Value::InstanceLiteral(instance))
+    Value::InstanceLiteral(instance)
 };
 
-pub InstanceLiteralTerm: Term = <InstanceLiteral<Exp5<"Term">>> => <>;
-pub InstanceLiteralPattern: Term = <InstanceLiteral<Exp9<"Pattern">>> => <>;
-
-// Either a *rest variable, or an ordinary term.
-RestVar<T>: Term = {
-    <start:@L> "*" <rest:Name> => {
-        Term::new_from_parser(src_id, start, Value::RestVariable(rest))
-    },
-    <Term> if T == "Term" => <>,
-    <Pattern> if T == "Pattern" => <>
+InstanceLiteralPattern: Value = <tag:Name> <fields:Object<Exp9<"Pattern">>> => {
+    let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
+    Value::Pattern(Pattern::Instance(instance))
 };
 
-pub Pattern: Term = {
-    <term:InstanceLiteralPattern> => Pattern::term_as_pattern(&term),
-    <term:DictionaryPattern> => Pattern::term_as_pattern(&term),
-    <term:Number> => term,
-    <term:PolarString> => term,
-    <term:Boolean> => term,
-    <term:Symbol> => term,
-    <start:@L> "[" <terms:(<Pattern> ",")*> <term:RestVar<"Pattern">?> "]" => {
-        match term {
-            Some(term) => Term::new_from_parser(src_id, start, Value::List(vec![term])),
-            None => Term::new_from_parser(src_id, start, Value::List(terms))
-        }
-    }
-};
-
-pub Term: Term = {
-    <term:Number> => term,
-    <term:PolarString> => term,
-    <term:Boolean> => term,
-    <term:Symbol> => term,
-    <term:DictionaryTerm> => term,
-    <start:@L> <op:BuiltinOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
-    <start:@L> <op:RewrittenOperation> => Term::new_from_parser(src_id, start, Value::Expression(op)),
-    <start:@L> <pred:Predicate> => Term::new_from_parser(src_id, start, Value::Call(pred)),
-    <start:@L> "[" <mut terms:(<Term> ",")*> <term:RestVar<"Term">?> "]" => {
-        match term {
-            Some(term) => {
-                terms.push(term);
-                Term::new_from_parser(src_id, start, Value::List(terms))
-            },
-            None => Term::new_from_parser(src_id, start, Value::List(terms))
-        }
-    }
-};
+// ****** Operations ******* //
 
 BuiltinOperator: Operator = {
     "debug" => Operator::Debug,
     "print" => Operator::Print,
 };
 
-pub BuiltinOperation: Operation = {
-    <op:BuiltinOperator> "(" <mut args:(<Exp2<"Term">> ",")*> <arg:Exp2<"Term">?> ")" => {
+BuiltinOperation: Value = {
+    <op:BuiltinOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
         match arg {
             Some(arg) => args.push(arg),
             None => ()
         };
-        Operation{operator: op, args: args}
+        Value::Expression(Operation{operator: op, args: args})
     },
 };
 
@@ -202,207 +175,228 @@ RewritableOperator: Operator = {
     "in" => Operator::In,
 };
 
-pub RewrittenOperation: Operation = {
+RewrittenOperation: Value = {
     <op:RewritableOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
         match arg {
             Some(arg) => args.push(arg),
             None => ()
         };
-        Operation{operator: op, args: args}
+        Value::Expression(Operation{operator: op, args: args})
     },
 };
 
-pub Predicate: Predicate = {
-    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
-        match arg {
-            Some(arg) => args.push(arg),
-            None => ()
-        };
-        Predicate{name, args}
-    }
+
+New: Value = "new" <literal:Spanned<InstanceLiteralTerm>> => {
+    let args = vec![literal];
+    let op = Operation{operator: Operator::New, args};
+    Value::Expression(op)
 };
 
+SpecialExp<T>: Value = {
+    // A pattern cannot contain a new operator
+    <New> if T == "Term",
+    "cut" => {
+        let args = vec![];
+        let op = Operation{operator: Operator::Cut, args};
+        Value::Expression(op)
+    },
+    "forall" "(" <arg1:TermExp> "," <arg2:TermExp> ")" => {
+        let args = vec![arg1, arg2];
+        let op = Operation{operator: Operator::ForAll, args};
+        Value::Expression(op)
+    },
+}
+
+
+
+// ****** Expressions ******* //
+
+// All ExpN & Exp productions are macros with one parameter. The parameter is the
+// *string* "Term" or "Pattern" which controls whether the expression is over terms
+// or patterns.  (It is a string since we need to conditionally
+// change the expression precedence allowed in patterns versus terms depending
+// on the parameter type, and LALRPOP does not allow conditional macros on anything
+// other than a string.
+
+Exp<T>: Term = {
+    <exp1:Exp1<T>> => exp1
+}
+
+pub TermExp: Term = {
+    <Exp<"Term">> => <>
+};
+
+pub PatternExp: Term = {
+    <Exp9<"Pattern">> => <>
+};
+
+
 Exp11<T>: Term = {
-    <term:Term> if T == "Term" => term,
-    <term:Pattern> if T == "Pattern" => term,
-    "(" <exp:Exp<T>> ")" => exp // seems sorta impossible to support parrens for expressions and list literals.
+    <Spanned<Pattern>> if T == "Pattern",
+    <Spanned<Value>> if T == "Term",
+    "(" <Exp<T>> ")", // "resets" the parsing
 }
 
 Exp10<T>: Term = {
-    // A pattern cannot contain a new operator
-    <new:New> if T == "Term" => new,
-    <start:@L> "cut" => {
-        let args = vec![];
-        let op = Operation{operator: Operator::Cut, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> "forall" "(" <arg1:Exp2<"Term">> "," <arg2:Exp2<"Term">> ")" => {
-        let args = vec![arg1, arg2];
-        let op = Operation{operator: Operator::ForAll, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <exp11:Exp11<T>> => exp11,
+    <Spanned<SpecialExp<T>>>,
+    <Exp11<T>>,
 }
 
-New: Term = <start:@L> "new" <literal:InstanceLiteralTerm> => {
-    let args = vec![literal];
-    let op = Operation{operator: Operator::New, args};
-    Term::new_from_parser(src_id, start, Value::Expression(op))
-};
-
-Callable<T>: Term = {
+Callable<T>: Value = {
     <DictionaryTerm> if T == "Term" => <>,
     <DictionaryPattern> if T == "Pattern" => <>,
-    <Symbol> => <>,
+    <Variable> => <>,
     <DotOp<T>> => <>,
     // A pattern cannot contain a new operator.
-    <New> if T == "Term" => <>,
+    <New> if T == "Term" => <>, // TODO(Sam): should we actually allow this?
 };
 
-DotOp<T>: Term = {
-    <start:@L> <head:Callable<T>> "." <call_loc:@L> <mut call:Predicate> => {
-        let call_term = Term::new_from_parser(src_id, call_loc, Value::Call(call));
+CallTerm: Value = {
+    <Predicate>,
+    <name:Name> => Value::Call(Predicate{name, args: vec![]}),
+    "(" <Variable> ")",
+}
+
+DotOp<T>: Value = {
+    <head:Spanned<Callable<T>>> "." <call_term:Spanned<CallTerm>> => {
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
+        Value::Expression(op)
     },
-    <start:@L> <head:Callable<T>> "." <call_loc:@L> <name:Name> => {
-        let call = Predicate{name, args: vec![]};
-        let call_term = Term::new_from_parser(src_id, call_loc, Value::Call(call));
-        let args = vec![head, call_term];
-        let op = Operation{operator: Operator::Dot, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <head:Callable<T>> "." <call_loc:@L> "(" <name:Name> ")" => {
-        let call_term = Term::new_from_parser(src_id, call_loc, Value::Variable(name));
-        let args = vec![head, call_term];
-        let op = Operation{operator: Operator::Dot, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    }
 }
 
 // .
 Exp9<T>: Term = {
-    <dot_op:DotOp<T>> => dot_op,
-    <exp10:Exp10<T>> => exp10
+    <Spanned<DotOp<T>>>,
+    <Exp10<T>>,
 };
 
-Matches = {"matches"};
-
-// in matches
-Exp8<T>: Term = {
-    <start:@L> <left:Exp8<T>> "in" <right:Exp9<T>> => {
+// in
+InExp<T>: Value = {
+    <left:Exp8<T>> "in" <right:Exp9<T>> => {
         let args = vec![left, right];
         let op = Operation{operator: Operator::In, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
+        Value::Expression(op)
     },
+}
+
+Matches = {"matches"};
+// matches
+MatchExp<T>: Value = {
     // Symbols on the RHS are treated as class names, just like in a specializers
-    <start:@L> <left:Exp8<T>> Matches <right:Pattern> => {
+    <left:Exp8<T>> Matches <right:Spanned<Pattern>> => {
         let right = if let Value::Variable(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
                 fields: Dictionary::new()
             })))
         } else {
-            Pattern::term_as_pattern(&right)
+            right
         };
         let args = vec![left, right];
         let op = Operation{operator: Operator::Isa, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
+        Value::Expression(op)
     },
-    <exp9:Exp9<T>> => exp9
+}
+
+Exp8<T>: Term = {
+    <Spanned<InExp<T>>>,
+    <Spanned<MatchExp<T>>>,
+    <Exp9<T>>,
 }
 
 // * /
+Op7: Operator = {
+    "*" => Operator::Mul,
+    "/" => Operator::Div,
+}
+MulExp<T>: Value = {
+    <exp7:Exp7<T>> <operator:Op7> <exp8:Exp8<T>> => {
+        let args = vec![exp7, exp8];
+        let op = Operation{operator, args};
+        Value::Expression(op)
+    },
+}
 Exp7<T>: Term = {
-    <start:@L> <exp7:Exp7<T>> "*" <exp8:Exp8<T>> => {
-        let args = vec![exp7, exp8];
-        let op = Operation{operator: Operator::Mul, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp7:Exp7<T>> "/" <exp8:Exp8<T>> => {
-        let args = vec![exp7, exp8];
-        let op = Operation{operator: Operator::Div, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <exp8:Exp8<T>> => exp8
+    <Spanned<MulExp<T>>>,
+    <Exp8<T>>,
 }
 
 // + -
+Op6: Operator = {
+    "+" => Operator::Add,
+    "-" => Operator::Sub,
+}
+AddExp<T>: Value = {
+    <exp6:Exp6<T>> <operator:Op6> <exp7:Exp7<T>> => {
+        let args = vec![exp6, exp7];
+        let op = Operation{operator, args};
+        Value::Expression(op)
+    },
+}
+
 Exp6<T>: Term = {
-    <start:@L> <exp6:Exp6<T>> "+" <exp7:Exp7<T>> => {
-        let args = vec![exp6, exp7];
-        let op = Operation{operator: Operator::Add, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp6:Exp6<T>> "-" <exp7:Exp7<T>> => {
-        let args = vec![exp6, exp7];
-        let op = Operation{operator: Operator::Sub, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <exp7:Exp7<T>> => exp7
+    <Spanned<AddExp<T>>>,
+    <Exp7<T>>,
 }
 
 // == != <= < >= >
+Op5: Operator = {
+    "==" => Operator::Eq,
+    "!=" => Operator::Neq,
+    "<=" => Operator::Leq,
+    ">=" => Operator::Geq,
+    "<" => Operator::Lt,
+    ">" => Operator::Gt,
+}
+
+CmpExp<T>: Value = {
+    <exp5:Exp5<T>> <operator:Op5> <exp6:Exp6<T>> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator, args};
+        Value::Expression(op)
+    },
+}
+
 Exp5<T>: Term = {
-    <start:@L> <exp5:Exp5<T>> "==" <exp6:Exp6<T>> => {
-        let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Eq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp5:Exp5<T>> "!=" <exp6:Exp6<T>> => {
-        let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Neq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp5:Exp5<T>> "<=" <exp6:Exp6<T>> => {
-        let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Leq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp5:Exp5<T>> ">=" <exp6:Exp6<T>> => {
-        let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Geq, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp5:Exp5<T>> "<" <exp6:Exp6<T>> => {
-        let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Lt, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <start:@L> <exp5:Exp5<T>> ">" <exp6:Exp6<T>> => {
-        let args = vec![exp5, exp6];
-        let op = Operation{operator: Operator::Gt, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
-    },
-    <exp6:Exp6<T>> => exp6
+    <Spanned<CmpExp<T>>>,
+    <Exp6<T>>,
 }
 
 // =
-Exp4<T>: Term = {
-    <start:@L> <exp4:Exp4<T>> "=" <exp5:Exp5<T>> => {
+UnifyExp<T>: Value = {
+    <exp4:Exp4<T>> "=" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Unify, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
+        Value::Expression(op)
     },
-     <exp5:Exp5<T>> => exp5
- }
+}
+
+Exp4<T>: Term = {
+    <Spanned<UnifyExp<T>>>,
+    <Exp5<T>>,
+}
+
 
  // !
 Not = {"not"};
-Exp3<T>: Term = {
-    <start:@L> Not <exp4:Exp4<T>> => {
+NotExp<T>: Value = {
+    Not <exp4:Exp4<T>> => {
         let args = vec![exp4];
         let op = Operation{operator: Operator::Not, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
+        Value::Expression(op)
     },
-    // TODO (dhatch): Maybe a different type here
-    <exp4:Exp4<T>> => exp4
 }
 
+Exp3<T>: Term = {
+    <Spanned<NotExp<T>>>,
+    <Exp4<T>>,
+}
+
+
 Or = {"or"};
-Exp2<T>: Term = {
-    <start:@L> <head:Exp3<T>> Or <mut tail:Exp2<T>> => {
+OrExp<T>: Value = {
+    <head:Exp3<T>> Or <mut tail:Exp2<T>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
                 let mut args = vec![head];
@@ -414,14 +408,19 @@ Exp2<T>: Term = {
             }
         };
         let op = Operation{operator: Operator::Or, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
+        Value::Expression(op)
     },
-    <exp3:Exp3<T>> => exp3
 }
 
+Exp2<T>: Term = {
+    <Spanned<OrExp<T>>>,
+    <Exp3<T>>,
+}
+
+
 And = {"and"};
-Exp1<T>: Term = {
-    <start:@L> <head:Exp2<T>> And <mut tail:Exp1<T>> => {
+AndExp<T>: Value = {
+    <head:Exp2<T>> And <mut tail:Exp1<T>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::And, args: tail_args}) => {
                 let mut args = vec![head];
@@ -433,56 +432,72 @@ Exp1<T>: Term = {
             }
         };
         let op = Operation{operator: Operator::And, args};
-        Term::new_from_parser(src_id, start, Value::Expression(op))
+        Value::Expression(op)
     },
-    <exp2:Exp2<T>> => exp2
 }
 
-// All ExpN & Exp productions are macros with one parameter. The parameter is the
-// *string* "Term" or "Pattern" which controls whether the expression is over terms
-// or patterns.  (It is a string since we need to conditionally
-// change the expression precedence allowed in patterns versus terms depending
-// on the parameter type, and LALRPOP does not allow conditional macros on anything
-// other than a string.
-Exp<T>: Term = {
-    <exp1:Exp1<T>> => exp1
+Exp1<T>: Term = {
+    <Spanned<AndExp<T>>>,
+    <Exp2<T>>,
 }
 
-Parameter: Parameter = {
-    <param:Exp6<"Term">> => {
-        Parameter{parameter: Some(param), specializer: None}
-    },
-    // parenthesized specializers do not have symbol translation to class names applied
-    <start:@L> <name:Name> ":" "(" <specializer:Pattern> ")" => {
-        let mut name = Term::new_from_parser(src_id, start, Value::Variable(name));
-        Parameter {
-            parameter: Some(name),
-            specializer: Some(specializer),
-        }
-    },
-    <start:@L> <name:Name> ":" <specializer:Pattern> => {
-        let mut name = Term::new_from_parser(src_id, start, Value::Variable(name));
-        let offset = specializer.offset();
-        if let Value::Variable(class_name) = specializer.value() {
-            let fields = BTreeMap::new();
-            let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
-            Parameter {
-                parameter: Some(name),
-                specializer: Some(Term::new_from_parser(src_id, offset, Value::Pattern(Pattern::Instance(instance_literal)))),
-            }
-        } else {
-            Parameter{parameter: Some(name), specializer: Some(specializer)}
+
+pub Pattern: Value = {
+    <Number>,
+    <PolarString>,
+    <Boolean>,
+    <Variable>,
+    <DictionaryPattern>,
+    <InstanceLiteralPattern>,
+    "[" <terms:(<Spanned<Pattern>> ",")*> <term:Spanned<RestVar<"Pattern">>?> "]" => {
+        match term {
+            Some(term) => Value::List(vec![term]),
+            None => Value::List(terms)
         }
     },
 };
 
-pub TermExp: Term = {
-    <Exp<"Term">> => <>
+pub Value: Value = {
+    <Number>,
+    <PolarString>,
+    <Boolean>,
+    <Variable>,
+    <DictionaryTerm>,
+    <BuiltinOperation>,
+    <RewrittenOperation>,
+    <Predicate>,
+    "[" <mut terms:(<Term> ",")*> <term:Spanned<RestVar<"Term">>?> "]" => {
+        match term {
+            Some(term) => {
+                terms.push(term);
+                Value::List(terms)
+            },
+            None => Value::List(terms)
+        }
+    },
+}
+
+
+
+// ****** Terms + Patterns ******* //
+
+// Either a *rest variable, or an ordinary term.
+// TODO(Sam): come back to this one
+RestVar<T>: Value = {
+    "*" <Name> => Value::RestVariable(<>),
+    <Value> if T == "Term",
+    <Pattern> if T == "Pattern",
 };
 
-pub PatternExp: Term = {
-    <Exp9<"Pattern">> => <>
-};
+
+
+Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, value);
+
+pub Term = TermExp;
+
+
+
+// ****** Rules + Lines ******* //
 
 ParameterList: Vec<Parameter> = {
     <param:Parameter> => vec![param],
@@ -491,6 +506,34 @@ ParameterList: Vec<Parameter> = {
         list
     },
 };
+
+
+Parameter: Parameter = {
+    <param:Exp6<"Term">> => {
+        Parameter{parameter: Some(param), specializer: None}
+    },
+    // parenthesized specializers do not have symbol translation to class names applied
+    <arg:Spanned<Variable>> ":" "(" <specializer:Spanned<Pattern>> ")" => {
+        Parameter {
+            parameter: Some(arg),
+            specializer: Some(specializer),
+        }
+    },
+    <arg:Spanned<Variable>> ":" <specializer:Spanned<Pattern>> => {
+        let offset = specializer.offset();
+        if let Value::Variable(class_name) = specializer.value() {
+            let fields = BTreeMap::new();
+            let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
+            Parameter {
+                parameter: Some(arg),
+                specializer: Some(specializer.clone_with_value(Value::Pattern(Pattern::Instance(instance_literal)))),
+            }
+        } else {
+            Parameter{parameter: Some(arg), specializer: Some(specializer)}
+        }
+    },
+};
+
 
 RuleHead: (Symbol, Vec<Parameter>) = {
     <name:Name> "(" ")" => {
@@ -525,6 +568,7 @@ pub Rule: Rule = {
         Rule{name, params, body}
     }
 }
+
 
 pub Rules: Vec<Rule> = <Rule*>;
 
