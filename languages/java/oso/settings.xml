@@ -3,7 +3,30 @@
       xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
                           https://maven.apache.org/xsd/settings-1.0.0.xsd">
 
+                          <settings>
   <servers>
+    
+  </servers>
+  <profiles>
+    <profile>
+      <id>ossrh</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <gpg.executable>${env.GPGPassphrase}</gpg.executable>
+        <gpg.passphrase>${env.JiraPassword}</gpg.passphrase>
+      </properties>
+    </profile>
+  </profiles>
+</settings>
+
+  <servers>
+  <server>
+      <id>ossrh</id>
+      <username>${env.JiraUser}</username>
+      <password>${env.JiraPassword}</password>
+    </server>
     <server>
       <id>github</id>
       <configuration>
