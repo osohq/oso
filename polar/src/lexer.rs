@@ -310,6 +310,26 @@ impl<'input> Lexer<'input> {
     }
 
     #[inline]
+    fn push_char(&mut self, c: char) {
+        self.buf.push(c);
+        self.c = self.chars.next();
+    }
+
+    #[inline]
+    fn match_digits(&mut self, mut last: usize) -> usize {
+        while let Some((i, char)) = self.c {
+            match char {
+                '0'..='9' => {
+                    self.push_char(char);
+                    last = i;
+                }
+                _ => break,
+            }
+        }
+        last
+    }
+
+    #[inline]
     fn scan_number(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let mut last = i;
@@ -317,22 +337,44 @@ impl<'input> Lexer<'input> {
         self.buf.push(chr);
         self.c = self.chars.next();
         let mut parse_as_float = false;
-        while let Some((i, char)) = self.c {
+
+        last = self.match_digits(last);
+
+        if let Some((i, char)) = self.c {
             match char {
-                '0'..='9' => {
-                    self.buf.push(char);
-                    self.c = self.chars.next();
+                '.' => {
+                    self.push_char(char);
                     last = i;
-                }
-                '.' | 'e' | 'E' | '+' | '-' => {
                     parse_as_float = true;
-                    self.buf.push(char);
-                    self.c = self.chars.next();
-                    last = i;
+
+                    last = self.match_digits(last);
+
+                    if let Some((i, char)) = self.c {
+                        match char {
+                            'e' | 'E' => {
+                                self.push_char(char);
+                                last = i;
+
+                                if let Some((i, char)) = self.c {
+                                    match char {
+                                        '+' | '-' => {
+                                            self.push_char(char);
+                                            last = i;
+                                        }
+                                        _ => (),
+                                    }
+                                }
+
+                                last = self.match_digits(last);
+                            }
+                            _ => (),
+                        }
+                    }
                 }
-                _ => break,
+                _ => (),
             }
         }
+
         if parse_as_float {
             if let Ok(f) = f64::from_str(&self.buf) {
                 Some(Ok((start, Token::Float(f), last + 1)))
@@ -634,5 +676,21 @@ mod tests {
             matches!(lexer.next(), Some(Ok((66, Token::Symbol(ruby_namespace), 81))) if ruby_namespace == Symbol::new("Ruby::Namespace"))
         );
         assert!(matches!(lexer.next(), None));
+    }
+
+    #[test]
+    fn test_numbers() {
+        let f = "1+2";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((0, Token::Integer(1), 1)))));
+        assert!(matches!(lexer.next(), Some(Ok((1, Token::Add, 2)))));
+        assert!(matches!(lexer.next(), Some(Ok((2, Token::Integer(2), 3)))));
+
+        let f = "0123";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(
+            lexer.next(),
+            Some(Ok((0, Token::Integer(123), 4)))
+        ));
     }
 }
