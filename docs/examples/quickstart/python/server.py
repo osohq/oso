@@ -1,7 +1,7 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from oso import Oso
 
-from .expense import Expense, EXPENSES
+from expense import Expense, EXPENSES
 
 oso = Oso()
 oso.load_file("expenses.polar")
