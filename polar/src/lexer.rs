@@ -340,38 +340,33 @@ impl<'input> Lexer<'input> {
 
         last = self.match_digits(last);
 
-        if let Some((i, char)) = self.c {
-            match char {
-                '.' => {
-                    self.push_char(char);
-                    last = i;
-                    parse_as_float = true;
+        if let Some((i, '.')) = self.c {
+            self.push_char('.');
+            last = i;
+            parse_as_float = true;
 
-                    last = self.match_digits(last);
+            last = self.match_digits(last);
 
-                    if let Some((i, char)) = self.c {
-                        match char {
-                            'e' | 'E' => {
-                                self.push_char(char);
-                                last = i;
+            if let Some((i, char)) = self.c {
+                match char {
+                    'e' | 'E' => {
+                        self.push_char(char);
+                        last = i;
 
-                                if let Some((i, char)) = self.c {
-                                    match char {
-                                        '+' | '-' => {
-                                            self.push_char(char);
-                                            last = i;
-                                        }
-                                        _ => (),
-                                    }
+                        if let Some((i, char)) = self.c {
+                            match char {
+                                '+' | '-' => {
+                                    self.push_char(char);
+                                    last = i;
                                 }
-
-                                last = self.match_digits(last);
+                                _ => (),
                             }
-                            _ => (),
                         }
+
+                        last = self.match_digits(last);
                     }
+                    _ => (),
                 }
-                _ => (),
             }
         }
 
