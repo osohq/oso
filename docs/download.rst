@@ -92,10 +92,10 @@ oso is available as a library in several languages:
             - OS X
             - Windows (coming soon)
 
-**Libraries Coming soon**
+**Libraries coming soon:**
 
+- JavaScript / TypeScript
 - Go
-- JavaScript
 - Rust
 
 Source Code
