@@ -1305,3 +1305,24 @@ fn test_boolean_expression() {
     assert!(qeval(&mut polar, "a = true and a"));
     assert!(qnull(&mut polar, "a = false and a"));
 }
+
+#[test]
+fn test_float_parsing() {
+    let mut polar = Polar::new(None);
+    polar.load("f(x) if x = 1+1;").unwrap();
+    polar.load("f(x) if x = 1+1.5;").unwrap();
+    polar.load("f(x) if x = 1.0e+15;").unwrap();
+    polar.load("f(x) if x = 1.0E+15;").unwrap();
+    polar.load("f(x) if x = 1.0e-15;").unwrap();
+
+    assert_eq!(
+        qvar(&mut polar, "f(x)", "x"),
+        vec![
+            value!(2),
+            value!(2.5),
+            value!(1.0e+15),
+            value!(1.0E+15),
+            value!(1.0e-15)
+        ]
+    )
+}
