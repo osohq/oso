@@ -36,16 +36,14 @@ oso is available as a library in several languages:
 
     .. group-tab:: Ruby
 
-        The Ruby version of oso is available on RubyGems_ and can be installed using
-        ``gem``::
+        The Ruby version of oso is available on RubyGems_ and can be installed
+        into your local Ruby::
 
             $ gem install oso-oso -v {release}
 
-        or added to your ``Gemfile``::
+        or added to a project's ``Gemfile``::
 
             gem 'oso-oso', '~> {release}'
-
-        and installed with `bundler`_.
 
         For more information on the oso Ruby library, see the
         :doc:`library documentation </using/libraries/ruby/index>`.
@@ -65,7 +63,6 @@ oso is available as a library in several languages:
             - Windows (coming soon)
 
         .. _RubyGems: https://rubygems.org/gems/oso-oso
-        .. _bundler: https://bundler.io/
 
 
     .. group-tab:: Java
@@ -95,10 +92,10 @@ oso is available as a library in several languages:
             - OS X
             - Windows (coming soon)
 
-**Libraries Coming soon**
+**Libraries coming soon:**
 
+- JavaScript / TypeScript
 - Go
-- JavaScript
 - Rust
 
 Source Code
