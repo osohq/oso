@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
 use super::formatting::{draw, ToPolarString};
-use super::lexer::{loc_to_pos, make_context};
+use super::lexer::loc_to_pos;
 use super::types::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
@@ -609,6 +609,10 @@ impl PolarVirtualMachine {
         let _ = writeln!(&mut writer, "{}", message);
     }
 
+    fn source(&self, term: &Term) -> Option<Source> {
+        self.kb.read().unwrap().sources.get_source(&term)
+    }
+
     /// Get the query stack as a string for printing in error messages.
     fn stack_trace(&self) -> String {
         let mut trace_stack = self.trace_stack.clone();
@@ -1000,22 +1004,17 @@ impl PolarVirtualMachine {
             let term = match &trace.node {
                 Node::Term(t) => Some(t),
                 _ => None,
-            }
-            .unwrap();
-            let source = self.kb.read().unwrap().sources.get_source(term);
-            let context = if let Some(source) = source {
-                make_context(&source, term.offset())
-            } else {
-                None
             };
             let stack_trace = self.stack_trace();
             let error = error::RuntimeError::Application {
                 msg: error.clone(),
-                loc: term.offset(),
-                context,
                 stack_trace: Some(stack_trace),
             };
-            Err(error.into())
+            if let Some(term) = term {
+                Err(self.set_error_context(term, error))
+            } else {
+                Err(error.into())
+            }
         } else {
             Ok(QueryEvent::None)
         }
@@ -1339,10 +1338,12 @@ impl PolarVirtualMachine {
                     Operator::Mul => *left * *right,
                     Operator::Div => *left / *right,
                     _ => {
-                        return Err(error::RuntimeError::Unsupported {
-                            msg: format!("numeric operation {}", op.to_polar()),
-                        }
-                        .into())
+                        return Err(self.set_error_context(
+                            term,
+                            error::RuntimeError::Unsupported {
+                                msg: format!("numeric operation {}", op.to_polar()),
+                            },
+                        ))
                     }
                 } {
                     self.push_goal(Goal::Unify {
@@ -1350,10 +1351,12 @@ impl PolarVirtualMachine {
                         right: result.clone(),
                     })?;
                 } else {
-                    return Err(error::RuntimeError::ArithmeticError {
-                        msg: term.to_polar(),
-                    }
-                    .into());
+                    return Err(self.set_error_context(
+                        term,
+                        error::RuntimeError::ArithmeticError {
+                            msg: term.to_polar(),
+                        },
+                    ));
                 }
             }
             (_, _) => todo!(),
@@ -1983,21 +1986,26 @@ impl PolarVirtualMachine {
         }
     }
 
+    fn set_error_context(
+        &self,
+        term: &Term,
+        error: impl Into<error::PolarError>,
+    ) -> error::PolarError {
+        let source = self.source(term);
+        if source.is_none() {
+            panic!("why is the source none?");
+        }
+        let error: error::PolarError = error.into();
+        error.set_context(source.as_ref(), Some(term))
+    }
+
     fn type_error(&self, term: &Term, msg: String) -> error::PolarError {
-        let source = { self.kb.read().unwrap().sources.get_source(&term) };
-        let context = if let Some(source) = source {
-            make_context(&source, term.offset())
-        } else {
-            None
-        };
         let stack_trace = self.stack_trace();
         let error = error::RuntimeError::TypeError {
             msg,
-            loc: term.offset(),
-            context,
             stack_trace: Some(stack_trace),
         };
-        error.into()
+        self.set_error_context(term, error)
     }
 }
 

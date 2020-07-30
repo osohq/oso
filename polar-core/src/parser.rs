@@ -25,11 +25,9 @@ lazy_static::lazy_static! {
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
     match e {
-        ParseError::InvalidToken { location: loc } => {
-            error::ParseError::InvalidToken { loc, context: None }
-        }
+        ParseError::InvalidToken { location: loc } => error::ParseError::InvalidToken { loc },
         ParseError::UnrecognizedEOF { location: loc, .. } => {
-            error::ParseError::UnrecognizedEOF { loc, context: None }
+            error::ParseError::UnrecognizedEOF { loc }
         }
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
@@ -37,18 +35,15 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
             Token::Debug | Token::Cut | Token::In | Token::New => error::ParseError::ReservedWord {
                 token: t.to_string(),
                 loc,
-                context: None,
             },
             _ => error::ParseError::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
-                context: None,
             },
         },
         ParseError::ExtraToken { token: (loc, t, _) } => error::ParseError::ExtraToken {
             token: t.to_string(),
             loc,
-            context: None,
         },
         ParseError::User { error } => error,
     }

@@ -1,6 +1,5 @@
-use super::error::{self, PolarError, PolarResult};
+use super::error::PolarResult;
 use super::formatting::source_lines;
-use super::lexer::make_context;
 use super::parser;
 use super::rewrites::*;
 use super::types::*;
@@ -9,68 +8,6 @@ use super::vm::*;
 use std::collections::{hash_map::Entry, HashMap};
 use std::io::{stderr, Write};
 use std::sync::{Arc, RwLock};
-
-fn fill_context(e: PolarError, source: &Source) -> PolarError {
-    match e.kind {
-        error::ErrorKind::Parse(parse_error) => {
-            let parse_error = match parse_error {
-                error::ParseError::IntegerOverflow {
-                    token,
-                    loc,
-                    context: None,
-                } => error::ParseError::IntegerOverflow {
-                    token,
-                    loc,
-                    context: make_context(source, loc),
-                },
-                error::ParseError::InvalidTokenCharacter {
-                    token,
-                    c,
-                    loc,
-                    context: None,
-                } => error::ParseError::InvalidTokenCharacter {
-                    token,
-                    c,
-                    loc,
-                    context: make_context(source, loc),
-                },
-                error::ParseError::InvalidToken { loc, context: None } => {
-                    error::ParseError::InvalidToken {
-                        loc,
-                        context: make_context(source, loc),
-                    }
-                }
-                error::ParseError::UnrecognizedEOF { loc, context: None } => {
-                    error::ParseError::UnrecognizedEOF {
-                        loc,
-                        context: make_context(source, loc),
-                    }
-                }
-                error::ParseError::UnrecognizedToken {
-                    token,
-                    loc,
-                    context: None,
-                } => error::ParseError::UnrecognizedToken {
-                    token,
-                    loc,
-                    context: make_context(source, loc),
-                },
-                error::ParseError::ExtraToken {
-                    token,
-                    loc,
-                    context: None,
-                } => error::ParseError::ExtraToken {
-                    token,
-                    loc,
-                    context: make_context(source, loc),
-                },
-                _ => parse_error,
-            };
-            PolarError::from(parse_error)
-        }
-        _ => e,
-    }
-}
 
 pub struct Query {
     vm: PolarVirtualMachine,
@@ -135,7 +72,8 @@ impl Polar {
         };
         let mut kb = self.kb.write().unwrap();
         let src_id = kb.new_id();
-        let mut lines = parser::parse_lines(src_id, src).map_err(|e| fill_context(e, &source))?;
+        let mut lines =
+            parser::parse_lines(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
         lines.reverse();
         kb.sources.add_source(source, src_id);
         while let Some(line) = lines.pop() {
@@ -231,7 +169,7 @@ impl Polar {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
             let mut term =
-                parser::parse_query(src_id, src).map_err(|e| fill_context(e, &source))?;
+                parser::parse_query(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
             kb.sources.add_source(source, src_id);
             rewrite_term(&mut term, &mut kb);
             term

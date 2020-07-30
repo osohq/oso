@@ -239,8 +239,6 @@ impl Value {
             Value::RestVariable(name) => Ok(name),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -251,8 +249,6 @@ impl Value {
             Value::InstanceLiteral(literal) => Ok(literal),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -263,8 +259,6 @@ impl Value {
             Value::Expression(op) => Ok(op),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -275,8 +269,6 @@ impl Value {
             Value::Call(pred) => Ok(pred),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -291,7 +283,8 @@ enum SourceInfo {
         src_id: u64,
 
         /// Location of the term within the source map
-        offset: usize,
+        left: usize,
+        right: usize,
     },
 
     /// Created as a temporary variable
@@ -339,9 +332,13 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(src_id: u64, offset: usize, value: Value) -> Self {
+    pub fn new_from_parser(src_id: u64, left: usize, right: usize, value: Value) -> Self {
         Self {
-            source_info: SourceInfo::Parser { src_id, offset },
+            source_info: SourceInfo::Parser {
+                src_id,
+                left,
+                right,
+            },
             value: Rc::new(value),
         }
     }
@@ -420,8 +417,8 @@ impl Term {
     }
 
     pub fn offset(&self) -> usize {
-        if let SourceInfo::Parser { offset, .. } = self.source_info {
-            offset
+        if let SourceInfo::Parser { left, .. } = self.source_info {
+            left
         } else {
             0
         }
@@ -724,7 +721,6 @@ mod tests {
             token: "Integer".to_owned(),
             c: 'x',
             loc: 99,
-            context: None,
         };
         let err: crate::error::PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());

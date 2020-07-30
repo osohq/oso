@@ -491,7 +491,7 @@ RestVar<T>: Value = {
 
 
 
-Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, value);
+Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, end, value);
 
 pub Term = TermExp;
 
@@ -547,10 +547,10 @@ RuleHead: (Symbol, Vec<Parameter>) = {
 Define = {":=", "if"};
 
 pub Rule: Rule = {
-    <head:RuleHead> <start:@L> ";" => {
+    <head:RuleHead> <start:@L> <end:@R> ";" => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
-        let body = Term::new_from_parser(src_id, start, Value::Expression(op));
+        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
         Rule{name, params, body}
     },
     <head:RuleHead> Define <body:TermExp> ";" => {
@@ -560,9 +560,8 @@ pub Rule: Rule = {
                 body
             },
             _ => {
-                let offset = body.offset();
-                let op = Operation{operator: Operator::And, args: vec![body]};
-                Term::new_from_parser(src_id, offset, Value::Expression(op))
+                let op = Operation{operator: Operator::And, args: vec![body.clone()]};
+                body.clone_with_value(Value::Expression(op))
             }
         };
         Rule{name, params, body}
