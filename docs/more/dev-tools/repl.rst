@@ -26,7 +26,7 @@ Once oso is installed, launch the REPL from the terminal:
         .. code-block:: console
             :caption: :fas:`gem` Launch the REPL
 
-            $ bundle exec oso
+            $ oso
             query>
 
     .. group-tab:: Java
@@ -91,7 +91,7 @@ on the command line:
         .. code-block:: console
             :caption: :fas:`gem` Load files and launch the REPL
 
-            $ bundle exec oso alice.polar
+            $ oso alice.polar
 
     .. group-tab:: Java
 
