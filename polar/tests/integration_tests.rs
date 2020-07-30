@@ -750,6 +750,12 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "lt(-1,+1)"));
     assert!(qnull(&mut polar, "lt(-1,-1)"));
     assert!(qeval(&mut polar, "lt(-2,-1)"));
+    assert!(qeval(&mut polar, "lt(1019,1.0e19)"));
+    assert!(qnull(&mut polar, "lt(1.0e19,1019)"));
+    assert!(qnull(&mut polar, "lt(9007199254740992,9007199254740992)")); // identical
+    assert!(qnull(&mut polar, "lt(9007199254740992,9007199254740992.0)")); // equal
+    assert!(qnull(&mut polar, "lt(9007199254740992,9007199254740993.0)")); // indistinguishable
+    assert!(qeval(&mut polar, "lt(9007199254740992,9007199254740994.0)")); // distinguishable
     assert!(qeval(&mut polar, "lt(\"aa\",\"ab\")"));
     assert!(qnull(&mut polar, "lt(\"aa\",\"aa\")"));
 
@@ -799,6 +805,12 @@ fn test_comparisons() {
     assert!(qnull(&mut polar, "eq(-1,+1)"));
     assert!(qeval(&mut polar, "eq(-1,-1)"));
     assert!(qeval(&mut polar, "eq(-1,-1.0)"));
+    assert!(qnull(&mut polar, "eq(1019,1.0e19)"));
+    assert!(qnull(&mut polar, "eq(1.0e19,1019)"));
+    assert!(qeval(&mut polar, "eq(9007199254740992,9007199254740992)")); // identical
+    assert!(qeval(&mut polar, "eq(9007199254740992,9007199254740992.0)")); // equal
+    assert!(qeval(&mut polar, "eq(9007199254740992,9007199254740993.0)")); // indistinguishable
+    assert!(qnull(&mut polar, "eq(9007199254740992,9007199254740994.0)")); // distinguishable
     assert!(qeval(&mut polar, "eq(\"aa\", \"aa\")"));
     assert!(qnull(&mut polar, "eq(\"ab\", \"aa\")"));
 
@@ -823,7 +835,6 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "1.0 <= 1"));
     assert!(qeval(&mut polar, "1 == 1"));
     assert!(qeval(&mut polar, "0.0 == 0"));
-    assert!(qeval(&mut polar, "0.000000000000000001 == 0"));
 }
 
 #[test]
