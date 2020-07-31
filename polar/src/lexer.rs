@@ -677,6 +677,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::float_cmp)]
     fn test_numbers() {
         let f = "1+2";
         let mut lexer = Lexer::new(&f);

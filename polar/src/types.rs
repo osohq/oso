@@ -2,7 +2,6 @@
 //!
 //! Polar types
 
-use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
@@ -208,13 +207,11 @@ impl Pattern {
     }
 }
 
-pub type Float = OrderedFloat<f64>;
-
 /// A number. See the [`numerics`] module for implementations.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum Numeric {
     Integer(i64),
-    Float(Float),
+    Float(f64),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
