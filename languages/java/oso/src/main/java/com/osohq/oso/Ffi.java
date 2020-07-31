@@ -53,10 +53,6 @@ public class Ffi {
             }
         }
 
-        protected Query newQueryFromRepl() throws Exceptions.OsoException {
-            return new Query(checkResult(polarLib.polar_query_from_repl(ptr)));
-        }
-
         protected int registerConstant(String name, String value) throws Exceptions.OsoException {
             return checkResult(polarLib.polar_register_constant(ptr, name, value));
         }
