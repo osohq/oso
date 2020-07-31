@@ -214,7 +214,7 @@ pub enum Numeric {
     Float(f64),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Value {
     Number(Numeric),
     String(String),
