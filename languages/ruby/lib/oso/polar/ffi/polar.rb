@@ -11,10 +11,10 @@ module Oso
 
           attach_function :new, :polar_new, [], FFI::Polar
           attach_function :load_str, :polar_load, [FFI::Polar, :string, :string], :int32
-          attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar], FFI::Query
+          attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar, :uint32], FFI::Query
           attach_function :new_id, :polar_get_external_id, [FFI::Polar], :uint64
-          attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string], FFI::Query
-          attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string], FFI::Query
+          attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], FFI::Query
+          attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string, :uint32], FFI::Query
           attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
           attach_function :free, :polar_free, [FFI::Polar], :int32
         end
@@ -40,7 +40,7 @@ module Oso
         # @return [nil] if there are no remaining inline queries.
         # @raise [FFI::Error] if the FFI call returns an error.
         def next_inline_query
-          query = Rust.next_inline_query(self)
+          query = Rust.next_inline_query(self, 0)
           query.null? ? nil : query
         end
 
@@ -59,7 +59,7 @@ module Oso
         # @return [FFI::Query]
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_str(str)
-          query = Rust.new_query_from_str(self, str)
+          query = Rust.new_query_from_str(self, str, 0)
           raise FFI::Error.get if query.null?
 
           query
@@ -69,7 +69,7 @@ module Oso
         # @return [FFI::Query]
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_term(term)
-          query = Rust.new_query_from_term(self, JSON.dump(term))
+          query = Rust.new_query_from_term(self, JSON.dump(term), 0)
           raise FFI::Error.get if query.null?
 
           query

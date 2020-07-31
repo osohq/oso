@@ -153,12 +153,12 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
 }
 
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
-    let query = polar.new_query(query_str).unwrap();
+    let query = polar.new_query(query_str, false).unwrap();
     !query_results!(query).is_empty()
 }
 
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
-    let query = polar.new_query(query_str).unwrap();
+    let query = polar.new_query(query_str, false).unwrap();
     query_results!(query).is_empty()
 }
 
@@ -168,12 +168,12 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
         .map(Term::new_from_test)
         .rev()
         .collect();
-    let query = polar.new_query(query_str).unwrap();
+    let query = polar.new_query(query_str, false).unwrap();
     query_results!(query, |_, _, _, _| external_results.pop())
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
-    let query = polar.new_query(query_str).unwrap();
+    let query = polar.new_query(query_str, false).unwrap();
     query_results!(query)
         .iter()
         .map(|bindings| bindings.0.get(&Symbol(var.to_string())).unwrap().clone())
@@ -181,7 +181,7 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
 }
 
 fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
-    let query = polar.new_query(query_str).unwrap();
+    let query = polar.new_query(query_str, false).unwrap();
 
     query_results!(query)
         .iter()
@@ -219,7 +219,7 @@ fn test_jealous() {
         )
         .unwrap();
 
-    let query = polar.new_query("jealous(who, of)").unwrap();
+    let query = polar.new_query("jealous(who, of)", false).unwrap();
     let results = query_results!(query);
     let jealous = |who: &str, of: &str| {
         assert!(
@@ -243,7 +243,7 @@ fn test_trace() {
     polar
         .load("f(x) if x = 1 and x = 1; f(y) if y = 1;")
         .unwrap();
-    let query = polar.new_query("f(1)").unwrap();
+    let query = polar.new_query("f(1)", true).unwrap();
     let results = query_results!(query);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
@@ -640,7 +640,7 @@ fn test_lookup_derefs() {
     polar
         .load("f(x) if x = y and g(y); g(y) if new Foo{}.get(y) = y;")
         .unwrap();
-    let query = polar.new_query("f(1)").unwrap();
+    let query = polar.new_query("f(1)", false).unwrap();
     let mut foo_lookups = vec![term!(1)];
     let mock_foo = |_, _, _, args: Vec<Term>| {
         // check the argument is bound to an integer
@@ -656,7 +656,7 @@ fn test_lookup_derefs() {
         assert!(matches!(args[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
-    let query = polar.new_query("f(2)").unwrap();
+    let query = polar.new_query("f(2)", false).unwrap();
     let results = query_results!(query, mock_foo);
     assert!(results.is_empty());
 }
@@ -693,7 +693,7 @@ fn test_load_with_query() {
     let src = "f(1); f(2); ?= f(1); ?= not f(3);";
     polar.load(src).expect("load failed");
 
-    while let Some(query) = polar.next_inline_query() {
+    while let Some(query) = polar.next_inline_query(false) {
         assert_eq!(query_results!(query).len(), 1);
     }
 }
@@ -723,7 +723,7 @@ fn test_externals_instantiated() {
         );
         foo_lookups.pop()
     };
-    let query = polar.new_query("f(1, new Foo{})").unwrap();
+    let query = polar.new_query("f(1, new Foo{})", false).unwrap();
     let results = query_results!(query, mock_foo);
     assert_eq!(results.len(), 1);
 }
@@ -825,7 +825,7 @@ fn test_comparisons() {
     assert!(qnull(&mut polar, "neq(\"aa\", \"aa\")"));
     assert!(qeval(&mut polar, "neq(\"ab\", \"aa\")"));
 
-    let mut query = polar.new_query("eq(bob, bob)").unwrap();
+    let mut query = polar.new_query("eq(bob, bob)", false).unwrap();
     query
         .next_event()
         .expect_err("can't compare unbound variables");
@@ -871,7 +871,7 @@ fn test_arithmetic() {
     assert!(qnull(&mut polar, "odd(4)"));
 
     let check_arithmetic_error = |query: &str| {
-        let mut query = polar.new_query(query).unwrap();
+        let mut query = polar.new_query(query, false).unwrap();
         let error = query.next_event().unwrap_err();
         assert!(matches!(
             error.kind,
@@ -934,7 +934,7 @@ fn test_debug() {
         rt.to_string()
     };
 
-    let query = polar.new_query("a()").unwrap();
+    let query = polar.new_query("a()", false).unwrap();
     let _results = query_results!(query, no_results, no_externals, debug_handler);
 
     let mut call_num = 0;
@@ -962,7 +962,7 @@ fn test_debug() {
         call_num += 1;
         rt.to_string()
     };
-    let query = polar.new_query("a()").unwrap();
+    let query = polar.new_query("a()", false).unwrap();
     let _results = query_results!(query, no_results, no_externals, debug_handler);
 }
 
@@ -1079,7 +1079,7 @@ fn test_in() {
 
     // strange test case but it's important to note that this returns
     // 3 results, with 1 binding each
-    let query = polar.new_query("f(1, [x,y,z])").unwrap();
+    let query = polar.new_query("f(1, [x,y,z])", false).unwrap();
     let results = query_results!(query);
     assert_eq!(results.len(), 3);
     assert_eq!(
@@ -1097,7 +1097,7 @@ fn test_in() {
 
     assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
 
-    let mut query = polar.new_query("a in {a:1}").unwrap();
+    let mut query = polar.new_query("a in {a:1}", false).unwrap();
     let e = query.next_event().unwrap_err();
     assert!(matches!(
         e.kind,
@@ -1186,11 +1186,13 @@ fn test_unify_rule_head() {
     polar.load("f(_: Foo{a: 1}, x) if x = 1;").unwrap();
     polar.load("g(_: Foo{a: Foo{a: 1}}, x) if x = 1;").unwrap();
 
-    let query = polar.new_query("f(new Foo{a: 1}, x)").unwrap();
+    let query = polar.new_query("f(new Foo{a: 1}, x)", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 
-    let query = polar.new_query("g(new Foo{a: new Foo{a: 1}}, x)").unwrap();
+    let query = polar
+        .new_query("g(new Foo{a: new Foo{a: 1}}, x)", false)
+        .unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
 }

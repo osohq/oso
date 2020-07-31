@@ -35,17 +35,17 @@ public class Ffi {
         }
 
         protected Query newQueryFromStr(String queryStr) throws Exceptions.OsoException {
-            return new Query(checkResult(polarLib.polar_new_query(ptr, queryStr)));
+            return new Query(checkResult(polarLib.polar_new_query(ptr, queryStr, 0)));
         }
 
         protected Query newQueryFromTerm(String queryTerm) throws Exceptions.OsoException {
-            return new Query(checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm)));
+            return new Query(checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm, 0)));
         }
 
         protected Query nextInlineQuery() throws Exceptions.OsoException {
             // Don't check result here because the returned Pointer is null to indicate
             // termination
-            Pointer p = polarLib.polar_next_inline_query(ptr);
+            Pointer p = polarLib.polar_next_inline_query(ptr, 0);
             if (p == null) {
                 return null;
             } else {
@@ -154,11 +154,11 @@ public class Ffi {
 
         Pointer polar_new();
 
-        Pointer polar_new_query(Pointer polar_ptr, String query_str);
+        Pointer polar_new_query(Pointer polar_ptr, String query_str, int trace);
 
-        Pointer polar_new_query_from_term(Pointer polar_ptr, String query_term);
+        Pointer polar_new_query_from_term(Pointer polar_ptr, String query_term, int trace);
 
-        Pointer polar_next_inline_query(Pointer polar_ptr);
+        Pointer polar_next_inline_query(Pointer polar_ptr, int trace);
 
         Pointer polar_next_query_event(Pointer query_ptr);
 
