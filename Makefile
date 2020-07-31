@@ -1,4 +1,4 @@
-.PHONY: test rust-test rust-build python-build python-test
+.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy
 
 test: rust-test python-test ruby-test java-test
 
@@ -32,3 +32,6 @@ docs-test: python-build
 fmt:
 	cargo fmt
 	$(MAKE) -C languages/python fmt
+
+clippy:
+	cargo clippy --all-features --all-targets -- -D warnings
