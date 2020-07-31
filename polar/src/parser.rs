@@ -258,6 +258,7 @@ mod tests {
         assert_eq!(parse_query("+1.234"), term!(1.234));
         assert_eq!(parse_query("-1.234"), term!(-1.234));
         assert_eq!(parse_query("-1.234e-56"), term!(-1.234e-56));
+        assert_eq!(parse_query("-1.234e56"), term!(-1.234e56));
     }
 
     #[test]

@@ -362,12 +362,12 @@ impl<'input> Lexer<'input> {
                             '+' | '-' => {
                                 self.push_char(char);
                                 last = i;
-
-                                last = self.match_digits(last);
                             }
                             _ => (),
                         }
                     }
+
+                    last = self.match_digits(last);
                 }
                 _ => (),
             }
@@ -690,5 +690,28 @@ mod tests {
             lexer.next(),
             Some(Ok((0, Token::Integer(123), 4)))
         ));
+
+        let f = "1.ee1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(
+            lexer.next(),
+            Some(Err(ParseError::InvalidFloat{ .. }))
+        ));
+
+        let f = "1.1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1));
+
+        let f = "1e1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e1));
+
+        let f = "1e-1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e-1));
+
+        let f = "1.1e-1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1e-1));
     }
 }
