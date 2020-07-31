@@ -64,7 +64,6 @@ impl PartialEq for Numeric {
 /// There are 53 bits of mantissa in an IEEE 754 double precision float.
 const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
 
-
 impl PartialOrd for Numeric {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // Compare the integer `i` with the float `f`.
@@ -87,6 +86,7 @@ impl PartialOrd for Numeric {
                 Some(Ordering::Greater)
             } else {
                 // The integral part of float is representable as an i64.
+                // Floats in this range do not have any fractional components.
                 i.partial_cmp(&(f as i64))
             }
         };
@@ -195,6 +195,5 @@ mod tests {
     }
 
     #[test]
-    fn test_sanity() {
-    }
+    fn test_sanity() {}
 }
