@@ -144,8 +144,11 @@ pub extern "C" fn polar_register_constant(
     })
 }
 
+// @Note(steve): trace is treated as a bool. 0 for false, anything else for true.
+// If we get more than one flag on these ffi methods, consider renaming it flags and making it a bitflags field.
+// Then we wont have to update the ffi to add new optional things like logging or tracing or whatever.
 #[no_mangle]
-pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
+pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar, trace: u32) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         match polar.next_inline_query() {
@@ -159,6 +162,7 @@ pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar) -> *mut Query {
 pub extern "C" fn polar_new_query_from_term(
     polar_ptr: *mut Polar,
     query_term: *const c_char,
+    trace: u32,
 ) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
@@ -175,7 +179,11 @@ pub extern "C" fn polar_new_query_from_term(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_new_query(polar_ptr: *mut Polar, query_str: *const c_char) -> *mut Query {
+pub extern "C" fn polar_new_query(
+    polar_ptr: *mut Polar,
+    query_str: *const c_char,
+    trace: u32,
+) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let s = unsafe { ffi_string!(query_str) };
