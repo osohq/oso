@@ -2,11 +2,8 @@
 //!
 //! Polar types
 
-use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::convert::TryFrom;
-use std::ops::{Add, Div, Mul, Sub};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -210,147 +207,14 @@ impl Pattern {
     }
 }
 
-pub type Float = OrderedFloat<f64>;
-
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq)]
+/// A number. See the [`numerics`] module for implementations.
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum Numeric {
     Integer(i64),
-    Float(Float),
+    Float(f64),
 }
 
-impl Add for Numeric {
-    type Output = Option<Self>;
-
-    fn add(self, other: Self) -> Option<Self> {
-        match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_add(b).map(Numeric::Integer),
-            (Numeric::Integer(a), Numeric::Float(b)) => {
-                Some(Numeric::Float(OrderedFloat(a as f64 + b.0)))
-            }
-            (Numeric::Float(a), Numeric::Integer(b)) => {
-                Some(Numeric::Float(OrderedFloat(a.0 + b as f64)))
-            }
-            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 + b.0))),
-        }
-    }
-}
-
-impl Sub for Numeric {
-    type Output = Option<Self>;
-
-    fn sub(self, other: Self) -> Option<Self> {
-        match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_sub(b).map(Numeric::Integer),
-            (Numeric::Integer(a), Numeric::Float(b)) => {
-                Some(Numeric::Float(OrderedFloat(a as f64 - b.0)))
-            }
-            (Numeric::Float(a), Numeric::Integer(b)) => {
-                Some(Numeric::Float(OrderedFloat(a.0 - b as f64)))
-            }
-            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 - b.0))),
-        }
-    }
-}
-
-impl Mul for Numeric {
-    type Output = Option<Self>;
-
-    fn mul(self, other: Self) -> Option<Self> {
-        match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_mul(b).map(Numeric::Integer),
-            (Numeric::Integer(a), Numeric::Float(b)) => {
-                Some(Numeric::Float(OrderedFloat(a as f64 * b.0)))
-            }
-            (Numeric::Float(a), Numeric::Integer(b)) => {
-                Some(Numeric::Float(OrderedFloat(a.0 * b as f64)))
-            }
-            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(OrderedFloat(a.0 * b.0))),
-        }
-    }
-}
-
-impl Div for Numeric {
-    type Output = Option<Self>;
-
-    fn div(self, other: Self) -> Option<Self> {
-        match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => {
-                if b == 0 {
-                    None
-                } else {
-                    Some(Numeric::Float(OrderedFloat(a as f64 / b as f64)))
-                }
-            }
-            (Numeric::Integer(a), Numeric::Float(b)) => {
-                if b.0 == 0.0 {
-                    None
-                } else {
-                    Some(Numeric::Float(OrderedFloat(a as f64 / b.0)))
-                }
-            }
-            (Numeric::Float(a), Numeric::Integer(b)) => {
-                if b == 0 {
-                    None
-                } else {
-                    Some(Numeric::Float(OrderedFloat(a.0 / b as f64)))
-                }
-            }
-            (Numeric::Float(a), Numeric::Float(b)) => {
-                if b.0 == 0.0 {
-                    None
-                } else {
-                    Some(Numeric::Float(OrderedFloat(a.0 / b.0)))
-                }
-            }
-        }
-    }
-}
-
-impl PartialEq for Numeric {
-    fn eq(&self, other: &Self) -> bool {
-        matches!(self.partial_cmp(other), Some(std::cmp::Ordering::Equal))
-    }
-}
-
-impl PartialOrd for Numeric {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        // compare the integer `i` and the float `f`
-        // if `swap` then do `f.partial_cmp(i)` otherwise do `i.partial_cmp(f)`
-        let cmp_and_swap = |i: i64, f: Float, swap: bool| {
-            if let Ok(i) = i32::try_from(i) {
-                // integer and float are equal if they are within Ɛ of each other
-                if (f.into_inner() - f64::from(i)).abs() <= f64::EPSILON {
-                    Some(std::cmp::Ordering::Equal)
-                } else if swap {
-                    f.into_inner().partial_cmp(&f64::from(i))
-                } else {
-                    f64::from(i).partial_cmp(&f)
-                }
-            } else {
-                None
-            }
-        };
-        match (*self, *other) {
-            (Self::Integer(left), Self::Integer(right)) => left.partial_cmp(&right),
-            (Self::Integer(i), Self::Float(f)) => cmp_and_swap(i, f, false),
-            (Self::Float(f), Self::Integer(i)) => cmp_and_swap(i, f, true),
-            (Self::Float(left), Self::Float(right)) => left.partial_cmp(&right),
-        }
-    }
-}
-
-impl From<i64> for Numeric {
-    fn from(other: i64) -> Self {
-        Self::Integer(other)
-    }
-}
-impl From<f64> for Numeric {
-    fn from(other: f64) -> Self {
-        Self::Float(other.into())
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Value {
     Number(Numeric),
     String(String),

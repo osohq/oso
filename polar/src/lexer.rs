@@ -346,27 +346,30 @@ impl<'input> Lexer<'input> {
             parse_as_float = true;
 
             last = self.match_digits(last);
+        }
 
-            if let Some((i, char)) = self.c {
-                match char {
-                    'e' | 'E' => {
-                        self.push_char(char);
-                        last = i;
+        if let Some((i, char)) = self.c {
+            match char {
+                'e' | 'E' => {
+                    self.push_char(char);
+                    last = i;
+                    parse_as_float = true;
 
-                        if let Some((i, char)) = self.c {
-                            match char {
-                                '+' | '-' => {
-                                    self.push_char(char);
-                                    last = i;
-                                }
-                                _ => (),
+                    last = self.match_digits(last);
+
+                    if let Some((i, char)) = self.c {
+                        match char {
+                            '+' | '-' => {
+                                self.push_char(char);
+                                last = i;
                             }
+                            _ => (),
                         }
-
-                        last = self.match_digits(last);
                     }
-                    _ => (),
+
+                    last = self.match_digits(last);
                 }
+                _ => (),
             }
         }
 
@@ -674,6 +677,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::float_cmp)]
     fn test_numbers() {
         let f = "1+2";
         let mut lexer = Lexer::new(&f);
@@ -687,5 +691,28 @@ mod tests {
             lexer.next(),
             Some(Ok((0, Token::Integer(123), 4)))
         ));
+
+        let f = "1.ee1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(
+            lexer.next(),
+            Some(Err(ParseError::InvalidFloat{ .. }))
+        ));
+
+        let f = "1.1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1));
+
+        let f = "1e1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e1));
+
+        let f = "1e-1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e-1));
+
+        let f = "1.1e-1";
+        let mut lexer = Lexer::new(&f);
+        assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1e-1));
     }
 }

@@ -9,6 +9,7 @@ mod debugger;
 pub mod error;
 mod formatting;
 mod lexer;
+mod numerics;
 pub mod parser;
 mod polar;
 mod rewrites;

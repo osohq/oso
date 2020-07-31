@@ -750,6 +750,12 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "lt(-1,+1)"));
     assert!(qnull(&mut polar, "lt(-1,-1)"));
     assert!(qeval(&mut polar, "lt(-2,-1)"));
+    assert!(qeval(&mut polar, "lt(1019,1e19)"));
+    assert!(qnull(&mut polar, "lt(1e19,1019)"));
+    assert!(qnull(&mut polar, "lt(9007199254740992,9007199254740992)")); // identical
+    assert!(qnull(&mut polar, "lt(9007199254740992,9007199254740992.0)")); // equal
+    assert!(qnull(&mut polar, "lt(9007199254740992,9007199254740993.0)")); // indistinguishable
+    assert!(qeval(&mut polar, "lt(9007199254740992,9007199254740994.0)")); // distinguishable
     assert!(qeval(&mut polar, "lt(\"aa\",\"ab\")"));
     assert!(qnull(&mut polar, "lt(\"aa\",\"aa\")"));
 
@@ -799,6 +805,12 @@ fn test_comparisons() {
     assert!(qnull(&mut polar, "eq(-1,+1)"));
     assert!(qeval(&mut polar, "eq(-1,-1)"));
     assert!(qeval(&mut polar, "eq(-1,-1.0)"));
+    assert!(qnull(&mut polar, "eq(1019,1e19)"));
+    assert!(qnull(&mut polar, "eq(1e19,1019)"));
+    assert!(qeval(&mut polar, "eq(9007199254740992,9007199254740992)")); // identical
+    assert!(qeval(&mut polar, "eq(9007199254740992,9007199254740992.0)")); // equal
+    assert!(qeval(&mut polar, "eq(9007199254740992,9007199254740993.0)")); // indistinguishable
+    assert!(qnull(&mut polar, "eq(9007199254740992,9007199254740994.0)")); // distinguishable
     assert!(qeval(&mut polar, "eq(\"aa\", \"aa\")"));
     assert!(qnull(&mut polar, "eq(\"ab\", \"aa\")"));
 
@@ -823,7 +835,6 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "1.0 <= 1"));
     assert!(qeval(&mut polar, "1 == 1"));
     assert!(qeval(&mut polar, "0.0 == 0"));
-    assert!(qeval(&mut polar, "0.000000000000000001 == 0"));
 }
 
 #[test]
@@ -869,7 +880,13 @@ fn test_arithmetic() {
     };
     check_arithmetic_error("9223372036854775807 + 1 > 0");
     check_arithmetic_error("-9223372036854775807 - 2 < 0");
-    check_arithmetic_error("1 / 0 == 0");
+
+    // x / 0 = ∞
+    assert_eq!(qvar(&mut polar, "x=1/0", "x"), vec![value!(f64::INFINITY)]);
+    assert!(qeval(&mut polar, "1/0 = 2/0"));
+    assert!(qnull(&mut polar, "1/0 < 0"));
+    assert!(qeval(&mut polar, "1/0 > 0"));
+    assert!(qeval(&mut polar, "1/0 > 1e100"));
 }
 
 #[test]
@@ -1311,20 +1328,14 @@ fn test_boolean_expression() {
 #[test]
 fn test_float_parsing() {
     let mut polar = Polar::new(None);
-    polar.load("f(x) if x = 1+1;").unwrap();
-    polar.load("f(x) if x = 1+1.5;").unwrap();
-    polar.load("f(x) if x = 1.0e+15;").unwrap();
-    polar.load("f(x) if x = 1.0E+15;").unwrap();
-    polar.load("f(x) if x = 1.0e-15;").unwrap();
-
-    assert_eq!(
-        qvar(&mut polar, "f(x)", "x"),
-        vec![
-            value!(2),
-            value!(2.5),
-            value!(1.0e+15),
-            value!(1.0E+15),
-            value!(1.0e-15)
-        ]
-    )
+    assert_eq!(qvar(&mut polar, "x=1+1", "x"), vec![value!(2)]);
+    assert_eq!(qvar(&mut polar, "x=1+1.5", "x"), vec![value!(2.5)]);
+    assert_eq!(qvar(&mut polar, "x=1.e+5", "x"), vec![value!(1e5)]);
+    assert_eq!(qvar(&mut polar, "x=1e+5", "x"), vec![value!(1e5)]);
+    assert_eq!(qvar(&mut polar, "x=1e5", "x"), vec![value!(1e5)]);
+    assert_eq!(qvar(&mut polar, "x=1e-5", "x"), vec![value!(1e-5)]);
+    assert_eq!(qvar(&mut polar, "x=1.e-5", "x"), vec![value!(1e-5)]);
+    assert_eq!(qvar(&mut polar, "x=1.0e+15", "x"), vec![value!(1e15)]);
+    assert_eq!(qvar(&mut polar, "x=1.0E+15", "x"), vec![value!(1e15)]);
+    assert_eq!(qvar(&mut polar, "x=1.0e-15", "x"), vec![value!(1e-15)]);
 }
