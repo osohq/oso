@@ -291,7 +291,7 @@ impl Polar {
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(
             self.kb.clone(),
-            false,
+            trace,
             vec![query],
             Some(self.output.clone()),
         );
@@ -308,7 +308,7 @@ impl Polar {
         let query = Goal::Query { term };
         let vm = PolarVirtualMachine::new(
             self.kb.clone(),
-            false,
+            trace,
             vec![query],
             Some(self.output.clone()),
         );

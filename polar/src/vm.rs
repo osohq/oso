@@ -149,6 +149,7 @@ pub struct PolarVirtualMachine {
     choices: Choices,
     pub queries: Queries,
 
+    pub tracing: bool,
     pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
@@ -215,6 +216,7 @@ impl PolarVirtualMachine {
             csp: 0,
             choices: vec![],
             queries: vec![],
+            tracing: trace,
             trace_stack: vec![],
             trace: vec![],
             external_error: None,
@@ -367,14 +369,22 @@ impl PolarVirtualMachine {
 
         if self.log {
             self.print("⇒ result");
-            for t in &self.trace {
-                self.print(&format!("trace\n{}", draw(t, 0)));
+            if self.tracing {
+                for t in &self.trace {
+                    self.print(&format!("trace\n{}", draw(t, 0)));
+                }
             }
         }
 
+        let trace = if self.tracing {
+            self.trace.first().cloned()
+        } else {
+            None
+        };
+
         Ok(QueryEvent::Result {
             bindings: self.bindings(false),
-            trace: self.trace.first().cloned(),
+            trace,
         })
     }
 

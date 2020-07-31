@@ -243,7 +243,7 @@ fn test_trace() {
     polar
         .load("f(x) if x = 1 and x = 1; f(y) if y = 1;")
         .unwrap();
-    let query = polar.new_query("f(1)", false).unwrap();
+    let query = polar.new_query("f(1)", true).unwrap();
     let results = query_results!(query);
     let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
     let expected = r#"f(1) [
