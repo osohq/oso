@@ -73,7 +73,6 @@ class Polar:
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
-        :param single: Whether to stop after the first result.
 
         :return: The result of the query.
         """
@@ -94,7 +93,7 @@ class Polar:
             raise PolarApiException(f"Can not query for {query}")
 
         for res in Query(query, host=host).run():
-            yield res["bindings"]
+            yield res
 
     def query_rule(self, name, *args):
         """Query for rule with name ``name`` and arguments ``args``.

@@ -424,6 +424,14 @@ impl Term {
         }
     }
 
+    pub fn span(&self) -> Option<(usize, usize)> {
+        if let SourceInfo::Parser { left, right, .. } = self.source_info {
+            Some((left, right))
+        } else {
+            None
+        }
+    }
+
     /// Get a reference to the underlying data of this term
     pub fn value(&self) -> &Value {
         &self.value
@@ -442,7 +450,7 @@ pub fn unwrap_and(term: Term) -> TermList {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Parameter {
-    pub parameter: Option<Term>,
+    pub parameter: Term,
     pub specializer: Option<Term>,
 }
 
@@ -451,7 +459,7 @@ impl Parameter {
     where
         F: FnMut(&Term) -> Term,
     {
-        self.parameter.iter_mut().for_each(|p| p.map_replace(f));
+        self.parameter.map_replace(f);
         self.specializer.iter_mut().for_each(|p| p.map_replace(f));
     }
 }
@@ -542,6 +550,12 @@ pub enum Node {
 pub struct Trace {
     pub node: Node,
     pub children: Vec<Rc<Trace>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TraceResult {
+    pub trace: Rc<Trace>,
+    pub formatted: String,
 }
 
 #[derive(Default)]
@@ -656,7 +670,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
-        trace: Option<Rc<Trace>>,
+        trace: Option<TraceResult>,
     },
 
     ExternalOp {

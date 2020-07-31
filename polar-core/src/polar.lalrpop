@@ -509,27 +509,27 @@ ParameterList: Vec<Parameter> = {
 
 
 Parameter: Parameter = {
-    <param:Exp6<"Term">> => {
-        Parameter{parameter: Some(param), specializer: None}
+    <parameter:Exp6<"Term">> => {
+        Parameter{parameter, specializer: None}
     },
     // parenthesized specializers do not have symbol translation to class names applied
-    <arg:Spanned<Variable>> ":" "(" <specializer:Spanned<Pattern>> ")" => {
+    <parameter:Spanned<Variable>> ":" "(" <specializer:Spanned<Pattern>> ")" => {
         Parameter {
-            parameter: Some(arg),
+            parameter,
             specializer: Some(specializer),
         }
     },
-    <arg:Spanned<Variable>> ":" <specializer:Spanned<Pattern>> => {
+    <parameter:Spanned<Variable>> ":" <specializer:Spanned<Pattern>> => {
         let offset = specializer.offset();
         if let Value::Variable(class_name) = specializer.value() {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
             Parameter {
-                parameter: Some(arg),
+                parameter,
                 specializer: Some(specializer.clone_with_value(Value::Pattern(Pattern::Instance(instance_literal)))),
             }
         } else {
-            Parameter{parameter: Some(arg), specializer: Some(specializer)}
+            Parameter{parameter, specializer: Some(specializer)}
         }
     },
 };

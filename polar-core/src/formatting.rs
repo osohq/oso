@@ -14,26 +14,46 @@ pub use display::*;
 pub use to_polar::*;
 
 use crate::types::{Node, Operation, Operator, Parameter, Source, Term, Trace, Value};
-use std::fmt::Write;
 
-pub fn draw(trace: &Trace, nest: usize) -> String {
-    let mut res = String::new();
-    for _ in 0..nest {
-        res.push_str("  ");
+impl Trace {
+    /// Return the string representation of this `Trace`
+    pub fn draw(&self, vm: &crate::vm::PolarVirtualMachine) -> String {
+        let mut res = String::new();
+        self.draw_trace(vm, 0, &mut res);
+        res
     }
-    match &trace.node {
-        Node::Term(t) => write!(&mut res, "{}", t.to_polar()).unwrap(),
-        Node::Rule(r) => write!(&mut res, "{}", r.to_polar()).unwrap(),
+
+    fn draw_trace(&self, vm: &crate::vm::PolarVirtualMachine, nest: usize, res: &mut String) {
+        if matches!(&self.node, Node::Term(term)
+            if matches!(term.value(), Value::Expression(Operation { operator: Operator::And, ..})))
+        {
+            for c in &self.children {
+                c.draw_trace(vm, nest + 1, res);
+            }
+        } else {
+            let polar_str = match self.node {
+                Node::Rule(ref r) => vm.rule_source(r),
+                Node::Term(ref t) => vm.term_source(t),
+            };
+            let indented = polar_str
+                .split('\n')
+                .map(|s| "  ".repeat(nest) + s)
+                .collect::<Vec<String>>()
+                .join("\n");
+            res.push_str(&indented);
+            res.push_str(" [");
+            if !self.children.is_empty() {
+                res.push('\n');
+                for c in &self.children {
+                    c.draw_trace(vm, nest + 1, res);
+                }
+                for _ in 0..nest {
+                    res.push_str("  ");
+                }
+            }
+            res.push_str("]\n");
+        }
     }
-    res.push_str(" [\n");
-    for c in &trace.children {
-        res.push_str(&draw(c, nest + 1));
-    }
-    for _ in 0..nest {
-        res.push_str("  ");
-    }
-    res.push_str("]\n");
-    res
 }
 
 /// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached,
@@ -414,13 +434,11 @@ pub mod to_polar {
 
     impl ToPolarString for Parameter {
         fn to_polar(&self) -> String {
-            match (&self.parameter, &self.specializer) {
-                (Some(parameter), Some(specializer)) => {
-                    format!("{}: {}", parameter.to_polar(), specializer.to_polar())
+            match &self.specializer {
+                None => self.parameter.to_polar(),
+                Some(specializer) => {
+                    format!("{}: {}", self.parameter.to_polar(), specializer.to_polar())
                 }
-                (None, Some(specializer)) => specializer.to_polar(),
-                (Some(parameter), None) => parameter.to_polar(),
-                (None, None) => panic!("Invalid specializer"),
             }
         }
     }

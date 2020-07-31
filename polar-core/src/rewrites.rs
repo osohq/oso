@@ -152,10 +152,8 @@ pub fn rewrite_rule(rule: &mut Rule, kb: &mut KnowledgeBase) {
     let mut new_terms = vec![];
 
     for param in &mut rule.params {
-        if let Some(parameter) = &mut param.parameter {
-            let mut rewrites = rewrite_parameter(parameter, kb);
-            new_terms.append(&mut rewrites);
-        }
+        let mut rewrites = rewrite_parameter(&mut param.parameter, kb);
+        new_terms.append(&mut rewrites);
     }
 
     if let Value::Expression(Operation {

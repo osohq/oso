@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
-use super::formatting::{draw, ToPolarString};
+use super::formatting::ToPolarString;
 use super::lexer::loc_to_pos;
 use super::types::*;
 
@@ -370,13 +370,17 @@ impl PolarVirtualMachine {
             self.print("⇒ result");
             if self.tracing {
                 for t in &self.trace {
-                    self.print(&format!("trace\n{}", draw(t, 0)));
+                    self.print(&format!("trace\n{}", t.draw(&self)));
                 }
             }
         }
 
         let trace = if self.tracing {
-            self.trace.first().cloned()
+            let trace = self.trace.first().cloned();
+            trace.map(|trace| TraceResult {
+                formatted: trace.draw(&self),
+                trace,
+            })
         } else {
             None
         };
@@ -1740,12 +1744,10 @@ impl PolarVirtualMachine {
             let Rule { params, .. } = self.rename_rule_vars(&rule);
             let mut check_applicability = vec![];
             for (arg, param) in args.iter().zip(params.iter()) {
-                if let Some(parameter) = &param.parameter {
-                    check_applicability.push(Goal::Unify {
-                        left: arg.clone(),
-                        right: parameter.clone(),
-                    });
-                }
+                check_applicability.push(Goal::Unify {
+                    left: arg.clone(),
+                    right: param.parameter.clone(),
+                });
                 if let Some(specializer) = &param.specializer {
                     check_applicability.push(Goal::Isa {
                         left: arg.clone(),
@@ -1843,12 +1845,10 @@ impl PolarVirtualMachine {
 
                 // Unify the arguments with the formal parameters.
                 for (arg, param) in args.iter().zip(params.iter()) {
-                    if let Some(right) = &param.parameter {
-                        goals.push(Goal::Unify {
-                            left: arg.clone(),
-                            right: right.clone(),
-                        });
-                    }
+                    goals.push(Goal::Unify {
+                        left: arg.clone(),
+                        right: param.parameter.clone(),
+                    });
                     if let Some(specializer) = &param.specializer {
                         goals.push(Goal::Isa {
                             left: arg.clone(),
@@ -1986,15 +1986,44 @@ impl PolarVirtualMachine {
         }
     }
 
+    pub fn term_source(&self, term: &Term) -> String {
+        let source = self.source(term);
+        let span = term.span();
+        match (source, span) {
+            (Some(source), Some((left, right))) => {
+                source.src.chars().take(right).skip(left).collect()
+            }
+            _ => term.to_polar(),
+        }
+    }
+
+    pub fn rule_source(&self, rule: &Rule) -> String {
+        let mut head = format!(
+            "{}({})",
+            rule.name,
+            rule.params.iter().fold(String::new(), |mut acc, p| {
+                if acc != "" {
+                    acc += ", ";
+                }
+                acc += &self.term_source(&p.parameter);
+                if let Some(spec) = &p.specializer {
+                    acc += ": ";
+                    acc += &self.term_source(&spec);
+                }
+                acc
+            })
+        );
+        // head
+        head += " if\n  ";
+        head + &self.term_source(&rule.body)
+    }
+
     fn set_error_context(
         &self,
         term: &Term,
         error: impl Into<error::PolarError>,
     ) -> error::PolarError {
         let source = self.source(term);
-        if source.is_none() {
-            panic!("why is the source none?");
-        }
         let error: error::PolarError = error.into();
         error.set_context(source.as_ref(), Some(term))
     }

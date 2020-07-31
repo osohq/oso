@@ -122,9 +122,7 @@ impl Polar {
         };
 
         for param in &rule.params {
-            if let Some(mut param) = param.parameter.clone() {
-                param.map_replace(&mut check_term);
-            }
+            param.parameter.clone().map_replace(&mut check_term);
             if let Some(mut spec) = param.specializer.clone() {
                 spec.map_replace(&mut check_term);
             }
