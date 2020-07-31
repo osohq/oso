@@ -269,12 +269,12 @@ impl Polar {
         self.load_file(src, None)
     }
 
-    pub fn next_inline_query(&self) -> Option<Query> {
+    pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
         let term = { self.kb.write().unwrap().inline_queries.pop() };
-        term.map(|t| self.new_query_from_term(t))
+        term.map(|t| self.new_query_from_term(t, trace))
     }
 
-    pub fn new_query(&self, src: &str) -> PolarResult<Query> {
+    pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
         let source = Source {
             filename: None,
             src: src.to_owned(),
@@ -289,19 +289,29 @@ impl Polar {
             term
         };
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query], Some(self.output.clone()));
+        let vm = PolarVirtualMachine::new(
+            self.kb.clone(),
+            false,
+            vec![query],
+            Some(self.output.clone()),
+        );
         Ok(Query { done: false, vm })
     }
 
     // TODO(gj): Ensure we always pass the source along with the parsed Term for debugging / error
     // handling purposes.
-    pub fn new_query_from_term(&self, mut term: Term) -> Query {
+    pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
         {
             let mut kb = self.kb.write().unwrap();
             rewrite_term(&mut term, &mut kb);
         }
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(self.kb.clone(), vec![query], Some(self.output.clone()));
+        let vm = PolarVirtualMachine::new(
+            self.kb.clone(),
+            false,
+            vec![query],
+            Some(self.output.clone()),
+        );
         Query { done: false, vm }
     }
 
@@ -324,7 +334,7 @@ mod tests {
     #[test]
     fn can_load_and_query() {
         let polar = Polar::new(None);
-        let _query = polar.new_query("1 = 1");
+        let _query = polar.new_query("1 = 1", false);
         let _ = polar.load("f(_);");
     }
 }

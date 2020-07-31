@@ -184,6 +184,7 @@ impl Default for PolarVirtualMachine {
     fn default() -> Self {
         PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::default())),
+            false,
             vec![],
             None,
         )
@@ -196,6 +197,7 @@ impl PolarVirtualMachine {
     /// Reverse the goal list for the sanity of callers.
     pub fn new(
         kb: Arc<RwLock<KnowledgeBase>>,
+        trace: bool,
         goals: Goals,
         output: Option<Arc<RwLock<Box<dyn std::io::Write>>>>,
     ) -> Self {
@@ -2100,7 +2102,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), vec![goal], None);
+        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), false, vec![goal], None);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -2472,6 +2474,7 @@ mod tests {
     fn debug() {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
             vec![Goal::Debug {
                 message: "Hello".to_string(),
             }],
@@ -2487,6 +2490,7 @@ mod tests {
     fn halt() {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
             vec![Goal::Halt],
             None,
         );
@@ -2505,6 +2509,7 @@ mod tests {
         let vals = term!([zero.clone(), one.clone()]);
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
             vec![Goal::Unify {
                 left: vars,
                 right: vals,
@@ -2621,6 +2626,7 @@ mod tests {
 
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(kb)),
+            false,
             vec![query!(pred!(
                 "bar",
                 [external_instance.clone(), external_instance, sym!("z")]

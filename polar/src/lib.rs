@@ -151,7 +151,8 @@ pub extern "C" fn polar_register_constant(
 pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar, trace: u32) -> *mut Query {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
-        match polar.next_inline_query() {
+        let trace = trace != 0;
+        match polar.next_inline_query(trace) {
             Some(query) => box_ptr!(query),
             None => null_mut(),
         }
@@ -168,8 +169,9 @@ pub extern "C" fn polar_new_query_from_term(
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let s = unsafe { ffi_string!(query_term) };
         let term = serde_json::from_str(&s);
+        let trace = trace != 0;
         match term {
-            Ok(term) => box_ptr!(polar.new_query_from_term(term)),
+            Ok(term) => box_ptr!(polar.new_query_from_term(term, trace)),
             Err(e) => {
                 set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
                 null_mut()
@@ -187,7 +189,8 @@ pub extern "C" fn polar_new_query(
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let s = unsafe { ffi_string!(query_str) };
-        let q = polar.new_query(&s);
+        let trace = trace != 0;
+        let q = polar.new_query(&s, trace);
         match q {
             Ok(q) => box_ptr!(q),
             Err(e) => {
