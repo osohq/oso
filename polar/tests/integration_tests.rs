@@ -880,7 +880,13 @@ fn test_arithmetic() {
     };
     check_arithmetic_error("9223372036854775807 + 1 > 0");
     check_arithmetic_error("-9223372036854775807 - 2 < 0");
-    check_arithmetic_error("1 / 0 == 0");
+
+    // x / 0 = ∞
+    assert_eq!(qvar(&mut polar, "x=1/0", "x"), vec![value!(f64::INFINITY)]);
+    assert!(qeval(&mut polar, "1/0 = 2/0"));
+    assert!(qnull(&mut polar, "1/0 < 0"));
+    assert!(qeval(&mut polar, "1/0 > 0"));
+    assert!(qeval(&mut polar, "1/0 > 1e100"));
 }
 
 #[test]

@@ -47,34 +47,10 @@ impl Div for Numeric {
 
     fn div(self, other: Self) -> Option<Self> {
         match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => {
-                if b == 0 {
-                    None
-                } else {
-                    Some(Numeric::Float(a as f64 / b as f64))
-                }
-            }
-            (Numeric::Integer(a), Numeric::Float(b)) => {
-                if b == 0.0 {
-                    None
-                } else {
-                    Some(Numeric::Float(a as f64 / b))
-                }
-            }
-            (Numeric::Float(a), Numeric::Integer(b)) => {
-                if b == 0 {
-                    None
-                } else {
-                    Some(Numeric::Float(a / b as f64))
-                }
-            }
-            (Numeric::Float(a), Numeric::Float(b)) => {
-                if b == 0.0 {
-                    None
-                } else {
-                    Some(Numeric::Float(a / b))
-                }
-            }
+            (Numeric::Integer(a), Numeric::Integer(b)) => Some(Numeric::Float(a as f64 / b as f64)),
+            (Numeric::Integer(a), Numeric::Float(b)) => Some(Numeric::Float(a as f64 / b)),
+            (Numeric::Float(a), Numeric::Integer(b)) => Some(Numeric::Float(a / b as f64)),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(a / b)),
         }
     }
 }
@@ -137,6 +113,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     /// Test mixed comparison of longs & doubles.
     fn test_mixed_comparison() {
         // NaN to int -- Nothing compares equal to NaN.
