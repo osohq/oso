@@ -149,6 +149,7 @@ pub struct PolarVirtualMachine {
     choices: Choices,
     pub queries: Queries,
 
+    pub tracing: bool,
     pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
     pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
 
@@ -184,6 +185,7 @@ impl Default for PolarVirtualMachine {
     fn default() -> Self {
         PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::default())),
+            false,
             vec![],
             None,
         )
@@ -196,6 +198,7 @@ impl PolarVirtualMachine {
     /// Reverse the goal list for the sanity of callers.
     pub fn new(
         kb: Arc<RwLock<KnowledgeBase>>,
+        trace: bool,
         goals: Goals,
         output: Option<Arc<RwLock<Box<dyn std::io::Write>>>>,
     ) -> Self {
@@ -213,6 +216,7 @@ impl PolarVirtualMachine {
             csp: 0,
             choices: vec![],
             queries: vec![],
+            tracing: trace,
             trace_stack: vec![],
             trace: vec![],
             external_error: None,
@@ -365,14 +369,22 @@ impl PolarVirtualMachine {
 
         if self.log {
             self.print("⇒ result");
-            for t in &self.trace {
-                self.print(&format!("trace\n{}", draw(t, 0)));
+            if self.tracing {
+                for t in &self.trace {
+                    self.print(&format!("trace\n{}", draw(t, 0)));
+                }
             }
         }
 
+        let trace = if self.tracing {
+            self.trace.first().cloned()
+        } else {
+            None
+        };
+
         Ok(QueryEvent::Result {
             bindings: self.bindings(false),
-            trace: self.trace.first().cloned(),
+            trace,
         })
     }
 
@@ -2100,7 +2112,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), vec![goal], None);
+        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), false, vec![goal], None);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -2472,6 +2484,7 @@ mod tests {
     fn debug() {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
             vec![Goal::Debug {
                 message: "Hello".to_string(),
             }],
@@ -2487,6 +2500,7 @@ mod tests {
     fn halt() {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
             vec![Goal::Halt],
             None,
         );
@@ -2505,6 +2519,7 @@ mod tests {
         let vals = term!([zero.clone(), one.clone()]);
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
             vec![Goal::Unify {
                 left: vars,
                 right: vals,
@@ -2621,6 +2636,7 @@ mod tests {
 
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(kb)),
+            false,
             vec![query!(pred!(
                 "bar",
                 [external_instance.clone(), external_instance, sym!("z")]

@@ -60,7 +60,7 @@ class Polar:
 
         # check inline queries
         while True:
-            query = lib.polar_next_inline_query(self.ffi_polar)
+            query = lib.polar_next_inline_query(self.ffi_polar, 0)
             if is_null(query):  # Load is done
                 break
             else:
@@ -81,11 +81,13 @@ class Polar:
 
         host = self.host.copy()
         if isinstance(query, str):
-            query = check_result(lib.polar_new_query(self.ffi_polar, to_c_str(query)))
+            query = check_result(
+                lib.polar_new_query(self.ffi_polar, to_c_str(query), 0)
+            )
         elif isinstance(query, Predicate):
             query = check_result(
                 lib.polar_new_query_from_term(
-                    self.ffi_polar, ffi_serialize(host.to_polar_term(query))
+                    self.ffi_polar, ffi_serialize(host.to_polar_term(query)), 0
                 )
             )
         else:
@@ -118,7 +120,7 @@ class Polar:
                 query = input("query> ").strip(";")
             except EOFError:
                 return
-            ffi_query = lib.polar_new_query(self.ffi_polar, to_c_str(query))
+            ffi_query = lib.polar_new_query(self.ffi_polar, to_c_str(query), 0)
             if is_null(ffi_query):
                 print("Parse error: ", get_error())
                 continue
