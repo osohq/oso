@@ -166,7 +166,7 @@ mod tests {
         assert!(Numeric::Integer(1 << 52) == Numeric::Float((2.0 as f64).powi(52)));
         assert!(Numeric::Integer(1 << 53) == Numeric::Float((2.0 as f64).powi(53)));
         assert!(Numeric::Integer((1 << 52) + 1) == Numeric::Float((2.0 as f64).powi(52) + 1.0));
-        assert!(Numeric::Integer((1 << 52)) < Numeric::Float((2.0 as f64).powi(52) + 1.0));
+        assert!(Numeric::Integer(1 << 52) < Numeric::Float((2.0 as f64).powi(52) + 1.0));
         assert!(Numeric::Integer((1 << 52) + 1) > Numeric::Float((2.0 as f64).powi(52)));
         assert!(Numeric::Integer(-(1 << 52) - 1) < Numeric::Float(-(2.0 as f64).powi(52)));
 
