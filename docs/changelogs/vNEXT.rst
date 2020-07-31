@@ -37,7 +37,5 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- fixed float parsing
+- improved integer/float comparisons
