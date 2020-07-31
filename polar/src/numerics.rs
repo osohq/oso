@@ -64,8 +64,6 @@ impl PartialEq for Numeric {
 /// There are 53 bits of mantissa in an IEEE 754 double precision float.
 const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
 
-/// Floats larger than this are not representable as signed 64-bit integers.
-const MOST_POSITIVE_INTEGER: i64 = 0x7fffffffffffffff;
 
 impl PartialOrd for Numeric {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -77,14 +75,18 @@ impl PartialOrd for Numeric {
             } else if -MOST_POSITIVE_EXACT_FLOAT < i && i < MOST_POSITIVE_EXACT_FLOAT {
                 // The integer is exactly representable as a float.
                 (i as f64).partial_cmp(&f)
-            } else if f > MOST_POSITIVE_INTEGER as f64 {
+            // -i64 min is 2**63.  The maximum positive long is 2** 63 - 1,
+            // but this isn't representable as a double.
+            // So, we first cast i64::MIN to f64 then flip the sign to get
+            // 2 ** 63.
+            } else if f >= (-(i64::MIN as f64)) {
                 // The float is greater than any representable integer.
                 Some(Ordering::Less)
-            } else if f < -MOST_POSITIVE_INTEGER as f64 {
+            } else if f < (i64::MIN as f64) {
                 // The float is less than any representable integer.
                 Some(Ordering::Greater)
             } else {
-                // The integral part of the float is representable as an integer.
+                // The integral part of float is representable as an i64.
                 i.partial_cmp(&(f as i64))
             }
         };
@@ -164,6 +166,23 @@ mod tests {
         assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0 as f64).powi(70)));
         assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0 as f64).powi(65) + 3.1));
 
+        // i64 max is 2 ** 63 - 1. This value is not representable as a f64.
+        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0 as f64).powi(63)));
+        // 2 ** 63 - 2 ** 10 is the next representable float down
+        assert!(Numeric::Integer(i64::MAX) > Numeric::Float((2.0 as f64).powi(63) - 1024.0));
+        // 2 ** 63 + 2 ** 11 is the next representable float up
+        assert!(Numeric::Integer(i64::MAX) < Numeric::Float((2.0 as f64).powi(63) + 2048.0));
+
+        // i64 min is 2 ** 63. This value is exactly representable as a f64.
+        assert!(Numeric::Integer(i64::MIN) == Numeric::Float(-(2.0 as f64).powi(63)));
+        // next value down is 2 ** 63 - 2048
+        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0 as f64).powi(63) - 2048.0));
+        // next value up is 2 ** 63 + 1024
+        assert!(Numeric::Integer(i64::MIN) < Numeric::Float(-(2.0 as f64).powi(63) + 1024.0));
+
+        assert!(Numeric::Integer(i64::MIN) < Numeric::Float(-(2.0 as f64).powi(62)));
+        assert!(Numeric::Integer(i64::MIN) > Numeric::Float(-(2.0 as f64).powi(65)));
+
         // Long exactly representable as float compares correctly
         assert!(Numeric::Integer(2) == Numeric::Float(2.0));
         assert!(Numeric::Integer(2) < Numeric::Float(2.1));
@@ -173,5 +192,9 @@ mod tests {
         assert!(Numeric::Integer(1) < Numeric::Float(1.0 + f64::EPSILON));
         assert!(Numeric::Integer(1) > Numeric::Float(1.0 - f64::EPSILON));
         assert!(Numeric::Integer(2) < Numeric::Float(3.0));
+    }
+
+    #[test]
+    fn test_sanity() {
     }
 }
