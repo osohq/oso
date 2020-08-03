@@ -48,13 +48,17 @@ impl MockExternal {
         assert!(self.externals.insert(instance_id, literal).is_none());
     }
 
-    pub fn external_isa(&mut self, instance_id: u64, class_tag: Symbol) -> bool {
+    pub fn external_isa(&mut self, instance: Term, class_tag: Symbol) -> bool {
         // True if class tags match
-        self.externals
-            .get(&instance_id)
-            .expect("Instance to be created")
-            .tag
-            == class_tag
+        if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = instance.value() {
+            self.externals
+                .get(&instance_id)
+                .expect("Instance to be created")
+                .tag
+                == class_tag
+        } else {
+            false
+        }
     }
 
     pub fn external_is_subspecializer(

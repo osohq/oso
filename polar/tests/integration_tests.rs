@@ -27,7 +27,7 @@ fn no_debug(_: &str) -> String {
     "".to_string()
 }
 
-fn no_isa(_: u64, _: Symbol) -> bool {
+fn no_isa(_: Term, _: Symbol) -> bool {
     true
 }
 
@@ -47,7 +47,7 @@ where
     F: FnMut(u64, Option<Term>, Symbol, Vec<Term>) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, InstanceLiteral),
-    I: FnMut(u64, Symbol) -> bool,
+    I: FnMut(Term, Symbol) -> bool,
     J: FnMut(u64, Symbol, Symbol) -> bool,
 {
     let mut results = vec![];
@@ -83,9 +83,9 @@ where
             } => make_external_handler(instance_id, instance),
             QueryEvent::ExternalIsa {
                 call_id,
-                instance_id,
+                instance,
                 class_tag,
-            } => query.question_result(call_id, external_isa_handler(instance_id, class_tag)),
+            } => query.question_result(call_id, external_isa_handler(instance, class_tag)),
             QueryEvent::ExternalIsSubSpecializer {
                 call_id,
                 instance_id,

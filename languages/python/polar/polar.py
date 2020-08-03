@@ -26,6 +26,12 @@ class Polar:
         self.load_queue = []
 
         # Register built-in classes.
+        self.register_class(bool, name="Boolean")
+        self.register_class(int, name="Integer")
+        self.register_class(float, name="Float")
+        self.register_class(list, name="List")
+        self.register_class(dict, name="Dictionary")
+        self.register_class(str, name="String")
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
 

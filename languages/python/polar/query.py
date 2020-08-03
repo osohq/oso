@@ -130,9 +130,9 @@ class Query:
         external_answer(self.ffi_query, data["call_id"], answer)
 
     def handle_external_isa(self, data):
-        instance_id = data["instance_id"]
+        instance = data["instance"]
         class_tag = data["class_tag"]
-        isa = self.host.isa(instance_id, class_tag)
+        isa = self.host.isa(instance, class_tag)
         external_answer(self.ffi_query, data["call_id"], isa)
 
     def handle_external_unify(self, data):

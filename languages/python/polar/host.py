@@ -83,9 +83,9 @@ class Host:
         except PolarRuntimeException:
             return False
 
-    def isa(self, instance_id, class_tag) -> bool:
+    def isa(self, instance, class_tag) -> bool:
         try:
-            instance = self.get_instance(instance_id)
+            instance = self.to_python(instance)
             cls = self.get_class(class_tag)
             return isinstance(instance, cls)
         except PolarRuntimeException:
