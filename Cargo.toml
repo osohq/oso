@@ -1,7 +1,8 @@
 [workspace]
 
 members = [
-    "polar",
+    "polar-core",
+    "polar-c-api",
 ]
 
 [profile.release]

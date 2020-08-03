@@ -5,11 +5,10 @@ use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
-use super::error;
-use super::formatting::draw;
+use super::error::{self, PolarResult};
+use super::formatting::{draw, ToPolarString};
 use super::lexer::{loc_to_pos, make_context};
 use super::types::*;
-use super::{PolarResult, ToPolarString};
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30);

@@ -1,11 +1,10 @@
-use super::error;
+use super::error::{self, PolarError, PolarResult};
 use super::formatting::source_lines;
 use super::lexer::make_context;
 use super::parser;
 use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
-use super::{PolarError, PolarResult};
 
 use std::collections::{hash_map::Entry, HashMap};
 use std::io::{stderr, Write};
