@@ -10,57 +10,6 @@ use std::collections::{hash_map::Entry, HashMap};
 use std::io::{stderr, Write};
 use std::sync::{Arc, RwLock};
 
-// @TODO: This should probably go in the readme, it's meant to be the things you'd have to know to add
-// new language bindings.
-
-// This is the interface between the polar library (rust) and the application language (python).
-// This interface uses rust types to make it easy to write tests against, see "lib.rs" for the ffi
-// translation layer that exposes the library over a c compatable interface for python and other
-// languages to call.
-// The library is compiled as a static library which can be easily linked into a python module.
-// The build step produces a "polar.h" file which is the interface needed to call into it.
-// That polar.h file is generated from the functions and types exposed in lib.rs.
-
-// The general usage of this library by an application language is like this.
-// Call polar_new to create a new polar instance. All the state is contained in this type (or other
-// types linked to it). There is no global state (except in some ffi details) so you can have multiple
-// instances of polar and it's not a problem.
-
-// With an Instance you can call polar_load() to load some polar code into the knowledge base.
-// With an Instance you can call polar_new_query() or polar_new_query_from_predicate() to create a
-// query object that can be used to execute a query against the knowledge base.
-
-// The execution of a query is based around an event loop which enables the polar library to return
-// control back to the application when something happens that requires interop with the application.
-// There are events for external calls and for yielding results.
-// Running a query looks something like this.
-
-// polar = polar_new();
-// polar_load(polar, "foo(1);foo(2);");
-// query = polar_new_query(polar, "foo(x)");
-// event = polar_query(query);
-// while event != Event::Done {
-//     if event == Event::Result(bindings) {
-//         yield event.bindings // or collect them up or something
-//     } else if event == Event::External(instance_info) {
-//         result = python_call_external(instance_info)
-//         if result {
-//           polar_result(instance_info, result);
-//         } else {
-//           polar_result(instance_info, None);
-//         }
-//     }
-//     event = polar_query(query);
-// }
-
-// When external calls are requested they have an associated id. You will typically get multiple external
-// call events and you can return an event each time until you don't have anymore. When you are out
-// or if you didn't have any to begin with you call polar_result with a null value.
-// This polling for the results enables hooking the event loop up to generators or other poll based
-// machinery in the application language.
-
-// @TODO: Once the external constructor stuff and instance ids are worked out explain them.
-
 fn fill_context(e: PolarError, source: &Source) -> PolarError {
     match e.kind {
         error::ErrorKind::Parse(parse_error) => {
@@ -297,8 +246,6 @@ impl Polar {
         Ok(Query { done: false, vm })
     }
 
-    // TODO(gj): Ensure we always pass the source along with the parsed Term for debugging / error
-    // handling purposes.
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
         {
             let mut kb = self.kb.write().unwrap();
@@ -316,7 +263,6 @@ impl Polar {
 
     // @TODO: Direct load_rules endpoint.
 
-    // @TODO: Get external_id call for returning external instances from python.
     pub fn get_external_id(&self) -> u64 {
         self.kb.read().unwrap().new_id()
     }
