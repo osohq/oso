@@ -1,6 +1,5 @@
-use polar_core::error;
-use polar_core::polar::{Polar, Query};
-use polar_core::types;
+pub use polar_core::polar::{Polar, Query};
+use polar_core::{error, types};
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
