@@ -121,34 +121,34 @@ Fields<T>: BTreeMap<Symbol, Term> = {
     }
 };
 
-Object<T>: BTreeMap<Symbol, Term> = {
+Object<T>: Dictionary = {
     "{" <fields:Fields<T>> "}" => {
-        fields
+        Dictionary { fields }
     },
     "{" "}" => {
-        BTreeMap::new()
+        Dictionary {
+            fields: BTreeMap::new()
+        }
     }
 };
 
 // ****** Strange Values ******* //
 
 DictionaryTerm: Value = <fields:Object<Exp5<"Term">>> => {
-    let dict = Dictionary{fields};
-    Value::Dictionary(dict)
+    Value::Dictionary(fields)
 };
 // Pattern dictionaries cannot contain any operators.
 DictionaryPattern: Value = <fields:Object<Exp9<"Pattern">>> => {
-    let dict = Dictionary{fields};
-    Value::Pattern(Pattern::Dictionary(dict))
+    Value::Pattern(Pattern::Dictionary(fields))
 };
 
 InstanceLiteralTerm: Value = <tag:Name> <fields:Object<Exp5<"Term">>> => {
-    let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
+    let instance = InstanceLiteral{tag, fields };
     Value::InstanceLiteral(instance)
 };
 
 InstanceLiteralPattern: Value = <tag:Name> <fields:Object<Exp9<"Pattern">>> => {
-    let instance = InstanceLiteral{tag, fields: Dictionary{fields}};
+    let instance = InstanceLiteral{tag, fields};
     Value::Pattern(Pattern::Instance(instance))
 };
 
