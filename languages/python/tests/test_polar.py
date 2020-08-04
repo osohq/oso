@@ -557,43 +557,6 @@ def test_external_op(polar, query):
     assert query(Predicate("gt", [a2, a1]))
 
 
-def test_built_in_specializers(polar, query):
-    polar.load_str("foo(x: Boolean) if x = true;")
-    polar.load_str("foo(x: Integer) if x > 2;")
-    polar.register_constant("pi", pi)
-    polar.load_str("foo(x: Float) if x > pi;")
-    polar.load_str('foo(x: List) if x = ["foo", *_rest];')
-    polar.load_str('foo(x: Dictionary) if x.foo = "foo";')
-    polar.load_str('foo(x: String) if x = "foo";')
-
-    # Boolean
-    assert query("foo(true)")
-    assert not query("foo(false)")
-
-    # Integer
-    assert query("foo(3)")
-    assert not query("foo(2)")
-    assert not query("foo(-2)")
-
-    # Float
-    assert query("foo(4.0)")
-    assert not query("foo(pi)")
-    assert not query("foo(-1.0)")
-
-    # List
-    assert query('foo(["foo", "bar"])')
-    assert not query('foo(["bar", "foo"])')
-
-    # Dictionary
-    assert query('foo({foo: "foo"})')
-    assert not query('foo({foo: "bar"})')
-    assert not query('foo({bar: "foo"})')
-
-    # String
-    assert query('foo("foo")')
-    assert not query('foo("bar")')
-
-
 def test_datetime(polar, query):
     # test datetime comparison
     t1 = datetime(2020, 5, 25)

@@ -4,6 +4,24 @@ require 'json'
 require 'pp'
 require 'set'
 
+# Missing Ruby type.
+class Boolean
+end
+
+# Monkey-patch Ruby true type.
+class TrueClass
+  def is_a?(cls)
+    [TrueClass, Boolean].include? cls
+  end
+end
+
+# Monkey-patch Ruby false type.
+class FalseClass
+  def is_a?(cls)
+    [FalseClass, Boolean].include? cls
+  end
+end
+
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
@@ -15,6 +33,14 @@ module Oso
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
         @load_queue = Set.new
+
+        # Register built-in classes.
+        register_class(Boolean, name: 'Boolean')
+        register_class(Integer, name: 'Integer')
+        register_class(Float, name: 'Float')
+        register_class(Array, name: 'List')
+        register_class(Hash, name: 'Dictionary')
+        register_class(String, name: 'String')
       end
 
       # Replace the current Polar instance but retain all registered classes and constructors.

@@ -57,23 +57,40 @@ class Test {
             }
             if (!throwsException)
                 throw new Exception();
-            boolean passes = !o.queryRule("specializers", new D("hello"), new BC("hello")).results().isEmpty()
-                    && !o.queryRule("floatLists").results().isEmpty() && !o.queryRule("intDicts").results().isEmpty()
-                    && !o.queryRule("comparisons").results().isEmpty() && !o.queryRule("testForall").results().isEmpty()
-                    && !o.queryRule("testRest").results().isEmpty()
-                    && !o.queryRule("testMatches", new A("hello")).results().isEmpty()
-                    && !o.queryRule("testMethodCalls", new A("hello"), new BC("hello")).results().isEmpty()
-                    && !o.queryRule("testOr").results().isEmpty()
-                    // Test that cut doesn't return anything.
-                    && o.queryRule("testCut").results().isEmpty()
-                    && !o.queryRule("testHttpAndPathMapper").results().isEmpty();
-            if (!passes)
-                throw new Exception();
+
+            assert !o.queryRule("specializers", new D("hello"), new BC("hello")).results().isEmpty();
+            assert !o.queryRule("floatLists").results().isEmpty() && !o.queryRule("intDicts").results().isEmpty();
+            assert !o.queryRule("comparisons").results().isEmpty() && !o.queryRule("testForall").results().isEmpty();
+            assert !o.queryRule("testRest").results().isEmpty();
+            assert !o.queryRule("testMatches", new A("hello")).results().isEmpty();
+            assert !o.queryRule("testMethodCalls", new A("hello"), new BC("hello")).results().isEmpty();
+            assert !o.queryRule("testOr").results().isEmpty();
+
+            // Test that cut doesn't return anything.
+            assert o.queryRule("testCut").results().isEmpty();
+
+            assert !o.queryRule("testHttpAndPathMapper").results().isEmpty();
 
             // Test that a constant can be called.
             o.registerConstant("Math", Math.class);
             o.loadStr("?= Math.PI == 3.141592653589793;");
 
+            // Test built-in type specializers.
+            assert !o.query("builtinSpecializers(true)").results().isEmpty();
+            assert o.query("builtinSpecializers(false)").results().isEmpty();
+            assert !o.query("builtinSpecializers(2)").results().isEmpty();
+            assert !o.query("builtinSpecializers(1)").results().isEmpty();
+            assert o.query("builtinSpecializers(0)").results().isEmpty();
+            assert o.query("builtinSpecializers(-1)").results().isEmpty();
+            assert !o.query("builtinSpecializers(1.0)").results().isEmpty();
+            assert o.query("builtinSpecializers(0.0)").results().isEmpty();
+            assert o.query("builtinSpecializers(-1.0)").results().isEmpty();
+            assert !o.query("builtinSpecializers([\"foo\", \"bar\", \"baz\"])").results().isEmpty();
+            assert o.query("builtinSpecializers([\"bar\", \"foo\", \"baz\"])").results().isEmpty();
+            assert !o.query("builtinSpecializers({foo: \"foo\"})").results().isEmpty();
+            assert o.query("builtinSpecializers({foo: \"bar\"})").results().isEmpty();
+            assert !o.query("builtinSpecializers(\"foo\")").results().isEmpty();
+            assert o.query("builtinSpecializers(\"bar\")").results().isEmpty();
         } catch (Exception e) {
             e.printStackTrace(System.out);
             System.exit(1);
