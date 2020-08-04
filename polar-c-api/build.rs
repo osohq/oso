@@ -10,9 +10,6 @@ fn main() {
     cbindgen::Builder::new()
         .with_config(config)
         .with_crate(crate_dir)
-        .with_language(cbindgen::Language::C)
-        .with_no_includes()
-        .with_item_prefix("polar_")
         .generate()
         .map(Some)
         .or_else(|err| {
