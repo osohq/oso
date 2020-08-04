@@ -1,18 +1,24 @@
-use js_sys::Error;
 use wasm_bindgen::prelude::*;
 
 use super::error::{
     ErrorKind, OperationalError, ParameterError, ParseError, PolarError, RuntimeError,
 };
 use super::polar::{self, Query};
-use super::types::Term;
+use super::types::{Symbol, Term};
 
-// #[cfg(target_arch = "wasm32")]
-impl From<PolarError> for Error {
-    fn from(err: PolarError) -> Error {
-        let e = Error::new(&err.formatted);
+// TODO(gj): figure out how to handle Rust panics in wasm.
+
+impl From<PolarError> for js_sys::Error {
+    fn from(err: PolarError) -> js_sys::Error {
+        let e = js_sys::Error::new(&err.formatted);
         e.set_name(err.kind.name());
         e
+    }
+}
+
+impl From<PolarError> for wasm_bindgen::JsValue {
+    fn from(err: PolarError) -> wasm_bindgen::JsValue {
+        js_sys::Error::from(err).into()
     }
 }
 
@@ -86,9 +92,12 @@ impl Polar {
 
     #[wasm_bindgen(js_class = Polar, js_name = loadFile)]
     pub fn wasm_load_file(&self, src: &str, filename: Option<String>) -> JsResult<()> {
-        self.0
-            .load_file(src, filename)
-            .map_err(|e| Error::from(e).into())
+        self.0.load_file(src, filename).map_err(|e| e.into())
+    }
+
+    #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
+    pub fn wasm_register_constant(&mut self, name: &str, value: Term) {
+        self.0.register_constant(Symbol::new(name), value)
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = nextInlineQuery)]
@@ -98,9 +107,7 @@ impl Polar {
 
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromStr)]
     pub fn wasm_new_query_from_str(&self, src: &str) -> JsResult<Query> {
-        self.0
-            .new_query(src, false)
-            .map_err(|e| Error::from(e).into())
+        self.0.new_query(src, false).map_err(|e| e.into())
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromTerm)]
@@ -115,40 +122,31 @@ impl Polar {
 }
 
 #[wasm_bindgen]
-pub enum QueryEvent {
-    None,
-    Debug,
-    Done,
-    MakeExternal,
-    ExternalCall,
-    ExternalIsa,
-    ExternalIsSubSpecializer,
-    Result,
-}
-
-#[wasm_bindgen]
 impl Query {
-    #[wasm_bindgen(js_name = nextEvent)]
+    #[wasm_bindgen(js_class = Query, js_name = nextEvent)]
     pub fn wasm_next_event(&mut self) -> JsResult<JsValue> {
         self.next_event()
-            .map_err(|e| Error::from(e).into())
+            .map_err(|e| e.into())
             .and_then(|event| serde_wasm_bindgen::to_value(&event).map_err(|e| e.into()))
     }
 
-    #[wasm_bindgen(js_name = callResult)]
+    #[wasm_bindgen(js_class = Query, js_name = callResult)]
     pub fn wasm_call_result(&mut self, call_id: u64, value: Option<Term>) -> JsResult<()> {
-        self.call_result(call_id, value)
-            .map_err(|e| Error::from(e).into())
+        self.call_result(call_id, value).map_err(|e| e.into())
     }
 
-    #[wasm_bindgen(js_name = questionResult)]
+    #[wasm_bindgen(js_class = Query, js_name = questionResult)]
     pub fn wasm_question_result(&mut self, call_id: u64, result: bool) {
         self.question_result(call_id, result)
     }
 
-    #[wasm_bindgen(js_name = debugCommand)]
+    #[wasm_bindgen(js_class = Query, js_name = debugCommand)]
     pub fn wasm_debug_command(&mut self, command: &str) -> JsResult<()> {
-        self.debug_command(command)
-            .map_err(|e| Error::from(e).into())
+        self.debug_command(command).map_err(|e| e.into())
+    }
+
+    #[wasm_bindgen(js_class = Query, js_name = appError)]
+    pub fn wasm_app_error(&mut self, msg: &str) {
+        self.application_error(msg.to_owned())
     }
 }

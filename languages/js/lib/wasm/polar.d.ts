@@ -2,18 +2,6 @@
 /* eslint-disable */
 /**
 */
-export enum QueryEvent {
-  None,
-  Debug,
-  Done,
-  MakeExternal,
-  ExternalCall,
-  ExternalIsa,
-  ExternalIsSubSpecializer,
-  Result,
-}
-/**
-*/
 export class Polar {
   free(): void;
 /**
@@ -24,6 +12,11 @@ export class Polar {
 * @param {string | undefined} filename 
 */
   loadFile(src: string, filename?: string): void;
+/**
+* @param {string} name 
+* @param {Term} value 
+*/
+  registerConstant(name: string, value: Term): void;
 /**
 * @returns {Query | undefined} 
 */
@@ -38,10 +31,6 @@ export class Polar {
 * @returns {Query} 
 */
   newQueryFromTerm(term: Term): Query;
-/**
-* @returns {Query} 
-*/
-  newQueryFromRepl(): Query;
 /**
 * @returns {BigInt} 
 */
@@ -69,6 +58,10 @@ export class Query {
 * @param {string} command 
 */
   debugCommand(command: string): void;
+/**
+* @param {string} msg 
+*/
+  appError(msg: string): void;
 }
 /**
 * Represents a concrete instance of a Polar value

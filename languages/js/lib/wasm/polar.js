@@ -124,9 +124,6 @@ function logError(f) {
 }
 /**
 */
-module.exports.QueryEvent = Object.freeze({ None:0,Debug:1,Done:2,MakeExternal:3,ExternalCall:4,ExternalIsa:5,ExternalIsSubSpecializer:6,Result:7, });
-/**
-*/
 class Polar {
 
     static __wrap(ptr) {
@@ -160,6 +157,23 @@ class Polar {
         var ptr1 = isLikeNone(filename) ? 0 : passStringToWasm0(filename, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         var len1 = WASM_VECTOR_LEN;
         wasm.polar_loadFile(this.ptr, ptr0, len0, ptr1, len1);
+    }
+    /**
+    * @param {string} name
+    * @param {Term} value
+    */
+    registerConstant(name, value) {
+        if (this.ptr == 0) throw new Error('Attempt to use a moved value');
+        _assertNum(this.ptr);
+        var ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        _assertClass(value, Term);
+        if (value.ptr === 0) {
+            throw new Error('Attempt to use a moved value');
+        }
+        var ptr1 = value.ptr;
+        value.ptr = 0;
+        wasm.polar_registerConstant(this.ptr, ptr0, len0, ptr1);
     }
     /**
     * @returns {Query | undefined}
@@ -196,15 +210,6 @@ class Polar {
         var ptr0 = term.ptr;
         term.ptr = 0;
         var ret = wasm.polar_newQueryFromTerm(this.ptr, ptr0);
-        return Query.__wrap(ret);
-    }
-    /**
-    * @returns {Query}
-    */
-    newQueryFromRepl() {
-        if (this.ptr == 0) throw new Error('Attempt to use a moved value');
-        _assertNum(this.ptr);
-        var ret = wasm.polar_newQueryFromRepl(this.ptr);
         return Query.__wrap(ret);
     }
     /**
@@ -297,6 +302,16 @@ class Query {
         var len0 = WASM_VECTOR_LEN;
         wasm.query_debugCommand(this.ptr, ptr0, len0);
     }
+    /**
+    * @param {string} msg
+    */
+    appError(msg) {
+        if (this.ptr == 0) throw new Error('Attempt to use a moved value');
+        _assertNum(this.ptr);
+        var ptr0 = passStringToWasm0(msg, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        wasm.query_appError(this.ptr, ptr0, len0);
+    }
 }
 module.exports.Query = Query;
 /**
@@ -317,15 +332,6 @@ class Term {
 }
 module.exports.Term = Term;
 
-module.exports.__wbg_new_68adb0d58759a4ed = logError(function() {
-    var ret = new Object();
-    return addHeapObject(ret);
-});
-
-module.exports.__wbg_set_2e79e744454afade = logError(function(arg0, arg1, arg2) {
-    getObject(arg0)[takeObject(arg1)] = takeObject(arg2);
-});
-
 module.exports.__wbindgen_number_new = function(arg0) {
     var ret = arg0;
     return addHeapObject(ret);
@@ -340,6 +346,15 @@ module.exports.__wbindgen_object_clone_ref = function(arg0) {
     var ret = getObject(arg0);
     return addHeapObject(ret);
 };
+
+module.exports.__wbg_new_68adb0d58759a4ed = logError(function() {
+    var ret = new Object();
+    return addHeapObject(ret);
+});
+
+module.exports.__wbg_set_2e79e744454afade = logError(function(arg0, arg1, arg2) {
+    getObject(arg0)[takeObject(arg1)] = takeObject(arg2);
+});
 
 module.exports.__wbg_new_a938277eeb06668d = logError(function() {
     var ret = new Array();
