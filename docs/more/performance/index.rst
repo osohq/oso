@@ -66,7 +66,7 @@ is reclaimed by its end, and our use of Rust ensures that the implementation
 is not vulnerable to many common classes of memory errors and leaks.
 
 You can check out our current benchmark suite in the
-`repository <https://github.com/osohq/oso/tree/main/polar/benches>`_,
+`repository <https://github.com/osohq/oso/tree/main/polar-core/benches>`_,
 along with instructions on how to run it. We would be delighted to accept
 any example queries that you would like to see profiled; please feel free
 to email us at :email:`engineering@osohq.com`.
