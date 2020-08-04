@@ -5,22 +5,11 @@ require 'pp'
 require 'set'
 
 # Missing Ruby type.
-class Boolean
-end
-
+module PolarBoolean; end
 # Monkey-patch Ruby true type.
-class TrueClass
-  def is_a?(cls)
-    [TrueClass, Boolean].include? cls
-  end
-end
-
+class TrueClass; include PolarBoolean; end
 # Monkey-patch Ruby false type.
-class FalseClass
-  def is_a?(cls)
-    [FalseClass, Boolean].include? cls
-  end
-end
+class FalseClass; include PolarBoolean; end
 
 module Oso
   module Polar
@@ -35,7 +24,7 @@ module Oso
         @load_queue = Set.new
 
         # Register built-in classes.
-        register_class(Boolean, name: 'Boolean')
+        register_class(PolarBoolean, name: 'Boolean')
         register_class(Integer, name: 'Integer')
         register_class(Float, name: 'Float')
         register_class(Array, name: 'List')
