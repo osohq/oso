@@ -17,7 +17,7 @@ languages/python/tests/__pycache__
 languages/python/_polar_lib.abi3.so
 venv
 
-polar/polar.h
+polar-c-api/polar.h
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -10,8 +10,8 @@ lib_dirs = {
     "CI": "native",
 }
 include_dirs = {
-    "DEVELOPMENT": "../../polar",
-    "RELEASE": "../../polar",
+    "DEVELOPMENT": "../../polar-c-api",
+    "RELEASE": "../../polar-c-api",
     "CI": "native",
 }
 env = os.environ.get("ENV", "DEVELOPMENT")

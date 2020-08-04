@@ -250,13 +250,3 @@ macro_rules! rule {
         }
     }};
 }
-// #[macro_export]
-// macro_rules! list {
-//     ([]) => {{
-//         Term::empty_list()
-//     }};
-//     ([$head:expr , [ $($tail:tt)* ]]) => {{
-//         let list = list!([$($tail)*]);
-//         list.insert_list($head)
-//     }};
-// }
