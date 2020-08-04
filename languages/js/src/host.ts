@@ -1,7 +1,7 @@
 // TODO(gj): make sure we aren't pulling in all of lodash here.
 import { isEqual } from 'lodash';
 
-import { Polar as FfiPolar } from '../lib/polar';
+import { Polar as FfiPolar } from '../lib/polar_wasm_api';
 import {
   DuplicateClassAliasError,
   InvalidConstructorError,

@@ -737,10 +737,8 @@ name = "polar-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "console_error_panic_hook",
  "criterion",
  "indoc",
- "js-sys",
  "lalrpop",
  "lalrpop-util",
  "lazy_static",
@@ -751,8 +749,18 @@ dependencies = [
  "proptest",
  "regex",
  "serde",
- "serde-wasm-bindgen",
  "serde_json",
+]
+
+[[package]]
+name = "polar-wasm-api"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "js-sys",
+ "polar-core",
+ "serde",
+ "serde-wasm-bindgen",
  "wasm-bindgen",
 ]
 

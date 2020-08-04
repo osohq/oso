@@ -315,7 +315,6 @@ class Query {
 }
 module.exports.Query = Query;
 /**
-* Represents a concrete instance of a Polar value
 */
 class Term {
 
@@ -398,7 +397,7 @@ module.exports.__wbindgen_rethrow = function(arg0) {
     throw takeObject(arg0);
 };
 
-const path = require('path').join(__dirname, 'polar_bg.wasm');
+const path = require('path').join(__dirname, 'polar_wasm_api_bg.wasm');
 const bytes = require('fs').readFileSync(path);
 
 const wasmModule = new WebAssembly.Module(bytes);

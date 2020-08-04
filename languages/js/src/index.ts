@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 
-import { Polar } from '../lib/polar';
+import { Polar } from '../lib/polar_wasm_api';
 
 interface PolarFile {
   name: string;

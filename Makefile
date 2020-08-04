@@ -1,4 +1,4 @@
-.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy
+.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy wasm-build
 
 test: rust-test python-test ruby-test java-test
 
@@ -11,11 +11,8 @@ rust-build:
 python-build: rust-build
 	$(MAKE) -C languages/python build
 
-js-build:
-	wasm-pack build --dev --target nodejs polar
-	rm polar/pkg/.gitignore polar/pkg/package.json
-	cp --recursive polar/pkg/. languages/js/lib
-	rm -rf polar/pkg
+wasm-build:
+	$(MAKE) -C polar-wasm-api build
 
 python-test: python-build
 	$(MAKE) -C languages/python test

@@ -1,25 +1,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export function __wbg_term_free(a: number): void;
-export function polar_get_error(): number;
-export function polar_new(): number;
-export function polar_load(a: number, b: number, c: number): number;
-export function polar_register_constant(a: number, b: number, c: number): number;
-export function polar_next_inline_query(a: number, b: number): number;
-export function polar_new_query_from_term(a: number, b: number, c: number): number;
-export function polar_new_query(a: number, b: number, c: number): number;
-export function polar_next_query_event(a: number): number;
-export function polar_debug_command(a: number, b: number): number;
-export function polar_call_result(a: number, b: number, c: number): number;
-export function polar_question_result(a: number, b: number, c: number): number;
-export function polar_application_error(a: number, b: number): number;
-export function polar_get_external_id(a: number): number;
-export function string_free(a: number): number;
-export function polar_free(a: number): number;
-export function query_free(a: number): number;
-export function __wbg_query_free(a: number): void;
 export function __wbg_polar_free(a: number): void;
+export function __wbg_query_free(a: number): void;
+export function __wbg_term_free(a: number): void;
 export function polar_wasm_new(): number;
 export function polar_loadFile(a: number, b: number, c: number, d: number, e: number): void;
 export function polar_registerConstant(a: number, b: number, c: number, d: number): void;

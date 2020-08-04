@@ -64,7 +64,6 @@ export class Query {
   appError(msg: string): void;
 }
 /**
-* Represents a concrete instance of a Polar value
 */
 export class Term {
   free(): void;

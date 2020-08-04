@@ -14,4 +14,3 @@ pub mod polar;
 mod rewrites;
 pub mod types;
 mod vm;
-mod wasm;
