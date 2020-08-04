@@ -33,6 +33,13 @@ Feature 1
 
 Link to relevant documentation section
 
+Built-in Types
+==============
+
+You may now write rules that specialize on any of the built-in types
+``Boolean``, ``Integer``, ``Float``, ``List``, ``Dictionary``, and ``String``.
+These types are mapped to host-language classes such as ``java.lang.Boolean``
+in Java or ``bool`` in Python.
 
 Other bugs & improvements
 =========================

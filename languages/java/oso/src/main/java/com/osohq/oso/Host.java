@@ -160,7 +160,7 @@ public class Host implements Cloneable {
      * @return
      * @throws Exceptions.UnregisteredClassError
      * @throws Exceptions.UnregisteredInstanceError
-     * @throws Exceptions.UnregisteredPolarTypeError
+     * @throws Exceptions.UnexpectedPolarTypeError
      */
     public boolean isa(JSONObject instance, String classTag)
             throws Exceptions.UnregisteredClassError,
