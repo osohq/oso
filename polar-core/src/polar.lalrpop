@@ -132,7 +132,7 @@ Object<T>: Dictionary = {
     }
 };
 
-// ****** Strange Values ******* //
+// ****** Dicts and literals ******* //
 
 DictionaryTerm: Value = <fields:Object<Exp5<"Term">>> => {
     Value::Dictionary(fields)
@@ -159,6 +159,12 @@ BuiltinOperator: Operator = {
     "print" => Operator::Print,
 };
 
+New: Value = "new" <literal:Spanned<InstanceLiteralTerm>> => {
+    let args = vec![literal];
+    let op = Operation{operator: Operator::New, args};
+    Value::Expression(op)
+};
+
 BuiltinOperation: Value = {
     <op:BuiltinOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
         match arg {
@@ -166,6 +172,18 @@ BuiltinOperation: Value = {
             None => ()
         };
         Value::Expression(Operation{operator: op, args: args})
+    },
+    // A pattern cannot contain a new operator
+    <New>,
+    "cut" => {
+        let args = vec![];
+        let op = Operation{operator: Operator::Cut, args};
+        Value::Expression(op)
+    },
+    "forall" "(" <arg1:TermExp> "," <arg2:TermExp> ")" => {
+        let args = vec![arg1, arg2];
+        let op = Operation{operator: Operator::ForAll, args};
+        Value::Expression(op)
     },
 };
 
@@ -186,29 +204,6 @@ RewrittenOperation: Value = {
 };
 
 
-New: Value = "new" <literal:Spanned<InstanceLiteralTerm>> => {
-    let args = vec![literal];
-    let op = Operation{operator: Operator::New, args};
-    Value::Expression(op)
-};
-
-SpecialExp<T>: Value = {
-    // A pattern cannot contain a new operator
-    <New> if T == "Term",
-    "cut" => {
-        let args = vec![];
-        let op = Operation{operator: Operator::Cut, args};
-        Value::Expression(op)
-    },
-    "forall" "(" <arg1:TermExp> "," <arg2:TermExp> ")" => {
-        let args = vec![arg1, arg2];
-        let op = Operation{operator: Operator::ForAll, args};
-        Value::Expression(op)
-    },
-}
-
-
-
 // ****** Expressions ******* //
 
 // All ExpN & Exp productions are macros with one parameter. The parameter is the
@@ -219,46 +214,32 @@ SpecialExp<T>: Value = {
 // other than a string.
 
 Exp<T>: Term = {
-    <exp1:Exp1<T>> => exp1
+    <Exp1<T>>
 }
 
 pub TermExp: Term = {
-    <Exp<"Term">> => <>
+    <Exp<"Term">>
 };
 
 pub PatternExp: Term = {
-    <Exp9<"Pattern">> => <>
+    <Exp9<"Pattern">>
 };
 
 
-Exp11<T>: Term = {
+Exp10<T>: Term = {
     <Spanned<Pattern>> if T == "Pattern",
     <Spanned<Value>> if T == "Term",
     "(" <Exp<T>> ")", // "resets" the parsing
 }
 
-Exp10<T>: Term = {
-    <Spanned<SpecialExp<T>>>,
-    <Exp11<T>>,
-}
-
-Callable<T>: Value = {
-    <DictionaryTerm> if T == "Term" => <>,
-    <DictionaryPattern> if T == "Pattern" => <>,
-    <Variable> => <>,
-    <DotOp<T>> => <>,
-    // A pattern cannot contain a new operator.
-    <New> if T == "Term" => <>, // TODO(Sam): should we actually allow this?
-};
-
 CallTerm: Value = {
     <Predicate>,
     <name:Name> => Value::Call(Predicate{name, args: vec![]}),
-    "(" <Variable> ")",
+    "(" <Value> ")",
 }
 
 DotOp<T>: Value = {
-    <head:Spanned<Callable<T>>> "." <call_term:Spanned<CallTerm>> => {
+    <head:Exp9<T>> "." <call_term:Spanned<CallTerm>> => {
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Value::Expression(op)

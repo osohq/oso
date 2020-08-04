@@ -263,4 +263,19 @@ mod tests {
             }
         ));
     }
+
+    #[test]
+    fn test_primitive_methods() {
+        let q = r#""abc".startswith("a")"#;
+        assert_eq!(
+            parse_query(q),
+            term!(op!(Dot, term!("abc"), term!(pred!("startswith", ["a"])))),
+        );
+
+        let q = r#"x.("invalid-key")"#;
+        assert_eq!(
+            parse_query(q),
+            term!(op!(Dot, term!(sym!("x")), term!("invalid-key"))),
+        );
+    }
 }
