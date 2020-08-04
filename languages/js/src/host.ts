@@ -1,202 +1,17 @@
-import { Polar as FfiPolar } from '../lib/polar';
 // TODO(gj): make sure we aren't pulling in all of lodash here.
 import { isEqual } from 'lodash';
 
-const root = Object.getPrototypeOf(() => {});
-function ancestors(cls: Function) {
-  const ancestors = [cls];
-  function next(cls: Function) {
-    try {
-      const parent = Object.getPrototypeOf(cls);
-      if (parent === root) return;
-      ancestors.push(parent);
-      next(parent);
-    } catch (e) {
-      // TODO(gj): should it be a silent failure if something weird's in the
-      // prototype chain?
-      return;
-    }
-  }
-  next(cls);
-  return ancestors;
-}
+import { Polar as FfiPolar } from '../lib/polar';
+import {
+  DuplicateClassAliasError,
+  InvalidConstructorError,
+  MissingConstructorError,
+  UnregisteredClassError,
+  UnregisteredInstanceError,
+} from './errors';
+import { ancestors } from './helpers';
 
-class Predicate {
-  readonly name: string;
-  readonly args: Array<any>;
-
-  constructor(name: string, args: Array<any>) {
-    this.name = name;
-    this.args = args;
-  }
-}
-
-class Variable {
-  readonly name: string;
-
-  constructor(name: string) {
-    this.name = name;
-  }
-}
-
-interface ConstructorKwargs {
-  [key: string]: any;
-}
-
-type Constructor = (kwargs: ConstructorKwargs) => object;
-
-interface PolarStr {
-  String: string;
-}
-
-function isPolarStr(v: PolarType): v is PolarStr {
-  return (v as PolarStr).String !== undefined;
-}
-
-interface PolarNum {
-  Number: PolarFloat | PolarInt;
-}
-
-function isPolarNum(v: PolarType): v is PolarNum {
-  return (v as PolarNum).Number !== undefined;
-}
-
-interface PolarFloat {
-  Float: number;
-}
-
-interface PolarInt {
-  Integer: number;
-}
-
-interface PolarBool {
-  Boolean: boolean;
-}
-
-function isPolarBool(v: PolarType): v is PolarBool {
-  return (v as PolarBool).Boolean !== undefined;
-}
-
-interface PolarList {
-  List: PolarValue[];
-}
-
-function isPolarList(v: PolarType): v is PolarList {
-  return (v as PolarList).List !== undefined;
-}
-
-interface PolarDict {
-  Dictionary: {
-    fields: {
-      [key: string]: PolarValue;
-    };
-  };
-}
-
-function isPolarDict(v: PolarType): v is PolarDict {
-  return (v as PolarDict).Dictionary !== undefined;
-}
-
-interface PolarPredicate {
-  Call: {
-    name: string;
-    args: PolarValue[];
-  };
-}
-
-interface PolarVariable {
-  Variable: {
-    name: string;
-  };
-}
-
-interface PolarInstance {
-  ExternalInstance: {
-    instance_id: bigint;
-    repr: string;
-  };
-}
-
-function isExternalInstance(v: PolarType): v is PolarInstance {
-  return (v as PolarInstance).ExternalInstance !== undefined;
-}
-
-function isCall(v: PolarType): v is PolarPredicate {
-  return (v as PolarPredicate).Call !== undefined;
-}
-
-function isVariable(v: PolarType): v is PolarVariable {
-  return (v as PolarVariable).Variable !== undefined;
-}
-
-type PolarType =
-  | PolarStr
-  | PolarNum
-  | PolarBool
-  | PolarList
-  | PolarDict
-  | PolarPredicate
-  | PolarVariable
-  | PolarInstance;
-
-interface PolarValue {
-  value: PolarType;
-}
-
-interface InstanceFields {
-  [key: string]: PolarValue;
-}
-
-class UnregisteredClassError extends Error {
-  constructor(name: string) {
-    super(`Unregistered class: ${name}.`);
-    Object.setPrototypeOf(this, UnregisteredClassError.prototype);
-  }
-}
-
-class UnregisteredInstanceError extends Error {
-  constructor(id: bigint) {
-    super(`Unregistered instance: ${id}.`);
-    Object.setPrototypeOf(this, UnregisteredInstanceError.prototype);
-  }
-}
-
-class MissingConstructorError extends Error {
-  constructor(name: string) {
-    super(`Missing constructor for class: ${name}.`);
-    Object.setPrototypeOf(this, MissingConstructorError.prototype);
-  }
-}
-
-class DuplicateClassAliasError extends Error {
-  constructor({
-    name,
-    cls,
-    existing,
-  }: {
-    name: string;
-    cls: object;
-    existing: object;
-  }) {
-    super(
-      `Attempted to alias ${cls} as '${name}', but ${existing} already has that alias.`
-    );
-    Object.setPrototypeOf(this, DuplicateClassAliasError.prototype);
-  }
-}
-
-class InvalidConstructorError extends Error {
-  constructor({ constructor, cls }: { constructor: any; cls: object }) {
-    super(
-      `${JSON.stringify(constructor)} is not a valid constructor for ${
-        cls.constructor.name
-      }.`
-    );
-    Object.setPrototypeOf(this, InvalidConstructorError.prototype);
-  }
-}
-
-class Host {
+export class Host {
   #ffiPolar: FfiPolar;
   #classes: Map<string, Function>;
   #constructors: Map<string, Constructor>;
@@ -331,7 +146,9 @@ class Host {
       // TODO(gj): do we want to handle TypedArrays here with
       // ArrayBuffer.isView(v)?
       case Array.isArray(v):
-        return { value: { List: v.map((el: any) => this.toPolarTerm(el)) } };
+        return {
+          value: { List: v.map((el: unknown) => this.toPolarTerm(el)) },
+        };
       // TODO(gj): is this the best way to determine whether it's an object?
       // TODO(gj): should we handle Maps here?
       case v.constructor === Object:
@@ -352,7 +169,7 @@ class Host {
           value: {
             Call: {
               name: v.name,
-              args: v.args.map((el: any) => this.toPolarTerm(el)),
+              args: v.args.map((el: unknown) => this.toPolarTerm(el)),
             },
           },
         };
@@ -394,14 +211,14 @@ class Host {
           [k]: this.toPolarTerm(v),
         }))
       );
-    } else if (isExternalInstance(t)) {
+    } else if (isPolarInstance(t)) {
       return this.getInstance(t.ExternalInstance.instance_id);
-    } else if (isCall(t)) {
+    } else if (isPolarPredicate(t)) {
       return new Predicate(
         t.Call.name,
         t.Call.args.map(a => this.toJs(a))
       );
-    } else if (isVariable(t)) {
+    } else if (isPolarVariable(t)) {
       return new Variable(t.Variable.name);
     } else {
       // TODO(gj): assert unreachable
