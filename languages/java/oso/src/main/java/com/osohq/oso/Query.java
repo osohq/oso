@@ -125,14 +125,14 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     handleCall(attrName, jArgs, polarInstance, callId);
                     break;
                 case "ExternalIsa":
-                    Long instanceId = data.getLong("instance_id");
+                    JSONObject instance = data.getJSONObject("instance");
                     callId = data.getLong("call_id");
                     String classTag = data.getString("class_tag");
-                    int answer = host.isa(instanceId, classTag) ? 1 : 0;
+                    int answer = host.isa(instance, classTag) ? 1 : 0;
                     ffiQuery.questionResult(callId, answer);
                     break;
                 case "ExternalIsSubSpecializer":
-                    instanceId = data.getLong("instance_id");
+                    long instanceId = data.getLong("instance_id");
                     callId = data.getLong("call_id");
                     String leftTag = data.getString("left_class_tag");
                     String rightTag = data.getString("right_class_tag");
@@ -174,8 +174,9 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      * @throws Exceptions.InvalidCallError
      */
     public void registerCall(String attrName, List<Object> args, long callId, JSONObject polarInstance)
-            throws Exceptions.InvalidCallError, Exceptions.UnregisteredInstanceError,
-            Exceptions.UnexpectedPolarTypeError {
+            throws Exceptions.InvalidCallError,
+                   Exceptions.UnregisteredInstanceError,
+                   Exceptions.UnexpectedPolarTypeError {
         if (calls.containsKey(callId)) {
             return;
         }

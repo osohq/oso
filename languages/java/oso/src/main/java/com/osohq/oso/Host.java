@@ -161,11 +161,12 @@ public class Host implements Cloneable {
      * @throws Exceptions.UnregisteredClassError
      * @throws Exceptions.UnregisteredInstanceError
      */
-    public boolean isa(long instanceId, String classTag)
-            throws Exceptions.UnregisteredClassError, Exceptions.UnregisteredInstanceError {
+    public boolean isa(JSONObject instance, String classTag)
+            throws Exceptions.UnregisteredClassError,
+                   Exceptions.UnregisteredInstanceError,
+                   Exceptions.UnexpectedPolarTypeError {
         Class cls = getClass(classTag);
-        Object instance = getInstance(instanceId);
-        return cls.isInstance(instance);
+        return cls.isInstance(toJava(instance));
     }
 
     /**
