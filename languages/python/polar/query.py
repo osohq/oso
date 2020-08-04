@@ -12,11 +12,11 @@ from .ffi import (
     check_result,
     is_null,
     new_id,
-    Predicate,
     to_c_str,
-    Variable,
 )
 from .host import Host
+from .predicate import Predicate
+from .variable import Variable
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 

@@ -8,9 +8,11 @@ from _polar_lib import lib
 
 from .errors import get_error
 from .exceptions import PolarApiException, PolarRuntimeException
-from .ffi import ffi_serialize, load_str, check_result, is_null, to_c_str, Predicate
+from .ffi import ffi_serialize, load_str, check_result, is_null, to_c_str
 from .host import Host
 from .query import Query, QueryResult
+from .predicate import Predicate
+from .variable import Variable
 
 
 CLASSES = {}

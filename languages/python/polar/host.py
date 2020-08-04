@@ -1,7 +1,9 @@
 """Translate between Polar and the host language (Python)."""
 
 from .exceptions import PolarApiException, PolarRuntimeException
-from .ffi import new_id, Predicate, Variable
+from .ffi import new_id
+from .variable import Variable
+from .predicate import Predicate
 
 
 class Host:

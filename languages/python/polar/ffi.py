@@ -3,36 +3,9 @@ from dataclasses import dataclass
 import json
 
 from _polar_lib import ffi, lib
-from typing import Any, Sequence
 
 from .errors import raise_error
 from .exceptions import PolarRuntimeException
-
-
-class Variable(str):
-    """An unbound variable type, can be used to query the KB for information"""
-
-    pass
-
-
-@dataclass(frozen=True)
-class Predicate:
-    """Represent a predicate in Polar (`name(args, ...)`)."""
-
-    name: str
-    args: Sequence[Any]
-
-    def __str__(self):
-        return f'{self.name}({", ".join(self.args)})'
-
-    def __eq__(self, other):
-        if not isinstance(other, Predicate):
-            return False
-        return (
-            self.name == other.name
-            and len(self.args) == len(other.args)
-            and all(x == y for x, y in zip(self.args, other.args))
-        )
 
 
 def check_result(result):
