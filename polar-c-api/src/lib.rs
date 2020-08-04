@@ -1,24 +1,5 @@
-#[macro_use]
-pub mod macros;
-
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-
-mod debugger;
-pub mod error;
-mod formatting;
-mod lexer;
-mod numerics;
-pub mod parser;
-mod polar;
-mod rewrites;
-pub mod types;
-mod vm;
-
-pub use self::polar::{Polar, Query};
-pub use error::{PolarError, PolarResult};
-pub use formatting::{draw, ToPolarString};
+pub use polar_core::polar::{Polar, Query};
+use polar_core::{error, types};
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};

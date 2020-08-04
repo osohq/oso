@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::{error, ToPolarString};
+pub use super::{error, formatting::ToPolarString};
 
 /// A map of bindings: variable name → value. The VM uses a stack internally,
 /// but can translate to and from this type.
@@ -727,7 +727,7 @@ mod tests {
             loc: 99,
             context: None,
         };
-        let err: crate::PolarError = e.into();
+        let err: crate::error::PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());
         let rule = Rule {
             name: Symbol::new("foo"),

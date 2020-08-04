@@ -6,10 +6,9 @@ lalrpop_mod!(
     polar
 );
 
-use super::error;
+use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
 use super::types::*;
-use super::PolarResult;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
@@ -83,7 +82,7 @@ pub fn parse_rules(src: &str) -> PolarResult<Vec<Rule>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ToPolarString;
+    use crate::formatting::ToPolarString;
     use pretty_assertions::assert_eq;
 
     fn parse_query(src: &str) -> Term {

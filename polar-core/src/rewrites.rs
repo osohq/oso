@@ -177,7 +177,7 @@ pub fn rewrite_rule(rule: &mut Rule, kb: &mut KnowledgeBase) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ToPolarString;
+    use crate::formatting::ToPolarString;
 
     // Re-defined here for convenience
     fn parse_query(src: &str) -> Term {

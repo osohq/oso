@@ -713,11 +713,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "polar"
+name = "polar-c-api"
+version = "0.1.0"
+dependencies = [
+ "cbindgen",
+ "polar-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "polar-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cbindgen",
  "criterion",
  "indoc",
  "lalrpop",

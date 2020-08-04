@@ -1,0 +1,9 @@
+language = "C"
+no_includes = true
+
+[parse]
+parse_deps = true
+include = ["polar-core"]
+
+[export]
+prefix = "polar_"

@@ -12,7 +12,9 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 use std::thread::spawn;
 
-use polar::{draw, error::*, sym, term, types::*, value, Polar, Query};
+use polar_core::{
+    error::*, formatting::draw, polar::Polar, polar::Query, sym, term, types::*, value,
+};
 
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Rc<Trace>>)>;
 use mock_externals::MockExternal;

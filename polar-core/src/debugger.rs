@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
-use super::formatting::source_lines;
+use super::error::PolarResult;
+use super::formatting::{source_lines, ToPolarString};
 use super::types::*;
 use super::vm::*;
-use super::{PolarResult, ToPolarString};
 
 impl PolarVirtualMachine {
     /// Drive debugger.
