@@ -20,10 +20,6 @@
                     <span class="md-header-nav__topic"> {{ title|striptags|e }} </span>
                 </div>
             </div>
-            <div class="md-flex__cell md-flex__cell--shrink">
-                <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
-                {% include "searchbox.html" %}
-            </div>
             {% if theme_repo_url %}
             <div class="md-flex__cell md-flex__cell--shrink">
                 <div class="md-header-nav__source">

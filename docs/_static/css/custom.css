@@ -338,3 +338,7 @@ body {
     margin: 0;
     }
 }
+
+.md-header-nav__button {
+	margin: .5rem;
+}
