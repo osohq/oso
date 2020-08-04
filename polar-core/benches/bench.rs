@@ -31,6 +31,48 @@ pub fn simple_queries(c: &mut Criterion) {
     });
 }
 
+pub fn fib(c: &mut Criterion) {
+    let policy = "
+        fib(0, 1) if cut;
+        fib(1, 1) if cut;
+        fib(n, a+b) if fib(n-1, a) and fib(n-2, b);
+    ";
+
+    let n_array = [
+        5i64, // 10, 15, 20,
+    ];
+
+    fn fib(n: i64) -> i64 {
+        match n {
+            0 => 1,
+            1 => 1,
+            n => fib(n - 1) + fib(n - 2),
+        }
+    }
+
+    let mut group = c.benchmark_group("fib");
+    for n in &n_array {
+        group.bench_function(BenchmarkId::from_parameter(format!("fib({})", n)), |b| {
+            b.iter_batched(
+                || {
+                    let mut runner = runner_from_query(&format!("fib({}, result)", n));
+                    runner.load(policy).unwrap();
+                    runner.expected_result(maplit::hashmap!(
+                        sym!("result") => term!(fib(*n))
+                    ));
+                    runner
+                },
+                |mut runner| {
+                    runner.run();
+                },
+                criterion::BatchSize::SmallInput,
+            )
+        });
+    }
+
+    group.finish();
+}
+
 /// Bench: create `TARGET` rules of the form `f(i) if f(i-1)`
 /// and measure the time to compute `f(TARGET)`
 /// This basically measures the performance of the rule sorting
@@ -139,7 +181,8 @@ criterion_group!(
     benches,
     simple_queries,
     too_many_predicates,
-    n_plus_one_queries
+    n_plus_one_queries,
+    fib
 );
 criterion_main!(benches);
 
