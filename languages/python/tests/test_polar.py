@@ -576,9 +576,9 @@ def test_built_in_specializers(polar, query):
     assert not query("foo(-2)")
 
     # Float
-    assert query("foo(4)")
+    assert query("foo(4.0)")
     assert not query("foo(pi)")
-    assert not query("foo(-1)")
+    assert not query("foo(-1.0)")
 
     # List
     assert query('foo(["foo", "bar"])')
