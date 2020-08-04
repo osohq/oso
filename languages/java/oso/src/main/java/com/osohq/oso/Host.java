@@ -155,11 +155,12 @@ public class Host implements Cloneable {
     /**
      * Check if a Java instance is an instance of a class.
      *
-     * @param instanceId
+     * @param instance
      * @param classTag
      * @return
      * @throws Exceptions.UnregisteredClassError
      * @throws Exceptions.UnregisteredInstanceError
+     * @throws Exceptions.UnregisteredPolarTypeError
      */
     public boolean isa(JSONObject instance, String classTag)
             throws Exceptions.UnregisteredClassError,
