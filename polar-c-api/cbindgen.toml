@@ -1,5 +1,10 @@
 language = "C"
 no_includes = true
 
+[parse]
+parse_deps = true
+
 [export]
 prefix = "polar_"
+
+include = ["Polar", "Query"]
