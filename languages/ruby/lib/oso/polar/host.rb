@@ -149,11 +149,11 @@ module Oso
 
       # Check if instance is an instance of class.
       #
-      # @param instance_id [Integer]
+      # @param instance [Hash<String, Object>]
       # @param class_tag [String]
       # @return [Boolean]
-      def isa?(instance_id, class_tag:)
-        instance = get_instance(instance_id)
+      def isa?(instance, class_tag:)
+        instance = to_ruby(instance)
         cls = get_class(class_tag)
         instance.is_a? cls
       rescue PolarRuntimeError
