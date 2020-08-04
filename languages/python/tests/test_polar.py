@@ -37,7 +37,18 @@ def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
     # Loading the same file twice doesn't mess stuff up.
     polar.load_file(Path(__file__).parent / "test_file.polar")
-    polar.load_file(Path(__file__).parent / "test_file.polar")
+    with pytest.raises(exceptions.PolarRuntimeException) as e:
+        polar.load_file(Path(__file__).parent / "test_file.polar")
+    assert (
+        str(e.value)
+        == f"File {Path(__file__).parent}/test_file.polar has already been loaded."
+    )
+    with pytest.raises(exceptions.PolarRuntimeException) as e:
+        polar.load_file(Path(__file__).parent / "test_file_renamed.polar")
+    assert (
+        str(e.value) ==
+        f"A file with the same contents as {Path(__file__).parent}/test_file_renamed.polar named {Path(__file__).parent}/test_file.polar has already been loaded."
+    )
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 

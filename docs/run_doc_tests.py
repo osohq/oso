@@ -46,9 +46,6 @@ def main():
         if filename.endswith(".polar"):
             load(filename, polar)
 
-    # Trigger load
-    polar._load_queued_files()
-
 
 if __name__ == "__main__":
     main()

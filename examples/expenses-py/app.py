@@ -140,7 +140,6 @@ if __name__ == "__main__":
     the policy.
     """
     oso = load_oso()
-    oso._load_queued_files()
     print("Policy loaded OK")
 
     if len(sys.argv) > 1 and sys.argv[1] == "repl":

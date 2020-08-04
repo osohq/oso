@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 from pprint import pprint
+import sys
+import hashlib
 
 from _polar_lib import lib
 
@@ -24,7 +26,8 @@ class Polar:
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
-        self.load_queue = []
+        self.loaded_names = {}
+        self.loaded_contents = {}
 
         # Register built-in classes.
         self.register_class(bool, name="Boolean")
@@ -45,7 +48,8 @@ class Polar:
         del self.ffi_polar
 
     def clear(self):
-        self.load_queue = []
+        self.loaded_names = {}
+        self.loaded_contents = {}
         del self.ffi_polar
         self.ffi_polar = FfiPolar()
 
@@ -54,12 +58,29 @@ class Polar:
         until a query is made."""
         policy_file = Path(policy_file)
         extension = policy_file.suffix
-        if extension not in (".pol", ".polar"):
-            raise PolarApiException(f"Polar files must have .pol or .polar extension.")
+        if extension not in (".polar"):
+            raise PolarApiException(f"Polar files must have a .polar extension.")
         if not policy_file.exists():
             raise PolarApiException(f"Could not find file: {policy_file}")
-        if policy_file not in self.load_queue:
-            self.load_queue.append(policy_file)
+
+        fname = str(policy_file)
+        fhash = hash_file(policy_file)
+        if fname in self.loaded_names.keys():
+            if self.loaded_names.get(fname) == fhash:
+                raise PolarRuntimeException(f"File {fname} has already been loaded.")
+            else:
+                raise PolarRuntimeException(
+                    f"A file with the name {fname}, but different contents, has already been loaded."
+                )
+        elif fhash in self.loaded_contents.keys():
+            raise PolarRuntimeException(
+                f"A file with the same contents as {fname} named {self.loaded_contents.get(fhash)} has already been loaded."
+            )
+        with open(policy_file) as file:
+            load_str(self.ffi_polar, file.read(), policy_file)
+
+        self.loaded_names[fname] = fhash
+        self.loaded_contents[fhash] = fname
 
     def load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
@@ -83,8 +104,6 @@ class Polar:
 
         :return: The result of the query.
         """
-        self._load_queued_files()
-
         host = self.host.copy()
         if isinstance(query, str):
             query = self.ffi_polar.new_query_from_str(query)
@@ -113,7 +132,6 @@ class Polar:
 
             for f in sys.argv[1:]:
                 self.load_file(f)
-        self._load_queued_files()
 
         while True:
             try:
@@ -150,13 +168,6 @@ class Polar:
         """Register `value` as a Polar constant variable called `name`."""
         self.ffi_polar.register_constant(name, self.host.to_polar_term(value))
 
-    def _load_queued_files(self):
-        """Load queued policy files into the knowledge base."""
-        while self.load_queue:
-            filename = self.load_queue.pop(0)
-            with open(filename) as file:
-                self.ffi_polar.load_str(file.read(), filename)
-
 
 def polar_class(_cls=None, *, name=None, from_polar=None):
     """Decorator to register a Python class with Polar.
@@ -176,3 +187,19 @@ def polar_class(_cls=None, *, name=None, from_polar=None):
         return wrap
 
     return wrap(_cls)
+
+
+def hash_file(fname):
+    # BUF_SIZE is totally arbitrary, change for your app!
+    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+
+    md5 = hashlib.md5()
+
+    with open(fname, "rb") as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            md5.update(data)
+
+    return md5.hexdigest()
