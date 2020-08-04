@@ -1,6 +1,6 @@
-import fs from 'fs/promises';
+import { readFile } from 'fs/promises';
 
-import { Polar } from './wasm/polar';
+import { Polar } from '../lib/polar';
 
 interface PolarFile {
   name: string;
@@ -24,7 +24,7 @@ class Oso {
       throw e;
     }
     try {
-      const contents = await fs.readFile(name, 'utf8');
+      const contents = await readFile(name, 'utf8');
       this.#loadQueue.add({ name, contents });
     } catch (e) {
       if (e.code === 'ENOENT') {
@@ -39,7 +39,7 @@ class Oso {
 
   private loadQueuedFiles() {
     try {
-      this.#loadQueue.forEach((file) => {
+      this.#loadQueue.forEach(file => {
         this.#polar.loadFile(file.contents, file.name);
         this.#loadQueue.delete(file);
       });

@@ -1,5 +1,6 @@
-import { Polar as FfiPolar } from './wasm/polar';
-import { isEqual } from 'lodash/isEqual';
+import { Polar as FfiPolar } from '../lib/polar';
+// TODO(gj): make sure we aren't pulling in all of lodash here.
+import { isEqual } from 'lodash';
 
 const root = Object.getPrototypeOf(() => {});
 function ancestors(cls: Function) {
@@ -387,17 +388,18 @@ class Host {
       return t.List.map(this.toJs);
       // TODO(gj): handle Map?
     } else if (isPolarDict(t)) {
-      const copy = {};
-      Object.entries(t.Dictionary.fields).forEach(
-        ([k, v]) => (copy[k] = this.toJs(v))
+      return Object.assign(
+        {},
+        ...Object.entries(t.Dictionary.fields).map(([k, v]) => ({
+          [k]: this.toPolarTerm(v),
+        }))
       );
-      return copy;
     } else if (isExternalInstance(t)) {
       return this.getInstance(t.ExternalInstance.instance_id);
     } else if (isCall(t)) {
       return new Predicate(
         t.Call.name,
-        t.Call.args.map((a) => this.toJs(a))
+        t.Call.args.map(a => this.toJs(a))
       );
     } else if (isVariable(t)) {
       return new Variable(t.Variable.name);

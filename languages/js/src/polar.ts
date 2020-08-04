@@ -1,4 +1,4 @@
-import { Polar as FfiPolar } from './wasm/polar';
+import { Polar as FfiPolar } from '../lib/polar';
 
 interface PolarFile {
   name: string;

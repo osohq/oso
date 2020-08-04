@@ -7,19 +7,28 @@
   "collaborators": [
     "Oso Security <support@osohq.com>"
   ],
-  "license": "TBD",
+  "license": "Apache-2.0",
   "private": false,
   "files": [
     "dist"
   ],
   "scripts": {
     "dev": "parcel lib/index.ts --target node",
-    "build": "parcel build lib/index.ts --target node"
+    "build": "parcel build lib/index.ts --target node",
+    "check": "gts check",
+    "clean": "gts clean",
+    "compile": "tsc",
+    "fix": "gts fix",
+    "prepare": "yarn run compile",
+    "pretest": "yarn run compile",
+    "posttest": "yarn run check"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.158",
     "@types/node": "^14.0.14",
     "parcel-bundler": "^1.12.4",
-    "typescript": "^3.9.5"
+    "typescript": "^3.9.5",
+    "gts": "^2.0.2"
   },
   "dependencies": {
     "lodash": "^4.17.19"
