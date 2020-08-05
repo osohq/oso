@@ -273,7 +273,7 @@ pub mod display {
                     } else {
                         write!(
                             fmt,
-                            "{}({}) := {};",
+                            "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
                             format_args(Operator::And, &args, ",\n  "),
