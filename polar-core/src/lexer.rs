@@ -1,5 +1,5 @@
-use super::error::{ErrorContext, ParseError};
-use super::types::{Source, Symbol};
+use super::error::ParseError;
+use super::types::Symbol;
 use std::iter::Peekable;
 use std::str::{CharIndices, FromStr};
 
@@ -22,15 +22,6 @@ pub fn loc_to_pos(src: &str, loc: usize) -> SrcPos {
         }
     }
     (row, col)
-}
-
-pub fn make_context(source: &Source, loc: usize) -> Option<ErrorContext> {
-    let (row, column) = loc_to_pos(&source.src, loc);
-    Some(ErrorContext {
-        source: source.clone(),
-        row,
-        column,
-    })
 }
 
 pub struct Lexer<'input> {
@@ -211,7 +202,6 @@ impl<'input> Lexer<'input> {
                     token: self.buf.clone(),
                     c: ':',
                     loc: last,
-                    context: None,
                 }));
             }
         }
@@ -263,7 +253,6 @@ impl<'input> Lexer<'input> {
                             token: self.buf.clone(),
                             c: char,
                             loc: i,
-                            context: None,
                         }))
                     }
                     '"' => {
@@ -287,7 +276,6 @@ impl<'input> Lexer<'input> {
                                 token: self.buf.clone(),
                                 c: '\0',
                                 loc: i,
-                                context: None,
                             }));
                         }
                         self.c = self.chars.next();
@@ -302,7 +290,6 @@ impl<'input> Lexer<'input> {
                     token: self.buf.clone(),
                     c: '\0',
                     loc: i,
-                    context: None,
                 }));
             }
         }
@@ -380,7 +367,6 @@ impl<'input> Lexer<'input> {
                 Some(Err(ParseError::InvalidFloat {
                     token: self.buf.clone(),
                     loc: start,
-                    context: None,
                 }))
             }
         } else if let Ok(int) = i64::from_str(&self.buf) {
@@ -389,7 +375,6 @@ impl<'input> Lexer<'input> {
             Some(Err(ParseError::IntegerOverflow {
                 token: self.buf.clone(),
                 loc: start,
-                context: None,
             }))
         }
     }
@@ -420,13 +405,11 @@ impl<'input> Lexer<'input> {
                 token: token.to_string(),
                 c: chr,
                 loc: i,
-                context: None,
             })),
             _ => Some(Err(ParseError::InvalidTokenCharacter {
                 token: token.to_string(),
                 c: '\0',
                 loc: start + 1,
-                context: None,
             })),
         }
     }
@@ -489,7 +472,6 @@ impl<'input> Iterator for Lexer<'input> {
                     token: "".to_owned(),
                     c: char,
                     loc: i,
-                    context: None,
                 })),
             },
         }
@@ -582,7 +564,6 @@ mod tests {
                 token: t,
                 c: '\u{0}',
                 loc: 5,
-                context: None
             })) if &t == "?="
         ));
     }
@@ -615,7 +596,6 @@ mod tests {
                 token: x,
                 c: ':',
                 loc: 4,
-                context: None
             })) if &x == "foo::"
         ));
     }
@@ -633,7 +613,6 @@ mod tests {
                 token: x,
                 c: '\u{0}',
                 loc: 5,
-                context: None
             })) if &x == "?="
         ));
     }
