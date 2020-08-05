@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 use polar_core::error::{
     ErrorKind, OperationalError, ParameterError, ParseError, PolarError, RuntimeError,
 };
-use polar_core::{polar, types};
+use polar_core::{polar, types::Symbol};
 
 // TODO(gj): figure out how to handle Rust panics in wasm.
 
@@ -71,9 +71,6 @@ pub struct Polar(polar::Polar);
 pub struct Query(polar::Query);
 
 #[wasm_bindgen]
-pub struct Term(types::Term);
-
-#[wasm_bindgen]
 impl Polar {
     #[wasm_bindgen(constructor)]
     pub fn wasm_new() -> Self {
@@ -89,8 +86,17 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
-    pub fn wasm_register_constant(&mut self, name: &str, value: Term) {
-        self.0.register_constant(types::Symbol::new(name), value.0)
+    pub fn wasm_register_constant(&mut self, name: &str, value: &str) -> JsResult<()> {
+        match serde_json::from_str(value) {
+            Ok(term) => self.0.register_constant(Symbol::new(name), term),
+            Err(e) => {
+                return Err(RuntimeError::Serialization { msg: e.to_string() })
+                    .map_err(PolarError::from)
+                    .map_err(Error::from)
+                    .map_err(|e| e.into());
+            }
+        }
+        Ok(())
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = nextInlineQuery)]
@@ -108,8 +114,11 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromTerm)]
-    pub fn wasm_new_query_from_term(&self, term: Term) -> Query {
-        Query(self.0.new_query_from_term(term.0, false))
+    pub fn wasm_new_query_from_term(&self, value: &str) -> JsResult<Query> {
+        serde_json::from_str(value)
+            .map(|term| Query(self.0.new_query_from_term(term, false)))
+            .map_err(|e| RuntimeError::Serialization { msg: e.to_string() })
+            .map_err(|e| Error::from(PolarError::from(e)).into())
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newId)]
