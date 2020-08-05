@@ -224,7 +224,7 @@ said to *unify* if they are equal or if there is a consistent set of
 variable bindings that makes them equal. Unification is defined
 recursively over compound types (e.g., lists and dictionaries):
 two compound values unify if all of their corresponding elements
-unify.
+unify.:warn
 
 Unification may be performed explicitly with the unification operator
 (``=``), which is true if its two operands unify; e.g., ``1 = 1``,
@@ -237,6 +237,16 @@ We will cover unification further in :ref:`search-procedure`.
 
 .. todo::
    add a little table with unification examples, esp. w/dictionaries.
+
+Assignment
+^^^^^^^^^^
+
+Assigning a value to an unbound variable can be done using the unification operator.
+However, the assignment operator (``:=``) may also be used, and will only succeed if the
+left-hand side oeprand is an unbound variable. For example, ``foo := 1``.
+This operator can be used to improve readability and predictability
+by indicating explicit assignment. Attempting to assign to a non-variable will result in a parse error,
+while attempting to assign to a bound variable will result in a runtime error.
 
 Conjunction (and)
 ^^^^^^^^^^^^^^^^^
