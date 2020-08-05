@@ -19,6 +19,7 @@ libs = []
 if sys.platform.startswith("win"):
     libs.append(lib_dirs[env] + "/polar.lib")
     libs.append("Ws2_32.lib")
+    libs.append("advapi32.lib")
 else:
     libs.append(lib_dirs[env] + "/libpolar.a")
 include_dir = include_dirs[env]
