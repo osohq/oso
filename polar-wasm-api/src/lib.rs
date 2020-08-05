@@ -1,66 +1,11 @@
+mod errors;
+
+use polar_core::{polar, types};
 use wasm_bindgen::prelude::*;
 
-use polar_core::error::{
-    ErrorKind, OperationalError, ParameterError, ParseError, PolarError, RuntimeError,
-};
-use polar_core::{polar, types::Symbol};
+use errors::{serde_serialization_error, serialization_error, Error};
 
 // TODO(gj): figure out how to handle Rust panics in wasm.
-
-pub struct Error {
-    pub kind: String,
-    inner: PolarError,
-}
-
-fn kind(err: &PolarError) -> String {
-    use ErrorKind::*;
-    use OperationalError::*;
-    use ParseError::*;
-    use RuntimeError::*;
-    match err.kind {
-        Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
-        Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
-        Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
-        Parse(UnrecognizedEOF { .. }) => "ParseError::UnrecognizedEOF",
-        Parse(UnrecognizedToken { .. }) => "ParseError::UnrecognizedToken",
-        Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
-        Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
-        Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
-        Runtime(Application { .. }) => "RuntimeError::Application",
-        Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
-        Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
-        Runtime(Serialization { .. }) => "RuntimeError::Serialization",
-        Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
-        Runtime(TypeError { .. }) => "RuntimeError::TypeError",
-        Runtime(UnboundVariable { .. }) => "RuntimeError::UnboundVariable",
-        Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
-        Operational(Unimplemented(..)) => "OperationalError::Unimplemented",
-        Operational(Unknown) => "OperationalError::Unknown",
-        Parameter(ParameterError(..)) => "ParameterError::ParameterError",
-    }
-    .to_owned()
-}
-
-impl From<PolarError> for Error {
-    fn from(err: PolarError) -> Self {
-        let kind = kind(&err);
-        Self { inner: err, kind }
-    }
-}
-
-impl From<Error> for js_sys::Error {
-    fn from(err: Error) -> Self {
-        let e = Self::new(&err.inner.formatted);
-        e.set_name(&err.kind);
-        e
-    }
-}
-
-impl From<Error> for wasm_bindgen::JsValue {
-    fn from(err: Error) -> Self {
-        js_sys::Error::from(err).into()
-    }
-}
 
 type JsResult<T> = Result<T, JsValue>;
 
@@ -88,13 +33,8 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
     pub fn wasm_register_constant(&mut self, name: &str, value: &str) -> JsResult<()> {
         match serde_json::from_str(value) {
-            Ok(term) => self.0.register_constant(Symbol::new(name), term),
-            Err(e) => {
-                return Err(RuntimeError::Serialization { msg: e.to_string() })
-                    .map_err(PolarError::from)
-                    .map_err(Error::from)
-                    .map_err(|e| e.into());
-            }
+            Ok(term) => self.0.register_constant(types::Symbol::new(name), term),
+            Err(e) => return Err(serde_serialization_error(e)),
         }
         Ok(())
     }
@@ -117,8 +57,7 @@ impl Polar {
     pub fn wasm_new_query_from_term(&self, value: &str) -> JsResult<Query> {
         serde_json::from_str(value)
             .map(|term| Query(self.0.new_query_from_term(term, false)))
-            .map_err(|e| RuntimeError::Serialization { msg: e.to_string() })
-            .map_err(|e| Error::from(PolarError::from(e)).into())
+            .map_err(serde_serialization_error)
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newId)]
@@ -135,12 +74,21 @@ impl Query {
             .next_event()
             .map_err(Error::from)
             .map_err(Error::into)
-            .and_then(|event| serde_wasm_bindgen::to_value(&event).map_err(|e| e.into()))
+            .and_then(|event| {
+                serde_wasm_bindgen::to_value(&event).map_err(|e| serialization_error(e.to_string()))
+            })
     }
 
     #[wasm_bindgen(js_class = Query, js_name = callResult)]
     pub fn wasm_call_result(&mut self, call_id: u64, value: Option<String>) -> JsResult<()> {
-        let term = value.and_then(|v| serde_json::from_str(&v).ok());
+        let term: Option<types::Term> = if let Some(value) = value {
+            match serde_json::from_str(&value) {
+                Ok(term) => Some(term),
+                Err(e) => return Err(serde_serialization_error(e)),
+            }
+        } else {
+            None
+        };
         self.0
             .call_result(call_id, term)
             .map_err(Error::from)
