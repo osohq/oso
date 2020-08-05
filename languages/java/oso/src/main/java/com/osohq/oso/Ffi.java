@@ -181,7 +181,7 @@ public class Ffi {
         String suffix = null;
 
         if (platform.contains("win")) {
-            path = "win\\polar.dll";
+            path = "win/polar.dll";
             prefix = "polar";
             suffix = ".dll";
         } else if (platform.contains("mac")) {
