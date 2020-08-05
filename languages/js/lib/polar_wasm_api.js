@@ -260,7 +260,7 @@ class Query {
     }
     /**
     * @param {BigInt} call_id
-    * @param {Term | undefined} value
+    * @param {string | undefined} value
     */
     callResult(call_id, value) {
         if (this.ptr == 0) throw new Error('Attempt to use a moved value');
@@ -268,16 +268,9 @@ class Query {
         uint64CvtShim[0] = call_id;
         const low0 = u32CvtShim[0];
         const high0 = u32CvtShim[1];
-        let ptr1 = 0;
-        if (!isLikeNone(value)) {
-            _assertClass(value, Term);
-            if (value.ptr === 0) {
-                throw new Error('Attempt to use a moved value');
-            }
-            ptr1 = value.ptr;
-            value.ptr = 0;
-        }
-        wasm.query_callResult(this.ptr, low0, high0, ptr1);
+        var ptr1 = isLikeNone(value) ? 0 : passStringToWasm0(value, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len1 = WASM_VECTOR_LEN;
+        wasm.query_callResult(this.ptr, low0, high0, ptr1, len1);
     }
     /**
     * @param {BigInt} call_id

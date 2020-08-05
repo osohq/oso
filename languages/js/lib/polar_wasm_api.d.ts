@@ -46,9 +46,9 @@ export class Query {
   nextEvent(): any;
 /**
 * @param {BigInt} call_id 
-* @param {Term | undefined} value 
+* @param {string | undefined} value 
 */
-  callResult(call_id: BigInt, value?: Term): void;
+  callResult(call_id: BigInt, value?: string): void;
 /**
 * @param {BigInt} call_id 
 * @param {boolean} result 

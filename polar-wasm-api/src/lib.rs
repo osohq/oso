@@ -130,9 +130,10 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = callResult)]
-    pub fn wasm_call_result(&mut self, call_id: u64, value: Option<Term>) -> JsResult<()> {
+    pub fn wasm_call_result(&mut self, call_id: u64, value: Option<String>) -> JsResult<()> {
+        let term = value.and_then(|v| serde_json::from_str(&v).ok());
         self.0
-            .call_result(call_id, value.map(|v| v.0))
+            .call_result(call_id, term)
             .map_err(Error::from)
             .map_err(Error::into)
     }
