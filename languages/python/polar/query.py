@@ -136,9 +136,9 @@ class Query:
         external_answer(self.ffi_query, data["call_id"], isa)
 
     def handle_external_unify(self, data):
-        left_instance_id = data["left_instance_id"]
-        right_instance_id = data["right_instance_id"]
-        unify = self.host.unify(left_instance_id, right_instance_id)
+        left = data["left"]
+        right = data["right"]
+        unify = self.host.unify(left, right)
         external_answer(self.ffi_query, data["call_id"], unify)
 
     def handle_external_is_subspecializer(self, data):

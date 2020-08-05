@@ -653,8 +653,8 @@ pub enum QueryEvent {
     /// Unifies two external instances.
     ExternalUnify {
         call_id: u64,
-        left_instance_id: u64,
-        right_instance_id: u64,
+        left: Term,
+        right: Term
     },
 
     Result {
