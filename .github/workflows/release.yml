@@ -271,7 +271,7 @@ jobs:
 
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
-    # needs: [build_jar]
+    needs: [build_jar]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
