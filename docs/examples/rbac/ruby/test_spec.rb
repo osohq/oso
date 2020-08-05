@@ -20,35 +20,23 @@ RSpec.describe do
   end
 
   context "01-simple" do
-    before do
+    it "parses" do
       @oso = load_file("01-simple.polar")
       @oso.register_class(User)
-    end
-
-    it "parses" do
-      @oso.load_queued_files
     end
   end
 
   context "02-simple" do
-    before do
+    it "parses" do
       @oso = load_file("02-simple.polar")
       @oso.register_class(User)
-    end
-
-    it "parses" do
-      @oso.load_queued_files
     end
   end
 
   context "05-external.polar" do
-    before do
+    it "parses" do
       @oso = load_file("05-external.polar")
       @oso.register_class(User)
-    end
-
-    it "parses" do
-      @oso.load_queued_files
     end
 
     it "works" do
@@ -76,13 +64,9 @@ RSpec.describe do
   end
 
   context "06-external.polar" do
-    before do
+    it "parses" do
       @oso = load_file("06-external.polar")
       @oso.register_class(User)
-    end
-
-    it "parses" do
-      @oso.load_queued_files
     end
 
     it "works" do

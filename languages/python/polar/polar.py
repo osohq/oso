@@ -76,11 +76,12 @@ class Polar:
             raise PolarRuntimeException(
                 f"A file with the same contents as {fname} named {self.loaded_contents.get(fhash)} has already been loaded."
             )
-        with open(policy_file) as file:
-            load_str(self.ffi_polar, file.read(), policy_file)
+        else:
+            with open(policy_file) as file:
+                load_str(self.ffi_polar, file.read(), policy_file)
 
-        self.loaded_names[fname] = fhash
-        self.loaded_contents[fhash] = fname
+            self.loaded_names[fname] = fhash
+            self.loaded_contents[fhash] = fname
 
     def load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""

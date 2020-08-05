@@ -30,12 +30,13 @@ RSpec.describe do
 
   FILES.each do |file|
     context "#{file}" do
-      before do
-        @oso = load_file(file)
-      end
 
       it "parses" do
-        @oso.load_queued_files
+        @oso.load_file(file)
+      end
+
+      before do
+        @oso = load_file(file)
       end
 
       it "allows medical staff" do
