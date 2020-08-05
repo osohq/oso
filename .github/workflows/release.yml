@@ -141,7 +141,7 @@ jobs:
     needs: version
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-latest] # Later: windows-latest
+        os: [ubuntu-18.04, macos-latest, windows-latest]
 
     env:
       # Skip Python 2.7 and Python 3.5
@@ -171,12 +171,19 @@ jobs:
           cp polar-c-api/polar.h languages/python/native/
           cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/native/
       - name: Build Rust library (OSX)
-        if: runner.os != 'Linux'
+        if: runner.os == 'macOS'
         run: |
           cargo build --release
           mkdir -p languages/python/native
           cp polar-c-api/polar.h languages/python/native/
           cp target/release/libpolar.a languages/python/native/
+      - name: Build Rust library (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cargo build --release
+          mkdir -p languages/python/native
+          cp polar-c-api/polar.h languages/python/native/
+          cp target/release/polar.lib languages/python/native/
 
       - name: Build wheels
         run: |
@@ -212,7 +219,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
+        os: [ubuntu-18.04, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8]
     steps:
       - name: Set version output
