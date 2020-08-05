@@ -23,8 +23,7 @@ java-test:
 	$(MAKE) -C languages/java package
 	cd test && \
 		javac -classpath "../languages/java/oso/target/*:." Test.java && \
-		java -classpath "../languages/java/oso/target/*:." Test
-
+		java -classpath "../languages/java/oso/target/*:." -enableassertions Test
 
 docs-test: python-build
 	$(MAKE) -C docs test

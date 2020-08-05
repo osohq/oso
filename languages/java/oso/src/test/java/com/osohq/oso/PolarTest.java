@@ -137,7 +137,7 @@ public class PolarTest {
 
     @Test
     public void testFloatFFIRoundTrip() throws Exception {
-        float f = (float) 3.50;
+        double f = 3.50;
         JSONObject polar = p.host.toPolarTerm(f);
         Object java = p.host.toJava(polar);
         assertEquals(f, java);
@@ -162,8 +162,7 @@ public class PolarTest {
         polar = p.host.toPolarTerm(a2);
         java = p.host.toJava(polar);
 
-        // TODO: adjust so precision isn't lost going from double -> float
-        assertEquals(List.of((float) 1.2, (float) 3.5), java);
+        assertEquals(List.of(1.2, 3.5), java);
 
         String[] a3 = { "hello", "world" };
         polar = p.host.toPolarTerm(a3);

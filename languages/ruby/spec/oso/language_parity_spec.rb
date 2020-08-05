@@ -75,18 +75,18 @@ oso.load_str '?= Math.acos(1.0) = 0.0;'
 
 # Test built-in type specializers.
 # rubocop:disable Layout/EmptyLineAfterGuardClause
-oso.query('builtinSpecializers(true)').next
-raise unless oso.query('builtinSpecializers(false)').to_a.empty?
-oso.query('builtinSpecializers(2)').next
-oso.query('builtinSpecializers(1)').next
-raise unless oso.query('builtinSpecializers(0)').to_a.empty?
-raise unless oso.query('builtinSpecializers(-1)').to_a.empty?
-oso.query('builtinSpecializers(1.0)').next
-raise unless oso.query('builtinSpecializers(0.0)').to_a.empty?
-raise unless oso.query('builtinSpecializers(-1.0)').to_a.empty?
-oso.query('builtinSpecializers(["foo", "bar", "baz"])').next
-raise unless oso.query('builtinSpecializers(["bar", "foo", "baz"])').to_a.empty?
-oso.query('builtinSpecializers({foo: "foo"})').next
-raise unless oso.query('builtinSpecializers({foo: "bar"})').to_a.empty?
-oso.query('builtinSpecializers("foo")').next
-raise unless oso.query('builtinSpecializers("bar")').to_a.empty?
+oso.query('builtinSpecializers(true, "Boolean")').next
+raise unless oso.query('builtinSpecializers(false, "Boolean")').to_a.empty?
+oso.query('builtinSpecializers(2, "Integer")').next
+oso.query('builtinSpecializers(1, "Integer")').next
+raise unless oso.query('builtinSpecializers(0, "Integer")').to_a.empty?
+raise unless oso.query('builtinSpecializers(-1, "Integer")').to_a.empty?
+oso.query('builtinSpecializers(1.0, "Float")').next
+raise unless oso.query('builtinSpecializers(0.0, "Float")').to_a.empty?
+raise unless oso.query('builtinSpecializers(-1.0, "Float")').to_a.empty?
+oso.query('builtinSpecializers(["foo", "bar", "baz"], "List")').next
+raise unless oso.query('builtinSpecializers(["bar", "foo", "baz"], "List")').to_a.empty?
+oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")').next
+raise unless oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').to_a.empty?
+oso.query('builtinSpecializers("foo", "String")').next
+raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?

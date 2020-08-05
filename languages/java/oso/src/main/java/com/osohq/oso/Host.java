@@ -280,8 +280,7 @@ public class Host implements Cloneable {
     /**
      * Turn a Polar term passed across the FFI boundary into a Java Object.
      *
-     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _,
-     *             "value": _}}
+     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _, "value": _}}
      * @throws Exceptions.UnregisteredInstanceError
      * @throws Exceptions.UnexpectedPolarTypeError
      */
@@ -300,7 +299,7 @@ public class Host implements Cloneable {
                     case "Integer":
                         return num.getInt("Integer");
                     case "Float":
-                        return num.getFloat("Float");
+                        return num.getDouble("Float");
                 }
             case "List":
                 return polarListToJava(value.getJSONArray(tag));
