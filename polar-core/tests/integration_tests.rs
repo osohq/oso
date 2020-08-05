@@ -9,14 +9,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Read;
 use std::iter::FromIterator;
-use std::rc::Rc;
 use std::thread::spawn;
 
-use polar_core::{
-    error::*, formatting::draw, polar::Polar, polar::Query, sym, term, types::*, value,
-};
+use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, value};
 
-type QueryResults = Vec<(HashMap<Symbol, Value>, Option<Rc<Trace>>)>;
+type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
 fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Vec<Term>) -> Option<Term> {
@@ -247,19 +244,25 @@ fn test_trace() {
         .unwrap();
     let query = polar.new_query("f(1)", true).unwrap();
     let results = query_results!(query);
-    let trace = draw(results.first().unwrap().1.as_ref().unwrap(), 0);
+    let trace = results[0].1.as_ref().unwrap();
     let expected = r#"f(1) [
-  f(x) if x = 1 and x = 1; [
-    _x_3 = 1 and _x_3 = 1 [
-      _x_3 = 1 [
-      ]
-      _x_3 = 1 [
-      ]
-    ]
+  f(x) if
+    x = 1 and x = 1 [
+      x = 1 []
+      x = 1 []
   ]
 ]
 "#;
-    assert_eq!(trace, expected);
+    assert_eq!(trace.formatted, expected);
+    let trace = results[1].1.as_ref().unwrap();
+    let expected = r#"f(1) [
+  f(y) if
+    y = 1 [
+      y = 1 []
+  ]
+]
+"#;
+    assert_eq!(trace.formatted, expected);
 }
 
 #[test]
@@ -1049,7 +1052,7 @@ fn test_rest_vars() {
     polar
         .load(
             r#"member(x, [x, *_rest]);
-               member(x, [_first, *rest]) := member(x, rest);"#,
+               member(x, [_first, *rest]) if member(x, rest);"#,
         )
         .unwrap();
     assert!(qeval(&mut polar, "member(1, [1,2,3])"));
@@ -1063,7 +1066,7 @@ fn test_rest_vars() {
     polar
         .load(
             r#"append([], x, x);
-               append([first, *rest], x, [first, *tail]) := append(rest, x, tail);"#,
+               append([first, *rest], x, [first, *tail]) if append(rest, x, tail);"#,
         )
         .unwrap();
     assert!(qeval(&mut polar, "append([], [], [])"));
@@ -1340,4 +1343,27 @@ fn test_float_parsing() {
     assert_eq!(qvar(&mut polar, "x=1.0e+15", "x"), vec![value!(1e15)]);
     assert_eq!(qvar(&mut polar, "x=1.0E+15", "x"), vec![value!(1e15)]);
     assert_eq!(qvar(&mut polar, "x=1.0e-15", "x"), vec![value!(1e-15)]);
+}
+#[test]
+fn test_assignment() {
+    let mut polar = Polar::new(None);
+    assert!(qeval(&mut polar, "x := 5 and x == 5"));
+    let mut query = polar.new_query("x := 5 and x := 6", false).unwrap();
+    let e = query.next_event().unwrap_err();
+    assert!(matches!(
+        e.kind,
+        ErrorKind::Runtime(RuntimeError::TypeError {
+            msg: s,
+            ..
+        }) if s == "Can only assign to unbound variables, x is bound to value 5."
+    ));
+    assert!(qnull(&mut polar, "x := 5 and x > 6"));
+    assert!(qeval(&mut polar, "x := y and y = 6 and x = 6"));
+
+    // confirm old syntax -> parse error
+    let e = polar.load("f(x) := g(x)").unwrap_err();
+    assert!(matches!(
+        e.kind,
+        ErrorKind::Parse(ParseError::UnrecognizedToken { .. })
+    ));
 }

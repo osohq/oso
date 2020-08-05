@@ -52,7 +52,7 @@ def query(polar):
     """ Query something and return the results as a list """
 
     def _query(q):
-        return list(polar.query(q))
+        return list(r["bindings"] for r in polar.query(q))
 
     return _query
 

@@ -36,7 +36,6 @@ class Oso(Polar):
         self.register_class(Http)
         self.register_class(PathMapper)
 
-    # TODO (dhatch): should we name this 'is_allowed'?
     def is_allowed(self, actor, action, resource) -> bool:
         """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
 

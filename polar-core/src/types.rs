@@ -149,6 +149,7 @@ pub enum Operator {
     Or,
     And,
     ForAll,
+    Assign,
 }
 
 impl Operator {
@@ -173,6 +174,7 @@ impl Operator {
             Operator::Gt => 5,
             Operator::Lt => 5,
             Operator::Unify => 4,
+            Operator::Assign => 4,
             Operator::Not => 3,
             Operator::Or => 2,
             Operator::And => 1,
@@ -239,8 +241,6 @@ impl Value {
             Value::RestVariable(name) => Ok(name),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected symbol, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -251,8 +251,6 @@ impl Value {
             Value::InstanceLiteral(literal) => Ok(literal),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -263,8 +261,6 @@ impl Value {
             Value::Expression(op) => Ok(op),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -275,8 +271,6 @@ impl Value {
             Value::Call(pred) => Ok(pred),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected instance literal, got: {}", self.to_polar()),
-                loc: 0,
-                context: None,     // @TODO
                 stack_trace: None, // @TODO
             }),
         }
@@ -291,7 +285,8 @@ enum SourceInfo {
         src_id: u64,
 
         /// Location of the term within the source map
-        offset: usize,
+        left: usize,
+        right: usize,
     },
 
     /// Created as a temporary variable
@@ -339,9 +334,13 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(src_id: u64, offset: usize, value: Value) -> Self {
+    pub fn new_from_parser(src_id: u64, left: usize, right: usize, value: Value) -> Self {
         Self {
-            source_info: SourceInfo::Parser { src_id, offset },
+            source_info: SourceInfo::Parser {
+                src_id,
+                left,
+                right,
+            },
             value: Rc::new(value),
         }
     }
@@ -420,10 +419,18 @@ impl Term {
     }
 
     pub fn offset(&self) -> usize {
-        if let SourceInfo::Parser { offset, .. } = self.source_info {
-            offset
+        if let SourceInfo::Parser { left, .. } = self.source_info {
+            left
         } else {
             0
+        }
+    }
+
+    pub fn span(&self) -> Option<(usize, usize)> {
+        if let SourceInfo::Parser { left, right, .. } = self.source_info {
+            Some((left, right))
+        } else {
+            None
         }
     }
 
@@ -445,7 +452,7 @@ pub fn unwrap_and(term: Term) -> TermList {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Parameter {
-    pub parameter: Option<Term>,
+    pub parameter: Term,
     pub specializer: Option<Term>,
 }
 
@@ -454,7 +461,7 @@ impl Parameter {
     where
         F: FnMut(&Term) -> Term,
     {
-        self.parameter.iter_mut().for_each(|p| p.map_replace(f));
+        self.parameter.map_replace(f);
         self.specializer.iter_mut().for_each(|p| p.map_replace(f));
     }
 }
@@ -545,6 +552,12 @@ pub enum Node {
 pub struct Trace {
     pub node: Node,
     pub children: Vec<Rc<Trace>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TraceResult {
+    pub trace: Rc<Trace>,
+    pub formatted: String,
 }
 
 #[derive(Default)]
@@ -659,7 +672,7 @@ pub enum QueryEvent {
 
     Result {
         bindings: Bindings,
-        trace: Option<Rc<Trace>>,
+        trace: Option<TraceResult>,
     },
 
     ExternalOp {
@@ -724,7 +737,6 @@ mod tests {
             token: "Integer".to_owned(),
             c: 'x',
             loc: 99,
-            context: None,
         };
         let err: crate::error::PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());

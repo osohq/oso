@@ -379,7 +379,7 @@ def test_parser_errors(polar):
 
 def test_runtime_errors(polar, query):
     rules = """
-    foo(a,b) := a in b;
+    foo(a,b) if a in b;
     """
     polar.load_str(rules)
     with pytest.raises(exceptions.PolarRuntimeException) as e:
@@ -604,17 +604,23 @@ def test_register_constants_with_decorator():
     p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
-        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))["y"] == 1
+        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
+            "bindings"
+        ]["y"]
+        == 1
     )
-    assert next(p.query_rule("foo_class_attr", Variable("y")))["y"] == 1
+    assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
 
     p = Polar()
     p.load_str("foo_rule(x: RegisterDecoratorTest, y) if y = 1;")
     p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
     assert (
-        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))["y"] == 1
+        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
+            "bindings"
+        ]["y"]
+        == 1
     )
-    assert next(p.query_rule("foo_class_attr", Variable("y")))["y"] == 1
+    assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
 
 
 def test_unbound_variable(polar, query):
