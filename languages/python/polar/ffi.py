@@ -4,7 +4,7 @@ import json
 
 from _polar_lib import ffi, lib
 
-from .errors import raise_error
+from .errors import get_python_error
 from .exceptions import PolarRuntimeException
 
 
@@ -75,7 +75,7 @@ class Query:
         check_result(lib.polar_application_error(self.ptr, message))
 
     def next_event(self):
-        return ffi_deserialize(lib.polar_next_query_event(self.ptr))
+        return QueryEvent(check_result(lib.polar_next_query_event(self.ptr)))
 
     def debug_command(self, command):
         check_result(lib.polar_debug_command(self.ptr, ffi_serialize(command)))
@@ -85,13 +85,19 @@ class QueryEvent:
     def __init__(self, ptr):
         self.ptr = ptr
 
+    def get(self):
+        return ffi.string(self.ptr).decode()
+
     def __del__(self):
         lib.string_free(self.ptr)
 
 
 class Error:
-    def __init__(self, ptr):
-        self.ptr = ptr
+    def __init__(self):
+        self.ptr = lib.polar_get_error()
+
+    def get(self):
+        return get_python_error(ffi.string(self.ptr).decode())
 
     def __del__(self):
         lib.string_free(self.ptr)
@@ -99,7 +105,7 @@ class Error:
 
 def check_result(result):
     if result == 0 or is_null(result):
-        raise_error()
+        raise Error().get()
     return result
 
 
@@ -113,14 +119,3 @@ def to_c_str(string):
 
 def ffi_serialize(value):
     return to_c_str(json.dumps(value))
-
-
-def ffi_deserialize(string):
-    """Reconstruct Python object from JSON-encoded C string."""
-    try:
-        check_result(string)
-        return json.loads(ffi.string(string).decode())
-    finally:
-        if not is_null(string):
-            lib.string_free(string)
-

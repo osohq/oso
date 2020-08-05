@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import json
 
 from _polar_lib import lib
 from .exceptions import PolarApiException
@@ -35,7 +36,8 @@ class Query:
         """Run the event loop and yield results."""
         assert self.ffi_query, "no query to run"
         while True:
-            event = self.ffi_query.next_event()
+            event_str = self.ffi_query.next_event().get()
+            event = json.loads(event_str)
             if event == "Done":
                 break
             kind = [*event][0]

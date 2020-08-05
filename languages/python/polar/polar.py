@@ -6,7 +6,6 @@ from pprint import pprint
 
 from _polar_lib import lib
 
-from .errors import get_error
 from .exceptions import PolarApiException, PolarRuntimeException, ParserException
 from .ffi import Polar as FfiPolar, Query as FfiQuery
 from .host import Host
