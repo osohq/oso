@@ -181,17 +181,17 @@ public class Ffi {
         String suffix = null;
 
         if (platform.contains("win")) {
-            path = "win/polar.dll";
+            path = "win\\polar.dll";
             prefix = "polar";
-            suffix = "dll";
+            suffix = ".dll";
         } else if (platform.contains("mac")) {
             path = "macos/libpolar.dylib";
             prefix = "libpolar";
-            suffix = "dylib";
+            suffix = ".dylib";
         } else {
             path = "linux/libpolar.so";
             prefix = "libpolar";
-            suffix = "so";
+            suffix = ".so";
         }
         try {
             InputStream input = getClass().getClassLoader().getResourceAsStream(path);
