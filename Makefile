@@ -1,4 +1,4 @@
-.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint
+.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint wasm-build
 
 test: rust-test python-test ruby-test java-test
 
@@ -10,6 +10,9 @@ rust-build:
 
 python-build: rust-build
 	$(MAKE) -C languages/python build
+
+wasm-build:
+	$(MAKE) -C polar-wasm-api build
 
 python-test: python-build
 	$(MAKE) -C languages/python test
