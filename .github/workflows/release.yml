@@ -280,9 +280,16 @@ jobs:
     steps:
       - name: Set version output
         id: version
+        if: runner.os != 'Windows'
         env:
           github_ref: ${{ github.ref }}
         run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - name: Set version output
+        id: version
+        if: runner.os == 'Windows'
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::$($env:github_ref.Substring(11))"
       - uses: actions/checkout@v2
       - uses: actions/setup-java@v1
         with:
@@ -291,7 +298,8 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: jar
-      - run: |
+      - name: Run tests
+        run: |
           javac -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test.java
           java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test
         working-directory: test
