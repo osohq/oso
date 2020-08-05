@@ -3,8 +3,9 @@
 module Oso
   module Polar
     # Translate between Polar and the host language (Ruby).
-    class Host
+    class Host # rubocop:disable Metrics/ClassLength
       protected
+
       # @return [FFI::Polar]
       attr_reader :ffi_polar
       # @return [Hash<String, Class>]
@@ -15,6 +16,7 @@ module Oso
       attr_reader :instances
 
       public
+
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
         @classes = {}
@@ -46,7 +48,7 @@ module Oso
       # @param name [String] the name to cache the class as. Defaults to the name of the class.
       # @return [String] the name the class is cached as.
       # @raise [UnregisteredClassError] if the class has not been registered.
-      def cache_class(cls, name:, constructor:)
+      def cache_class(cls, name:, constructor:) # rubocop:disable Metrics/MethodLength
         name = cls.name if name.nil?
         raise DuplicateClassAliasError, name: name, old: get_class(name), new: cls if classes.key? name
 

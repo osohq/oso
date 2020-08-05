@@ -4,10 +4,11 @@ module Oso
   module Polar
     # A single Polar query.
     class Query
+      # @return [Enumerator]
       attr_reader :results
 
       # @param ffi_query [FFI::Query]
-      # @param ffi_polar [FFI::Polar]
+      # @param host [Oso::Polar::Host]
       def initialize(ffi_query, host:)
         @calls = {}
         @ffi_query = ffi_query
@@ -38,7 +39,7 @@ module Oso
       #
       # @param method [#to_sym]
       # @param call_id [Integer]
-      # @param instance [Hash]
+      # @param instance [Hash<String, Object>]
       # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
@@ -77,10 +78,9 @@ module Oso
         host.to_polar_term(calls[id].next)
       end
 
-      # Send result of predicate check across FFI boundary.
+      # Send application error across FFI boundary.
       #
-      # @param result [Boolean]
-      # @param call_id [Integer]
+      # @param message [String]
       # @raise [Error] if the FFI call raises one.
       def application_error(message)
         ffi_query.application_error(message)
@@ -92,7 +92,7 @@ module Oso
       # @param method [#to_sym]
       # @param args [Array<Hash>]
       # @param call_id [Integer]
-      # @param instance_id [Integer]
+      # @param instance [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
       def handle_call(method, call_id:, instance:, args:)
         register_call(method, call_id: call_id, instance: instance, args: args)
