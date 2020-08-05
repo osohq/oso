@@ -6,8 +6,8 @@ use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
-use super::formatting::{draw, ToPolarString};
-use super::lexer::{loc_to_pos, make_context};
+use super::formatting::ToPolarString;
+use super::lexer::loc_to_pos;
 use super::types::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
@@ -370,13 +370,17 @@ impl PolarVirtualMachine {
             self.print("⇒ result");
             if self.tracing {
                 for t in &self.trace {
-                    self.print(&format!("trace\n{}", draw(t, 0)));
+                    self.print(&format!("trace\n{}", t.draw(&self)));
                 }
             }
         }
 
         let trace = if self.tracing {
-            self.trace.first().cloned()
+            let trace = self.trace.first().cloned();
+            trace.map(|trace| TraceResult {
+                formatted: trace.draw(&self),
+                trace,
+            })
         } else {
             None
         };
@@ -607,6 +611,10 @@ impl PolarVirtualMachine {
     fn print(&self, message: &str) {
         let mut writer = self.output.write().unwrap();
         let _ = writeln!(&mut writer, "{}", message);
+    }
+
+    fn source(&self, term: &Term) -> Option<Source> {
+        self.kb.read().unwrap().sources.get_source(&term)
     }
 
     /// Get the query stack as a string for printing in error messages.
@@ -1000,22 +1008,17 @@ impl PolarVirtualMachine {
             let term = match &trace.node {
                 Node::Term(t) => Some(t),
                 _ => None,
-            }
-            .unwrap();
-            let source = self.kb.read().unwrap().sources.get_source(term);
-            let context = if let Some(source) = source {
-                make_context(&source, term.offset())
-            } else {
-                None
             };
             let stack_trace = self.stack_trace();
             let error = error::RuntimeError::Application {
                 msg: error.clone(),
-                loc: term.offset(),
-                context,
                 stack_trace: Some(stack_trace),
             };
-            Err(error.into())
+            if let Some(term) = term {
+                Err(self.set_error_context(term, error))
+            } else {
+                Err(error.into())
+            }
         } else {
             Ok(QueryEvent::None)
         }
@@ -1339,10 +1342,12 @@ impl PolarVirtualMachine {
                     Operator::Mul => *left * *right,
                     Operator::Div => *left / *right,
                     _ => {
-                        return Err(error::RuntimeError::Unsupported {
-                            msg: format!("numeric operation {}", op.to_polar()),
-                        }
-                        .into())
+                        return Err(self.set_error_context(
+                            term,
+                            error::RuntimeError::Unsupported {
+                                msg: format!("numeric operation {}", op.to_polar()),
+                            },
+                        ))
                     }
                 } {
                     self.push_goal(Goal::Unify {
@@ -1350,10 +1355,12 @@ impl PolarVirtualMachine {
                         right: result.clone(),
                     })?;
                 } else {
-                    return Err(error::RuntimeError::ArithmeticError {
-                        msg: term.to_polar(),
-                    }
-                    .into());
+                    return Err(self.set_error_context(
+                        term,
+                        error::RuntimeError::ArithmeticError {
+                            msg: term.to_polar(),
+                        },
+                    ));
                 }
             }
             (_, _) => todo!(),
@@ -1737,12 +1744,10 @@ impl PolarVirtualMachine {
             let Rule { params, .. } = self.rename_rule_vars(&rule);
             let mut check_applicability = vec![];
             for (arg, param) in args.iter().zip(params.iter()) {
-                if let Some(parameter) = &param.parameter {
-                    check_applicability.push(Goal::Unify {
-                        left: arg.clone(),
-                        right: parameter.clone(),
-                    });
-                }
+                check_applicability.push(Goal::Unify {
+                    left: arg.clone(),
+                    right: param.parameter.clone(),
+                });
                 if let Some(specializer) = &param.specializer {
                     check_applicability.push(Goal::Isa {
                         left: arg.clone(),
@@ -1840,12 +1845,10 @@ impl PolarVirtualMachine {
 
                 // Unify the arguments with the formal parameters.
                 for (arg, param) in args.iter().zip(params.iter()) {
-                    if let Some(right) = &param.parameter {
-                        goals.push(Goal::Unify {
-                            left: arg.clone(),
-                            right: right.clone(),
-                        });
-                    }
+                    goals.push(Goal::Unify {
+                        left: arg.clone(),
+                        right: param.parameter.clone(),
+                    });
                     if let Some(specializer) = &param.specializer {
                         goals.push(Goal::Isa {
                             left: arg.clone(),
@@ -1983,21 +1986,55 @@ impl PolarVirtualMachine {
         }
     }
 
+    pub fn term_source(&self, term: &Term) -> String {
+        let source = self.source(term);
+        let span = term.span();
+        match (source, span) {
+            (Some(source), Some((left, right))) => {
+                source.src.chars().take(right).skip(left).collect()
+            }
+            _ => term.to_polar(),
+        }
+    }
+
+    pub fn rule_source(&self, rule: &Rule) -> String {
+        let mut head = format!(
+            "{}({})",
+            rule.name,
+            rule.params.iter().fold(String::new(), |mut acc, p| {
+                if acc != "" {
+                    acc += ", ";
+                }
+                acc += &self.term_source(&p.parameter);
+                if let Some(spec) = &p.specializer {
+                    acc += ": ";
+                    acc += &self.term_source(&spec);
+                }
+                acc
+            })
+        );
+        // head
+        head += " if\n  ";
+        head + &self.term_source(&rule.body)
+    }
+
+    fn set_error_context(
+        &self,
+        term: &Term,
+        error: impl Into<error::PolarError>,
+    ) -> error::PolarError {
+        let source = self.source(term);
+        let error: error::PolarError = error.into();
+        error.set_context(source.as_ref(), Some(term))
+    }
+
     fn type_error(&self, term: &Term, msg: String) -> error::PolarError {
-        let source = { self.kb.read().unwrap().sources.get_source(&term) };
-        let context = if let Some(source) = source {
-            make_context(&source, term.offset())
-        } else {
-            None
-        };
         let stack_trace = self.stack_trace();
         let error = error::RuntimeError::TypeError {
             msg,
-            loc: term.offset(),
-            context,
             stack_trace: Some(stack_trace),
         };
-        error.into()
+        self.set_error_context(term, error)
     }
 }
 

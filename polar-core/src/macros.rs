@@ -41,7 +41,7 @@ macro_rules! term {
 impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
         Self(Parameter {
-            parameter: Some(arg.1.clone_with_value(Value::Variable(arg.0))),
+            parameter: arg.1.clone_with_value(Value::Variable(arg.0)),
             specializer: Some(Pattern::term_as_pattern(&arg.1)),
         })
     }
@@ -53,7 +53,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Some(Term::new_from_test(name)),
+            parameter: Term::new_from_test(name),
             specializer: None,
         })
     }

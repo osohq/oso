@@ -4,10 +4,26 @@ use std::fmt;
 
 use crate::types::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(into = "FormattedPolarError")]
 pub struct PolarError {
     pub kind: ErrorKind,
+    pub context: Option<ErrorContext>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct FormattedPolarError {
+    pub kind: ErrorKind,
     pub formatted: String,
+}
+
+impl From<PolarError> for FormattedPolarError {
+    fn from(other: PolarError) -> Self {
+        Self {
+            formatted: other.to_string(),
+            kind: other.kind,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,11 +34,51 @@ pub enum ErrorKind {
     Parameter(ParameterError),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorContext {
+    pub source: Source,
+    pub row: usize,
+    pub column: usize,
+}
+
+impl PolarError {
+    pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
+        match (&self.kind, source, term) {
+            (ErrorKind::Parse(e), Some(source), _) => match e {
+                ParseError::IntegerOverflow { loc, .. }
+                | ParseError::InvalidTokenCharacter { loc, .. }
+                | ParseError::InvalidToken { loc, .. }
+                | ParseError::UnrecognizedEOF { loc }
+                | ParseError::UnrecognizedToken { loc, .. }
+                | ParseError::ExtraToken { loc, .. } => {
+                    let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
+                    self.context.replace(ErrorContext {
+                        source: source.clone(),
+                        row,
+                        column,
+                    });
+                }
+                _ => {}
+            },
+            (_, Some(source), Some(term)) => {
+                let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
+                self.context.replace(ErrorContext {
+                    source: source.clone(),
+                    row,
+                    column,
+                });
+            }
+            _ => {}
+        }
+        self
+    }
+}
+
 impl From<ParseError> for PolarError {
     fn from(err: ParseError) -> Self {
         Self {
-            formatted: err.to_string(),
             kind: ErrorKind::Parse(err),
+            context: None,
         }
     }
 }
@@ -30,8 +86,8 @@ impl From<ParseError> for PolarError {
 impl From<RuntimeError> for PolarError {
     fn from(err: RuntimeError) -> Self {
         Self {
-            formatted: err.to_string(),
             kind: ErrorKind::Runtime(err),
+            context: None,
         }
     }
 }
@@ -39,8 +95,8 @@ impl From<RuntimeError> for PolarError {
 impl From<OperationalError> for PolarError {
     fn from(err: OperationalError) -> Self {
         Self {
-            formatted: err.to_string(),
             kind: ErrorKind::Operational(err),
+            context: None,
         }
     }
 }
@@ -48,8 +104,8 @@ impl From<OperationalError> for PolarError {
 impl From<ParameterError> for PolarError {
     fn from(err: ParameterError) -> Self {
         Self {
-            formatted: err.to_string(),
             kind: ErrorKind::Parameter(err),
+            context: None,
         }
     }
 }
@@ -60,64 +116,29 @@ impl std::error::Error for PolarError {}
 
 impl fmt::Display for PolarError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.kind {
-            ErrorKind::Parse(_) => write!(f, "Parse error: ")?,
-            ErrorKind::Runtime(_) => write!(f, "Runtime error: ")?,
-            ErrorKind::Operational(_) => write!(f, "Operational error: ")?,
-            ErrorKind::Parameter(_) => write!(f, "Parameter error: ")?,
+        match &self.kind {
+            ErrorKind::Parse(e) => write!(f, "{}", e)?,
+            ErrorKind::Runtime(e) => write!(f, "{}", e)?,
+            ErrorKind::Operational(e) => write!(f, "{}", e)?,
+            ErrorKind::Parameter(e) => write!(f, "{}", e)?,
         }
-        write!(f, "{}", self.formatted)
+        if let Some(ref context) = self.context {
+            write!(f, "{}", context)?;
+        }
+        Ok(())
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ErrorContext {
-    pub source: Source,
-    pub row: usize,
-    pub column: usize,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
-    IntegerOverflow {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    InvalidTokenCharacter {
-        token: String,
-        c: char,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    InvalidToken {
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    UnrecognizedEOF {
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    UnrecognizedToken {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    ExtraToken {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    ReservedWord {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
-    InvalidFloat {
-        token: String,
-        loc: usize,
-        context: Option<ErrorContext>,
-    },
+    IntegerOverflow { token: String, loc: usize },
+    InvalidTokenCharacter { token: String, c: char, loc: usize },
+    InvalidToken { loc: usize },
+    UnrecognizedEOF { loc: usize },
+    UnrecognizedToken { token: String, loc: usize },
+    ExtraToken { token: String, loc: usize },
+    ReservedWord { token: String, loc: usize },
+    InvalidFloat { token: String, loc: usize },
 }
 
 impl fmt::Display for ErrorContext {
@@ -132,70 +153,41 @@ impl fmt::Display for ErrorContext {
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let context = match self {
-            Self::IntegerOverflow { token, context, .. } => {
-                write!(f, "'{}' caused an integer overflow", token.escape_debug())?;
-                context
+        match self {
+            Self::IntegerOverflow { token, .. } => {
+                write!(f, "'{}' caused an integer overflow", token.escape_debug())
             }
-            Self::InvalidTokenCharacter {
-                token, c, context, ..
-            } => {
-                write!(
-                    f,
-                    "'{}' is not a valid character. Found in {}",
-                    c.escape_debug(),
-                    token.escape_debug()
-                )?;
-                context
-            }
-            Self::InvalidToken { context, .. } => {
-                write!(f, "found an unexpected sequence of characters")?;
-                context
-            }
-            Self::UnrecognizedEOF { context, .. } => {
-                write!(
-                    f,
-                    "hit the end of the file unexpectedly. Did you forget a semi-colon"
-                )?;
-                context
-            }
-            Self::UnrecognizedToken { token, context, .. } => {
-                write!(
-                    f,
-                    "did not expect to find the token '{}'",
-                    token.escape_debug()
-                )?;
-                context
-            }
-            Self::ExtraToken { token, context, .. } => {
-                write!(
-                    f,
-                    "did not expect to find the token '{}'",
-                    token.escape_debug()
-                )?;
-                context
-            }
-            Self::ReservedWord { token, context, .. } => {
-                write!(
-                    f,
-                    "{} is a reserved Polar word and cannot be used here",
-                    token.escape_debug()
-                )?;
-                context
-            }
-            Self::InvalidFloat { token, context, .. } => {
-                write!(
-                    f,
-                    "{} was parsed as a float, but is invalid",
-                    token.escape_debug()
-                )?;
-                context
-            }
-        };
-        if let Some(context) = context {
-            write!(f, "{}", context)
-        } else {
-            Ok(())
+            Self::InvalidTokenCharacter { token, c, .. } => write!(
+                f,
+                "'{}' is not a valid character. Found in {}",
+                c.escape_debug(),
+                token.escape_debug()
+            ),
+            Self::InvalidToken { .. } => write!(f, "found an unexpected sequence of characters"),
+            Self::UnrecognizedEOF { .. } => write!(
+                f,
+                "hit the end of the file unexpectedly. Did you forget a semi-colon"
+            ),
+            Self::UnrecognizedToken { token, .. } => write!(
+                f,
+                "did not expect to find the token '{}'",
+                token.escape_debug()
+            ),
+            Self::ExtraToken { token, .. } => write!(
+                f,
+                "did not expect to find the token '{}'",
+                token.escape_debug()
+            ),
+            Self::ReservedWord { token, .. } => write!(
+                f,
+                "{} is a reserved Polar word and cannot be used here",
+                token.escape_debug()
+            ),
+            Self::InvalidFloat { token, .. } => write!(
+                f,
+                "{} was parsed as a float, but is invalid",
+                token.escape_debug()
+            ),
         }
     }
 }
@@ -214,8 +206,6 @@ pub enum RuntimeError {
     },
     TypeError {
         msg: String,
-        loc: usize,
-        context: Option<ErrorContext>,
         stack_trace: Option<String>,
     },
     UnboundVariable {
@@ -229,8 +219,6 @@ pub enum RuntimeError {
     },
     Application {
         msg: String,
-        loc: usize,
-        context: Option<ErrorContext>,
         stack_trace: Option<String>,
     },
 }
@@ -241,40 +229,20 @@ impl fmt::Display for RuntimeError {
             Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
-            Self::TypeError {
-                msg,
-                loc,
-                context,
-                stack_trace,
-            } => {
+            Self::TypeError { msg, stack_trace } => {
                 if let Some(stack_trace) = stack_trace {
                     writeln!(f, "{}", stack_trace)?;
                 }
-                write!(f, "Type error: {}", msg)?;
-                if let Some(context) = context {
-                    write!(f, "{}", context)
-                } else {
-                    write!(f, " at location {}", loc)
-                }
+                write!(f, "Type error: {}", msg)
             }
             Self::UnboundVariable { sym } => write!(f, "{} is an unbound variable", sym.0),
             Self::StackOverflow { msg } => write!(f, "Hit a stack limit: {}", msg),
             Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
-            Self::Application {
-                msg,
-                loc,
-                context,
-                stack_trace,
-            } => {
+            Self::Application { msg, stack_trace } => {
                 if let Some(stack_trace) = stack_trace {
                     writeln!(f, "{}", stack_trace)?;
                 }
-                write!(f, "Application error: {}", msg)?;
-                if let Some(context) = context {
-                    write!(f, "{}", context)
-                } else {
-                    write!(f, " at location {}", loc)
-                }
+                write!(f, "Application error: {}", msg)
             }
         }
     }
