@@ -302,8 +302,8 @@ jobs:
         env:
           github_ref: ${{ github.ref }}
         run: |
-          javac -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar:." Test.java
-          java -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar:." Test
+          javac -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test.java
+          java -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test
         working-directory: test
   # release:
   #   name: Create release
