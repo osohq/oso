@@ -544,7 +544,6 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Trace {
     pub node: Node,
-    pub polar_str: String,
     pub children: Vec<Rc<Trace>>,
 }
 
