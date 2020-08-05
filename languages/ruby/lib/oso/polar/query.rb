@@ -47,12 +47,7 @@ module Oso
         return if calls.key?(call_id)
 
         args = args.map { |a| host.to_ruby(a) }
-        if instance['value'].key? 'ExternalInstance'
-          instance_id = instance['value']['ExternalInstance']['instance_id']
-          instance = host.get_instance(instance_id)
-        else
-          instance = host.to_ruby(instance)
-        end
+        instance = host.to_ruby(instance)
         result = instance.__send__(method, *args)
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
