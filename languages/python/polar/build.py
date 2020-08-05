@@ -15,7 +15,10 @@ include_dirs = {
     "CI": "native",
 }
 env = os.environ.get("ENV", "DEVELOPMENT")
-lib = lib_dirs[env] + "/libpolar.a"  # @TODO: Windows
+if sys.platform.startswith("win"):
+    lib = lib_dirs[env] + "/libpolar.a"
+else:
+    lib = lib_dirs[env] + "/polar.lib"
 include_dir = include_dirs[env]
 
 ffibuilder.set_source(
