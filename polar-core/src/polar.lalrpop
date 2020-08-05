@@ -46,9 +46,9 @@ extern {
         "<" => lexer::Token::Lt,        // <
         ">" => lexer::Token::Gt,        // >
         "=" => lexer::Token::Unify,     // =
+        ":=" => lexer::Token::Assign,    // :=
         "|" => lexer::Token::Pipe,      // |
         ";" => lexer::Token::SemiColon, // ;
-        ":=" => lexer::Token::Define,   // :=
         "?=" => lexer::Token::Query,    // ?=
         "cut" => lexer::Token::Cut,
         "debug" => lexer::Token::Debug,
@@ -344,11 +344,16 @@ Exp5<T>: Term = {
     <Exp6<T>>,
 }
 
-// =
+// =, :=
 UnifyExp<T>: Value = {
     <exp4:Exp4<T>> "=" <exp5:Exp5<T>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Unify, args};
+        Value::Expression(op)
+    },
+    <variable:Spanned<Variable>> ":=" <exp5:Exp5<T>> => {
+        let args = vec![variable, exp5];
+        let op = Operation{operator: Operator::Assign, args};
         Value::Expression(op)
     },
 }
@@ -357,6 +362,7 @@ Exp4<T>: Term = {
     <Spanned<UnifyExp<T>>>,
     <Exp5<T>>,
 }
+
 
 
  // !
@@ -525,7 +531,7 @@ RuleHead: (Symbol, Vec<Parameter>) = {
     }
 };
 
-Define = {":=", "if"};
+Define = {"if"};
 
 pub Rule: Rule = {
     <head:RuleHead> <start:@L> <end:@R> ";" => {
