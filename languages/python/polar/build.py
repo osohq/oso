@@ -15,10 +15,12 @@ include_dirs = {
     "CI": "native",
 }
 env = os.environ.get("ENV", "DEVELOPMENT")
+libs = []
 if sys.platform.startswith("win"):
-    lib = lib_dirs[env] + "/polar.lib"
+    libs.append(lib_dirs[env] + "/polar.lib")
+    libs.append("Ws2_32.lib")
 else:
-    lib = lib_dirs[env] + "/libpolar.a"
+    libs.append(lib_dirs[env] + "/libpolar.a")
 include_dir = include_dirs[env]
 
 ffibuilder.set_source(
@@ -29,7 +31,7 @@ ffibuilder.set_source(
     library_dirs=[lib_dirs[env]],
     include_dirs=[include_dir],
     libraries=["rt"] if sys.platform.startswith("linux") else [],
-    extra_link_args=[lib],
+    extra_link_args=libs,
 )
 
 with open(include_dir + "/polar.h") as f:
