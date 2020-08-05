@@ -92,182 +92,182 @@ jobs:
           name: jar
           path: languages/java/oso/target/oso-${{ steps.version.outputs.oso_version }}.jar
 
-  # build_gem:
-  #   name: Build Gem.
-  #   runs-on: ubuntu-18.04
-  #   needs: build_dylib
+  build_gem:
+    name: Build Gem.
+    runs-on: ubuntu-18.04
+    needs: build_dylib
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Ruby + gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4
+          working-directory: "languages/ruby"
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - name: Download dylibs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_library
+      - name: Copy libraries into resources.
+        run: |
+          mkdir -p languages/ruby/ext/oso-oso/lib
+          cp -r oso_library/libpolar.so languages/ruby/ext/oso-oso/lib/
+          cp -r oso_library/libpolar.dylib languages/ruby/ext/oso-oso/lib/
+          cp -r oso_library/polar.dll languages/ruby/ext/oso-oso/lib/
+      - name: Test
+        run: |
+          bundle install
+          bundle exec rake spec
+        working-directory: languages/ruby
+      - name: Build
+        run: |
+          gem build oso-oso.gemspec
+        working-directory: languages/ruby
+      - run: gem install oso-oso-${{ steps.version.outputs.oso_version }}.gem
+        working-directory: languages/ruby
+      - uses: actions/upload-artifact@v2
+        with:
+          name: gem
+          path: languages/ruby/oso-oso-${{ steps.version.outputs.oso_version }}.gem
+
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: version
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest, windows-latest]
+
+    env:
+      # Skip Python 2.7 and Python 3.5
+      CIBW_SKIP: "cp27-* cp35-* pp27-*"
+      # 64-bit builds only
+      CIBW_BUILD: "*64"
+      # Used in build.py to find right files
+      CIBW_ENVIRONMENT: ENV=CI
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: "3.7"
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==1.4.2
+
+      - name: Build Rust library (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          cargo build --target x86_64-unknown-linux-musl --release
+          mkdir -p languages/python/native
+          cp polar-c-api/polar.h languages/python/native/
+          cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/native/
+      - name: Build Rust library (OSX)
+        if: runner.os == 'macOS'
+        run: |
+          cargo build --release
+          mkdir -p languages/python/native
+          cp polar-c-api/polar.h languages/python/native/
+          cp target/release/libpolar.a languages/python/native/
+      - name: Build Rust library (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cargo build --release
+          mkdir -p languages/python/native
+          cp polar-c-api/polar.h languages/python/native/
+          cp target/release/polar.lib languages/python/native/
+
+      - name: Build wheels
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+        working-directory: languages/python
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: languages/python/wheelhouse/*.whl
+  # docs:
+  #   runs-on: ubuntu-latest
   #   steps:
+  #     - uses: actions/setup-python@v1
+  #       with:
+  #         python-version: "3.6"
   #     - uses: actions/checkout@v2
-  #     - name: Install Ruby + gems
-  #       uses: ruby/setup-ruby@v1
+  #     - run: pip3 install -r requirements-dev.txt -i https://pypi.python.org/simple/
+  #       working-directory: polar
+  #     - run: pip3 install -e .
+  #       working-directory: polar
+  #     - run: pip3 install -e .
+  #       working-directory: oso
+  #     - run: make html
+  #       working-directory: docs
+  #     - uses: actions/upload-artifact@v1
   #       with:
-  #         bundler-cache: true
-  #         ruby-version: 2.4
-  #         working-directory: "languages/ruby"
-  #     - name: Set version output
-  #       id: version
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-  #     - name: Download dylibs
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: oso_library
-  #     - name: Copy libraries into resources.
-  #       run: |
-  #         mkdir -p languages/ruby/ext/oso-oso/lib
-  #         cp -r oso_library/libpolar.so languages/ruby/ext/oso-oso/lib/
-  #         cp -r oso_library/libpolar.dylib languages/ruby/ext/oso-oso/lib/
-  #         cp -r oso_library/polar.dll languages/ruby/ext/oso-oso/lib/
-  #     - name: Test
-  #       run: |
-  #         bundle install
-  #         bundle exec rake spec
-  #       working-directory: languages/ruby
-  #     - name: Build
-  #       run: |
-  #         gem build oso-oso.gemspec
-  #       working-directory: languages/ruby
-  #     - run: gem install oso-oso-${{ steps.version.outputs.oso_version }}.gem
-  #       working-directory: languages/ruby
-  #     - uses: actions/upload-artifact@v2
-  #       with:
-  #         name: gem
-  #         path: languages/ruby/oso-oso-${{ steps.version.outputs.oso_version }}.gem
+  #         name: docs
+  #         path: docs/_build/html/
 
-  # build_wheels:
-  #   name: Build wheels on ${{ matrix.os }}
-  #   runs-on: ${{ matrix.os }}
-  #   needs: version
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-18.04, macos-latest, windows-latest]
+  validate_python:
+    name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
+    needs: [build_wheels]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest, windows-latest]
+        python-version: [3.6, 3.7, 3.8]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - run: |
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          python test.py
+        working-directory: test
 
-  #   env:
-  #     # Skip Python 2.7 and Python 3.5
-  #     CIBW_SKIP: "cp27-* cp35-* pp27-*"
-  #     # 64-bit builds only
-  #     CIBW_BUILD: "*64"
-  #     # Used in build.py to find right files
-  #     CIBW_ENVIRONMENT: ENV=CI
-
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/setup-python@v2
-  #       name: Install Python
-  #       with:
-  #         python-version: "3.7"
-
-  #     - name: Install cibuildwheel
-  #       run: |
-  #         python -m pip install cibuildwheel==1.4.2
-
-  #     - name: Build Rust library (Linux)
-  #       if: runner.os == 'Linux'
-  #       run: |
-  #         rustup target add x86_64-unknown-linux-musl
-  #         cargo build --target x86_64-unknown-linux-musl --release
-  #         mkdir -p languages/python/native
-  #         cp polar-c-api/polar.h languages/python/native/
-  #         cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/native/
-  #     - name: Build Rust library (OSX)
-  #       if: runner.os == 'macOS'
-  #       run: |
-  #         cargo build --release
-  #         mkdir -p languages/python/native
-  #         cp polar-c-api/polar.h languages/python/native/
-  #         cp target/release/libpolar.a languages/python/native/
-  #     - name: Build Rust library (Windows)
-  #       if: runner.os == 'Windows'
-  #       run: |
-  #         cargo build --release
-  #         mkdir -p languages/python/native
-  #         cp polar-c-api/polar.h languages/python/native/
-  #         cp target/release/polar.lib languages/python/native/
-
-  #     - name: Build wheels
-  #       run: |
-  #         python -m cibuildwheel --output-dir wheelhouse
-  #       working-directory: languages/python
-  #     - uses: actions/upload-artifact@v2
-  #       with:
-  #         name: wheel
-  #         path: languages/python/wheelhouse/*.whl
-  # # docs:
-  # #   runs-on: ubuntu-latest
-  # #   steps:
-  # #     - uses: actions/setup-python@v1
-  # #       with:
-  # #         python-version: "3.6"
-  # #     - uses: actions/checkout@v2
-  # #     - run: pip3 install -r requirements-dev.txt -i https://pypi.python.org/simple/
-  # #       working-directory: polar
-  # #     - run: pip3 install -e .
-  # #       working-directory: polar
-  # #     - run: pip3 install -e .
-  # #       working-directory: oso
-  # #     - run: make html
-  # #       working-directory: docs
-  # #     - uses: actions/upload-artifact@v1
-  # #       with:
-  # #         name: docs
-  # #         path: docs/_build/html/
-
-  # validate_python:
-  #   name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
-  #   needs: [build_wheels]
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-18.04, macos-latest, windows-latest]
-  #       python-version: [3.6, 3.7, 3.8]
-  #   steps:
-  #     - name: Set version output
-  #       id: version
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-  #     - uses: actions/checkout@v2
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v1
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Download oso python wheels from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: wheel
-  #     - run: |
-  #         pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
-  #         python test.py
-  #       working-directory: test
-
-  # validate_ruby:
-  #   name: Test ruby ${{ matrix.ruby-version }} on ${{ matrix.os }}
-  #   needs: [build_gem]
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
-  #       ruby-version: [2.4, 2.5, 2.6, 2.7]
-  #   steps:
-  #     - name: Set version output
-  #       id: version
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-  #     - uses: actions/checkout@v2
-  #     - name: Set up ruby ${{ matrix.ruby-version }}
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: ${{ matrix.ruby-version }}
-  #         working-directory: "languages/ruby"
-  #     - name: Download oso gem from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: gem
-  #     - run: |
-  #         gem install gem/oso-oso-${{ steps.version.outputs.oso_version }}.gem
-  #         ruby languages/ruby/spec/oso/language_parity_spec.rb
+  validate_ruby:
+    name: Test ruby ${{ matrix.ruby-version }} on ${{ matrix.os }}
+    needs: [build_gem]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
+        ruby-version: [2.4, 2.5, 2.6, 2.7]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - uses: actions/checkout@v2
+      - name: Set up ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          working-directory: "languages/ruby"
+      - name: Download oso gem from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: gem
+      - run: |
+          gem install gem/oso-oso-${{ steps.version.outputs.oso_version }}.gem
+          ruby languages/ruby/spec/oso/language_parity_spec.rb
 
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
@@ -305,100 +305,101 @@ jobs:
           javac -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test.java
           java -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test
         working-directory: test
-  # release:
-  #   name: Create release
-  #   runs-on: ubuntu-latest
-  #   needs: [build_wheels, build_jar, build_gem]
-  #   steps:
-  #     - name: Set version output
-  #       id: version
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-  #     - name: Download oso dylibs
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: oso_library
-  #     - name: Zip file
-  #       run: zip --junk-paths -r oso-lib.zip oso_library/
-  #     - name: Download oso python wheels from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: wheel
-  #     - name: Zip file
-  #       run: zip --junk-paths -r oso-python.zip wheel/
-  #     - name: Download oso gem from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: gem
-  #     - name: Zip file
-  #       run: zip --junk-paths -r oso-ruby.zip gem/
-  #     - name: Download oso jar from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: jar
-  #     - name: Zip file
-  #       run: zip --junk-paths -r oso-java.zip jar/
-  #     # - name: Download docs
-  #     #   uses: actions/download-artifact@v1
-  #     #   with:
-  #     #     name: docs
-  #     # - name: Zip docs
-  #     #   run: zip -r oso-docs.zip docs/
-  #     - name: Create Release
-  #       id: create_release
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-  #       with:
-  #         tag_name: ${{ steps.version.outputs.oso_version }}
-  #         release_name: Release ${{ steps.version.outputs.oso_version }}
-  #         body: |
-  #           Oso Release ${{ steps.version.outputs.oso_version }}
-  #         draft: false
-  #         prerelease: true
-  #     - name: Upload Libraries
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #         asset_path: ./oso-lib.zip
-  #         asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     - name: Upload Python Package
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #         asset_path: ./oso-python.zip
-  #         asset_name: oso-python-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     - name: Upload Ruby Gem
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #         asset_path: ./oso-ruby.zip
-  #         asset_name: oso-ruby-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     - name: Upload Java Jar
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #         asset_path: ./oso-java.zip
-  #         asset_name: oso-java-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     # - name: Upload Release Docs
-  #     #   uses: actions/upload-release-asset@v1
-  #     #   env:
-  #     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #     #   with:
-  #     #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #     #     asset_path: ./oso-docs.zip
-  #     #     asset_name: oso-docs.zip
-  #     #     asset_content_type: application/zip
+
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: [build_wheels, build_jar, build_gem]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - name: Download oso dylibs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_library
+      - name: Zip file
+        run: zip --junk-paths -r oso-lib.zip oso_library/
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: Zip file
+        run: zip --junk-paths -r oso-python.zip wheel/
+      - name: Download oso gem from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: gem
+      - name: Zip file
+        run: zip --junk-paths -r oso-ruby.zip gem/
+      - name: Download oso jar from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: jar
+      - name: Zip file
+        run: zip --junk-paths -r oso-java.zip jar/
+      # - name: Download docs
+      #   uses: actions/download-artifact@v1
+      #   with:
+      #     name: docs
+      # - name: Zip docs
+      #   run: zip -r oso-docs.zip docs/
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ steps.version.outputs.oso_version }}
+          release_name: Release ${{ steps.version.outputs.oso_version }}
+          body: |
+            Oso Release ${{ steps.version.outputs.oso_version }}
+          draft: false
+          prerelease: true
+      - name: Upload Libraries
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-lib.zip
+          asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Python Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-python.zip
+          asset_name: oso-python-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Ruby Gem
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-ruby.zip
+          asset_name: oso-ruby-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Java Jar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-java.zip
+          asset_name: oso-java-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      # - name: Upload Release Docs
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+      #     asset_path: ./oso-docs.zip
+      #     asset_name: oso-docs.zip
+      #     asset_content_type: application/zip
