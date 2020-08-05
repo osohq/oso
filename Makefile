@@ -9,10 +9,10 @@ rust-build:
 	cargo build
 
 python-build: rust-build
-	$(MAKE) -C languages/python build
+	$(MAKE) -C languages/python/oso build
 
 python-test: python-build
-	$(MAKE) -C languages/python test
+	$(MAKE) -C languages/python/oso test
 	python examples/expenses-py/app.py
 	cd test && python test.py
 
@@ -30,7 +30,7 @@ docs-test: python-build
 
 fmt:
 	cargo fmt
-	$(MAKE) -C languages/python fmt
+	$(MAKE) -C languages/python/oso fmt
 
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings

@@ -16,7 +16,7 @@ jobs:
         run: echo "::set-env name=oso_version::${github_ref/refs\/tags\/v/}"
       - name: Check python version matches
         run: grep "__version__ = \"$oso_version\"" oso/oso.py
-        working-directory: languages/python
+        working-directory: languages/python/oso
       - name: Check ruby version matches
         run: grep "VERSION = '$oso_version'" lib/oso/version.rb
         working-directory: languages/ruby
@@ -167,31 +167,30 @@ jobs:
         run: |
           cargo build --release
           mkdir -p languages/python/native
-          cp polar-c-api/polar.h languages/python/native/
-          cp target/release/libpolar.a languages/python/native/
+          cp polar-c-api/polar.h languages/python/oso/native/
+          cp target/release/libpolar.a languages/python/oso/native/
       - name: Build Rust library (OSX)
         if: runner.os == 'macOS'
         run: |
           cargo build --release
-          mkdir -p languages/python/native
-          cp polar-c-api/polar.h languages/python/native/
-          cp target/release/libpolar.a languages/python/native/
+          mkdir -p languages/python/oso/native
+          cp polar-c-api/polar.h languages/python/oso/native/
+          cp target/release/libpolar.a languages/python/oso/native/
       - name: Build Rust library (Windows)
         if: runner.os == 'Windows'
         run: |
           cargo build --release
-          mkdir -p languages/python/native
-          cp polar-c-api/polar.h languages/python/native/
-          cp target/release/polar.lib languages/python/native/
-
+          mkdir -p languages/python/oso/native
+          cp polar-c-api/polar.h languages/python/oso/native/
+          cp target/release/polar.lib languages/python/oso/native/
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse
-        working-directory: languages/python
+        working-directory: languages/python/oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
-          path: languages/python/wheelhouse/*.whl
+          path: languages/python/oso/wheelhouse/*.whl
 
   build_musl_wheels:
     name: Build musl wheels
@@ -204,8 +203,8 @@ jobs:
       - run: rustup target add x86_64-unknown-linux-musl
       - run: cargo build --target x86_64-unknown-linux-musl --release
       - run: mkdir -p languages/python/native
-      - run: cp polar-c-api/polar.h languages/python/native/
-      - run: cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/native/
+      - run: cp polar-c-api/polar.h languages/python/oso/native/
+      - run: cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/oso/native/
       - run: docker run --rm --env ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
