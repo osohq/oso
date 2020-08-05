@@ -12,6 +12,7 @@ pub struct Polar(polar::Polar);
 impl Polar {
     #[wasm_bindgen(constructor)]
     pub fn wasm_new() -> Self {
+        console_error_panic_hook::set_once();
         Self(polar::Polar::new(None))
     }
 
