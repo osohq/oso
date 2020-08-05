@@ -275,7 +275,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
+        os: [ubuntu-18.04, macos-latest, windows-latest]
         java-version: [10, 11, 12, 13, 14] # @TODO: 8 and 9 not working.
     steps:
       - name: Set version output
@@ -291,9 +291,19 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: jar
-      - run: |
+      - name: Run tests
+        if: runner.os != 'Windows'
+        run: |
           javac -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test.java
           java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test
+        working-directory: test
+      - name: Run tests
+        if: runner.os == 'Windows'
+        env:
+          github_ref: ${{ github.ref }}
+        run: |
+          javac -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test.java
+          java -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test
         working-directory: test
 
   release:
