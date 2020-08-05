@@ -15,14 +15,41 @@ export class DuplicateClassAliasError extends Error {
   }
 }
 
+export class DuplicateInstanceRegistrationError extends Error {
+  constructor(id: bigint) {
+    super(
+      `Attempted to register instance ${id}, but an instance with that ID already exists.`
+    );
+    Object.setPrototypeOf(this, DuplicateInstanceRegistrationError.prototype);
+  }
+}
+
+export class InvalidCallError extends Error {
+  constructor(attr: string, instance: any) {
+    super(`Property '${attr}' does not exist on ${JSON.stringify(instance)}`);
+    Object.setPrototypeOf(this, InvalidCallError.prototype);
+  }
+}
+
 export class InvalidConstructorError extends Error {
   constructor({ constructor, cls }: { constructor: any; cls: object }) {
+    let stringified;
+    if (typeof constructor === 'function') {
+      stringified = constructor.toString();
+    } else {
+      stringified = JSON.stringify(constructor);
+    }
     super(
-      `${JSON.stringify(constructor)} is not a valid constructor for ${
-        cls.constructor.name
-      }.`
+      `${stringified} is not a valid constructor for ${cls.constructor.name}.`
     );
     Object.setPrototypeOf(this, InvalidConstructorError.prototype);
+  }
+}
+
+export class InvalidQueryEventError extends Error {
+  constructor(event: string) {
+    super(`Invalid query event: ${event}`);
+    Object.setPrototypeOf(this, InvalidQueryEventError.prototype);
   }
 }
 

@@ -95,7 +95,11 @@ export class Host {
     return instanceId;
   }
 
-  makeInstance(name: string, fields: InstanceFields, id: bigint): bigint {
+  makeInstance(
+    name: string,
+    fields: Map<string, PolarValue>,
+    id: bigint
+  ): bigint {
     const constructor = this.getConstructor(name);
     const args = new Map(
       Object.entries(fields).map(([k, v]) => [k, this.toJs(v)])
@@ -129,6 +133,7 @@ export class Host {
     return isEqual(this.getInstance(left), this.getInstance(right));
   }
 
+  // TODO(gj): should PolarValue be called PolarTerm?
   toPolarTerm(v: any): PolarValue {
     switch (true) {
       case typeof v === 'boolean':
@@ -188,7 +193,7 @@ export class Host {
   }
 
   // TODO(gj): handle Set?
-  private toJs(v: PolarValue): any {
+  toJs(v: PolarValue): any {
     const t = v.value;
     if (isPolarStr(t)) {
       return t.String;

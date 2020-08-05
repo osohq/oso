@@ -96,8 +96,21 @@ interface PolarValue {
   value: PolarType;
 }
 
-interface InstanceFields {
-  [key: string]: PolarValue;
+function isPolarType(v: any): v is PolarType {
+  return (
+    isPolarStr(v) ||
+    isPolarNum(v) ||
+    isPolarBool(v) ||
+    isPolarList(v) ||
+    isPolarDict(v) ||
+    isPolarPredicate(v) ||
+    isPolarVariable(v) ||
+    isPolarInstance(v)
+  );
+}
+
+function isPolarValue(v: any): v is PolarValue {
+  return isPolarType(v?.value);
 }
 
 interface ConstructorKwargs {
