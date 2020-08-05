@@ -27,70 +27,70 @@ jobs:
         run: grep "release = \"$oso_version\"" conf.py
         working-directory: docs
 
-  build_dylib:
-    name: Build release dylib on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-18.04, macos-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build release library
-        run: cargo build --release
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
-        with:
-          name: oso_library
-          path: target/release/libpolar.so
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'macOS'
-        with:
-          name: oso_library
-          path: target/release/libpolar.dylib
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'Windows'
-        with:
-          name: oso_library
-          path: target/release/polar.dll
+  # build_dylib:
+  #   name: Build release dylib on ${{ matrix.os }}
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-18.04, macos-latest, windows-latest]
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Build release library
+  #       run: cargo build --release
+  #     - uses: actions/upload-artifact@v2
+  #       if: runner.os == 'Linux'
+  #       with:
+  #         name: oso_library
+  #         path: target/release/libpolar.so
+  #     - uses: actions/upload-artifact@v2
+  #       if: runner.os == 'macOS'
+  #       with:
+  #         name: oso_library
+  #         path: target/release/libpolar.dylib
+  #     - uses: actions/upload-artifact@v2
+  #       if: runner.os == 'Windows'
+  #       with:
+  #         name: oso_library
+  #         path: target/release/polar.dll
 
-  build_jar:
-    name: Build jar.
-    runs-on: ubuntu-18.04
-    needs: build_dylib
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
-        with:
-          java-version: "10"
-      - name: Set version output
-        id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-      - name: Download dylibs
-        uses: actions/download-artifact@v1
-        with:
-          name: oso_library
-      - name: Copy libraries into resources.
-        run: |
-          mkdir -p languages/java/oso/src/main/resources/linux
-          cp -r oso_library/libpolar.so languages/java/oso/src/main/resources/linux/
-          mkdir -p languages/java/oso/src/main/resources/macos
-          cp -r oso_library/libpolar.dylib languages/java/oso/src/main/resources/macos/
-          mkdir -p languages/java/oso/src/main/resources/win
-          cp -r oso_library/polar.dll languages/java/oso/src/main/resources/win/
-      - name: Test
-        run: |
-          mvn test
-        working-directory: languages/java/oso
-      - name: Build
-        run: |
-          mvn package
-        working-directory: languages/java/oso
-      - uses: actions/upload-artifact@v2
-        with:
-          name: jar
-          path: languages/java/oso/target/oso-${{ steps.version.outputs.oso_version }}.jar
+  # build_jar:
+  #   name: Build jar.
+  #   runs-on: ubuntu-18.04
+  #   needs: build_dylib
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions/setup-java@v1
+  #       with:
+  #         java-version: "10"
+  #     - name: Set version output
+  #       id: version
+  #       env:
+  #         github_ref: ${{ github.ref }}
+  #       run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+  #     - name: Download dylibs
+  #       uses: actions/download-artifact@v1
+  #       with:
+  #         name: oso_library
+  #     - name: Copy libraries into resources.
+  #       run: |
+  #         mkdir -p languages/java/oso/src/main/resources/linux
+  #         cp -r oso_library/libpolar.so languages/java/oso/src/main/resources/linux/
+  #         mkdir -p languages/java/oso/src/main/resources/macos
+  #         cp -r oso_library/libpolar.dylib languages/java/oso/src/main/resources/macos/
+  #         mkdir -p languages/java/oso/src/main/resources/win
+  #         cp -r oso_library/polar.dll languages/java/oso/src/main/resources/win/
+  #     - name: Test
+  #       run: |
+  #         mvn test
+  #       working-directory: languages/java/oso
+  #     - name: Build
+  #       run: |
+  #         mvn package
+  #       working-directory: languages/java/oso
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: jar
+  #         path: languages/java/oso/target/oso-${{ steps.version.outputs.oso_version }}.jar
 
   # build_gem:
   #   name: Build Gem.
@@ -271,7 +271,7 @@ jobs:
 
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
-    needs: [build_jar]
+    # needs: [build_jar]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -284,24 +284,25 @@ jobs:
           github_ref: ${{ github.ref }}
         run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
       - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.java-version }}
-      - name: Download oso jar from package run
-        uses: actions/download-artifact@v1
-        with:
-          name: jar
-      - name: Run tests
-        if: runner.os != 'Windows'
-        run: |
-          javac -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test.java
-          java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test
-        working-directory: test
+      # - uses: actions/setup-java@v1
+      #   with:
+      #     java-version: ${{ matrix.java-version }}
+      # - name: Download oso jar from package run
+      #   uses: actions/download-artifact@v1
+      #   with:
+      #     name: jar
+      # - name: Run tests
+      #   if: runner.os != 'Windows'
+      #   run: |
+      #     javac -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test.java
+      #     java -cp "../jar/oso-${{ steps.version.outputs.oso_version }}.jar:." Test
+      #   working-directory: test
       - name: Run tests
         if: runner.os == 'Windows'
         env:
           github_ref: ${{ github.ref }}
         run: |
+          echo "../jar/oso-$($env:github_ref.Substring(11)).jar"
           javac -cp "../jar/oso-$($env:github_ref.Substring(11)).jar:." Test.java
           java -cp "../jar/oso-$($env:github_ref.Substring(11)).jar:." Test
         working-directory: test
