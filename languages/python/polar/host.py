@@ -1,7 +1,6 @@
 """Translate between Polar and the host language (Python)."""
 
 from .exceptions import PolarApiException, PolarRuntimeException
-from .ffi import new_id
 from .variable import Variable
 from .predicate import Predicate
 
@@ -60,7 +59,7 @@ class Host:
     def cache_instance(self, instance, id=None):
         """Cache Python instance under Polar-generated id."""
         if id is None:
-            id = new_id(self.ffi_polar)
+            id = self.ffi_polar.new_id()
         self.instances[id] = instance
         return id
 
