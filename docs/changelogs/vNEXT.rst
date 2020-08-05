@@ -24,14 +24,12 @@ Link to migration guide
 New features
 ==============
 
-Feature 1
-=========
-
-- summary
-- of
-- user facing changes
-
-Link to relevant documentation section
+Assignment Operator
+===================
+- The operator ``:=`` may now be used to assign values to unbound variables. Unlike the unify operator (``=``),
+the assignment operator will NOT evaluate equality.
+- Attempting to assign to a non-variable will result in a parse error.
+- Attempting to assign to a bound variable will result in a runtime error.
 
 
 Other bugs & improvements
