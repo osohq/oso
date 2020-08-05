@@ -243,7 +243,7 @@ Assignment
 
 Assigning a value to an unbound variable can be done using the unification operator.
 However, the assignment operator (``:=``) may also be used, and will only succeed if the
-left-hand side oeprand is an unbound variable. For example, ``foo := 1``.
+left-hand side operand is an unbound variable. For example, ``foo := 1``.
 This operator can be used to improve readability and predictability
 by indicating explicit assignment. Attempting to assign to a non-variable will result in a parse error,
 while attempting to assign to a bound variable will result in a runtime error.
