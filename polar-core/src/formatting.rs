@@ -273,7 +273,7 @@ pub mod display {
                     } else {
                         write!(
                             fmt,
-                            "{}({}) := {};",
+                            "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
                             format_args(Operator::And, &args, ",\n  "),
@@ -353,6 +353,7 @@ pub mod to_polar {
                 New => "new",
                 Dot => ".",
                 Unify => "=",
+                Assign => ":=",
                 In => "in",
                 Cut => "cut",
                 ForAll => "forall",
@@ -409,14 +410,13 @@ pub mod to_polar {
                     to_polar_parens(self.operator, &self.args[0])
                 ),
                 // Binary operators
-                Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa | In => {
-                    format!(
-                        "{} {} {}",
-                        to_polar_parens(self.operator, &self.args[0]),
-                        self.operator.to_polar(),
-                        to_polar_parens(self.operator, &self.args[1])
-                    )
-                }
+                Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa | In
+                | Assign => format!(
+                    "{} {} {}",
+                    to_polar_parens(self.operator, &self.args[0]),
+                    self.operator.to_polar(),
+                    to_polar_parens(self.operator, &self.args[1])
+                ),
                 // n-ary operators
                 And => format_args(
                     self.operator,

@@ -757,9 +757,9 @@ impl PolarVirtualMachine {
     /// Comparison operator that essentially performs partial unification.
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         // TODO (dhatch): These errors could potentially be caused by the user.
-        // rule(foo) :=
-        //    x = {a: 1},
-        //    foo isa x
+        // rule(foo) if
+        //    x = {a: 1} and
+        //    foo matches x
         assert!(
             !matches!(&right.value(), Value::InstanceLiteral(_)),
             "Called isa with bare instance lit!"
@@ -1113,6 +1113,26 @@ impl PolarVirtualMachine {
                 ];
                 self.choose(alternatives)?;
             }
+            Operator::Assign => {
+                assert_eq!(args.len(), 2);
+                let right = args.pop().unwrap();
+                let left = args.pop().unwrap();
+                match (left.value(), right.value()) {
+                    (Value::Variable(var), _) => match self.value(var) {
+                        None => self.push_goal(Goal::Unify { left, right })?,
+                        Some(value) => {
+                            return Err(self.type_error( &left, format!("Can only assign to unbound variables, {} is bound to value {}.", var.to_polar(), value.to_polar())));
+                        }
+                    },
+                    _ => {
+                        return Err(self.type_error(
+                            &left,
+                            format!("Cannot assign to type {}.", left.to_polar()),
+                        ))
+                    }
+                }
+            }
+
             Operator::Unify => {
                 // Push a `Unify` goal
                 assert_eq!(args.len(), 2);
@@ -1579,8 +1599,8 @@ impl PolarVirtualMachine {
             //
             // External instances can unify if they are the same instance, i.e., have the same
             // instance ID. This is necessary for the case where an instance appears multiple times
-            // in the same rule head. For example, `f(foo, foo) := ...` or `isa(x, y, x: y) := ...`
-            // or `max(x, y, x) := x > y;`.
+            // in the same rule head. For example, `f(foo, foo) if ...` or `isa(x, y, x: y) if ...`
+            // or `max(x, y, x) if x > y;`.
             (
                 Value::ExternalInstance(ExternalInstance {
                     instance_id: left_instance,

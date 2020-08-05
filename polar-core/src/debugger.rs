@@ -40,7 +40,7 @@ enum Step {
     /// is evaluated in the following snippet of Polar...
     ///
     /// ```polar
-    /// a() := debug(), b();
+    /// a() if debug() and b();
     /// b();
     /// ?= a()
     /// ```
@@ -72,8 +72,8 @@ enum Step {
     /// polar:
     ///
     /// ```text
-    /// a() := b(), c();
-    /// b() := debug(), d();
+    /// a() if b() and c();
+    /// b() if debug() and d();
     /// c();
     /// d();
     /// ?= a()

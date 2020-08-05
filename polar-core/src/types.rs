@@ -149,6 +149,7 @@ pub enum Operator {
     Or,
     And,
     ForAll,
+    Assign,
 }
 
 impl Operator {
@@ -173,6 +174,7 @@ impl Operator {
             Operator::Gt => 5,
             Operator::Lt => 5,
             Operator::Unify => 4,
+            Operator::Assign => 4,
             Operator::Not => 3,
             Operator::Or => 2,
             Operator::And => 1,
