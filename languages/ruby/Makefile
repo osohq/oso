@@ -1,4 +1,4 @@
-.PHONY: install rust test
+.PHONY: rust install test lint typecheck repl
 
 rust:
 	$(MAKE) -C ../.. rust-build
@@ -9,5 +9,11 @@ install: rust
 test: install
 	bundle exec rake spec
 
-repl:
+lint:
+	bundle exec rubocop
+
+typecheck:
+	bundle exec solargraph typecheck
+
+repl: install
 	bundle exec oso
