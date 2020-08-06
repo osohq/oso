@@ -1,6 +1,6 @@
-.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint wasm-build
+.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint wasm-build wasm-test
 
-test: rust-test python-test ruby-test java-test
+test: rust-test python-test ruby-test java-test wasm-test
 
 rust-test:
 	cargo test
@@ -10,9 +10,6 @@ rust-build:
 
 python-build: rust-build
 	$(MAKE) -C languages/python build
-
-wasm-build:
-	$(MAKE) -C polar-wasm-api build
 
 python-test: python-build
 	$(MAKE) -C languages/python test
@@ -40,3 +37,9 @@ clippy:
 
 lint: fmt clippy
 	$(MAKE) -C languages/ruby lint
+
+wasm-build:
+	$(MAKE) -C polar-wasm-api build
+
+wasm-test:
+	$(MAKE) -C polar-wasm-api test
