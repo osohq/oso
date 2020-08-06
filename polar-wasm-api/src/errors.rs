@@ -1,12 +1,13 @@
 use wasm_bindgen::JsValue;
 
 use polar_core::error::{
-    ErrorKind, OperationalError, ParameterError, ParseError, PolarError, RuntimeError,
+    ErrorKind, FormattedPolarError, OperationalError, ParameterError, ParseError, PolarError,
+    RuntimeError,
 };
 
 pub struct Error {
     pub kind: String,
-    inner: PolarError,
+    inner: FormattedPolarError,
 }
 
 pub fn serde_serialization_error(e: serde_json::Error) -> JsValue {
@@ -49,7 +50,10 @@ fn kind(err: &PolarError) -> String {
 impl From<PolarError> for Error {
     fn from(err: PolarError) -> Self {
         let kind = kind(&err);
-        Self { inner: err, kind }
+        Self {
+            inner: err.into(),
+            kind,
+        }
     }
 }
 
