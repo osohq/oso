@@ -5,10 +5,7 @@ from polar import polar_class
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
-actors = {
-    "guest": "1",
-    "president": "1",
-}
+actors = {"guest": "1", "president": "1"}
 
 frobbed = []
 

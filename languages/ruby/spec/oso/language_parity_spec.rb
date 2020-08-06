@@ -92,3 +92,4 @@ oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")').next
 raise unless oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').to_a.empty?
 oso.query('builtinSpecializers("foo", "String")').next
 raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?
+# rubocop:enable Layout/EmptyLineAfterGuardClause

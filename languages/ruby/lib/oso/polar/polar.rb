@@ -14,7 +14,7 @@ class FalseClass; include PolarBoolean; end
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
-    class Polar
+    class Polar # rubocop:disable Metrics/ClassLength
       # @return [Host]
       attr_reader :host
 

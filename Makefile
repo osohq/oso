@@ -1,4 +1,4 @@
-.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy
+.PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint
 
 test: rust-test python-test ruby-test java-test
 
@@ -34,3 +34,6 @@ fmt:
 
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings
+
+lint: fmt clippy
+	$(MAKE) -C languages/ruby lint
