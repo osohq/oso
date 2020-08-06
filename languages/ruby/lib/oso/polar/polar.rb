@@ -53,7 +53,7 @@ module Oso
         hash = hash_file(name)
 
         if @loaded_names.key?(name)
-          raise PolarRuntimeError, "File #{name} has already been loaded." unless @loaded_names[name] == hash
+          raise PolarRuntimeError, "File #{name} has already been loaded." unless @loaded_names[name] != hash
 
           raise PolarRuntimeError, "A file with the name #{name}, but different contents,
             has already been loaded."
