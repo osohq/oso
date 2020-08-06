@@ -60,10 +60,15 @@ module Oso
 
       # Query for a predicate, parsing it if necessary.
       #
-      # @param query [String or Predicate]
-      # @return Enumerator of resulting bindings
-      # @raise [Error] if the FFI call raises one.
-      def query(query)
+      # @overload query(query)
+      #   @param query [String]
+      #   @return [Enumerator] of resulting bindings
+      #   @raise [Error] if the FFI call raises one.
+      # @overload query(query)
+      #   @param query [Predicate]
+      #   @return [Enumerator] of resulting bindings
+      #   @raise [Error] if the FFI call raises one.
+      def query(query) # rubocop:disable Metrics/MethodLength
         load_queued_files
         new_host = host.dup
         case query
@@ -89,14 +94,14 @@ module Oso
       # Start a REPL session.
       #
       # @raise [Error] if the FFI call raises one.
-      def repl(load: false) # rubocop:disable Metrics/MethodLength
+      def repl(load: false) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
         ARGV.map { |f| load_file(f) } if load
         load_queued_files
 
-        loop do
-          print('query> ')
+        loop do # rubocop:disable Metrics/BlockLength
+          print 'query> '
           begin
-            query = STDIN.readline.chomp.chomp(';')
+            query = $stdin.readline.chomp.chomp(';')
           rescue EOFError
             return
           end
@@ -104,14 +109,14 @@ module Oso
           begin
             ffi_query = ffi_polar.new_query_from_str(query)
           rescue ParseError => e
-            puts("Parse error: " + e.to_s)
+            puts "Parse error: #{e}"
             next
           end
 
           begin
             results = Query.new(ffi_query, host: host).results.to_a
           rescue PolarRuntimeError => e
-            puts(e.to_s)
+            puts e
             next
           end
 
@@ -136,9 +141,7 @@ module Oso
       # @param from_polar [Proc]
       # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
       def register_class(cls, name: nil, from_polar: nil)
-        if block_given?
-          from_polar = Proc.new
-        end
+        from_polar = Proc.new if block_given?
         name = host.cache_class(cls, name: name, constructor: from_polar)
         register_constant(name, value: cls)
       end
