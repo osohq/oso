@@ -11,9 +11,9 @@ use super::lexer::loc_to_pos;
 use super::types::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
-#[cfg(not(target_os = "unknown"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30);
-#[cfg(target_os = "unknown")]
+#[cfg(target_arch = "wasm32")]
 pub const QUERY_TIMEOUT_S: f64 = 30_000.0;
 
 #[derive(Clone, Debug)]
@@ -158,13 +158,13 @@ pub struct PolarVirtualMachine {
     // Errors from outside the vm.
     pub external_error: Option<String>,
 
-    #[cfg(not(target_os = "unknown"))]
+    #[cfg(not(target_arch = "wasm32"))]
     query_start_time: Option<std::time::Instant>,
-    #[cfg(target_os = "unknown")]
+    #[cfg(target_arch = "wasm32")]
     query_start_time: Option<f64>,
-    #[cfg(not(target_os = "unknown"))]
+    #[cfg(not(target_arch = "wasm32"))]
     query_timeout: std::time::Duration,
-    #[cfg(target_os = "unknown")]
+    #[cfg(target_arch = "wasm32")]
     query_timeout: f64,
 
     /// Maximum size of goal stack
@@ -350,9 +350,9 @@ impl PolarVirtualMachine {
     /// the machine.
     pub fn run(&mut self) -> PolarResult<QueryEvent> {
         if self.query_start_time.is_none() {
-            #[cfg(not(target_os = "unknown"))]
+            #[cfg(not(target_arch = "wasm32"))]
             let query_start_time = Some(std::time::Instant::now());
-            #[cfg(target_os = "unknown")]
+            #[cfg(target_arch = "wasm32")]
             let query_start_time = Some(js_sys::Date::now());
             self.query_start_time = query_start_time;
         }
@@ -674,7 +674,7 @@ impl PolarVirtualMachine {
         st
     }
 
-    #[cfg(not(target_os = "unknown"))]
+    #[cfg(not(target_arch = "wasm32"))]
     fn check_timeout(&self) -> PolarResult<()> {
         let now = std::time::Instant::now();
         let start_time = self
@@ -695,7 +695,7 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    #[cfg(target_os = "unknown")]
+    #[cfg(target_arch = "wasm32")]
     fn check_timeout(&self) -> PolarResult<()> {
         let now = js_sys::Date::now();
         let start_time = self
