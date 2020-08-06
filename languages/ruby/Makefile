@@ -9,10 +9,10 @@ install: rust
 test: install
 	bundle exec rake spec
 
-lint: install
+lint:
 	bundle exec rubocop
 
-typecheck: install
+typecheck:
 	bundle exec solargraph typecheck
 
 repl: install
