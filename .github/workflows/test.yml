@@ -24,12 +24,12 @@ jobs:
           bundler-cache: true
           ruby-version: 2.4
           working-directory: "languages/ruby"
-      - name: Check RuboCop
+      - name: Lint Ruby code
         working-directory: "languages/ruby"
-        run: make lint
+        run: bundle exec rubocop
       - name: Check Ruby types
         working-directory: "languages/ruby"
-        run: make typecheck | grep '0 problems found in 0 of'
+        run: bundle exec solargraph typecheck | grep '0 problems found in 0 of'
 
       - name: Install Java
         uses: actions/setup-java@v1
