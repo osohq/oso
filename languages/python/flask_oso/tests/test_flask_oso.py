@@ -175,3 +175,15 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
+
+def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
+    """Test that a custom unauthorize handler can be provided."""
+    auth_failed = False
+    def unauth():
+        nonlocal auth_failed
+        auth_failed = True
+
+    flask_oso.set_unauthorized_action(unauth)
+    flask_oso.authorize(resource="fail!", action="bad")
+
+    assert auth_failed

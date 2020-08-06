@@ -31,6 +31,10 @@ class FlaskOso:
         self._app = app
         self._oso = None
 
+        def unauthorized():
+            raise Forbidden("Unauthorized")
+        self._unauthorized_action = unauthorized
+
         # TODO (dhatch): A few defaults for this dependending on what
         # other frameworks are in use.
         self._get_actor = lambda: g.current_user
@@ -59,6 +63,14 @@ class FlaskOso:
     def set_get_actor(self, func):
         """Provide a function that oso will use to get the current actor."""
         self._get_actor = func
+
+    def set_unauthorized_action(self, func):
+        """Set a function that will be called to handle an authorization failure.
+
+        The default behavior is to raise a Forbidden exception, returning a 403
+        response.
+        """
+        self._unauthorized_action = func
 
     ## Middleware-like functions that affect every request.
 
@@ -105,7 +117,7 @@ class FlaskOso:
         _authorize_called()
 
         if not allowed:
-            raise Forbidden("Not authorized")
+            self._unauthorized_action()
 
     @property
     def app(self):
