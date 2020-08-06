@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'oso'
 
 oso = Oso.new
@@ -6,7 +8,7 @@ oso = Oso.new
 class A
   attr_reader :x
 
-  def initialize(x:)
+  def initialize(x:) # rubocop:disable Naming/MethodParameterName
     @x = x
   end
 
@@ -24,7 +26,7 @@ module B
   class C
     attr_reader :y
 
-    def initialize(y)
+    def initialize(y) # rubocop:disable Naming/MethodParameterName
       @y = y
     end
 

@@ -22,7 +22,7 @@ module Oso
         #
         # @return [::Oso::Polar::Error] if there's an FFI error.
         # @return [::Oso::Polar::FFIErrorNotFound] if there isn't one.
-        def self.get # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+        def self.get # rubocop:disable Metrics/MethodLength
           error = Rust.get
           return ::Oso::Polar::FFIErrorNotFound if error.null?
 
@@ -48,7 +48,7 @@ module Oso
         # @param msg [String]
         # @param details [Hash<String, Object>]
         # @return [::Oso::Polar::ParseError] the object converted into the expected format.
-        private_class_method def self.parse_error(kind, msg:, details:) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/MethodLength
+        private_class_method def self.parse_error(kind, msg:, details:) # rubocop:disable Metrics/MethodLength
           case kind
           when 'ExtraToken'
             ::Oso::Polar::ParseError::ExtraToken.new(msg, details: details)
