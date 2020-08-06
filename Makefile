@@ -1,6 +1,6 @@
 .PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint wasm-build wasm-test
 
-test: rust-test python-test ruby-test java-test wasm-test
+test: rust-test python-test ruby-test java-test python-flask-test wasm-test
 
 rust-test:
 	cargo test
@@ -15,6 +15,9 @@ python-test: python-build
 	$(MAKE) -C languages/python/oso test
 	python examples/expenses-py/app.py
 	cd test && python test.py
+
+python-flask-test: python-build
+	$(MAKE) -C languages/python/flask_oso test
 
 ruby-test:
 	$(MAKE) -C languages/ruby test
