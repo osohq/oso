@@ -3,14 +3,14 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
 
 #[wasm_bindgen_test]
-fn polar_load_file_succeeds() {
+fn load_file_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_load_file("x() if 1 == 1;\n", Some("foo.polar".to_owned()));
     assert!(matches!(res, Ok(())));
 }
 
 #[wasm_bindgen_test]
-fn polar_load_file_errors() {
+fn load_file_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let err = polar.wasm_load_file(";", None).unwrap_err();
     let err: Error = err.dyn_into().unwrap();
@@ -22,10 +22,11 @@ fn polar_load_file_errors() {
 }
 
 #[wasm_bindgen_test]
-fn polar_next_inline_query_succeeds() {
+fn next_inline_query_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_load_file("?= 1 = 1;", None);
     assert!(matches!(res, Ok(())));
+
     let mut query = polar.wasm_next_inline_query().unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     let event_kind: JsValue = "Result".into();
@@ -33,13 +34,15 @@ fn polar_next_inline_query_succeeds() {
     let data_key: JsValue = "bindings".into();
     let bindings = Reflect::get(&event_data, &data_key).unwrap();
     assert_eq!(bindings.dyn_into::<Map>().unwrap().size(), 0);
+
     let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
     assert_eq!(event, "Done");
+
     assert!(polar.wasm_next_inline_query().is_none());
 }
 
 #[wasm_bindgen_test]
-fn polar_next_inline_query_errors() {
+fn next_inline_query_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_load_file("?= 1 = 2;", None);
     assert!(matches!(res, Ok(())));
@@ -50,7 +53,7 @@ fn polar_next_inline_query_errors() {
 }
 
 #[wasm_bindgen_test]
-fn polar_register_constant_succeeds() {
+fn register_constant_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_register_constant(
         "mathematics",
@@ -60,7 +63,7 @@ fn polar_register_constant_succeeds() {
 }
 
 #[wasm_bindgen_test]
-fn polar_register_constant_errors() {
+fn register_constant_errors() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
     let err = polar.wasm_register_constant("mathematics", "").unwrap_err();
     let err: Error = err.dyn_into().unwrap();
@@ -72,7 +75,7 @@ fn polar_register_constant_errors() {
 }
 
 #[wasm_bindgen_test]
-fn polar_new_query_from_str_succeeds() {
+fn new_query_from_str_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
     let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -80,7 +83,7 @@ fn polar_new_query_from_str_succeeds() {
 }
 
 #[wasm_bindgen_test]
-fn polar_new_query_from_str_errors() {
+fn new_query_from_str_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let mut query = polar.wasm_new_query_from_str("x").unwrap();
     let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
@@ -89,7 +92,7 @@ fn polar_new_query_from_str_errors() {
 }
 
 #[wasm_bindgen_test]
-fn polar_new_query_from_term_succeeds() {
+fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let term = r#"{"value":{"Call":{"name":"x","args":[]}}}"#;
     let mut query = polar.wasm_new_query_from_term(term).unwrap();
@@ -98,7 +101,7 @@ fn polar_new_query_from_term_succeeds() {
 }
 
 #[wasm_bindgen_test]
-fn polar_new_query_from_term_errors() {
+fn new_query_from_term_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_new_query_from_term("");
     if let Err(err) = res {
@@ -114,26 +117,8 @@ fn polar_new_query_from_term_errors() {
 }
 
 #[wasm_bindgen_test]
-fn polar_get_external_id_succeeds() {
+fn get_external_id_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     assert_eq!(polar.wasm_get_external_id(), 1);
     assert_eq!(polar.wasm_get_external_id(), 2);
-}
-
-#[wasm_bindgen_test]
-fn works() {
-    let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load_file("x() if 1 == 1;\n", None);
-    assert!(matches!(res, Ok(())));
-
-    let mut query = polar.wasm_new_query_from_str("x()").unwrap();
-    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    let event_kind: JsValue = "Result".into();
-    let event_data = Reflect::get(&event, &event_kind).unwrap();
-    let data_key: JsValue = "bindings".into();
-    let bindings = Reflect::get(&event_data, &data_key).unwrap();
-    assert_eq!(bindings.dyn_into::<Map>().unwrap().size(), 0);
-
-    let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    assert_eq!(event, "Done");
 }
