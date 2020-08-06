@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-RSpec.describe Oso::Oso do
-  context '#register_class' do
+RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
+  context '#register_class' do # rubocop:disable Metrics/BlockLength
     before do
       stub_const('User', Class.new do
         attr_accessor :name, :special
@@ -26,7 +26,12 @@ RSpec.describe Oso::Oso do
         subject.register_class(User) do |**args|
           User.new(**args).tap { |u| u.special = true }
         end
-        subject.load_str('allow(u: User{}, 1, 2) if x = new User{name: "alice"} and x.name = u.name and x.special = true;')
+        subject.load_str <<~POLAR
+          allow(u: User{}, 1, 2) if
+              x = new User{name: "alice"}
+              and x.name = u.name
+              and x.special = true;
+        POLAR
         allowed = subject.allowed?(actor: User.new(name: 'alice'), action: 1, resource: 2)
         expect(allowed).to be true
       end
@@ -51,7 +56,7 @@ RSpec.describe Oso::Oso do
     end
   end
 
-  context 'Extras' do
+  context 'Extras' do # rubocop:disable Metrics/BlockLength
     context 'PathMapper' do
       context '#map' do
         it 'extracts matches into a hash' do
