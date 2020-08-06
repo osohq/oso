@@ -22,8 +22,8 @@ module Oso
       def initialize
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
-        @loaded_names = Hash.new
-        @loaded_contents = Hash.new
+        @loaded_names = {}
+        @loaded_contents = {}
 
         # Register built-in classes.
         register_class(PolarBoolean, name: 'Boolean')
@@ -46,24 +46,24 @@ module Oso
       # @param name [String]
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
       # @raise [PolarFileNotFoundError] if provided filename does not exist.
-      def load_file(name)
+      def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
         raise PolarFileNotFoundError, name unless File.file?(name)
 
         hash = hash_file(name)
 
         if @loaded_names.key?(name)
-            if @loaded_names[name] == hash
-                raise PolarRuntimeError, "File #{name} has already been loaded."
-            else
-                raise PolarRuntimeError, "A file with the name #{name}, but different contents, has already been loaded."
-            end
+          raise PolarRuntimeError, "File #{name} has already been loaded." unless @loaded_names[name] == hash
+
+          raise PolarRuntimeError, "A file with the name #{name}, but different contents,
+            has already been loaded."
         elsif @loaded_contents.key?(hash)
-            raise PolarRuntimeError, "A file with the same contents as #{name} named #{@loaded_contents[hash]} has already been loaded."
+          raise PolarRuntimeError, "A file with the same contents as #{name} named #{@loaded_contents[hash]}
+            has already been loaded."
         else
-            File.open(name) { |file| load_str(file.read, filename: name) }
-            @loaded_names[name] = hash
-            @loaded_contents[hash] = name
+          File.open(name) { |file| load_str(file.read, filename: name) }
+          @loaded_names[name] = hash
+          @loaded_contents[hash] = name
         end
       end
 
@@ -100,7 +100,7 @@ module Oso
       #   @param query [Predicate]
       #   @return [Enumerator] of resulting bindings
       #   @raise [Error] if the FFI call raises one.
-      def query(query) # rubocop:disable Metrics/MethodLength
+      def query(query)
         new_host = host.dup
         case query
         when String
@@ -183,18 +183,15 @@ module Oso
       private
 
       # @return [FFI::Polar]
-      attr_reader :ffi_polar
-      attr_reader :loaded_names
-      attr_reader :loaded_contents
+      attr_reader :ffi_polar, :loaded_names, :loaded_contents
+
       # @return [Array<String>]
 
       def hash_file(filename)
-        begin
-            file = File.open(filename)
-            Digest::MD5.hexdigest(File.read(file))
-        ensure
-            file.close
-        end
+        file = File.open(filename)
+        Digest::MD5.hexdigest(File.read(file))
+      ensure
+        file.close
       end
     end
   end
