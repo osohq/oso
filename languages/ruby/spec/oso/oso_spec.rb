@@ -5,6 +5,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     before do
       stub_const('User', Class.new do
         attr_accessor :name, :special
+
         def initialize(name:)
           @name = name
           @special = false
@@ -71,6 +72,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       it 'can map Http resources' do
         stub_const('Widget', Class.new do
           attr_reader :id
+
           def initialize(id:)
             @id = id
           end

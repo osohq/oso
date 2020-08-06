@@ -1,0 +1,4 @@
+AllCops:
+  Exclude:
+    - 'bin/oso'
+  NewCops: enable

@@ -96,7 +96,7 @@ module Oso
         loop do # rubocop:disable Metrics/BlockLength
           print 'query> '
           begin
-            query = STDIN.readline.chomp.chomp(';')
+            query = $stdin.readline.chomp.chomp(';')
           rescue EOFError
             return
           end

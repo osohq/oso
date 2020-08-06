@@ -21,6 +21,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     before do
       stub_const('Widget', Class.new do
         attr_reader :id
+
         def initialize(id)
           @id = id
         end
@@ -157,6 +158,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       it 'handles keyword args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
+
           def initialize(bar:, baz:)
             @bar = bar
             @baz = baz
@@ -192,6 +194,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       it 'handles keyword args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
+
           def initialize(bar:, baz:)
             @bar = bar
             @baz = baz

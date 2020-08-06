@@ -147,7 +147,7 @@ module Oso
               puts event.data['message'] if event.data['message']
               print 'debug> '
               begin
-                input = STDIN.readline.chomp.chomp(';')
+                input = $stdin.readline.chomp.chomp(';')
               rescue EOFError
                 next
               end
