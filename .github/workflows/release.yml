@@ -247,7 +247,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-latest] # @TODO: windows-latest
+        os: [ubuntu-18.04, macos-latest, windows-latest]
         ruby-version: [2.4, 2.5, 2.6, 2.7]
     steps:
       - name: Set version output
@@ -265,9 +265,16 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: gem
-      - run: |
+      - name: "test"
+        if: runner.os != 'Windows'
+        run: |
           gem install gem/oso-oso-${{ steps.version.outputs.oso_version }}.gem
           ruby languages/ruby/spec/oso/language_parity_spec.rb
+      - name: "test"
+        if: runner.os == 'Windows'
+        run: |
+          gem install gem/oso-oso-$($env:github_ref.Substring(11)).gem
+          ruby languages\ruby\spec\oso\language_parity_spec.rb
 
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
