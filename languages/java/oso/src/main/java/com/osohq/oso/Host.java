@@ -33,9 +33,6 @@ public class Host implements Cloneable {
 
     /**
      * Get a registered Java class.
-     *
-     * @param name
-     * @throws Exceptions.UnregisteredClassError
      */
     public Class<?> getClass(String name) throws Exceptions.UnregisteredClassError {
         if (classes.containsKey(name)) {
@@ -48,9 +45,8 @@ public class Host implements Cloneable {
     /**
      * Store a Java class in the cache by name.
      *
-     * @param name
-     * @throws Exceptions.DuplicateClassAliasError If the class is already
-     *                                             registered.
+     * @param name The name of the class from within Polar.
+     * @throws Exceptions.DuplicateClassAliasError If the name is already registered.
      */
     public String cacheClass(Class<?> cls, Constructor<?> constructor, String name)
             throws Exceptions.DuplicateClassAliasError {
@@ -64,9 +60,6 @@ public class Host implements Cloneable {
 
     /**
      * Get a cached Java instance.
-     *
-     * @param instanceId
-     * @throws Exceptions.UnregisteredInstanceError
      */
     public Object getInstance(long instanceId) throws Exceptions.UnregisteredInstanceError {
         if (hasInstance(instanceId)) {
@@ -78,8 +71,6 @@ public class Host implements Cloneable {
 
     /**
      * Determine if a Java instance has been cached.
-     *
-     * @param instanceId
      */
     public boolean hasInstance(long instanceId) {
         return instances.containsKey(instanceId);
@@ -87,10 +78,6 @@ public class Host implements Cloneable {
 
     /**
      * Cache an instance of a Java class.
-     *
-     * @param instance
-     * @param id
-     * @throws Exceptions.OsoException
      */
     public Long cacheInstance(Object instance, Long id) throws Exceptions.OsoException {
         if (id == null) {
@@ -104,10 +91,6 @@ public class Host implements Cloneable {
     /**
      * Make an instance of a Java class from a {@code Map<String, Object>} of
      * fields.
-     *
-     * @param className
-     * @param fields
-     * @param id
      */
     public Object makeInstance(String className, List<Object> initargs, long id)
             throws Exceptions.OsoException
@@ -147,12 +130,6 @@ public class Host implements Cloneable {
 
     /**
      * Check if a class specializer is more specific than another class specializer.
-     *
-     * @param instanceId
-     * @param leftTag
-     * @param rightTag
-     * @return
-     * @throws Exceptions.UnregisteredClassError
      */
     public boolean subspecializer(long instanceId, String leftTag, String rightTag)
             throws Exceptions.UnregisteredClassError {
@@ -178,13 +155,6 @@ public class Host implements Cloneable {
 
     /**
      * Check if a Java instance is an instance of a class.
-     *
-     * @param instance
-     * @param classTag
-     * @return
-     * @throws Exceptions.UnregisteredClassError
-     * @throws Exceptions.UnregisteredInstanceError
-     * @throws Exceptions.UnexpectedPolarTypeError
      */
     public boolean isa(JSONObject instance, String classTag)
             throws Exceptions.UnregisteredClassError,
@@ -196,10 +166,6 @@ public class Host implements Cloneable {
 
     /**
      * Convert Java Objects to Polar (JSON) terms.
-     *
-     * @param value Java Object to be converted to Polar.
-     * @return JSONObject Polar term of form: {@code {"id": _, "offset": _, "value":
-     *         _}}.
      */
     public JSONObject toPolarTerm(Object value) throws Exceptions.OsoException {
         // Build Polar value
@@ -243,10 +209,6 @@ public class Host implements Cloneable {
 
     /**
      * Convert a Java List to a JSONified Polar list.
-     *
-     * @param list List<Object>
-     * @return List<JSONObject>
-     * @throws Exceptions.OsoException
      */
     private List<JSONObject> javaListToPolar(List<Object> list) throws Exceptions.OsoException {
         ArrayList<JSONObject> polarList = new ArrayList<JSONObject>();
@@ -258,10 +220,6 @@ public class Host implements Cloneable {
 
     /**
      * Convert a Java Array to a JSONified Polar list.
-     *
-     * @param list List<Object>
-     * @return List<JSONObject>
-     * @throws Exceptions.OsoException
      */
     private List<JSONObject> javaArrayToPolar(Object array) throws Exceptions.OsoException {
         assert (array.getClass().isArray());
@@ -287,10 +245,6 @@ public class Host implements Cloneable {
 
     /**
      * Convert a Java Map to a JSONified Polar dictionary.
-     *
-     * @param map Java Map<Object, Object>
-     * @return Map<String, JSONObject>
-     * @throws Exceptions.OsoException
      */
     private Map<String, JSONObject> javaMaptoPolar(Map<Object, Object> map) throws Exceptions.OsoException {
         HashMap<String, JSONObject> polarDict = new HashMap<String, JSONObject>();
@@ -303,10 +257,6 @@ public class Host implements Cloneable {
 
     /**
      * Turn a Polar term passed across the FFI boundary into a Java Object.
-     *
-     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _, "value": _}}
-     * @throws Exceptions.UnregisteredInstanceError
-     * @throws Exceptions.UnexpectedPolarTypeError
      */
     public Object toJava(JSONObject term)
             throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
@@ -343,10 +293,6 @@ public class Host implements Cloneable {
 
     /**
      * Convert a JSONified Polar dictionary to a Java Map
-     *
-     * @param dict JSONObject
-     * @throws Exceptions.UnregisteredInstanceError
-     * @throws Exceptions.UnexpectedPolarTypeError
      */
     public HashMap<String, Object> polarDictToJava(JSONObject dict)
             throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
@@ -359,8 +305,6 @@ public class Host implements Cloneable {
 
     /**
      * Convert a JSONified Polar List to a Java List
-     *
-     * @param list JSONArray
      */
     public List<Object> polarListToJava(JSONArray list)
             throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {

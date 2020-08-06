@@ -14,12 +14,6 @@ public class Oso extends Polar {
 
     /**
      * Submit an `allow` query to the Polar knowledge base.
-     *
-     * @param actor
-     * @param action
-     * @param resource
-     * @return
-     * @throws Exceptions.OsoException
      */
     public boolean isAllowed(Object actor, Object action, Object resource) throws Exceptions.OsoException {
         return queryRule("allow", actor, action, resource).hasMoreElements();

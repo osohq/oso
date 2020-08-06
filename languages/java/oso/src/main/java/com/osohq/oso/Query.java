@@ -58,12 +58,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Helper for `ExternalCall` query events
-     *
-     * @param attrName
-     * @param jArgs
-     * @param instanceId
-     * @param callId
-     * @throws Exceptions.OsoException
      */
     private void handleCall(String attrName, JSONArray jArgs, JSONObject polarInstance, long callId)
             throws Exceptions.OsoException {
@@ -84,9 +78,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Generate the next Query result
-     *
-     * @return
-     * @throws Exceptions.OsoException
      */
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
         while (true) {
@@ -183,7 +174,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      * @param callId        Call ID under which to register the call.
      * @param polarInstance JSONObject containing either an instance_id or an
      *                      instance of a built-in type.
-     * @throws Exceptions.InvalidCallError
      */
     public void registerCall(String attrName, List<Object> args, long callId, JSONObject polarInstance)
             throws Exceptions.InvalidCallError,
@@ -238,10 +228,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Get cached Java method call result.
-     *
-     * @param callId
-     * @return
-     * @throws Exceptions.PolarRuntimeException
      */
     private Enumeration<Object> getCall(long callId) throws Exceptions.PolarRuntimeException {
         if (calls.containsKey(callId)) {
@@ -254,11 +240,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Get the next JSONified Polar result of a cached method call (enumeration).
-     *
-     * @param callId
-     * @return JSONObject
-     * @throws NoSuchElementException
-     * @throws Exceptions.OsoException
      */
     protected JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
         return host.toPolarTerm(getCall(callId).nextElement());
