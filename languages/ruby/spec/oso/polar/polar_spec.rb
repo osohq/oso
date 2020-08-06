@@ -8,7 +8,7 @@ RSpec.configure do |c|
   c.include Helpers
 end
 
-RSpec.describe Oso::Polar::Polar do
+RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   let(:test_file) { File.join(__dir__, 'test_file.polar') }
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
 
@@ -17,7 +17,7 @@ RSpec.describe Oso::Polar::Polar do
     expect(query(subject, 'f(x)')).to eq([{ 'x' => 1 }])
   end
 
-  context 'when converting between Polar and Ruby values' do
+  context 'when converting between Polar and Ruby values' do # rubocop:disable Metrics/BlockLength
     before do
       stub_const('Widget', Class.new do
         attr_reader :id
@@ -28,8 +28,8 @@ RSpec.describe Oso::Polar::Polar do
       subject.register_class(Widget)
 
       stub_const('Actor', Class.new do
-        def initialize(n)
-          @name = n
+        def initialize(name)
+          @name = name
         end
 
         def widget
@@ -69,20 +69,21 @@ RSpec.describe Oso::Polar::Polar do
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
       subject.load_str('widgets(actor, x) if x = actor.widgets.id;')
-      expect(subject.query_rule('widgets', actor, Oso::Polar::Variable.new('x')).to_a).to eq([{ 'x' => 2 }, { 'x' => 3 }])
+      result = subject.query_rule('widgets', actor, Oso::Polar::Variable.new('x')).to_a
+      expect(result).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
 
     it 'caches instances and does not leak them' do
       stub_const('Counter', Class.new do
-                   @count = 0
-                   class << self
-                     attr_accessor :count
-                   end
+        @count = 0
+        class << self
+          attr_accessor :count
+        end
 
-                   def initialize()
-                     self.class.count += 1
-                   end
-                 end)
+        def initialize
+          self.class.count += 1
+        end
+      end)
       subject.register_class(Counter)
       subject.load_str('f(c: Counter) if c.class.count > 0;')
       expect(Counter.count).to be 0
@@ -94,7 +95,7 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
-  context '#load_file' do
+  context '#load_file' do # rubocop:disable Metrics/BlockLength
     it 'loads a Polar file' do
       subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
@@ -141,7 +142,7 @@ RSpec.describe Oso::Polar::Polar do
 
   context '#query' do
     it 'is able to make basic queries' do
-      subject.load_str('f(1);');
+      subject.load_str('f(1);')
       expect(subject.query('f(1)').to_a).to eq([{}])
       expect(subject.query_rule('f', 1).to_a).to eq([{}])
     end
@@ -151,8 +152,8 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
-  context '#make_instance' do
-    context 'when using the default constructor' do
+  context '#make_instance' do # rubocop:disable Metrics/BlockLength
+    context 'when using the default constructor' do # rubocop:disable Metrics/BlockLength
       it 'handles keyword args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
@@ -182,7 +183,7 @@ RSpec.describe Oso::Polar::Polar do
       end
     end
 
-    context 'when using a custom constructor' do
+    context 'when using a custom constructor' do # rubocop:disable Metrics/BlockLength
       it 'errors when provided an invalid constructor' do
         stub_const('Foo', Class.new)
         expect { subject.register_class(Foo, from_polar: 5) }.to raise_error Oso::Polar::InvalidConstructorError
@@ -219,13 +220,13 @@ RSpec.describe Oso::Polar::Polar do
 
   context '#register_constant' do
     it 'works' do
-      d = {"a" => 1}
-      subject.register_constant("d", value: d)
+      d = { 'a' => 1 }
+      subject.register_constant('d', value: d)
       expect(qvar(subject, 'd.a = x', 'x')).to eq([1])
     end
   end
 
-  context 'can call host language methods' do
+  context 'can call host language methods' do # rubocop:disable Metrics/BlockLength
     it 'on strings' do
       expect(query(subject, 'x = "abc" and x.index("bc") = 1').length).to be 1
     end
@@ -247,23 +248,22 @@ RSpec.describe Oso::Polar::Polar do
     end
 
     it 'that return nil' do
-        stub_const('Foo', Class.new do
-          def this_is_nil
-            nil
-          end
-        end)
+      stub_const('Foo', Class.new do
+        def this_is_nil
+          nil
+        end
+      end)
 
-        subject.register_class(Foo, from_polar: -> { Foo.new })
-        subject.load_str("f(x) if x.this_is_nil = 1;")
-        expect(subject.query_rule('f', Foo.new).to_a).to eq([])
+      subject.register_class(Foo, from_polar: -> { Foo.new })
+      subject.load_str 'f(x) if x.this_is_nil = 1;'
+      expect(subject.query_rule('f', Foo.new).to_a).to eq([])
 
-        subject.load_str("f(x) if x.this_is_nil.bad_call = 1;")
-        expect { subject.query_rule('f', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
+      subject.load_str 'f(x) if x.this_is_nil.bad_call = 1;'
+      expect { subject.query_rule('f', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
     end
-
   end
 
-  context '#register_class' do
+  context '#register_class' do # rubocop:disable Metrics/BlockLength
     it 'errors when registering the same class twice' do
       stub_const('Foo', Class.new)
       expect { subject.register_class Foo }.not_to raise_error
@@ -279,7 +279,7 @@ RSpec.describe Oso::Polar::Polar do
       end
     end
 
-    it 'registers a Ruby class with Polar' do
+    it 'registers a Ruby class with Polar' do # rubocop:disable Metrics/BlockLength
       stub_const('Bar', Class.new do
         def y
           'y'
@@ -289,7 +289,7 @@ RSpec.describe Oso::Polar::Polar do
       stub_const('Foo', Class.new do
         attr_reader :a
 
-        def initialize(a)
+        def initialize(a) # rubocop:disable Naming/MethodParameterName
           @a = a
         end
 
@@ -303,7 +303,7 @@ RSpec.describe Oso::Polar::Polar do
           'c'
         end
 
-        def d(x)
+        def d(x) # rubocop:disable Naming/MethodParameterName
           x
         end
 
@@ -348,7 +348,7 @@ RSpec.describe Oso::Polar::Polar do
       expect(qvar(subject, 'new Foo{}.h = x', 'x', one: true)).to be true
     end
 
-    it 'respects the Ruby inheritance hierarchy for class specialization' do
+    it 'respects the Ruby inheritance hierarchy for class specialization' do # rubocop:disable Metrics/BlockLength
       stub_const('A', Class.new do
         def a
           'A'
@@ -419,7 +419,7 @@ RSpec.describe Oso::Polar::Polar do
       expect(qvar(subject, 'try(new X{}, x)', 'x')).to eq([])
     end
 
-    context 'animal tests' do
+    context 'animal tests' do # rubocop:disable Metrics/BlockLength
       before do
         stub_const('Animal', Class.new do
           attr_reader :family, :genus, :species
@@ -451,8 +451,8 @@ RSpec.describe Oso::Polar::Polar do
           yup() if new Animal{family: "steve"} = new Animal{family: "steve"};
           nope() if new Animal{family: "steve"} = new Animal{family: "gabe"};
         POLAR
-        expect(query(subject, "yup()")).to eq([{}])
-        expect(query(subject, "nope()")).to eq([])
+        expect(query(subject, 'yup()')).to eq([{}])
+        expect(query(subject, 'nope()')).to eq([])
       end
 
       it 'can specialize on dict fields' do
@@ -532,7 +532,7 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
-  context 'when parsing' do
+  context 'when parsing' do # rubocop:disable Metrics/BlockLength
     it 'raises on IntegerOverflow errors' do
       int = '18446744073709551616'
       rule = <<~POLAR
@@ -605,26 +605,22 @@ RSpec.describe Oso::Polar::Polar do
     end
   end
 
-  context 'runtime errors' do
+  context 'runtime errors' do # rubocop:disable Metrics/BlockLength
     it 'include a stack trace' do
-        rule = <<~POLAR
-        foo(a,b) if a in b;
-        POLAR
-        subject.load_str(rule)
-        expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
-          expect(e).to be_an Oso::Polar::PolarTypeError
-          error = <<-EOM.chomp
-trace (most recent evaluation last):
-  in query at line 1, column 1
-    foo(1, 2)
-  in rule foo at line 1, column 13
-    _a_3 in _b_4
-  in rule foo at line 1, column 13
-    _a_3 in _b_4
-Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13
-EOM
-          expect(e.message).to eq(error)
-        end
+      subject.load_str 'foo(a,b) if a in b;'
+      expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::PolarTypeError
+        error = <<~TRACE.chomp
+          trace (most recent evaluation last):
+            in query at line 1, column 1
+              foo(1, 2)
+            in rule foo at line 1, column 13
+              _a_3 in _b_4
+            in rule foo at line 1, column 13
+              _a_3 in _b_4
+          Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13
+        TRACE
+        expect(e.message).to eq(error)
       end
     end
 
@@ -640,12 +636,13 @@ EOM
         expect(e).to be_an Oso::Polar::PolarRuntimeError
       end
     end
+  end
 
   context 'unbound variable' do
     it 'returns unbound properly' do
-      subject.load_str("rule(x, y) if y = 1;")
+      subject.load_str 'rule(x, y) if y = 1;'
 
-      results = query(subject, "rule(x, y)")
+      results = query(subject, 'rule(x, y)')
       first = results[0]
 
       expect(first['y']).to be 1
