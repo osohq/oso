@@ -5,16 +5,12 @@ module Oso
     # Base error type for Oso::Polar.
     class Error < ::RuntimeError
       attr_reader :stack_trace
-      
+
       # @param message [String]
       # @param details [Hash]
       def initialize(message = nil, details: nil)
         @details = details
-        if details and details.key?("stack_trace")
-          @stack_trace = details['stack_trace']
-        else
-          @stack_trace = nil
-        end
+        @stack_trace = details&.fetch('stack_trace', nil)
         super(message)
       end
     end
@@ -59,7 +55,7 @@ module Oso
       # @param as [String]
       # @param old [Class]
       # @param new [Class]
-      def initialize(name:, old:, new:) # rubocop:disable Naming/MethodParameterName
+      def initialize(name:, old:, new:)
         super("Attempted to alias #{new} as '#{name}', but #{old} already has that alias.")
       end
     end
