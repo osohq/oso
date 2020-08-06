@@ -739,6 +739,7 @@ dependencies = [
  "anyhow",
  "criterion",
  "indoc",
+ "js-sys",
  "lalrpop",
  "lalrpop-util",
  "lazy_static",

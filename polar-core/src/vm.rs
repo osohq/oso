@@ -11,7 +11,10 @@ use super::lexer::loc_to_pos;
 use super::types::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
+#[cfg(not(target_os = "unknown"))]
 pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(30);
+#[cfg(target_os = "unknown")]
+pub const QUERY_TIMEOUT_S: f64 = 30_000.0;
 
 #[derive(Clone, Debug)]
 #[must_use = "ignored goals are never accomplished"]
@@ -155,8 +158,14 @@ pub struct PolarVirtualMachine {
     // Errors from outside the vm.
     pub external_error: Option<String>,
 
+    #[cfg(not(target_os = "unknown"))]
     query_start_time: Option<std::time::Instant>,
+    #[cfg(target_os = "unknown")]
+    query_start_time: Option<f64>,
+    #[cfg(not(target_os = "unknown"))]
     query_timeout: std::time::Duration,
+    #[cfg(target_os = "unknown")]
+    query_timeout: f64,
 
     /// Maximum size of goal stack
     stack_limit: usize,
@@ -341,7 +350,11 @@ impl PolarVirtualMachine {
     /// the machine.
     pub fn run(&mut self) -> PolarResult<QueryEvent> {
         if self.query_start_time.is_none() {
-            self.query_start_time = Some(std::time::Instant::now());
+            #[cfg(not(target_os = "unknown"))]
+            let query_start_time = Some(std::time::Instant::now());
+            #[cfg(target_os = "unknown")]
+            let query_start_time = Some(js_sys::Date::now());
+            self.query_start_time = query_start_time;
         }
 
         if self.goals.is_empty() {
@@ -661,6 +674,7 @@ impl PolarVirtualMachine {
         st
     }
 
+    #[cfg(not(target_os = "unknown"))]
     fn check_timeout(&self) -> PolarResult<()> {
         let now = std::time::Instant::now();
         let start_time = self
@@ -673,6 +687,27 @@ impl PolarVirtualMachine {
                     "Query running for {}. Exceeded query timeout of {} seconds",
                     (now - start_time).as_secs(),
                     self.query_timeout.as_secs()
+                ),
+            }
+            .into());
+        }
+
+        Ok(())
+    }
+
+    #[cfg(target_os = "unknown")]
+    fn check_timeout(&self) -> PolarResult<()> {
+        let now = js_sys::Date::now();
+        let start_time = self
+            .query_start_time
+            .expect("Query start time not recorded");
+
+        if now - start_time > self.query_timeout {
+            return Err(error::RuntimeError::QueryTimeout {
+                msg: format!(
+                    "Query running for {}. Exceeded query timeout of {} seconds",
+                    (now - start_time) / 1_000.0,
+                    self.query_timeout / 1_000.0
                 ),
             }
             .into());
