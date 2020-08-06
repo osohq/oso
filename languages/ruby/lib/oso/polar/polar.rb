@@ -60,9 +60,14 @@ module Oso
 
       # Query for a predicate, parsing it if necessary.
       #
-      # @param query [String or Predicate]
-      # @return Enumerator of resulting bindings
-      # @raise [Error] if the FFI call raises one.
+      # @overload query(query)
+      #   @param query [String]
+      #   @return [Enumerator] of resulting bindings
+      #   @raise [Error] if the FFI call raises one.
+      # @overload query(query)
+      #   @param query [Predicate]
+      #   @return [Enumerator] of resulting bindings
+      #   @raise [Error] if the FFI call raises one.
       def query(query) # rubocop:disable Metrics/MethodLength
         load_queued_files
         new_host = host.dup
