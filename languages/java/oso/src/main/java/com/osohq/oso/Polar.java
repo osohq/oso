@@ -2,25 +2,31 @@ package com.osohq.oso;
 
 import java.lang.reflect.Constructor;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.function.Function;
 
+import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
 
 public class Polar {
     private Ffi.Polar ffiPolar;
     protected Host host; // visible for tests only
-    private Map<String, String> loadQueue; // Map from filename -> file contents
+    private Map<String, String> loadedNames; // Map from filename -> file contents
+    private Map<String, String> loadedContent; // Map from file contents -> filename
 
     public Polar() throws Exceptions.OsoException {
         ffiPolar = Ffi.get().polarNew();
         host = new Host(ffiPolar);
-        loadQueue = new HashMap<String, String>();
+        loadedNames = new HashMap<String, String>();
+        loadedContent = new HashMap<String, String>();
 
         // Register built-in classes.
         registerClass(Boolean.class, "Boolean");
@@ -37,7 +43,8 @@ public class Polar {
      * @throws Exceptions.OsoException
      */
     public void clear() throws Exceptions.OsoException {
-        loadQueue.clear();
+        loadedNames.clear();
+        loadedContent.clear();
         ffiPolar = Ffi.get().polarNew();
     }
 
@@ -50,7 +57,7 @@ public class Polar {
      * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
      * @throws IOException                        If unable to open or read the file.
      */
-    public void loadFile(String filename) throws IOException, Exceptions.PolarFileExtensionError {
+    public void loadFile(String filename) throws IOException, OsoException {
         Optional<String> ext = Optional.ofNullable(filename).filter(f -> f.contains("."))
                 .map(f -> f.substring(filename.lastIndexOf(".") + 1));
 
@@ -59,8 +66,28 @@ public class Polar {
             throw new Exceptions.PolarFileExtensionError();
         }
 
-        // add file to queue
-        loadQueue.put(filename, new String(Files.readAllBytes(Paths.get(filename))));
+        File file = new File(Paths.get(filename).toString());
+        try {
+            String hash = getFileChecksum(file);
+            if (loadedNames.containsKey(filename)) {
+                if (loadedNames.get(filename).equals(hash)) {
+                    throw new PolarRuntimeException("File " + filename + " has already been loaded.");
+                } else {
+                    throw new PolarRuntimeException(
+                            "A file with the name " + filename + ", but different contents, has already been loaded.");
+                }
+            } else if (loadedContent.containsKey(hash)) {
+                throw new PolarRuntimeException("A file with the same contents as " + filename + " named "
+                        + loadedContent.get(hash) + "has already been loaded.");
+            } else {
+                loadStr(new String(Files.readAllBytes(Paths.get(filename))), filename);
+                loadedNames.put(filename, hash);
+                loadedContent.put(hash, filename);
+            }
+        } catch (NoSuchAlgorithmException e) {
+            throw new PolarRuntimeException("Failed to hash file " + filename);
+        }
+
     }
 
     /**
@@ -88,7 +115,6 @@ public class Polar {
      * Query for a predicate, parsing it first.
      */
     public Query query(String query) throws Exceptions.OsoException {
-        loadQueuedFiles();
         return new Query(ffiPolar.newQueryFromStr(query), host.clone());
     }
 
@@ -96,7 +122,6 @@ public class Polar {
      * Query for a predicate.
      */
     public Query query(Predicate query) throws Exceptions.OsoException {
-        loadQueuedFiles();
         Host new_host = host.clone();
         String pred = new_host.toPolarTerm(query).toString();
         return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
@@ -109,7 +134,6 @@ public class Polar {
      * @param args Variable list of rule arguments.
      */
     public Query queryRule(String rule, Object... args) throws Exceptions.OsoException {
-        loadQueuedFiles();
         Host new_host = host.clone();
         String pred = new_host.toPolarTerm(new Predicate(rule, Arrays.asList(args))).toString();
         return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
@@ -129,7 +153,6 @@ public class Polar {
         for (String file : files) {
             loadFile(file);
         }
-        loadQueuedFiles();
 
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         Ffi.Query ffiQuery;
@@ -215,16 +238,6 @@ public class Polar {
     }
 
     /**
-     * Load all queued files, flushing the {@code loadQueue}
-     */
-    private void loadQueuedFiles() throws Exceptions.OsoException {
-        for (String fname : loadQueue.keySet()) {
-            loadStr(loadQueue.get(fname), fname);
-        }
-        loadQueue.clear();
-    }
-
-    /**
      * Confirm that all queued inline queries succeed.
      */
     private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
@@ -235,5 +248,39 @@ public class Polar {
             }
             nextQuery = ffiPolar.nextInlineQuery();
         }
+    }
+
+    private static String getFileChecksum(File file) throws IOException, NoSuchAlgorithmException {
+        // Get file input stream for reading the file content
+        FileInputStream fis = new FileInputStream(file);
+
+        // Use MD5 algorithm
+        MessageDigest digest = MessageDigest.getInstance("MD5");
+
+        // Create byte array to read data in chunks
+        byte[] byteArray = new byte[1024];
+        int bytesCount = 0;
+
+        // Read file data and update in message digest
+        while ((bytesCount = fis.read(byteArray)) != -1) {
+            digest.update(byteArray, 0, bytesCount);
+        }
+        ;
+
+        // close the stream; We don't need it now.
+        fis.close();
+
+        // Get the hash's bytes
+        byte[] bytes = digest.digest();
+
+        // This bytes[] has bytes in decimal format;
+        // Convert it to hexadecimal format
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+        }
+
+        // return complete hash
+        return sb.toString();
     }
 }

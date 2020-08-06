@@ -369,8 +369,7 @@ public class PolarTest {
         FileWriter w = new FileWriter(tempFile);
         w.write(";");
         w.close();
-        p.loadFile(tempFile.getPath());
-        assertThrows(Exceptions.ParseError.class, () -> p.query("f(1)"),
+        assertThrows(Exceptions.ParseError.class, () -> p.loadFile(tempFile.getPath()),
                 "Failed to pass filename across FFI boundary.");
         tempFile.deleteOnExit();
     }
@@ -378,7 +377,8 @@ public class PolarTest {
     @Test
     public void testLoadFileIdempotent() throws Exception {
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
-        p.loadFile("src/test/java/com/osohq/oso/test.polar");
+        assertThrows(Exceptions.PolarRuntimeException.class,
+                () -> p.loadFile("src/test/java/com/osohq/oso/test.polar"));
         assertTrue(p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))),
                 "loadFile behavior is not idempotent.");
     }
