@@ -6,7 +6,7 @@ public class Project {
         this.teamId = teamId;
     }
 
-    public static Project byId(Integer id) {
+    public static Project id(Integer id) {
         return new Project(id, 0);
     }
 }

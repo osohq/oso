@@ -1,5 +1,6 @@
 package com.osohq.oso;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -10,14 +11,14 @@ import org.json.JSONArray;
 
 public class Host implements Cloneable {
     private Ffi.Polar ffiPolar;
-    private Map<String, Class<Object>> classes;
-    private Map<String, Function<Map, Object>> constructors;
+    private Map<String, Class<?>> classes;
+    private Map<String, Constructor<?>> constructors;
     private Map<Long, Object> instances;
 
     public Host(Ffi.Polar polarPtr) {
         ffiPolar = polarPtr;
-        classes = new HashMap<String, Class<Object>>();
-        constructors = new HashMap<String, Function<Map, Object>>();
+        classes = new HashMap<String, Class<?>>();
+        constructors = new HashMap<String, Constructor<?>>();
         instances = new HashMap<Long, Object>();
     }
 
@@ -36,7 +37,7 @@ public class Host implements Cloneable {
      * @param name
      * @throws Exceptions.UnregisteredClassError
      */
-    public Class getClass(String name) throws Exceptions.UnregisteredClassError {
+    public Class<?> getClass(String name) throws Exceptions.UnregisteredClassError {
         if (classes.containsKey(name)) {
             return classes.get(name);
         } else {
@@ -51,7 +52,7 @@ public class Host implements Cloneable {
      * @throws Exceptions.DuplicateClassAliasError If the class is already
      *                                             registered.
      */
-    public String cacheClass(Class cls, Function<Map, Object> constructor, String name)
+    public String cacheClass(Class<?> cls, Constructor<?> constructor, String name)
             throws Exceptions.DuplicateClassAliasError {
         if (classes.containsKey(name)) {
             throw new Exceptions.DuplicateClassAliasError(name, classes.get(name).getName(), cls.getName());
@@ -104,18 +105,41 @@ public class Host implements Cloneable {
      * Make an instance of a Java class from a {@code Map<String, Object>} of
      * fields.
      *
-     * @param clsName
+     * @param className
      * @param fields
      * @param id
      */
-    public Object makeInstance(String clsName, Map fields, long id) throws Exceptions.OsoException {
-        Function<Map, Object> constructor = constructors.get(clsName);
+    public Object makeInstance(String className, List<Object> initargs, long id)
+            throws Exceptions.OsoException
+    {
+        Constructor<?> constructor = constructors.get(className);
+        if (constructor == null) {
+            // Try to find a constructor applicable to the supplied arguments.
+            Class<?> cls = classes.get(className);
+            Class<?>[] argTypes = initargs.stream().map(arg -> arg.getClass())
+                .collect(Collectors.toUnmodifiableList())
+                .toArray(new Class[0]);
+            search: for (Constructor<?> c : cls.getConstructors()) {
+                Class<?>[] paramTypes = c.getParameterTypes();
+                if (argTypes.length == paramTypes.length) {
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        if (!paramTypes[i].isAssignableFrom(argTypes[i])) {
+                            continue search;
+                        }
+                    }
+                    constructor = c;
+                    break search;
+                }
+            }
+            if (constructor == null)
+                throw new Exceptions.MissingConstructorError(className);
+        }
+
         Object instance;
-        if (constructor != null) {
-            instance = constructor.apply(fields);
-        } else {
-            // TODO: default constructor
-            throw new Exceptions.MissingConstructorError(clsName);
+        try {
+            instance = constructor.newInstance(initargs.toArray());
+        } catch (Exception e) {
+            throw new Exceptions.InstantiationError(className, e);
         }
         cacheInstance(instance, id);
         return instance;
@@ -133,7 +157,7 @@ public class Host implements Cloneable {
     public boolean subspecializer(long instanceId, String leftTag, String rightTag)
             throws Exceptions.UnregisteredClassError {
         Object instance = instances.get(instanceId);
-        Class cls, leftClass, rightClass;
+        Class<?> cls, leftClass, rightClass;
         cls = instance.getClass();
         leftClass = getClass(leftTag);
         rightClass = getClass(rightTag);
@@ -166,7 +190,7 @@ public class Host implements Cloneable {
             throws Exceptions.UnregisteredClassError,
                    Exceptions.UnregisteredInstanceError,
                    Exceptions.UnexpectedPolarTypeError {
-        Class cls = getClass(classTag);
+        Class<?> cls = getClass(classTag);
         return cls.isInstance(toJava(instance));
     }
 

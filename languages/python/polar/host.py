@@ -62,7 +62,7 @@ class Host:
         self.instances[id] = instance
         return id
 
-    def make_instance(self, name, fields, id):
+    def make_instance(self, name, initargs, id):
         """Make and cache a new instance of a Python class."""
         cls = self.get_class(name)
         constructor = self.get_constructor(name)
@@ -70,7 +70,11 @@ class Host:
             constructor = getattr(cls, constructor)
         if id in self.instances:
             raise PolarRuntimeException(f"instance {id} is already registered")
-        instance = constructor(**fields)
+        instance = (
+            constructor(**initargs)
+            if isinstance(initargs, dict)
+            else constructor(*initargs)
+        )
         self.cache_instance(instance, id)
         return instance
 

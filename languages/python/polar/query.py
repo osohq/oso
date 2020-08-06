@@ -55,19 +55,19 @@ class Query:
 
             if kind == "MakeExternal":
                 self.handle_make_external(data)
-            if kind == "ExternalCall":
+            elif kind == "ExternalCall":
                 self.handle_external_call(data)
-            if kind == "ExternalOp":
+            elif kind == "ExternalOp":
                 self.handle_external_op(data)
-            if kind == "ExternalIsa":
+            elif kind == "ExternalIsa":
                 self.handle_external_isa(data)
-            if kind == "ExternalUnify":
+            elif kind == "ExternalUnify":
                 self.handle_external_unify(data)
-            if kind == "ExternalIsSubSpecializer":
+            elif kind == "ExternalIsSubSpecializer":
                 self.handle_external_is_subspecializer(data)
-            if kind == "Debug":
+            elif kind == "Debug":
                 self.handle_debug(data)
-            if kind == "Result":
+            elif kind == "Result":
                 bindings = {
                     k: self.host.to_python(v) for k, v in data["bindings"].items()
                 }
@@ -76,10 +76,17 @@ class Query:
 
     def handle_make_external(self, data):
         id = data["instance_id"]
-        cls_name = data["instance"]["tag"]
-        fields = data["instance"]["fields"]["fields"]
-        fields = {k: self.host.to_python(v) for k, v in fields.items()}
-        self.host.make_instance(cls_name, fields, id)
+        constructor = data["constructor"]["value"]
+        if "InstanceLiteral" in constructor:
+            cls_name = constructor["InstanceLiteral"]["tag"]
+            fields = constructor["InstanceLiteral"]["fields"]["fields"]
+            initargs = {k: self.host.to_python(v) for k, v in fields.items()}
+        elif "Call" in constructor:
+            cls_name = constructor["Call"]["name"]
+            initargs = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
+        else:
+            raise PolarApiException("Bad constructor")
+        self.host.make_instance(cls_name, initargs, id)
 
     def handle_external_call(self, data):
         call_id = data["call_id"]

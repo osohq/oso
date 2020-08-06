@@ -91,8 +91,10 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
         while (true) {
             String eventStr = ffiQuery.nextEvent().get();
-            String kind;
-            JSONObject data;
+            String kind, className;
+            JSONObject data, instance;
+            Long callId;
+
             try {
                 JSONObject event = new JSONObject(eventStr);
                 kind = event.keys().next();
@@ -113,22 +115,32 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     if (host.hasInstance(id)) {
                         throw new Exceptions.DuplicateInstanceRegistrationError(id);
                     }
-                    String clsName = data.getJSONObject("instance").getString("tag");
-                    JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields").getJSONObject("fields");
-                    host.makeInstance(clsName, host.polarDictToJava(jFields), id);
+                    JSONObject constructor = data.getJSONObject("constructor").getJSONObject("value");
+                    JSONArray initargs;
+                    if (constructor.has("InstanceLiteral")) {
+                        // Keyword initargs are not supported in Java.
+                        className = constructor.getJSONObject("InstanceLiteral").getString("tag");
+                        throw new Exceptions.InstantiationError(className);
+                    } else if (constructor.has("Call")) {
+                        className = constructor.getJSONObject("Call").getString("name");
+                        initargs = constructor.getJSONObject("Call").getJSONArray("args");
+                    } else {
+                        throw new Exceptions.InvalidConstructorError("Bad constructor");
+                    }
+                    host.makeInstance(className, host.polarListToJava(initargs), id);
                     break;
                 case "ExternalCall":
-                    long callId = data.getLong("call_id");
-                    JSONObject polarInstance = data.getJSONObject("instance");
+                    instance = data.getJSONObject("instance");
+                    callId = data.getLong("call_id");
                     String attrName = data.getString("attribute");
                     JSONArray jArgs = data.getJSONArray("args");
-                    handleCall(attrName, jArgs, polarInstance, callId);
+                    handleCall(attrName, jArgs, instance, callId);
                     break;
                 case "ExternalIsa":
-                    JSONObject instance = data.getJSONObject("instance");
+                    instance = data.getJSONObject("instance");
                     callId = data.getLong("call_id");
-                    String classTag = data.getString("class_tag");
-                    int answer = host.isa(instance, classTag) ? 1 : 0;
+                    className = data.getString("class_tag");
+                    int answer = host.isa(instance, className) ? 1 : 0;
                     ffiQuery.questionResult(callId, answer);
                     break;
                 case "ExternalIsSubSpecializer":
@@ -189,23 +201,22 @@ public class Query implements Enumeration<HashMap<String, Object>> {
             instance = host.toJava(polarInstance);
         }
 
-        // Get types of args to pass into `getMethod()`
-        List<Class> argTypes = args.stream().map(a -> a.getClass()).collect(Collectors.toUnmodifiableList());
+        // Select a method to call based on the types of the arguments.
+        Class<?>[] argTypes = args.stream().map(a -> a.getClass())
+            .collect(Collectors.toUnmodifiableList())
+            .toArray(new Class[0]);
         Object result = null;
-        Boolean isMethod = true;
         try {
-            Class cls = instance instanceof Class ? (Class) instance : instance.getClass();
+            Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
             try {
-                Method method = cls.getMethod(attrName, argTypes.toArray(new Class[argTypes.size()]));
+                Method method = cls.getMethod(attrName, argTypes);
                 result = method.invoke(instance, args.toArray());
             } catch (NoSuchMethodException e) {
-                isMethod = false;
-            }
-            if (!isMethod) {
+                // Look for a field with the given name.
                 try {
                     Field field = cls.getField(attrName);
                     result = field.get(instance);
-                } catch (NoSuchFieldException e) {
+                } catch (NoSuchFieldException f) {
                     throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
                 }
             }

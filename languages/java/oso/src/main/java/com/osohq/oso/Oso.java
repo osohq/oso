@@ -6,9 +6,10 @@ import java.util.*;
 public class Oso extends Polar {
     public Oso() throws Exceptions.OsoException {
         super();
-        registerClass(Http.class, (m) -> new Http((String) m.get("hostname"), (String) m.get("path"),
-                (Map<String, String>) m.get("query")), "Http");
-        registerClass(PathMapper.class, (m) -> new PathMapper((String) m.get("template")), "PathMapper");
+
+        // Register helper classes.
+        registerClass(Http.class, "Http");
+        registerClass(PathMapper.class, "PathMapper");
     }
 
     /**

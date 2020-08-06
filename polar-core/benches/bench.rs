@@ -267,7 +267,7 @@ impl Runner {
         let instance_id = self.polar.get_external_id();
         Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id,
-            literal: Some(literal),
+            constructor: Some(Term::new_from_test(Value::InstanceLiteral(literal))),
             repr: None,
         }))
     }

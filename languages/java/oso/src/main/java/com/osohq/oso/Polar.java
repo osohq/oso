@@ -1,5 +1,6 @@
 package com.osohq.oso;
 
+import java.lang.reflect.Constructor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -22,13 +23,12 @@ public class Polar {
         loadQueue = new HashMap<String, String>();
 
         // Register built-in classes.
-        // FIXME: These constructors are garbage.
-        registerClass(Boolean.class, m -> (boolean) m.get("value") ? false : true, "Boolean");
-        registerClass(Integer.class, m -> (int) m.get("value"), "Integer");
-        registerClass(Double.class, m -> (double) m.get("value"), "Float");
-        registerClass(List.class, m -> (List<Object>) m.get("value"), "List");
-        registerClass(Map.class, m -> (Map<String, Object>) m.get("fields"), "Dictionary");
-        registerClass(String.class, m -> (String) m.get("value"), "String");
+        registerClass(Boolean.class, "Boolean");
+        registerClass(Integer.class, "Integer");
+        registerClass(Double.class, "Float");
+        registerClass(List.class, "List");
+        registerClass(Map.class, "Dictionary");
+        registerClass(String.class, "String");
     }
 
     /**
@@ -191,35 +191,53 @@ public class Polar {
     }
 
     /**
-     * Register a Java class with oso.
+     * Register a Java class with Polar.
      *
-     * @param cls       Class object to be registered.
-     * @param fromPolar lambda function to convert from a
-     *                  {@code Map<String, Object>} of parameters to an instance of
-     *                  the Java class.
-     * @throws Exceptions.DuplicateClassAliasError if class has already been
-     *                                             registered.
+     * @param cls         Class object to be registered.
+     * @param constructor The constructor to use with the Polar `new` operator.
+     * @throws Exceptions.DuplicateClassAliasError if class has already been registered.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar)
+    public void registerClass(Class<?> cls)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-        registerClass(cls, fromPolar, cls.getName());
+        registerClass(cls, cls.getName(), null);
     }
 
     /**
-     * Register a Java class with oso using an alias.
+     * Register a Java class with Polar using a specific constructor.
      *
-     * @param cls       Class object to be registered.
-     * @param fromPolar lambda function to convert from a
-     *                  {@code Map<String, Object>} of parameters to an instance of
-     *                  the Java class.
-     * @param name      name to register the class under, which is how the class is
-     *                  accessed from Polar.
+     * @param cls         Class object to be registered.
+     * @param constructor The constructor to use with the Polar `new` operator.
+     * @throws Exceptions.DuplicateClassAliasError if class has already been registered.
+     */
+    public void registerClass(Class<?> cls, Constructor<?> constructor)
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
+        registerClass(cls, cls.getName(), constructor);
+    }
+
+    /**
+     * Register a Java class with Polar using an alias.
+     *
+     * @param cls         Class object to be registered.
+     * @param constructor The constructor to use with the Polar `new` operator.
+     * @throws Exceptions.DuplicateClassAliasError if class has already been registered.
+     */
+    public void registerClass(Class<?> cls, String name)
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
+        registerClass(cls, name, null);
+    }
+
+    /**
+     * Register a Java class with Polar using an alias.
+     *
+     * @param cls         Class object to be registered.
+     * @param constructor The constructor to use with the Polar `new` operator.
+     * @param name        The name of the class from within Polar.
      * @throws Exceptions.DuplicateClassAliasError if a class has already been
      *                                             registered with the given alias.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar, String name)
+    public void registerClass(Class<?> cls, String name, Constructor<?> constructor)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-        host.cacheClass(cls, fromPolar, name);
+        host.cacheClass(cls, constructor, name);
         registerConstant(name, cls);
     }
 

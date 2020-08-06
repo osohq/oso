@@ -86,7 +86,7 @@ impl InstanceLiteral {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ExternalInstance {
     pub instance_id: u64,
-    pub literal: Option<InstanceLiteral>,
+    pub constructor: Option<Term>,
     pub repr: Option<String>,
 }
 
@@ -633,7 +633,7 @@ pub enum QueryEvent {
 
     MakeExternal {
         instance_id: u64,
-        instance: InstanceLiteral,
+        constructor: Term,
     },
 
     ExternalCall {
@@ -719,12 +719,12 @@ mod tests {
         };
         let event = QueryEvent::MakeExternal {
             instance_id: 12345,
-            instance: literal,
+            constructor: Term::new_from_test(Value::InstanceLiteral(literal)),
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let external = Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
-            literal: None,
+            constructor: None,
             repr: None,
         }));
         let list_of = Term::new_from_test(Value::List(vec![external]));

@@ -4,7 +4,7 @@ module Oso
   # Map from a template string with capture groups of the form
   # `{name}` to a dictionary of the form `{name: captured_value}`
   class PathMapper
-    def initialize(template:)
+    def initialize(template)
       capture_group = /({([^}]+)})/
 
       template = template.dup
