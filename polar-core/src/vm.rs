@@ -56,7 +56,7 @@ pub enum Goal {
         instance_id: u64,
     },
     IsaExternal {
-        instance_id: u64,
+        instance: Term,
         literal: InstanceLiteral,
     },
     UnifyExternal {
@@ -287,10 +287,7 @@ impl PolarVirtualMachine {
                 field,
                 check_errors,
             } => return self.lookup_external(*call_id, instance, field, *check_errors),
-            Goal::IsaExternal {
-                instance_id,
-                literal,
-            } => return self.isa_external(*instance_id, literal),
+            Goal::IsaExternal { instance, literal } => return self.isa_external(instance, literal),
             Goal::UnifyExternal {
                 left_instance_id,
                 right_instance_id,
@@ -868,11 +865,19 @@ impl PolarVirtualMachine {
                 })?;
                 // Check class
                 self.push_goal(Goal::IsaExternal {
-                    instance_id: left_instance.instance_id,
+                    instance: left.clone(),
                     literal: right_literal.clone(),
                 })?;
             }
 
+            (_, Value::Pattern(Pattern::Instance(right_literal))) => {
+                self.push_goal(Goal::IsaExternal {
+                    instance: left.clone(),
+                    literal: right_literal.clone(),
+                })?;
+            }
+
+            // Default case: x isa y if x = y.
             _ => self.push_goal(Goal::Unify {
                 left: left.clone(),
                 right: right.clone(),
@@ -957,7 +962,7 @@ impl PolarVirtualMachine {
 
     pub fn isa_external(
         &mut self,
-        instance_id: u64,
+        instance: &Term,
         literal: &InstanceLiteral,
     ) -> PolarResult<QueryEvent> {
         let result = self.kb.read().unwrap().gensym("isa");
@@ -970,7 +975,7 @@ impl PolarVirtualMachine {
 
         Ok(QueryEvent::ExternalIsa {
             call_id,
-            instance_id,
+            instance: instance.clone(),
             class_tag: literal.tag.clone(),
         })
     }
@@ -1396,8 +1401,25 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 2);
-        let left_term = self.deref(&args[0]);
-        let right_term = self.deref(&args[1]);
+        let mut left_term = self.deref(&args[0]);
+        let mut right_term = self.deref(&args[1]);
+
+        // Coerce booleans to integers.
+        fn to_int(x: bool) -> i64 {
+            if x {
+                1
+            } else {
+                0
+            }
+        }
+        if let Value::Boolean(x) = left_term.value() {
+            left_term = left_term.clone_with_value(Value::Number(Numeric::Integer(to_int(*x))));
+        }
+        if let Value::Boolean(x) = right_term.value() {
+            right_term = right_term.clone_with_value(Value::Number(Numeric::Integer(to_int(*x))));
+        }
+
+        // Do the comparison.
         match (left_term.value(), right_term.value()) {
             (Value::Number(left), Value::Number(right)) => {
                 if !match op {

@@ -31,6 +31,13 @@ the assignment operator will NOT evaluate equality.
 - Attempting to assign to a non-variable will result in a parse error.
 - Attempting to assign to a bound variable will result in a runtime error.
 
+Built-in Types
+==============
+
+You may now write rules that specialize on any of the built-in types
+``Boolean``, ``Integer``, ``Float``, ``List``, ``Dictionary``, and ``String``.
+These types are mapped to host-language classes such as ``java.lang.Boolean``
+in Java or ``bool`` in Python.
 
 Other bugs & improvements
 =========================

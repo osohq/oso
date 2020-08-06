@@ -155,17 +155,19 @@ public class Host implements Cloneable {
     /**
      * Check if a Java instance is an instance of a class.
      *
-     * @param instanceId
+     * @param instance
      * @param classTag
      * @return
      * @throws Exceptions.UnregisteredClassError
      * @throws Exceptions.UnregisteredInstanceError
+     * @throws Exceptions.UnexpectedPolarTypeError
      */
-    public boolean isa(long instanceId, String classTag)
-            throws Exceptions.UnregisteredClassError, Exceptions.UnregisteredInstanceError {
+    public boolean isa(JSONObject instance, String classTag)
+            throws Exceptions.UnregisteredClassError,
+                   Exceptions.UnregisteredInstanceError,
+                   Exceptions.UnexpectedPolarTypeError {
         Class cls = getClass(classTag);
-        Object instance = getInstance(instanceId);
-        return cls.isInstance(instance);
+        return cls.isInstance(toJava(instance));
     }
 
     /**
@@ -278,8 +280,7 @@ public class Host implements Cloneable {
     /**
      * Turn a Polar term passed across the FFI boundary into a Java Object.
      *
-     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _,
-     *             "value": _}}
+     * @param term JSONified Polar term of the form: {@code {"id": _, "offset": _, "value": _}}
      * @throws Exceptions.UnregisteredInstanceError
      * @throws Exceptions.UnexpectedPolarTypeError
      */
@@ -298,7 +299,7 @@ public class Host implements Cloneable {
                     case "Integer":
                         return num.getInt("Integer");
                     case "Float":
-                        return num.getFloat("Float");
+                        return num.getDouble("Float");
                 }
             case "List":
                 return polarListToJava(value.getJSONArray(tag));

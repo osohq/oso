@@ -20,6 +20,15 @@ public class Polar {
         ffiPolar = Ffi.get().polarNew();
         host = new Host(ffiPolar);
         loadQueue = new HashMap<String, String>();
+
+        // Register built-in classes.
+        // FIXME: These constructors are garbage.
+        registerClass(Boolean.class, m -> (boolean) m.get("value") ? false : true, "Boolean");
+        registerClass(Integer.class, m -> (int) m.get("value"), "Integer");
+        registerClass(Double.class, m -> (double) m.get("value"), "Float");
+        registerClass(List.class, m -> (List<Object>) m.get("value"), "List");
+        registerClass(Map.class, m -> (Map<String, Object>) m.get("fields"), "Dictionary");
+        registerClass(String.class, m -> (String) m.get("value"), "String");
     }
 
     /**

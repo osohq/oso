@@ -1,3 +1,6 @@
+import math
+import os
+
 from polar.exceptions import UnrecognizedEOF
 from oso import Oso, OsoException
 
@@ -38,8 +41,6 @@ def custom_c_constructor(y):
 
 oso.register_class(B.C, name="C", from_polar=custom_c_constructor)
 
-import os
-
 polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
 oso.load_file(polar_file)
 oso._load_queued_files()
@@ -75,8 +76,23 @@ assert list(oso.query_rule("testHttpAndPathMapper"))
 # Test that cut doesn't return anything.
 assert not list(oso.query_rule("testCut"))
 
-import math
-
 # Test that a constant can be called.
 oso.register_constant("Math", math)
 oso.load_str("?= Math.factorial(5) == 120;")
+
+# Test built-in type specializers.
+assert list(oso.query('builtinSpecializers(true, "Boolean")'))
+assert not list(oso.query('builtinSpecializers(false, "Boolean")'))
+assert list(oso.query('builtinSpecializers(2, "Integer")'))
+assert list(oso.query('builtinSpecializers(1, "Integer")'))
+assert not list(oso.query('builtinSpecializers(0, "Integer")'))
+assert not list(oso.query('builtinSpecializers(-1, "Integer")'))
+assert list(oso.query('builtinSpecializers(1.0, "Float")'))
+assert not list(oso.query('builtinSpecializers(0.0, "Float")'))
+assert not list(oso.query('builtinSpecializers(-1.0, "Float")'))
+assert list(oso.query('builtinSpecializers(["foo", "bar", "baz"], "List")'))
+assert not list(oso.query('builtinSpecializers(["bar", "foo", "baz"], "List")'))
+assert list(oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")'))
+assert not list(oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")'))
+assert list(oso.query('builtinSpecializers("foo", "String")'))
+assert not list(oso.query('builtinSpecializers("bar", "String")'))

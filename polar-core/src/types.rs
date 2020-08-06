@@ -648,10 +648,10 @@ pub enum QueryEvent {
         args: Vec<Term>,
     },
 
-    /// Checks if the instance is an instance of (or subclass of) the class_tag.
+    /// Checks if the instance is an instance of (a subclass of) the class_tag.
     ExternalIsa {
         call_id: u64,
-        instance_id: u64,
+        instance: Term,
         class_tag: Symbol,
     },
 

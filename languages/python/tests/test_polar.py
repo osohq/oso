@@ -1,5 +1,6 @@
-from pathlib import Path
 from datetime import datetime, timedelta
+from math import pi
+from pathlib import Path
 
 from polar import polar_class
 from polar import exceptions, Polar, Predicate, Query, Variable
@@ -557,7 +558,6 @@ def test_external_op(polar, query):
 
 
 def test_datetime(polar, query):
-
     # test datetime comparison
     t1 = datetime(2020, 5, 25)
     t2 = datetime.now()

@@ -69,14 +69,27 @@ oso.query_rule('testOr').next
 oso.query_rule('testHttpAndPathMapper').next
 
 # Test that cut doesn't return anything.
-exception_thrown = false
-begin
-  oso.query_rule('testCut').next
-rescue StopIteration
-  exception_thrown = true
-end
-raise unless exception_thrown
+raise unless oso.query_rule('testCut').to_a.empty?
 
 # Test that a constant can be called.
-oso.register_class String
-oso.load_str '?= x = "" and x.length == String.send("new").length;'
+oso.register_class Math
+oso.load_str '?= Math.acos(1.0) = 0.0;'
+
+# Test built-in type specializers.
+# rubocop:disable Layout/EmptyLineAfterGuardClause
+oso.query('builtinSpecializers(true, "Boolean")').next
+raise unless oso.query('builtinSpecializers(false, "Boolean")').to_a.empty?
+oso.query('builtinSpecializers(2, "Integer")').next
+oso.query('builtinSpecializers(1, "Integer")').next
+raise unless oso.query('builtinSpecializers(0, "Integer")').to_a.empty?
+raise unless oso.query('builtinSpecializers(-1, "Integer")').to_a.empty?
+oso.query('builtinSpecializers(1.0, "Float")').next
+raise unless oso.query('builtinSpecializers(0.0, "Float")').to_a.empty?
+raise unless oso.query('builtinSpecializers(-1.0, "Float")').to_a.empty?
+oso.query('builtinSpecializers(["foo", "bar", "baz"], "List")').next
+raise unless oso.query('builtinSpecializers(["bar", "foo", "baz"], "List")').to_a.empty?
+oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")').next
+raise unless oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').to_a.empty?
+oso.query('builtinSpecializers("foo", "String")').next
+raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?
+# rubocop:enable Layout/EmptyLineAfterGuardClause

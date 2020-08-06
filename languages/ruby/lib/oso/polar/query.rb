@@ -134,9 +134,9 @@ module Oso
               answer = host.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
               question_result(answer, call_id: event.data['call_id'])
             when 'ExternalIsa'
-              instance_id = event.data['instance_id']
+              instance = event.data['instance']
               class_tag = event.data['class_tag']
-              answer = host.isa?(instance_id, class_tag: class_tag)
+              answer = host.isa?(instance, class_tag: class_tag)
               question_result(answer, call_id: event.data['call_id'])
             when 'ExternalUnify'
               left_instance_id = event.data['left_instance_id']

@@ -9,6 +9,13 @@ c(instance, y) if instance = new C{y: y};
 specializers(a: A, c: C) if
     a.x = c.y;
 
+builtinSpecializers(x: Boolean, "Boolean") if x = true;
+builtinSpecializers(x: Integer, "Integer") if x > 0;
+builtinSpecializers(x: Float, "Float") if x > 0.0;
+builtinSpecializers(x: List, "List") if x = ["foo", *_rest];
+builtinSpecializers(x: Dictionary, "Dictionary") if x.foo = "foo";
+builtinSpecializers(x: String, "String") if x = "foo";
+
 floatLists() if 3.14159 in ["pi", 3.14159];
 
 intDicts() if {a: 42}.a = 42;

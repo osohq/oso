@@ -62,7 +62,7 @@ setup(
     #
     # Similar to `install_requires` above, these must be valid existing
     # projects.
-    extras_require={"flask": ["flask", "authlib"], "django": [], "jwt": ["authlib"],},
+    extras_require={"flask": ["flask", "authlib"], "django": [], "jwt": ["authlib"]},
     # If there are data files included in your packages that need to be
     # installed, specify them here.
     #
@@ -82,7 +82,7 @@ setup(
     #
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
-    entry_points={"console_scripts": [],},  # Optional
+    entry_points={"console_scripts": []},  # Optional
     # List additional URLs that are relevant to your project as a dict.
     #
     # This field corresponds to the "Project-URL" metadata fields:
