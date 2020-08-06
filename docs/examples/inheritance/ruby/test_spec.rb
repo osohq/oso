@@ -24,16 +24,13 @@ RSpec.describe do
 
   def load_file(example_name)
       file = File.join(File.dirname(__FILE__), '..', example_name)
+      OSO.clear
       OSO.load_file(file)
       OSO
   end
 
   FILES.each do |file|
     context "#{file}" do
-
-      it "parses" do
-        @oso.load_file(file)
-      end
 
       before do
         @oso = load_file(file)
