@@ -36,9 +36,10 @@ class Query:
         """Run the event loop and yield results."""
         assert self.ffi_query, "no query to run"
         while True:
-            event_str = self.ffi_query.next_event().get()
-            event = json.loads(event_str)
+            ffi_event = self.ffi_query.next_event()
+            event = json.loads(ffi_event.get())
             if event == "Done":
+                del ffi_event
                 break
             kind = [*event][0]
             data = event[kind]
