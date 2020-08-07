@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 
-echo "is this on?"
+apk add sdk rustup
+rustup-init
