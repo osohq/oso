@@ -211,3 +211,5 @@ interface QueryEvent {
     | ExternalUnify
     | Debug;
 }
+
+type QueryResult = Generator<Map<string, any>, null, never>;

@@ -1,7 +1,7 @@
 // TODO(gj): make sure we aren't pulling in all of lodash here.
 import { isEqual } from 'lodash';
 
-import { Polar as FfiPolar } from '../lib/polar_wasm_api';
+import { Polar as FfiPolar } from '../../../polar-wasm-api/pkg/index';
 import {
   DuplicateClassAliasError,
   InvalidConstructorError,
@@ -125,7 +125,8 @@ export class Host {
   isa(id: bigint, name: string): boolean {
     const instance = this.getInstance(id);
     const cls = this.getClass(name);
-    return instance instanceof cls;
+    // TODO(gj): is this correct?
+    return instance instanceof cls || instance.constructor === cls;
   }
 
   // TODO(gj): do more thinking about whether this should be ===

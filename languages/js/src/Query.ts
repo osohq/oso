@@ -1,7 +1,6 @@
 import { createInterface } from 'readline';
 
-import { Query as FfiQuery } from '../lib/polar_wasm_api';
-
+import { Query as FfiQuery } from '../../../polar-wasm-api/pkg/index';
 import { Host } from './Host';
 import { parseQueryEvent } from './helpers';
 import { DuplicateInstanceRegistrationError, InvalidCallError } from './errors';
@@ -10,7 +9,7 @@ export class Query {
   #ffiQuery: FfiQuery;
   #calls: Map<bigint, Generator>;
   #host: Host;
-  results: Generator;
+  results: QueryResult;
 
   constructor(ffiQuery: FfiQuery, host: Host) {
     this.#ffiQuery = ffiQuery;
@@ -110,7 +109,7 @@ export class Query {
     }
   }
 
-  private *start(): Generator<Map<string, any>, null, never> {
+  private *start(): QueryResult {
     while (true) {
       const nextEvent = this.#ffiQuery.nextEvent();
       const event: QueryEvent = parseQueryEvent(JSON.parse(nextEvent));
