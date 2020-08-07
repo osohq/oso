@@ -20,6 +20,15 @@ streamline the process of adding oso to your application.
     def secret_route():
         return "Hello world"
 
+Python
+======
+
+.. toctree::
+    :titlesonly:
+    :maxdepth: 1
+
+   flask
+
 What do you think?
 ==================
 We are working on updating our documentation with these integrations. In the
