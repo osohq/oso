@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -66,18 +67,18 @@ public class Polar {
             throw new Exceptions.PolarFileExtensionError();
         }
 
-        File file = new File(Paths.get(filename).toString());
         try {
+            File file = new File(Paths.get(filename).toString());
             String hash = getFileChecksum(file);
             if (loadedNames.containsKey(filename)) {
                 if (loadedNames.get(filename).equals(hash)) {
-                    throw new PolarRuntimeException("File " + filename + " has already been loaded.");
+                    throw new Exceptions.RepeatLoadError("File " + filename + " has already been loaded.");
                 } else {
-                    throw new PolarRuntimeException(
+                    throw new Exceptions.RepeatLoadError(
                             "A file with the name " + filename + ", but different contents, has already been loaded.");
                 }
             } else if (loadedContent.containsKey(hash)) {
-                throw new PolarRuntimeException("A file with the same contents as " + filename + " named "
+                throw new Exceptions.RepeatLoadError("A file with the same contents as " + filename + " named "
                         + loadedContent.get(hash) + "has already been loaded.");
             } else {
                 loadStr(new String(Files.readAllBytes(Paths.get(filename))), filename);
@@ -86,6 +87,8 @@ public class Polar {
             }
         } catch (NoSuchAlgorithmException e) {
             throw new PolarRuntimeException("Failed to hash file " + filename);
+        } catch (FileNotFoundException e) {
+            throw new Exceptions.PolarFileNotFoundError(filename);
         }
 
     }

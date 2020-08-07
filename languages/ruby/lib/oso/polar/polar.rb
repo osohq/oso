@@ -54,10 +54,9 @@ module Oso
           file_data = file.read
           hash = Digest::MD5.hexdigest(file_data)
           file.close
-        rescue
+        rescue Errno::ENOENT
           raise PolarFileNotFoundError, name unless File.file?(name)
         end
-
 
         if loaded_names.key?(name)
           raise RepeatLoadError, "File #{name} has already been loaded." if loaded_names[name] == hash
@@ -195,7 +194,6 @@ module Oso
       attr_reader :loaded_names
       # @return [Hash<String, String>]
       attr_reader :loaded_contents
-
     end
   end
 end

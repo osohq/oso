@@ -230,6 +230,15 @@ public class Exceptions {
         }
     }
 
+    public static class RepeatLoadError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public RepeatLoadError(String type) {
+            super(type);
+        }
+
+    }
+
     public static class PolarFileExtensionError extends PolarRuntimeException {
         public PolarFileExtensionError() {
             super("Polar files must have a .pol or .polar extension");
