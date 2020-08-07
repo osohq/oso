@@ -1,4 +1,4 @@
-name: Create Release
+name: Musl Release
 on:
   push:
     branches:
