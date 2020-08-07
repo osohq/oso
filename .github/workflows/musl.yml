@@ -18,8 +18,33 @@ jobs:
       - run: mkdir -p languages/python/native
       - run: cp polar-c-api/polar.h languages/python/native/
       - run: cp target/x86_64-unknown-linux-musl/debug/libpolar.a languages/python/native/
+      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.6-alpine oso/build_musl.sh
       - run: docker run --rm --env ENV -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
+      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.8-alpine oso/build_musl.sh
       - uses: actions/upload-artifact@v2
         with:
           name: musl-wheel
           path: languages/python/dist/*.whl
+
+  validate_python_musl:
+    name: Test python musl
+    needs: [build_musl_wheels]
+    runs-on: ubuntu-18.04
+    strategy:
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - uses: actions/checkout@v2
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - run: |
+          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.6-alpine oso/test_musl.sh
+          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.7-alpine oso/test_musl.sh
+          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.8-alpine oso/test_musl.sh
+        env:
+          OSO_VERSION: 0.3.1
