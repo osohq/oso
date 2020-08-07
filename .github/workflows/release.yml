@@ -359,7 +359,17 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    needs: [build_wheels, build_musl_wheels, build_jar, build_gem]
+    needs:
+      [
+        build_wheels,
+        build_musl_wheels,
+        build_jar,
+        build_gem,
+        validate_python,
+        validate_python_musl,
+        validate_ruby,
+        validate_java,
+      ]
     steps:
       - name: Set version output
         id: version
