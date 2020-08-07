@@ -282,7 +282,7 @@ jobs:
           name: musl-wheel
       - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:${{ matrix.python-version }}-alpine oso/scripts/test_musl.sh
         env:
-          OSO_VERSION: 0.3.1
+          OSO_VERSION: ${{ steps.version.outputs.oso_version }}
 
   validate_ruby:
     name: Test ruby ${{ matrix.ruby-version }} on ${{ matrix.os }}
