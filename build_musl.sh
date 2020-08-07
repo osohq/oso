@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 apk add musl-dev rustup
 rustup-init -y
