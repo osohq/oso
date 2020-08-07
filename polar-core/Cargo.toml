@@ -10,6 +10,7 @@ harness = false
 
 [dependencies]
 anyhow = "1.0.31"
+js-sys = "0.3"
 lalrpop-util = "0.18.1"
 lazy_static = "1.4.0"
 regex = "1.3.7"
