@@ -3,6 +3,17 @@ import functools
 from flask import g, current_app, _app_ctx_stack, request, Request
 
 def authorize(func=None, resource=None, actor=None, action=None):
+    """Flask route decorator.  Calls :py:meth:`FlaskOso.authorize` before the route.
+
+    Parameters are the same as :py:meth:`FlaskOso.authorize`.
+
+    For example::
+
+        @app.route("/")
+        @authorize(resource=flask.request)
+        def route():
+            return "authorized"
+    """
     if func is not None:
         @functools.wraps(func)
         def wrap(*args, **kwargs):
@@ -16,6 +27,11 @@ def authorize(func=None, resource=None, actor=None, action=None):
     return functools.partial(authorize, actor=actor, action=action, resource=resource)
 
 def skip_authorization(func=None, reason=None):
+    """Decorator to mark route as not requiring authorization.
+
+    Causes use in conjunction with :py:meth:`FlaskOso.require_authorization` to
+    silence errors on routes that do not need to be authorized.
+    """
     if func is not None:
         @functools.wraps(func)
         def wrap(*args, **kwargs):
