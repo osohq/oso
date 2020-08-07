@@ -207,64 +207,14 @@ jobs:
       - run: mkdir -p languages/python/native
       - run: cp polar-c-api/polar.h languages/python/native/
       - run: cp target/x86_64-unknown-linux-musl/debug/libpolar.a languages/python/native/
-      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.6-alpine oso/build_musl.sh
-      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
-      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.8-alpine oso/build_musl.sh
+      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
+      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
+      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
       - uses: actions/upload-artifact@v2
         with:
           name: musl-wheel
           path: languages/python/dist/*.whl
 
-    env:
-      # Skip Python 2.7 and Python 3.5
-      CIBW_SKIP: "cp27-* cp35-* pp27-*"
-      # 64-bit builds only
-      CIBW_BUILD: "*64"
-      # Used in build.py to find right files
-      CIBW_ENVIRONMENT: ENV=CI
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: "3.7"
-
-      - name: Install cibuildwheel
-        run: |
-          python -m pip install cibuildwheel==1.4.2
-
-      - name: Build Rust library (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          rustup target add x86_64-unknown-linux-musl
-          cargo build --target x86_64-unknown-linux-musl --release
-          mkdir -p languages/python/native
-          cp polar-c-api/polar.h languages/python/native/
-          cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/native/
-      - name: Build Rust library (OSX)
-        if: runner.os == 'macOS'
-        run: |
-          cargo build --release
-          mkdir -p languages/python/native
-          cp polar-c-api/polar.h languages/python/native/
-          cp target/release/libpolar.a languages/python/native/
-      - name: Build Rust library (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cargo build --release
-          mkdir -p languages/python/native
-          cp polar-c-api/polar.h languages/python/native/
-          cp target/release/polar.lib languages/python/native/
-
-      - name: Build wheels
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
-        working-directory: languages/python
-      - uses: actions/upload-artifact@v2
-        with:
-          name: wheel
-          path: languages/python/wheelhouse/*.whl
   # docs:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -317,7 +267,6 @@ jobs:
     name: Test python musl
     needs: [build_musl_wheels]
     runs-on: ubuntu-18.04
-    strategy:
     steps:
       - name: Set version output
         id: version
@@ -328,11 +277,14 @@ jobs:
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
-          name: wheel
-      - run: |
-          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.6-alpine oso/test_musl.sh
-          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.7-alpine oso/test_musl.sh
-          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.8-alpine oso/test_musl.sh
+          name: musl-wheel
+      - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.6-alpine oso/scripts/test_musl.sh
+        env:
+          OSO_VERSION: ${{ steps.version.outputs.oso_version }}
+      - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.7-alpine oso/scripts/test_musl.sh
+        env:
+          OSO_VERSION: ${{ steps.version.outputs.oso_version }}
+      - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.8-alpine oso/scripts/test_musl.sh
         env:
           OSO_VERSION: ${{ steps.version.outputs.oso_version }}
 
