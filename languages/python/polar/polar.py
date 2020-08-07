@@ -60,11 +60,17 @@ class Polar:
         extension = policy_file.suffix
         if extension not in (".polar"):
             raise PolarApiException(f"Polar files must have a .polar extension.")
-        if not policy_file.exists():
-            raise PolarApiException(f"Could not find file: {policy_file}")
 
         fname = str(policy_file)
-        fhash = hash_file(policy_file)
+
+        # Checksum file contents
+        try:
+            with open(fname, "rb") as f:
+                file_data = f.read()
+            fhash = hashlib.md5(file_data).hexdigest()
+        except FileNotFoundError:
+            raise PolarApiException(f"Could not find file: {policy_file}")
+
         if fname in self.loaded_names.keys():
             if self.loaded_names.get(fname) == fhash:
                 raise PolarRuntimeException(f"File {fname} has already been loaded.")
@@ -77,9 +83,7 @@ class Polar:
                 f"A file with the same contents as {fname} named {self.loaded_contents.get(fhash)} has already been loaded."
             )
         else:
-            with open(policy_file) as file:
-                self.load_str(file.read(), policy_file)
-
+            self.load_str(file_data.decode("utf-8"), policy_file)
             self.loaded_names[fname] = fhash
             self.loaded_contents[fhash] = fname
 
@@ -189,17 +193,3 @@ def polar_class(_cls=None, *, name=None, from_polar=None):
 
     return wrap(_cls)
 
-
-def hash_file(fname):
-    BUF_SIZE = 65536
-
-    md5 = hashlib.md5()
-
-    with open(fname, "rb") as f:
-        while True:
-            data = f.read(BUF_SIZE)
-            if not data:
-                break
-            md5.update(data)
-
-    return md5.hexdigest()
