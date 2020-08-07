@@ -78,14 +78,14 @@ class Polar:
             )
         else:
             with open(policy_file) as file:
-                load_str(self.ffi_polar, file.read(), policy_file)
+                self.load_str(file.read(), policy_file)
 
             self.loaded_names[fname] = fhash
             self.loaded_contents[fhash] = fname
 
-    def load_str(self, string):
+    def load_str(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
-        self.ffi_polar.load_str(string, None)
+        self.ffi_polar.load_str(string, filename)
 
         # check inline queries
         while True:
