@@ -8,6 +8,17 @@ jobs:
   build_musl_wheels:
     name: Build musl wheels
     runs-on: ubuntu-18.04
+    env:
+      # Skip Python 2.7 and Python 3.5
+      CIBW_SKIP: "cp27-* cp35-* pp27-*"
+      # 64-bit builds only
+      CIBW_BUILD: "*64"
+      # Used in build.py to find right files
+      CIBW_ENVIRONMENT: ENV=CI
     steps:
       - uses: actions/checkout@v2
-      - run: docker run --rm -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
+      - run: docker run --rm --env CIBW_SKIP --env CIBW_BUILD --wnv CIBW_ENVIRONMENT -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: musl-wheel
+          path: languages/python/wheelhouse/*.whl
