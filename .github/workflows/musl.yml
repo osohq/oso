@@ -4,9 +4,10 @@ on:
     branches:
       - "steve/musl"
 
-build_musl_wheels:
-  name: Build musl wheels
-  runs-on: ubuntu-18.04
-  steps:
-    - uses: actions/checkout@v2
-    - run: docker run --rm -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
+jobs:
+  build_musl_wheels:
+    name: Build musl wheels
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker run --rm -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
