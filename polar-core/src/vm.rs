@@ -1197,18 +1197,26 @@ impl PolarVirtualMachine {
                 let item = &args[0];
                 let list = self.deref(&args[1]);
                 let mut alternatives = vec![];
-                if let Value::List(list) = list.value() {
-                    for term in list {
-                        alternatives.push(vec![Goal::Unify {
-                            left: item.clone(),
-                            right: term.clone(),
-                        }])
+
+                match list.value() {
+                    Value::List(list) if list.is_empty() => {
+                        self.backtrack()?;
+                        return Ok(QueryEvent::None);
                     }
-                } else {
-                    return Err(self.type_error(
-                        item,
-                        format!("can only use `in` on a list, this is {:?}", item.value()),
-                    ));
+                    Value::List(list) => {
+                        for term in list {
+                            alternatives.push(vec![Goal::Unify {
+                                left: item.clone(),
+                                right: term.clone(),
+                            }])
+                        }
+                    }
+                    _ => {
+                        return Err(self.type_error(
+                            item,
+                            format!("can only use `in` on a list, this is {:?}", item.value()),
+                        ));
+                    }
                 }
                 self.choose(alternatives)?;
             }
