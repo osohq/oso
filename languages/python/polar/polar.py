@@ -201,4 +201,3 @@ def polar_class(_cls=None, *, name=None, from_polar=None):
         return wrap
 
     return wrap(_cls)
-
