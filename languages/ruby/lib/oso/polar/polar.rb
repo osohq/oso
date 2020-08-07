@@ -49,7 +49,7 @@ module Oso
       def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         raise PolarFileExtensionError unless File.extname(name) == '.polar'
 
-        file_data = File.open(name) { |f| f.read }
+        file_data = File.open(name, &:read)
         hash = Digest::MD5.hexdigest(file_data)
 
         if loaded_names.key?(name)
