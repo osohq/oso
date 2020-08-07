@@ -41,9 +41,12 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: musl-wheel
-      - run: |
-          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.6-alpine oso/test_musl.sh
-          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.7-alpine oso/test_musl.sh
-          docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.8-alpine oso/test_musl.sh
+      - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.6-alpine oso/test_musl.sh
+        env:
+          OSO_VERSION: 0.3.1
+      - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.7-alpine oso/test_musl.sh
+        env:
+          OSO_VERSION: 0.3.1
+      - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:3.8-alpine oso/test_musl.sh
         env:
           OSO_VERSION: 0.3.1

@@ -4,3 +4,4 @@ cd oso
 pip install oso==$OSO_VERSION -f musl-wheel
 cd test
 python test.py
+echo "tests passed"
