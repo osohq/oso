@@ -17,7 +17,7 @@ jobs:
       CIBW_ENVIRONMENT: ENV=CI
     steps:
       - uses: actions/checkout@v2
-      - run: docker run --rm --env CIBW_SKIP --env CIBW_BUILD --wnv CIBW_ENVIRONMENT -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
+      - run: docker run --rm --env CIBW_SKIP --env CIBW_BUILD --env CIBW_ENVIRONMENT -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
       - uses: actions/upload-artifact@v2
         with:
           name: musl-wheel
