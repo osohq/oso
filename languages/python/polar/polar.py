@@ -6,11 +6,12 @@ from pprint import pprint
 
 from _polar_lib import lib
 
-from .errors import get_error
-from .exceptions import PolarApiException, PolarRuntimeException
-from .ffi import ffi_serialize, load_str, check_result, is_null, to_c_str, Predicate
+from .exceptions import PolarApiException, PolarRuntimeException, ParserException
+from .ffi import Polar as FfiPolar, Query as FfiQuery
 from .host import Host
 from .query import Query, QueryResult
+from .predicate import Predicate
+from .variable import Variable
 
 
 CLASSES = {}
@@ -21,7 +22,7 @@ class Polar:
     """Polar API"""
 
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
-        self.ffi_polar = lib.polar_new()
+        self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
         self.load_queue = []
 
@@ -41,12 +42,12 @@ class Polar:
 
     def __del__(self):
         del self.host
-        lib.polar_free(self.ffi_polar)
+        del self.ffi_polar
 
     def clear(self):
         self.load_queue = []
-        lib.polar_free(self.ffi_polar)
-        self.ffi_polar = lib.polar_new()
+        del self.ffi_polar
+        self.ffi_polar = FfiPolar()
 
     def load_file(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
@@ -62,12 +63,12 @@ class Polar:
 
     def load_str(self, string):
         """Load a Polar string, checking that all inline queries succeed."""
-        load_str(self.ffi_polar, string, None)
+        self.ffi_polar.load_str(string, None)
 
         # check inline queries
         while True:
-            query = lib.polar_next_inline_query(self.ffi_polar, 0)
-            if is_null(query):  # Load is done
+            query = self.ffi_polar.next_inline_query()
+            if query is None:  # Load is done
                 break
             else:
                 try:
@@ -86,15 +87,9 @@ class Polar:
 
         host = self.host.copy()
         if isinstance(query, str):
-            query = check_result(
-                lib.polar_new_query(self.ffi_polar, to_c_str(query), 0)
-            )
+            query = self.ffi_polar.new_query_from_str(query)
         elif isinstance(query, Predicate):
-            query = check_result(
-                lib.polar_new_query_from_term(
-                    self.ffi_polar, ffi_serialize(host.to_polar_term(query)), 0
-                )
-            )
+            query = self.ffi_polar.new_query_from_term(host.to_polar_term(query))
         else:
             raise PolarApiException(f"Can not query for {query}")
 
@@ -125,9 +120,10 @@ class Polar:
                 query = input("query> ").strip(";")
             except EOFError:
                 return
-            ffi_query = lib.polar_new_query(self.ffi_polar, to_c_str(query), 0)
-            if is_null(ffi_query):
-                print("Parse error: ", get_error())
+            try:
+                ffi_query = self.ffi_polar.new_query_from_str(query)
+            except ParserException as e:
+                print("Parse error: ", str(e.value()))
                 continue
 
             result = False
@@ -152,16 +148,14 @@ class Polar:
 
     def register_constant(self, name, value):
         """Register `value` as a Polar constant variable called `name`."""
-        name = to_c_str(name)
-        value = ffi_serialize(self.host.to_polar_term(value))
-        lib.polar_register_constant(self.ffi_polar, name, value)
+        self.ffi_polar.register_constant(name, self.host.to_polar_term(value))
 
     def _load_queued_files(self):
         """Load queued policy files into the knowledge base."""
         while self.load_queue:
             filename = self.load_queue.pop(0)
             with open(filename) as file:
-                load_str(self.ffi_polar, file.read(), filename)
+                self.ffi_polar.load_str(file.read(), filename)
 
 
 def polar_class(_cls=None, *, name=None, from_polar=None):
