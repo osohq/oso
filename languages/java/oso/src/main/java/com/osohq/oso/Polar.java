@@ -72,14 +72,14 @@ public class Polar {
             String hash = getFileChecksum(file);
             if (loadedNames.containsKey(filename)) {
                 if (loadedNames.get(filename).equals(hash)) {
-                    throw new Exceptions.RepeatLoadError("File " + filename + " has already been loaded.");
+                    throw new Exceptions.PolarFileAlreadyLoadedError("File " + filename + " has already been loaded.");
                 } else {
-                    throw new Exceptions.RepeatLoadError(
+                    throw new Exceptions.PolarFileContentsChangedError(
                             "A file with the name " + filename + ", but different contents, has already been loaded.");
                 }
             } else if (loadedContent.containsKey(hash)) {
-                throw new Exceptions.RepeatLoadError("A file with the same contents as " + filename + " named "
-                        + loadedContent.get(hash) + "has already been loaded.");
+                throw new Exceptions.PolarFileNameChangedError("A file with the same contents as " + filename
+                        + " named " + loadedContent.get(hash) + "has already been loaded.");
             } else {
                 loadStr(new String(Files.readAllBytes(Paths.get(filename))), filename);
                 loadedNames.put(filename, hash);

@@ -230,10 +230,26 @@ public class Exceptions {
         }
     }
 
-    public static class RepeatLoadError extends PolarRuntimeException {
+    public static class PolarFileAlreadyLoadedError extends PolarRuntimeException {
         private static final long serialVersionUID = 1L;
 
-        public RepeatLoadError(String type) {
+        public PolarFileAlreadyLoadedError(String type) {
+            super(type);
+        }
+    }
+
+    public static class PolarFileContentsChangedError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public PolarFileContentsChangedError(String type) {
+            super(type);
+        }
+    }
+
+    public static class PolarFileNameChangedError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public PolarFileNameChangedError(String type) {
             super(type);
         }
 
