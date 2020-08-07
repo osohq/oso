@@ -44,3 +44,4 @@ Other bugs & improvements
 
 - fixed float parsing
 - improved integer/float comparisons
+- Fix checking membership in an empty list. ``x in []`` is now always false

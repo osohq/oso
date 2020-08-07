@@ -1120,6 +1120,16 @@ fn test_in() {
     assert!(qnull(&mut polar, "not (1 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (2 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (3 in [1,2,3])"));
+
+    // empty lists
+    assert!(qnull(&mut polar, "x in []"));
+    assert!(qnull(&mut polar, "1 in []"));
+    assert!(qnull(&mut polar, "\"foo\" in []"));
+    assert!(qnull(&mut polar, "[] in []"));
+    assert!(qeval(&mut polar, "not x in []"));
+    assert!(qeval(&mut polar, "not 1 in []"));
+    assert!(qeval(&mut polar, "not \"foo\" in []"));
+    assert!(qeval(&mut polar, "not [] in []"));
 }
 
 #[test]
