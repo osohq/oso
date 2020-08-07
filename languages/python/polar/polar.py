@@ -58,7 +58,7 @@ class Polar:
         until a query is made."""
         policy_file = Path(policy_file)
         extension = policy_file.suffix
-        if extension not in (".polar"):
+        if not extension == ".polar":
             raise PolarApiException(f"Polar files must have a .polar extension.")
 
         fname = str(policy_file)
