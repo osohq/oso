@@ -38,8 +38,8 @@ class Query:
         while True:
             ffi_event = self.ffi_query.next_event()
             event = json.loads(ffi_event.get())
+            del ffi_event
             if event == "Done":
-                del ffi_event
                 break
             kind = [*event][0]
             data = event[kind]
