@@ -116,12 +116,16 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
 
     it 'raises if given a non-Polar file' do
-      expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarRuntimeError
+      expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarFileExtensionError
+    end
+
+    it 'raises if given a non-existent file' do
+      expect { subject.load_file('other.polar') }.to raise_error Oso::Polar::PolarFileNotFoundError
     end
 
     it 'is idempotent' do
       expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
-        expect(e).to be_an Oso::Polar::PolarRuntimeError
+        expect(e).to be_an Oso::Polar::RepeatLoadError
         expect(e.message).to eq("File #{test_file} has already been loaded.")
       end
     end

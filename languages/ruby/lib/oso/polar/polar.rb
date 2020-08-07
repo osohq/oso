@@ -48,20 +48,27 @@ module Oso
       # @raise [PolarFileNotFoundError] if provided filename does not exist.
       def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
-        raise PolarFileNotFoundError, name unless File.file?(name)
 
-        hash = hash_file(name)
+        begin
+          file = File.open(name)
+          file_data = file.read
+          hash = Digest::MD5.hexdigest(file_data)
+          file.close
+        rescue
+          raise PolarFileNotFoundError, name unless File.file?(name)
+        end
+
 
         if loaded_names.key?(name)
-          raise PolarRuntimeError, "File #{name} has already been loaded." unless loaded_names[name] != hash
+          raise RepeatLoadError, "File #{name} has already been loaded." if loaded_names[name] == hash
 
-          raise PolarRuntimeError, "A file with the name #{name}, but different contents,
+          raise RepeatLoadError, "A file with the name #{name}, but different contents,
             has already been loaded."
         elsif loaded_contents.key?(hash)
-          raise PolarRuntimeError, "A file with the same contents as #{name} named #{loaded_contents[hash]}
+          raise RepeatLoadError, "A file with the same contents as #{name} named #{loaded_contents[hash]}
             has already been loaded."
         else
-          File.open(name) { |file| load_str(file.read, filename: name) }
+          load_str(file_data, filename: name)
           loaded_names[name] = hash
           loaded_contents[hash] = name
         end
@@ -189,14 +196,6 @@ module Oso
       # @return [Hash<String, String>]
       attr_reader :loaded_contents
 
-      # @return [Array<String>]
-
-      def hash_file(filename)
-        file = File.open(filename)
-        Digest::MD5.hexdigest(File.read(file))
-      ensure
-        file.close
-      end
     end
   end
 end
