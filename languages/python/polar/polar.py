@@ -191,8 +191,7 @@ def polar_class(_cls=None, *, name=None, from_polar=None):
 
 
 def hash_file(fname):
-    # BUF_SIZE is totally arbitrary, change for your app!
-    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+    BUF_SIZE = 65536
 
     md5 = hashlib.md5()
 
