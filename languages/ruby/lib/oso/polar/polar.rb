@@ -47,7 +47,7 @@ module Oso
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
       # @raise [PolarFileNotFoundError] if provided filename does not exist.
       def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
+        raise PolarFileExtensionError unless File.extname(name) == '.polar'
 
         begin
           file = File.open(name)

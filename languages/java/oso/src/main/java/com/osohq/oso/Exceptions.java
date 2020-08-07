@@ -241,7 +241,7 @@ public class Exceptions {
 
     public static class PolarFileExtensionError extends PolarRuntimeException {
         public PolarFileExtensionError() {
-            super("Polar files must have a .pol or .polar extension");
+            super("Polar files must have a .polar extension");
         }
     }
 
