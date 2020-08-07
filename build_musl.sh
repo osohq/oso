@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
-apk add musl-sdk rustup
+apk add musl-dev rustup
 rustup-init
