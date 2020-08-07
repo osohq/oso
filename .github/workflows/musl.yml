@@ -10,8 +10,14 @@ jobs:
     runs-on: ubuntu-18.04
     env:
       ENV: CI
+      RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
     steps:
       - uses: actions/checkout@v2
+      - run: rustup target add x86_64-unknown-linux-musl
+      - run: cargo build --target x86_64-unknown-linux-musl
+      - run: mkdir -p languages/python/native
+      - run: cp polar-c-api/polar.h languages/python/native/
+      - run: cp target/x86_64-unknown-linux-musl/debug/libpolar.a languages/python/native/
       - run: docker run --rm --env ENV -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
       - uses: actions/upload-artifact@v2
         with:
