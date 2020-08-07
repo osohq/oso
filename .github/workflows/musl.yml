@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - run: docker run --rm -v `pwd`:/oso python:3.7-alpine oso/build_musl.sh
+      - run: docker run --rm -v `pwd`:/oso python:3.7-alpine cd oso && build_musl.sh
