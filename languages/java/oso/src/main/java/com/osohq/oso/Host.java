@@ -45,7 +45,7 @@ public class Host implements Cloneable {
     /**
      * Store a Java class in the cache by name.
      *
-     * @param name The name of the class from within Polar.
+     * @param name The name used to reference the class from within Polar.
      * @throws Exceptions.DuplicateClassAliasError If the name is already registered.
      */
     public String cacheClass(Class<?> cls, Constructor<?> constructor, String name)
