@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 pub use super::{error, formatting::ToPolarString};
 
@@ -313,7 +314,7 @@ pub struct Term {
     source_info: SourceInfo,
 
     /// The actual underlying value
-    value: Rc<Value>,
+    value: Arc<Value>,
 }
 
 impl PartialEq for Term {
@@ -329,7 +330,7 @@ impl Term {
     pub fn new_temporary(value: Value) -> Self {
         Self {
             source_info: SourceInfo::TemporaryVariable,
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
@@ -341,7 +342,7 @@ impl Term {
                 left,
                 right,
             },
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
@@ -349,7 +350,7 @@ impl Term {
     pub fn new_from_test(value: Value) -> Self {
         Self {
             source_info: SourceInfo::Test,
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
@@ -358,13 +359,13 @@ impl Term {
     pub fn clone_with_value(&self, value: Value) -> Self {
         Self {
             source_info: self.source_info.clone(),
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
     /// Replace the `value` of self
     pub fn replace_value(&mut self, value: Value) {
-        self.value = Rc::new(value);
+        self.value = Arc::new(value);
     }
 
     /// Convenience wrapper around map_replace that clones the
