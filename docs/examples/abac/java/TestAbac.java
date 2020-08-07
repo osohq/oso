@@ -47,17 +47,17 @@ public class TestAbac {
     public static void testRbac02() throws Exception {
         Oso oso = setupOso();
         oso.loadFile("02-rbac.polar");
-        oso.loadStr("role(_: User { name: \"sam\" }, \"admin\", __: Project { id: 2 });");
+        oso.loadStr("role(_: User { name: \"sam\" }, \"admin\", _: Project { id: 2 });");
 
         Expense expense = new Expense(50, "steve", "NYC", 0);
         if (oso.isAllowed(new User("sam"), "view", expense)) {
             throw new Exception("ABAC docs test failed!");
         }
 
-        /*expense = new Expense(50, "steve", "NYC", 2);
+        expense = new Expense(50, "steve", "NYC", 2);
         if (!oso.isAllowed(new User("sam"), "view", expense)) {
             throw new Exception("ABAC docs test failed!");
-        }*/
+        }
     }
 
     public static void testHierarchy03() throws Exception {
