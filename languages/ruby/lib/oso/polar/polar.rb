@@ -36,8 +36,8 @@ module Oso
 
       # Replace the current Polar instance but retain all registered classes and constructors.
       def clear
-        @loaded_names.clear
-        @loaded_contents.clear
+        loaded_names.clear
+        loaded_contents.clear
         @ffi_polar = FFI::Polar.create
       end
 
@@ -52,18 +52,18 @@ module Oso
 
         hash = hash_file(name)
 
-        if @loaded_names.key?(name)
-          raise PolarRuntimeError, "File #{name} has already been loaded." unless @loaded_names[name] != hash
+        if loaded_names.key?(name)
+          raise PolarRuntimeError, "File #{name} has already been loaded." unless loaded_names[name] != hash
 
           raise PolarRuntimeError, "A file with the name #{name}, but different contents,
             has already been loaded."
-        elsif @loaded_contents.key?(hash)
-          raise PolarRuntimeError, "A file with the same contents as #{name} named #{@loaded_contents[hash]}
+        elsif loaded_contents.key?(hash)
+          raise PolarRuntimeError, "A file with the same contents as #{name} named #{loaded_contents[hash]}
             has already been loaded."
         else
           File.open(name) { |file| load_str(file.read, filename: name) }
-          @loaded_names[name] = hash
-          @loaded_contents[hash] = name
+          loaded_names[name] = hash
+          loaded_contents[hash] = name
         end
       end
 
@@ -183,7 +183,11 @@ module Oso
       private
 
       # @return [FFI::Polar]
-      attr_reader :ffi_polar, :loaded_names, :loaded_contents
+      attr_reader :ffi_polar
+      # @return [Hash<String, String>]
+      attr_reader :loaded_names
+      # @return [Hash<String, String>]
+      attr_reader :loaded_contents
 
       # @return [Array<String>]
 
