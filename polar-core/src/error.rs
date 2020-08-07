@@ -12,7 +12,7 @@ pub struct PolarError {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-struct FormattedPolarError {
+pub struct FormattedPolarError {
     pub kind: ErrorKind,
     pub formatted: String,
 }

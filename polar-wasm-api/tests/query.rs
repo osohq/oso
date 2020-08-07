@@ -1,0 +1,80 @@
+use js_sys::{Error, JsString, Map, Object, Reflect};
+use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen_test::*;
+
+#[wasm_bindgen_test]
+fn call_result_succeeds() {
+    let mut polar = polar_wasm_api::Polar::wasm_new();
+    polar
+        .wasm_register_constant(
+            "y",
+            r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
+        )
+        .unwrap();
+    polar.wasm_load_file("x() if y.z;", None).unwrap();
+    let mut query = polar.wasm_new_query_from_str("x()").unwrap();
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    let event_kind: JsValue = "ExternalCall".into();
+    let event_data = Reflect::get(&event, &event_kind).unwrap();
+    let event_data: Object = event_data.dyn_into().unwrap();
+    let event_field: JsValue = "call_id".into();
+    let call_id = Reflect::get(&event_data, &event_field).unwrap();
+    assert_eq!(call_id, 3);
+
+    let call_result = Some(r#"{"value":{"Boolean":true}}"#.to_string());
+    query.wasm_call_result(3, call_result).unwrap();
+
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    let event_kind: JsValue = "Result".into();
+    let event_data = Reflect::get(&event, &event_kind).unwrap();
+    let data_key: JsValue = "bindings".into();
+    let bindings = Reflect::get(&event_data, &data_key).unwrap();
+    assert_eq!(bindings.dyn_into::<Map>().unwrap().size(), 0);
+
+    query.wasm_call_result(3, None).unwrap();
+
+    let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    assert_eq!(event, "Done");
+}
+
+#[wasm_bindgen_test]
+fn app_error_succeeds() {
+    let mut polar = polar_wasm_api::Polar::wasm_new();
+    polar
+        .wasm_register_constant(
+            "y",
+            r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
+        )
+        .unwrap();
+    polar.wasm_load_file("x() if y.z;", None).unwrap();
+    let mut query = polar.wasm_new_query_from_str("x()").unwrap();
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    let event_kind: JsValue = "ExternalCall".into();
+    let event_data = Reflect::get(&event, &event_kind).unwrap();
+    let event_data: Object = event_data.dyn_into().unwrap();
+    let event_field: JsValue = "call_id".into();
+    let call_id = Reflect::get(&event_data, &event_field).unwrap();
+    assert_eq!(call_id, 3);
+
+    let msg = "doin' the hokey-pokey";
+    query.wasm_app_error(msg);
+
+    let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
+    assert_eq!(err.name(), "RuntimeError::Application");
+    assert!(err.message().includes(msg, 0));
+}
+
+#[wasm_bindgen_test]
+fn debug_command_succeeds() {
+    let polar = polar_wasm_api::Polar::wasm_new();
+    let mut query = polar.wasm_new_query_from_str("x()").unwrap();
+    query.wasm_debug_command("h").unwrap();
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    let event_kind: JsValue = "Debug".into();
+    let event_data = Reflect::get(&event, &event_kind).unwrap();
+    let event_data: Object = event_data.dyn_into().unwrap();
+    let event_field: JsValue = "message".into();
+    let msg = Reflect::get(&event_data, &event_field).unwrap();
+    let msg: JsString = msg.dyn_into().unwrap();
+    assert!(msg.includes("Debugger Commands", 0));
+}

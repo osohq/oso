@@ -3,6 +3,7 @@
 members = [
     "polar-core",
     "polar-c-api",
+    "polar-wasm-api",
 ]
 
 [profile.release]
