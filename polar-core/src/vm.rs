@@ -471,8 +471,10 @@ impl PolarVirtualMachine {
         if let Some(alternative) = alternatives_iter.next() {
             self.push_choice(alternatives_iter);
             self.append_goals(alternative)?;
+            Ok(())
+        } else {
+            self.backtrack()
         }
-        Ok(())
     }
 
     /// Push multiple goals onto the stack in reverse order.
