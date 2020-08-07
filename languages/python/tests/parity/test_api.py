@@ -4,10 +4,9 @@ import pytest
 
 from pathlib import Path
 
-from polar import Polar
+from polar import Polar, Predicate
 from polar.exceptions import PolarRuntimeException, PolarApiException
 from oso import Http, PathMapper
-from polar.ffi import Predicate
 
 from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
 

@@ -17,31 +17,22 @@ from .exceptions import (
 )
 
 
-def raise_error():
-    raise get_error()
-
-
-def get_error():
+def get_python_error(err_str):
     """Fetch a Polar error and map it into a Python exception."""
-    try:
-        err_s = lib.polar_get_error()
-        err_json = ffi.string(err_s).decode()
-        err = json.loads(err_json)
+    err = json.loads(err_str)
 
-        kind = [*err["kind"]][0]
-        data = err["kind"][kind]
-        message = err["formatted"]
+    kind = [*err["kind"]][0]
+    data = err["kind"][kind]
+    message = err["formatted"]
 
-        if kind == "Parse":
-            return _parse_error(message, data)
-        elif kind == "Runtime":
-            return PolarRuntimeException(message, data)
-        elif kind == "Operational":
-            return PolarOperationalException(message, data)
-        elif kind == "Parameter":
-            return PolarApiException(message, data)
-    finally:
-        lib.string_free(err_s)
+    if kind == "Parse":
+        return _parse_error(message, data)
+    elif kind == "Runtime":
+        return PolarRuntimeException(message, data)
+    elif kind == "Operational":
+        return PolarOperationalException(message, data)
+    elif kind == "Parameter":
+        return PolarApiException(message, data)
 
 
 def _parse_error(message, data):

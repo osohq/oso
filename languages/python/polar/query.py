@@ -1,22 +1,12 @@
 from collections.abc import Iterable
+import json
 
 from _polar_lib import lib
 from .exceptions import PolarApiException
-from .ffi import (
-    external_answer,
-    external_call,
-    application_error,
-    ffi_deserialize,
-    ffi_serialize,
-    load_str,
-    check_result,
-    is_null,
-    new_id,
-    Predicate,
-    to_c_str,
-    Variable,
-)
+from .ffi import Polar as FfiPolar, Query as FfiQuery
 from .host import Host
+from .predicate import Predicate
+from .variable import Variable
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -40,14 +30,15 @@ class Query:
 
     def __del__(self):
         del self.host
-        lib.query_free(self.ffi_query)
+        del self.ffi_query
 
     def run(self):
         """Run the event loop and yield results."""
         assert self.ffi_query, "no query to run"
         while True:
-            event_s = lib.polar_next_query_event(self.ffi_query)
-            event = ffi_deserialize(event_s)
+            ffi_event = self.ffi_query.next_event()
+            event = json.loads(ffi_event.get())
+            del ffi_event
             if event == "Done":
                 break
             kind = [*event][0]
@@ -98,8 +89,8 @@ class Query:
             try:
                 attr = getattr(instance, attribute)
             except AttributeError as e:
-                application_error(self.ffi_query, str(e))
-                external_call(self.ffi_query, call_id, None)
+                self.ffi_query.application_error(str(e))
+                self.ffi_query.call_result(call_id, None)
                 return
 
             if callable(attr):  # If it's a function, call it with the args.
@@ -118,37 +109,34 @@ class Query:
         # Return the next result of the call.
         try:
             value = next(self.calls[call_id])
-            stringified = ffi_serialize(self.host.to_polar_term(value))
-            external_call(self.ffi_query, call_id, stringified)
+            self.ffi_query.call_result(call_id, self.host.to_polar_term(value))
         except StopIteration:
-            external_call(self.ffi_query, call_id, None)
+            self.ffi_query.call_result(call_id, None)
 
     def handle_external_op(self, data):
         op = data["operator"]
         args = [self.host.to_python(arg) for arg in data["args"]]
         answer = self.host.operator(op, args)
-        external_answer(self.ffi_query, data["call_id"], answer)
+        self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_external_isa(self, data):
         instance = data["instance"]
         class_tag = data["class_tag"]
-        isa = self.host.isa(instance, class_tag)
-        external_answer(self.ffi_query, data["call_id"], isa)
+        answer = self.host.isa(instance, class_tag)
+        self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_external_unify(self, data):
         left_instance_id = data["left_instance_id"]
         right_instance_id = data["right_instance_id"]
-        unify = self.host.unify(left_instance_id, right_instance_id)
-        external_answer(self.ffi_query, data["call_id"], unify)
+        answer = self.host.unify(left_instance_id, right_instance_id)
+        self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_external_is_subspecializer(self, data):
         instance_id = data["instance_id"]
         left_tag = data["left_class_tag"]
         right_tag = data["right_class_tag"]
-        is_subspecializer = self.host.is_subspecializer(
-            instance_id, left_tag, right_tag
-        )
-        external_answer(self.ffi_query, data["call_id"], is_subspecializer)
+        answer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
+        self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_debug(self, data):
         if data["message"]:
@@ -157,5 +145,4 @@ class Query:
             command = input("debug> ").strip(";")
         except EOFError:
             command = "continue"
-        stringified = ffi_serialize(self.host.to_polar_term(command))
-        check_result(lib.polar_debug_command(self.ffi_query, stringified))
+        self.ffi_query.debug_command(self.host.to_polar_term(command))
