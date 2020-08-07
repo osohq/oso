@@ -40,7 +40,9 @@ module Oso
     class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end
-    class RepeatLoadError < PolarRuntimeError; end
+    class PolarFileAlreadyLoadedError < PolarRuntimeError; end
+    class PolarFileContentsChangedError < PolarRuntimeError; end
+    class PolarFileNameChangedError < PolarRuntimeError; end
     class PolarFileExtensionError < PolarRuntimeError # rubocop:disable Style/Documentation
       def initialize
         super('Polar files must have .pol or .polar extension.')

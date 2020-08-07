@@ -125,7 +125,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     it 'is idempotent' do
       expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
-        expect(e).to be_an Oso::Polar::RepeatLoadError
+        expect(e).to be_an Oso::Polar::PolarFileAlreadyLoadedError
         expect(e.message).to eq("File #{test_file} has already been loaded.")
       end
     end

@@ -49,28 +49,24 @@ module Oso
       def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         raise PolarFileExtensionError unless File.extname(name) == '.polar'
 
-        begin
-          file = File.open(name)
-          file_data = file.read
-          hash = Digest::MD5.hexdigest(file_data)
-          file.close
-        rescue Errno::ENOENT
-          raise PolarFileNotFoundError, name unless File.file?(name)
-        end
+        file_data = File.open(name) { |f| f.read }
+        hash = Digest::MD5.hexdigest(file_data)
 
         if loaded_names.key?(name)
-          raise RepeatLoadError, "File #{name} has already been loaded." if loaded_names[name] == hash
+          raise PolarFileAlreadyLoadedError, "File #{name} has already been loaded." if loaded_names[name] == hash
 
-          raise RepeatLoadError, "A file with the name #{name}, but different contents,
+          raise PolarFileContentChangedError, "A file with the name #{name}, but different contents,
             has already been loaded."
         elsif loaded_contents.key?(hash)
-          raise RepeatLoadError, "A file with the same contents as #{name} named #{loaded_contents[hash]}
+          raise PolarFileNameChangedError, "A file with the same contents as #{name} named #{loaded_contents[hash]}
             has already been loaded."
         else
           load_str(file_data, filename: name)
           loaded_names[name] = hash
           loaded_contents[hash] = name
         end
+      rescue Errno::ENOENT
+        raise PolarFileNotFoundError, name unless File.file?(name)
       end
 
       # Load a Polar string into the KB.
