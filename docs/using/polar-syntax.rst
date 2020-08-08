@@ -108,8 +108,8 @@ name is specified before the dictionary::
 Classes can be registered with the oso library to integrate with Polar.  See
 :doc:`/getting-started/policies/application-types` for more information.
 
-A class instance literal must be used either with the :ref:`new operator <operator-new>` or
-as a :ref:`pattern <pattern>`.
+An instance literal can only be used with the :ref:`new operator <operator-new>`
+or as a :ref:`pattern <pattern>`.
 
 .. _polar-rules:
 
@@ -332,11 +332,21 @@ the body: **if** so-and-so is true, then **cut** out all other alternatives.
 New
 ^^^
 
-The ``new`` operator is used to construct a new instance of an application class.
-See :doc:`/getting-started/policies/application-types`. The single argument to the
-new operator must be an instance literal::
+The ``new`` operator is used to construct a new instance of an application
+class. (See :doc:`/getting-started/policies/application-types` for more
+about how to define and register application classes.) The name of the class
+to instantiate comes next, followed by a set of initialization arguments
+that are passed to the class's constructor::
+
+    new Person("yogi", "bear")
+
+In host languages that support keyword arguments (e.g., Python & Ruby, but
+not Java), you can pass initialization arguments as keywords by using an
+instance literal::
 
     new Person{first_name: "yogi", last_name: "bear"}
+
+Mixed positional/keyword initialization arguments are not currently supported.
 
 .. _operator-in:
 
