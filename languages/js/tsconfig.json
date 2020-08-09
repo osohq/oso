@@ -4,7 +4,8 @@
     "rootDir": ".",
     "outDir": "dist",
     "module": "ESNext",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "lib": ["DOM", "ES2018"]
   },
   "include": [
     "src/**/*.ts",

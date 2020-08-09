@@ -1,4 +1,6 @@
 import { InvalidQueryEventError } from './errors';
+import { isPolarValue, QueryEventKind } from './types';
+import type { QueryEvent } from './types';
 
 const root: Function = Object.getPrototypeOf(() => {});
 export function ancestors(cls: Function): Function[] {
@@ -19,31 +21,32 @@ export function ancestors(cls: Function): Function[] {
   return ancestors;
 }
 
-export function parseQueryEvent(e: any): QueryEvent {
+export function parseQueryEvent(
+  e: string | { [key: string]: any }
+): QueryEvent {
   try {
-    if (typeof e?.kind !== 'string') throw new Error();
-    if (e.kind === 'Done') return e;
-    if (typeof e.data !== 'object') throw new Error();
-    switch (e.kind) {
-      case 'Result':
-        return parseResult(e.data);
-      case 'MakeExternal':
-        return parseMakeExternal(e.data);
-      case 'ExternalCall':
-        return parseExternalCall(e.data);
-      case 'ExternalIsSubSpecializer':
-        return parseExternalIsSubspecializer(e.data);
-      case 'ExternalIsa':
-        return parseExternalIsa(e.data);
-      case 'ExternalUnify':
-        return parseExternalUnify(e.data);
-      case 'Debug':
-        return parseDebug(e.data);
+    if (e === 'Done') return { kind: QueryEventKind.Debug };
+    if (typeof e === 'string') throw new Error();
+    switch (true) {
+      case e['Result'] !== undefined:
+        return parseResult(e['Result']);
+      case e['MakeExternal'] !== undefined:
+        return parseMakeExternal(e['MakeExternal']);
+      case e['ExternalCall'] !== undefined:
+        return parseExternalCall(e['ExternalCall']);
+      case e['ExternalIsSubSpecializer'] !== undefined:
+        return parseExternalIsSubspecializer(e['ExternalIsSubSpecializer']);
+      case e['ExternalIsa'] !== undefined:
+        return parseExternalIsa(e['ExternalIsa']);
+      case e['ExternalUnify'] !== undefined:
+        return parseExternalUnify(e['ExternalUnify']);
+      case e['Debug'] !== undefined:
+        return parseDebug(e['Debug']);
       default:
         throw new Error();
     }
   } catch (_) {
-    throw new InvalidQueryEventError(e);
+    throw new InvalidQueryEventError(JSON.stringify(e));
   }
 }
 

@@ -1,7 +1,5 @@
-// TODO(gj): make sure we aren't pulling in all of lodash here.
-import { isEqual } from 'lodash';
+import isEqual from 'lodash/isEqual';
 
-import { Polar as FfiPolar } from '../../../polar-wasm-api/pkg/index';
 import {
   DuplicateClassAliasError,
   InvalidConstructorError,
@@ -10,6 +8,25 @@ import {
   UnregisteredInstanceError,
 } from './errors';
 import { ancestors } from './helpers';
+import type { Polar as FfiPolar } from '../dist/polar_wasm_api';
+import { Predicate } from './Predicate';
+import { Variable } from './Variable';
+import type { Constructor, ConstructorKwargs, PolarValue } from './types';
+import {
+  isPolarStr,
+  isPolarNum,
+  isPolarBool,
+  isPolarList,
+  isPolarDict,
+  isPolarInstance,
+  isPolarPredicate,
+  isPolarVariable,
+} from './types';
+
+// TODO(gj): temporary shenanigans
+(BigInt as any).prototype.toJSON = function () {
+  return Number.parseInt(this.toString());
+};
 
 export class Host {
   #ffiPolar: FfiPolar;
@@ -35,7 +52,8 @@ export class Host {
   }
 
   cacheClass(cls: Function, name?: string, constructor?: Constructor): string {
-    const clsName = name === undefined ? cls.constructor.name : name;
+    const clsName = name === undefined ? cls.name : name;
+    console.assert(clsName, cls.toString());
     const existing = this.#classes.get(clsName);
     if (existing !== undefined)
       throw new DuplicateClassAliasError({
@@ -139,6 +157,8 @@ export class Host {
     switch (true) {
       case typeof v === 'boolean':
         return { value: { Boolean: v } };
+      case typeof v === 'bigint':
+        return { value: { Number: { Integer: v } } };
       // TODO(gj): Not sure what to do here... is it cool that 5.0 becomes
       // { 'Integer': 5.0 } and that we punt on large integers? Should we
       // handle BigInts separately?
