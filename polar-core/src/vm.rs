@@ -728,28 +728,40 @@ impl PolarVirtualMachine {
             self.print("⇒ backtrack");
         }
         loop {
-            match self.choices.last_mut() {
+            match self.choices.pop() {
                 None => return self.push_goal(Goal::Halt),
                 Some(Choice {
-                    alternatives,
+                    mut alternatives,
                     bsp,
                     goals,
                     queries,
                     trace,
                     trace_stack,
                 }) => {
-                    self.bindings.truncate(*bsp);
+                    self.bindings.truncate(bsp);
                     if let Some(mut alternative) = alternatives.pop() {
-                        self.goals.clone_from(&goals);
+                        if alternatives.is_empty() {
+                            self.goals = goals;
+                            self.queries = queries;
+                            self.trace = trace;
+                            self.trace_stack = trace_stack;
+                        } else {
+                            self.goals.clone_from(&goals);
+                            self.queries.clone_from(&queries);
+                            self.trace.clone_from(&trace);
+                            self.trace_stack.clone_from(&trace_stack);
+                            self.choices.push(Choice {
+                                alternatives,
+                                bsp,
+                                goals,
+                                queries,
+                                trace,
+                                trace_stack,
+                            })
+                        }
                         self.goals.append(&mut alternative);
-                        self.queries.clone_from(&queries);
-                        self.trace.clone_from(&trace);
-                        self.trace_stack.clone_from(&trace_stack);
-                        break; // we have our alternative, end the loop
+                        break;
                     }
-
-                    // falling through means no alternatives found
-                    let _ = self.choices.pop();
                 }
             }
         }
