@@ -128,7 +128,7 @@ pub fn to_polar_parens(op: Operator, t: &Term) -> String {
 pub mod display {
     use crate::formatting::{format_args, format_params};
     use std::fmt;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     use super::ToPolarString;
     use crate::types::{Numeric, Operation, Operator, Rule, Symbol, Term, Value};
@@ -179,7 +179,7 @@ pub mod display {
 
     impl fmt::Display for Goal {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-            fn fmt_rules(rules: &[Rc<Rule>]) -> String {
+            fn fmt_rules(rules: &[Arc<Rule>]) -> String {
                 rules
                     .iter()
                     .map(|rule| rule.to_polar())

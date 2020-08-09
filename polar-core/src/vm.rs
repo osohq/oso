@@ -33,8 +33,8 @@ pub enum Goal {
         right: Term,
     },
     IsMoreSpecific {
-        left: Rc<Rule>,
-        right: Rc<Rule>,
+        left: Arc<Rule>,
+        right: Arc<Rule>,
         args: TermList,
     },
     IsSubspecializer {
@@ -2233,7 +2233,7 @@ mod tests {
 
         let rule = GenericRule {
             name: sym!("f"),
-            rules: vec![Rc::new(f1), Rc::new(f2)],
+            rules: vec![Arc::new(f1), Arc::new(f2)],
         };
 
         let mut kb = KnowledgeBase::new();
@@ -2747,10 +2747,10 @@ mod tests {
         let bar_rule = GenericRule::new(
             sym!("bar"),
             vec![
-                Rc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)])),
-                Rc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)])),
-                Rc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)])),
-                Rc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)])),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)])),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)])),
             ],
         );
 
