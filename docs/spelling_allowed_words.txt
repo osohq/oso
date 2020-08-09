@@ -3,6 +3,7 @@ embeddable
 codebase
 specializer
 specializers
+unspecialized
 subclasses
 destructure
 disjunction

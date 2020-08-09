@@ -20,7 +20,7 @@ fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Vec<Term>) -> Option<Term> 
     None
 }
 
-fn no_externals(_: u64, _: InstanceLiteral) {}
+fn no_externals(_: u64, _: Term) {}
 
 fn no_debug(_: &str) -> String {
     "".to_string()
@@ -45,7 +45,7 @@ fn query_results<F, G, H, I, J>(
 where
     F: FnMut(u64, Option<Term>, Symbol, Vec<Term>) -> Option<Term>,
     G: FnMut(&str) -> String,
-    H: FnMut(u64, InstanceLiteral),
+    H: FnMut(u64, Term),
     I: FnMut(Term, Symbol) -> bool,
     J: FnMut(u64, Symbol, Symbol) -> bool,
 {
@@ -78,8 +78,8 @@ where
             }
             QueryEvent::MakeExternal {
                 instance_id,
-                instance,
-            } => make_external_handler(instance_id, instance),
+                constructor,
+            } => make_external_handler(instance_id, constructor),
             QueryEvent::ExternalIsa {
                 call_id,
                 instance,
@@ -715,17 +715,19 @@ fn test_externals_instantiated() {
     let mock_foo = |_, _, _, args: Vec<Term>| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
-        assert!(
-            matches!(&args[0].value(),
-                Value::ExternalInstance(ExternalInstance {
-                    literal: Some(InstanceLiteral {
-                        ref tag, ref fields
-                    }),
-                    ..
-                }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
-            "expected external instance Bar {{ x: 1 }}, found: {:?}",
-            args[0].value()
-        );
+        match &args[0].value() {
+            Value::ExternalInstance(ExternalInstance {
+                constructor: Some(ref term),
+                ..
+            }) => assert!(
+                matches!(term.value(), Value::InstanceLiteral(InstanceLiteral {
+                ref tag, ref fields
+            }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
+                "expected external instance Bar {{ x: 1 }}, found: {:?}",
+                args[0].value()
+            ),
+            _ => panic!("Expected external instance"),
+        }
         foo_lookups.pop()
     };
     let query = polar.new_query("f(1, new Foo{})", false).unwrap();

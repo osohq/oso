@@ -1,5 +1,6 @@
 package com.osohq.oso;
 
+import java.lang.reflect.Constructor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -22,13 +23,12 @@ public class Polar {
         loadQueue = new HashMap<String, String>();
 
         // Register built-in classes.
-        // FIXME: These constructors are garbage.
-        registerClass(Boolean.class, m -> (boolean) m.get("value") ? false : true, "Boolean");
-        registerClass(Integer.class, m -> (int) m.get("value"), "Integer");
-        registerClass(Double.class, m -> (double) m.get("value"), "Float");
-        registerClass(List.class, m -> (List<Object>) m.get("value"), "List");
-        registerClass(Map.class, m -> (Map<String, Object>) m.get("fields"), "Dictionary");
-        registerClass(String.class, m -> (String) m.get("value"), "String");
+        registerClass(Boolean.class, "Boolean");
+        registerClass(Integer.class, "Integer");
+        registerClass(Double.class, "Float");
+        registerClass(List.class, "List");
+        registerClass(Map.class, "Dictionary");
+        registerClass(String.class, "String");
     }
 
     /**
@@ -47,10 +47,8 @@ public class Polar {
      * will not be recognized. If the filename already exists in the load queue,
      * replace it.
      *
-     * @param filename
      * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
-     * @throws IOException                        If unable to open or read the
-     *                                            file.
+     * @throws IOException                        If unable to open or read the file.
      */
     public void loadFile(String filename) throws IOException, Exceptions.PolarFileExtensionError {
         Optional<String> ext = Optional.ofNullable(filename).filter(f -> f.contains("."))
@@ -70,7 +68,6 @@ public class Polar {
      *
      * @param str      Polar string to be loaded.
      * @param filename Name of the source file.
-     * @throws Exceptions.OsoException
      */
     public void loadStr(String str, String filename) throws Exceptions.OsoException {
         ffiPolar.loadStr(str, filename);
@@ -81,7 +78,6 @@ public class Polar {
      * Load a Polar string into the KB (without filename).
      *
      * @param str Polar string to be loaded.
-     * @throws Exceptions.OsoException
      */
     public void loadStr(String str) throws Exceptions.OsoException {
         ffiPolar.loadStr(str, null);
@@ -90,9 +86,6 @@ public class Polar {
 
     /**
      * Query for a predicate, parsing it first.
-     *
-     * @param query String string
-     * @return Query object (Enumeration of resulting variable bindings).
      */
     public Query query(String query) throws Exceptions.OsoException {
         loadQueuedFiles();
@@ -101,9 +94,6 @@ public class Polar {
 
     /**
      * Query for a predicate.
-     *
-     * @param query as a Predicate
-     * @return Query object (Enumeration of resulting variable bindings).
      */
     public Query query(Predicate query) throws Exceptions.OsoException {
         loadQueuedFiles();
@@ -117,8 +107,6 @@ public class Polar {
      *
      * @param rule Rule name, e.g. "f" for rule "f(x)".
      * @param args Variable list of rule arguments.
-     * @return Query object (Enumeration of resulting variable bindings).
-     * @throws Exceptions.OsoException
      */
     public Query queryRule(String rule, Object... args) throws Exceptions.OsoException {
         loadQueuedFiles();
@@ -129,8 +117,6 @@ public class Polar {
 
     /**
      * Start the Polar REPL.
-     *
-     * @throws Exceptions.OsoException
      */
     public void repl() throws Exceptions.OsoException, IOException {
         repl(new String[0]);
@@ -138,8 +124,6 @@ public class Polar {
 
     /**
      * Load the given files and start the Polar REPL.
-     *
-     * @throws Exceptions.OsoException
      */
     public void repl(String[] files) throws Exceptions.OsoException, IOException {
         for (String file : files) {
@@ -191,57 +175,47 @@ public class Polar {
     }
 
     /**
-     * Register a Java class with oso.
-     *
-     * @param cls       Class object to be registered.
-     * @param fromPolar lambda function to convert from a
-     *                  {@code Map<String, Object>} of parameters to an instance of
-     *                  the Java class.
-     * @throws Exceptions.DuplicateClassAliasError if class has already been
-     *                                             registered.
+     * Register a Java class with Polar.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar)
+    public void registerClass(Class<?> cls)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-        registerClass(cls, fromPolar, cls.getName());
+        registerClass(cls, cls.getName(), null);
     }
 
     /**
-     * Register a Java class with oso using an alias.
-     *
-     * @param cls       Class object to be registered.
-     * @param fromPolar lambda function to convert from a
-     *                  {@code Map<String, Object>} of parameters to an instance of
-     *                  the Java class.
-     * @param name      name to register the class under, which is how the class is
-     *                  accessed from Polar.
-     * @throws Exceptions.DuplicateClassAliasError if a class has already been
-     *                                             registered with the given alias.
+     * Register a Java class with Polar using a specific constructor.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar, String name)
+    public void registerClass(Class<?> cls, Constructor<?> constructor)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-        host.cacheClass(cls, fromPolar, name);
+        registerClass(cls, cls.getName(), constructor);
+    }
+
+    /**
+     * Register a Java class with Polar using an alias.
+     */
+    public void registerClass(Class<?> cls, String name)
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
+        registerClass(cls, name, null);
+    }
+
+    /**
+     * Register a Java class with an optional constructor and alias.
+     */
+    public void registerClass(Class<?> cls, String name, Constructor<?> constructor)
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
+        host.cacheClass(cls, constructor, name);
         registerConstant(name, cls);
     }
 
     /**
      * Registers `value` as a Polar constant variable called `name`.
-     *
-     * @param name
-     * @param value
-     * @throws Exceptions.OsoException
      */
     public void registerConstant(String name, Object value) throws Exceptions.OsoException {
         ffiPolar.registerConstant(name, host.toPolarTerm(value).toString());
     }
 
-    /*******************/
-    /* PRIVATE METHODS */
-    /*******************/
-
     /**
      * Load all queued files, flushing the {@code loadQueue}
-     *
-     * @throws Exceptions.OsoException
      */
     private void loadQueuedFiles() throws Exceptions.OsoException {
         for (String fname : loadQueue.keySet()) {
@@ -252,9 +226,6 @@ public class Polar {
 
     /**
      * Confirm that all queued inline queries succeed.
-     *
-     * @throws Exceptions.OsoException           On failed query creation.
-     * @throws Exceptions.InlineQueryFailedError On inline query failure.
      */
     private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
         Ffi.Query nextQuery = ffiPolar.nextInlineQuery();

@@ -1,9 +1,9 @@
 allow("a","b","c");
 
-a(a_var, x_val) if a_var = new A{x: x_val};
+a(a_var, x_val) if a_var = new A(x_val);
 ?= a(a_instance, "hello") and a_instance.x = "hello";
 
-c(instance, y) if instance = new C{y: y};
+c(instance, y) if instance = new C(y);
 ?= c(instance, "hello") and instance.y = "hello";
 
 specializers(a: A, c: C) if
@@ -52,8 +52,8 @@ testMatches(a) if
     and {x: 1, y: 3} matches {y: 3}
     and {x: 1, y: 3} matches {x:1, y: 3}
     and not {x: 1, y: 3} matches {x:1, y: 4}
-    and new A{x: "hello"} matches A
-    and new A{x: "hello"} matches A{x: "hello"};
+    and new A("hello") matches A
+    and new A("hello") matches A{x: "hello"};
 
 testMethodCalls(a, c) if
     a.foo() == c.foo();
@@ -67,5 +67,5 @@ testCut() if
     and x == 3;
 
 testHttpAndPathMapper() if
-    new Http{hostname: "foo", path: "/", query: {x: 1}}.hostname = "foo"
-    and new PathMapper{template: "/foo/{id}/bar/{ego}"}.map("/foo/1/bar/2") = {id: "1", ego: "2"};
+    new Http("foo", "/", {x: 1}).hostname = "foo"
+    and new PathMapper("/foo/{id}/bar/{ego}").map("/foo/1/bar/2") = {id: "1", ego: "2"};

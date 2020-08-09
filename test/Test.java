@@ -35,10 +35,10 @@ class Test {
         }
     }
 
-    public static void main(String[] args) throws IOException, Exceptions.OsoException {
+    public static void main(String[] args) throws IOException, NoSuchMethodException, Exceptions.OsoException {
         Oso o = new Oso();
-        o.registerClass(A.class, m -> new A((String) m.get("x")), "A");
-        o.registerClass(BC.class, m -> new BC((String) m.get("y")), "C");
+        o.registerClass(A.class, "A");
+        o.registerClass(BC.class, "C");
         o.loadFile("test.polar");
         assert o.isAllowed("a", "b", "c");
 

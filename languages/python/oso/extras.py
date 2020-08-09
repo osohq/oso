@@ -6,10 +6,10 @@ from typing import List
 class Http:
     """A resource accessed via HTTP."""
 
-    def __init__(self, path="", query={}, hostname=None):
+    def __init__(self, hostname="", path="", query={}):
+        self.hostname = hostname
         self.path = path
         self.query = query
-        self.hostname = hostname
 
     def __repr__(self):
         return str(self)

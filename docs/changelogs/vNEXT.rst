@@ -39,6 +39,50 @@ You may now write rules that specialize on any of the built-in types
 These types are mapped to host-language classes such as ``java.lang.Boolean``
 in Java or ``bool`` in Python.
 
+Positional Arguments to Constructors
+====================================
+
+The ``new`` operator previously required an instance literal whose fields
+are passed to the class's constructor as keyword arguments:
+
+.. code-block:: polar
+
+    new Person{first: "First", last: "Last"}
+
+This syntax is still supported in application languages that support keyword
+arguments (e.g., Python and Ruby), but some languages (e.g., Java) do not
+support keywords. So a new syntax was added to pass initialization arguments
+positionally:
+
+.. code-block:: polar
+
+    new Person("First", "Last")
+
+Positional constructor arguments may be used in any application language.
+
+Java Class Registration
+=======================
+The Java ``registerClass`` method now requires only a class:
+
+.. code-block:: Java
+
+    registerClass(Person.class)
+
+If you want to always use a specific constructor from within
+a policy, you may now specify a ``Constructor`` to use:
+
+.. code-block:: Java
+
+    registerClass(Person.class, Person.class.getConstructor(String.class, String.class))
+
+This takes the place of the function previously required to map keyword
+arguments to positional ones.
+
+If you omit the constructor (recommended), the default behavior at
+instantiation time is to search the list returned by ``Class.getConstructors``
+for a constructor that is applicable to the supplied (positional) constructor
+arguments; see :doc:`/using/libraries/java/index` for details.
+
 Other bugs & improvements
 =========================
 

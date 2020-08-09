@@ -15,8 +15,8 @@ class Expense:
         self.location = location
         self.project_id = project_id
 
-    @classmethod
-    def by_id(cls, id: int):
+    @staticmethod
+    def id(id: int):
         if id < len(EXPENSES):
             return Expense(**EXPENSES[id])
         else:
@@ -50,8 +50,8 @@ class Project:
         self.id = id
         self.team_id = team_id
 
-    @classmethod
-    def by_id(cls, id: int):
+    @staticmethod
+    def id(id: int):
         return Project(id, 0)
 
 
@@ -62,8 +62,8 @@ class Team:
     def __init__(self, organization_id: int):
         self.organization_id = organization_id
 
-    @classmethod
-    def by_id(cls, id: int):
+    @staticmethod
+    def id(id: int):
         return Team(0)
 
 
@@ -74,6 +74,6 @@ class Organization:
     def __init__(self, name: str):
         self.name = name
 
-    @classmethod
-    def by_id(cls, id: int):
+    @staticmethod
+    def id(id: int):
         return Organization("ACME")
