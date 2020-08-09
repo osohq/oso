@@ -373,6 +373,13 @@ impl Term {
         }
     }
 
+    pub fn new_from_ffi(value: Value) -> Self {
+        Self {
+            source_info: SourceInfo::Ffi,
+            value: Rc::new(value),
+        }
+    }
+
     /// Create a new Term, cloning the source info of `self`
     /// but with the new `value`
     pub fn clone_with_value(&self, value: Value) -> Self {

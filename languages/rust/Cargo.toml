@@ -1,0 +1,13 @@
+[package]
+name = "oso"
+version = "0.1.0"
+authors = ["Sam Scott <sam@osohq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+polar = { path = "../../polar" }
+rustyline = {version = "6.2"}
+rustyline-derive = {version = "0.3.1"}
+anyhow = "1.0.32"

@@ -1,0 +1,12 @@
+class Person() {name: str};
+class Employee(Person) {manager: Person};
+class Manager(Employee) {id: int};
+
+froody(Manager{name: "Sam"}, x) if x = 1;
+froody(Manager{name: "Sam", id: 1}, x) if x = 2;
+froody(Manager{name: "Sam", id: 1, manager: Person{}}, x) if x = 3;
+
+manages(m: Manager, _: Employee{manager: m});
+
+?= manages(Manager{name: "Sam"}, Manager{manager: Manager{name: "Sam"}});
+?= !(manages(Manager{name: "Sam"}, Manager{manager: Manager{name: "Gabe"}}));
