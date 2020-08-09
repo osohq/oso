@@ -1,74 +1,72 @@
 /// Translate between Polar and the host language (Rust).
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::rc::Weak;
+use std::sync::Arc;
 
-use polar::types::Symbol as Name;
+use polar_core::types::Symbol as Name;
+use polar_core::types::{Numeric, Term, Value};
 
-#[derive(Clone)]
-pub struct Class;
+pub struct Class {
+    constructor: Arc<dyn Fn() -> Arc<dyn std::any::Any>>,
+    methods: ClassMethods,
+}
 
 impl Class {
-    pub fn name(&self) -> Name {
-        todo!()
+    pub fn new<T: std::default::Default + 'static>() -> Self {
+        Self {
+            constructor: Arc::new(|| Arc::new(T::default())),
+            methods: ClassMethods::new(),
+        }
     }
 
-    pub fn default_constructor(&self) -> Constructor {
-        todo!()
+    pub fn with_constructor<T: 'static, F: 'static + Fn() -> T>(constructor: F) -> Self {
+        Self {
+            constructor: Arc::new(move || Arc::new(constructor())),
+            methods: ClassMethods::new(),
+        }
     }
 }
-#[derive(Clone)]
-pub struct Instance;
-#[derive(Clone)]
-pub struct Constructor;
 
-impl Constructor {
-    pub fn call(&self, fields: ()) -> Instance {
-        todo!()
-    }
+#[derive(Clone)]
+pub struct Instance {
+    pub instance: Arc<dyn std::any::Any>,
+    pub methods: Arc<ClassMethods>,
 }
 
 /// Maintain mappings and caches for Python classes & instances
-#[derive(Clone)]
 pub struct Host {
     classes: HashMap<Name, Class>,
-    constructors: HashMap<Name, Constructor>,
     instances: HashMap<u64, Instance>,
-    polar: Weak<polar::Polar>,
+    polar: Weak<crate::PolarCore>,
 }
 
 impl Host {
-    pub fn new(polar: Weak<polar::Polar>) -> Self {
+    pub fn new(polar: Weak<crate::PolarCore>) -> Self {
         Self {
             classes: HashMap::new(),
-            constructors: HashMap::new(),
             instances: HashMap::new(),
             polar,
         }
     }
 
-    pub fn get_class(&self, name: &Name) -> Option<Class> {
-        self.classes.get(name).cloned()
+    pub fn get_class(&self, name: &Name) -> Option<&Class> {
+        self.classes.get(name)
     }
 
-    pub fn get_constructor(&self, name: &Name) -> Option<Constructor> {
-        self.constructors.get(name).cloned()
-    }
-
-    pub fn cache_class(
+    pub fn cache_class<T: PolarClass>(
         &mut self,
-        class: Class,
         name: Option<Name>,
-        constructor: Option<Constructor>,
+        constructor: Option<fn() -> T>,
     ) -> Name {
-        let name = name.unwrap_or_else(|| class.name());
-        let constructor = constructor.unwrap_or_else(|| class.default_constructor());
-        self.classes.insert(name.clone(), class);
-        self.constructors.insert(name.clone(), constructor);
+        let name = name.unwrap_or_else(|| Name(T::name()));
+        let constructor = constructor.unwrap_or_else(|| T::constructor);
+        self.classes
+            .insert(name.clone(), Class::with_constructor(constructor));
         name
     }
 
-    pub fn get_instance(&self, id: u64) -> Option<Instance> {
-        self.instances.get(&id).cloned()
+    pub fn get_instance(&self, id: u64) -> Option<&Instance> {
+        self.instances.get(&id)
     }
 
     pub fn cache_instance(&mut self, instance: Instance, id: Option<u64>) -> u64 {
@@ -77,13 +75,21 @@ impl Host {
         id
     }
 
-    pub fn make_instance(&mut self, name: &Name, fields: (), id: u64) -> Instance {
+    pub fn make_instance(&mut self, name: &Name, fields: BTreeMap<Name, Term>, id: u64) {
+        println!(
+            "Making instance: {}.\nConstructors: {:?}",
+            name,
+            self.classes.keys().collect::<Vec<&Name>>()
+        );
         let class = self.get_class(name).unwrap();
-        let constructor = self.get_constructor(name).unwrap();
         debug_assert!(self.instances.get(&id).is_none());
-        let instance = constructor.call(fields);
-        self.cache_instance(instance.clone(), Some(id));
-        instance
+        let _fields = fields; // TODO: use
+        let instance = (class.constructor)();
+        let instance = Instance {
+            instance,
+            methods: Arc::new(class.methods.clone()),
+        };
+        self.cache_instance(instance, Some(id));
     }
 
     pub fn unify(&self, left: u64, right: u64) -> bool {
@@ -106,7 +112,7 @@ impl Host {
         todo!("????")
     }
 
-    pub fn operator(&self, op: polar::types::Operation, args: [Instance; 2]) -> bool {
+    pub fn operator(&self, op: polar_core::types::Operation, args: [Instance; 2]) -> bool {
         todo!()
     }
 
@@ -119,9 +125,7 @@ impl Host {
     }
 }
 
-use polar::types::{Numeric, Term, Value};
-
-trait ToPolar {
+pub trait ToPolar {
     fn to_polar_value(&self, host: &mut Host) -> Value;
 
     fn to_polar(&self, host: &mut Host) -> Term {
@@ -130,7 +134,7 @@ trait ToPolar {
 }
 
 impl ToPolar for bool {
-    fn to_polar_value(&self, host: &mut Host) -> Value {
+    fn to_polar_value(&self, _host: &mut Host) -> Value {
         Value::Boolean(*self)
     }
 }
@@ -138,7 +142,7 @@ impl ToPolar for bool {
 macro_rules! int_to_polar {
     ($i:ty) => {
         impl ToPolar for $i {
-            fn to_polar_value(&self, host: &mut Host) -> Value {
+            fn to_polar_value(&self, _host: &mut Host) -> Value {
                 Value::Number(Numeric::Integer((*self).into()))
             }
         }
@@ -156,7 +160,7 @@ int_to_polar!(i64);
 macro_rules! float_to_polar {
     ($i:ty) => {
         impl ToPolar for $i {
-            fn to_polar_value(&self, host: &mut Host) -> Value {
+            fn to_polar_value(&self, _host: &mut Host) -> Value {
                 Value::Number(Numeric::Float((*self).into()))
             }
         }
@@ -167,13 +171,13 @@ float_to_polar!(f32);
 float_to_polar!(f64);
 
 impl ToPolar for String {
-    fn to_polar_value(&self, host: &mut Host) -> Value {
+    fn to_polar_value(&self, _host: &mut Host) -> Value {
         Value::String(self.clone())
     }
 }
 
 impl ToPolar for str {
-    fn to_polar_value(&self, host: &mut Host) -> Value {
+    fn to_polar_value(&self, _host: &mut Host) -> Value {
         Value::String(self.to_owned())
     }
 }
@@ -186,7 +190,7 @@ impl<T: ToPolar> ToPolar for Vec<T> {
 
 impl<T: ToPolar> ToPolar for HashMap<String, T> {
     fn to_polar_value(&self, host: &mut Host) -> Value {
-        Value::Dictionary(polar::types::Dictionary {
+        Value::Dictionary(polar_core::types::Dictionary {
             fields: self
                 .iter()
                 .map(|(k, v)| (Name(k.to_string()), v.to_polar(host)))
@@ -201,26 +205,123 @@ impl ToPolar for Value {
     }
 }
 
-//     def to_python(self, value):
-//         """Convert a Polar term to a Python object."""
-//         value = value["value"]
-//         tag = [*value][0]
-//         if tag in ["String", "Boolean"]:
-//             return value[tag]
-//         elif tag == "Number":
-//             return [*value[tag].values()][0]
-//         elif tag == "List":
-//             return [self.to_python(e) for e in value[tag]]
-//         elif tag == "Dictionary":
-//             return {k: self.to_python(v) for k, v in value[tag]["fields"].items()}
-//         elif tag == "ExternalInstance":
-//             return self.get_instance(value[tag]["instance_id"])
-//         elif tag == "Call":
-//             return Predicate(
-//                 name=value[tag]["name"],
-//                 args=[self.to_python(v) for v in value[tag]["args"]],
-//             )
-//         elif tag == "Variable":
-//             return Variable(value[tag])
+impl ToPolar for Box<dyn ToPolar> {
+    fn to_polar_value(&self, host: &mut Host) -> Value {
+        self.as_ref().to_polar_value(host)
+    }
+}
 
-//         raise PolarRuntimeException(f"cannot convert {value} to Python")
+pub trait FromPolar: Sized {
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self>;
+}
+
+impl FromPolar for bool {
+    fn from_polar(term: &Term, _host: &mut Host) -> Option<Self> {
+        if let Value::Boolean(b) = term.value() {
+            Some(*b)
+        } else {
+            None
+        }
+    }
+}
+
+use std::convert::TryFrom;
+
+macro_rules! polar_to_int {
+    ($i:ty) => {
+        impl FromPolar for $i {
+            fn from_polar(term: &Term, _host: &mut Host) -> Option<Self> {
+                if let Value::Number(Numeric::Integer(i)) = term.value() {
+                    <$i>::try_from(*i).ok()
+                } else {
+                    None
+                }
+            }
+        }
+    };
+}
+
+polar_to_int!(u8);
+polar_to_int!(i8);
+polar_to_int!(u16);
+polar_to_int!(i16);
+polar_to_int!(u32);
+polar_to_int!(i32);
+polar_to_int!(i64);
+
+impl FromPolar for f64 {
+    fn from_polar(term: &Term, _host: &mut Host) -> Option<Self> {
+        if let Value::Number(Numeric::Float(f)) = term.value() {
+            Some(*f)
+        } else {
+            None
+        }
+    }
+}
+
+impl FromPolar for String {
+    fn from_polar(term: &Term, _host: &mut Host) -> Option<Self> {
+        if let Value::String(s) = term.value() {
+            Some(s.to_string())
+        } else {
+            None
+        }
+    }
+}
+
+impl<T: FromPolar> FromPolar for Vec<T> {
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
+        if let Value::List(l) = term.value() {
+            l.iter().map(|t| T::from_polar(t, host)).collect()
+        } else {
+            None
+        }
+    }
+}
+
+impl<T: FromPolar> FromPolar for HashMap<String, T> {
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
+        if let Value::Dictionary(dict) = term.value() {
+            dict.fields
+                .iter()
+                .map(|(k, v)| T::from_polar(v, host).map(|v| (k.0.clone(), v)))
+                .collect()
+        } else {
+            None
+        }
+    }
+}
+
+impl FromPolar for Value {
+    fn from_polar(term: &Term, _host: &mut Host) -> Option<Self> {
+        Some(term.value().clone())
+    }
+}
+
+impl FromPolar for Instance {
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
+        if let Value::ExternalInstance(polar_core::types::ExternalInstance {
+            instance_id, ..
+        }) = term.value()
+        {
+            host.get_instance(*instance_id).cloned()
+        } else {
+            None
+        }
+    }
+}
+
+pub type ClassMethod = Arc<dyn Fn(&Instance, Vec<Term>) -> Arc<dyn ToPolar>>;
+pub type ClassMethods = HashMap<Name, ClassMethod>;
+
+pub trait PolarClass: 'static {
+    fn name() -> String {
+        std::any::type_name::<Self>().to_string()
+    }
+
+    fn constructor() -> Self;
+
+    fn methods() -> ClassMethods {
+        HashMap::new()
+    }
+}

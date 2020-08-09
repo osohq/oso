@@ -13,10 +13,7 @@ use std::io::Read;
 
 pub fn load_files(oso: &mut Oso, files: &mut dyn Iterator<Item = String>) -> anyhow::Result<()> {
     for file in files {
-        let mut f = File::open(&file)?;
-        let mut policy = String::new();
-        f.read_to_string(&mut policy)?;
-        oso.load_file(&policy, Some(file))?;
+        oso.load_file(&file)?;
     }
     Ok(())
 }
@@ -122,7 +119,7 @@ pub fn main() -> anyhow::Result<()> {
                 break;
             }
         };
-        let mut query = match oso.query_str(&input) {
+        let mut query = match oso.query(&input) {
             Err(e) => {
                 println!("{}", e);
                 continue;
@@ -130,7 +127,13 @@ pub fn main() -> anyhow::Result<()> {
             Ok(q) => q,
         };
         let mut has_result = false;
-        query.run()
+        while let Some(res) = query.next() {
+            has_result = true;
+            println!("{:?}", res)
+        }
+        if !has_result {
+            println!("False")
+        }
     }
     Ok(())
 }

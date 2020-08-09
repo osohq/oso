@@ -806,8 +806,8 @@ pub enum QueryEvent {
     ExternalCall {
         /// Persistent id across all requests for results from the same external call.
         call_id: u64,
-        /// The external instance to make this call on. None for functions or constructors.
-        instance: Option<Term>,
+        /// The external instance to make this call on.
+        instance: Term,
         /// Field name to lookup or method name to call. A class name indicates a constructor
         /// should be called.
         attribute: Symbol,
@@ -917,7 +917,7 @@ mod tests {
         );
         let event = QueryEvent::ExternalCall {
             call_id: 2,
-            instance: None,
+            instance: Term::new_from_test(Value::String("abc".to_string())),
             attribute: Symbol::new("foo"),
             args: Some(vec![
                 Term::new_from_test(value!(0)),

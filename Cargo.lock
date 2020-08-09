@@ -702,7 +702,8 @@ name = "oso"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "polar",
+ "maplit",
+ "polar-core",
  "rustyline",
  "rustyline-derive",
 ]
