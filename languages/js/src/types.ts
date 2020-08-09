@@ -2,7 +2,7 @@ interface PolarStr {
   String: string;
 }
 
-function isPolarStr(v: PolarType): v is PolarStr {
+export function isPolarStr(v: PolarType): v is PolarStr {
   return (v as PolarStr).String !== undefined;
 }
 
@@ -10,7 +10,7 @@ interface PolarNum {
   Number: PolarFloat | PolarInt;
 }
 
-function isPolarNum(v: PolarType): v is PolarNum {
+export function isPolarNum(v: PolarType): v is PolarNum {
   return (v as PolarNum).Number !== undefined;
 }
 
@@ -26,7 +26,7 @@ interface PolarBool {
   Boolean: boolean;
 }
 
-function isPolarBool(v: PolarType): v is PolarBool {
+export function isPolarBool(v: PolarType): v is PolarBool {
   return (v as PolarBool).Boolean !== undefined;
 }
 
@@ -34,7 +34,7 @@ interface PolarList {
   List: PolarValue[];
 }
 
-function isPolarList(v: PolarType): v is PolarList {
+export function isPolarList(v: PolarType): v is PolarList {
   return (v as PolarList).List !== undefined;
 }
 
@@ -46,7 +46,7 @@ interface PolarDict {
   };
 }
 
-function isPolarDict(v: PolarType): v is PolarDict {
+export function isPolarDict(v: PolarType): v is PolarDict {
   return (v as PolarDict).Dictionary !== undefined;
 }
 
@@ -70,15 +70,15 @@ interface PolarInstance {
   };
 }
 
-function isPolarInstance(v: PolarType): v is PolarInstance {
+export function isPolarInstance(v: PolarType): v is PolarInstance {
   return (v as PolarInstance).ExternalInstance !== undefined;
 }
 
-function isPolarPredicate(v: PolarType): v is PolarPredicate {
+export function isPolarPredicate(v: PolarType): v is PolarPredicate {
   return (v as PolarPredicate).Call !== undefined;
 }
 
-function isPolarVariable(v: PolarType): v is PolarVariable {
+export function isPolarVariable(v: PolarType): v is PolarVariable {
   return (v as PolarVariable).Variable !== undefined;
 }
 
@@ -92,7 +92,7 @@ type PolarType =
   | PolarVariable
   | PolarInstance;
 
-interface PolarValue {
+export interface PolarValue {
   value: PolarType;
 }
 
@@ -109,39 +109,21 @@ function isPolarType(v: any): v is PolarType {
   );
 }
 
-function isPolarValue(v: any): v is PolarValue {
+export function isPolarValue(v: any): v is PolarValue {
   return isPolarType(v?.value);
 }
 
-interface ConstructorKwargs {
+export interface ConstructorKwargs {
   [key: string]: any;
 }
 
-type Constructor = (kwargs: ConstructorKwargs) => object;
+export type Constructor = (kwargs: ConstructorKwargs) => object;
 
-class Predicate {
-  readonly name: string;
-  readonly args: unknown[];
-
-  constructor(name: string, args: unknown[]) {
-    this.name = name;
-    this.args = args;
-  }
-}
-
-class Variable {
-  readonly name: string;
-
-  constructor(name: string) {
-    this.name = name;
-  }
-}
-
-function isGenerator(x: any): x is Generator {
+export function isGenerator(x: any): x is Generator {
   return [x.next, x.return, x.throw].every(f => typeof f === 'function');
 }
 
-function isGeneratorFunction(x: any): x is GeneratorFunction {
+export function isGeneratorFunction(x: any): x is GeneratorFunction {
   if (!x.constructor) return false;
   return (
     x.constructor.name === 'GeneratorFunction' ||
@@ -149,47 +131,47 @@ function isGeneratorFunction(x: any): x is GeneratorFunction {
   );
 }
 
-interface Result {
+export interface Result {
   bindings: Map<string, PolarValue>;
 }
 
-interface MakeExternal {
+export interface MakeExternal {
   instanceId: bigint;
   tag: string;
   fields: Map<string, PolarValue>;
 }
 
-interface ExternalCall {
+export interface ExternalCall {
   callId: bigint;
   instance: PolarValue;
   attribute: string;
   args: PolarValue[];
 }
 
-interface ExternalIsSubspecializer {
+export interface ExternalIsSubspecializer {
   instanceId: bigint;
   leftTag: string;
   rightTag: string;
   callId: bigint;
 }
 
-interface ExternalIsa {
+export interface ExternalIsa {
   instanceId: bigint;
   tag: string;
   callId: bigint;
 }
 
-interface ExternalUnify {
+export interface ExternalUnify {
   leftId: bigint;
   rightId: bigint;
   callId: bigint;
 }
 
-interface Debug {
+export interface Debug {
   message: string;
 }
 
-enum QueryEventKind {
+export enum QueryEventKind {
   Done,
   Result,
   MakeExternal,
@@ -200,7 +182,7 @@ enum QueryEventKind {
   Debug,
 }
 
-interface QueryEvent {
+export interface QueryEvent {
   kind: QueryEventKind;
   data?:
     | Result
@@ -212,4 +194,4 @@ interface QueryEvent {
     | Debug;
 }
 
-type QueryResult = Generator<Map<string, any>, null, never>;
+export type QueryResult = Generator<Map<string, any>, null, never>;

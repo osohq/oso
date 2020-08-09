@@ -3,7 +3,8 @@
 build:
 	wasm-pack build --dev --target nodejs
 	rm pkg/.gitignore pkg/package.json
-	cp --recursive pkg/. ../languages/js/lib
+	mkdir -p ../languages/js/dist
+	cp --recursive pkg/. ../languages/js/dist
 	rm -rf pkg
 
 test:

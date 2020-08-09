@@ -1,11 +1,8 @@
-import { readFile } from 'fs/promises';
+import { readFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { extname } from 'path';
 import { createInterface } from 'readline';
 
-import { Polar as FfiPolar } from '../../../polar-wasm-api/pkg/index';
-import { Host } from './Host';
-import { Query } from './Query';
 import {
   InlineQueryFailedError,
   PolarError,
@@ -15,6 +12,11 @@ import {
   PolarFileExtensionError,
   PolarFileNotFoundError,
 } from './errors';
+import { Query } from './Query';
+import { Host } from './Host';
+import { Polar as FfiPolar } from '../dist/polar_wasm_api';
+import { Predicate } from './Predicate';
+import type { Constructor, QueryResult } from './types';
 
 export class Polar {
   #ffiPolar: FfiPolar;
@@ -44,11 +46,11 @@ export class Polar {
     previous.free();
   }
 
-  async loadFile(name: string): Promise<void> {
+  loadFile(name: string): void {
     if (extname(name) !== '.polar') throw new PolarFileExtensionError(name);
     let contents;
     try {
-      contents = await readFile(name, { encoding: 'utf8' });
+      contents = readFileSync(name, { encoding: 'utf8' });
     } catch (e) {
       if (e.code === 'ENOENT') throw new PolarFileNotFoundError(name);
       throw e;
