@@ -55,7 +55,7 @@ pub enum Goal {
         check_errors: bool,
     },
     MakeExternal {
-        literal: InstanceLiteral,
+        constructor: Term,
         instance_id: u64,
     },
     IsaExternal {
@@ -302,9 +302,9 @@ impl PolarVirtualMachine {
                 right_instance_id,
             } => return self.unify_external(*left_instance_id, *right_instance_id),
             Goal::MakeExternal {
-                literal,
+                constructor,
                 instance_id,
-            } => return Ok(self.make_external(literal, *instance_id)),
+            } => return Ok(self.make_external(constructor, *instance_id)),
             Goal::CheckError => return self.check_error(),
             Goal::Noop => {}
             Goal::Query { term } => {
@@ -1045,10 +1045,10 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn make_external(&self, literal: &InstanceLiteral, instance_id: u64) -> QueryEvent {
+    pub fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
             instance_id,
-            instance: literal.clone(),
+            constructor: constructor.clone(),
         }
     }
 
@@ -1257,33 +1257,29 @@ impl PolarVirtualMachine {
                 let result = args.pop().unwrap();
                 assert!(
                     matches!(result.value(), Value::Variable(_)),
-                    "Must have result as second arg."
+                    "Must have result variable as second arg."
                 );
-                let mut literal_term = args.pop().unwrap();
-                literal_term.map_replace(&mut |t| self.deref(t));
-                let literal_value = literal_term
-                    .value()
-                    .clone()
-                    .instance_literal()
-                    .expect("Arg must be instance literal");
+                let mut constructor = args.pop().unwrap();
+                constructor.map_replace(&mut |t| self.deref(t));
 
                 let instance_id = self.new_id();
-                literal_term.replace_value(Value::ExternalInstance(ExternalInstance {
-                    instance_id,
-                    literal: Some(literal_value.clone()),
-                    repr: Some(literal_value.to_polar()),
-                }));
+                let instance =
+                    constructor.clone_with_value(Value::ExternalInstance(ExternalInstance {
+                        instance_id,
+                        constructor: Some(constructor.clone()),
+                        repr: Some(constructor.to_polar()),
+                    }));
 
                 // A goal is used here in case the result is already bound to some external
                 // instance.
                 self.append_goals(vec![
                     Goal::Unify {
                         left: result,
-                        right: literal_term,
+                        right: instance,
                     },
                     Goal::MakeExternal {
                         instance_id,
-                        literal: literal_value,
+                        constructor,
                     },
                 ])?;
             }
@@ -2758,8 +2754,8 @@ mod tests {
         kb.add_generic_rule(bar_rule);
 
         let external_instance = Value::ExternalInstance(ExternalInstance {
-            literal: None,
             instance_id: 1,
+            constructor: None,
             repr: None,
         });
 
@@ -2818,7 +2814,7 @@ mod tests {
         // - right: `Dictionary`
         let arg = term!(Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
-            literal: None,
+            constructor: None,
             repr: None,
         }));
         let left = term!(value!(Pattern::Instance(InstanceLiteral {

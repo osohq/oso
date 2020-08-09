@@ -5,7 +5,7 @@ public class Organization {
         this.name = name;
     }
 
-    public static Organization byId(Integer id) {
+    public static Organization id(Integer id) {
         return new Organization("ACME");
     }
 }

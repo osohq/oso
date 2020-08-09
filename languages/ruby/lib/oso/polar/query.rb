@@ -3,7 +3,7 @@
 module Oso
   module Polar
     # A single Polar query.
-    class Query
+    class Query # rubocop:disable Metrics/ClassLength
       # @return [Enumerator]
       attr_reader :results
 
@@ -105,7 +105,7 @@ module Oso
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         Enumerator.new do |yielder| # rubocop:disable Metrics/BlockLength
           loop do # rubocop:disable Metrics/BlockLength
             event = ffi_query.next_event
@@ -118,9 +118,18 @@ module Oso
               id = event.data['instance_id']
               raise DuplicateInstanceRegistrationError, id if host.instance? id
 
-              cls_name = event.data['instance']['tag']
-              fields = event.data['instance']['fields']['fields']
-              host.make_instance(cls_name, fields: fields, id: id)
+              constructor = event.data['constructor']['value']
+              if constructor.key? 'InstanceLiteral'
+                cls_name = constructor['InstanceLiteral']['tag']
+                fields = constructor['InstanceLiteral']['fields']['fields']
+                initargs = Hash[fields.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+              elsif constructor.key? 'Call'
+                cls_name = constructor['Call']['name']
+                initargs = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
+              else
+                raise InvalidConstructorError
+              end
+              host.make_instance(cls_name, initargs: initargs, id: id)
             when 'ExternalCall'
               call_id = event.data['call_id']
               instance = event.data['instance']

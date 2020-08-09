@@ -5,7 +5,7 @@ public class Team {
         this.organizationId = organizationId;
     }
 
-    public static Team byId(Integer id) {
+    public static Team id(Integer id) {
         return new Team(0);
     }
 

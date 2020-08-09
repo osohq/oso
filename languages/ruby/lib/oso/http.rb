@@ -3,7 +3,7 @@
 module Oso
   # An HTTP resource.
   class Http
-    def initialize(hostname: nil, path: nil, query: nil)
+    def initialize(hostname, path, query)
       @hostname = hostname
       @path = path
       @query = query
