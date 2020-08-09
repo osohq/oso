@@ -7,6 +7,7 @@ use super::vm::*;
 
 use std::collections::{hash_map::Entry, HashMap};
 use std::io::{stderr, Write};
+use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -87,7 +88,7 @@ impl Polar {
                         name,
                         rules: vec![],
                     });
-                    generic_rule.rules.push(rule);
+                    generic_rule.rules.push(Rc::new(rule));
                 }
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);
