@@ -738,17 +738,13 @@ impl PolarVirtualMachine {
                     trace,
                     trace_stack,
                 }) => {
-                    self.bindings.drain(*bsp..);
+                    self.bindings.truncate(*bsp);
                     if let Some(mut alternative) = alternatives.pop() {
-                        self.goals = goals.clone();
-                        self.queries = queries.clone();
-                        self.trace = trace.clone();
-                        self.trace_stack = trace_stack.clone();
-                        // Note: here we are directly modifying the
-                        // VM goal stack, since what we have is already
-                        // a "stored goal stack"
+                        self.goals.clone_from(&goals);
                         self.goals.append(&mut alternative);
-
+                        self.queries.clone_from(&queries);
+                        self.trace.clone_from(&trace);
+                        self.trace_stack.clone_from(&trace_stack);
                         break; // we have our alternative, end the loop
                     }
 
@@ -762,7 +758,7 @@ impl PolarVirtualMachine {
 
     /// Commit to the current choice.
     fn cut(&mut self, index: usize) {
-        let _ = self.choices.drain(index..);
+        let _ = self.choices.truncate(index);
     }
 
     /// Clean up the query stack after completing a query.
