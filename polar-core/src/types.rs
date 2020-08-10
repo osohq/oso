@@ -574,6 +574,8 @@ pub struct KnowledgeBase {
     pub inline_queries: Vec<Term>,
 }
 
+const MAX_ID: u64 = (1 << 53) - 1;
+
 impl KnowledgeBase {
     pub fn new() -> Self {
         Self {
@@ -588,8 +590,19 @@ impl KnowledgeBase {
     }
 
     /// Return a monotonically increasing integer ID.
+    ///
+    /// Wraps around at 52 bits of precision so that it can be safely coerced to an IEEE-754
+    /// double-float (f64).
     pub fn new_id(&self) -> u64 {
-        self.id_counter.fetch_add(1, Ordering::SeqCst)
+        if self
+            .id_counter
+            .compare_and_swap(MAX_ID, 1, Ordering::SeqCst)
+            == MAX_ID
+        {
+            MAX_ID
+        } else {
+            self.id_counter.fetch_add(1, Ordering::SeqCst)
+        }
     }
 
     /// Generate a new symbol.
@@ -750,5 +763,15 @@ mod tests {
             })),
         };
         eprintln!("{}", rule);
+    }
+
+    #[test]
+    fn test_id_wrapping() {
+        let kb = KnowledgeBase::new();
+        kb.id_counter.store(MAX_ID - 1, Ordering::SeqCst);
+        assert_eq!(MAX_ID - 1, kb.new_id());
+        assert_eq!(MAX_ID, kb.new_id());
+        assert_eq!(1, kb.new_id());
+        assert_eq!(2, kb.new_id());
     }
 }

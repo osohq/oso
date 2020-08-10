@@ -257,8 +257,16 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: wheel
-      - run: |
+      - name: "test"
+        if: runner.os != 'Windows'
+        run: |
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          python test.py
+        working-directory: test
+      - name: "test"
+        if: runner.os == 'Windows'
+        run: |
+          pip install oso==$($env:github_ref.Substring(11)) -f ../wheel
           python test.py
         working-directory: test
 

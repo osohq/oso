@@ -78,11 +78,11 @@ Adding oso
 
       oso v{release} supports Java versions **>= 10**
 
-      Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_
-      and download the latest jar.
+      Go to the `Maven Repository <https://search.maven.org/artifact/com.osohq/oso>`_
 
-      Either add this to your Java project libraries,
+      Either download the latest jar and add this to your Java project libraries,
       load using your IDE,
+      add the project as dependency to your build system
       or build from the command line with:
 
       .. code-block:: console

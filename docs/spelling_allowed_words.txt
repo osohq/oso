@@ -53,6 +53,8 @@ unsafety
 middleware
 url
 stderr
+musl
+glibc
 
 ## Product names
 sqlite
@@ -70,6 +72,7 @@ Rego
 Hashicorp
 JShell
 
+
 ## Misc terms
 roadmap
 de
@@ -79,3 +82,7 @@ SaaS
 Todo
 Bhavik
 amongst
+
+# Release specifiers
+rc
+dev
