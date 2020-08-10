@@ -117,8 +117,9 @@ fn new_query_from_term_errors() {
 }
 
 #[wasm_bindgen_test]
+#[allow(clippy::float_cmp)]
 fn get_external_id_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    assert_eq!(polar.wasm_get_external_id(), 1);
-    assert_eq!(polar.wasm_get_external_id(), 2);
+    assert_eq!(polar.wasm_get_external_id(), 1.0);
+    assert_eq!(polar.wasm_get_external_id(), 2.0);
 }

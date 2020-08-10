@@ -55,7 +55,7 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newId)]
-    pub fn wasm_get_external_id(&self) -> u64 {
-        self.0.get_external_id()
+    pub fn wasm_get_external_id(&self) -> f64 {
+        self.0.get_external_id() as f64
     }
 }

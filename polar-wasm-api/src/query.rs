@@ -27,7 +27,7 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = callResult)]
-    pub fn wasm_call_result(&mut self, call_id: u64, value: Option<String>) -> JsResult<()> {
+    pub fn wasm_call_result(&mut self, call_id: f64, value: Option<String>) -> JsResult<()> {
         let term: Option<Term> = if let Some(value) = value {
             match serde_json::from_str(&value) {
                 Ok(term) => Some(term),
@@ -37,14 +37,14 @@ impl Query {
             None
         };
         self.0
-            .call_result(call_id, term)
+            .call_result(call_id as u64, term)
             .map_err(Error::from)
             .map_err(Error::into)
     }
 
     #[wasm_bindgen(js_class = Query, js_name = questionResult)]
-    pub fn wasm_question_result(&mut self, call_id: u64, result: bool) {
-        self.0.question_result(call_id, result)
+    pub fn wasm_question_result(&mut self, call_id: f64, result: bool) {
+        self.0.question_result(call_id as u64, result)
     }
 
     #[wasm_bindgen(js_class = Query, js_name = debugCommand)]
