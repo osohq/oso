@@ -6,31 +6,83 @@ use std::sync::Arc;
 use polar_core::types::Symbol as Name;
 use polar_core::types::{Numeric, Term, Value};
 
+#[derive(Clone)]
 pub struct Class {
+    name: String,
     constructor: Arc<dyn Fn() -> Arc<dyn std::any::Any>>,
-    methods: ClassMethods,
+    instance_methods: InstanceMethods,
+    class_methods: ClassMethods,
 }
 
 impl Class {
     pub fn new<T: std::default::Default + 'static>() -> Self {
         Self {
+            name: std::any::type_name::<Self>().to_string(),
             constructor: Arc::new(|| Arc::new(T::default())),
-            methods: ClassMethods::new(),
+            instance_methods: InstanceMethods::new(),
+            class_methods: ClassMethods::new(),
         }
     }
 
     pub fn with_constructor<T: 'static, F: 'static + Fn() -> T>(constructor: F) -> Self {
         Self {
+            name: std::any::type_name::<Self>().to_string(),
             constructor: Arc::new(move || Arc::new(constructor())),
-            methods: ClassMethods::new(),
+            instance_methods: InstanceMethods::new(),
+            class_methods: ClassMethods::new(),
         }
+    }
+
+    pub fn add_method<T: 'static, R: 'static + ToPolar, F: 'static + Fn(&T) -> R>(
+        &mut self,
+        name: &str,
+        f: F,
+    ) {
+        self.instance_methods.insert(
+            Name(name.to_string()),
+            Arc::new(
+                move |self_arg: &Instance, args: Vec<polar_core::types::Term>| {
+                    assert!(args.is_empty());
+                    let self_arg = self_arg
+                        .instance
+                        .downcast_ref::<T>()
+                        .expect(&format!("not a {}!", std::any::type_name::<T>()));
+                    let result = f(&self_arg);
+                    Arc::new(result) as Arc<dyn ToPolar>
+                },
+            ) as InstanceMethod,
+        );
+    }
+
+    pub fn add_class_method<T: 'static, R: 'static + ToPolar, F: 'static + Fn() -> R>(
+        &mut self,
+        name: &str,
+        f: F,
+    ) {
+        self.class_methods.insert(
+            Name(name.to_string()),
+            Arc::new(move |class: &Class, args: Vec<polar_core::types::Term>| {
+                assert!(args.is_empty());
+                let result = f();
+                Arc::new(result) as Arc<dyn ToPolar>
+            }) as ClassMethod,
+        );
+    }
+
+    pub fn register(
+        self,
+        name: Option<String>,
+        polar: &mut crate::polar::Polar,
+    ) -> anyhow::Result<()> {
+        polar.register_class(self, name)?;
+        Ok(())
     }
 }
 
 #[derive(Clone)]
 pub struct Instance {
     pub instance: Arc<dyn std::any::Any>,
-    pub methods: Arc<ClassMethods>,
+    pub methods: Arc<InstanceMethods>,
 }
 
 /// Maintain mappings and caches for Python classes & instances
@@ -53,15 +105,13 @@ impl Host {
         self.classes.get(name)
     }
 
-    pub fn cache_class<T: PolarClass>(
-        &mut self,
-        name: Option<Name>,
-        constructor: Option<fn() -> T>,
-    ) -> Name {
-        let name = name.unwrap_or_else(|| Name(T::name()));
-        let constructor = constructor.unwrap_or_else(|| T::constructor);
-        self.classes
-            .insert(name.clone(), Class::with_constructor(constructor));
+    pub fn get_class_mut(&mut self, name: &Name) -> Option<&mut Class> {
+        self.classes.get_mut(name)
+    }
+
+    pub fn cache_class(&mut self, class: Class, name: Option<Name>) -> Name {
+        let name = name.unwrap_or_else(|| Name(class.name.clone()));
+        self.classes.insert(name.clone(), class);
         name
     }
 
@@ -76,18 +126,13 @@ impl Host {
     }
 
     pub fn make_instance(&mut self, name: &Name, fields: BTreeMap<Name, Term>, id: u64) {
-        println!(
-            "Making instance: {}.\nConstructors: {:?}",
-            name,
-            self.classes.keys().collect::<Vec<&Name>>()
-        );
         let class = self.get_class(name).unwrap();
         debug_assert!(self.instances.get(&id).is_none());
         let _fields = fields; // TODO: use
         let instance = (class.constructor)();
         let instance = Instance {
             instance,
-            methods: Arc::new(class.methods.clone()),
+            methods: Arc::new(class.instance_methods.clone()),
         };
         self.cache_instance(instance, Some(id));
     }
@@ -176,6 +221,12 @@ impl ToPolar for String {
     }
 }
 
+impl ToPolar for &'static str {
+    fn to_polar_value(&self, _host: &mut Host) -> Value {
+        Value::String(self.to_string())
+    }
+}
+
 impl ToPolar for str {
     fn to_polar_value(&self, _host: &mut Host) -> Value {
         Value::String(self.to_owned())
@@ -196,6 +247,14 @@ impl<T: ToPolar> ToPolar for HashMap<String, T> {
                 .map(|(k, v)| (Name(k.to_string()), v.to_polar(host)))
                 .collect(),
         })
+    }
+}
+
+pub struct PolarIter<I>(pub I);
+
+impl<I: Clone + Iterator<Item = T>, T: ToPolar> ToPolar for PolarIter<I> {
+    fn to_polar_value(&self, host: &mut Host) -> Value {
+        Value::List(self.0.clone().map(|v| v.to_polar(host)).collect())
     }
 }
 
@@ -311,17 +370,8 @@ impl FromPolar for Instance {
     }
 }
 
-pub type ClassMethod = Arc<dyn Fn(&Instance, Vec<Term>) -> Arc<dyn ToPolar>>;
+pub type InstanceMethod = Arc<dyn Fn(&Instance, Vec<Term>) -> Arc<dyn ToPolar>>;
+pub type InstanceMethods = HashMap<Name, InstanceMethod>;
+
+pub type ClassMethod = Arc<dyn Fn(&Class, Vec<Term>) -> Arc<dyn ToPolar>>;
 pub type ClassMethods = HashMap<Name, ClassMethod>;
-
-pub trait PolarClass: 'static {
-    fn name() -> String {
-        std::any::type_name::<Self>().to_string()
-    }
-
-    fn constructor() -> Self;
-
-    fn methods() -> ClassMethods {
-        HashMap::new()
-    }
-}

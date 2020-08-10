@@ -60,7 +60,12 @@ impl PolarTest {
 
     fn qvar<T: oso::host::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
         let res = self.query(q);
-        res.into_iter().map(|set| set.get(var).unwrap()).collect()
+        res.into_iter()
+            .map(|set| {
+                set.get(var)
+                    .expect(&format!("query: '{}', binding for '{}'", q, var))
+            })
+            .collect()
     }
 
     fn qvar_one<T: oso::host::FromPolar>(&mut self, q: &str, var: &str) -> T {
@@ -179,7 +184,7 @@ fn test_external() {
             }
         }
 
-        fn b(&self) -> impl Iterator<Item = &'static str> {
+        fn b(&self) -> impl Iterator<Item = &'static str> + Clone {
             vec!["b"].into_iter()
         }
 
@@ -199,12 +204,12 @@ fn test_external() {
             vec![1, 2, 3]
         }
 
-        fn f(&self) -> impl Iterator<Item = Vec<u32>> {
+        fn f(&self) -> impl Iterator<Item = Vec<u32>> + Clone {
             vec![vec![1, 2, 3], vec![4, 5, 6], vec![7]].into_iter()
         }
 
-        fn g(&self) -> std::collections::HashMap<&'static str, &'static str> {
-            hashmap!("hello" => "world")
+        fn g(&self) -> std::collections::HashMap<String, &'static str> {
+            hashmap!("hello".to_string() => "world")
         }
 
         fn h(&self) -> bool {
@@ -218,40 +223,53 @@ fn test_external() {
 
     let mut test = PolarTest::new();
 
-    impl oso::host::PolarClass for Foo {
-        fn constructor() -> Self {
-            Self::new(None)
-        }
-
-        fn methods() -> oso::host::ClassMethods {
-            hashmap! {
-                polar_core::types::Symbol("a".to_string()) => Arc::new(|foo_self: &oso::host::Instance, args: Vec<polar_core::types::Term>| {
-                    assert!(args.is_empty());
-                    let foo_self = foo_self.instance.downcast_ref::<Foo>().expect("not a foo!");
-                    Arc::new(foo_self.a.to_string()) as Arc<dyn ToPolar>
-                }) as oso::host::ClassMethod
-            }
-        }
-    }
+    let mut class = oso::host::Class::with_constructor::<Foo, _>(capital_foo);
+    class.add_method("a", |foo_self: &Foo| foo_self.a);
+    class.add_method("b", |foo_self: &Foo| oso::host::PolarIter(foo_self.b()));
+    class.add_class_method::<Foo, _, _>("c", || Foo::c());
+    // class.add_method("d", |foo_self: &Foo, (arg,)| foo_self.d(arg));
+    class.add_method("e", |foo_self: &Foo| foo_self.e());
+    class.add_method("f", |foo_self: &Foo| oso::host::PolarIter(foo_self.f()));
+    class.add_method("g", |foo_self: &Foo| foo_self.g());
+    class.add_method("h", |foo_self: &Foo| foo_self.h());
 
     test.polar
-        .register_class::<Foo>(Some("Foo".to_string()), Some(capital_foo))
+        .register_class(class, Some("Foo".to_string()))
         .unwrap();
 
     assert_eq!(test.qvar_one::<String>("new Foo{}.a = x", "x"), "A");
     assert_eq!(test.qvar_one::<String>("new Foo{}.a() = x", "x"), "A");
-    assert_eq!(test.qvar_one::<String>("new Foo{}.b = x", "x"), "b");
-    assert_eq!(test.qvar_one::<String>("new Foo{}.b() = x", "x"), "b");
-    // assert qvar("new Foo{}.b = x", "x", one=True) == "b"
-    // assert qvar("new Foo{}.b() = x", "x", one=True) == "b"
-    // assert qvar("Foo.c = x", "x", one=True) == "c"
-    // assert qvar("Foo.c() = x", "x", one=True) == "c"
-    // assert qvar("new Foo{} = f and f.a() = x", "x", one=True) == "A"
-    // assert qvar("new Foo{}.bar().y() = x", "x", one=True) == "y"
-    // assert qvar("new Foo{}.e = x", "x", one=True) == [1, 2, 3]
-    // assert qvar("new Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
-    // assert qvar("new Foo{}.g.hello = x", "x", one=True) == "world"
-    // assert qvar("new Foo{}.h = x", "x", one=True) is True
+
+    // TODO: This shouldn't be a vec, b returns an iter
+    assert_eq!(
+        test.qvar_one::<Vec<String>>("new Foo{}.b = x", "x"),
+        vec!["b"]
+    );
+    assert_eq!(
+        test.qvar_one::<Vec<String>>("new Foo{}.b() = x", "x"),
+        vec!["b"]
+    );
+
+    // TODO: Register Foo as a constant
+    // assert_eq!(test.qvar_one::<String>("Foo.c = x", "x"), "c");
+    // assert_eq!(test.qvar_one::<String>("Foo.c() = x", "x"), "c");
+    assert_eq!(
+        test.qvar_one::<String>("new Foo{} = f and f.a() = x", "x"),
+        "A"
+    );
+    assert_eq!(
+        test.qvar_one::<Vec<u32>>("new Foo{}.e = x", "x"),
+        vec![1, 2, 3]
+    );
+    assert_eq!(
+        test.qvar_one::<Vec<Vec<u32>>>("new Foo{}.f = x", "x"),
+        vec![vec![1, 2, 3], vec![4, 5, 6], vec![7]]
+    );
+    assert_eq!(
+        test.qvar_one::<String>("new Foo{}.g.hello = x", "x"),
+        "world"
+    );
+    assert!(test.qvar_one::<bool>("new Foo{}.h = x", "x"));
 }
 
 // def test_external(polar, qvar):

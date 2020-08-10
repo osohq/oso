@@ -44,16 +44,13 @@ impl Polar {
         Ok(query)
     }
 
-    pub fn register_class<T: crate::host::PolarClass>(
+    pub fn register_class(
         &mut self,
+        class: crate::host::Class,
         name: Option<String>,
-        constructor: Option<fn() -> T>,
     ) -> anyhow::Result<()> {
-        self.host
-            .lock()
-            .unwrap()
-            .cache_class::<T>(name.map(polar_core::types::Symbol), constructor);
-
+        let mut host = self.host.lock().unwrap();
+        let _name = host.cache_class(class, name.map(polar_core::types::Symbol));
         Ok(())
     }
     // pub fn query_rule<'a>(
