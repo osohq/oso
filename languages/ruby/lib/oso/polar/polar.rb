@@ -3,6 +3,7 @@
 require 'json'
 require 'pp'
 require 'set'
+require 'digest/md5'
 
 # Missing Ruby type.
 module PolarBoolean; end
@@ -21,7 +22,8 @@ module Oso
       def initialize
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
-        @load_queue = Set.new
+        @loaded_names = {}
+        @loaded_contents = {}
 
         # Register built-in classes.
         register_class(PolarBoolean, name: 'Boolean')
@@ -34,7 +36,8 @@ module Oso
 
       # Replace the current Polar instance but retain all registered classes and constructors.
       def clear
-        load_queue.clear
+        loaded_names.clear
+        loaded_contents.clear
         @ffi_polar = FFI::Polar.create
       end
 
@@ -43,11 +46,25 @@ module Oso
       # @param name [String]
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
       # @raise [PolarFileNotFoundError] if provided filename does not exist.
-      def load_file(name)
-        raise PolarFileExtensionError unless ['.pol', '.polar'].include? File.extname(name)
-        raise PolarFileNotFoundError, name unless File.file?(name)
+      def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+        raise PolarFileExtensionError unless File.extname(name) == '.polar'
 
-        load_queue << name
+        file_data = File.open(name, &:read)
+        hash = Digest::MD5.hexdigest(file_data)
+
+        if loaded_names.key?(name)
+          raise PolarFileAlreadyLoadedError, name if loaded_names[name] == hash
+
+          raise PolarFileContentsChangedError, name
+        elsif loaded_contents.key?(hash)
+          raise PolarFileNameChangedError, name, loaded_contents[hash]
+        else
+          load_str(file_data, filename: name)
+          loaded_names[name] = hash
+          loaded_contents[hash] = name
+        end
+      rescue Errno::ENOENT
+        raise PolarFileNotFoundError, name
       end
 
       # Load a Polar string into the KB.
@@ -83,8 +100,7 @@ module Oso
       #   @param query [Predicate]
       #   @return [Enumerator] of resulting bindings
       #   @raise [Error] if the FFI call raises one.
-      def query(query) # rubocop:disable Metrics/MethodLength
-        load_queued_files
+      def query(query)
         new_host = host.dup
         case query
         when String
@@ -111,7 +127,6 @@ module Oso
       # @raise [Error] if the FFI call raises one.
       def repl(load: false) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
         ARGV.map { |f| load_file(f) } if load
-        load_queued_files
 
         loop do # rubocop:disable Metrics/BlockLength
           print 'query> '
@@ -165,20 +180,14 @@ module Oso
         ffi_polar.register_constant(name, value: host.to_polar_term(value))
       end
 
-      # Load all queued files, flushing the {#load_queue}.
-      def load_queued_files
-        load_queue.reject! do |filename|
-          File.open(filename) { |file| load_str(file.read, filename: filename) }
-          true
-        end
-      end
-
       private
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
-      # @return [Array<String>]
-      attr_reader :load_queue
+      # @return [Hash<String, String>]
+      attr_reader :loaded_names
+      # @return [Hash<String, String>]
+      attr_reader :loaded_contents
     end
   end
 end

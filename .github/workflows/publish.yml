@@ -12,10 +12,25 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GithubToken: ${{ secrets.GITHUB_TOKEN }}
+      GPGPassphrase: ${{ secrets.PASSPHRASE }}
+      JiraUser: ${{ secrets.JIRAUSER }}
+      JiraPassword: ${{ secrets.JIRAPASSWORD }}
     steps:
       - uses: actions/checkout@v2
         with:
           ref: "v${{ github.event.inputs.version }}"
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v2
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          PASSPHRASE: ${{ secrets.PASSPHRASE }}
+      - name: GPG user IDs
+        run: |
+          echo "fingerprint: ${{ steps.import_gpg.outputs.fingerprint }}"
+          echo "keyid:       ${{ steps.import_gpg.outputs.keyid }}"
+          echo "name:        ${{ steps.import_gpg.outputs.name }}"
+          echo "email:       ${{ steps.import_gpg.outputs.email }}"
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-lib-${{ github.event.inputs.version }}.zip") | .url') --output oso-lib-${{ github.event.inputs.version }}.zip
       - run: unzip oso-lib-${{ github.event.inputs.version }}.zip -d oso-lib-${{ github.event.inputs.version }}
@@ -31,7 +46,7 @@ jobs:
           mkdir -p languages/java/oso/src/main/resources/win
           cp -r oso-lib-${{ github.event.inputs.version }}/polar.dll languages/java/oso/src/main/resources/win/
       - run: |
-          mvn clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true -s settings.xml
+          GPG_TTY=$(tty) mvn clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true --settings settings.xml
         working-directory: languages/java/oso
   python:
     name: Publish python package to pypi

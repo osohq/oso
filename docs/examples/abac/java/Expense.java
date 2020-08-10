@@ -17,7 +17,7 @@ public class Expense {
     public Expense() {
     }
 
-    public static Expense byId(Integer id) {
+    public static Expense id(Integer id) {
         if (id < EXPENSES.size()) {
             return EXPENSES.get(id);
         } else {

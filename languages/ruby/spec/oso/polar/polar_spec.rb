@@ -108,20 +108,26 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         f.rewind
         f.close
       end
-      subject.load_file(file.path)
-      expect { query(subject, 'f(x)') }.to raise_error do |e|
+
+      expect { subject.load_file(file.path) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
         expect(e.message).to eq("did not expect to find the token ';' at line 1, column 1 in file #{file.path}")
       end
     end
 
     it 'raises if given a non-Polar file' do
-      expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarRuntimeError
+      expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarFileExtensionError
+    end
+
+    it 'raises if given a non-existent file' do
+      expect { subject.load_file('other.polar') }.to raise_error Oso::Polar::PolarFileNotFoundError
     end
 
     it 'is idempotent' do
-      2.times { subject.load_file(test_file) }
-      expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
+      expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::PolarFileAlreadyLoadedError
+        expect(e.message).to eq("File #{test_file} has already been loaded.")
+      end
     end
 
     it 'can load multiple files' do
@@ -154,7 +160,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context '#make_instance' do # rubocop:disable Metrics/BlockLength
-    context 'when using the default constructor' do # rubocop:disable Metrics/BlockLength
+    context 'when using the default constructor' do
       it 'handles keyword args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
@@ -165,9 +171,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           end
         end)
         subject.register_class(Foo)
-        one = subject.host.to_polar_term(1)
-        two = subject.host.to_polar_term(2)
-        id = subject.host.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
+        id = subject.host.make_instance('Foo', initargs: { bar: 1, baz: 2 }, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
@@ -179,7 +183,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           def initialize; end
         end)
         subject.register_class(Foo)
-        id = subject.host.make_instance('Foo', fields: {}, id: 1)
+        id = subject.host.make_instance('Foo', initargs: {}, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
@@ -202,9 +206,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end)
         constructor = ->(**args) { Foo.new(**args) }
         subject.register_class(Foo, from_polar: constructor)
-        one = subject.host.to_polar_term(1)
-        two = subject.host.to_polar_term(2)
-        id = subject.host.make_instance('Foo', fields: { 'bar' => one, 'baz' => two }, id: 1)
+        id = subject.host.make_instance('Foo', initargs: { bar: 1, baz: 2 }, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
@@ -214,7 +216,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       it 'handles no args' do
         stub_const('Foo', Class.new)
         subject.register_class(Foo, from_polar: -> { Foo.new })
-        id = subject.host.make_instance('Foo', fields: {}, id: 1)
+        id = subject.host.make_instance('Foo', initargs: {}, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end

@@ -40,7 +40,7 @@ def externals(polar):
 
 
 def test_load_file(load_file, tell, qeval, qvar):
-    load_file(Path(__file__).parent / "policies/test.pol")
+    load_file(Path(__file__).parent / "policies/test.polar")
     assert qeval('test("true")')
     tell('b("foo")')
     assert qvar("a(x)", "x", one=True) == "foo"

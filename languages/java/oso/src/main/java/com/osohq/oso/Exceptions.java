@@ -3,6 +3,7 @@ package com.osohq.oso;
 import org.json.*;
 import java.util.*;
 
+@SuppressWarnings("serial")
 public class Exceptions {
     public static OsoException getJavaError(String polarError) {
         String msg, kind, subkind;
@@ -35,7 +36,6 @@ public class Exceptions {
             default:
                 return new OsoException(msg, details);
         }
-
     }
 
     private static OsoException parseError(String kind, String msg, Map<String, Object> details) {
@@ -92,7 +92,6 @@ public class Exceptions {
     }
 
     public static class OsoException extends Exception {
-        private static final long serialVersionUID = 1L;
         private Map<String, Object> details;
 
         public OsoException(String msg, Map<String, Object> details) {
@@ -107,14 +106,10 @@ public class Exceptions {
         public Map<String, Object> getDetails() {
             return details;
         }
-
     }
 
-    // Expected to find an FFI error to convert into a Java error but found
-    // none.
+    /** Expected to find an FFI error to convert into a Java error but found none. */
     public static class FFIErrorNotFound extends OsoException {
-        private static final long serialVersionUID = 1L;
-
         public FFIErrorNotFound(String msg, Map<String, Object> details) {
             super(msg, details);
         }
@@ -124,10 +119,8 @@ public class Exceptions {
         }
     }
 
-    // Generic runtime exception.
+    /** Generic runtime exception. */
     public static class PolarRuntimeException extends OsoException {
-        private static final long serialVersionUID = 1L;
-
         public PolarRuntimeException(String msg, Map<String, Object> details) {
             super(msg, details);
         }
@@ -135,260 +128,217 @@ public class Exceptions {
         public PolarRuntimeException(String msg) {
             super(msg);
         }
-
     }
 
     // Errors from across the FFI boundary.
-    public static class SerializationError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
 
+    public static class SerializationError extends PolarRuntimeException {
         public SerializationError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
     }
 
     public static class UnsupportedError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
         public UnsupportedError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
     public static class PolarTypeError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
         public PolarTypeError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
     public static class StackOverflowError extends PolarRuntimeException {
         public StackOverflowError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
-        private static final long serialVersionUID = 1L;
-
     }
 
     // Errors originating from this side of the FFI boundary.
+
     public static class UnregisteredClassError extends PolarRuntimeException {
         public UnregisteredClassError(String clsName) {
             super(clsName);
         }
-
-        private static final long serialVersionUID = 1L;
-
     }
 
     public static class MissingConstructorError extends PolarRuntimeException {
         public MissingConstructorError(String clsName) {
             super("Missing constructor for class " + clsName);
         }
-
-        private static final long serialVersionUID = 1L;
-
     }
 
     public static class UnregisteredInstanceError extends PolarRuntimeException {
         public UnregisteredInstanceError(long id) {
             super("Unregistered instance ID: " + id);
         }
-
-        private static final long serialVersionUID = 1L;
-
     }
 
     public static class DuplicateInstanceRegistrationError extends PolarRuntimeException {
         public DuplicateInstanceRegistrationError(Long id) {
             super(id.toString());
         }
-
-        private static final long serialVersionUID = 1L;
-
     }
 
     public static class InvalidCallError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
-        public InvalidCallError(String className, String callName, List<Class> argTypes) {
+        public InvalidCallError(String className, String callName, Class<?>... argTypes) {
             super("`" + callName + "` on class " + className + ", with argument types " + "`" + argTypes + "`");
         }
 
         public InvalidCallError(String msg) {
             super(msg);
         }
-
     }
 
     public static class InvalidConstructorError extends PolarRuntimeException {
+        public InvalidConstructorError(String msg) {
+            super(msg);
+        }
+
         public InvalidConstructorError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
+    }
 
-        private static final long serialVersionUID = 1L;
+    public static class InstantiationError extends PolarRuntimeException {
+        public InstantiationError(String className) {
+            super("constructor on class `" +  className + "`");
+        }
 
+        public InstantiationError(String className, Exception e) {
+            super("constructor on class `" +  className + "`: " + e.getMessage());
+        }
     }
 
     public static class InlineQueryFailedError extends PolarRuntimeException {
         public InlineQueryFailedError() {
             super(null, null);
         }
-
-        private static final long serialVersionUID = 1L;
-
     }
 
     public static class NullByteInPolarFileError extends PolarRuntimeException {
         public NullByteInPolarFileError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
-        private static final long serialVersionUID = 1L;
-
     }
 
     public static class UnexpectedPolarTypeError extends PolarRuntimeException {
+        public UnexpectedPolarTypeError(String type) {
+            super(type);
+        }
+    }
+
+    public static class PolarFileAlreadyLoadedError extends PolarRuntimeException {
         private static final long serialVersionUID = 1L;
 
-        public UnexpectedPolarTypeError(String type) {
+        public PolarFileAlreadyLoadedError(String type) {
+            super(type);
+        }
+    }
+
+    public static class PolarFileContentsChangedError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public PolarFileContentsChangedError(String type) {
+            super(type);
+        }
+    }
+
+    public static class PolarFileNameChangedError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public PolarFileNameChangedError(String type) {
             super(type);
         }
 
     }
 
     public static class PolarFileExtensionError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
         public PolarFileExtensionError() {
-            super("Polar files must have a .pol or .polar extension");
+            super("Polar files must have a .polar extension");
         }
     }
 
     public static class PolarFileNotFoundError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
         public PolarFileNotFoundError(String filename) {
             super("Could not find file: " + filename);
         }
     }
 
     public static class DuplicateClassAliasError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
         public DuplicateClassAliasError(String alias, String oldClass, String newClass) {
             super("Attempted to alias '" + newClass + "' as '" + alias + "', but " + oldClass
                     + " already has that alias.");
         }
-
     }
 
-    // # Generic operational exception.
     public static class OperationalError extends OsoException {
-        private static final long serialVersionUID = 1L;
-
         public OperationalError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
     }
 
-    // class UnknownError < OperationalError; end
     public static class UnknownError extends OperationalError {
-        private static final long serialVersionUID = 1L;
-
         public UnknownError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
 
     }
 
-    // Catch-all for a parsing error that doesn't match any of the more specific
-    // types.
     public static class ParseError extends OsoException {
-        private static final long serialVersionUID = 1L;
-
         public ParseError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
-    // class ExtraToken < ParseError; end
     public static class ExtraToken extends ParseError {
-        private static final long serialVersionUID = 1L;
-
         public ExtraToken(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
-    // class IntegerOverflow < ParseError; end
     public static class IntegerOverflow extends ParseError {
-        private static final long serialVersionUID = 1L;
-
         public IntegerOverflow(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
     public static class InvalidTokenCharacter extends ParseError {
-        private static final long serialVersionUID = 1L;
-
         public InvalidTokenCharacter(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
     public static class InvalidToken extends ParseError {
-        private static final long serialVersionUID = 1L;
-
         public InvalidToken(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
     public static class UnrecognizedEOF extends ParseError {
-        private static final long serialVersionUID = 1L;
-
         public UnrecognizedEOF(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
     public static class UnrecognizedToken extends ParseError {
-        private static final long serialVersionUID = 1L;
-
         public UnrecognizedToken(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
-    // Generic Polar API exception.
+    /** Generic Polar API exception. */
     public static class ApiError extends OsoException {
-        private static final long serialVersionUID = 1L;
-
         public ApiError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
 
     public static class ParameterError extends ApiError {
-        private static final long serialVersionUID = 1L;
-
         public ParameterError(String msg, Map<String, Object> details) {
             super(msg, details);
         }
-
     }
-
 }

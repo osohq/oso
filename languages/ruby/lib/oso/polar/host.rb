@@ -116,19 +116,24 @@ module Oso
       # @param fields [Hash<String, Hash>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
-      def make_instance(cls_name, fields:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def make_instance(cls_name, initargs:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
         constructor = get_constructor(cls_name)
-        fields = Hash[fields.map { |k, v| [k.to_sym, to_ruby(v)] }]
         instance = if constructor == :new
-                     if fields.empty?
+                     if initargs.empty?
                        get_class(cls_name).__send__(:new)
+                     elsif initargs.is_a? Array
+                       get_class(cls_name).__send__(:new, *initargs)
                      else
-                       get_class(cls_name).__send__(:new, **fields)
+                       get_class(cls_name).__send__(:new, **initargs)
                      end
-                   elsif fields.empty?
+                   elsif initargs.empty?
                      constructor.call
+                   elsif initargs.is_a? Array
+                     constructor.call(*initargs)
+                   elsif initargs.is_a? Hash
+                     constructor.call(**initargs)
                    else
-                     constructor.call(**fields)
+                     raise PolarRuntimeError, "Bad initargs: #{initargs}"
                    end
         cache_instance(instance, id: id)
       rescue StandardError => e

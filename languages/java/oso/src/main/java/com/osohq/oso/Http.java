@@ -10,7 +10,5 @@ public class Http {
         this.hostname = hostname;
         this.path = path;
         this.query = query;
-
     }
-
 }

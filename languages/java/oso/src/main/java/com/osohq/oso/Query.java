@@ -58,12 +58,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Helper for `ExternalCall` query events
-     *
-     * @param attrName
-     * @param jArgs
-     * @param instanceId
-     * @param callId
-     * @throws Exceptions.OsoException
      */
     private void handleCall(String attrName, JSONArray jArgs, JSONObject polarInstance, long callId)
             throws Exceptions.OsoException {
@@ -84,15 +78,14 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Generate the next Query result
-     *
-     * @return
-     * @throws Exceptions.OsoException
      */
     private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
         while (true) {
             String eventStr = ffiQuery.nextEvent().get();
-            String kind;
-            JSONObject data;
+            String kind, className;
+            JSONObject data, instance;
+            Long callId;
+
             try {
                 JSONObject event = new JSONObject(eventStr);
                 kind = event.keys().next();
@@ -113,22 +106,32 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     if (host.hasInstance(id)) {
                         throw new Exceptions.DuplicateInstanceRegistrationError(id);
                     }
-                    String clsName = data.getJSONObject("instance").getString("tag");
-                    JSONObject jFields = data.getJSONObject("instance").getJSONObject("fields").getJSONObject("fields");
-                    host.makeInstance(clsName, host.polarDictToJava(jFields), id);
+                    JSONObject constructor = data.getJSONObject("constructor").getJSONObject("value");
+                    JSONArray initargs;
+                    if (constructor.has("InstanceLiteral")) {
+                        // Keyword initargs are not supported in Java.
+                        className = constructor.getJSONObject("InstanceLiteral").getString("tag");
+                        throw new Exceptions.InstantiationError(className);
+                    } else if (constructor.has("Call")) {
+                        className = constructor.getJSONObject("Call").getString("name");
+                        initargs = constructor.getJSONObject("Call").getJSONArray("args");
+                    } else {
+                        throw new Exceptions.InvalidConstructorError("Bad constructor");
+                    }
+                    host.makeInstance(className, host.polarListToJava(initargs), id);
                     break;
                 case "ExternalCall":
-                    long callId = data.getLong("call_id");
-                    JSONObject polarInstance = data.getJSONObject("instance");
+                    instance = data.getJSONObject("instance");
+                    callId = data.getLong("call_id");
                     String attrName = data.getString("attribute");
                     JSONArray jArgs = data.getJSONArray("args");
-                    handleCall(attrName, jArgs, polarInstance, callId);
+                    handleCall(attrName, jArgs, instance, callId);
                     break;
                 case "ExternalIsa":
-                    JSONObject instance = data.getJSONObject("instance");
+                    instance = data.getJSONObject("instance");
                     callId = data.getLong("call_id");
-                    String classTag = data.getString("class_tag");
-                    int answer = host.isa(instance, classTag) ? 1 : 0;
+                    className = data.getString("class_tag");
+                    int answer = host.isa(instance, className) ? 1 : 0;
                     ffiQuery.questionResult(callId, answer);
                     break;
                 case "ExternalIsSubSpecializer":
@@ -171,7 +174,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      * @param callId        Call ID under which to register the call.
      * @param polarInstance JSONObject containing either an instance_id or an
      *                      instance of a built-in type.
-     * @throws Exceptions.InvalidCallError
      */
     public void registerCall(String attrName, List<Object> args, long callId, JSONObject polarInstance)
             throws Exceptions.InvalidCallError,
@@ -189,23 +191,22 @@ public class Query implements Enumeration<HashMap<String, Object>> {
             instance = host.toJava(polarInstance);
         }
 
-        // Get types of args to pass into `getMethod()`
-        List<Class> argTypes = args.stream().map(a -> a.getClass()).collect(Collectors.toUnmodifiableList());
+        // Select a method to call based on the types of the arguments.
+        Class<?>[] argTypes = args.stream().map(a -> a.getClass())
+            .collect(Collectors.toUnmodifiableList())
+            .toArray(new Class[0]);
         Object result = null;
-        Boolean isMethod = true;
         try {
-            Class cls = instance instanceof Class ? (Class) instance : instance.getClass();
+            Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
             try {
-                Method method = cls.getMethod(attrName, argTypes.toArray(new Class[argTypes.size()]));
+                Method method = cls.getMethod(attrName, argTypes);
                 result = method.invoke(instance, args.toArray());
             } catch (NoSuchMethodException e) {
-                isMethod = false;
-            }
-            if (!isMethod) {
+                // Look for a field with the given name.
                 try {
                     Field field = cls.getField(attrName);
                     result = field.get(instance);
-                } catch (NoSuchFieldException e) {
+                } catch (NoSuchFieldException f) {
                     throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
                 }
             }
@@ -227,10 +228,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Get cached Java method call result.
-     *
-     * @param callId
-     * @return
-     * @throws Exceptions.PolarRuntimeException
      */
     private Enumeration<Object> getCall(long callId) throws Exceptions.PolarRuntimeException {
         if (calls.containsKey(callId)) {
@@ -243,11 +240,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
 
     /**
      * Get the next JSONified Polar result of a cached method call (enumeration).
-     *
-     * @param callId
-     * @return JSONObject
-     * @throws NoSuchElementException
-     * @throws Exceptions.OsoException
      */
     protected JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
         return host.toPolarTerm(getCall(callId).nextElement());

@@ -67,7 +67,6 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
             args,
         }) if args.len() == 1 => {
             // Rewrite new(Foo{}) to new(Foo{}, x) with x a temporary.
-            assert!(matches!(args[0].value(), Value::InstanceLiteral { .. }));
             let temp = Value::Variable(kb.gensym("instance"));
             let new_op = Value::Expression(Operation {
                 operator: Operator::New,

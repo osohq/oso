@@ -1,34 +1,41 @@
 package com.osohq.oso;
 
+import java.lang.reflect.Constructor;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.function.Function;
 
+import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
 
 public class Polar {
     private Ffi.Polar ffiPolar;
     protected Host host; // visible for tests only
-    private Map<String, String> loadQueue; // Map from filename -> file contents
+    private Map<String, String> loadedNames; // Map from filename -> file contents
+    private Map<String, String> loadedContent; // Map from file contents -> filename
 
     public Polar() throws Exceptions.OsoException {
         ffiPolar = Ffi.get().polarNew();
         host = new Host(ffiPolar);
-        loadQueue = new HashMap<String, String>();
+        loadedNames = new HashMap<String, String>();
+        loadedContent = new HashMap<String, String>();
 
         // Register built-in classes.
-        // FIXME: These constructors are garbage.
-        registerClass(Boolean.class, m -> (boolean) m.get("value") ? false : true, "Boolean");
-        registerClass(Integer.class, m -> (int) m.get("value"), "Integer");
-        registerClass(Double.class, m -> (double) m.get("value"), "Float");
-        registerClass(List.class, m -> (List<Object>) m.get("value"), "List");
-        registerClass(Map.class, m -> (Map<String, Object>) m.get("fields"), "Dictionary");
-        registerClass(String.class, m -> (String) m.get("value"), "String");
+        registerClass(Boolean.class, "Boolean");
+        registerClass(Integer.class, "Integer");
+        registerClass(Double.class, "Float");
+        registerClass(List.class, "List");
+        registerClass(Map.class, "Dictionary");
+        registerClass(String.class, "String");
     }
 
     /**
@@ -37,7 +44,8 @@ public class Polar {
      * @throws Exceptions.OsoException
      */
     public void clear() throws Exceptions.OsoException {
-        loadQueue.clear();
+        loadedNames.clear();
+        loadedContent.clear();
         ffiPolar = Ffi.get().polarNew();
     }
 
@@ -47,12 +55,10 @@ public class Polar {
      * will not be recognized. If the filename already exists in the load queue,
      * replace it.
      *
-     * @param filename
      * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
-     * @throws IOException                        If unable to open or read the
-     *                                            file.
+     * @throws IOException                        If unable to open or read the file.
      */
-    public void loadFile(String filename) throws IOException, Exceptions.PolarFileExtensionError {
+    public void loadFile(String filename) throws IOException, OsoException {
         Optional<String> ext = Optional.ofNullable(filename).filter(f -> f.contains("."))
                 .map(f -> f.substring(filename.lastIndexOf(".") + 1));
 
@@ -61,8 +67,30 @@ public class Polar {
             throw new Exceptions.PolarFileExtensionError();
         }
 
-        // add file to queue
-        loadQueue.put(filename, new String(Files.readAllBytes(Paths.get(filename))));
+        try {
+            File file = new File(Paths.get(filename).toString());
+            String hash = getFileChecksum(file);
+            if (loadedNames.containsKey(filename)) {
+                if (loadedNames.get(filename).equals(hash)) {
+                    throw new Exceptions.PolarFileAlreadyLoadedError("File " + filename + " has already been loaded.");
+                } else {
+                    throw new Exceptions.PolarFileContentsChangedError(
+                            "A file with the name " + filename + ", but different contents, has already been loaded.");
+                }
+            } else if (loadedContent.containsKey(hash)) {
+                throw new Exceptions.PolarFileNameChangedError("A file with the same contents as " + filename
+                        + " named " + loadedContent.get(hash) + "has already been loaded.");
+            } else {
+                loadStr(new String(Files.readAllBytes(Paths.get(filename))), filename);
+                loadedNames.put(filename, hash);
+                loadedContent.put(hash, filename);
+            }
+        } catch (NoSuchAlgorithmException e) {
+            throw new PolarRuntimeException("Failed to hash file " + filename);
+        } catch (FileNotFoundException e) {
+            throw new Exceptions.PolarFileNotFoundError(filename);
+        }
+
     }
 
     /**
@@ -70,7 +98,6 @@ public class Polar {
      *
      * @param str      Polar string to be loaded.
      * @param filename Name of the source file.
-     * @throws Exceptions.OsoException
      */
     public void loadStr(String str, String filename) throws Exceptions.OsoException {
         ffiPolar.loadStr(str, filename);
@@ -81,7 +108,6 @@ public class Polar {
      * Load a Polar string into the KB (without filename).
      *
      * @param str Polar string to be loaded.
-     * @throws Exceptions.OsoException
      */
     public void loadStr(String str) throws Exceptions.OsoException {
         ffiPolar.loadStr(str, null);
@@ -90,23 +116,15 @@ public class Polar {
 
     /**
      * Query for a predicate, parsing it first.
-     *
-     * @param query String string
-     * @return Query object (Enumeration of resulting variable bindings).
      */
     public Query query(String query) throws Exceptions.OsoException {
-        loadQueuedFiles();
         return new Query(ffiPolar.newQueryFromStr(query), host.clone());
     }
 
     /**
      * Query for a predicate.
-     *
-     * @param query as a Predicate
-     * @return Query object (Enumeration of resulting variable bindings).
      */
     public Query query(Predicate query) throws Exceptions.OsoException {
-        loadQueuedFiles();
         Host new_host = host.clone();
         String pred = new_host.toPolarTerm(query).toString();
         return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
@@ -117,11 +135,8 @@ public class Polar {
      *
      * @param rule Rule name, e.g. "f" for rule "f(x)".
      * @param args Variable list of rule arguments.
-     * @return Query object (Enumeration of resulting variable bindings).
-     * @throws Exceptions.OsoException
      */
     public Query queryRule(String rule, Object... args) throws Exceptions.OsoException {
-        loadQueuedFiles();
         Host new_host = host.clone();
         String pred = new_host.toPolarTerm(new Predicate(rule, Arrays.asList(args))).toString();
         return new Query(ffiPolar.newQueryFromTerm(pred), new_host);
@@ -129,8 +144,6 @@ public class Polar {
 
     /**
      * Start the Polar REPL.
-     *
-     * @throws Exceptions.OsoException
      */
     public void repl() throws Exceptions.OsoException, IOException {
         repl(new String[0]);
@@ -138,14 +151,11 @@ public class Polar {
 
     /**
      * Load the given files and start the Polar REPL.
-     *
-     * @throws Exceptions.OsoException
      */
     public void repl(String[] files) throws Exceptions.OsoException, IOException {
         for (String file : files) {
             loadFile(file);
         }
-        loadQueuedFiles();
 
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         Ffi.Query ffiQuery;
@@ -191,70 +201,47 @@ public class Polar {
     }
 
     /**
-     * Register a Java class with oso.
-     *
-     * @param cls       Class object to be registered.
-     * @param fromPolar lambda function to convert from a
-     *                  {@code Map<String, Object>} of parameters to an instance of
-     *                  the Java class.
-     * @throws Exceptions.DuplicateClassAliasError if class has already been
-     *                                             registered.
+     * Register a Java class with Polar.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar)
+    public void registerClass(Class<?> cls)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-        registerClass(cls, fromPolar, cls.getName());
+        registerClass(cls, cls.getName(), null);
     }
 
     /**
-     * Register a Java class with oso using an alias.
-     *
-     * @param cls       Class object to be registered.
-     * @param fromPolar lambda function to convert from a
-     *                  {@code Map<String, Object>} of parameters to an instance of
-     *                  the Java class.
-     * @param name      name to register the class under, which is how the class is
-     *                  accessed from Polar.
-     * @throws Exceptions.DuplicateClassAliasError if a class has already been
-     *                                             registered with the given alias.
+     * Register a Java class with Polar using a specific constructor.
      */
-    public void registerClass(Class cls, Function<Map, Object> fromPolar, String name)
+    public void registerClass(Class<?> cls, Constructor<?> constructor)
             throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-        host.cacheClass(cls, fromPolar, name);
+        registerClass(cls, cls.getName(), constructor);
+    }
+
+    /**
+     * Register a Java class with Polar using an alias.
+     */
+    public void registerClass(Class<?> cls, String name)
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
+        registerClass(cls, name, null);
+    }
+
+    /**
+     * Register a Java class with an optional constructor and alias.
+     */
+    public void registerClass(Class<?> cls, String name, Constructor<?> constructor)
+            throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
+        host.cacheClass(cls, constructor, name);
         registerConstant(name, cls);
     }
 
     /**
      * Registers `value` as a Polar constant variable called `name`.
-     *
-     * @param name
-     * @param value
-     * @throws Exceptions.OsoException
      */
     public void registerConstant(String name, Object value) throws Exceptions.OsoException {
         ffiPolar.registerConstant(name, host.toPolarTerm(value).toString());
     }
 
-    /*******************/
-    /* PRIVATE METHODS */
-    /*******************/
-
-    /**
-     * Load all queued files, flushing the {@code loadQueue}
-     *
-     * @throws Exceptions.OsoException
-     */
-    private void loadQueuedFiles() throws Exceptions.OsoException {
-        for (String fname : loadQueue.keySet()) {
-            loadStr(loadQueue.get(fname), fname);
-        }
-        loadQueue.clear();
-    }
-
     /**
      * Confirm that all queued inline queries succeed.
-     *
-     * @throws Exceptions.OsoException           On failed query creation.
-     * @throws Exceptions.InlineQueryFailedError On inline query failure.
      */
     private void checkInlineQueries() throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
         Ffi.Query nextQuery = ffiPolar.nextInlineQuery();
@@ -264,5 +251,39 @@ public class Polar {
             }
             nextQuery = ffiPolar.nextInlineQuery();
         }
+    }
+
+    private static String getFileChecksum(File file) throws IOException, NoSuchAlgorithmException {
+        // Get file input stream for reading the file content
+        FileInputStream fis = new FileInputStream(file);
+
+        // Use MD5 algorithm
+        MessageDigest digest = MessageDigest.getInstance("MD5");
+
+        // Create byte array to read data in chunks
+        byte[] byteArray = new byte[1024];
+        int bytesCount = 0;
+
+        // Read file data and update in message digest
+        while ((bytesCount = fis.read(byteArray)) != -1) {
+            digest.update(byteArray, 0, bytesCount);
+        }
+        ;
+
+        // close the stream; We don't need it now.
+        fis.close();
+
+        // Get the hash's bytes
+        byte[] bytes = digest.digest();
+
+        // This bytes[] has bytes in decimal format;
+        // Convert it to hexadecimal format
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+        }
+
+        // return complete hash
+        return sb.toString();
     }
 }

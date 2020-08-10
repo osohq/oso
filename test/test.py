@@ -43,7 +43,6 @@ oso.register_class(B.C, name="C", from_polar=custom_c_constructor)
 
 polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
 oso.load_file(polar_file)
-oso._load_queued_files()
 
 assert oso.is_allowed("a", "b", "c")
 

@@ -30,7 +30,6 @@ def load(oso):
 def test_parses(oso, policy, load):
     """Test that policy parses and inline tests pass."""
     load(policy)
-    oso._load_queued_files()
 
 
 EXPENSES_DEFAULT = {"location": "NYC", "amount": 50, "project_id": 2}

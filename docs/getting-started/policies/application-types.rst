@@ -96,33 +96,51 @@ make it possible to take advantage of an app's existing domain model. For exampl
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has a field
         called ``isAdmin``, it is evaluated by the Polar rule and found to be true.
 
-.. note::
-    You can also call methods on application instances in a policy. If the method takes arguments, the method must be called
-    with `ordered arguments`, even if the method is defined to take keyword arguments.
+In addition to accessing attributes, you can also call methods on application
+instances in a policy:
 
+.. code-block:: polar
+    :caption: :fa:`oso` policy.polar
+
+    allow(actor, action, resource) if actor.isAdminOf(resource);
+
+If the method takes arguments, they must currently be supplied as
+positional arguments, even if the method is defined to take keyword
+arguments.
 
 .. _specializer:
 
 Registering Application Types
 ==============================
 
-Instances of application types can be constructed from inside an oso policy using the :ref:`operator-new` operator if the class has been **registered**:
+Instances of application types can be constructed from inside an oso policy
+using the :ref:`operator-new` operator if the class has been **registered**:
 
 .. tabs::
     .. group-tab:: Python
-        We can register a Python class using :py:meth:`oso.Oso.register_class` or the :py:func:`~oso.polar_class` decorator:
+        We can register a Python class using :py:meth:`oso.Oso.register_class`
+        or the :py:func:`~oso.polar_class` decorator:
 
         .. code-block:: python
             :caption: :fab:`python` app.py
 
             oso.register_class(User)
 
-        Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
+        Once the class is registered, we can make a ``User`` object in Polar.
+        This can be helpful for writing inline test queries:
 
         .. code-block:: polar
             :caption: :fa:`oso` policy.polar
 
             ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
+
+        Initialization arguments provided in this way are passed as keywords.
+        We can also pass positional arguments to the class constructor:
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            ?= allow(new User("alice", true), "foo", "bar");
 
     .. group-tab:: Ruby
         Ruby classes are registered using ``register_class()``(see :doc:`/ruby/index`):
@@ -132,55 +150,77 @@ Instances of application types can be constructed from inside an oso policy usin
 
             OSO.register_class(User)
 
-        Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
+        Once the class is registered, we can make a ``User`` object in Polar.
+        This can be helpful for writing inline test queries:
 
         .. code-block:: polar
             :caption: :fa:`oso` policy.polar
 
             ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
 
-    .. group-tab:: Java
-        To register a Java class, you must provide a lambda function to ``registerClass()`` that takes a map of arguments:
-
-        .. code-block:: java
-            :caption: :fab:`java` User.java
-
-            public static void main(String[] args) {
-                oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
-            }
-
-        Once the class is registered, we can make a ``User`` object in Polar. This can be helpful for writing inline queries:
+        Initialization arguments provided in this way are passed as keywords.
+        We can also pass positional arguments to the class constructor:
 
         .. code-block:: polar
             :caption: :fa:`oso` policy.polar
 
-            ?= allow(new User{name: "alice", isAdmin: true}, "foo", "bar");
+            ?= allow(new User("alice", true), "foo", "bar");
 
+    .. group-tab:: Java
+        Java classes are registered using ``registerClass()``:
 
+        .. code-block:: java
+            :caption: :fab:`java` App.java
 
-Registering classes also makes it possible to use :ref:`specialization` and the :ref:`operator-matches` with the registered class.
+            public static void main(String[] args) {
+                oso.registerClass(User.class);
+            }
 
-In our previous example, the **allow** rule expected the actor to be a ``User``, but we couldn't actually check
-that type assumption in the policy. If we register the ``User`` class, we can write the following rule:
+        You may register a Java class with a particular `Constructor
+        <https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Constructor.html>`_,
+        but the default behavior is to choose one at instantiation time
+        based on the classes of the supplied arguments. For the example
+        above, this would probably be a constructor with a signature like
+        ``public User(String name, bool isAdmin)``.
+        See :doc:`/using/libraries/java/index` for more details.
+
+        Once the class is registered, we can make a ``User`` object in Polar.
+        This can be helpful for writing inline test queries:
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            ?= allow(new User("alice", true), "foo", "bar");
+
+        We must pass positional arguments to the class constructor because
+        Java does not support keyword arguments.
+
+Registering classes also makes it possible to use :ref:`specialization`
+and the :ref:`operator-matches` with the registered class. Here's what
+specialization on an application type looks like.
+
+In our previous example, the **allow** rule expected the actor to be a ``User``,
+but we couldn't actually check that type assumption in the policy. If we register
+the ``User`` class, we can write the following rule:
 
 .. code-block:: polar
     :caption: :fa:`oso` policy.polar
 
     allow(actor: User, action, resource) if actor.name = "alice";
 
-
-This rule will only be evaluated when the actor is a ``User``.
-We could also use ``matches`` to express the same logic:
+This rule will only be evaluated when the actor is a ``User``; the
+``actor`` argument is *specialized* on that type. We could also use
+``matches`` to express the same logic on an unspecialized rule:
 
 .. code-block:: polar
     :caption: :fa:`oso` policy.polar
 
     allow(actor, action, resource) if actor matches User{name: "alice"};
 
+Either way, using the rule could look like this:
+
 .. tabs::
     .. group-tab:: Python
-
-        We can then evaluate the rule:
 
         .. code-block:: python
             :caption: :fab:`python` app.py
@@ -193,8 +233,6 @@ We could also use ``matches`` to express the same logic:
 
     .. group-tab:: Ruby
 
-        We can then evaluate the rule:
-
         .. code-block:: ruby
             :caption: :fas:`gem` app.rb
 
@@ -205,13 +243,11 @@ We could also use ``matches`` to express the same logic:
 
     .. group-tab:: Java
 
-        We can then evaluate the rule:
-
         .. code-block:: java
             :caption: :fab:`java` User.java
 
             public static void main(String[] args) {
-                oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+                oso.registerClass(User.class);
 
                 User user = new User("alice", true);
                 assert oso.isAllowed(user, "foo", "bar");
@@ -224,7 +260,7 @@ We could also use ``matches`` to express the same logic:
     **inheritance** hierarchy of our application classes. See our :doc:`/using/examples/inheritance` guide for an
     in-depth example of how this works.
 
-Once a class is registered, its class methods can also be called from oso policies:
+Once a class is registered, class or static methods can also be called from oso policies:
 
 .. tabs::
     .. group-tab:: Python
@@ -286,7 +322,7 @@ Once a class is registered, its class methods can also be called from oso polici
             }
 
             public static void main(String[] args) {
-                oso.registerClass(User.class, (args) -> new User((String) args.get("name"), (boolean) args.get("isAdmin")), "User");
+                oso.registerClass(User.class);
 
                 User user = new User("alice", true);
                 assert oso.isAllowed(user, "foo", "bar");
@@ -297,13 +333,13 @@ Once a class is registered, its class methods can also be called from oso polici
 Built-in Types
 ==============
 
-Methods called on Polar built-ins (``str``, ``dict``, ``number`` & ``list``)
-call methods on the corresponding language type. That way you can use
-familiar methods like ``str.startswith()`` on strings regardless of whether
-they originated in your application or as a literal in your policy.
-This applies to all of the Polar :ref:`supported types <basic-types>`:
-strings, lists, dictionaries, and numbers, in any supported application
-language. For examples using built-in types, see the :doc:`/using/libraries/index` guides.
+Methods called on the Polar built-in types ``String``, ``Dictionary``, ``Number``,
+and ``List`` punt to methods on the corresponding application language class.
+That way you can use familiar methods like ``str.startswith()`` on strings
+regardless of whether they originated in your application or as a literal in
+your policy. This applies to all of the Polar :ref:`supported types <basic-types>`,
+in any supported application language. For examples using built-in types,
+see the :doc:`/using/libraries/index` guides.
 
 .. warning:: Do not attempt to mutate a literal using a method on it.
   Literals in Polar are constant, and any changes made to such objects

@@ -15,7 +15,7 @@ class Expense
     @project_id = project_id
   end
 
-  def self.by_id(id:)
+  def self.id(id)
     if id < EXPENSES.length
       Expense.new(**EXPENSES[id])
     else
@@ -24,9 +24,7 @@ class Expense
   end
 end
 
-OSO.register_class(Expense) do |**kwargs|
-  Expense.by_id(**kwargs)
-end
+OSO.register_class(Expense)
 
 MANAGERS = {
   "cora" => ["bhavik"],
@@ -36,7 +34,7 @@ MANAGERS = {
 # user-class-start
 class User
   attr_accessor :name, :location
-  def initialize(name:, location: nil)
+  def initialize(name, location = nil)
     @name = name # user-class-end
     @location = (location or "NYC")
   end
@@ -63,14 +61,12 @@ class Project
     @team_id = team_id
   end
 
-  def self.by_id(id:)
+  def self.id(id)
     Project.new(id: id, team_id: 0)
   end
 end
 
-OSO.register_class(Project) do |**kwargs|
-  Project.by_id(**kwargs)
-end
+OSO.register_class(Project)
 
 class Team
   attr_accessor :organization_id
@@ -78,14 +74,12 @@ class Team
     @organization_id = organization_id
   end
 
-  def self.by_id(id:)
+  def self.id(_id)
     Team.new(organization_id: 0)
   end
 end
 
-OSO.register_class(Team) do |**kwargs|
-  Team.by_id(**kwargs)
-end
+OSO.register_class(Team)
 
 class Organization
   attr_accessor :name
@@ -93,11 +87,9 @@ class Organization
     @name = name
   end
 
-  def self.by_id(id:)
+  def self.id(_id)
     Organization.new(name: "ACME")
   end
 end
 
-OSO.register_class(Organization) do |**kwargs|
-  Organization.by_id(**kwargs)
-end
+OSO.register_class(Organization)
