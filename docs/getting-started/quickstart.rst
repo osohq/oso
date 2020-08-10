@@ -83,7 +83,6 @@ Adding oso
       Either download the latest jar and add this to your Java project libraries,
       load using your IDE,
       add the project as dependency to your build system
-      load using your IDE,
       or build from the command line with:
 
       .. code-block:: console

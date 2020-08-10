@@ -14,8 +14,8 @@ oso is available as a library in several languages:
 
             $ pip install oso=={release}
 
-        The python version is known to work on glibc based distributions but not on musl based ones (like apline).
-        Wheels built against musl that you can use on alpine can be downloaded from the `Release <https://github.com/osohq/oso/releases/latest>`_ on Github.
+        The Python version is known to work on glibc-based distributions but not on musl-based ones (like Alpine Linux).
+        Wheels built against musl that you can use on Alpine Linux can be downloaded from `the releases page on GitHub <https://github.com/osohq/oso/releases/latest>`_.
 
         For more information on the oso Python library, see the
         :doc:`library documentation </using/libraries/python/index>`.
