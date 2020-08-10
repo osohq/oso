@@ -339,7 +339,7 @@ the actor, the rule no longer succeeds because the string ``"bhavik@example.com"
 match the string ``"alice@example.com"``.
 
 A Quick Note on Type Checking
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------
 You may have already guessed that the ``Expense`` term following the colon in the head of our policy rule: Actor
 is specifying an argument type. This is a :ref:`specializer <Specialization>` that controls rule
 execution based on whether it matches the supplied argument. In general, arguments match specializers
