@@ -16,7 +16,7 @@ allow(actor: User, "view", resource: Expense) if
 
 # start-hierarchy-rule
 # Management hierarchies
-manages(manager: User, employee: User) if
+manages(manager: User, employee) if
     employee = manager.employees()
     or manages(manager.employees(), employee);
 

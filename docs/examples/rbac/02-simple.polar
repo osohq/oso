@@ -28,7 +28,7 @@ allow(actor: String, "submit", "expense") if
 
 # Accountants can view expenses
 allow(actor: String, "view", "expense") if
-    role(actor: String, "accountant");
+    role(actor, "accountant");
 
 # Admins can approve expenses
 allow(actor: String, "approve", "expense") if
