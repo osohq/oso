@@ -1,7 +1,10 @@
-from flask import g, current_app, _app_ctx_stack, request, Request
+from flask import g, current_app, request, Request
 from werkzeug.exceptions import Forbidden
 
 from oso import OsoException, Oso
+
+from .context import _app_context
+
 
 class FlaskOso:
     """oso flask plugin
@@ -157,7 +160,13 @@ class FlaskOso:
         See also: :py:func:`flask_oso.authorize` for a route decorator version.
         """
         if actor is None:
-            actor = self.current_actor
+            try:
+                actor = self.current_actor
+            except AttributeError as e:
+                raise OsoException(
+                    "Getting the current actor failed. "
+                    "You may need to override the current actor function with "
+                    "FlaskOso#set_get_actor") from e
 
         if action is None:
             action = request.method
@@ -189,8 +198,9 @@ class FlaskOso:
 
     ## Before / after
     def _provide_oso(self):
-        if not hasattr(_app_ctx_stack.top, "oso_flask_oso"):
-            _app_ctx_stack.top.oso_flask_oso = self
+        top = _app_context()
+        if not hasattr(top, "oso_flask_oso"):
+            top.oso_flask_oso = self
 
     def _perform_route_authorization(self):
         if not request.url_rule:
@@ -208,7 +218,7 @@ class FlaskOso:
             # cases.
             return response
 
-        if not getattr(_app_ctx_stack.top, "oso_flask_authorize_called", False):
+        if not getattr(_app_context(), "oso_flask_authorize_called", False):
             raise OsoException("Authorize not called.")
 
         return response
@@ -218,4 +228,5 @@ class FlaskOso:
 
 def _authorize_called():
     """Mark current request as authorized."""
-    _app_ctx_stack.top.oso_flask_authorize_called = True
+    _app_context().oso_flask_authorize_called = True
+

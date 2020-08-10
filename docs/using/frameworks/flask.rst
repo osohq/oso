@@ -16,7 +16,7 @@ It must be initialized with the Flask app and oso::
     from flask import Flask
     from oso import Oso
 
-    app = Flask()
+    app = Flask("app")
     oso = Oso()
     flask_oso = FlaskOso(app=app, oso=oso)
 
@@ -32,7 +32,7 @@ Alternatively, to support the Flask factory pattern, the
     flask_oso = FlaskOso(oso=oso)
 
     def create_app():
-        app = Flask()
+        app = Flask("app")
 
         # Initialize oso for this application
         flask_oso.init_app(app)
@@ -46,7 +46,7 @@ calling configuration functions on :py:class:`flask_oso.FlaskOso` like
 :py:meth:`flask_oso.FlaskOso.require_authorization`::
 
     def create_app():
-        app = Flask()
+        app = Flask("app")
 
         flask_oso.init_app(app)
         flask_oso.require_authorization(app)
@@ -115,7 +115,7 @@ causing an authorization error, call
     flask_oso = FlaskOso()
 
     def create_app():
-        app = Flask()
+        app = Flask("app")
 
         flask_oso.init_app(app)
         flask_oso.require_authorization(app)

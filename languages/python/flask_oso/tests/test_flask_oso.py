@@ -129,6 +129,8 @@ def test_require_authorization(flask_app, flask_oso, app_ctx, simple_policy):
         raise Exception("You messed this one up")
 
     flask_app.testing = False
+    # Ensure that requiring authorization doesn't interfere with surfacing
+    # other exceptions that occur during the request.
     with flask_app.test_client() as c:
         resp = c.get("/500")
         assert resp.status_code == 500
@@ -187,3 +189,25 @@ def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
     flask_oso.authorize(resource="fail!", action="bad")
 
     assert auth_failed
+
+def test_no_oso_error(flask_app, oso):
+    """Test that using authorize without init app throws an error."""
+    flask_oso = FlaskOso(oso=oso)
+
+    with pytest.raises(OsoException, match="Application context"):
+        @authorize(resource="test")
+        def orm_function():
+            return "model"
+
+        orm_function()
+
+    with flask_app.app_context():
+        with pytest.raises(OsoException, match="init_app"):
+            @flask_app.route("/")
+            @authorize(resource="test")
+            def route():
+                return "test"
+
+            flask_app.testing = True
+            with flask_app.test_client() as c:
+                c.get("/").status_code
