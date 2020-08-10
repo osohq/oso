@@ -621,6 +621,11 @@ impl PolarVirtualMachine {
         rule
     }
 
+    /// Get a generic rule by name.
+    fn get_generic_rule(&self, name: &Symbol) -> Option<GenericRule> {
+        self.kb.read().unwrap().rules.get(name).cloned()
+    }
+
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
         let mut writer = self.output.write().unwrap();
@@ -1112,19 +1117,17 @@ impl PolarVirtualMachine {
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
-        let generic_rule = {
-            let kb = self.kb.read().unwrap();
-            kb.rules.get(&predicate.name).cloned()
-        };
-        match generic_rule {
+        match self.get_generic_rule(&predicate.name) {
             None => self.push_goal(Goal::Backtrack)?,
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
+                let (applicable_rules, unfiltered_rules) =
+                    generic_rule.get_applicable_rules(&predicate.args);
                 self.append_goals(vec![
                     Goal::TracePush,
                     Goal::FilterRules {
-                        applicable_rules: vec![],
-                        unfiltered_rules: generic_rule.rules,
+                        applicable_rules,
+                        unfiltered_rules,
                         args: predicate.args,
                     },
                     Goal::TracePop,
@@ -2232,10 +2235,7 @@ mod tests {
         let f1 = rule!("f", [1]);
         let f2 = rule!("f", [2]);
 
-        let rule = GenericRule {
-            name: sym!("f"),
-            rules: vec![Arc::new(f1), Arc::new(f2)],
-        };
+        let rule = GenericRule::new(sym!("f"), vec![Arc::new(f1), Arc::new(f2)]);
 
         let mut kb = KnowledgeBase::new();
         kb.rules.insert(rule.name.clone(), rule);

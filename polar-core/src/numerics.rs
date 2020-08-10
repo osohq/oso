@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 use std::ops::{Add, Div, Mul, Sub};
 
 use super::types::*;
@@ -58,6 +59,24 @@ impl Div for Numeric {
 impl PartialEq for Numeric {
     fn eq(&self, other: &Self) -> bool {
         matches!(self.partial_cmp(other), Some(Ordering::Equal))
+    }
+}
+
+impl Eq for Numeric {}
+
+impl Hash for Numeric {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        match self {
+            Numeric::Integer(i) => i,
+            Numeric::Float(f) => unsafe {
+                #[allow(clippy::transmute_ptr_to_ptr)]
+                std::mem::transmute(f)
+            },
+        }
+        .hash(state)
     }
 }
 

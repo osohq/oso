@@ -83,11 +83,11 @@ impl Polar {
                     rewrite_rule(&mut rule, &mut kb);
 
                     let name = rule.name.clone();
-                    let generic_rule = kb.rules.entry(name.clone()).or_insert(GenericRule {
-                        name,
-                        rules: vec![],
-                    });
-                    generic_rule.rules.push(Arc::new(rule));
+                    let generic_rule = kb
+                        .rules
+                        .entry(name.clone())
+                        .or_insert_with(|| GenericRule::new(name, vec![]));
+                    generic_rule.add_rule(Arc::new(rule));
                 }
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);

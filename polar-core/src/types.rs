@@ -14,7 +14,7 @@ pub use super::{error, formatting::ToPolarString};
 /// but can translate to and from this type.
 pub type Bindings = HashMap<Symbol, Term>;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
     pub fields: BTreeMap<Symbol, Term>,
 }
@@ -56,7 +56,7 @@ pub fn field_name(field: &Term) -> Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
@@ -84,7 +84,7 @@ impl InstanceLiteral {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ExternalInstance {
     pub instance_id: u64,
     pub constructor: Option<Term>,
@@ -120,13 +120,13 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Predicate {
     pub name: Symbol,
     pub args: TermList,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
     Debug,
     Print,
@@ -183,14 +183,14 @@ impl Operator {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Operation {
     pub operator: Operator,
     pub args: TermList,
 }
 
 /// Represents a pattern in a specializer or after isa.
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Pattern {
     Dictionary(Dictionary),
     Instance(InstanceLiteral),
@@ -217,7 +217,7 @@ pub enum Numeric {
     Float(f64),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Value {
     Number(Numeric),
     String(String),
@@ -278,7 +278,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 enum SourceInfo {
     // From the parser
     Parser {
@@ -307,7 +307,8 @@ impl SourceInfo {
 }
 
 /// Represents a concrete instance of a Polar value
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+#[allow(clippy::derive_hash_xor_eq)]
 pub struct Term {
     /// Information about where the term was created from
     #[serde(skip, default = "SourceInfo::ffi")]
@@ -490,11 +491,38 @@ pub type Rules = Vec<Arc<Rule>>;
 pub struct GenericRule {
     pub name: Symbol,
     pub rules: Rules,
+    pub index: HashMap<Value, Rules>,
 }
 
 impl GenericRule {
     pub fn new(name: Symbol, rules: Rules) -> Self {
-        GenericRule { name, rules }
+        GenericRule {
+            name,
+            rules,
+            index: HashMap::new(),
+        }
+    }
+
+    pub fn add_rule(&mut self, rule: Arc<Rule>) {
+        if !rule.params.is_empty()
+            && rule.params[0].specializer.is_none()
+            && !matches!(rule.params[0].parameter.value(), Value::Variable(_))
+        {
+            self.index
+                .entry(rule.params[0].parameter.value().clone())
+                .or_insert_with(Vec::new)
+                .insert(0, rule.clone());
+        }
+        self.rules.push(rule);
+    }
+
+    pub fn get_applicable_rules(&self, args: &[Term]) -> (Rules, Rules) {
+        if !args.is_empty() {
+            if let Some(rules) = self.index.get(args[0].value()) {
+                return (rules.clone(), vec![]);
+            }
+        }
+        (vec![], self.rules.clone())
     }
 }
 
