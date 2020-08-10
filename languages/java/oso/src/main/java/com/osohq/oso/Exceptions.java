@@ -186,8 +186,7 @@ public class Exceptions {
 
     public static class InvalidCallError extends PolarRuntimeException {
         public InvalidCallError(String className, String callName, Class<?>... argTypes) {
-            super("Invalid call `" + callName + "` on class " + className + ", with argument types " + "`" + argTypes
-                    + "`");
+            super("Invalid call `" + callName + "` on class " + className + ", with argument types " + "`" + argTypes + "`");
         }
 
         public InvalidCallError(String msg) {
