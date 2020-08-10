@@ -4,11 +4,11 @@ require 'oso'
 
 oso = Oso.new
 
-# Application class with default kwargs constructor.
+# Application class with default constructor.
 class A
   attr_reader :x
 
-  def initialize(x:) # rubocop:disable Naming/MethodParameterName
+  def initialize(x) # rubocop:disable Naming/MethodParameterName
     @x = x
   end
 
@@ -35,10 +35,9 @@ module B
     end
   end
 end
-oso.register_class(B::C, name: 'C') { |y:| B::C.new(y) }
+oso.register_class(B::C, name: 'C') { |y| B::C.new(y) }
 
 oso.load_file File.expand_path(File.join(__dir__, '../../../../test/test.polar'))
-oso.load_queued_files
 
 raise unless oso.allowed?(actor: 'a', action: 'b', resource: 'c')
 
@@ -57,14 +56,14 @@ rescue Oso::Polar::ParseError::UnrecognizedEOF => e
 end
 raise unless exception_thrown
 
-oso.query_rule('specializers', D.new(x: 'hello'), B::C.new('hello')).next
+oso.query_rule('specializers', D.new('hello'), B::C.new('hello')).next
 oso.query_rule('floatLists').next
 oso.query_rule('intDicts').next
 oso.query_rule('comparisons').next
 oso.query_rule('testForall').next
 oso.query_rule('testRest').next
-oso.query_rule('testMatches', A.new(x: 'hello')).next
-oso.query_rule('testMethodCalls', A.new(x: 'hello'), B::C.new('hello')).next
+oso.query_rule('testMatches', A.new('hello')).next
+oso.query_rule('testMethodCalls', A.new('hello'), B::C.new('hello')).next
 oso.query_rule('testOr').next
 oso.query_rule('testHttpAndPathMapper').next
 

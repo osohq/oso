@@ -159,10 +159,20 @@ BuiltinOperator: Operator = {
     "print" => Operator::Print,
 };
 
-New: Value = "new" <literal:Spanned<InstanceLiteralTerm>> => {
-    let args = vec![literal];
-    let op = Operation{operator: Operator::New, args};
-    Value::Expression(op)
+New: Value = {
+    // Keyword argument constructor.
+    "new" <literal:Spanned<InstanceLiteralTerm>> => {
+        let args = vec![literal];
+        let op = Operation{operator: Operator::New, args};
+        Value::Expression(op)
+    },
+
+    // Positional argument constructor.
+    "new" <call:Spanned<Predicate>> => {
+        let args = vec![call];
+        let op = Operation{operator: Operator::New, args};
+        Value::Expression(op)
+    },
 };
 
 BuiltinOperation: Value = {

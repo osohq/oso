@@ -6,7 +6,7 @@ actorInRole(actor, role, resource: Widget) if
     role = resource.company.role(actor);
 
 allow(actor, "get", _: Http{path: path}) if
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
+    new PathMapper("/widget/{id}").map(path) = {id: id} and
     allow(actor, "get", new Widget{id: id});
 
 allow(actor, "post", _: Http{path: path}) if
@@ -14,11 +14,11 @@ allow(actor, "post", _: Http{path: path}) if
     allow(actor, "create", new Widget{});
 
 allow(actor, "what", _: Http{path: path}) if
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
+    new PathMapper("/widget/{id}").map(path) = {id: id} and
     allow(actor, "unparameterised_get", new Widget{id: id});
 
 allow(actor, "what", _: Http{path: path, query: {param: "foo"}}) if
-    new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
+    new PathMapper("/widget/{id}").map(path) = {id: id} and
     allow(actor, "parameterised_get", new Widget{id: id});
 
 allow(actor, "get", resource: Widget) if resource.frob("Widget") = x;

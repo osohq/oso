@@ -11,6 +11,6 @@ role(actor: User, "accountant") if
 role(actor: User, "admin") if
     actor.role = "admin";
 
-?= role(new User{name: "alice"}, "employee");
-?= role(new User{name: "ebrahim"}, "employee");
-?= role(new User{name: "ebrahim"}, "accountant");
+?= role(new User("alice"), "employee");
+?= role(new User("ebrahim"), "employee");
+?= role(new User("ebrahim"), "accountant");

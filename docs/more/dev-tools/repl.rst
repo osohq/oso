@@ -155,8 +155,8 @@ plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
             public class AppRepl {
                 public static void main(String[] args) throws OsoException, IOException {
                     Oso oso = new Oso();
-                    oso.registerClass(Expense.class, () -> new Expense());
-                    oso.registerClass(User.class, () -> new User());
+                    oso.registerClass(Expense.class);
+                    oso.registerClass(User.class);
                     oso.repl(args)
                 }
             }

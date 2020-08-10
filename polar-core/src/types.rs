@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 pub use super::{error, formatting::ToPolarString};
 
@@ -86,7 +87,7 @@ impl InstanceLiteral {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ExternalInstance {
     pub instance_id: u64,
-    pub literal: Option<InstanceLiteral>,
+    pub constructor: Option<Term>,
     pub repr: Option<String>,
 }
 
@@ -313,7 +314,7 @@ pub struct Term {
     source_info: SourceInfo,
 
     /// The actual underlying value
-    value: Rc<Value>,
+    value: Arc<Value>,
 }
 
 impl PartialEq for Term {
@@ -329,7 +330,7 @@ impl Term {
     pub fn new_temporary(value: Value) -> Self {
         Self {
             source_info: SourceInfo::TemporaryVariable,
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
@@ -341,7 +342,7 @@ impl Term {
                 left,
                 right,
             },
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
@@ -349,7 +350,7 @@ impl Term {
     pub fn new_from_test(value: Value) -> Self {
         Self {
             source_info: SourceInfo::Test,
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
@@ -358,13 +359,13 @@ impl Term {
     pub fn clone_with_value(&self, value: Value) -> Self {
         Self {
             source_info: self.source_info.clone(),
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
     /// Replace the `value` of self
     pub fn replace_value(&mut self, value: Value) {
-        self.value = Rc::new(value);
+        self.value = Arc::new(value);
     }
 
     /// Convenience wrapper around map_replace that clones the
@@ -633,7 +634,7 @@ pub enum QueryEvent {
 
     MakeExternal {
         instance_id: u64,
-        instance: InstanceLiteral,
+        constructor: Term,
     },
 
     ExternalCall {
@@ -719,12 +720,12 @@ mod tests {
         };
         let event = QueryEvent::MakeExternal {
             instance_id: 12345,
-            instance: literal,
+            constructor: Term::new_from_test(Value::InstanceLiteral(literal)),
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let external = Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id: 12345,
-            literal: None,
+            constructor: None,
             repr: None,
         }));
         let list_of = Term::new_from_test(Value::List(vec![external]));

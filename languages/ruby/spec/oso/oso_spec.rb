@@ -61,7 +61,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     context 'PathMapper' do
       context '#map' do
         it 'extracts matches into a hash' do
-          mapper = Oso::PathMapper.new(template: '/widget/{id}')
+          mapper = Oso::PathMapper.new('/widget/{id}')
           expect(mapper.map('/widget/12')).to eq({ 'id' => '12' })
           expect(mapper.map('/widget/12/frob')).to eq({})
         end
@@ -80,14 +80,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         subject.register_class(Widget)
         subject.load_str <<~POLAR
           allow(actor, "get", _: Http{path: path}) if
-              new PathMapper{template: "/widget/{id}"}.map(path) = {id: id} and
+              new PathMapper("/widget/{id}").map(path) = {id: id} and
               allow(actor, "get", new Widget{id: id});
           allow(_actor, "get", widget: Widget{}) if widget.id = "12";
         POLAR
-        widget12 = Oso::Http.new(path: '/widget/12')
+        widget12 = Oso::Http.new('host', '/widget/12', {})
         allowed = subject.allowed?(actor: 'sam', action: 'get', resource: widget12)
         expect(allowed).to eq true
-        widget13 = Oso::Http.new(path: '/widget/13')
+        widget13 = Oso::Http.new('host', '/widget/13', {})
         expect(subject.allowed?(actor: 'sam', action: 'get', resource: widget13)).to eq false
       end
     end

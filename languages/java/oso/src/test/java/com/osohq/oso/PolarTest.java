@@ -56,12 +56,11 @@ public class PolarTest {
     }
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws NoSuchMethodException {
         try {
             p = new Polar();
-            p.registerClass(MyClass.class, m -> new MyClass((String) m.get("name"), (int) m.get("id")), "MyClass");
-            p.registerClass(MySubClass.class, m -> new MySubClass((String) m.get("name"), (int) m.get("id")),
-                    "MySubClass");
+            p.registerClass(MyClass.class, "MyClass");
+            p.registerClass(MySubClass.class, "MySubClass");
         } catch (Exceptions.OsoException e) {
             throw new Error(e);
         }
@@ -199,8 +198,7 @@ public class PolarTest {
 
     @Test
     public void testRegisterAndMakeClass() throws Exception {
-        Map<String, Object> testArg = Map.of("name", "testName", "id", 1);
-        MyClass instance = (MyClass) p.host.makeInstance("MyClass", testArg, Long.valueOf(0));
+        MyClass instance = (MyClass) p.host.makeInstance("MyClass", Arrays.asList("testName", 1), Long.valueOf(0));
         assertEquals("testName", instance.name);
         assertEquals(Integer.valueOf(1), instance.id);
         // TODO: test that errors when given invalid constructor
@@ -211,13 +209,13 @@ public class PolarTest {
 
     @Test
     public void testDuplicateRegistration() throws Exception {
-        assertThrows(Exceptions.DuplicateClassAliasError.class, () -> p.registerClass(MyClass.class,
-                m -> new MyClass((String) m.get("name"), (int) m.get("id")), "MyClass"));
+        assertThrows(Exceptions.DuplicateClassAliasError.class,
+                     () -> p.registerClass(MyClass.class, "MyClass"));
     }
 
     @Test
     public void testMakeInstanceFromPolar() throws Exception {
-        p.loadStr("f(x) if x = new MyClass{name: \"test\", id: 1};");
+        p.loadStr("f(x) if x = new MyClass(\"test\", 1);");
         Query query = p.query("f(x)");
         MyClass ret = (MyClass) query.nextElement().get("x");
         assertEquals("test", ret.name);
@@ -238,12 +236,12 @@ public class PolarTest {
     @Test
     public void testExternalCall() throws Exception {
         // Test get attribute
-        p.loadStr("id(x) if x = new MyClass{name: \"test\", id: 1}.id;");
+        p.loadStr("id(x) if x = new MyClass(\"test\", 1).id;");
         assertTrue(p.query("id(x)").results().equals(List.of(Map.of("x", 1))),
                 "Failed to get attribute on external instance.");
 
         // Test call method
-        p.loadStr("method(x) if x = new MyClass{name: \"test\", id: 1}.myMethod(\"hello world\");");
+        p.loadStr("method(x) if x = new MyClass(\"test\", 1).myMethod(\"hello world\");");
         assertTrue(p.query("method(x)").results().equals(List.of(Map.of("x", "hello world"))),
                 "Failed to get attribute on external instance.");
     }
@@ -371,8 +369,7 @@ public class PolarTest {
         FileWriter w = new FileWriter(tempFile);
         w.write(";");
         w.close();
-        p.loadFile(tempFile.getPath());
-        assertThrows(Exceptions.ParseError.class, () -> p.query("f(1)"),
+        assertThrows(Exceptions.ParseError.class, () -> p.loadFile(tempFile.getPath()),
                 "Failed to pass filename across FFI boundary.");
         tempFile.deleteOnExit();
     }
@@ -380,7 +377,8 @@ public class PolarTest {
     @Test
     public void testLoadFileIdempotent() throws Exception {
         p.loadFile("src/test/java/com/osohq/oso/test.polar");
-        p.loadFile("src/test/java/com/osohq/oso/test.polar");
+        assertThrows(Exceptions.PolarRuntimeException.class,
+                () -> p.loadFile("src/test/java/com/osohq/oso/test.polar"));
         assertTrue(p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))),
                 "loadFile behavior is not idempotent.");
     }
@@ -411,9 +409,9 @@ public class PolarTest {
 
     @Test
     public void testLookupErrors() throws Exception {
-        p.registerClass(Foo.class, m -> new Foo(), "Foo");
-        assertEquals(List.of(), p.query("new Foo{} = {bar: \"bar\"}").results());
-        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.query("new Foo{}.bar = \"bar\""),
+        p.registerClass(Foo.class, "Foo");
+        assertEquals(List.of(), p.query("new Foo() = {bar: \"bar\"}").results());
+        assertThrows(Exceptions.PolarRuntimeException.class, () -> p.query("new Foo().bar = \"bar\""),
                 "Expected error.");
     }
 
@@ -443,10 +441,10 @@ public class PolarTest {
         PathMapper mapper = new PathMapper("/widget/{id}");
         assertTrue(mapper.map("/widget/12").equals(Map.of("id", "12")), "Failed to extract matches to a hash");
         // maps HTTP resources
-        oso.registerClass(MyClass.class, m -> new MyClass("test", Integer.parseInt((String) m.get("id"))), "MyClass");
+        oso.registerClass(MyClass.class, "MyClass");
         oso.loadStr("allow(actor, \"get\", _: Http{path: path}) if "
-                + "new PathMapper{template: \"/myclass/{id}\"}.map(path) = {id: id} and "
-                + "allow(actor, \"get\", new MyClass{id: id});\n"
+                + "new PathMapper(\"/myclass/{id}\").map(path) = {id: id} and "
+                + "allow(actor, \"get\", new MyClass(\"test\", new Integer(id)));\n"
                 + "allow(actor, \"get\", myclass: MyClass) if myclass.id = 12;");
         Http http12 = new Http(null, "/myclass/12", null);
         assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");

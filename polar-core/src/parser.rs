@@ -228,11 +228,16 @@ mod tests {
 
     #[test]
     fn test_parse_new() {
-        let f = r#"
-        a(x) if x = new Foo{a: 1};
-        "#;
+        let f = r#"a(x) if x = new Foo{a: 1};"#;
         let results = parse_rules(0, f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo{a: 1};"#);
+    }
+
+    #[test]
+    fn test_parse_new_boa_constructor() {
+        let f = r#"a(x) if x = new Foo(1, 2);"#;
+        let results = parse_rules(0, f).unwrap();
+        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(1, 2);"#);
     }
 
     #[test]
