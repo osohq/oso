@@ -1,1 +1,1 @@
-allow("alice@example.com", "GET", _expense);
+allow("alice@example.com", "GET", _expense: Expense);

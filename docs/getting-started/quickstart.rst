@@ -78,11 +78,10 @@ Adding oso
 
       oso v{release} supports Java versions **>= 10**
 
-      Go to the `Maven Repository <https://search.maven.org/artifact/com.osohq/oso>`_
+      Go to the oso `Maven Repository <https://search.maven.org/artifact/com.osohq/oso>`_.
 
-      Either download the latest jar and add this to your Java project libraries,
-      load using your IDE,
-      add the project as dependency to your build system
+      Either download the latest JAR and add this to your Java project libraries,
+      load using your IDE, add the project as a dependency to your build system,
       or build from the command line with:
 
       .. code-block:: console
@@ -338,6 +337,14 @@ When we pass in ``"bhavik@example.com"`` as
 the actor, the rule no longer succeeds because the string ``"bhavik@example.com"`` does not
 match the string ``"alice@example.com"``.
 
+A Quick Note on Type Checking
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You may have already guessed that the ``Expense`` term following the colon in the head of our policy rule
+is specifying an argument type. This is a :ref:`specializer <Specialization>` that controls rule
+execution based on whether it matches the supplied argument. In general, arguments match specializers
+if they are an instance of the specializer class. Here, we specialize the third argument on
+our own ``Expense`` class. We'll see more examples of specializers later in this guide.
+
 
 Authorizing HTTP Requests
 =========================
@@ -450,8 +457,8 @@ able to view expenses, but no one outside the company will be able to:
     .. |str_endswith| replace:: the ``str.endswith`` method
     .. _str_endswith: https://docs.python.org/3/library/stdtypes.html#str.endswith
 
-    We bind the provided email to the ``actor`` variable in the rule head and then
-    perform the ``.endswith("@example.com")`` check in the rule body. If you
+    We bind the provided email to the ``actor`` variable in the rule head (specialized on the built-in :ref:`String <strings>` class),
+    and then perform the ``.endswith("@example.com")`` check in the rule body. If you
     noticed that the ``.endswith`` call looks pretty familiar, you're right on ---
     oso is actually calling out to |str_endswith|_ defined in the Python standard
     library. The **actor** value passed to oso is a Python string, and oso allows us
@@ -474,8 +481,8 @@ able to view expenses, but no one outside the company will be able to:
     .. |string_end_with| replace:: the ``String#end_with?`` method
     .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
 
-    We bind the provided email to the ``actor`` variable in the rule head and then
-    perform the ``.end_with?("@example.com")`` check in the rule body. If you
+    We bind the provided email to the ``actor`` variable in the rule head (specialized on the built-in :ref:`String <strings>` class),
+    and then perform the ``.end_with?("@example.com")`` check in the rule body. If you
     noticed that the ``.end_with?`` call looks pretty familiar, you're right on ---
     oso is actually calling out to |string_end_with|_ defined in the Ruby standard
     library. The **actor** value passed to oso is a Ruby string, and oso allows us
@@ -498,8 +505,8 @@ able to view expenses, but no one outside the company will be able to:
     .. |string_endsWith| replace:: the ``String.endsWith?`` method
     .. _string_endsWith: https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#endsWith-java.lang.String-
 
-    We bind the provided email to the ``actor`` variable in the rule head and then
-    perform the ``.endsWith("@example.com")`` check in the rule body. If you
+    We bind the provided email to the ``actor`` variable in the rule head (specialized on the built-in :ref:`String <strings>` class),
+    and then perform the ``.endsWith("@example.com")`` check in the rule body. If you
     noticed that the ``.endsWith`` call looks pretty familiar, you're right on ---
     oso is actually calling out to |string_endsWith|_ defined in the Java standard
     library. The **actor** value passed to oso is a Java string, and oso allows us
@@ -587,8 +594,7 @@ And vice-versa:
 We encourage you to play around with the current policy and experiment with
 adding your own rules!
 
-For
-example, if you have ``Expense`` and ``User`` classes defined in your
+For example, if you have ``Expense`` and ``User`` classes defined in your
 application, you could write a policy rule in oso that says a ``User`` may
 approve an ``Expense`` if they manage the ``User`` who submitted the expense
 and the expense's amount is less than $100.00:
@@ -597,7 +603,7 @@ and the expense's amount is less than $100.00:
 .. code-block:: polar
   :class: no-select
 
-  allow(approver, "approve", expense) if
+  allow(approver: User, "approve", expense: Expense) if
       approver = expense.submitted_by.manager
       and expense.amount < 10000;
 
