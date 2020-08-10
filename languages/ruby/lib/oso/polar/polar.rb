@@ -66,7 +66,7 @@ module Oso
           loaded_contents[hash] = name
         end
       rescue Errno::ENOENT
-        raise PolarFileNotFoundError, name unless File.file?(name)
+        raise PolarFileNotFoundError, name
       end
 
       # Load a Polar string into the KB.
