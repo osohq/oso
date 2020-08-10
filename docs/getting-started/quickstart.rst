@@ -229,7 +229,6 @@ start a REPL session and follow along:
     To follow along, either try using ``jshell`` (requires Java version >= 9)
     or copy the follow code into a ``main`` method in ``Expense.java``.
 
-    Run: ``jshell --class-path {JAR} Expense.java``
 
     .. tabs::
       .. group-tab:: Java main
@@ -257,6 +256,8 @@ start a REPL session and follow along:
             false
 
       .. group-tab:: JShell
+
+        Run: ``jshell --class-path {JAR} Expense.java``
 
         .. code-block:: jshell
 
@@ -339,7 +340,7 @@ match the string ``"alice@example.com"``.
 
 A Quick Note on Type Checking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You may have already guessed that the ``Expense`` term following the colon in the head of our policy rule
+You may have already guessed that the ``Expense`` term following the colon in the head of our policy rule: Actor
 is specifying an argument type. This is a :ref:`specializer <Specialization>` that controls rule
 execution based on whether it matches the supplied argument. In general, arguments match specializers
 if they are an instance of the specializer class. Here, we specialize the third argument on
@@ -415,6 +416,8 @@ We'll first start our server...
       [2020-07-15 00:35:52] INFO  WEBrick::HTTPServer#start: pid=537647 port=5050
 
   .. group-tab:: Java
+
+    Run the server from your IDE, or from the command line:
 
     .. code-block:: console
 
