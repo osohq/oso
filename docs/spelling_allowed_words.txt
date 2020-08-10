@@ -82,3 +82,7 @@ SaaS
 Todo
 Bhavik
 amongst
+
+# Release specifiers
+rc
+dev
