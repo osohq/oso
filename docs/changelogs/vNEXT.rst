@@ -24,6 +24,15 @@ Link to migration guide
 New features
 ==============
 
+Windows Support
+===============
+The three oso libraries (Python, Ruby and Java) all now work on Windows.
+
+musl builds for Python
+======================
+
+musl-based Python wheels (for Alpine Linux and other musl-based distros) are built and downloadable from `the releases page on GitHub <https://github.com/osohq/oso/releases/latest>`_.
+
 Assignment Operator
 ===================
 - The operator ``:=`` may now be used to assign values to unbound variables. Unlike the unify operator (``=``),
