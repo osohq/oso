@@ -23,15 +23,15 @@ role(actor, "admin") if
     actor = "iqbal";
 
 # Employees can submit expenses
-allow(actor, "submit", "expense") if
+allow(actor: String, "submit", "expense") if
     role(actor, "employee");
 
 # Accountants can view expenses
-allow(actor, "view", "expense") if
-    role(actor, "accountant");
+allow(actor: String, "view", "expense") if
+    role(actor: String, "accountant");
 
 # Admins can approve expenses
-allow(actor, "approve", "expense") if
+allow(actor: String, "approve", "expense") if
     role(actor, "admin");
 
 # Deirdre the accountant can view and submit expenses
