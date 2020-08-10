@@ -53,6 +53,8 @@ unsafety
 middleware
 url
 stderr
+musl
+glibc
 
 ## Product names
 sqlite
@@ -69,6 +71,7 @@ Okta
 Rego
 Hashicorp
 JShell
+
 
 ## Misc terms
 roadmap
