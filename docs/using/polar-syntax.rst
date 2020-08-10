@@ -57,6 +57,9 @@ Polar strings are quoted with double quotes (``"``). Quotes within strings can
 be escaped with a single backslash. Two strings are considered equal if they
 have the same length and each of their corresponding characters are equal.
 
+The string type can be referenced (for use in specializers, or with the ``matches`` operator),
+as ``String``.
+
 .. _compound-types:
 
 Compound Types

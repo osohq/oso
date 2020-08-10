@@ -33,11 +33,11 @@ allow(actor: User, "view", resource: Expense) if
 role(_: User { name: "bhavik" }, "admin",  _: Organization { name: "ACME" });
 
 # Team roles inherit from Organization roles
-role(actor: User, role, team: Team) if
+role(actor: User, role: String, team: Team) if
     role(actor, role, Organization.id(team.organization_id));
 
 # Project roles inherit from Team roles
-role(actor: User, role, project: Project) if
+role(actor: User, role: String, project: Project) if
     role(actor, role, Team.id(project.team_id));
 # role-inherit-end
 

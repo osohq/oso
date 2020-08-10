@@ -5,7 +5,7 @@
 # - rule specializers
 
 # Python:
-# 
+#
 # @polar_class
 # class User:
 #   def role(self):
@@ -43,13 +43,13 @@ role(actor: User, "admin") if
     actor.role = "admin";
 
 # Employees can submit expenses
-allow(actor, "submit", "expense") if
+allow(actor: User, "submit", "expense") if
     role(actor, "employee");
 
 # Accountants can view expenses
-allow(actor, "view", "expense") if
+allow(actor: User, "view", "expense") if
     role(actor, "accountant");
 
 # Admins can approve expenses
-allow(actor, "approve", "expense") if
+allow(actor: User, "approve", "expense") if
     role(actor, "admin");

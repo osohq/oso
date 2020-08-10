@@ -70,9 +70,23 @@ oso is available as a library in several languages:
 
     .. group-tab:: Java
 
-        The Java version of oso is available on GitHub. Go to the `Maven Repository <https://search.maven.org/artifact/com.osohq/oso>`_ and download the latest jar or add it as a dependency to your build system.
+        The Java version of oso is available on `Maven Central <https://search.maven.org/artifact/com.osohq/oso>`_.
 
-        To use it, add it to the classpath for your project::
+        It can be added as a dependency to a **Maven** project::
+
+            <!-- https://mvnrepository.com/artifact/com.osohq/oso -->
+            <dependency>
+                <groupId>com.osohq</groupId>
+                <artifactId>oso</artifactId>
+                <version>{release}</version>
+            </dependency>
+
+        or a **Gradle** project::
+
+            // https://mvnrepository.com/artifact/com.osohq/oso
+            compile group: 'com.osohq', name: 'oso', version: '{relase}'
+
+        or downloaded as a **JAR** and added to the classpath of any Java project::
 
             $ javac -classpath "{JAR}:." MyProject.java
 
