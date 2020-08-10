@@ -344,7 +344,8 @@ You may have already guessed that the ``Expense`` term following the colon in th
 is specifying an argument type. This is a :ref:`specializer <Specialization>` that controls rule
 execution based on whether it matches the supplied argument. In general, arguments match specializers
 if they are an instance of the specializer class. Here, we specialize the third argument on
-our own ``Expense`` class. We'll see more examples of specializers later in this guide.
+our own ``Expense`` class. Specializers are optional but highly recommended to avoid bugs that could arise if
+an unexpected type of resource is passed into a certain rule. We'll see more examples of specializers later in this guide.
 
 
 Authorizing HTTP Requests
