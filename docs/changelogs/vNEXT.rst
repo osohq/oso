@@ -26,11 +26,12 @@ New features
 
 Windows Support
 ===============
-The three oso libraries (python, ruby and java) all now work on Windows.
+The three oso libraries (Python, Ruby and Java) all now work on Windows.
 
-Musl Python Builds
-===========
-Python linux musl-based wheels (for alpine and other musl based distros) are built and downloadable from the release in Github.
+musl builds for Python
+======================
+
+musl-based Python wheels (for Alpine Linux and other musl-based distros) are built and downloadable from `the releases page on GitHub <https://github.com/osohq/oso/releases>`_.
 
 Assignment Operator
 ===================
