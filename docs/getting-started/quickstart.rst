@@ -340,11 +340,11 @@ match the string ``"alice@example.com"``.
 
 A Quick Note on Type Checking
 -----------------------------
-You may have already guessed that the ``Expense`` term following the colon in the head of our policy rule: Actor
-is specifying an argument type. This is a :ref:`specializer <Specialization>` that controls rule
-execution based on whether it matches the supplied argument. In general, arguments match specializers
-if they are an instance of the specializer class. Here, we specialize the third argument on
-our own ``Expense`` class. Specializers are optional but highly recommended to avoid bugs that could arise if
+You may have already guessed that the ``Expense`` term following the colon in the head of our policy rule
+specifies a parameter type restriction. This is a :ref:`specializer <Specialization>`, a pattern that controls rule
+execution based on whether the supplied argument matches it. Here, we specialize the third argument on
+our own ``Expense`` class, which will restrict this rule to arguments that are instances of that class or any
+subclass. Specializers are optional but highly recommended to avoid bugs that could arise if
 an unexpected type of resource is passed into a certain rule. We'll see more examples of specializers later in this guide.
 
 
