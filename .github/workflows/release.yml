@@ -258,7 +258,7 @@ jobs:
         with:
           name: wheel
       - name: "test"
-      if: runner.os != 'Windows'
+        if: runner.os != 'Windows'
         run: |
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
