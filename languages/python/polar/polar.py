@@ -66,7 +66,9 @@ class Polar:
         policy_file = Path(policy_file)
         extension = policy_file.suffix
         if not extension == ".polar":
-            raise PolarApiException(f"Polar files must have a .polar extension.")
+            raise PolarApiException(
+                f"Polar files must have .polar extension. Offending file: {policy_file}"
+            )
 
         fname = str(policy_file)
 
