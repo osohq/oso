@@ -113,7 +113,7 @@ module Oso
       # Construct and cache a Ruby instance.
       #
       # @param cls_name [String]
-      # @param fields [Hash<String, Hash>]
+      # @param initargs [Hash<String, Hash>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
       def make_instance(cls_name, initargs:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
@@ -123,8 +123,10 @@ module Oso
                        get_class(cls_name).__send__(:new)
                      elsif initargs.is_a? Array
                        get_class(cls_name).__send__(:new, *initargs)
-                     else
+                     elsif initargs.is_a? Hash
                        get_class(cls_name).__send__(:new, **initargs)
+                     else
+                       raise PolarRuntimeError, "Bad initargs: #{initargs}"
                      end
                    elsif initargs.empty?
                      constructor.call
