@@ -53,13 +53,11 @@ module Oso
         hash = Digest::MD5.hexdigest(file_data)
 
         if loaded_names.key?(name)
-          raise PolarFileAlreadyLoadedError, "File #{name} has already been loaded." if loaded_names[name] == hash
+          raise PolarFileAlreadyLoadedError, name if loaded_names[name] == hash
 
-          raise PolarFileContentsChangedError, "A file with the name #{name}, but different contents,
-            has already been loaded."
+          raise PolarFileContentsChangedError, name
         elsif loaded_contents.key?(hash)
-          raise PolarFileNameChangedError, "A file with the same contents as #{name} named #{loaded_contents[hash]}
-            has already been loaded."
+          raise PolarFileNameChangedError, name, loaded_contents[hash]
         else
           load_str(file_data, filename: name)
           loaded_names[name] = hash
