@@ -108,20 +108,26 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         f.rewind
         f.close
       end
-      subject.load_file(file.path)
-      expect { query(subject, 'f(x)') }.to raise_error do |e|
+
+      expect { subject.load_file(file.path) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
         expect(e.message).to eq("did not expect to find the token ';' at line 1, column 1 in file #{file.path}")
       end
     end
 
     it 'raises if given a non-Polar file' do
-      expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarRuntimeError
+      expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarFileExtensionError
+    end
+
+    it 'raises if given a non-existent file' do
+      expect { subject.load_file('other.polar') }.to raise_error Oso::Polar::PolarFileNotFoundError
     end
 
     it 'is idempotent' do
-      2.times { subject.load_file(test_file) }
-      expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
+      expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::PolarFileAlreadyLoadedError
+        expect(e.message).to eq("File #{test_file} has already been loaded.")
+      end
     end
 
     it 'can load multiple files' do

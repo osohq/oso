@@ -49,7 +49,7 @@ class User:
                 yield User.by_name(name)
 
 
-@polar_class(from_polar="by_id")
+@polar_class(from_polar="id")
 class Expense:
     """Expense model"""
 
@@ -60,14 +60,14 @@ class Expense:
         self.project_id = project_id
 
     @classmethod
-    def by_id(cls, id: int):
+    def id(cls, id: int):
         if id < len(EXPENSES):
             return Expense(**EXPENSES[id])
         else:
             return Expense()
 
 
-@polar_class(from_polar="by_id")
+@polar_class(from_polar="id")
 class Project:
     """Project model"""
 
@@ -75,14 +75,14 @@ class Project:
         self.team_id = team_id
 
     @classmethod
-    def by_id(cls, id: int):
+    def id(cls, id: int):
         if id < len(PROJECTS):
             return Project(**PROJECTS[id])
         else:
             return Project()
 
 
-@polar_class(from_polar="by_id")
+@polar_class(from_polar="id")
 class Team:
     """Team model"""
 
@@ -90,14 +90,14 @@ class Team:
         self.organization_id = organization_id
 
     @classmethod
-    def by_id(cls, id: int):
+    def id(cls, id: int):
         if id < len(TEAMS):
             return Team(**TEAMS[id])
         else:
             return Team()
 
 
-@polar_class(from_polar="by_id")
+@polar_class(from_polar="id")
 class Organization:
     """Organization model"""
 
@@ -105,7 +105,7 @@ class Organization:
         self.name = name
 
     @classmethod
-    def by_id(cls, id: int):
+    def id(cls, id: int):
         if id < len(ORGANIZATIONS):
             return Organization(**ORGANIZATIONS[id])
         else:
@@ -140,7 +140,6 @@ if __name__ == "__main__":
     the policy.
     """
     oso = load_oso()
-    oso._load_queued_files()
     print("Policy loaded OK")
 
     if len(sys.argv) > 1 and sys.argv[1] == "repl":

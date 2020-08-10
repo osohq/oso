@@ -3,10 +3,19 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 from pprint import pprint
+import sys
+import hashlib
 
 from _polar_lib import lib
 
-from .exceptions import PolarApiException, PolarRuntimeException, ParserException
+from .exceptions import (
+    PolarApiException,
+    PolarRuntimeException,
+    ParserException,
+    PolarFileAlreadyLoadedError,
+    PolarFileContentsChangedError,
+    PolarFileNameChangedError,
+)
 from .ffi import Polar as FfiPolar, Query as FfiQuery
 from .host import Host
 from .query import Query, QueryResult
@@ -24,7 +33,8 @@ class Polar:
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
-        self.load_queue = []
+        self.loaded_names = {}
+        self.loaded_contents = {}
 
         # Register built-in classes.
         self.register_class(bool, name="Boolean")
@@ -45,7 +55,8 @@ class Polar:
         del self.ffi_polar
 
     def clear(self):
-        self.load_queue = []
+        self.loaded_names = {}
+        self.loaded_contents = {}
         del self.ffi_polar
         self.ffi_polar = FfiPolar()
 
@@ -54,16 +65,40 @@ class Polar:
         until a query is made."""
         policy_file = Path(policy_file)
         extension = policy_file.suffix
-        if extension not in (".pol", ".polar"):
-            raise PolarApiException(f"Polar files must have .pol or .polar extension.")
-        if not policy_file.exists():
-            raise PolarApiException(f"Could not find file: {policy_file}")
-        if policy_file not in self.load_queue:
-            self.load_queue.append(policy_file)
+        if not extension == ".polar":
+            raise PolarApiException(f"Polar files must have a .polar extension.")
 
-    def load_str(self, string):
+        fname = str(policy_file)
+
+        # Checksum file contents
+        try:
+            with open(fname, "rb") as f:
+                file_data = f.read()
+            fhash = hashlib.md5(file_data).hexdigest()
+        except FileNotFoundError:
+            raise PolarApiException(f"Could not find file: {policy_file}")
+
+        if fname in self.loaded_names.keys():
+            if self.loaded_names.get(fname) == fhash:
+                raise PolarFileAlreadyLoadedError(
+                    f"File {fname} has already been loaded."
+                )
+            else:
+                raise PolarFileContentsChangedError(
+                    f"A file with the name {fname}, but different contents, has already been loaded."
+                )
+        elif fhash in self.loaded_contents.keys():
+            raise PolarFileNameChangedError(
+                f"A file with the same contents as {fname} named {self.loaded_contents.get(fhash)} has already been loaded."
+            )
+        else:
+            self.load_str(file_data.decode("utf-8"), policy_file)
+            self.loaded_names[fname] = fhash
+            self.loaded_contents[fhash] = fname
+
+    def load_str(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
-        self.ffi_polar.load_str(string, None)
+        self.ffi_polar.load_str(string, filename)
 
         # check inline queries
         while True:
@@ -83,8 +118,6 @@ class Polar:
 
         :return: The result of the query.
         """
-        self._load_queued_files()
-
         host = self.host.copy()
         if isinstance(query, str):
             query = self.ffi_polar.new_query_from_str(query)
@@ -113,7 +146,6 @@ class Polar:
 
             for f in sys.argv[1:]:
                 self.load_file(f)
-        self._load_queued_files()
 
         while True:
             try:
@@ -149,13 +181,6 @@ class Polar:
     def register_constant(self, name, value):
         """Register `value` as a Polar constant variable called `name`."""
         self.ffi_polar.register_constant(name, self.host.to_polar_term(value))
-
-    def _load_queued_files(self):
-        """Load queued policy files into the knowledge base."""
-        while self.load_queue:
-            filename = self.load_queue.pop(0)
-            with open(filename) as file:
-                self.ffi_polar.load_str(file.read(), filename)
 
 
 def polar_class(_cls=None, *, name=None, from_polar=None):

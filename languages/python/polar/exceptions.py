@@ -33,6 +33,18 @@ class PolarRuntimeException(PolarException):
         return super(PolarException, self).__str__()
 
 
+class PolarFileAlreadyLoadedError(PolarRuntimeException):
+    pass
+
+
+class PolarFileContentsChangedError(PolarRuntimeException):
+    pass
+
+
+class PolarFileNameChangedError(PolarRuntimeException):
+    pass
+
+
 class PolarOperationalException(PolarException):
     """Exceptions from polar that are not necessarily the user's fault. OOM etc..."""
 

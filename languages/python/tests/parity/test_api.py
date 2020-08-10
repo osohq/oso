@@ -261,7 +261,6 @@ def test_clear(polar, load_policy, query):
     polar.clear()
     with pytest.raises(PolarRuntimeException):
         polar.load_file(fails)
-        polar._load_queued_files()
 
     polar.clear()
     polar.load_file(new)

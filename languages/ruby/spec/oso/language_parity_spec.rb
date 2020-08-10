@@ -38,7 +38,6 @@ end
 oso.register_class(B::C, name: 'C') { |y| B::C.new(y) }
 
 oso.load_file File.expand_path(File.join(__dir__, '../../../../test/test.polar'))
-oso.load_queued_files
 
 raise unless oso.allowed?(actor: 'a', action: 'b', resource: 'c')
 
