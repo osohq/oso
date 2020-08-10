@@ -60,8 +60,8 @@ module Oso
       end
     end
     class PolarFileExtensionError < PolarRuntimeError # rubocop:disable Style/Documentation
-      def initialize
-        super('Polar files must have .pol or .polar extension.')
+      def initialize(file)
+        super("Polar files must have .polar extension. Offending file: #{file}")
       end
     end
     class PolarFileNotFoundError < PolarRuntimeError # rubocop:disable Style/Documentation

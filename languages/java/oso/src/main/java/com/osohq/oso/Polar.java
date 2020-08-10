@@ -64,7 +64,7 @@ public class Polar {
 
         // check file extension
         if (!ext.isPresent() || !ext.get().equals("polar")) {
-            throw new Exceptions.PolarFileExtensionError();
+            throw new Exceptions.PolarFileExtensionError(filename);
         }
 
         try {

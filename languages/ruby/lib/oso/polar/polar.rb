@@ -26,12 +26,12 @@ module Oso
         @loaded_contents = {}
 
         # Register built-in classes.
-        register_class(PolarBoolean, name: 'Boolean')
-        register_class(Integer, name: 'Integer')
-        register_class(Float, name: 'Float')
-        register_class(Array, name: 'List')
-        register_class(Hash, name: 'Dictionary')
-        register_class(String, name: 'String')
+        register_class PolarBoolean, name: 'Boolean'
+        register_class Integer
+        register_class Float
+        register_class Array, name: 'List'
+        register_class Hash, name: 'Dictionary'
+        register_class String
       end
 
       # Replace the current Polar instance but retain all registered classes and constructors.
@@ -47,7 +47,7 @@ module Oso
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
       # @raise [PolarFileNotFoundError] if provided filename does not exist.
       def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        raise PolarFileExtensionError unless File.extname(name) == '.polar'
+        raise PolarFileExtensionError, name unless File.extname(name) == '.polar'
 
         file_data = File.open(name, &:read)
         hash = Digest::MD5.hexdigest(file_data)
@@ -117,6 +117,7 @@ module Oso
       #
       # @param name [String]
       # @param args [Array<Object>]
+      # @return [Enumerator] of resulting bindings
       # @raise [Error] if the FFI call raises one.
       def query_rule(name, *args)
         query(Predicate.new(name, args: args))
