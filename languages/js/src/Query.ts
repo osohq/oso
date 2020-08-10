@@ -21,7 +21,7 @@ import { isGenerator, isGeneratorFunction, QueryEventKind } from './types';
 
 export class Query {
   #ffiQuery: FfiQuery;
-  #calls: Map<bigint, Generator>;
+  #calls: Map<number, Generator>;
   #host: Host;
   results: QueryResult;
 
@@ -32,13 +32,13 @@ export class Query {
     this.results = this.start();
   }
 
-  private questionResult(result: boolean, callId: bigint): void {
+  private questionResult(result: boolean, callId: number): void {
     this.#ffiQuery.questionResult(callId, result);
   }
 
   private registerCall(
     attr: string,
-    callId: bigint,
+    callId: number,
     instance: PolarValue,
     args: PolarValue[]
   ): void {
@@ -87,11 +87,11 @@ export class Query {
     this.#calls.set(callId, result);
   }
 
-  private callResult(callId: bigint, result?: string): void {
+  private callResult(callId: number, result?: string): void {
     this.#ffiQuery.callResult(callId, result);
   }
 
-  private nextCallResult(callId: bigint): string | undefined {
+  private nextCallResult(callId: number): string | undefined {
     const { done, value } = this.#calls.get(callId)!.next();
     // TODO(gj): should this only check 'done'?
     if (done || value === null || value === undefined) return undefined;
@@ -104,7 +104,7 @@ export class Query {
 
   private handleCall(
     attr: string,
-    callId: bigint,
+    callId: number,
     instance: PolarValue,
     args: PolarValue[]
   ): void {

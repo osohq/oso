@@ -73,7 +73,7 @@ function parseMakeExternal(d: { [key: string]: any }): QueryEvent {
   return {
     kind: QueryEventKind.MakeExternal,
     data: {
-      instanceId: d.instance_id as bigint,
+      instanceId: d.instance_id,
       tag: d.instance.tag,
       fields: new Map(Object.entries(d.instance.fields.fields)),
     },
@@ -92,7 +92,7 @@ function parseExternalCall(d: { [key: string]: any }): QueryEvent {
   return {
     kind: QueryEventKind.ExternalCall,
     data: {
-      callId: d.call_id as bigint,
+      callId: d.call_id,
       instance: d.instance,
       attribute: d.attribute,
       args: d.args,
@@ -111,10 +111,10 @@ function parseExternalIsSubspecializer(d: { [key: string]: any }): QueryEvent {
   return {
     kind: QueryEventKind.ExternalIsSubspecializer,
     data: {
-      instanceId: d.instance_id as bigint,
+      instanceId: d.instance_id,
       leftTag: d.left_class_tag,
       rightTag: d.right_class_tag,
-      callId: d.call_id as bigint,
+      callId: d.call_id,
     },
   };
 }
@@ -129,9 +129,9 @@ function parseExternalIsa(d: { [key: string]: any }): QueryEvent {
   return {
     kind: QueryEventKind.ExternalIsa,
     data: {
-      instanceId: d.instance_id as bigint,
+      instanceId: d.instance_id,
       tag: d.class_tag,
-      callId: d.call_id as bigint,
+      callId: d.call_id,
     },
   };
 }
@@ -146,9 +146,9 @@ function parseExternalUnify(d: { [key: string]: any }): QueryEvent {
   return {
     kind: QueryEventKind.ExternalUnify,
     data: {
-      leftId: d.left_instance_id as bigint,
-      rightId: d.right_instance_id as bigint,
-      callId: d.call_id as bigint,
+      leftId: d.left_instance_id,
+      rightId: d.right_instance_id,
+      callId: d.call_id,
     },
   };
 }

@@ -23,7 +23,7 @@ export class DuplicateClassAliasError extends PolarError {
 }
 
 export class DuplicateInstanceRegistrationError extends PolarError {
-  constructor(id: bigint) {
+  constructor(id: number) {
     super(
       `Attempted to register instance ${id}, but an instance with that ID already exists.`
     );
@@ -121,7 +121,7 @@ export class UnregisteredClassError extends PolarError {
 }
 
 export class UnregisteredInstanceError extends PolarError {
-  constructor(id: bigint) {
+  constructor(id: number) {
     super(`Unregistered instance: ${id}.`);
     Object.setPrototypeOf(this, UnregisteredInstanceError.prototype);
   }
