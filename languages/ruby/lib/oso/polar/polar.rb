@@ -117,6 +117,7 @@ module Oso
       #
       # @param name [String]
       # @param args [Array<Object>]
+      # @return [Enumerator] of resulting bindings
       # @raise [Error] if the FFI call raises one.
       def query_rule(name, *args)
         query(Predicate.new(name, args: args))
