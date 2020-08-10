@@ -32,7 +32,6 @@ def test_parses(oso, policy, load):
 
     # Test that policy parses and inline tests pass.
     load(policy)
-    oso._load_queued_files()
 
 
 def test_external_policy(oso, load):
@@ -44,8 +43,6 @@ def test_external_policy(oso, load):
             self.name = name
 
     oso.register_class(User)
-
-    oso._load_queued_files()
 
     assert oso.is_allowed(User(role="employee"), "submit", "expense")
     assert oso.is_allowed(User(role="admin"), "approve", "expense")
@@ -63,8 +60,6 @@ def test_external_policy(oso, load):
             self.name = name
 
     oso.register_class(User)
-
-    oso._load_queued_files()
 
     assert oso.is_allowed(User(role="employee"), "submit", "expense")
     assert not oso.is_allowed(User(role="employee"), "view", "expense")

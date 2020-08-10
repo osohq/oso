@@ -13,6 +13,7 @@ RSpec.describe do
 
   def load_file(example_name)
       oso = Oso::Oso.new
+      oso.register_class(User)
 
       file = File.join(File.dirname(__FILE__), '..', example_name)
       oso.load_file(file)
@@ -20,35 +21,20 @@ RSpec.describe do
   end
 
   context "01-simple" do
-    before do
-      @oso = load_file("01-simple.polar")
-      @oso.register_class(User)
-    end
-
     it "parses" do
-      @oso.load_queued_files
+      load_file("01-simple.polar")
     end
   end
 
   context "02-simple" do
-    before do
-      @oso = load_file("02-simple.polar")
-      @oso.register_class(User)
-    end
-
     it "parses" do
-      @oso.load_queued_files
+      load_file("02-simple.polar")
     end
   end
 
   context "05-external.polar" do
     before do
       @oso = load_file("05-external.polar")
-      @oso.register_class(User)
-    end
-
-    it "parses" do
-      @oso.load_queued_files
     end
 
     it "works" do
@@ -78,11 +64,6 @@ RSpec.describe do
   context "06-external.polar" do
     before do
       @oso = load_file("06-external.polar")
-      @oso.register_class(User)
-    end
-
-    it "parses" do
-      @oso.load_queued_files
     end
 
     it "works" do

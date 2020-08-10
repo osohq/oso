@@ -40,6 +40,25 @@ module Oso
     class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end
+    class PolarFileAlreadyLoadedError < PolarRuntimeError # rubocop:disable Style/Documentation
+      # @param file [String]
+      def initialize(file)
+        super("File #{file} has already been loaded.")
+      end
+    end
+    class PolarFileContentsChangedError < PolarRuntimeError # rubocop:disable Style/Documentation
+      # @param file [String]
+      def initialize(file)
+        super("A file with the name #{file}, but different contents, has already been loaded.")
+      end
+    end
+    class PolarFileNameChangedError < PolarRuntimeError # rubocop:disable Style/Documentation
+      # @param file [String]
+      # @param existing [String]
+      def initialize(file, existing)
+        super("A file with the same contents as #{file} named #{existing} has already been loaded.")
+      end
+    end
     class PolarFileExtensionError < PolarRuntimeError # rubocop:disable Style/Documentation
       def initialize
         super('Polar files must have .pol or .polar extension.')

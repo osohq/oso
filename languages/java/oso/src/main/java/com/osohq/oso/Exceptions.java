@@ -230,9 +230,34 @@ public class Exceptions {
         }
     }
 
+    public static class PolarFileAlreadyLoadedError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public PolarFileAlreadyLoadedError(String type) {
+            super(type);
+        }
+    }
+
+    public static class PolarFileContentsChangedError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public PolarFileContentsChangedError(String type) {
+            super(type);
+        }
+    }
+
+    public static class PolarFileNameChangedError extends PolarRuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public PolarFileNameChangedError(String type) {
+            super(type);
+        }
+
+    }
+
     public static class PolarFileExtensionError extends PolarRuntimeException {
         public PolarFileExtensionError() {
-            super("Polar files must have a .pol or .polar extension");
+            super("Polar files must have a .polar extension");
         }
     }
 
