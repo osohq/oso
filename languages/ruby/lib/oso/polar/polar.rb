@@ -55,7 +55,7 @@ module Oso
         if loaded_names.key?(name)
           raise PolarFileAlreadyLoadedError, "File #{name} has already been loaded." if loaded_names[name] == hash
 
-          raise PolarFileContentChangedError, "A file with the name #{name}, but different contents,
+          raise PolarFileContentsChangedError, "A file with the name #{name}, but different contents,
             has already been loaded."
         elsif loaded_contents.key?(hash)
           raise PolarFileNameChangedError, "A file with the same contents as #{name} named #{loaded_contents[hash]}
