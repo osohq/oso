@@ -644,3 +644,6 @@ We just went through a ton of stuff:
 ------------------------
 
 .. include:: /newsletter.rst
+
+.. spelling::
+    Gradle

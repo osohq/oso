@@ -72,7 +72,7 @@ oso is available as a library in several languages:
 
         The Java version of oso is available on `Maven Central <https://search.maven.org/artifact/com.osohq/oso>`_.
 
-        It can be added as a depndency to a **Maven** project::
+        It can be added as a dependency to a **Maven** project::
 
             <!-- https://mvnrepository.com/artifact/com.osohq/oso -->
             <dependency>
