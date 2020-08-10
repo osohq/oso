@@ -22,7 +22,7 @@ class FlaskOso:
     **Configuration**
 
     - :py:meth:`require_authorization`: Require at least one
-    :py:meth:`FlaskOso.authorize` call for every request.
+      :py:meth:`FlaskOso.authorize` call for every request.
     - :py:meth:`set_get_actor`: Override how oso determines the actor
       associated with a request if none is provided to :py:meth:`FlaskOso.authorize`.
     - :py:meth:`set_unauthorized_action`: Control how :py:meth:`FlaskOso.authorize`
