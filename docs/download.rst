@@ -78,13 +78,13 @@ oso is available as a library in several languages:
             <dependency>
                 <groupId>com.osohq</groupId>
                 <artifactId>oso</artifactId>
-                <version>0.3.1</version>
+                <version>{release}</version>
             </dependency>
 
         or a **Gradle** project::
 
             // https://mvnrepository.com/artifact/com.osohq/oso
-            compile group: 'com.osohq', name: 'oso', version: '0.3.1'
+            compile group: 'com.osohq', name: 'oso', version: '{relase}'
 
         or downloaded as a **JAR** and added to the classpath of any Java project::
 
