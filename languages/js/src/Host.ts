@@ -23,16 +23,11 @@ import {
   isPolarVariable,
 } from './types';
 
-// TODO(gj): temporary shenanigans
-(BigInt as any).prototype.toJSON = function () {
-  return Number.parseInt(this.toString());
-};
-
 export class Host {
   #ffiPolar: FfiPolar;
   #classes: Map<string, Function>;
   #constructors: Map<string, Constructor>;
-  #instances: Map<bigint, object>;
+  #instances: Map<number, object>;
 
   constructor(ffiPolar: FfiPolar) {
     this.#ffiPolar = ffiPolar;
@@ -93,21 +88,20 @@ export class Host {
     return constructor;
   }
 
-  hasInstance(id: bigint): boolean {
+  hasInstance(id: number): boolean {
     return this.#instances.has(id);
   }
 
-  getInstance(id: bigint): object {
+  getInstance(id: number): object {
     const instance = this.#instances.get(id);
     if (instance === undefined) throw new UnregisteredInstanceError(id);
     return instance;
   }
 
-  // NOTE(gj): BigInt requires Node >= 10.4.0
-  private cacheInstance(instance: object, id?: bigint): bigint {
+  private cacheInstance(instance: object, id?: number): number {
     let instanceId = id;
     if (instanceId === undefined) {
-      instanceId = this.#ffiPolar.newId() as bigint;
+      instanceId = this.#ffiPolar.newId();
     }
     this.#instances.set(instanceId, instance);
     return instanceId;
@@ -116,8 +110,8 @@ export class Host {
   makeInstance(
     name: string,
     fields: Map<string, PolarValue>,
-    id: bigint
-  ): bigint {
+    id: number
+  ): number {
     const constructor = this.getConstructor(name);
     const args = new Map(
       Object.entries(fields).map(([k, v]) => [k, this.toJs(v)])
@@ -126,7 +120,7 @@ export class Host {
     return this.cacheInstance(instance, id);
   }
 
-  isSubspecializer(id: bigint, left: string, right: string): boolean {
+  isSubspecializer(id: number, left: string, right: string): boolean {
     const instance = this.getInstance(id);
     const mro = ancestors(instance.constructor);
     const leftIndex = mro.indexOf(this.getClass(left));
@@ -140,7 +134,7 @@ export class Host {
     }
   }
 
-  isa(id: bigint, name: string): boolean {
+  isa(id: number, name: string): boolean {
     const instance = this.getInstance(id);
     const cls = this.getClass(name);
     // TODO(gj): is this correct?
@@ -148,7 +142,7 @@ export class Host {
   }
 
   // TODO(gj): do more thinking about whether this should be ===
-  unify(left: bigint, right: bigint): boolean {
+  unify(left: number, right: number): boolean {
     return isEqual(this.getInstance(left), this.getInstance(right));
   }
 
@@ -157,20 +151,13 @@ export class Host {
     switch (true) {
       case typeof v === 'boolean':
         return { value: { Boolean: v } };
-      case typeof v === 'bigint':
+      case Number.isInteger(v):
         return { value: { Number: { Integer: v } } };
-      // TODO(gj): Not sure what to do here... is it cool that 5.0 becomes
-      // { 'Integer': 5.0 } and that we punt on large integers? Should we
-      // handle BigInts separately?
-      case Number.isSafeInteger(v):
-        return { value: { Number: { Integer: v } } };
-      // TODO(gj): I think this roughly covers floats and excludes BigInts?
-      case !Number.isInteger(v) && typeof v === 'number':
+      // TODO(gj): Handle Infinity, -Infinity, -0, NaN, etc.
+      case typeof v === 'number':
         return { value: { Number: { Float: v } } };
       case typeof v === 'string':
         return { value: { String: v } };
-      // TODO(gj): do we want to handle TypedArrays here with
-      // ArrayBuffer.isView(v)?
       case Array.isArray(v):
         return {
           value: { List: v.map((el: unknown) => this.toPolarTerm(el)) },
@@ -213,7 +200,6 @@ export class Host {
     }
   }
 
-  // TODO(gj): handle Set?
   toJs(v: PolarValue): any {
     const t = v.value;
     if (isPolarStr(t)) {
@@ -222,7 +208,6 @@ export class Host {
       if ('Float' in t.Number) {
         return t.Number.Float;
       } else {
-        // TODO(gj): handle BigInts?
         return t.Number.Integer;
       }
     } else if (isPolarBool(t)) {
@@ -246,8 +231,6 @@ export class Host {
       );
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable.name);
-    } else {
-      // TODO(gj): assert unreachable
     }
   }
 }

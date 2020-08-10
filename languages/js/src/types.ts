@@ -65,7 +65,7 @@ interface PolarVariable {
 
 interface PolarInstance {
   ExternalInstance: {
-    instance_id: bigint;
+    instance_id: number;
     repr: string;
   };
 }
@@ -136,35 +136,35 @@ export interface Result {
 }
 
 export interface MakeExternal {
-  instanceId: bigint;
+  instanceId: number;
   tag: string;
   fields: Map<string, PolarValue>;
 }
 
 export interface ExternalCall {
-  callId: bigint;
+  callId: number;
   instance: PolarValue;
   attribute: string;
   args: PolarValue[];
 }
 
 export interface ExternalIsSubspecializer {
-  instanceId: bigint;
+  instanceId: number;
   leftTag: string;
   rightTag: string;
-  callId: bigint;
+  callId: number;
 }
 
 export interface ExternalIsa {
-  instanceId: bigint;
+  instanceId: number;
   tag: string;
-  callId: bigint;
+  callId: number;
 }
 
 export interface ExternalUnify {
-  leftId: bigint;
-  rightId: bigint;
-  callId: bigint;
+  leftId: number;
+  rightId: number;
+  callId: number;
 }
 
 export interface Debug {
