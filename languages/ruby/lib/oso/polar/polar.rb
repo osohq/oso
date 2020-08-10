@@ -26,12 +26,12 @@ module Oso
         @loaded_contents = {}
 
         # Register built-in classes.
-        register_class(PolarBoolean, name: 'Boolean')
-        register_class(Integer, name: 'Integer')
-        register_class(Float, name: 'Float')
-        register_class(Array, name: 'List')
-        register_class(Hash, name: 'Dictionary')
-        register_class(String, name: 'String')
+        register_class PolarBoolean, name: 'Boolean'
+        register_class Integer
+        register_class Float
+        register_class Array, name: 'List'
+        register_class Hash, name: 'Dictionary'
+        register_class String
       end
 
       # Replace the current Polar instance but retain all registered classes and constructors.
