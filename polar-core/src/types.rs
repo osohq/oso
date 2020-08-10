@@ -484,7 +484,7 @@ impl Rule {
     }
 }
 
-pub type Rules = Vec<Rule>;
+pub type Rules = Vec<Arc<Rule>>;
 
 #[derive(Clone)]
 pub struct GenericRule {
@@ -545,7 +545,7 @@ impl Sources {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Node {
-    Rule(Rule),
+    Rule(Arc<Rule>),
     Term(Term),
 }
 

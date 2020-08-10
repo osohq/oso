@@ -181,7 +181,7 @@ mod tests {
         crate::parser::parse_query(0, src).unwrap()
     }
 
-    fn parse_rules(src: &str) -> Rules {
+    fn parse_rules(src: &str) -> Vec<Rule> {
         crate::parser::parse_rules(0, src).unwrap()
     }
 

@@ -33,8 +33,8 @@ pub enum Goal {
         right: Term,
     },
     IsMoreSpecific {
-        left: Rule,
-        right: Rule,
+        left: Arc<Rule>,
+        right: Arc<Rule>,
         args: TermList,
     },
     IsSubspecializer {
@@ -106,13 +106,15 @@ pub struct Choice {
     pub goals: GoalStack,  // goal stack snapshot
     queries: Queries,      // query stack snapshot
     trace: Vec<Rc<Trace>>, // trace snapshot
-    trace_stack: Vec<Vec<Rc<Trace>>>,
+    trace_stack: TraceStack,
 }
 
 pub type BindingStack = Vec<Binding>;
 pub type Choices = Vec<Choice>;
 /// Shortcut type alias for a list of goals
 pub type Goals = Vec<Goal>;
+pub type TraceStack = Vec<Rc<Vec<Rc<Trace>>>>;
+
 #[derive(Clone, Debug, Default)]
 pub struct GoalStack(Vec<Rc<Goal>>);
 
@@ -152,8 +154,8 @@ pub struct PolarVirtualMachine {
     pub queries: Queries,
 
     pub tracing: bool,
-    pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
-    pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
+    pub trace_stack: TraceStack, // Stack of traces higher up the tree.
+    pub trace: Vec<Rc<Trace>>,   // Traces for the current level of the trace tree.
 
     // Errors from outside the vm.
     pub external_error: Option<String>,
@@ -325,12 +327,12 @@ impl PolarVirtualMachine {
                 args,
             } => self.sort_rules(rules, args, *outer, *inner)?,
             Goal::TracePush => {
-                self.trace_stack.push(self.trace.clone());
+                self.trace_stack.push(Rc::new(self.trace.clone()));
                 self.trace = vec![];
             }
             Goal::TracePop => {
                 let mut children = self.trace.clone();
-                self.trace = self.trace_stack.pop().unwrap();
+                self.trace = self.trace_stack.pop().unwrap().as_ref().clone();
                 let mut trace = self.trace.pop().unwrap();
                 let trace = Rc::make_mut(&mut trace);
                 trace.children.append(&mut children);
@@ -639,7 +641,10 @@ impl PolarVirtualMachine {
         let mut stack = vec![];
         while let Some(t) = trace.last() {
             stack.push(t.clone());
-            trace = trace_stack.pop().unwrap_or_else(Vec::new);
+            trace = trace_stack
+                .pop()
+                .map(|ts| ts.as_ref().clone())
+                .unwrap_or_else(Vec::new);
         }
 
         stack.reverse();
@@ -728,32 +733,40 @@ impl PolarVirtualMachine {
             self.print("⇒ backtrack");
         }
         loop {
-            match self.choices.last_mut() {
+            match self.choices.pop() {
                 None => return self.push_goal(Goal::Halt),
                 Some(Choice {
-                    alternatives,
+                    mut alternatives,
                     bsp,
                     goals,
                     queries,
                     trace,
                     trace_stack,
                 }) => {
-                    self.bindings.drain(*bsp..);
+                    self.bindings.truncate(bsp);
                     if let Some(mut alternative) = alternatives.pop() {
-                        self.goals = goals.clone();
-                        self.queries = queries.clone();
-                        self.trace = trace.clone();
-                        self.trace_stack = trace_stack.clone();
-                        // Note: here we are directly modifying the
-                        // VM goal stack, since what we have is already
-                        // a "stored goal stack"
+                        if alternatives.is_empty() {
+                            self.goals = goals;
+                            self.queries = queries;
+                            self.trace = trace;
+                            self.trace_stack = trace_stack;
+                        } else {
+                            self.goals.clone_from(&goals);
+                            self.queries.clone_from(&queries);
+                            self.trace.clone_from(&trace);
+                            self.trace_stack.clone_from(&trace_stack);
+                            self.choices.push(Choice {
+                                alternatives,
+                                bsp,
+                                goals,
+                                queries,
+                                trace,
+                                trace_stack,
+                            })
+                        }
                         self.goals.append(&mut alternative);
-
-                        break; // we have our alternative, end the loop
+                        break;
                     }
-
-                    // falling through means no alternatives found
-                    let _ = self.choices.pop();
                 }
             }
         }
@@ -762,7 +775,7 @@ impl PolarVirtualMachine {
 
     /// Commit to the current choice.
     fn cut(&mut self, index: usize) {
-        let _ = self.choices.drain(index..);
+        let _ = self.choices.truncate(index);
     }
 
     /// Clean up the query stack after completing a query.
@@ -1914,9 +1927,9 @@ impl PolarVirtualMachine {
         } else {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
-            let mut alternatives = vec![];
+            let mut alternatives = Vec::with_capacity(rules.len());
             for rule in rules.iter() {
-                let mut goals = vec![];
+                let mut goals = Vec::with_capacity(2 * args.len() + 4);
                 goals.push(Goal::TraceRule {
                     trace: Rc::new(Trace {
                         node: Node::Rule(rule.clone()),
@@ -2221,7 +2234,7 @@ mod tests {
 
         let rule = GenericRule {
             name: sym!("f"),
-            rules: vec![f1, f2],
+            rules: vec![Arc::new(f1), Arc::new(f2)],
         };
 
         let mut kb = KnowledgeBase::new();
@@ -2735,10 +2748,10 @@ mod tests {
         let bar_rule = GenericRule::new(
             sym!("bar"),
             vec![
-                rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)]),
-                rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)]),
-                rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)]),
-                rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)]),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)])),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)])),
             ],
         );
 

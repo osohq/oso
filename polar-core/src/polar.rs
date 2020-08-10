@@ -87,7 +87,7 @@ impl Polar {
                         name,
                         rules: vec![],
                     });
-                    generic_rule.rules.push(rule);
+                    generic_rule.rules.push(Arc::new(rule));
                 }
                 parser::Line::Query(term) => {
                     kb.inline_queries.push(term);
