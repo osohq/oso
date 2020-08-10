@@ -106,13 +106,15 @@ pub struct Choice {
     pub goals: GoalStack,  // goal stack snapshot
     queries: Queries,      // query stack snapshot
     trace: Vec<Rc<Trace>>, // trace snapshot
-    trace_stack: Vec<Vec<Rc<Trace>>>,
+    trace_stack: TraceStack,
 }
 
 pub type BindingStack = Vec<Binding>;
 pub type Choices = Vec<Choice>;
 /// Shortcut type alias for a list of goals
 pub type Goals = Vec<Goal>;
+pub type TraceStack = Vec<Rc<Vec<Rc<Trace>>>>;
+
 #[derive(Clone, Debug, Default)]
 pub struct GoalStack(Vec<Rc<Goal>>);
 
@@ -152,8 +154,8 @@ pub struct PolarVirtualMachine {
     pub queries: Queries,
 
     pub tracing: bool,
-    pub trace_stack: Vec<Vec<Rc<Trace>>>, // Stack of traces higher up the tree.
-    pub trace: Vec<Rc<Trace>>,            // Traces for the current level of the trace tree.
+    pub trace_stack: TraceStack, // Stack of traces higher up the tree.
+    pub trace: Vec<Rc<Trace>>,   // Traces for the current level of the trace tree.
 
     // Errors from outside the vm.
     pub external_error: Option<String>,
@@ -325,12 +327,12 @@ impl PolarVirtualMachine {
                 args,
             } => self.sort_rules(rules, args, *outer, *inner)?,
             Goal::TracePush => {
-                self.trace_stack.push(self.trace.clone());
+                self.trace_stack.push(Rc::new(self.trace.clone()));
                 self.trace = vec![];
             }
             Goal::TracePop => {
                 let mut children = self.trace.clone();
-                self.trace = self.trace_stack.pop().unwrap();
+                self.trace = self.trace_stack.pop().unwrap().as_ref().clone();
                 let mut trace = self.trace.pop().unwrap();
                 let trace = Rc::make_mut(&mut trace);
                 trace.children.append(&mut children);
@@ -639,7 +641,10 @@ impl PolarVirtualMachine {
         let mut stack = vec![];
         while let Some(t) = trace.last() {
             stack.push(t.clone());
-            trace = trace_stack.pop().unwrap_or_else(Vec::new);
+            trace = trace_stack
+                .pop()
+                .map(|ts| ts.as_ref().clone())
+                .unwrap_or_else(Vec::new);
         }
 
         stack.reverse();
@@ -1922,9 +1927,9 @@ impl PolarVirtualMachine {
         } else {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
-            let mut alternatives = vec![];
+            let mut alternatives = Vec::with_capacity(rules.len());
             for rule in rules.iter() {
-                let mut goals = vec![];
+                let mut goals = Vec::with_capacity(2 * args.len() + 4);
                 goals.push(Goal::TraceRule {
                     trace: Rc::new(Trace {
                         node: Node::Rule(rule.clone()),

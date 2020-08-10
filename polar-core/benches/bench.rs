@@ -145,7 +145,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
     }
 
     let n_array = [1, 20];
-    let delays = [100_000, 1_000_000];
+    let delays = [100_000];
 
     let mut group = c.benchmark_group("n_plus_one query");
     for delay in &delays {

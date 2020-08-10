@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 edition = "2018"
 
+[lib]
+bench = false
+
 [[bench]]
 name = "bench"
 harness = false
