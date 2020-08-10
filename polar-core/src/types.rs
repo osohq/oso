@@ -594,8 +594,11 @@ impl KnowledgeBase {
     /// Wraps around at 52 bits of precision so that it can be safely coerced to an IEEE-754
     /// double-float (f64).
     pub fn new_id(&self) -> u64 {
-        if self.id_counter.load(Ordering::SeqCst) == MAX_ID {
-            self.id_counter.store(1, Ordering::SeqCst);
+        if self
+            .id_counter
+            .compare_and_swap(MAX_ID, 1, Ordering::SeqCst)
+            == MAX_ID
+        {
             MAX_ID
         } else {
             self.id_counter.fetch_add(1, Ordering::SeqCst)
