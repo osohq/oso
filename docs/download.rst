@@ -14,6 +14,9 @@ oso is available as a library in several languages:
 
             $ pip install oso=={release}
 
+        The python version is known to work on glibc based distributions but not on musl based ones (like apline).
+        Wheels built against musl that you can use on alpine can be downloaded from the `Release <https://github.com/osohq/oso/releases/latest>`_ on Github.
+
         For more information on the oso Python library, see the
         :doc:`library documentation </using/libraries/python/index>`.
 
@@ -29,7 +32,7 @@ oso is available as a library in several languages:
         - Supported platforms:
             - Linux
             - OS X
-            - Windows (coming soon)
+            - Windows
 
         .. _PyPI: https://pypi.org/project/oso/
 
@@ -60,14 +63,14 @@ oso is available as a library in several languages:
         - Supported platforms:
             - Linux
             - OS X
-            - Windows (coming soon)
+            - Windows
 
         .. _RubyGems: https://rubygems.org/gems/oso-oso
 
 
     .. group-tab:: Java
 
-        The Java version of oso is available on GitHub. Go to the `Maven Repository <https://github.com/osohq/oso/packages/321403>`_ and download the latest jar.
+        The Java version of oso is available on GitHub. Go to the `Maven Repository <https://search.maven.org/artifact/com.osohq/oso>`_ and download the latest jar or add it as a dependency to your build system.
 
         To use it, add it to the classpath for your project::
 
@@ -90,7 +93,7 @@ oso is available as a library in several languages:
         - Supported platforms:
             - Linux
             - OS X
-            - Windows (coming soon)
+            - Windows
 
 **Libraries coming soon:**
 
