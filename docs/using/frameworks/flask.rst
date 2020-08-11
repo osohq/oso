@@ -98,8 +98,8 @@ authorization.  ``flask_oso`` does not dictate where this call should occur.
 See :doc:`/getting-started/application/patterns` for more on where oso can be
 integrated.
 
-One downside to requiring routes to call :py:meth:`flask_oso.FlaskOso.authorize`
-explicitly is that it can potentially be forgotten.  To help detect this, the
+One downside to calling :py:meth:`flask_oso.FlaskOso.authorize`
+explicitly within route handlers is that the check might be forgotten.  To help detect this, the
 :py:meth:`flask_oso.FlaskOso.require_authorization` option can be enabled during
 initialization. This will cause an :py:class:`oso.OsoException` to be raised if
 a call to :py:meth:`flask_oso.FlaskOso.authorize` **is not** made during the
