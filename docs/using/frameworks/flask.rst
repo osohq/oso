@@ -187,9 +187,9 @@ initialization.
 Example
 -------
 
-Check out the Flask integration example app below:
+Check out the Flask integration example app below on GitHub:
 
-.. todo:: github link
+:fab:`github` `osohq/oso-flask-integration <https://github.com/osohq/oso-flask-integration>`_
 
 API Reference
 -------------
