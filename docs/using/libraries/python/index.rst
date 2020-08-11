@@ -13,6 +13,11 @@ Code-level documentation is :doc:`here<api>`.
 
 To install, see :doc:`installation instructions </download>`.
 
+**Framework integrations**
+
+oso provides integrations for popular frameworks.  The :doc:`/using/frameworks/flask` integration
+is available now, with more coming soon.
+
 Working with Python Objects
 ===========================
 

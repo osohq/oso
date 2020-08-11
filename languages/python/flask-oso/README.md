@@ -1,2 +1,2 @@
-flask_oso
+flask-oso
 =========

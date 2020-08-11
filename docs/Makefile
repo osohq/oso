@@ -34,7 +34,7 @@ _api_docs/ruby: $(RUBY_FILES)
 
 _api_docs/java: $(JAVA_FILES)
 	mkdir -p _api_docs
-	cd "$(JAVA_DIR)" && mvn javadoc:javadoc
+	cd "$(JAVA_DIR)" && mvn -q javadoc:javadoc
 	rm -rf _api_docs/java
 	cp -R $(JAVA_DIR)/target/site/apidocs _api_docs/java
 

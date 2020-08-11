@@ -13,10 +13,10 @@ rust:
 	fi
 
 test: rust
-	cd oso && mvn clean test
+	cd oso && mvn $(MVN_FLAGS) clean test
 
 package: rust
-	cd oso && mvn clean package
+	cd oso && mvn $(MVN_FLAGS) clean package
 
 repl: rust
-	cd oso && mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="$(ARGS)"
+	cd oso && mvn $(MVN_FLAGS) exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="$(ARGS)"

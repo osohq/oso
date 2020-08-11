@@ -32,7 +32,7 @@ jobs:
           echo "name:        ${{ steps.import_gpg.outputs.name }}"
           echo "email:       ${{ steps.import_gpg.outputs.email }}"
       - run: |
-          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-lib-${{ github.event.inputs.version }}.zip") | .url') --output oso-lib-${{ github.event.inputs.version }}.zip
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-lib-${{ github.event.inputs.version }}.zip") | .url') --output oso-lib-${{ github.event.inputs.version }}.zip
       - run: unzip oso-lib-${{ github.event.inputs.version }}.zip -d oso-lib-${{ github.event.inputs.version }}
       - uses: actions/setup-java@v1
         with:
@@ -46,7 +46,7 @@ jobs:
           mkdir -p languages/java/oso/src/main/resources/win
           cp -r oso-lib-${{ github.event.inputs.version }}/polar.dll languages/java/oso/src/main/resources/win/
       - run: |
-          GPG_TTY=$(tty) mvn clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true --settings settings.xml
+          GPG_TTY=$(tty) mvn -q clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true --settings settings.xml
         working-directory: languages/java/oso
   python:
     name: Publish python package to pypi
@@ -60,7 +60,7 @@ jobs:
         with:
           ref: "v${{ github.event.inputs.version }}"
       - run: |
-          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.version }}.zip -d oso-python-${{ github.event.inputs.version }}
       - uses: actions/setup-python@v2
         name: Install Python
@@ -79,7 +79,7 @@ jobs:
         with:
           ref: "v${{ github.event.inputs.version }}"
       - run: |
-          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-ruby-${{ github.event.inputs.version }}.zip") | .url') --output oso-ruby-${{ github.event.inputs.version }}.zip
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-ruby-${{ github.event.inputs.version }}.zip") | .url') --output oso-ruby-${{ github.event.inputs.version }}.zip
       - run: unzip oso-ruby-${{ github.event.inputs.version }}.zip -d oso-ruby-${{ github.event.inputs.version }}
       - name: Set up ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
