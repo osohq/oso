@@ -23,9 +23,6 @@
     "clean": "gts clean",
     "compile": "tsc",
     "fix": "gts fix",
-    "prepare": "yarn run compile",
-    "pretest": "yarn run compile",
-    "posttest": "yarn run check",
     "checkfmt": "prettier --check 'src/**/*.[jt]s'"
   },
   "devDependencies": {
