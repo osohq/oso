@@ -11,12 +11,15 @@ rust-build:
 python-build: rust-build
 	$(MAKE) -C languages/python/oso build
 
+python-flask-build: python-build
+	$(MAKE) -C languages/python/flask_oso build
+
 python-test: python-build
 	$(MAKE) -C languages/python/oso test
 	python examples/expenses-py/app.py
 	cd test && python test.py
 
-python-flask-test: python-build
+python-flask-test: python-build python-flask-build
 	$(MAKE) -C languages/python/flask_oso test
 
 ruby-test:

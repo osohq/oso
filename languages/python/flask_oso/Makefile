@@ -1,7 +1,6 @@
 .PHONY: build test test-requirements fmt
 build:
 	rm -rf build
-	python setup.py build
 	python setup.py develop
 
 test-requirements: .make.test-requirements-install
