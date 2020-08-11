@@ -2,7 +2,9 @@ Flask
 =====
 
 The oso Flask integration provides a more convenient interface to oso for
-usage with Flask.
+usage with Flask_.
+
+.. _Flask: https://flask.palletsprojects.com/
 
 Usage
 -----
@@ -10,7 +12,7 @@ Usage
 Initialization
 ~~~~~~~~~~~~~~
 
-The :py:class:`flask_oso.FlaskOso` class is the entrypoint to the integration.
+The :py:class:`~flask_oso.FlaskOso` class is the entrypoint to the integration.
 It must be initialized with the Flask app and oso::
 
     from flask import Flask
@@ -21,7 +23,7 @@ It must be initialized with the Flask app and oso::
     flask_oso = FlaskOso(app=app, oso=oso)
 
 Alternatively, to support the Flask factory pattern, the
-:py:meth:`flask_oso.FlaskOso.init_app` method can be used::
+:py:meth:`~flask_oso.FlaskOso.init_app` method can be used::
 
     from flask import Flask
 
@@ -42,7 +44,7 @@ Alternatively, to support the Flask factory pattern, the
     app = create_app()
 
 This factory function can be a useful place for loading policy files, and
-calling configuration functions on :py:class:`flask_oso.FlaskOso` like
+calling configuration functions on :py:class:`~flask_oso.FlaskOso` like
 :py:meth:`flask_oso.FlaskOso.require_authorization`::
 
     def create_app():
@@ -59,9 +61,9 @@ Performing authorization
 
 When using the ``flask_oso`` integration, the primary authorization function is
 :py:meth:`flask_oso.FlaskOso.authorize`.  It accepts the same arguments as
-:py:meth:`oso.Oso.is_allowed`, but provides sensible defaults for working with
+:py:meth:`~oso.Oso.is_allowed`, but provides sensible defaults for working with
 Flask. The actor defaults to ``flask.g.current_user`` (this can be
-customized, see :py:meth:`flask_oso.FlaskOso.set_get_actor`).  The ``action``
+customized, see :py:meth:`~flask_oso.FlaskOso.set_get_actor`).  The ``action``
 defaults to the method of the current request ``flask.request.method``.
 ``resource`` must be provided.
 
@@ -72,9 +74,12 @@ defaults to the method of the current request ``flask.request.method``.
     :doc:`/getting-started/quickstart`.
 
 :py:meth:`flask_oso.FlaskOso.authorize` can be used within route handlers, or in
-the data access layer, depending on how you want to express authorization.
+the data access layer, depending upon how you want to express authorization.
 
-Here's a basic example in a route::
+Here's a basic example in a route:
+
+.. code-block:: python
+    :emphasize-lines: 7
 
     @bp.route("/<int:id>", methods=["GET"])
     def get_expense(id):
@@ -88,7 +93,7 @@ Here's a basic example in a route::
 Notice we didn't need to check the return value of ``authorize``.  **By default,
 a failed authorization will return a ``403 Forbidden`` response for the current
 request.** This can be controlled with
-:py:meth:`flask_oso.FlaskOso.set_unauthorized_action`.
+:py:meth:`~flask_oso.FlaskOso.set_unauthorized_action`.
 
 Requiring authorization
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,7 +181,7 @@ attributes, like the path:
 
 To enforce route authorization on all requests (the equivalent of decorating
 every route as we did above), use the
-:py:meth:`flask_oso.FlaskOso.perform_route_authorization` method during
+:py:meth:`~flask_oso.FlaskOso.perform_route_authorization` method during
 initialization.
 
 Example
@@ -187,7 +192,7 @@ Check out the Flask integration example app below:
 .. todo:: github link
 
 API Reference
-=============
+-------------
 
 .. automodule:: flask_oso
     :members:
