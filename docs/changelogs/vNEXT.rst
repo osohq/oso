@@ -92,6 +92,23 @@ instantiation time is to search the list returned by ``Class.getConstructors``
 for a constructor that is applicable to the supplied (positional) constructor
 arguments; see :doc:`/using/libraries/java/index` for details.
 
+Flask Integration (``flask_oso``)
+==================================
+
+The new flask_oso_ package makes it easy to use oso with Flask, the popular
+Python web framework. It includes a flask-specific authorization method with
+sensible defaults, middleware that ensure all requests are properly authorized,
+and route decorators to more succinctly use oso.
+
+.. code-block:: python
+
+    from flask_oso import authorize
+
+    @authorize(resource="get_user")
+    @app.route("/user")
+    def get_user():
+        return "current user"
+
 Other bugs & improvements
 =========================
 
