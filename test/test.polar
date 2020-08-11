@@ -32,8 +32,8 @@ comparisons() if
     and 1 <= 2
     and not (3 <= 2)
     and 1 == 1
-    # and not (-1 == 1)
-    # and 1 != -1
+    and not (-1 == 1)
+    and 1 != -1
     and not (1 != 1);
 
 testForall() if
