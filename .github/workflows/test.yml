@@ -35,9 +35,9 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 10.13.0
-      - name: Lint JS code
+      - name: Check formatting of JS library
         working-directory: "languages/js"
-        run: make lint
+        run: make checkfmt
 
       - name: Install Java
         uses: actions/setup-java@v1
@@ -65,9 +65,15 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -- -D warnings
+
+      - name: Typecheck JS library
+        working-directory: "languages/js"
+        run: make typecheck
+
       - run: make test
         env:
           MVN_FLAGS: "-q"
+
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Install spelling check
