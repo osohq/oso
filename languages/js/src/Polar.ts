@@ -16,7 +16,7 @@ import { Query } from './Query';
 import { Host } from './Host';
 import { Polar as FfiPolar } from '../dist/polar_wasm_api';
 import { Predicate } from './Predicate';
-import type { Constructor, QueryResult } from './types';
+import type { Class, QueryResult } from './types';
 
 export class Polar {
   #ffiPolar: FfiPolar;
@@ -31,10 +31,11 @@ export class Polar {
     this.#loadedNames = new Map();
 
     this.registerClass(Boolean);
-    this.registerClass(Number);
+    this.registerClass(Number, 'Integer');
+    this.registerClass(Number, 'Float');
     this.registerClass(String);
-    this.registerClass(Array);
-    this.registerClass(Object);
+    this.registerClass(Array, 'List');
+    this.registerClass(Object, 'Dictionary');
     // TODO(gj): should we register more than this? Map/Set? Function? Math/Date? JSON?
   }
 
@@ -69,7 +70,7 @@ export class Polar {
     this.#loadedNames.set(hash, name);
   }
 
-  private loadStr(contents: string, name?: string): void {
+  loadStr(contents: string, name?: string): void {
     this.#ffiPolar.loadFile(contents, name);
     while (true) {
       const query = this.#ffiPolar.nextInlineQuery();
@@ -80,7 +81,7 @@ export class Polar {
   }
 
   query(query: Predicate | string): QueryResult {
-    const host = this.#host.dup();
+    const host = Host.clone(this.#host);
     let q;
     if (typeof query === 'string') {
       q = this.#ffiPolar.newQueryFromStr(query);
@@ -91,7 +92,7 @@ export class Polar {
     return new Query(q, host).results;
   }
 
-  queryRule(name: string, args: unknown[]): QueryResult {
+  queryRule(name: string, ...args: unknown[]): QueryResult {
     return this.query(new Predicate(name, args));
   }
 
@@ -130,9 +131,8 @@ export class Polar {
     });
   }
 
-  // TODO(gj): is Function the most accurate type here?
-  registerClass(cls: Function, alias?: string, ctor?: Constructor): void {
-    const name = this.#host.cacheClass(cls, alias, ctor);
+  registerClass<T>(cls: Class<T>, alias?: string): void {
+    const name = this.#host.cacheClass(cls, alias);
     this.registerConstant(name, cls);
   }
 

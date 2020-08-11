@@ -2,8 +2,6 @@ import isEqual from 'lodash/isEqual';
 
 import {
   DuplicateClassAliasError,
-  InvalidConstructorError,
-  MissingConstructorError,
   UnregisteredClassError,
   UnregisteredInstanceError,
 } from './errors';
@@ -11,7 +9,7 @@ import { ancestors } from './helpers';
 import type { Polar as FfiPolar } from '../dist/polar_wasm_api';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
-import type { Constructor, ConstructorKwargs, PolarValue } from './types';
+import type { Class, PolarValue } from './types';
 import {
   isPolarStr,
   isPolarNum,
@@ -23,30 +21,35 @@ import {
   isPolarVariable,
 } from './types';
 
+const GLOBAL_BUILTIN_OBJECTS = Object.getOwnPropertyNames(global)
+  .map(name => Reflect.get(global, name))
+  .filter(prop => typeof prop === 'object');
+
 export class Host {
   #ffiPolar: FfiPolar;
-  #classes: Map<string, Function>;
-  #constructors: Map<string, Constructor>;
-  #instances: Map<number, object>;
+  #classes: Map<string, Class>;
+  #instances: Map<number, any>;
+
+  static clone(host: Host): Host {
+    const clone = new Host(host.#ffiPolar);
+    clone.#classes = new Map(host.#classes);
+    clone.#instances = new Map(host.#instances);
+    return clone;
+  }
 
   constructor(ffiPolar: FfiPolar) {
     this.#ffiPolar = ffiPolar;
     this.#classes = new Map();
-    this.#constructors = new Map();
     this.#instances = new Map();
   }
 
-  dup(): Host {
-    return { ...this };
-  }
-
-  private getClass(name: string): Function {
+  private getClass(name: string): Class {
     const cls = this.#classes.get(name);
     if (cls === undefined) throw new UnregisteredClassError(name);
     return cls;
   }
 
-  cacheClass(cls: Function, name?: string, constructor?: Constructor): string {
+  cacheClass<T>(cls: Class<T>, name?: string): string {
     const clsName = name === undefined ? cls.name : name;
     console.assert(clsName, cls.toString());
     const existing = this.#classes.get(clsName);
@@ -57,48 +60,20 @@ export class Host {
         existing,
       });
     this.#classes.set(clsName, cls);
-    let ctor: Constructor;
-    switch (typeof constructor) {
-      case 'undefined':
-        ctor = (kwargs: ConstructorKwargs) => Reflect.construct(cls, [kwargs]);
-        break;
-      case 'function':
-        ctor = (kwargs: ConstructorKwargs) =>
-          Reflect.apply(constructor, cls, [kwargs]);
-        break;
-      case 'string':
-        const prop = Reflect.get(cls, constructor);
-        if (prop === undefined) {
-          throw new InvalidConstructorError({ constructor, cls });
-        } else {
-          ctor = (kwargs: ConstructorKwargs) =>
-            Reflect.apply(prop, cls, [kwargs]);
-          break;
-        }
-      default:
-        throw new InvalidConstructorError({ constructor, cls });
-    }
-    this.#constructors.set(clsName, ctor);
     return clsName;
-  }
-
-  private getConstructor(name: string): Constructor {
-    const constructor = this.#constructors.get(name);
-    if (constructor === undefined) throw new MissingConstructorError(name);
-    return constructor;
   }
 
   hasInstance(id: number): boolean {
     return this.#instances.has(id);
   }
 
-  getInstance(id: number): object {
+  private getInstance(id: number): object {
     const instance = this.#instances.get(id);
     if (instance === undefined) throw new UnregisteredInstanceError(id);
     return instance;
   }
 
-  private cacheInstance(instance: object, id?: number): number {
+  private cacheInstance(instance: any, id?: number): number {
     let instanceId = id;
     if (instanceId === undefined) {
       instanceId = this.#ffiPolar.newId();
@@ -107,16 +82,10 @@ export class Host {
     return instanceId;
   }
 
-  makeInstance(
-    name: string,
-    fields: Map<string, PolarValue>,
-    id: number
-  ): number {
-    const constructor = this.getConstructor(name);
-    const args = new Map(
-      Object.entries(fields).map(([k, v]) => [k, this.toJs(v)])
-    );
-    const instance = constructor(args);
+  makeInstance(name: string, fields: PolarValue[], id: number): number {
+    const cls = this.getClass(name);
+    const args = fields.map(f => this.toJs(f));
+    const instance = new cls(...args);
     return this.cacheInstance(instance, id);
   }
 
@@ -134,14 +103,13 @@ export class Host {
     }
   }
 
-  isa(id: number, name: string): boolean {
-    const instance = this.getInstance(id);
+  isa(instance: PolarValue, name: string): boolean {
+    const jsInstance = this.toJs(instance);
     const cls = this.getClass(name);
     // TODO(gj): is this correct?
-    return instance instanceof cls || instance.constructor === cls;
+    return jsInstance instanceof cls || jsInstance.constructor === cls;
   }
 
-  // TODO(gj): do more thinking about whether this should be ===
   unify(left: number, right: number): boolean {
     return isEqual(this.getInstance(left), this.getInstance(right));
   }
@@ -162,9 +130,23 @@ export class Host {
         return {
           value: { List: v.map((el: unknown) => this.toPolarTerm(el)) },
         };
+      case v instanceof Predicate:
+        return {
+          value: {
+            Call: {
+              name: v.name,
+              args: v.args.map((el: unknown) => this.toPolarTerm(el)),
+            },
+          },
+        };
+      case v instanceof Variable:
+        return { value: { Variable: v } };
       // TODO(gj): is this the best way to determine whether it's an object?
       // TODO(gj): should we handle Maps here?
-      case v.constructor === Object:
+      // TODO(gj): Need to find a better way to filter out Math.
+      case typeof v === 'object' &&
+        v.constructor.prototype === {}.constructor.prototype &&
+        !GLOBAL_BUILTIN_OBJECTS.includes(v):
         return {
           value: {
             Dictionary: {
@@ -177,17 +159,6 @@ export class Host {
             },
           },
         };
-      case v instanceof Predicate:
-        return {
-          value: {
-            Call: {
-              name: v.name,
-              args: v.args.map((el: unknown) => this.toPolarTerm(el)),
-            },
-          },
-        };
-      case v instanceof Variable:
-        return { value: { Variable: v } };
       default:
         return {
           value: {

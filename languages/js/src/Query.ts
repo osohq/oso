@@ -45,36 +45,28 @@ export class Query {
     if (this.#calls.has(callId)) return;
     const jsArgs = args.map(a => this.#host.toJs(a));
     const jsInstance = this.#host.toJs(instance);
-    const jsAttr = Reflect.get(jsInstance, attr);
+    const jsAttr = jsInstance[attr];
     if (jsAttr === undefined) throw new InvalidCallError(attr, jsInstance);
     let result: Generator;
     if (isGenerator(jsAttr)) {
-      let call;
-      switch (jsArgs.length) {
-        case 0:
-          call = jsAttr.next();
-          break;
-        case 1:
-          call = jsAttr.next(jsArgs[0]);
-          break;
-        default:
-          // The Generator#next method only takes 0 or 1 args.
-          throw new InvalidCallError(attr, jsInstance);
-      }
+      // The Generator#next method only takes 0 or 1 args.
+      if (jsArgs.length > 1) throw new InvalidCallError(attr, jsInstance);
       // TODO(gj): is this correct?
       result = (function* () {
         while (true) {
-          const { done, value } = call;
+          const { done, value } = jsArgs.length
+            ? jsAttr.next(jsArgs[0])
+            : jsAttr.next();
           if (done) return;
           yield value;
         }
       })();
     } else if (isGeneratorFunction(jsAttr)) {
       // TODO(gj): is this correct?
-      result = jsAttr(...jsArgs);
+      result = jsInstance[attr](...jsArgs);
     } else if (typeof jsAttr === 'function') {
       result = (function* () {
-        yield jsAttr(...jsArgs);
+        yield jsInstance[attr](...jsArgs);
       })();
     } else {
       // Blow up if jsArgs is not [] since the user is attempting to invoke +
@@ -93,8 +85,7 @@ export class Query {
 
   private nextCallResult(callId: number): string | undefined {
     const { done, value } = this.#calls.get(callId)!.next();
-    // TODO(gj): should this only check 'done'?
-    if (done || value === null || value === undefined) return undefined;
+    if (done) return undefined;
     return JSON.stringify(this.#host.toPolarTerm(value));
   }
 
@@ -171,8 +162,8 @@ export class Query {
           break;
         }
         case QueryEventKind.ExternalIsa: {
-          const { instanceId, tag, callId } = event.data as ExternalIsa;
-          const answer = this.#host.isa(instanceId, tag);
+          const { instance, tag, callId } = event.data as ExternalIsa;
+          const answer = this.#host.isa(instance, tag);
           this.questionResult(answer, callId);
           break;
         }

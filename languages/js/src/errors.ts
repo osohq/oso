@@ -49,18 +49,12 @@ export class InvalidCallError extends PolarError {
   }
 }
 
-export class InvalidConstructorError extends PolarError {
-  constructor({ constructor, cls }: { constructor: any; cls: object }) {
-    let stringified;
-    if (typeof constructor === 'function') {
-      stringified = constructor.toString();
-    } else {
-      stringified = JSON.stringify(constructor);
-    }
+export class KwargsConstructorError extends PolarError {
+  constructor(tag: string) {
     super(
-      `${stringified} is not a valid constructor for ${cls.constructor.name}.`
+      `To construct a JavaScript instance, use the positional args constructor syntax: new ${tag}(...)`
     );
-    Object.setPrototypeOf(this, InvalidConstructorError.prototype);
+    Object.setPrototypeOf(this, KwargsConstructorError.prototype);
   }
 }
 
@@ -68,13 +62,6 @@ export class InvalidQueryEventError extends PolarError {
   constructor(event: string) {
     super(`Invalid query event: ${event}`);
     Object.setPrototypeOf(this, InvalidQueryEventError.prototype);
-  }
-}
-
-export class MissingConstructorError extends PolarError {
-  constructor(name: string) {
-    super(`Missing constructor for class: ${name}.`);
-    Object.setPrototypeOf(this, MissingConstructorError.prototype);
   }
 }
 
