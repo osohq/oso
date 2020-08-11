@@ -20,6 +20,9 @@ oso is available as a library in several languages:
         For more information on the oso Python library, see the
         :doc:`library documentation </using/libraries/python/index>`.
 
+        To use or install the oso Flask integration, see
+        :doc:`/using/frameworks/flask`.
+
         .. admonition:: What's next
             :class: tip
 

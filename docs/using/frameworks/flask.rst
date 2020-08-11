@@ -6,6 +6,16 @@ usage with Flask_.
 
 .. _Flask: https://flask.palletsprojects.com/
 
+Installation
+------------
+
+The oso flask integration is available on `PyPI`_ and can be installed using
+``pip``::
+
+    $ pip install flask_oso
+
+.. _PyPI: https://pypi.org/project/flask_oso/
+
 Usage
 -----
 
