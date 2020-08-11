@@ -112,6 +112,8 @@ and route decorators to more succinctly use oso.
     def get_user():
         return "current user"
 
+.. _flask_oso: https://pypi.org/project/flask_oso/
+
 Other bugs & improvements
 =========================
 
