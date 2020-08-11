@@ -81,11 +81,11 @@ jobs:
           cp -r oso_library/polar.dll languages/java/oso/src/main/resources/win/
       - name: Test
         run: |
-          mvn test
+          mvn -q test
         working-directory: languages/java/oso
       - name: Build
         run: |
-          mvn package
+          mvn -q package
         working-directory: languages/java/oso
       - uses: actions/upload-artifact@v2
         with:

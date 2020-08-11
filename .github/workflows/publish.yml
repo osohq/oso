@@ -46,7 +46,7 @@ jobs:
           mkdir -p languages/java/oso/src/main/resources/win
           cp -r oso-lib-${{ github.event.inputs.version }}/polar.dll languages/java/oso/src/main/resources/win/
       - run: |
-          GPG_TTY=$(tty) mvn clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true --settings settings.xml
+          GPG_TTY=$(tty) mvn -q clean source:jar deploy -DuniqueVersion=false -Dmaven.source.useDefaultManifestFile=true -DdeplyAtEnd=true -Dmaven.source.includePom=true -Dmaven.install.skip=true --settings settings.xml
         working-directory: languages/java/oso
   python:
     name: Publish python package to pypi
