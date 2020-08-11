@@ -12,7 +12,7 @@ dev: build-wasm install
 checkfmt: install
 	yarn checkfmt
 
-typecheck: install
+typecheck: install build-wasm
 	yarn compile
 
 lint: checkfmt typecheck
