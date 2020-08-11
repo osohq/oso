@@ -31,6 +31,14 @@ jobs:
         working-directory: "languages/ruby"
         run: make typecheck | grep '0 problems found in 0 of'
 
+      - name: Use Node.js 10.13.0
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.13.0
+      - name: Lint JS code
+        working-directory: "languages/js"
+        run: make lint
+
       - name: Install Java
         uses: actions/setup-java@v1
         with:
