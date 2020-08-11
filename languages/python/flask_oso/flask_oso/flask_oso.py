@@ -14,7 +14,7 @@ class FlaskOso:
     construction.
 
     The plugin must be initialized with an :py:class:`oso.Oso` instance before
-    use, either by passing one to the constuctor or calling
+    use, either by passing one to the constructor or calling
     :py:meth:`set_oso`.
 
     **Authorization**
