@@ -1,4 +1,4 @@
-name: Publish Release
+name: Publish Flask Release
 on:
   workflow_dispatch:
     inputs:
