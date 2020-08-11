@@ -1356,6 +1356,7 @@ fn test_float_parsing() {
     assert_eq!(qvar(&mut polar, "x=1.0E+15", "x"), vec![value!(1e15)]);
     assert_eq!(qvar(&mut polar, "x=1.0e-15", "x"), vec![value!(1e-15)]);
 }
+
 #[test]
 fn test_assignment() {
     let mut polar = Polar::new(None);
@@ -1378,4 +1379,21 @@ fn test_assignment() {
         e.kind,
         ErrorKind::Parse(ParseError::UnrecognizedToken { .. })
     ));
+}
+
+#[test]
+fn test_rule_index() {
+    // FIXME: This exercises the indexer, but does not actually test it.
+    // Run with RUST_LOG=1 and watch the input to FilterRules for now.
+    let mut polar = Polar::new(None);
+    polar.load(r#"f(1, 1, "x");"#).unwrap();
+    polar.load(r#"f(1, 1, "y");"#).unwrap();
+    polar.load(r#"f(1, 2, {b: "y"});"#).unwrap();
+    polar.load(r#"f(1, 3, {c: "z"});"#).unwrap();
+    assert!(qeval(&mut polar, r#"f(1, 1, "x")"#));
+    assert!(qeval(&mut polar, r#"f(1, 1, "y")"#));
+    assert!(qnull(&mut polar, r#"f(1, 1, "z")"#));
+    assert!(qnull(&mut polar, r#"f(1, 2, "x")"#));
+    assert!(qeval(&mut polar, r#"f(1, 2, {b: "y"})"#));
+    assert!(qeval(&mut polar, r#"f(1, 3, {c: "z"})"#));
 }

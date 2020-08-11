@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -307,7 +308,7 @@ impl SourceInfo {
 }
 
 /// Represents a concrete instance of a Polar value
-#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(clippy::derive_hash_xor_eq)]
 pub struct Term {
     /// Information about where the term was created from
@@ -325,6 +326,16 @@ impl PartialEq for Term {
 }
 
 impl Eq for Term {}
+
+impl Hash for Term {
+    /// Hash just the value, not source information.
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.value().hash(state)
+    }
+}
 
 impl Term {
     /// Creates a new term for a temporary variable
@@ -487,42 +498,79 @@ impl Rule {
 
 pub type Rules = Vec<Arc<Rule>>;
 
-#[derive(Clone)]
-pub struct GenericRule {
-    pub name: Symbol,
-    pub rules: Rules,
-    pub index: HashMap<Value, Rules>,
+#[derive(Debug)]
+pub enum RuleFilter {
+    Applicable(Rules),
+    Unfiltered(Rules),
 }
 
-impl GenericRule {
-    pub fn new(name: Symbol, rules: Rules) -> Self {
-        GenericRule {
-            name,
-            rules,
-            index: HashMap::new(),
-        }
+#[derive(Clone, Default, Debug)]
+pub struct RuleIndex {
+    pub rules: Rules,
+    pub index: HashMap<Value, RuleIndex>,
+}
+
+impl RuleIndex {
+    pub fn new(rules: Rules) -> Self {
+        let mut index = Self::default();
+        rules
+            .iter()
+            .for_each(|rule| index.index_rule(rule.clone(), &rule.params[..], 0));
+        index
     }
 
-    pub fn add_rule(&mut self, rule: Arc<Rule>) {
-        if !rule.params.is_empty()
-            && rule.params[0].specializer.is_none()
-            && !matches!(rule.params[0].parameter.value(), Value::Variable(_))
+    pub fn index_rule(&mut self, rule: Arc<Rule>, params: &[Parameter], i: usize) {
+        if i < params.len()
+            && params[i].specializer.is_none()
+            && !matches!(params[i].parameter.value(), Value::Variable(_))
         {
             self.index
-                .entry(rule.params[0].parameter.value().clone())
-                .or_insert_with(Vec::new)
-                .insert(0, rule.clone());
+                .entry(params[i].parameter.value().clone())
+                .or_insert_with(RuleIndex::default)
+                .index_rule(rule.clone(), params, i + 1);
         }
         self.rules.push(rule);
     }
 
-    pub fn get_applicable_rules(&self, args: &[Term]) -> (Rules, Rules) {
-        if !args.is_empty() {
-            if let Some(rules) = self.index.get(args[0].value()) {
-                return (rules.clone(), vec![]);
+    #[allow(clippy::comparison_chain)]
+    pub fn get_applicable_rules(&self, args: &[Term], i: usize) -> RuleFilter {
+        if args.is_empty() || i > args.len() {
+            RuleFilter::Unfiltered(self.rules.clone())
+        } else if i == args.len() {
+            RuleFilter::Applicable(self.rules.clone())
+        } else if let Some(index) = self.index.get(args[i].value()) {
+            if i < args.len() {
+                index.get_applicable_rules(args, i + 1)
+            } else {
+                RuleFilter::Unfiltered(index.rules.clone())
             }
+        } else {
+            RuleFilter::Unfiltered(self.rules.clone())
         }
-        (vec![], self.rules.clone())
+    }
+}
+
+#[derive(Clone)]
+pub struct GenericRule {
+    pub name: Symbol,
+    pub index: RuleIndex,
+}
+
+impl GenericRule {
+    pub fn new(name: Symbol, rules: Rules) -> Self {
+        Self {
+            name,
+            index: RuleIndex::new(rules),
+        }
+    }
+
+    pub fn add_rule(&mut self, rule: Arc<Rule>) {
+        self.index.index_rule(rule.clone(), &rule.params[..], 0);
+    }
+
+    #[allow(clippy::ptr_arg)]
+    pub fn get_applicable_rules(&self, args: &TermList) -> RuleFilter {
+        self.index.get_applicable_rules(&args, 0)
     }
 }
 
@@ -801,5 +849,32 @@ mod tests {
         assert_eq!(MAX_ID, kb.new_id());
         assert_eq!(1, kb.new_id());
         assert_eq!(2, kb.new_id());
+    }
+
+    #[test]
+    fn test_value_hash() {
+        let mut table = HashMap::new();
+        table.insert(value!(0), "0");
+        table.insert(value!(1), "1");
+        table.insert(value!(1.0), "1.0");
+        table.insert(value!("one"), "one");
+        table.insert(value!(btreemap! {sym!("a") => term!(1)}), "a:1");
+        table.insert(value!(btreemap! {sym!("b") => term!(2)}), "b:2");
+        assert_eq!(*table.get(&value!(0)).unwrap(), "0");
+        assert_eq!(*table.get(&value!(1)).unwrap(), "1");
+        assert_eq!(*table.get(&value!(1.0)).unwrap(), "1.0");
+        assert_eq!(*table.get(&value!("one")).unwrap(), "one");
+        assert_eq!(
+            *table
+                .get(&value!(btreemap! {sym!("a") => term!(1)}))
+                .unwrap(),
+            "a:1"
+        );
+        assert_eq!(
+            *table
+                .get(&value!(btreemap! {sym!("b") => term!(2)}))
+                .unwrap(),
+            "b:2"
+        );
     }
 }

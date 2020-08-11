@@ -9,11 +9,9 @@
 //! In addition, there are special cases like traces and sources that have their own
 //! formatting requirements.
 
+use crate::types::*;
 pub use display::*;
-
 pub use to_polar::*;
-
-use crate::types::{Node, Operation, Operator, Parameter, Source, Term, Trace, Value};
 
 impl Trace {
     /// Return the string representation of this `Trace`
@@ -106,6 +104,16 @@ pub fn format_params(args: &[Parameter], sep: &str) -> String {
         .join(sep)
 }
 
+/// Formats a vector of rules as a string-separated list.
+#[allow(clippy::ptr_arg)]
+pub fn format_rules(rules: &Rules, sep: &str) -> String {
+    rules
+        .iter()
+        .map(|rule| rule.to_polar())
+        .collect::<Vec<String>>()
+        .join(sep)
+}
+
 /// Helper method: uses the operator precedence to determine if `t`
 /// has a lower precedence than `op`.
 fn has_lower_pred(op: Operator, t: &Term) -> bool {
@@ -126,12 +134,12 @@ pub fn to_polar_parens(op: Operator, t: &Term) -> String {
 }
 
 pub mod display {
-    use crate::formatting::{format_args, format_params};
+    use crate::formatting::{format_args, format_params, format_rules};
     use std::fmt;
     use std::sync::Arc;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Operation, Operator, Rule, Symbol, Term, Value};
+    use crate::types::{Numeric, Operation, Operator, Rule, RuleFilter, Symbol, Term, Value};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -249,6 +257,10 @@ pub mod display {
                     outer,
                     inner,
                 ),
+                Goal::TraceRule { trace: _ } => write!(
+                    fmt,
+                    "TraceRule(...)" // FIXME: draw trace?
+                ),
                 Goal::Unify { left, right } => {
                     write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
                 }
@@ -282,6 +294,19 @@ pub mod display {
                     }
                 }
                 _ => panic!("Not any sorta rule I parsed"),
+            }
+        }
+    }
+
+    impl fmt::Display for RuleFilter {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                RuleFilter::Applicable(rules) => {
+                    write!(f, "RuleFilter::Applicable([{}])", format_rules(rules, " "),)
+                }
+                RuleFilter::Unfiltered(rules) => {
+                    write!(f, "RuleFilter::Unfiltered([{}])", format_rules(rules, " "))
+                }
             }
         }
     }

@@ -1122,7 +1122,10 @@ impl PolarVirtualMachine {
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
                 let (applicable_rules, unfiltered_rules) =
-                    generic_rule.get_applicable_rules(&predicate.args);
+                    match generic_rule.get_applicable_rules(&predicate.args) {
+                        RuleFilter::Applicable(rules) => (rules, vec![]),
+                        RuleFilter::Unfiltered(rules) => (vec![], rules),
+                    };
                 self.append_goals(vec![
                     Goal::TracePush,
                     Goal::FilterRules {
