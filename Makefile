@@ -43,6 +43,7 @@ clippy:
 
 lint: fmt clippy
 	$(MAKE) -C languages/ruby lint typecheck
+	$(MAKE) -C languages/js lint
 
 wasm-build:
 	$(MAKE) -C polar-wasm-api build
