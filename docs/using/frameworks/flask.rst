@@ -93,10 +93,6 @@ request.** This can be controlled with
 Requiring authorization
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The :py:meth:`flask_oso.FlaskOso.authorize` function provides a flexible API for
-authorization.  ``flask_oso`` does not dictate where this call should occur.
-See :doc:`/getting-started/application/patterns` for more on where oso can be
-integrated.
 
 One downside to calling :py:meth:`flask_oso.FlaskOso.authorize`
 explicitly within route handlers is that the check might be forgotten.  To help detect this, the
