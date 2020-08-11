@@ -20,6 +20,14 @@ jobs:
         name: Install Python
         with:
           python-version: "3.7"
+      - name: Install Ruby + gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4
+          working-directory: "languages/ruby"
+      - name: Install yard
+        run: gem install yard
       - name: Build docs
         run: make -C docs html
       - name: s3 preview
