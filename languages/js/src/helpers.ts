@@ -1,4 +1,8 @@
-import { InvalidQueryEventError } from './errors';
+import {
+  InvalidQueryEventError,
+  KwargsConstructorError,
+  PolarError,
+} from './errors';
 import { isPolarValue, QueryEventKind } from './types';
 import type { QueryEvent } from './types';
 
@@ -22,31 +26,32 @@ export function ancestors(cls: Function): Function[] {
 }
 
 export function parseQueryEvent(
-  e: string | { [key: string]: any }
+  event: string | { [key: string]: any }
 ): QueryEvent {
   try {
-    if (e === 'Done') return { kind: QueryEventKind.Debug };
-    if (typeof e === 'string') throw new Error();
+    if (event === 'Done') return { kind: QueryEventKind.Done };
+    if (typeof event === 'string') throw new Error();
     switch (true) {
-      case e['Result'] !== undefined:
-        return parseResult(e['Result']);
-      case e['MakeExternal'] !== undefined:
-        return parseMakeExternal(e['MakeExternal']);
-      case e['ExternalCall'] !== undefined:
-        return parseExternalCall(e['ExternalCall']);
-      case e['ExternalIsSubSpecializer'] !== undefined:
-        return parseExternalIsSubspecializer(e['ExternalIsSubSpecializer']);
-      case e['ExternalIsa'] !== undefined:
-        return parseExternalIsa(e['ExternalIsa']);
-      case e['ExternalUnify'] !== undefined:
-        return parseExternalUnify(e['ExternalUnify']);
-      case e['Debug'] !== undefined:
-        return parseDebug(e['Debug']);
+      case event['Result'] !== undefined:
+        return parseResult(event['Result']);
+      case event['MakeExternal'] !== undefined:
+        return parseMakeExternal(event['MakeExternal']);
+      case event['ExternalCall'] !== undefined:
+        return parseExternalCall(event['ExternalCall']);
+      case event['ExternalIsSubSpecializer'] !== undefined:
+        return parseExternalIsSubspecializer(event['ExternalIsSubSpecializer']);
+      case event['ExternalIsa'] !== undefined:
+        return parseExternalIsa(event['ExternalIsa']);
+      case event['ExternalUnify'] !== undefined:
+        return parseExternalUnify(event['ExternalUnify']);
+      case event['Debug'] !== undefined:
+        return parseDebug(event['Debug']);
       default:
         throw new Error();
     }
-  } catch (_) {
-    throw new InvalidQueryEventError(JSON.stringify(e));
+  } catch (e) {
+    if (e instanceof PolarError) throw e;
+    throw new InvalidQueryEventError(JSON.stringify(event));
   }
 }
 
@@ -63,19 +68,23 @@ function parseResult(d: { [key: string]: any }): QueryEvent {
 }
 
 function parseMakeExternal(d: { [key: string]: any }): QueryEvent {
+  const id = d.instance_id;
+  const ctor = d['constructor']?.value;
+  if (ctor?.InstanceLiteral !== undefined)
+    throw new KwargsConstructorError(ctor?.InstanceLiteral?.tag);
   if (
-    !Number.isSafeInteger(d.instance_id) ||
-    typeof d.instance?.tag !== 'string' ||
-    typeof d.instance?.fields?.fields !== 'object' ||
-    Object.values(d.instance.fields.fields).some(v => !isPolarValue(v))
+    !Number.isSafeInteger(id) ||
+    typeof ctor?.Call?.name !== 'string' ||
+    !Array.isArray(ctor?.Call?.args) ||
+    ctor.Call.args.some((v: unknown) => !isPolarValue(v))
   )
     throw new Error();
   return {
     kind: QueryEventKind.MakeExternal,
     data: {
-      instanceId: d.instance_id,
-      tag: d.instance.tag,
-      fields: new Map(Object.entries(d.instance.fields.fields)),
+      instanceId: id,
+      tag: ctor.Call.name,
+      fields: ctor.Call.args,
     },
   };
 }
@@ -120,19 +129,19 @@ function parseExternalIsSubspecializer(d: { [key: string]: any }): QueryEvent {
 }
 
 function parseExternalIsa(d: { [key: string]: any }): QueryEvent {
+  const callId = d?.call_id;
+  // const instanceId = d?.instance?.value?.ExternalInstance?.instance_id;
+  const instance = d?.instance;
+  const tag = d?.class_tag;
   if (
-    !Number.isSafeInteger(d.instance_id) ||
-    !Number.isSafeInteger(d.call_id) ||
-    typeof d.class_tag !== 'string'
+    !Number.isSafeInteger(callId) ||
+    !isPolarValue(instance) ||
+    typeof tag !== 'string'
   )
     throw new Error();
   return {
     kind: QueryEventKind.ExternalIsa,
-    data: {
-      instanceId: d.instance_id,
-      tag: d.class_tag,
-      callId: d.call_id,
-    },
+    data: { instance, tag, callId },
   };
 }
 

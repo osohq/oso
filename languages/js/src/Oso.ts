@@ -10,6 +10,6 @@ export class Oso extends Polar {
   }
 
   isAllowed(actor: unknown, action: unknown, resource: unknown): boolean {
-    return !!this.queryRule('allow', [actor, action, resource]).next().done;
+    return !this.queryRule('allow', actor, action, resource).next().done;
   }
 }

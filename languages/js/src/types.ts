@@ -113,11 +113,7 @@ export function isPolarValue(v: any): v is PolarValue {
   return isPolarType(v?.value);
 }
 
-export interface ConstructorKwargs {
-  [key: string]: any;
-}
-
-export type Constructor = (kwargs: ConstructorKwargs) => object;
+export type Class<T extends {} = {}> = new (...args: any[]) => T;
 
 export function isGenerator(x: any): x is Generator {
   return [x.next, x.return, x.throw].every(f => typeof f === 'function');
@@ -138,7 +134,7 @@ export interface Result {
 export interface MakeExternal {
   instanceId: number;
   tag: string;
-  fields: Map<string, PolarValue>;
+  fields: PolarValue[];
 }
 
 export interface ExternalCall {
@@ -156,7 +152,7 @@ export interface ExternalIsSubspecializer {
 }
 
 export interface ExternalIsa {
-  instanceId: number;
+  instance: PolarValue;
   tag: string;
   callId: number;
 }
