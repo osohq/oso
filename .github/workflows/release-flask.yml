@@ -1,4 +1,4 @@
-name: Create Flask Integratino Release
+name: Create Flask Integration Release
 on:
   push:
     tags:
@@ -32,6 +32,9 @@ jobs:
       CIBW_BUILD: "*64"
       # Used in build.py to find right files
       CIBW_ENVIRONMENT: ENV=CI
+
+      CIBW_BEFORE_TEST: make test-requirements
+      CIBW_TEST_COMMAND: make test
 
     steps:
       - uses: actions/checkout@v2
