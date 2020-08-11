@@ -8,17 +8,21 @@ from werkzeug.exceptions import Forbidden
 from oso import Oso, OsoException
 from flask_oso import FlaskOso, authorize, skip_authorization
 
+
 @pytest.fixture
 def flask_app():
-    return Flask('test')
+    return Flask("test")
+
 
 @pytest.fixture
 def oso():
     return Oso()
 
+
 @pytest.fixture
 def user():
     return "user"
+
 
 @pytest.fixture
 def flask_oso(flask_app, oso, user):
@@ -26,15 +30,18 @@ def flask_oso(flask_app, oso, user):
     fo.set_get_actor(lambda: user)
     return fo
 
+
 @pytest.fixture
 def simple_policy(oso):
     """Load a simple base policy into oso."""
     oso.load_file(Path(__file__).parent / "simple.polar")
 
+
 @pytest.fixture
 def app_ctx(flask_app):
     with flask_app.app_context():
         yield
+
 
 def test_initialization(flask_app, oso, simple_policy, app_ctx, user):
     """Test that setting oso works correctly."""
@@ -52,6 +59,7 @@ def test_initialization(flask_app, oso, simple_policy, app_ctx, user):
     flask_oso = FlaskOso(oso=oso)
     flask_oso.set_get_actor(lambda: user)
     flask_oso.authorize(action="read", resource="resource")
+
 
 def test_authorize(flask_app, flask_oso, simple_policy, app_ctx):
     """Test that authorize function works correctly."""
@@ -75,6 +83,7 @@ def test_authorize(flask_app, flask_oso, simple_policy, app_ctx):
     flask_oso.set_get_actor(lambda: "other_user")
     flask_oso.authorize("other_resource", action="read")
 
+
 def test_require_authorization(flask_app, flask_oso, app_ctx, simple_policy):
     flask_oso.require_authorization(flask_app)
     flask_app.testing = True
@@ -87,7 +96,6 @@ def test_require_authorization(flask_app, flask_oso, app_ctx, simple_policy):
     with pytest.raises(OsoException):
         with flask_app.test_client() as c:
             c.get("/")
-
 
     @flask_app.route("/auth")
     def auth():
@@ -135,12 +143,13 @@ def test_require_authorization(flask_app, flask_oso, app_ctx, simple_policy):
         resp = c.get("/500")
         assert resp.status_code == 500
 
+
 def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
     """Test that route authorization middleware works."""
     flask_oso.perform_route_authorization(app=flask_app)
     flask_app.testing = True
 
-    @flask_app.route("/test_route", methods=('GET',))
+    @flask_app.route("/test_route", methods=("GET",))
     def test():
         return "Test"
 
@@ -158,6 +167,7 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
 
     with flask_app.test_client() as c:
         assert c.post("/test_route").status_code == 405
+
 
 def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
     """Perform route auth manually."""
@@ -178,9 +188,11 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
 
+
 def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
     """Test that a custom unauthorize handler can be provided."""
     auth_failed = False
+
     def unauth():
         nonlocal auth_failed
         auth_failed = True
@@ -190,11 +202,13 @@ def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
 
     assert auth_failed
 
+
 def test_no_oso_error(flask_app, oso):
     """Test that using authorize without init app throws an error."""
     flask_oso = FlaskOso(oso=oso)
 
     with pytest.raises(OsoException, match="Application context"):
+
         @authorize(resource="test")
         def orm_function():
             return "model"
@@ -203,6 +217,7 @@ def test_no_oso_error(flask_app, oso):
 
     with flask_app.app_context():
         with pytest.raises(OsoException, match="init_app"):
+
             @flask_app.route("/")
             @authorize(resource="test")
             def route():

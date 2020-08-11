@@ -33,12 +33,14 @@ class FlaskOso:
     - :py:meth:`perform_route_authorization`:
       Call `authorize(resource=flask.request)` before every request.
     """
+
     def __init__(self, oso=None, app=None):
         self._app = app
         self._oso = None
 
         def unauthorized():
             raise Forbidden("Unauthorized")
+
         self._unauthorized_action = unauthorized
 
         # TODO (dhatch): A few defaults for this dependending on what
@@ -166,7 +168,8 @@ class FlaskOso:
                 raise OsoException(
                     "Getting the current actor failed. "
                     "You may need to override the current actor function with "
-                    "FlaskOso#set_get_actor") from e
+                    "FlaskOso#set_get_actor"
+                ) from e
 
         if action is None:
             action = request.method
@@ -226,7 +229,7 @@ class FlaskOso:
     def teardown(self, exception):
         pass
 
+
 def _authorize_called():
     """Mark current request as authorized."""
     _app_context().oso_flask_authorize_called = True
-

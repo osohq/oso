@@ -4,6 +4,7 @@ from flask import g, current_app, request, Request
 
 from .context import _app_oso
 
+
 def authorize(func=None, resource=None, actor=None, action=None):
     """Flask route decorator.  Calls :py:meth:`FlaskOso.authorize` before the route.
 
@@ -23,6 +24,7 @@ def authorize(func=None, resource=None, actor=None, action=None):
             return "authorized"
     """
     if func is not None:
+
         @functools.wraps(func)
         def wrap(*args, **kwargs):
             oso = _app_oso()
@@ -33,6 +35,7 @@ def authorize(func=None, resource=None, actor=None, action=None):
         return wrap
 
     return functools.partial(authorize, actor=actor, action=action, resource=resource)
+
 
 def skip_authorization(func=None, reason=None):
     """Decorator to mark route as not requiring authorization.
@@ -45,6 +48,7 @@ def skip_authorization(func=None, reason=None):
     silence errors on routes that do not need to be authorized.
     """
     if func is not None:
+
         @functools.wraps(func)
         def wrap(*args, **kwargs):
             oso = _app_oso()
