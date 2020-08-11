@@ -58,6 +58,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -- -D warnings
       - run: make test
+        env:
+          MVN_FLAGS: "-q"
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Install spelling check
