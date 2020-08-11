@@ -1,15 +1,19 @@
 name: Publish Docs
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "docs s3 path"
-        required: false
-        default: docs-preview.oso.dev
+  # workflow_dispatch:
+  #   inputs:
+  #     version:
+  #       description: "docs s3 path"
+  #       required: false
+  #       default: docs-preview.oso.dev
+  push:
 jobs:
   publish:
     name: Publish docs
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -18,3 +22,5 @@ jobs:
           python-version: "3.7"
       - name: Build docs
         run: make -C docs html
+      - name: s3 preview
+        run: aws s3 sync --dryrun --delete docs/_build/html s3://docs-preview.oso.dev
