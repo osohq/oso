@@ -38,9 +38,9 @@ def get_version(rel_path):
 
 
 setup(
-    name="flask_oso",
+    name="flask-oso",
     version=get_version("flask_oso/__init__.py"),
-    description="oso flask plugin.",
+    description="oso flask integration",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Oso Security, Inc.",

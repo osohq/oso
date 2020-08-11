@@ -16,7 +16,7 @@ jobs:
         run: echo "::set-env name=oso_version::${github_ref/refs\/tags\/flask-v/}"
       - name: Check python version matches
         run: grep "__version__ = \"$oso_version\"" flask_oso/__init__.py
-        working-directory: languages/python/flask_oso
+        working-directory: languages/python/flask-oso
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -50,11 +50,11 @@ jobs:
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse
-        working-directory: languages/python/flask_oso
+        working-directory: languages/python/flask-oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
-          path: languages/python/flask_oso/wheelhouse/*.whl
+          path: languages/python/flask-oso/wheelhouse/*.whl
 
   # TODO what validation can we do here.
   release:
