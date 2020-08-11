@@ -46,6 +46,7 @@ module Oso
       #
       # @param cls [Class] the class to cache
       # @param name [String] the name to cache the class as. Defaults to the name of the class.
+      # @param constructor [Proc] optional custom constructor function. Defaults to the :new method.
       # @return [String] the name the class is cached as.
       # @raise [UnregisteredClassError] if the class has not been registered.
       def cache_class(cls, name:, constructor:) # rubocop:disable Metrics/MethodLength
