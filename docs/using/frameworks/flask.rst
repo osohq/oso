@@ -12,9 +12,9 @@ Installation
 The oso flask integration is available on `PyPI`_ and can be installed using
 ``pip``::
 
-    $ pip install flask_oso
+    $ pip install flask-oso
 
-.. _PyPI: https://pypi.org/project/flask_oso/
+.. _PyPI: https://pypi.org/project/flask-oso/
 
 Usage
 -----
@@ -69,7 +69,7 @@ calling configuration functions on :py:class:`~flask_oso.FlaskOso` like
 Performing authorization
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-When using the ``flask_oso`` integration, the primary authorization function is
+When using the ``flask-oso`` integration, the primary authorization function is
 :py:meth:`flask_oso.FlaskOso.authorize`.  It accepts the same arguments as
 :py:meth:`~oso.Oso.is_allowed`, but provides sensible defaults for working with
 Flask. The actor defaults to ``flask.g.current_user`` (this can be

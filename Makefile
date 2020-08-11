@@ -12,7 +12,7 @@ python-build: rust-build
 	$(MAKE) -C languages/python/oso build
 
 python-flask-build: python-build
-	$(MAKE) -C languages/python/flask_oso build
+	$(MAKE) -C languages/python/flask-oso build
 
 python-test: python-build
 	$(MAKE) -C languages/python/oso test
@@ -20,7 +20,7 @@ python-test: python-build
 	cd test && python test.py
 
 python-flask-test: python-build python-flask-build
-	$(MAKE) -C languages/python/flask_oso test
+	$(MAKE) -C languages/python/flask-oso test
 
 ruby-test:
 	$(MAKE) -C languages/ruby test
