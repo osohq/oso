@@ -85,9 +85,9 @@ Here's a basic example in a route::
         oso.authorize(action="read", resource=expense)
         return expense.json()
 
-Notice we didn't need to check the return value of ``authorize``.  By default,
+Notice we didn't need to check the return value of ``authorize``.  **By default,
 a failed authorization will return a ``403 Forbidden`` response for the current
-request. This can be controlled with
+request.** This can be controlled with
 :py:meth:`flask_oso.FlaskOso.set_unauthorized_action`.
 
 Requiring authorization
