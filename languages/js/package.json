@@ -12,6 +12,10 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=10.13.0",
+    "npm": ">=6.4.1"
+  },
   "scripts": {
     "dev": "parcel src/index.ts --target node",
     "build": "parcel build src/index.ts --target node",
