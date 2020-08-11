@@ -72,7 +72,7 @@ defaults to the method of the current request ``flask.request.method``.
     :doc:`/getting-started/quickstart`.
 
 :py:meth:`flask_oso.FlaskOso.authorize` can be used within route handlers, or in
-the data access layer, depending upon how you want to express authorization.
+the data access layer, depending on how you want to express authorization.
 Here's a basic example in a route::
 
     @bp.route("/<int:id>", methods=["GET"])
