@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: "v${{ github.event.inputs.version }}"
+          ref: "flask-v${{ github.event.inputs.version }}"
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/flask-v${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "flask-oso-python-${{ github.event.inputs.version }}.zip") | .url') --output flask-oso-python-${{ github.event.inputs.version }}.zip
       - run: unzip flask-oso-python-${{ github.event.inputs.version }}.zip -d flask-oso-python-${{ github.event.inputs.version }}
