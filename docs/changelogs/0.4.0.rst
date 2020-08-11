@@ -10,30 +10,54 @@ Breaking changes
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-Breaking change 1
------------------
+Changed file loading behaviour
+------------------------------
 
-- summary of breaking change
+We removed the lazy-loading of policy files from the various
+oso libraries. This means that all classes and constants need
+to be registered _before_ calling ``Oso.load_file``. If a class
+is not registered, but used in a specializer, it will load
+but return a warning:
 
-Link to migration guide
+.. code-block:: pycon
+
+  >>> from oso import Oso
+  >>> oso = Oso()
+  >>> oso.load_file("test.polar")
+  Unknown specializer Foo
+  001: foo(_: Foo);
+
+Additionally, in order to remove ambiguity when the same policy
+file is loaded multiple times, oso will now error if the same
+policy is loaded multiple times:
+
+.. code-block:: pycon
+
+  >>> oso.load_file("test.polar")
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+    File "polar.py", line 86, in load_file
+      f"File {fname} has already been loaded."
+  polar.exceptions.PolarFileAlreadyLoadedError: File test.polar has already been loaded.
 
 
 New features
 ==============
 
 Windows Support
-===============
+---------------
 The three oso libraries (Python, Ruby and Java) all now work on Windows.
 
 musl builds for Python
-======================
+----------------------
 
 musl-based Python wheels (for Alpine Linux and other musl-based distros) are
 built and downloadable from `the releases page on GitHub
 <https://github.com/osohq/oso/releases/latest>`_.
 
 Assignment Operator
-===================
+-------------------
+
 - The operator ``:=`` may now be used to assign values to unbound variables.
   Unlike the unify operator (``=``), the assignment operator will NOT evaluate
   equality.
@@ -41,7 +65,7 @@ Assignment Operator
 - Attempting to assign to a bound variable will result in a runtime error.
 
 Built-in Types
-==============
+--------------
 
 You may now write rules that specialize on any of the built-in types
 ``Boolean``, ``Integer``, ``Float``, ``List``, ``Dictionary``, and ``String``.
@@ -49,7 +73,7 @@ These types are mapped to host-language classes such as ``java.lang.Boolean``
 in Java or ``bool`` in Python.
 
 Positional Arguments to Constructors
-====================================
+------------------------------------
 
 The ``new`` operator previously required an instance literal whose fields
 are passed to the class's constructor as keyword arguments:
@@ -70,7 +94,7 @@ positionally:
 Positional constructor arguments may be used in any application language.
 
 Java Class Registration
-=======================
+-----------------------
 The Java ``registerClass`` method now requires only a class:
 
 .. code-block:: Java
@@ -94,7 +118,7 @@ arguments; see :doc:`/using/libraries/java/index` for details.
 
 
 Flask Integration (``flask-oso``)
-==================================
+--------------------------------
 
 The new flask-oso_ package makes it easy to use oso with Flask, the popular
 Python web framework. It includes a flask-specific authorization method with
@@ -113,7 +137,7 @@ and route decorators to more succinctly use oso.
 .. _flask-oso: https://pypi.org/project/flask-oso/
 
 Other bugs & improvements
-=========================
+-------------------------
 
 - fixed float parsing
 - improved integer/float comparisons
