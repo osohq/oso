@@ -34,7 +34,7 @@ jobs:
       CIBW_ENVIRONMENT: ENV=CI
 
       CIBW_BEFORE_TEST: make test-requirements
-      CIBW_TEST_COMMAND: make test
+      CIBW_TEST_COMMAND: make -C {project} test
 
     steps:
       - uses: actions/checkout@v2
