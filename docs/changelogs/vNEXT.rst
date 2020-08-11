@@ -31,12 +31,15 @@ The three oso libraries (Python, Ruby and Java) all now work on Windows.
 musl builds for Python
 ======================
 
-musl-based Python wheels (for Alpine Linux and other musl-based distros) are built and downloadable from `the releases page on GitHub <https://github.com/osohq/oso/releases/latest>`_.
+musl-based Python wheels (for Alpine Linux and other musl-based distros) are
+built and downloadable from `the releases page on GitHub
+<https://github.com/osohq/oso/releases/latest>`_.
 
 Assignment Operator
 ===================
-- The operator ``:=`` may now be used to assign values to unbound variables. Unlike the unify operator (``=``),
-the assignment operator will NOT evaluate equality.
+- The operator ``:=`` may now be used to assign values to unbound variables.
+  Unlike the unify operator (``=``), the assignment operator will NOT evaluate
+  equality.
 - Attempting to assign to a non-variable will result in a parse error.
 - Attempting to assign to a bound variable will result in a runtime error.
 
@@ -91,6 +94,23 @@ If you omit the constructor (recommended), the default behavior at
 instantiation time is to search the list returned by ``Class.getConstructors``
 for a constructor that is applicable to the supplied (positional) constructor
 arguments; see :doc:`/using/libraries/java/index` for details.
+
+Flask Integration (``flask_oso``)
+==================================
+
+The new flask_oso_ package makes it easy to use oso with Flask, the popular
+Python web framework. It includes a flask-specific authorization method with
+sensible defaults, middleware that ensure all requests are properly authorized,
+and route decorators to more succinctly use oso.
+
+.. code-block:: python
+
+    from flask_oso import authorize
+
+    @authorize(resource="get_user")
+    @app.route("/user")
+    def get_user():
+        return "current user"
 
 Other bugs & improvements
 =========================

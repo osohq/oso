@@ -2,23 +2,15 @@
 Framework Integrations
 ======================
 
-Coming soon
-===========
-
 oso integrates directly with language-specific web frameworks and ORMs to
 streamline the process of adding oso to your application.
 
-.. Totally made up code snippet!
+.. toctree::
+   :caption: Integrations:
+   :titlesonly:
+   :maxdepth: 1
 
-.. code-block:: python
-
-    from oso.flask import oso
-    from .app import app
-
-    @app.route("/secret")
-    @oso.authorize
-    def secret_route():
-        return "Hello world"
+   flask
 
 What do you think?
 ==================
