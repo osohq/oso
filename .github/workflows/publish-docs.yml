@@ -1,11 +1,9 @@
 name: Publish Docs
 on:
-  # workflow_dispatch:
-  #   inputs:
-  #     version:
-  #       description: "docs s3 path"
-  #       required: false
-  #       default: docs-preview.oso.dev
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
   push:
 jobs:
   publish:
@@ -31,4 +29,8 @@ jobs:
       - name: Build docs
         run: make -C docs html
       - name: s3 preview
+        run: aws s3 sync --dryrun --delete docs/_build/html s3://${{ github.event.inputs.url }}
+        if: github.events.inputs.url
+      - name: s3 preview
         run: aws s3 sync --dryrun --delete docs/_build/html s3://docs-preview.oso.dev
+        if: "${{ ! github.events.inputs.url }}"
