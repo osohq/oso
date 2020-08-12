@@ -139,7 +139,7 @@ export class Host {
           },
         };
       case v instanceof Variable:
-        return { value: { Variable: v } };
+        return { value: { Variable: v.name } };
       // TODO(gj): is this the best way to determine whether it's an object?
       // TODO(gj): should we handle Maps here?
       // TODO(gj): Need to find a better way to filter out Math.
@@ -200,7 +200,7 @@ export class Host {
         t.Call.args.map(a => this.toJs(a))
       );
     } else if (isPolarVariable(t)) {
-      return new Variable(t.Variable.name);
+      return new Variable(t.Variable);
     }
   }
 }
