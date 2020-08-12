@@ -8,7 +8,6 @@ on:
         description: "oso release to build docs for"
       flask_oso_version:
         description: "flask oso release to build docs for"
-  push:
 jobs:
   publish:
     name: Publish docs
@@ -36,6 +35,7 @@ jobs:
       - run: |
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.version }}.zip") | .url') --output oso-python-${{ github.event.inputs.oso_version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.oso_version }}.zip -d oso-python
+        run: pip install oso==${{ github.event.inputs.oso_version }} -f oso-python
       - name: Install oso from release
       - name: Download flask-oso from release
         with:
@@ -44,7 +44,6 @@ jobs:
         curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.flask_oso_version }} | jq -r '.assets[] | select(.name == "flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip") | .url') --output flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip
       - run: unzip flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip -d flask-oso-python
       - name: Install oso from release
-        run: pip install oso==${{ github.event.inputs.oso_version }} -f oso-python
         run: pip install flask_oso==${{ github.event.inputs.flask_oso_version }} -f flask-oso-python
       - name: Build docs
         run: SPHINXOPTS="-W" make -C docs html
