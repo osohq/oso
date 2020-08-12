@@ -70,8 +70,8 @@ jobs:
         run: SPHINXOPTS="-W" make -C docs spelling
       - name: Docs build
         run: SPHINXOPTS="-W" make -C docs build
-      - name: s3 preview
-        run: aws s3 sync --dryrun --delete docs/_build/html s3://docs-preview.oso.dev
+      - name: s3 preview publish
+        run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
