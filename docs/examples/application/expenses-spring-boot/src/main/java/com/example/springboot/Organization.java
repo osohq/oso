@@ -29,8 +29,8 @@ public class Organization {
 
     }
 
-    // @bp.route("/<int:id>", methods=["GET"])
-    // def get_organization(id):
-    // organization = Organization.lookup(id)
-    // return str(authorize("read", organization))
+    public String toString() {
+        return String.format("Organization(name=%s, id=%d)", this.name, this.id);
+    }
+
 }

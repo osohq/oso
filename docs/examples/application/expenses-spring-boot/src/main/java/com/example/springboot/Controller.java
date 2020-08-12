@@ -24,7 +24,7 @@ public class Controller {
     private Db db;
 
     @RequestMapping(value = "/expenses/{id}", method = RequestMethod.GET)
-    public String getResource(@PathVariable(name = "id") int id,
+    public String getExpense(@PathVariable(name = "id") int id,
             @RequestHeader(name = "user", required = true) String email) {
         try {
             Expense e = Expense.lookup(id);
@@ -54,6 +54,24 @@ public class Controller {
             return "unimplemented";
         } catch (SQLException e) {
             return "user not found";
+        }
+    }
+
+    @RequestMapping("/organizations/{id}")
+    public String getOrganization(@PathVariable(name = "id") int id,
+            @RequestHeader(name = "user", required = true) String email) {
+        try {
+            Organization org = Organization.lookup(id);
+            User user = User.lookup(email);
+            if (!oso.isAllowed(user, "read", org)) {
+                return "Forbidden";
+            } else {
+                return org.toString();
+            }
+        } catch (OsoException e) {
+            return "Failure: " + e.getMessage();
+        } catch (SQLException e) {
+            return "Organization not found";
         }
     }
 }
