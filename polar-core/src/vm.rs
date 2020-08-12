@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Write;
 use std::rc::Rc;
 use std::string::ToString;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
@@ -187,8 +187,8 @@ pub struct PolarVirtualMachine {
     /// Logging flag.
     log: bool,
 
-    /// Output stream.
-    output: Arc<RwLock<Box<dyn std::io::Write>>>,
+    /// Output messages.
+    pub messages: Arc<Mutex<VecDeque<Message>>>,
 }
 
 impl Default for PolarVirtualMachine {
@@ -197,7 +197,8 @@ impl Default for PolarVirtualMachine {
             Arc::new(RwLock::new(KnowledgeBase::default())),
             false,
             vec![],
-            None,
+            // Messages will not be exposed, only use default() for testing.
+            Arc::new(Mutex::new(VecDeque::new())),
         )
     }
 }
@@ -210,7 +211,7 @@ impl PolarVirtualMachine {
         kb: Arc<RwLock<KnowledgeBase>>,
         trace: bool,
         goals: Goals,
-        output: Option<Arc<RwLock<Box<dyn std::io::Write>>>>,
+        messages: Arc<Mutex<VecDeque<Message>>>,
     ) -> Self {
         let constants = kb
             .read()
@@ -234,14 +235,14 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
-            output: if let Some(output) = output {
-                output
-            } else {
-                Arc::new(RwLock::new(Box::new(std::io::stderr())))
-            },
+            messages,
         };
         vm.bind_constants(constants);
         vm
+    }
+
+    pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, trace: bool, goals: Goals) -> Self {
+        PolarVirtualMachine::new(kb, trace, goals, Arc::new(Mutex::new(VecDeque::new())))
     }
 
     #[cfg(test)]
@@ -252,6 +253,11 @@ impl PolarVirtualMachine {
     #[cfg(test)]
     fn set_query_timeout(&mut self, timeout_s: u64) {
         self.query_timeout = std::time::Duration::from_secs(timeout_s);
+    }
+
+    pub fn push_message(&self, kind: MessageKind, msg: String) {
+        let mut messages = self.messages.lock().unwrap();
+        messages.push_back(Message { kind, msg });
     }
 
     pub fn new_id(&self) -> u64 {
@@ -623,8 +629,7 @@ impl PolarVirtualMachine {
 
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
-        let mut writer = self.output.write().unwrap();
-        let _ = writeln!(&mut writer, "{}", message);
+        self.push_message(MessageKind::Print, message.to_owned());
     }
 
     fn source(&self, term: &Term) -> Option<Source> {
@@ -2242,7 +2247,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), false, vec![goal], None);
+        let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![goal]);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -2612,13 +2617,12 @@ mod tests {
 
     #[test]
     fn debug() {
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(KnowledgeBase::new())),
             false,
             vec![Goal::Debug {
                 message: "Hello".to_string(),
             }],
-            None,
         );
         assert!(matches!(
             vm.run().unwrap(),
@@ -2628,11 +2632,10 @@ mod tests {
 
     #[test]
     fn halt() {
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(KnowledgeBase::new())),
             false,
             vec![Goal::Halt],
-            None,
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.goals.len(), 0);
@@ -2647,14 +2650,13 @@ mod tests {
         let zero = value!(0);
         let one = value!(1);
         let vals = term!([zero.clone(), one.clone()]);
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(KnowledgeBase::new())),
             false,
             vec![Goal::Unify {
                 left: vars,
                 right: vals,
             }],
-            None,
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
@@ -2764,14 +2766,13 @@ mod tests {
             repr: None,
         });
 
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(kb)),
             false,
             vec![query!(pred!(
                 "bar",
                 [external_instance.clone(), external_instance, sym!("z")]
             ))],
-            None,
         );
 
         let mut results = Vec::new();

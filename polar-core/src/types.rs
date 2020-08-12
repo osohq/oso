@@ -696,6 +696,18 @@ pub enum QueryEvent {
     },
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessageKind {
+    Print,
+    Warning,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Message {
+    pub kind: MessageKind,
+    pub msg: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

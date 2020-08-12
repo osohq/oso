@@ -8,7 +8,7 @@ use polar_core::*;
 use polar_core::{polar::Polar, polar::Query, types::*};
 
 fn runner_from_query(q: &str) -> Runner {
-    let polar = Polar::new(None);
+    let polar = Polar::new();
     let query_term = parser::parse_query(0, q).unwrap();
     let query = polar.new_query_from_term(query_term, false);
     Runner::new(polar, query)

@@ -13,7 +13,7 @@ impl Polar {
     #[wasm_bindgen(constructor)]
     pub fn wasm_new() -> Self {
         console_error_panic_hook::set_once();
-        Self(polar::Polar::new(None))
+        Self(polar::Polar::new())
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = loadFile)]
