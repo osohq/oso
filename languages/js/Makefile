@@ -1,18 +1,27 @@
-.PHONY: build-wasm install dev checkfmt typecheck lint
+.PHONY: wasm install dev fmtcheck typecheck lint
 
-build-wasm:
+wasm: clean install
+	rm -f src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.d.ts
 	$(MAKE) -C ../../polar-wasm-api build
+	mkdir -p dist
+	cp src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.d.ts dist
 
 install:
 	yarn install
 
-dev: build-wasm install
-	yarn dev
+clean:
+	yarn clean
 
-checkfmt: install
-	yarn checkfmt
+dev: wasm
+	yarn tsc --watch
 
-typecheck: install build-wasm
-	yarn compile
+build: wasm
+	yarn tsc
 
-lint: checkfmt typecheck
+fmtcheck: install
+	yarn fmtcheck
+
+typecheck: install wasm
+	yarn typecheck
+
+lint: fmtcheck typecheck

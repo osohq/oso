@@ -6,7 +6,7 @@ import {
   UnregisteredInstanceError,
 } from './errors';
 import { ancestors } from './helpers';
-import type { Polar as FfiPolar } from '../dist/polar_wasm_api';
+import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
 import type { Class, PolarValue } from './types';
