@@ -10,8 +10,8 @@ Breaking changes
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-Changed file loading behaviour
-------------------------------
+Changed file loading behavior
+-----------------------------
 
 We removed the lazy-loading of policy files from the various
 oso libraries. This means that all classes and constants need
@@ -51,7 +51,7 @@ The three oso libraries (Python, Ruby and Java) all now work on Windows.
 musl builds for Python
 ----------------------
 
-musl-based Python wheels (for Alpine Linux and other musl-based distros) are
+musl-based Python wheels (for Alpine Linux and other musl-based distributions) are
 built and downloadable from `the releases page on GitHub
 <https://github.com/osohq/oso/releases/latest>`_.
 
@@ -84,8 +84,7 @@ are passed to the class's constructor as keyword arguments:
 
 This syntax is still supported in application languages that support keyword
 arguments (e.g., Python and Ruby), but some languages (e.g., Java) do not
-support keywords. So a new syntax was added to pass initialization arguments
-positionally:
+support keywords. So a new syntax was added to pass positional initialization arguments:
 
 .. code-block:: polar
 
