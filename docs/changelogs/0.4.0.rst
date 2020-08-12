@@ -118,7 +118,7 @@ arguments; see :doc:`/using/libraries/java/index` for details.
 
 
 Flask Integration (``flask-oso``)
---------------------------------
+---------------------------------
 
 The new flask-oso_ package makes it easy to use oso with Flask, the popular
 Python web framework. It includes a flask-specific authorization method with
@@ -141,5 +141,5 @@ Other bugs & improvements
 
 - Fixed float parsing
 - Improved integer/float comparisons
-- Fix checking membership in an empty list. ``x in []`` is now always false
+- Fixed checking membership in an empty list. ``x in []`` is now always false
 - Fixed bug causing memory issues when running across multiple threads
