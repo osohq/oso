@@ -4,11 +4,12 @@
     "allowJs": true,
     "esModuleInterop": true,
     "lib": ["DOM", "ES2018"],
+    "noEmit": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "."
   },
   "include": [
-    "src/**/*.js",
-    "src/**/*.ts"
+    "src/**/*",
+    "test/**/*"
   ]
 }

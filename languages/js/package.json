@@ -19,7 +19,6 @@
   "scripts": {
     "check": "gts check",
     "clean": "gts clean",
-    "typecheck": "tsc --noEmit",
     "fix": "gts fix",
     "fmtcheck": "prettier --check 'src/**/*.[jt]s'"
   },
@@ -28,6 +27,7 @@
     "@types/node": "^14.0.14",
     "gts": "^2.0.2",
     "prettier": "^2.0.5",
+    "ts-node": "^8.10.2",
     "typescript": "^3.9.5"
   },
   "dependencies": {
