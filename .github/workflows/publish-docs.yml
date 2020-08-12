@@ -30,14 +30,15 @@ jobs:
       - name: Install yard
         run: gem install yard
       - name: Download oso from release
+        # TODO add v to url for release below.
         run: |
-          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.oso_version }}.zip") | .url') --output oso-python-${{ github.event.inputs.oso_version }}.zip
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.oso_version }}.zip") | .url') --output oso-python-${{ github.event.inputs.oso_version }}.zip
       - run: unzip oso-python-${{ github.event.inputs.oso_version }}.zip -d oso-python
       - name: Install oso from release
         run: pip install oso==${{ github.event.inputs.oso_version }} -f oso-python
       - name: Download flask-oso from release
         run: |
-          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.flask_oso_version }} | jq -r '.assets[] | select(.name == "flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip") | .url') --output flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/flask-v${{ github.event.inputs.flask_oso_version }} | jq -r '.assets[] | select(.name == "flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip") | .url') --output flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip
       - run: unzip flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip -d flask-oso-python
       - name: Install oso from release
         run: pip install flask_oso==${{ github.event.inputs.flask_oso_version }} -f flask-oso-python
