@@ -184,14 +184,19 @@ export class Host {
       return t.Boolean;
     } else if (isPolarList(t)) {
       return t.List.map(this.toJs);
-      // TODO(gj): handle Map?
     } else if (isPolarDict(t)) {
-      return Object.assign(
-        {},
-        ...Object.entries(t.Dictionary.fields).map(([k, v]) => ({
-          [k]: this.toPolarTerm(v),
-        }))
-      );
+      const { fields } = t.Dictionary;
+      let entries;
+      // TODO(gj): Why is this sometimes a Map and sometimes an Object?
+      if (typeof fields.entries === 'function') {
+        entries = [...fields.entries()];
+      } else {
+        entries = Object.entries(fields);
+      }
+      return entries.reduce((obj: { [key: string]: any }, [k, v]) => {
+        obj[k] = this.toJs(v);
+        return obj;
+      }, {});
     } else if (isPolarInstance(t)) {
       return this.getInstance(t.ExternalInstance.instance_id);
     } else if (isPolarPredicate(t)) {

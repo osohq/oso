@@ -40,9 +40,7 @@ export function isPolarList(v: PolarType): v is PolarList {
 
 interface PolarDict {
   Dictionary: {
-    fields: {
-      [key: string]: PolarValue;
-    };
+    fields: Map<string, PolarValue> | { [key: string]: PolarValue };
   };
 }
 
