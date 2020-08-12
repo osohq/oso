@@ -1,10 +1,15 @@
 package com.example.springboot;
 
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 import javax.annotation.Resource;
 import com.osohq.oso.Oso;
@@ -15,8 +20,8 @@ public class Controller {
     @Resource(name = "setupOso")
     private Oso oso;
 
-    @Resource(name = "currentUser")
-    private User currentUser;
+    @Autowired
+    private Db db;
 
     @RequestMapping(value = "/expense/{id}", method = RequestMethod.GET)
     public String getResource(@PathVariable(name = "id") int id,
@@ -34,12 +39,18 @@ public class Controller {
     }
 
     @RequestMapping("/whoami")
-    public String whoami() {
-        if (currentUser != null) {
-            // TODO
-
+    public String whoami(@RequestHeader("user") String email) {
+        try {
+            User you = User.lookup(email);
+            if (you != null) {
+                PreparedStatement statement = db.prepareStatement("select name from organizations where id = ?");
+                statement.setInt(1, you.organizationId);
+                String orgName = statement.executeQuery().getString("name");
+                return "You are " + you.email + ", the " + you.title + " at " + orgName + ". (User ID: " + you.id + ")";
+            }
+            return "unimplemented";
+        } catch (SQLException e) {
+            return "user not found";
         }
-        return "unimplemented";
-
     }
 }

@@ -2,6 +2,7 @@ package com.example.springboot;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -27,7 +28,7 @@ public class Db {
     }
 
     @PreDestroy
-    private void closeDB(final Connection db) {
+    private void closeDB() {
         try {
             if (this.db != null) {
                 db.close();
@@ -35,6 +36,14 @@ public class Db {
         } catch (final SQLException ex) {
             System.out.println(ex.getMessage());
         }
+    }
+
+    public Connection get() {
+        return this.db;
+    }
+
+    public PreparedStatement prepareStatement(String query) throws SQLException {
+        return this.db.prepareStatement(query);
     }
 
     public ResultSet queryDB(final String query) throws SQLException {

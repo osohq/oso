@@ -1,5 +1,6 @@
 package com.example.springboot;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -24,8 +25,8 @@ public class User {
         try {
             ResultSet results = db.queryDB(
                     "select id, email, title, location_id, organization_id, manager_id from users where id = " + id);
-            return new User(id, results.getInt("locationId"), results.getInt("organizationId"),
-                    results.getInt("managerId"), results.getString("email"), results.getString("title"));
+            return new User(id, results.getInt("location_id"), results.getInt("organization_id"),
+                    results.getInt("manager_id"), results.getString("email"), results.getString("title"));
         } catch (SQLException e) {
             throw new Exception("user not found");
         } finally {
@@ -33,17 +34,16 @@ public class User {
         }
     }
 
-    public static User lookup(String email) throws Exception {
+    public static User lookup(String email) throws SQLException {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
         Db db = context.getBean(Db.class);
         try {
-            ResultSet results = db.queryDB(
-                    "select id, email, title, location_id, organization_id, manager_id from users where email = "
-                            + email);
-            return new User(results.getInt("id"), results.getInt("locationId"), results.getInt("organizationId"),
-                    results.getInt("managerId"), email, results.getString("title"));
-        } catch (SQLException e) {
-            throw new Exception("user not found");
+            PreparedStatement statement = db.prepareStatement(
+                    "select id, email, title, location_id, organization_id, manager_id from users where email = ?");
+            statement.setString(1, email);
+            ResultSet results = statement.executeQuery();
+            return new User(results.getInt("id"), results.getInt("location_id"), results.getInt("organization_id"),
+                    results.getInt("manager_id"), email, results.getString("title"));
         } finally {
             context.close();
         }
