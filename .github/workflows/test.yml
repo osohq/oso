@@ -75,4 +75,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-        if: github.ref == 'refs/heads/dhatch/docs-publish'
+        if: github.ref == 'refs/heads/main'
