@@ -58,9 +58,7 @@ interface PolarPredicate {
 }
 
 interface PolarVariable {
-  Variable: {
-    name: string;
-  };
+  Variable: string;
 }
 
 interface PolarInstance {
