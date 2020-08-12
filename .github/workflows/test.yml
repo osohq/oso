@@ -31,10 +31,10 @@ jobs:
         working-directory: "languages/ruby"
         run: make typecheck | grep '0 problems found in 0 of'
 
-      - name: Use Node.js 10.13.0
+      - name: Use Node.js 10.14.2
         uses: actions/setup-node@v1
         with:
-          node-version: 10.13.0
+          node-version: 10.14.2
       - name: Check formatting of JS library
         working-directory: "languages/js"
         run: make fmtcheck
