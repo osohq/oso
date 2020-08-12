@@ -14,7 +14,7 @@ import {
 } from './errors';
 import { Query } from './Query';
 import { Host } from './Host';
-import { Polar as FfiPolar } from '../dist/polar_wasm_api';
+import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import type { Class, QueryResult } from './types';
 

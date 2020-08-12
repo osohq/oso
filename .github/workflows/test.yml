@@ -37,7 +37,7 @@ jobs:
           node-version: 10.13.0
       - name: Check formatting of JS library
         working-directory: "languages/js"
-        run: make checkfmt
+        run: make fmtcheck
 
       - name: Install Java
         uses: actions/setup-java@v1

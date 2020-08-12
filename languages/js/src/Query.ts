@@ -1,4 +1,4 @@
-import type { Query as FfiQuery } from '../dist/polar_wasm_api';
+import type { Query as FfiQuery } from './polar_wasm_api';
 
 import { createInterface } from 'readline';
 
