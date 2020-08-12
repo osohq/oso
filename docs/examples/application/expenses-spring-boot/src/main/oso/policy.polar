@@ -22,9 +22,9 @@ allow(user: User, "read", expense: Expense) if
     submitted(user, expense);
 
 submitted(user: User, expense: Expense) if
-    user.id = expense.user_id;
+    user.id = expense.userId;
 
 ### Organization rules
 allow_by_path(_user, "GET", "organizations", _rest);
 allow(user: User, "read", organization: Organization) if
-    user.organization_id = organization.id;
+    user.organizationId = organization.id;

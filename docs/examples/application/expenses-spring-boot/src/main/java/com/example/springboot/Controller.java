@@ -23,18 +23,21 @@ public class Controller {
     @Autowired
     private Db db;
 
-    @RequestMapping(value = "/expense/{id}", method = RequestMethod.GET)
+    @RequestMapping(value = "/expenses/{id}", method = RequestMethod.GET)
     public String getResource(@PathVariable(name = "id") int id,
-            @RequestHeader(name = "user", required = true) String user) {
+            @RequestHeader(name = "user", required = true) String email) {
         try {
             Expense e = Expense.lookup(id);
-            if (!oso.isAllowed(user, "GET", e)) {
+            User user = User.lookup(email);
+            if (!oso.isAllowed(user, "read", e)) {
                 return "Forbidden";
             } else {
                 return e.toString();
             }
         } catch (OsoException e) {
-            return "Failure";
+            return "Failure: " + e.getMessage();
+        } catch (SQLException e) {
+            return "Expense not found";
         }
     }
 

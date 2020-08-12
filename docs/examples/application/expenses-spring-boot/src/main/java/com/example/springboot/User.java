@@ -7,10 +7,10 @@ import java.sql.SQLException;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 public class User {
-    int id, locationId, organizationId, managerId;
-    String email, title;
+    public Integer id, locationId, organizationId, managerId;
+    public String email, title;
 
-    public User(int id, int locationId, int organizationId, int managerId, String email, String title) {
+    public User(Integer id, Integer locationId, Integer organizationId, Integer managerId, String email, String title) {
         this.id = id;
         this.locationId = locationId;
         this.organizationId = organizationId;

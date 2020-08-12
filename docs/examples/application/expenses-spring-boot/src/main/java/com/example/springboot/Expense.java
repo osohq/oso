@@ -1,29 +1,39 @@
 package com.example.springboot;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
 public class Expense {
-    public int amount;
+    public Integer amount, userId, id;
     public String description;
-    public String submittedBy;
 
-    public static Expense[] EXPENSES = { new Expense(500, "coffee", "alice@example.com"),
-            new Expense(5000, "software", "alice@example.com"), new Expense(50000, "flight", "bhavik@example.com"), };
-
-    public Expense(int amount, String description, String submittedBy) {
+    public Expense(Integer amount, String description, Integer userId, Integer id) {
         this.amount = amount;
         this.description = description;
-        this.submittedBy = submittedBy;
+        this.userId = userId;
+        this.id = id;
     }
 
-    public static Expense lookup(int id) {
-        if (id < EXPENSES.length) {
-            return EXPENSES[id];
-        } else {
-            return null;
+    public static Expense lookup(int id) throws SQLException {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        Db db = context.getBean(Db.class);
+        try {
+            PreparedStatement statement = db
+                    .prepareStatement("select id, amount, description, user_id from expenses where id  = ?");
+            statement.setInt(1, id);
+            ResultSet results = statement.executeQuery();
+            return new Expense(results.getInt("amount"), results.getString("description"), results.getInt("user_id"),
+                    id);
+        } finally {
+            context.close();
         }
     }
 
     public String toString() {
-        return String.format("Expense(amount=%d, description=%s, submittedBy=%s)", this.amount, this.description,
-                this.submittedBy);
+        return String.format("Expense(amount=%d, description=%s, user_id=%d, id=%d)", this.amount, this.description,
+                this.userId, this.id);
     }
 }
