@@ -22,6 +22,8 @@ public class Application {
     @Bean
     public Oso setupOso() throws IOException, Exceptions.OsoException {
         Oso oso = new Oso();
+        oso.registerClass(User.class, (m) -> new User(1, 2, 3, 4, "email", "title"), "User");
+        oso.registerClass(Expense.class, (m) -> new Expense(1, "description", "submittedBy"), "Expense");
         oso.loadFile("src/main/oso/policy.polar");
         return oso;
     }

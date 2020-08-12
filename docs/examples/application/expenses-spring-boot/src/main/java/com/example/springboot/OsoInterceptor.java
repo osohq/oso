@@ -1,6 +1,7 @@
 package com.example.springboot;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -9,13 +10,14 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import com.osohq.oso.Http;
 import com.osohq.oso.Oso;
-import com.osohq.oso.Exceptions.OsoException;
 
-public class ExpenseInterceptor extends HandlerInterceptorAdapter {
+@Component
+public class OsoInterceptor extends HandlerInterceptorAdapter {
     @Resource(name = "setupOso")
     private Oso oso;
 
@@ -26,13 +28,20 @@ public class ExpenseInterceptor extends HandlerInterceptorAdapter {
         Map<String, String> query = request.getParameterMap().entrySet().stream()
                 .collect(Collectors.toMap(Entry::getKey, e -> e.getValue()[0]));
 
-        User user = User.lookup(request.getHeader("user"));
-        if (oso.isAllowed(user, request.getMethod(),
-                new Http(request.getServerName(), request.getRequestURL().toString(), query))) {
-            return true;
-        } else {
+        try {
+
+            User user = User.lookup(request.getHeader("user"));
+            Http http = new Http(request.getServerName(), request.getServletPath().toString(), query);
+            if (oso.isAllowed(user, request.getMethod(), http)) {
+                return true;
+            } else {
+                response.getWriter().write("Forbidden");
+                return false;
+            }
+        } catch (SQLException e) {
             response.getWriter().write("Forbidden");
             return false;
+
         }
     }
 }
