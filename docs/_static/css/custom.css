@@ -88,6 +88,9 @@
         font-weight: 600;
     }
 
+    .md-header-nav__button {
+        margin: .5rem;
+    }
 }
 
 .logo-sidebar {
@@ -337,8 +340,4 @@ body {
     .md-typeset pre {
     margin: 0;
     }
-}
-
-.md-header-nav__button {
-	margin: .5rem;
 }
