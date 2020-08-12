@@ -1,6 +1,5 @@
 package com.example.springboot;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,7 +40,6 @@ public class OsoInterceptor extends HandlerInterceptorAdapter {
         } catch (SQLException e) {
             response.getWriter().write("Forbidden");
             return false;
-
         }
     }
 }
