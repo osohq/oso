@@ -53,3 +53,4 @@ wasm-test:
 
 js-test:
 	$(MAKE) -C languages/js parity
+	$(MAKE) -C languages/js test

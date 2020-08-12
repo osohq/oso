@@ -1,4 +1,4 @@
-.PHONY: wasm install clean dev build fmtcheck typecheck lint
+.PHONY: wasm install clean dev build fmtcheck typecheck lint test
 
 wasm: clean install
 	rm -f src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.d.ts
@@ -28,3 +28,6 @@ lint: fmtcheck typecheck
 
 parity: install wasm
 	yarn ts-node test/parity.ts
+
+test: install wasm
+	yarn test
