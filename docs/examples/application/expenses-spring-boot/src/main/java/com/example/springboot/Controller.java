@@ -1,17 +1,12 @@
 package com.example.springboot;
 
 import org.springframework.web.bind.annotation.RestController;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -83,8 +78,20 @@ public class Controller {
     @PutMapping("/expenses/submit")
     public String submitExpense(@RequestBody Expense expense, @RequestHeader(name = "user") String email)
             throws SQLException {
-        expense.userId = User.lookup(email).id;
-        expense.save();
-        return expense.toString();
+        try {
+            User user = User.lookup(email);
+
+            if (expense.userId == 0)
+                expense.userId = user.id;
+
+            if (!oso.isAllowed(user, "create", expense)) {
+                return "Forbidden";
+            } else {
+                expense.save();
+                return expense.toString();
+            }
+        } catch (OsoException e) {
+            return "Failure: " + e.getMessage();
+        }
     }
 }

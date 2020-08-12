@@ -28,3 +28,8 @@ submitted(user: User, expense: Expense) if
 allow_by_path(_user, "GET", "organizations", _rest);
 allow(user: User, "read", organization: Organization) if
     user.organizationId = organization.id;
+
+# Users should try to add this rule themselves
+# submit Expenses
+allow(user: User, "create", expense: Expense) if
+    user.id = expense.userId;

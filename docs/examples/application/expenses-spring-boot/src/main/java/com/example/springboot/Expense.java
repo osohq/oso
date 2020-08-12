@@ -3,7 +3,6 @@ package com.example.springboot;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -24,9 +23,11 @@ public class Expense {
     }
 
     @JsonCreator
-    public Expense(@JsonProperty("amount") int amount, @JsonProperty("description") String description) {
+    public Expense(@JsonProperty("amount") int amount, @JsonProperty("description") String description,
+            @JsonProperty("user_id") int userId) {
         this.amount = amount;
         this.description = description;
+        this.userId = userId;
     }
 
     public static Expense lookup(int id) throws SQLException {

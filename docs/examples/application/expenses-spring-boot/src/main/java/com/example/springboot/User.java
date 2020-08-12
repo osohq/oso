@@ -19,16 +19,16 @@ public class User {
         this.title = title;
     }
 
-    public static User get(int id) throws Exception {
+    public static User get(int id) throws SQLException {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
         Db db = context.getBean(Db.class);
         try {
-            ResultSet results = db.queryDB(
-                    "select id, email, title, location_id, organization_id, manager_id from users where id = " + id);
+            PreparedStatement statement = db.prepareStatement(
+                    "select id, email, title, location_id, organization_id, manager_id from users where id = ?");
+            statement.setInt(1, id);
+            ResultSet results = statement.executeQuery();
             return new User(id, results.getInt("location_id"), results.getInt("organization_id"),
                     results.getInt("manager_id"), results.getString("email"), results.getString("title"));
-        } catch (SQLException e) {
-            throw new Exception("user not found");
         } finally {
             context.close();
         }
