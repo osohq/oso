@@ -43,10 +43,6 @@ jobs:
       - name: Install oso from release
         run: pip install flask_oso==${{ github.event.inputs.flask_oso_version }} -f flask-oso-python
       - name: Build docs
-        run: SPHINXOPTS="-W" make -C docs html
+        run: SPHINXOPTS="-W" make -C docs build
       - name: s3 preview
         run: aws s3 sync --dryrun --delete docs/_build/html s3://${{ github.event.inputs.url }}
-        if: github.events.inputs.url
-      - name: s3 preview
-        run: aws s3 sync --dryrun --delete docs/_build/html s3://docs-preview.oso.dev
-        if: "${{ ! github.events.inputs.url }}"
