@@ -121,8 +121,7 @@ export class Host {
         return { value: { Boolean: v } };
       case Number.isInteger(v):
         return { value: { Number: { Integer: v } } };
-      // TODO(gj): Handle Infinity, -Infinity, -0, NaN, etc.
-      case typeof v === 'number':
+      case typeof v === 'number' && Number.isFinite(v):
         return { value: { Number: { Float: v } } };
       case typeof v === 'string':
         return { value: { String: v } };
