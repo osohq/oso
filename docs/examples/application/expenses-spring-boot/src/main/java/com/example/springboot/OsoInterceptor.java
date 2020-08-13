@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
+import com.example.springboot.User.CurrentUser;
 import com.osohq.oso.Http;
 import com.osohq.oso.Oso;
 
@@ -19,6 +20,9 @@ import com.osohq.oso.Oso;
 public class OsoInterceptor extends HandlerInterceptorAdapter {
     @Resource(name = "setupOso")
     private Oso oso;
+
+    @Resource(name = "requestScopeCurrentUser")
+    private CurrentUser currentUser;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -29,16 +33,20 @@ public class OsoInterceptor extends HandlerInterceptorAdapter {
 
         try {
 
-            User user = User.lookup(request.getHeader("user"));
+            // Set current user from authorization header
+            String email = request.getHeader("user");
+            User user = (email == null) ? new User(0, 0, 0, 0, "Guest", "") : User.lookup(email);
+            currentUser.set(user);
+
             Http http = new Http(request.getServerName(), request.getServletPath().toString(), query);
             if (oso.isAllowed(user, request.getMethod(), http)) {
                 return true;
             } else {
-                response.getWriter().write("Forbidden");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "oso authorization");
                 return false;
             }
         } catch (SQLException e) {
-            response.getWriter().write("Forbidden");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "user not found");
             return false;
         }
     }

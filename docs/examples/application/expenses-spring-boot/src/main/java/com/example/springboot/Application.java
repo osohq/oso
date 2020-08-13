@@ -5,7 +5,9 @@ import java.io.IOException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.context.annotation.RequestScope;
 
+import com.example.springboot.User.CurrentUser;
 import com.osohq.oso.Exceptions;
 import com.osohq.oso.Oso;
 
@@ -24,5 +26,11 @@ public class Application {
         oso.registerClass(Organization.class, "Organization");
         oso.loadFile("src/main/oso/policy.polar");
         return oso;
+    }
+
+    @Bean
+    @RequestScope
+    public CurrentUser requestScopeCurrentUser() {
+        return new CurrentUser();
     }
 }

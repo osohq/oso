@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.stereotype.Component;
 
 public class User {
     public Integer id, locationId, organizationId, managerId;
@@ -46,6 +47,19 @@ public class User {
                     results.getInt("manager_id"), email, results.getString("title"));
         } finally {
             context.close();
+        }
+    }
+
+    @Component
+    public static class CurrentUser {
+        private User user;
+
+        public void set(User user) {
+            this.user = user;
+        }
+
+        public User get() {
+            return this.user;
         }
     }
 
