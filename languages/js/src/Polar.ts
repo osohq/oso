@@ -22,13 +22,13 @@ export class Polar {
   #ffiPolar: FfiPolar;
   #host: Host;
   #loadedContents: Map<string, string>;
-  #loadedNames: Map<string, string>;
+  #loadedFiles: Map<string, string>;
 
   constructor() {
     this.#ffiPolar = new FfiPolar();
     this.#host = new Host(this.#ffiPolar);
     this.#loadedContents = new Map();
-    this.#loadedNames = new Map();
+    this.#loadedFiles = new Map();
 
     this.registerClass(Boolean);
     this.registerClass(Number, 'Integer');
@@ -41,7 +41,7 @@ export class Polar {
 
   clear() {
     this.#loadedContents.clear();
-    this.#loadedNames.clear();
+    this.#loadedFiles.clear();
     const previous = this.#ffiPolar;
     this.#ffiPolar = new FfiPolar();
     previous.free();
@@ -58,17 +58,18 @@ export class Polar {
       throw e;
     }
     const hash = createHash('md5').update(contents).digest('hex');
-    const matchingName = this.#loadedNames.get(file);
-    if (matchingName !== undefined) {
-      if (matchingName !== hash) throw new PolarFileContentsChangedError(file);
-      throw new PolarFileAlreadyLoadedError(file);
+    const existingContents = this.#loadedFiles.get(file);
+    if (existingContents !== undefined) {
+      if (existingContents === hash)
+        throw new PolarFileAlreadyLoadedError(file);
+      throw new PolarFileContentsChangedError(file);
     }
-    const matchingContents = this.#loadedContents.get(hash);
-    if (matchingContents !== undefined)
-      throw new PolarFileDuplicateContentError(file, matchingContents);
+    const existingFile = this.#loadedContents.get(hash);
+    if (existingFile !== undefined)
+      throw new PolarFileDuplicateContentError(file, existingFile);
     this.loadStr(contents, file);
-    this.#loadedContents.set(file, hash);
-    this.#loadedNames.set(hash, file);
+    this.#loadedContents.set(hash, file);
+    this.#loadedFiles.set(file, hash);
   }
 
   loadStr(contents: string, name?: string): void {
