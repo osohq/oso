@@ -1393,53 +1393,6 @@ fn test_rule_index() {
     polar.load(r#"f(1, 2, {b: "y"});"#).unwrap();
     polar.load(r#"f(1, 3, {c: "z"});"#).unwrap();
 
-    {
-        // Test the index itself.
-        let kb = polar.kb.read().unwrap();
-        let generic_rule = kb.rules.get(&sym!("f")).unwrap();
-        let index = &generic_rule.index;
-        assert!(index.rules.is_empty());
-
-        fn keys(index: &RuleIndex) -> HashSet<Option<Value>> {
-            index.index.keys().cloned().collect()
-        }
-
-        let mut args = HashSet::<Option<Value>>::new();
-
-        args.clear();
-        args.insert(Some(value!(1)));
-        //assert_eq!(args, keys(index));
-        eprintln!("{:?}", index);
-
-        args.clear();
-        args.insert(None); // x
-        args.insert(Some(value!(1)));
-        args.insert(Some(value!(2)));
-        args.insert(Some(value!(3)));
-        let index1 = index.index.get(&Some(value!(1))).unwrap();
-        assert_eq!(args, keys(index1));
-
-        args.clear();
-        args.insert(Some(value!("x")));
-        args.insert(Some(value!("y")));
-        let index11 = index1.index.get(&Some(value!(1))).unwrap();
-        assert_eq!(args, keys(index11));
-
-        args.remove(&Some(value!("x")));
-        let index1_ = index1.index.get(&None).unwrap();
-        assert_eq!(args, keys(index1_));
-
-        args.clear();
-        args.insert(Some(value!(btreemap! {sym!("b") => term!("y")})));
-        let index12 = index1.index.get(&Some(value!(2))).unwrap();
-        assert_eq!(args, keys(index12));
-
-        args.clear();
-        args.insert(Some(value!(btreemap! {sym!("c") => term!("z")})));
-        let index13 = index1.index.get(&Some(value!(3))).unwrap();
-        assert_eq!(args, keys(index13));
-    }
-
     // Exercise the index.
     assert!(qeval(&mut polar, r#"f(1, 1, "x")"#));
     assert!(qeval(&mut polar, r#"f(1, 1, "y")"#));

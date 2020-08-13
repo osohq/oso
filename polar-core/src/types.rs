@@ -483,7 +483,7 @@ pub fn unwrap_and(term: Term) -> TermList {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Parameter {
     pub parameter: Term,
     pub specializer: Option<Term>,
@@ -503,7 +503,7 @@ impl Parameter {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Rule {
     pub name: Symbol,
     pub params: Vec<Parameter>,
@@ -522,38 +522,6 @@ impl Rule {
 
 pub type Rules = Vec<Arc<Rule>>;
 
-#[derive(Clone, Debug, Default)]
-pub struct RuleOrder {
-    next_id: u64,
-    order: HashMap<Arc<Rule>, u64>,
-}
-
-impl RuleOrder {
-    pub fn new(rules: Rules) -> Self {
-        let mut order = Self::default();
-        rules.iter().for_each(|rule| {
-            let id = order.next_id();
-            order.order.insert(rule.clone(), id);
-        });
-        order
-    }
-
-    pub fn next_id(&mut self) -> u64 {
-        let id = self.next_id;
-        self.next_id += 1;
-        id
-    }
-
-    pub fn add_rule(&mut self, rule: Arc<Rule>) {
-        let id = self.next_id();
-        self.order.insert(rule, id);
-    }
-
-    pub fn get(&self, rule: &Arc<Rule>) -> u64 {
-        *self.order.get(rule).unwrap()
-    }
-}
-
 #[derive(Debug)]
 pub struct RuleFilter {
     pub applicable_rules: Rules,
@@ -563,16 +531,12 @@ pub struct RuleFilter {
 type RuleSet = BTreeSet<u64>;
 
 #[derive(Clone, Default, Debug)]
-pub struct RuleIndex {
-    pub rules: RuleSet,
-    pub index: HashMap<Option<Value>, RuleIndex>,
+struct RuleIndex {
+    rules: RuleSet,
+    index: HashMap<Option<Value>, RuleIndex>,
 }
 
 impl RuleIndex {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn index_rule(&mut self, rule_id: u64, params: &[Parameter], i: usize) {
         if i < params.len() {
             self.index
@@ -630,9 +594,9 @@ impl RuleIndex {
 #[derive(Clone)]
 pub struct GenericRule {
     pub name: Symbol,
-    pub rules: HashMap<u64, Arc<Rule>>,
-    pub index: RuleIndex,
-    pub next_rule_id: u64,
+    rules: HashMap<u64, Arc<Rule>>,
+    index: RuleIndex,
+    next_rule_id: u64,
 }
 
 impl GenericRule {
@@ -884,7 +848,11 @@ pub enum QueryEvent {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
+    use crate::polar::Polar;
+
     #[test]
     fn serialize_test() {
         let pred = Predicate {
@@ -986,5 +954,60 @@ mod tests {
                 .unwrap(),
             "b:2"
         );
+    }
+
+    #[test]
+    fn test_rule_index() {
+        let polar = Polar::new(None);
+        polar.load(r#"f(1, 1, "x");"#).unwrap();
+        polar.load(r#"f(1, 1, "y");"#).unwrap();
+        polar.load(r#"f(1, x, "y") if x = 2;"#).unwrap();
+        polar.load(r#"f(1, 2, {b: "y"});"#).unwrap();
+        polar.load(r#"f(1, 3, {c: "z"});"#).unwrap();
+
+        // Test the index itself.
+        let kb = polar.kb.read().unwrap();
+        let generic_rule = kb.rules.get(&sym!("f")).unwrap();
+        let index = &generic_rule.index;
+        assert!(index.rules.is_empty());
+
+        fn keys(index: &RuleIndex) -> HashSet<Option<Value>> {
+            index.index.keys().cloned().collect()
+        }
+
+        let mut args = HashSet::<Option<Value>>::new();
+
+        args.clear();
+        args.insert(Some(value!(1)));
+        //assert_eq!(args, keys(index));
+        eprintln!("{:?}", index);
+
+        args.clear();
+        args.insert(None); // x
+        args.insert(Some(value!(1)));
+        args.insert(Some(value!(2)));
+        args.insert(Some(value!(3)));
+        let index1 = index.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index1));
+
+        args.clear();
+        args.insert(Some(value!("x")));
+        args.insert(Some(value!("y")));
+        let index11 = index1.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index11));
+
+        args.remove(&Some(value!("x")));
+        let index1_ = index1.index.get(&None).unwrap();
+        assert_eq!(args, keys(index1_));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("b") => term!("y")})));
+        let index12 = index1.index.get(&Some(value!(2))).unwrap();
+        assert_eq!(args, keys(index12));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("c") => term!("z")})));
+        let index13 = index1.index.get(&Some(value!(3))).unwrap();
+        assert_eq!(args, keys(index13));
     }
 }
