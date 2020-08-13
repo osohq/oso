@@ -67,7 +67,8 @@ export class Host {
     return this.#instances.has(id);
   }
 
-  private getInstance(id: number): object {
+  // TODO(gj): Currently public for the test suite.
+  getInstance(id: number): object {
     const instance = this.#instances.get(id);
     if (instance === undefined) throw new UnregisteredInstanceError(id);
     return instance;

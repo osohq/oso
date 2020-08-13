@@ -39,6 +39,11 @@ export class Polar {
     // TODO(gj): should we register more than this? Map/Set? Function? Math/Date? JSON?
   }
 
+  // For tests only.
+  __host() {
+    return this.#host;
+  }
+
   clear() {
     this.#loadedContents.clear();
     this.#loadedFiles.clear();

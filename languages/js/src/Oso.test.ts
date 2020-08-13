@@ -1,19 +1,8 @@
 import { Oso } from './Oso';
 
-class User {
-  readonly name: string;
-  special: boolean;
-
-  constructor(name: string) {
-    this.name = name;
-    this.special = false;
-  }
-}
-
-test('Oso#registerClass', () => {
-  const oso = new Oso();
-  oso.registerClass(User);
-  oso.loadStr('allow(u: User{}, 1, 2) if u.name = "alice";');
-  const allowed = oso.isAllowed(new User('alice'), 1, 2);
-  expect(allowed).toBe(true);
+test('#isAllowed', () => {
+  const o = new Oso();
+  o.loadStr('allow(1, 2, 3);');
+  expect(o.isAllowed(1, 2, 3)).toBe(true);
+  expect(o.isAllowed(3, 2, 1)).toBe(false);
 });
