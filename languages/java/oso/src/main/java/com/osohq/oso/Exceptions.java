@@ -108,7 +108,9 @@ public class Exceptions {
         }
     }
 
-    /** Expected to find an FFI error to convert into a Java error but found none. */
+    /**
+     * Expected to find an FFI error to convert into a Java error but found none.
+     */
     public static class FFIErrorNotFound extends OsoException {
         public FFIErrorNotFound(String msg, Map<String, Object> details) {
             super(msg, details);
@@ -184,7 +186,7 @@ public class Exceptions {
 
     public static class InvalidCallError extends PolarRuntimeException {
         public InvalidCallError(String className, String callName, Class<?>... argTypes) {
-            super("`" + callName + "` on class " + className + ", with argument types " + "`" + argTypes + "`");
+            super("Invalid call `" + callName + "` on class " + className + ", with argument types " + "`" + argTypes + "`");
         }
 
         public InvalidCallError(String msg) {
@@ -204,11 +206,11 @@ public class Exceptions {
 
     public static class InstantiationError extends PolarRuntimeException {
         public InstantiationError(String className) {
-            super("constructor on class `" +  className + "`");
+            super("constructor on class `" + className + "`");
         }
 
         public InstantiationError(String className, Exception e) {
-            super("constructor on class `" +  className + "`: " + e.getMessage());
+            super("constructor on class `" + className + "`: " + e.getMessage());
         }
     }
 

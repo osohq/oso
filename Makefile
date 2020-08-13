@@ -1,6 +1,6 @@
 .PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint wasm-build wasm-test
 
-test: rust-test python-test ruby-test java-test wasm-test
+test: rust-test python-test ruby-test java-test python-flask-test wasm-test
 
 rust-test:
 	cargo test
@@ -9,12 +9,18 @@ rust-build:
 	cargo build
 
 python-build: rust-build
-	$(MAKE) -C languages/python build
+	$(MAKE) -C languages/python/oso build
+
+python-flask-build: python-build
+	$(MAKE) -C languages/python/flask-oso build
 
 python-test: python-build
-	$(MAKE) -C languages/python test
+	$(MAKE) -C languages/python/oso test
 	python examples/expenses-py/app.py
 	cd test && python test.py
+
+python-flask-test: python-build python-flask-build
+	$(MAKE) -C languages/python/flask-oso test
 
 ruby-test:
 	$(MAKE) -C languages/ruby test
@@ -30,13 +36,13 @@ docs-test: python-build
 
 fmt:
 	cargo fmt
-	$(MAKE) -C languages/python fmt
+	$(MAKE) -C languages/python/oso fmt
 
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings
 
 lint: fmt clippy
-	$(MAKE) -C languages/ruby lint
+	$(MAKE) -C languages/ruby lint typecheck
 
 wasm-build:
 	$(MAKE) -C polar-wasm-api build

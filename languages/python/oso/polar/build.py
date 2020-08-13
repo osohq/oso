@@ -5,13 +5,13 @@ from os import sys
 ffibuilder = FFI()
 
 lib_dirs = {
-    "DEVELOPMENT": "../../target/debug",
-    "RELEASE": "../../target/release",
+    "DEVELOPMENT": "../../../target/debug",
+    "RELEASE": "../../../target/release",
     "CI": "native",
 }
 include_dirs = {
-    "DEVELOPMENT": "../../polar-c-api",
-    "RELEASE": "../../polar-c-api",
+    "DEVELOPMENT": "../../../polar-c-api",
+    "RELEASE": "../../../polar-c-api",
     "CI": "native",
 }
 env = os.environ.get("ENV", "DEVELOPMENT")

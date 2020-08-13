@@ -66,6 +66,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
             registerCall(attrName, args, callId, polarInstance);
         } catch (Exceptions.InvalidCallError e) {
             ffiQuery.applicationError(e.getMessage());
+            ffiQuery.callResult(callId, null);
+            return;
         }
         String result;
         try {

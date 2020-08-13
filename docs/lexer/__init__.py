@@ -9,10 +9,11 @@ line_re = re.compile(".*?\n")
 class PolarLexer(RegexLexer):
     tokens = {
         "root": [
+            (r"(:)(\s\b[A-Z].*?\b)", bygroups(token.Punctuation, token.Name.Class)),
             (r"(\w[\w-]*)(\()", bygroups(token.Keyword, token.Punctuation)),
             (
                 r"\sif\s|\sand\s|\sor\s|\snot\s|\smatches\s|\strue\s|\sfalse\s",
-                token.Name.Function,
+                token.Keyword,
             ),
             (r"\w[\w-]*", token.Text),
             (r"\s", token.Text),
