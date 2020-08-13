@@ -9,7 +9,7 @@ import { ancestors } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
-import type { Class, PolarValue } from './types';
+import type { Class, PolarTerm } from './types';
 import {
   isPolarStr,
   isPolarNum,
@@ -83,7 +83,7 @@ export class Host {
     return instanceId;
   }
 
-  makeInstance(name: string, fields: PolarValue[], id: number): number {
+  makeInstance(name: string, fields: PolarTerm[], id: number): number {
     const cls = this.getClass(name);
     const args = fields.map(f => this.toJs(f));
     const instance = new cls(...args);
@@ -104,7 +104,7 @@ export class Host {
     }
   }
 
-  isa(instance: PolarValue, name: string): boolean {
+  isa(instance: PolarTerm, name: string): boolean {
     const jsInstance = this.toJs(instance);
     const cls = this.getClass(name);
     // TODO(gj): is this correct?
@@ -115,8 +115,7 @@ export class Host {
     return isEqual(this.getInstance(left), this.getInstance(right));
   }
 
-  // TODO(gj): should PolarValue be called PolarTerm?
-  toPolarTerm(v: any): PolarValue {
+  toPolarTerm(v: any): PolarTerm {
     switch (true) {
       case typeof v === 'boolean':
         return { value: { Boolean: v } };
@@ -171,7 +170,7 @@ export class Host {
     }
   }
 
-  toJs(v: PolarValue): any {
+  toJs(v: PolarTerm): any {
     const t = v.value;
     if (isPolarStr(t)) {
       return t.String;

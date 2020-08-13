@@ -31,7 +31,7 @@ export function isPolarBool(v: PolarType): v is PolarBool {
 }
 
 interface PolarList {
-  List: PolarValue[];
+  List: PolarTerm[];
 }
 
 export function isPolarList(v: PolarType): v is PolarList {
@@ -40,7 +40,7 @@ export function isPolarList(v: PolarType): v is PolarList {
 
 interface PolarDict {
   Dictionary: {
-    fields: Map<string, PolarValue> | { [key: string]: PolarValue };
+    fields: Map<string, PolarTerm> | { [key: string]: PolarTerm };
   };
 }
 
@@ -51,7 +51,7 @@ export function isPolarDict(v: PolarType): v is PolarDict {
 interface PolarPredicate {
   Call: {
     name: string;
-    args: PolarValue[];
+    args: PolarTerm[];
   };
 }
 
@@ -88,7 +88,7 @@ type PolarType =
   | PolarVariable
   | PolarInstance;
 
-export interface PolarValue {
+export interface PolarTerm {
   value: PolarType;
 }
 
@@ -105,7 +105,7 @@ function isPolarType(v: any): v is PolarType {
   );
 }
 
-export function isPolarValue(v: any): v is PolarValue {
+export function isPolarTerm(v: any): v is PolarTerm {
   return isPolarType(v?.value);
 }
 
@@ -124,20 +124,20 @@ export function isGeneratorFunction(x: any): x is GeneratorFunction {
 }
 
 export interface Result {
-  bindings: Map<string, PolarValue>;
+  bindings: Map<string, PolarTerm>;
 }
 
 export interface MakeExternal {
   instanceId: number;
   tag: string;
-  fields: PolarValue[];
+  fields: PolarTerm[];
 }
 
 export interface ExternalCall {
   callId: number;
-  instance: PolarValue;
+  instance: PolarTerm;
   attribute: string;
-  args: PolarValue[];
+  args: PolarTerm[];
 }
 
 export interface ExternalIsSubspecializer {
@@ -148,7 +148,7 @@ export interface ExternalIsSubspecializer {
 }
 
 export interface ExternalIsa {
-  instance: PolarValue;
+  instance: PolarTerm;
   tag: string;
   callId: number;
 }

@@ -6,7 +6,7 @@ import { parseQueryEvent } from './helpers';
 import { DuplicateInstanceRegistrationError, InvalidCallError } from './errors';
 import { Host } from './Host';
 import type {
-  PolarValue,
+  PolarTerm,
   QueryEvent,
   QueryResult,
   Result,
@@ -39,8 +39,8 @@ export class Query {
   private registerCall(
     attr: string,
     callId: number,
-    instance: PolarValue,
-    args: PolarValue[]
+    instance: PolarTerm,
+    args: PolarTerm[]
   ): void {
     if (this.#calls.has(callId)) return;
     const jsArgs = args.map(a => this.#host.toJs(a));
@@ -96,8 +96,8 @@ export class Query {
   private handleCall(
     attr: string,
     callId: number,
-    instance: PolarValue,
-    args: PolarValue[]
+    instance: PolarTerm,
+    args: PolarTerm[]
   ): void {
     let result;
     try {
