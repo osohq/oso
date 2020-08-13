@@ -70,11 +70,8 @@ impl Hash for Numeric {
         H: Hasher,
     {
         match self {
-            Numeric::Integer(i) => i,
-            Numeric::Float(f) => unsafe {
-                #[allow(clippy::transmute_ptr_to_ptr)]
-                std::mem::transmute(f)
-            },
+            Numeric::Integer(i) => *i as u64,
+            Numeric::Float(f) => f.to_bits(),
         }
         .hash(state)
     }
