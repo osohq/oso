@@ -69,6 +69,8 @@ impl Hash for Numeric {
     where
         H: Hasher,
     {
+        std::mem::discriminant(self).hash(state);
+
         match self {
             Numeric::Integer(i) => *i as u64,
             Numeric::Float(f) => f.to_bits(),
@@ -124,11 +126,19 @@ impl From<f64> for Numeric {
     fn from(other: f64) -> Self {
         Self::Float(other)
     }
-}
 
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::collections::hash_map::DefaultHasher;
+
+    fn calculate_hash<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+        t.hash(&mut s);
+        s.finish()
+    }
 
     #[test]
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -211,5 +221,8 @@ mod tests {
     }
 
     #[test]
-    fn test_sanity() {}
+    fn test_numeric_hash() {
+       assert_eq!(calculate_hash(&Numeric::Float(1.0)), calculate_hash(&Numeric::Float(1.0)));
+       assert_eq!(calculate_hash(&Numeric::Float(0.0)), calculate_hash(&Numeric::Float(-0.0)));
+    }
 }
