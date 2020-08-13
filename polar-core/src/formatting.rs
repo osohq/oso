@@ -134,7 +134,7 @@ pub fn to_polar_parens(op: Operator, t: &Term) -> String {
 }
 
 pub mod display {
-    use crate::formatting::{format_args, format_params, format_rules};
+    use crate::formatting::{format_args, format_params};
     use std::fmt;
     use std::sync::Arc;
 

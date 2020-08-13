@@ -6,7 +6,7 @@ use permute::permute;
 use pipe::pipe;
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::io::Read;
 use std::iter::FromIterator;
 use std::thread::spawn;
