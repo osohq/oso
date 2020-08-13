@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { createHash } from 'crypto';
-import { extname } from 'path';
+import { extname, isAbsolute, resolve } from 'path';
 import { createInterface } from 'readline';
 
 import {
@@ -49,25 +49,26 @@ export class Polar {
 
   loadFile(name: string): void {
     if (extname(name) !== '.polar') throw new PolarFileExtensionError(name);
+    let file = isAbsolute(name) ? name : resolve(__dirname, name);
     let contents;
     try {
-      contents = readFileSync(name, { encoding: 'utf8' });
+      contents = readFileSync(file, { encoding: 'utf8' });
     } catch (e) {
-      if (e.code === 'ENOENT') throw new PolarFileNotFoundError(name);
+      if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
       throw e;
     }
     const hash = createHash('md5').update(contents).digest('hex');
-    const matchingName = this.#loadedNames.get(name);
+    const matchingName = this.#loadedNames.get(file);
     if (matchingName !== undefined) {
-      if (matchingName !== hash) throw new PolarFileContentsChangedError(name);
-      throw new PolarFileAlreadyLoadedError(name);
+      if (matchingName !== hash) throw new PolarFileContentsChangedError(file);
+      throw new PolarFileAlreadyLoadedError(file);
     }
     const matchingContents = this.#loadedContents.get(hash);
     if (matchingContents !== undefined)
-      throw new PolarFileDuplicateContentError(name, matchingContents);
-    this.loadStr(contents, name);
-    this.#loadedContents.set(name, hash);
-    this.#loadedNames.set(hash, name);
+      throw new PolarFileDuplicateContentError(file, matchingContents);
+    this.loadStr(contents, file);
+    this.#loadedContents.set(file, hash);
+    this.#loadedNames.set(hash, file);
   }
 
   loadStr(contents: string, name?: string): void {
