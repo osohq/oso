@@ -18,6 +18,12 @@ public class Application {
     }
 
     @Bean
+    @RequestScope
+    public CurrentUser requestScopeCurrentUser() {
+        return new CurrentUser();
+    }
+
+    @Bean
     public Oso setupOso() throws IOException, Exceptions.OsoException {
         Oso oso = new Oso();
         oso.registerClass(User.class, "User");
@@ -25,11 +31,5 @@ public class Application {
         oso.registerClass(Organization.class, "Organization");
         oso.loadFile("src/main/oso/policy.polar");
         return oso;
-    }
-
-    @Bean
-    @RequestScope
-    public CurrentUser requestScopeCurrentUser() {
-        return new CurrentUser();
     }
 }

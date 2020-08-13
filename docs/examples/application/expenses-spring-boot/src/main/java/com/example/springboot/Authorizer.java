@@ -19,7 +19,7 @@ import com.osohq.oso.Oso;
 import com.osohq.oso.Exceptions.OsoException;
 
 @Component
-public class Authorization extends HandlerInterceptorAdapter {
+public class Authorizer extends HandlerInterceptorAdapter {
     @Resource(name = "setupOso")
     private Oso oso;
 
@@ -29,12 +29,9 @@ public class Authorization extends HandlerInterceptorAdapter {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
-
         Map<String, String> query = request.getParameterMap().entrySet().stream()
                 .collect(Collectors.toMap(Entry::getKey, e -> e.getValue()[0]));
-
         try {
-
             // Set current user from authorization header
             String email = request.getHeader("user");
             User user = (email == null) ? new User(0, 0, 0, 0, "Guest", "") : User.lookup(email);
@@ -64,4 +61,5 @@ public class Authorization extends HandlerInterceptorAdapter {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);
         }
     }
+
 }

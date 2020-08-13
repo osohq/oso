@@ -18,7 +18,7 @@ import javax.annotation.Resource;
 @RestController
 public class Controller {
     @Autowired
-    Authorization authorizer;
+    Authorizer authorizer;
 
     @Autowired
     private Db db;

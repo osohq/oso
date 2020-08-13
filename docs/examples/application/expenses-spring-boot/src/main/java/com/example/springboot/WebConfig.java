@@ -9,11 +9,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
-    Authorization osoInterceptor;
+    Authorizer authorizer;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(osoInterceptor);
+        registry.addInterceptor(authorizer);
     }
 
 }
