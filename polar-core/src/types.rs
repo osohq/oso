@@ -523,6 +523,38 @@ impl Rule {
 pub type Rules = Vec<Arc<Rule>>;
 pub type RuleSet = HashSet<Arc<Rule>>;
 
+#[derive(Clone, Debug, Default)]
+pub struct RuleOrder {
+    next_id: u64,
+    order: HashMap<Arc<Rule>, u64>,
+}
+
+impl RuleOrder {
+    pub fn new(rules: Rules) -> Self {
+        let mut order = Self::default();
+        rules.iter().for_each(|rule| {
+            let id = order.next_id();
+            order.order.insert(rule.clone(), id);
+        });
+        order
+    }
+
+    pub fn next_id(&mut self) -> u64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        id
+    }
+
+    pub fn add_rule(&mut self, rule: Arc<Rule>) {
+        let id = self.next_id();
+        self.order.insert(rule, id);
+    }
+
+    pub fn get(&self, rule: &Arc<Rule>) -> u64 {
+        *self.order.get(rule).unwrap()
+    }
+}
+
 #[derive(Debug)]
 pub struct RuleFilter {
     pub applicable_rules: Rules,
@@ -602,27 +634,35 @@ impl RuleIndex {
 pub struct GenericRule {
     pub name: Symbol,
     pub index: RuleIndex,
+    pub order: RuleOrder,
 }
 
 impl GenericRule {
     pub fn new(name: Symbol, rules: Rules) -> Self {
         Self {
             name,
-            index: RuleIndex::new(rules),
+            index: RuleIndex::new(rules.clone()),
+            order: RuleOrder::new(rules),
         }
     }
 
     pub fn add_rule(&mut self, rule: Arc<Rule>) {
         self.index.index_rule(rule.clone(), &rule.params[..], 0);
+        self.order.add_rule(rule);
     }
 
     #[allow(clippy::ptr_arg)]
     pub fn get_applicable_rules(&self, args: &TermList) -> RuleFilter {
         let rules = self.index.get_applicable_rules(&args, 0);
-        let (applicable_rules, unfiltered_rules): (Rules, Rules) = rules
+        let (mut applicable_rules, mut unfiltered_rules): (Rules, Rules) = rules
             .iter()
             .cloned()
             .partition(|r| r.params.iter().all(|p| p.is_ground()));
+
+        let rule_order = |rule: &Arc<Rule>| -> u64 { self.order.get(rule) };
+        applicable_rules.sort_unstable_by_key(rule_order);
+        unfiltered_rules.sort_unstable_by_key(rule_order);
+
         RuleFilter {
             applicable_rules,
             unfiltered_rules,

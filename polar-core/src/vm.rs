@@ -1816,7 +1816,7 @@ impl PolarVirtualMachine {
         if unfiltered_rules.is_empty() {
             // The rules have been filtered. Sort them.
             self.push_goal(Goal::SortRules {
-                rules: applicable_rules.iter().cloned().rev().collect(),
+                rules: applicable_rules.to_vec(),
                 args: args.clone(),
                 outer: 1,
                 inner: 1,
@@ -1835,7 +1835,7 @@ impl PolarVirtualMachine {
             }
 
             let mut applicable_rules = applicable_rules.clone();
-            applicable_rules.push(rule.clone());
+            applicable_rules.insert(0, rule.clone());
             let applicable = Goal::FilterRules {
                 args: args.clone(),
                 applicable_rules,

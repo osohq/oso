@@ -13,15 +13,6 @@ use std::thread::spawn;
 
 use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, value};
 
-macro_rules! assert_value_sets_eq {
-    ($left:expr, $right:expr) => {
-        assert_eq!(
-            $left.iter().cloned().collect::<HashSet<Value>>(),
-            $right.iter().cloned().collect::<HashSet<Value>>(),
-        );
-    };
-}
-
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
@@ -345,7 +336,7 @@ fn test_functions_reorder() {
 fn test_results() {
     let mut polar = Polar::new(None);
     polar.load("foo(1); foo(2); foo(3);").unwrap();
-    assert_value_sets_eq!(
+    assert_eq!(
         qvar(&mut polar, "foo(a)", "a"),
         vec![value!(1), value!(2), value!(3)]
     );
@@ -365,7 +356,7 @@ fn test_result_permutations() {
         let mut polar = Polar::new(None);
         let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();
         polar.load(&format!("{};", rules.join(";"))).unwrap();
-        assert_value_sets_eq!(
+        assert_eq!(
             qvar(&mut polar, "foo(a)", "a"),
             results.into_iter().map(|v| value!(v)).collect::<Vec<_>>()
         );
@@ -531,8 +522,8 @@ fn test_unify_and() {
     polar
         .load("f(x, y) if a(x) and y = 2; a(1); a(3);")
         .unwrap();
-    assert_value_sets_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
-    assert_value_sets_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
+    assert_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
+    assert_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
 }
 
 #[test]
@@ -1041,7 +1032,7 @@ fn test_rest_vars() {
     assert!(qeval(&mut polar, "member(1, [1,2,3])"));
     assert!(qeval(&mut polar, "member(3, [1,2,3])"));
     assert!(qeval(&mut polar, "not member(4, [1,2,3])"));
-    assert_value_sets_eq!(
+    assert_eq!(
         qvar(&mut polar, "member(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
@@ -1421,7 +1412,7 @@ fn test_rule_index() {
     // Exercise the index.
     assert!(qeval(&mut polar, r#"f(1, 1, "x")"#));
     assert!(qeval(&mut polar, r#"f(1, 1, "y")"#));
-    assert_value_sets_eq!(
+    assert_eq!(
         qvar(&mut polar, r#"f(1, x, "y")"#, "x"),
         vec![value!(2), value!(1)]
     );
