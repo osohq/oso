@@ -5,7 +5,7 @@ import {
   UnregisteredClassError,
   UnregisteredInstanceError,
 } from './errors';
-import { ancestors } from './helpers';
+import { ancestors, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
@@ -20,10 +20,6 @@ import {
   isPolarPredicate,
   isPolarVariable,
 } from './types';
-
-const GLOBAL_BUILTIN_OBJECTS = Object.getOwnPropertyNames(global)
-  .map(name => Reflect.get(global, name))
-  .filter(prop => typeof prop === 'object');
 
 export class Host {
   #ffiPolar: FfiPolar;
@@ -74,7 +70,7 @@ export class Host {
     return instance;
   }
 
-  private cacheInstance(instance: any, id?: number): number {
+  cacheInstance(instance: any, id?: number): number {
     let instanceId = id;
     if (instanceId === undefined) {
       instanceId = this.#ffiPolar.newId();
@@ -140,12 +136,9 @@ export class Host {
         };
       case v instanceof Variable:
         return { value: { Variable: v.name } };
-      // TODO(gj): is this the best way to determine whether it's an object?
-      // TODO(gj): should we handle Maps here?
-      // TODO(gj): Need to find a better way to filter out Math.
+      // JS global built-ins like Math are hard to check for.
       case typeof v === 'object' &&
-        v.constructor.prototype === {}.constructor.prototype &&
-        !GLOBAL_BUILTIN_OBJECTS.includes(v):
+        v.constructor.prototype === {}.constructor.prototype:
         return {
           value: {
             Dictionary: {
@@ -163,7 +156,7 @@ export class Host {
           value: {
             ExternalInstance: {
               instance_id: this.cacheInstance(v),
-              repr: JSON.stringify(v),
+              repr: repr(v),
             },
           },
         };

@@ -25,6 +25,10 @@ export function ancestors(cls: Function): Function[] {
   return ancestors;
 }
 
+export function repr(x: any): string {
+  return typeof x.toString === 'function' ? x.toString() : JSON.stringify(x);
+}
+
 type data = { [key: string]: any };
 
 export function parseQueryEvent(event: string | data): QueryEvent {
