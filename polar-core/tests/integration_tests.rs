@@ -1414,7 +1414,12 @@ fn test_fib() {
     let mut polar = Polar::new(None);
     polar.load(policy).unwrap();
 
-    assert!(qeval(&mut polar, r#"fib(1, x)"#));
+    assert_eq!(qvar(&mut polar, r#"fib(0, x)"#, "x"), vec![value!(1)]);
+    assert_eq!(qvar(&mut polar, r#"fib(1, x)"#, "x"), vec![value!(1)]);
+    assert_eq!(qvar(&mut polar, r#"fib(2, x)"#, "x"), vec![value!(2)]);
+    assert_eq!(qvar(&mut polar, r#"fib(3, x)"#, "x"), vec![value!(3)]);
+    assert_eq!(qvar(&mut polar, r#"fib(4, x)"#, "x"), vec![value!(5)]);
+    assert_eq!(qvar(&mut polar, r#"fib(5, x)"#, "x"), vec![value!(8)]);
 }
 
 #[test]
