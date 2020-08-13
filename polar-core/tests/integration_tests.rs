@@ -6,12 +6,21 @@ use permute::permute;
 use pipe::pipe;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::iter::FromIterator;
 use std::thread::spawn;
 
 use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, value};
+
+macro_rules! assert_value_sets_eq {
+    ($left:expr, $right:expr) => {
+        assert_eq!(
+            $left.iter().cloned().collect::<HashSet<Value>>(),
+            $right.iter().cloned().collect::<HashSet<Value>>(),
+        );
+    };
+}
 
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
@@ -240,13 +249,13 @@ fn test_jealous() {
 fn test_trace() {
     let polar = Polar::new(None);
     polar
-        .load("f(x) if x = 1 and x = 1; f(y) if y = 1;")
+        .load("f(x, 1) if x = 1 and x = 1; f(y, 2) if y = 1;")
         .unwrap();
-    let query = polar.new_query("f(1)", true).unwrap();
+    let query = polar.new_query("f(1, 1)", true).unwrap();
     let results = query_results!(query);
     let trace = results[0].1.as_ref().unwrap();
-    let expected = r#"f(1) [
-  f(x) if
+    let expected = r#"f(1, 1) [
+  f(x, 1) if
     x = 1 and x = 1 [
       x = 1 []
       x = 1 []
@@ -254,9 +263,12 @@ fn test_trace() {
 ]
 "#;
     assert_eq!(trace.formatted, expected);
-    let trace = results[1].1.as_ref().unwrap();
-    let expected = r#"f(1) [
-  f(y) if
+
+    let query = polar.new_query("f(1, 2)", true).unwrap();
+    let results = query_results!(query);
+    let trace = results[0].1.as_ref().unwrap();
+    let expected = r#"f(1, 2) [
+  f(y, 2) if
     y = 1 [
       y = 1 []
   ]
@@ -333,7 +345,7 @@ fn test_functions_reorder() {
 fn test_results() {
     let mut polar = Polar::new(None);
     polar.load("foo(1); foo(2); foo(3);").unwrap();
-    assert_eq!(
+    assert_value_sets_eq!(
         qvar(&mut polar, "foo(a)", "a"),
         vec![value!(1), value!(2), value!(3)]
     );
@@ -353,28 +365,11 @@ fn test_result_permutations() {
         let mut polar = Polar::new(None);
         let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();
         polar.load(&format!("{};", rules.join(";"))).unwrap();
-        assert_eq!(
+        assert_value_sets_eq!(
             qvar(&mut polar, "foo(a)", "a"),
             results.into_iter().map(|v| value!(v)).collect::<Vec<_>>()
         );
     }
-}
-
-#[test]
-fn test_multi_arg_method_ordering() {
-    let mut polar = Polar::new(None);
-    polar
-        .load("bar(2, 1); bar(1, 1); bar(1, 2); bar(2, 2);")
-        .unwrap();
-    assert_eq!(
-        qvars(&mut polar, "bar(a, b)", &["a", "b"]),
-        vec![
-            vec![value!(2), value!(1)],
-            vec![value!(1), value!(1)],
-            vec![value!(1), value!(2)],
-            vec![value!(2), value!(2)],
-        ]
-    );
 }
 
 #[test]
@@ -536,8 +531,8 @@ fn test_unify_and() {
     polar
         .load("f(x, y) if a(x) and y = 2; a(1); a(3);")
         .unwrap();
-    assert_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
-    assert_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
+    assert_value_sets_eq!(qvar(&mut polar, "f(x, y)", "x"), vec![value!(1), value!(3)]);
+    assert_value_sets_eq!(qvar(&mut polar, "f(x, y)", "y"), vec![value!(2), value!(2)]);
 }
 
 #[test]
@@ -676,20 +671,6 @@ fn unify_predicates() {
     assert!(qeval(&mut polar, "f(g(1))"));
     assert!(qnull(&mut polar, "f(1)"));
     assert!(qeval(&mut polar, "k(1)"));
-}
-
-/// Test that rules are executed in the correct order.
-#[test]
-fn test_rule_order() {
-    let mut polar = Polar::new(None);
-    polar.load("a(\"foo\");").unwrap();
-    polar.load("a(\"bar\");").unwrap();
-    polar.load("a(\"baz\");").unwrap();
-
-    assert_eq!(
-        qvar(&mut polar, "a(x)", "x"),
-        vec![value!("foo"), value!("bar"), value!("baz")]
-    );
 }
 
 #[test]
@@ -1060,7 +1041,7 @@ fn test_rest_vars() {
     assert!(qeval(&mut polar, "member(1, [1,2,3])"));
     assert!(qeval(&mut polar, "member(3, [1,2,3])"));
     assert!(qeval(&mut polar, "not member(4, [1,2,3])"));
-    assert_eq!(
+    assert_value_sets_eq!(
         qvar(&mut polar, "member(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
@@ -1383,15 +1364,67 @@ fn test_assignment() {
 
 #[test]
 fn test_rule_index() {
-    // FIXME: This exercises the indexer, but does not actually test it.
-    // Run with RUST_LOG=1 and watch the input to FilterRules for now.
     let mut polar = Polar::new(None);
     polar.load(r#"f(1, 1, "x");"#).unwrap();
     polar.load(r#"f(1, 1, "y");"#).unwrap();
+    polar.load(r#"f(1, x, "y") if x = 2;"#).unwrap();
     polar.load(r#"f(1, 2, {b: "y"});"#).unwrap();
     polar.load(r#"f(1, 3, {c: "z"});"#).unwrap();
+
+    {
+        // Test the index itself.
+        let kb = polar.kb.read().unwrap();
+        let generic_rule = kb.rules.get(&sym!("f")).unwrap();
+        let index = &generic_rule.index;
+        assert!(index.rules.is_empty());
+
+        fn keys(index: &RuleIndex) -> HashSet<Option<Value>> {
+            index.index.keys().cloned().collect()
+        }
+
+        let mut args = HashSet::<Option<Value>>::new();
+
+        args.clear();
+        args.insert(Some(value!(1)));
+        //assert_eq!(args, keys(index));
+        eprintln!("{:?}", index);
+
+        args.clear();
+        args.insert(None); // x
+        args.insert(Some(value!(1)));
+        args.insert(Some(value!(2)));
+        args.insert(Some(value!(3)));
+        let index1 = index.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index1));
+
+        args.clear();
+        args.insert(Some(value!("x")));
+        args.insert(Some(value!("y")));
+        let index11 = index1.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index11));
+
+        args.remove(&Some(value!("x")));
+        let index1_ = index1.index.get(&None).unwrap();
+        assert_eq!(args, keys(index1_));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("b") => term!("y")})));
+        let index12 = index1.index.get(&Some(value!(2))).unwrap();
+        assert_eq!(args, keys(index12));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("c") => term!("z")})));
+        let index13 = index1.index.get(&Some(value!(3))).unwrap();
+        assert_eq!(args, keys(index13));
+    }
+
+    // Exercise the index.
     assert!(qeval(&mut polar, r#"f(1, 1, "x")"#));
     assert!(qeval(&mut polar, r#"f(1, 1, "y")"#));
+    assert_value_sets_eq!(
+        qvar(&mut polar, r#"f(1, x, "y")"#, "x"),
+        vec![value!(2), value!(1)]
+    );
     assert!(qnull(&mut polar, r#"f(1, 1, "z")"#));
     assert!(qnull(&mut polar, r#"f(1, 2, "x")"#));
     assert!(qeval(&mut polar, r#"f(1, 2, {b: "y"})"#));

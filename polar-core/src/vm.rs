@@ -1121,11 +1121,14 @@ impl PolarVirtualMachine {
             None => self.push_goal(Goal::Backtrack)?,
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
-                let (applicable_rules, unfiltered_rules) =
-                    match generic_rule.get_applicable_rules(&predicate.args) {
-                        RuleFilter::Applicable(rules) => (rules, vec![]),
-                        RuleFilter::Unfiltered(rules) => (vec![], rules),
-                    };
+
+                // Pre-filter rules.
+                let RuleFilter {
+                    applicable_rules,
+                    unfiltered_rules,
+                } = generic_rule.get_applicable_rules(&predicate.args);
+
+                // Filter rules by applicability.
                 self.append_goals(vec![
                     Goal::TracePush,
                     Goal::FilterRules {

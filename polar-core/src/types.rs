@@ -3,7 +3,7 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -277,6 +277,22 @@ impl Value {
             }),
         }
     }
+
+    pub fn is_ground(&self) -> bool {
+        match self {
+            Value::Call(_)
+            | Value::ExternalInstance(_)
+            | Value::Variable(_)
+            | Value::RestVariable(_) => false,
+            Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
+            Value::InstanceLiteral(_) | Value::Pattern(_) => panic!("unexpected value type"),
+            Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
+            Value::List(terms) => terms.iter().all(|t| t.is_ground()),
+            Value::Expression(Operation { operator: _, args }) => {
+                args.iter().all(|t| t.is_ground())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Hash)]
@@ -451,6 +467,10 @@ impl Term {
     pub fn value(&self) -> &Value {
         &self.value
     }
+
+    pub fn is_ground(&self) -> bool {
+        self.value().is_ground()
+    }
 }
 
 pub fn unwrap_and(term: Term) -> TermList {
@@ -463,7 +483,7 @@ pub fn unwrap_and(term: Term) -> TermList {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Parameter {
     pub parameter: Term,
     pub specializer: Option<Term>,
@@ -477,9 +497,13 @@ impl Parameter {
         self.parameter.map_replace(f);
         self.specializer.iter_mut().for_each(|p| p.map_replace(f));
     }
+
+    pub fn is_ground(&self) -> bool {
+        self.specializer.is_none() && self.parameter.value().is_ground()
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Rule {
     pub name: Symbol,
     pub params: Vec<Parameter>,
@@ -497,17 +521,18 @@ impl Rule {
 }
 
 pub type Rules = Vec<Arc<Rule>>;
+pub type RuleSet = HashSet<Arc<Rule>>;
 
 #[derive(Debug)]
-pub enum RuleFilter {
-    Applicable(Rules),
-    Unfiltered(Rules),
+pub struct RuleFilter {
+    pub applicable_rules: Rules,
+    pub unfiltered_rules: Rules,
 }
 
 #[derive(Clone, Default, Debug)]
 pub struct RuleIndex {
-    pub rules: Rules,
-    pub index: HashMap<Value, RuleIndex>,
+    pub rules: RuleSet,
+    pub index: HashMap<Option<Value>, RuleIndex>,
 }
 
 impl RuleIndex {
@@ -520,32 +545,55 @@ impl RuleIndex {
     }
 
     pub fn index_rule(&mut self, rule: Arc<Rule>, params: &[Parameter], i: usize) {
-        if i < params.len()
-            && params[i].specializer.is_none()
-            && !matches!(params[i].parameter.value(), Value::Variable(_))
-        {
+        if i < params.len() {
             self.index
-                .entry(params[i].parameter.value().clone())
+                .entry({
+                    if params[i].is_ground() {
+                        Some(params[i].parameter.value().clone())
+                    } else {
+                        None
+                    }
+                })
                 .or_insert_with(RuleIndex::default)
-                .index_rule(rule.clone(), params, i + 1);
+                .index_rule(rule, params, i + 1);
+        } else {
+            self.rules.insert(rule);
         }
-        self.rules.push(rule);
     }
 
     #[allow(clippy::comparison_chain)]
-    pub fn get_applicable_rules(&self, args: &[Term], i: usize) -> RuleFilter {
-        if args.is_empty() || i > args.len() {
-            RuleFilter::Unfiltered(self.rules.clone())
-        } else if i == args.len() {
-            RuleFilter::Applicable(self.rules.clone())
-        } else if let Some(index) = self.index.get(args[i].value()) {
-            if i < args.len() {
-                index.get_applicable_rules(args, i + 1)
+    pub fn get_applicable_rules(&self, args: &[Term], i: usize) -> RuleSet {
+        if i < args.len() {
+            // Check this argument and recurse on the rest.
+            let filter_next_args =
+                |index: &RuleIndex| -> RuleSet { index.get_applicable_rules(args, i + 1) };
+            let arg = args[i].value();
+            if arg.is_ground() {
+                // Check the index for a ground argument.
+                let mut ruleset = self
+                    .index
+                    .get(&Some(arg.clone()))
+                    .map(|index| filter_next_args(index))
+                    .unwrap_or_else(RuleSet::default);
+
+                // Extend for a variable parameter.
+                if let Some(index) = self.index.get(&None) {
+                    ruleset.extend(filter_next_args(index));
+                }
+                ruleset
             } else {
-                RuleFilter::Unfiltered(index.rules.clone())
+                // Accumulate all indexed arguments.
+                self.index.values().fold(
+                    RuleSet::default(),
+                    |mut result: RuleSet, index: &RuleIndex| {
+                        result.extend(filter_next_args(index).into_iter());
+                        result
+                    },
+                )
             }
         } else {
-            RuleFilter::Unfiltered(self.rules.clone())
+            // No more arguments.
+            self.rules.clone()
         }
     }
 }
@@ -570,7 +618,15 @@ impl GenericRule {
 
     #[allow(clippy::ptr_arg)]
     pub fn get_applicable_rules(&self, args: &TermList) -> RuleFilter {
-        self.index.get_applicable_rules(&args, 0)
+        let rules = self.index.get_applicable_rules(&args, 0);
+        let (applicable_rules, unfiltered_rules): (Rules, Rules) = rules
+            .iter()
+            .cloned()
+            .partition(|r| r.params.iter().all(|p| p.is_ground()));
+        RuleFilter {
+            applicable_rules,
+            unfiltered_rules,
+        }
     }
 }
 

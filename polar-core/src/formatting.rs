@@ -300,14 +300,12 @@ pub mod display {
 
     impl fmt::Display for RuleFilter {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                RuleFilter::Applicable(rules) => {
-                    write!(f, "RuleFilter::Applicable([{}])", format_rules(rules, " "),)
-                }
-                RuleFilter::Unfiltered(rules) => {
-                    write!(f, "RuleFilter::Unfiltered([{}])", format_rules(rules, " "))
-                }
-            }
+            write!(
+                f,
+                "RuleFilter {{ applicable: [{}], unfiltered: [{}] }}",
+                format_rules(&self.applicable_rules, " "),
+                format_rules(&self.unfiltered_rules, " ")
+            )
         }
     }
 
