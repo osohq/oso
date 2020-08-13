@@ -1,3 +1,5 @@
+import type { obj } from './types';
+
 export class PathMapper {
   #pattern: RegExp;
 
@@ -18,7 +20,7 @@ export class PathMapper {
     this.#pattern = new RegExp(`^${temp}$`);
   }
 
-  map(str: string): { [key: string]: any } {
+  map(str: string): obj {
     return { ...this.#pattern.exec(str)?.groups };
   }
 }

@@ -9,7 +9,7 @@ import { ancestors, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
-import type { Class, PolarTerm } from './types';
+import type { Class, obj, PolarTerm } from './types';
 import {
   isPolarStr,
   isPolarNum,
@@ -185,7 +185,7 @@ export class Host {
       } else {
         entries = Object.entries(fields);
       }
-      return entries.reduce((obj: { [key: string]: any }, [k, v]) => {
+      return entries.reduce((obj: obj, [k, v]) => {
         obj[k] = this.toJs(v);
         return obj;
       }, {});

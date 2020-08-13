@@ -1,5 +1,6 @@
 import type { Polar } from '../src/Polar';
 import { Predicate } from '../src/Predicate';
+import type { obj } from '../src/types';
 
 type Result = Map<string, any>;
 
@@ -21,7 +22,7 @@ export function pred(name: string, ...args: unknown[]): Predicate {
   return new Predicate(name, args);
 }
 
-export function map(obj?: { [key: string]: any }): Map<string, any> {
+export function map(obj?: obj): Map<string, any> {
   return new Map(Object.entries(obj || {}));
 }
 

@@ -4,7 +4,7 @@ import {
   PolarError,
 } from './errors';
 import { isPolarTerm, QueryEventKind } from './types';
-import type { QueryEvent } from './types';
+import type { obj, QueryEvent } from './types';
 
 const root: Function = Object.getPrototypeOf(() => {});
 export function ancestors(cls: Function): Function[] {
@@ -23,9 +23,7 @@ export function repr(x: any): string {
   return typeof x.toString === 'function' ? x.toString() : JSON.stringify(x);
 }
 
-type data = { [key: string]: any };
-
-export function parseQueryEvent(event: string | data): QueryEvent {
+export function parseQueryEvent(event: string | obj): QueryEvent {
   try {
     if (event === 'Done') return { kind: QueryEventKind.Done };
     if (typeof event === 'string') throw new Error();
@@ -53,7 +51,7 @@ export function parseQueryEvent(event: string | data): QueryEvent {
   }
 }
 
-function parseResult({ bindings }: data): QueryEvent {
+function parseResult({ bindings }: obj): QueryEvent {
   if (
     typeof bindings !== 'object' ||
     Object.values(bindings).some(v => !isPolarTerm(v))
@@ -65,7 +63,7 @@ function parseResult({ bindings }: data): QueryEvent {
   };
 }
 
-function parseMakeExternal(d: data): QueryEvent {
+function parseMakeExternal(d: obj): QueryEvent {
   const instanceId = d.instance_id;
   const ctor = d['constructor']?.value;
   if (ctor?.InstanceLiteral !== undefined)
@@ -90,7 +88,7 @@ function parseExternalCall({
   attribute,
   call_id: callId,
   instance,
-}: data): QueryEvent {
+}: obj): QueryEvent {
   if (
     !Number.isSafeInteger(callId) ||
     !isPolarTerm(instance) ||
@@ -110,7 +108,7 @@ function parseExternalIsSubspecializer({
   instance_id: instanceId,
   left_class_tag: leftTag,
   right_class_tag: rightTag,
-}: data): QueryEvent {
+}: obj): QueryEvent {
   if (
     !Number.isSafeInteger(instanceId) ||
     !Number.isSafeInteger(callId) ||
@@ -128,7 +126,7 @@ function parseExternalIsa({
   call_id: callId,
   instance,
   class_tag: tag,
-}: data): QueryEvent {
+}: obj): QueryEvent {
   if (
     !Number.isSafeInteger(callId) ||
     !isPolarTerm(instance) ||
@@ -145,7 +143,7 @@ function parseExternalUnify({
   call_id: callId,
   left_instance_id: leftId,
   right_instance_id: rightId,
-}: data): QueryEvent {
+}: obj): QueryEvent {
   if (
     !Number.isSafeInteger(callId) ||
     !Number.isSafeInteger(leftId) ||
@@ -158,7 +156,7 @@ function parseExternalUnify({
   };
 }
 
-function parseDebug({ message }: data): QueryEvent {
+function parseDebug({ message }: obj): QueryEvent {
   if (typeof message !== 'string') throw new Error();
   return {
     kind: QueryEventKind.Debug,

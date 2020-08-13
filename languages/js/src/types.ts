@@ -187,3 +187,5 @@ export interface QueryEvent {
 }
 
 export type QueryResult = Generator<Map<string, any>, null, never>;
+
+export type obj = { [key: string]: any };
