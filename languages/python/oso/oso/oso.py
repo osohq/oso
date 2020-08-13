@@ -1,6 +1,6 @@
 """Core oso functionality"""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1-rc0"
 
 from pathlib import Path
 import os
