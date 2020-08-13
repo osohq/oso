@@ -1,7 +1,8 @@
 .PHONY: build test
 
+CARGO_FLAGS=--dev
 build:
-	wasm-pack build --dev --target nodejs
+	wasm-pack build $(CARGO_FLAGS) --target nodejs
 	rm pkg/.gitignore pkg/package.json
 	cp -r pkg/. ../languages/js/src
 	rm -rf pkg

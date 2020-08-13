@@ -23,6 +23,9 @@ jobs:
       - name: Check java version matches
         run: grep "<version>$oso_version</version>" pom.xml
         working-directory: languages/java/oso
+      - name: Check js version matches
+        run: grep "$oso_version" package.json
+        working-directory: languages/js
       - name: Check docs release matches
         run: grep "release = \"$oso_version\"" conf.py
         working-directory: docs
@@ -128,8 +131,6 @@ jobs:
         run: |
           gem build oso-oso.gemspec
         working-directory: languages/ruby
-      - run: gem install oso-oso-${{ steps.version.outputs.oso_version }}.gem
-        working-directory: languages/ruby
       - uses: actions/upload-artifact@v2
         with:
           name: gem
@@ -213,6 +214,36 @@ jobs:
           name: musl-wheel
           path: languages/python/oso/dist/*.whl
 
+  build_js:
+    name: Build js.
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js 10.14.2
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.14.2
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build
+        run: |
+          make install
+          make CARGO_FLAGS=--release build
+          rm -rf node_modules
+        working-directory: languages/js
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_js_node
+          path: languages/js/*
   # docs:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -232,7 +263,6 @@ jobs:
   #       with:
   #         name: docs
   #         path: docs/_build/html/
-
   validate_python:
     name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: [build_wheels]
@@ -268,7 +298,6 @@ jobs:
           pip install oso==$($env:github_ref.Substring(11)) -f ../wheel
           python test.py
         working-directory: test
-
   validate_python_musl:
     name: Test python ${{ matrix.python-version }} on Alpine
     needs: [build_musl_wheels]
@@ -290,7 +319,6 @@ jobs:
       - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:${{ matrix.python-version }}-alpine oso/scripts/test_musl.sh
         env:
           OSO_VERSION: ${{ steps.version.outputs.oso_version }}
-
   validate_ruby:
     name: Test ruby ${{ matrix.ruby-version }} on ${{ matrix.os }}
     needs: [build_gem]
@@ -325,7 +353,6 @@ jobs:
         run: |
           gem install gem/*.gem
           ruby languages\ruby\spec\oso\language_parity_spec.rb
-
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
     needs: [build_jar]
@@ -363,6 +390,34 @@ jobs:
           java -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test
         working-directory: test
 
+  validate_js:
+    name: Test node ${{ matrix.node-version }} on ${{ matrix.os }}
+    needs: [build_js]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest, windows-latest]
+        node-version: [10, 11, 12, 13, 14]
+    steps:
+      - name: Set version output
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Download oso js from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_js_node
+      - name: Run tests
+        run: |
+          yarn install --prod
+          node dist/test/parity.js
+        working-directory: oso_js_node
   release:
     name: Create release
     runs-on: ubuntu-latest
@@ -376,6 +431,7 @@ jobs:
         validate_python_musl,
         validate_ruby,
         validate_java,
+        validate_js,
       ]
     steps:
       - name: Set version output
@@ -413,6 +469,12 @@ jobs:
           name: jar
       - name: Zip file
         run: zip --junk-paths -r oso-java.zip jar/
+      - name: Download oso javascript package from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_js_node
+      - name: Zip file
+        run: zip -r oso-js-node.zip oso_js_node
       # - name: Download docs
       #   uses: actions/download-artifact@v1
       #   with:
@@ -475,6 +537,15 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./oso-java.zip
           asset_name: oso-java-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Js Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./oso-js-node.zip
+          asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
       # - name: Upload Release Docs
       #   uses: actions/upload-release-asset@v1

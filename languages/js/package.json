@@ -1,8 +1,8 @@
 {
   "name": "oso",
-  "version": "0.0.0",
+  "version": "0.4.1-rc2",
   "description": "Oso authorization library.",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "repository": "https://github.com/osohq/oso",
   "collaborators": [
     "Oso Security <support@osohq.com>"
