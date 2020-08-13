@@ -37,10 +37,9 @@ export class Polar {
     this.registerClass(String);
     this.registerClass(Array, 'List');
     this.registerClass(Object, 'Dictionary');
-    // TODO(gj): should we register more than this? Map/Set? Function? Math/Date? JSON?
   }
 
-  // TODO(gj): For tests only.
+  // For tests only.
   __host() {
     return this.#host;
   }

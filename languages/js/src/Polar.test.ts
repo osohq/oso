@@ -539,7 +539,6 @@ describe('errors', () => {
       );
     });
 
-    // TODO(gj): Not sure what causes this.
     test.todo('raises on InvalidToken');
 
     test('raises on UnrecognizedEOF errors', () => {
@@ -558,7 +557,6 @@ describe('errors', () => {
       );
     });
 
-    // TODO(gj): Not sure what causes this.
     test.todo('raises on ExtraToken');
   });
 

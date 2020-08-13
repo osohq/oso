@@ -10,16 +10,10 @@ const root: Function = Object.getPrototypeOf(() => {});
 export function ancestors(cls: Function): Function[] {
   const ancestors = [cls];
   function next(cls: Function): void {
-    try {
-      const parent = Object.getPrototypeOf(cls);
-      if (parent === root) return;
-      ancestors.push(parent);
-      next(parent);
-    } catch (e) {
-      // TODO(gj): should it be a silent failure if something weird's in the
-      // prototype chain?
-      return;
-    }
+    const parent = Object.getPrototypeOf(cls);
+    if (parent === root) return;
+    ancestors.push(parent);
+    next(parent);
   }
   next(cls);
   return ancestors;
@@ -73,7 +67,6 @@ function parseResult({ bindings }: data): QueryEvent {
 
 function parseMakeExternal(d: data): QueryEvent {
   const instanceId = d.instance_id;
-  // TODO(gj): it's a little unfortunate that the property is called 'constructor'.
   const ctor = d['constructor']?.value;
   if (ctor?.InstanceLiteral !== undefined)
     throw new KwargsConstructorError(ctor?.InstanceLiteral?.tag);
