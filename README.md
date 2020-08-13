@@ -63,7 +63,7 @@ See: [LICENSE][license].
 [badge-slack]: https://img.shields.io/badge/slack-oso--oss-orange
 <!-- NOTE: the Slack invite link must be recreated every 30 days or every 2000
 invites, whichever comes first. -->
-[badge-slack-link]: https://join.slack.com/t/oso-oss/shared_invite/zt-g8asdmdt-26n_E1TjBxa64J17oXv~~A
+[badge-slack-link]: https://slack.oso.dev/
 [contributing]: https://github.com/osohq/oso/blob/main/CONTRIBUTING.md
 [docs]: https://docs.osohq.com
 [license]: https://github.com/osohq/oso/blob/main/LICENSE

@@ -15,7 +15,7 @@ questions.
 [docs]: https://docs.osohq.com
 <!-- NOTE: the Slack invite link must be recreated every 30 days or every 2000
 invites, whichever comes first. -->
-[slack]: https://join.slack.com/t/oso-oss/shared_invite/zt-g8asdmdt-26n_E1TjBxa64J17oXv~~A
+[slack]: https://slack.oso.dev
 
 ## Reporting issues
 
