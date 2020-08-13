@@ -240,13 +240,13 @@ fn test_jealous() {
 fn test_trace() {
     let polar = Polar::new(None);
     polar
-        .load("f(x, 1) if x = 1 and x = 1; f(y, 2) if y = 1;")
+        .load("f(x) if x = 1 and x = 1; f(y) if y = 1;")
         .unwrap();
-    let query = polar.new_query("f(1, 1)", true).unwrap();
+    let query = polar.new_query("f(1)", true).unwrap();
     let results = query_results!(query);
     let trace = results[0].1.as_ref().unwrap();
-    let expected = r#"f(1, 1) [
-  f(x, 1) if
+    let expected = r#"f(1) [
+  f(x) if
     x = 1 and x = 1 [
       x = 1 []
       x = 1 []
@@ -254,12 +254,9 @@ fn test_trace() {
 ]
 "#;
     assert_eq!(trace.formatted, expected);
-
-    let query = polar.new_query("f(1, 2)", true).unwrap();
-    let results = query_results!(query);
-    let trace = results[0].1.as_ref().unwrap();
-    let expected = r#"f(1, 2) [
-  f(y, 2) if
+    let trace = results[1].1.as_ref().unwrap();
+    let expected = r#"f(1) [
+  f(y) if
     y = 1 [
       y = 1 []
   ]
