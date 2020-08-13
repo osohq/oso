@@ -545,7 +545,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::IntegerOverflow
-        expect(e.message).to eq("'18446744073709551616' caused an integer overflow at line 1, column 13")
+        expect(e.message).to eq("'#{int}' caused an integer overflow at line 1, column 13")
       end
     end
 
