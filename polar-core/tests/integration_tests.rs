@@ -364,6 +364,23 @@ fn test_result_permutations() {
 }
 
 #[test]
+fn test_multi_arg_method_ordering() {
+    let mut polar = Polar::new(None);
+    polar
+        .load("bar(2, 1); bar(1, 1); bar(1, 2); bar(2, 2);")
+        .unwrap();
+    assert_eq!(
+        qvars(&mut polar, "bar(a, b)", &["a", "b"]),
+        vec![
+            vec![value!(2), value!(1)],
+            vec![value!(1), value!(1)],
+            vec![value!(1), value!(2)],
+            vec![value!(2), value!(2)],
+        ]
+    );
+}
+
+#[test]
 fn test_no_applicable_rules() {
     let mut polar = Polar::new(None);
     assert!(qnull(&mut polar, "f()"));
@@ -662,6 +679,20 @@ fn unify_predicates() {
     assert!(qeval(&mut polar, "f(g(1))"));
     assert!(qnull(&mut polar, "f(1)"));
     assert!(qeval(&mut polar, "k(1)"));
+}
+
+/// Test that rules are executed in the correct order.
+#[test]
+fn test_rule_order() {
+    let mut polar = Polar::new(None);
+    polar.load("a(\"foo\");").unwrap();
+    polar.load("a(\"bar\");").unwrap();
+    polar.load("a(\"baz\");").unwrap();
+
+    assert_eq!(
+        qvar(&mut polar, "a(x)", "x"),
+        vec![value!("foo"), value!("bar"), value!("baz")]
+    );
 }
 
 #[test]
