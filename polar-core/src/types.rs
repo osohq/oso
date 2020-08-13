@@ -3,7 +3,7 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -521,7 +521,6 @@ impl Rule {
 }
 
 pub type Rules = Vec<Arc<Rule>>;
-pub type RuleSet = HashSet<Arc<Rule>>;
 
 #[derive(Clone, Debug, Default)]
 pub struct RuleOrder {
@@ -561,6 +560,8 @@ pub struct RuleFilter {
     pub unfiltered_rules: Rules,
 }
 
+type RuleSet = BTreeSet<u64>;
+
 #[derive(Clone, Default, Debug)]
 pub struct RuleIndex {
     pub rules: RuleSet,
@@ -568,15 +569,11 @@ pub struct RuleIndex {
 }
 
 impl RuleIndex {
-    pub fn new(rules: Rules) -> Self {
-        let mut index = Self::default();
-        rules
-            .iter()
-            .for_each(|rule| index.index_rule(rule.clone(), &rule.params[..], 0));
-        index
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn index_rule(&mut self, rule: Arc<Rule>, params: &[Parameter], i: usize) {
+    pub fn index_rule(&mut self, rule_id: u64, params: &[Parameter], i: usize) {
         if i < params.len() {
             self.index
                 .entry({
@@ -587,9 +584,9 @@ impl RuleIndex {
                     }
                 })
                 .or_insert_with(RuleIndex::default)
-                .index_rule(rule, params, i + 1);
+                .index_rule(rule_id, params, i + 1);
         } else {
-            self.rules.insert(rule);
+            self.rules.insert(rule_id);
         }
     }
 
@@ -633,40 +630,57 @@ impl RuleIndex {
 #[derive(Clone)]
 pub struct GenericRule {
     pub name: Symbol,
+    pub rules: HashMap<u64, Arc<Rule>>,
     pub index: RuleIndex,
-    pub order: RuleOrder,
+    pub next_rule_id: u64,
 }
 
 impl GenericRule {
     pub fn new(name: Symbol, rules: Rules) -> Self {
-        Self {
+        let mut generic_rule = Self {
             name,
-            index: RuleIndex::new(rules.clone()),
-            order: RuleOrder::new(rules),
+            rules: Default::default(),
+            index: Default::default(),
+            next_rule_id: 0,
+        };
+
+        for rule in rules {
+            generic_rule.add_rule(rule);
         }
+
+        generic_rule
     }
 
     pub fn add_rule(&mut self, rule: Arc<Rule>) {
-        self.index.index_rule(rule.clone(), &rule.params[..], 0);
-        self.order.add_rule(rule);
+        let rule_id = self.next_rule_id();
+
+        assert!(
+            self.rules.insert(rule_id, rule.clone()).is_none(),
+            "Rule id already used."
+        );
+        self.index.index_rule(rule_id, &rule.params[..], 0);
     }
 
     #[allow(clippy::ptr_arg)]
     pub fn get_applicable_rules(&self, args: &TermList) -> RuleFilter {
-        let rules = self.index.get_applicable_rules(&args, 0);
-        let (mut applicable_rules, mut unfiltered_rules): (Rules, Rules) = rules
+        let (applicable_rules, unfiltered_rules) = self
+            .index
+            .get_applicable_rules(&args, 0)
             .iter()
+            .map(|id| self.rules.get(id).expect("Rule missing"))
             .cloned()
             .partition(|r| r.params.iter().all(|p| p.is_ground()));
-
-        let rule_order = |rule: &Arc<Rule>| -> u64 { self.order.get(rule) };
-        applicable_rules.sort_unstable_by_key(rule_order);
-        unfiltered_rules.sort_unstable_by_key(rule_order);
 
         RuleFilter {
             applicable_rules,
             unfiltered_rules,
         }
+    }
+
+    fn next_rule_id(&mut self) -> u64 {
+        let v = self.next_rule_id;
+        self.next_rule_id += 1;
+        v
     }
 }
 
