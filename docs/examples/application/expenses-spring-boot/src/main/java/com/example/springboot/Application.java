@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.context.annotation.RequestScope;
 
-import com.example.springboot.User.CurrentUser;
 import com.osohq.oso.Exceptions;
 import com.osohq.oso.Oso;
 

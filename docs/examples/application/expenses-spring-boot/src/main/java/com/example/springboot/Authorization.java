@@ -9,15 +9,17 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
-import com.example.springboot.User.CurrentUser;
 import com.osohq.oso.Http;
 import com.osohq.oso.Oso;
+import com.osohq.oso.Exceptions.OsoException;
 
 @Component
-public class OsoInterceptor extends HandlerInterceptorAdapter {
+public class Authorization extends HandlerInterceptorAdapter {
     @Resource(name = "setupOso")
     private Oso oso;
 
@@ -48,6 +50,18 @@ public class OsoInterceptor extends HandlerInterceptorAdapter {
         } catch (SQLException e) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "user not found");
             return false;
+        }
+    }
+
+    public Object authorize(String action, Object resource) {
+        try {
+            if (oso.isAllowed(currentUser.get(), action, resource)) {
+                return resource;
+            } else {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization");
+            }
+        } catch (OsoException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);
         }
     }
 }

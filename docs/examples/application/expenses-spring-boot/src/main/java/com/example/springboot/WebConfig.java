@@ -9,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
-    OsoInterceptor osoInterceptor;
+    Authorization osoInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

@@ -15,14 +15,10 @@ import java.sql.SQLException;
 
 import javax.annotation.Resource;
 
-import com.example.springboot.User.CurrentUser;
-import com.osohq.oso.Oso;
-import com.osohq.oso.Exceptions.OsoException;
-
 @RestController
 public class Controller {
-    @Resource(name = "setupOso")
-    private Oso oso;
+    @Autowired
+    Authorization authorizer;
 
     @Autowired
     private Db db;
@@ -32,31 +28,13 @@ public class Controller {
 
     @RequestMapping("/")
     public String index() throws SQLException {
-        return "hello " + currentUser.get().email;
-    }
-
-    @GetMapping("/expenses/{id}")
-    public String getExpense(@PathVariable(name = "id") int id) {
-        try {
-            Expense e = Expense.lookup(id);
-            if (!oso.isAllowed(currentUser.get(), "read", e)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization");
-            } else {
-                return e.toString();
-            }
-        } catch (
-
-        OsoException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);
-        } catch (SQLException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expense not found", e);
-        }
+        return "hello " + currentUser.get();
     }
 
     @GetMapping("/whoami")
     public String whoami() {
         try {
-            User you = currentUser.get();
+            User you = (User) currentUser.get();
             if (you != null) {
                 PreparedStatement statement = db.prepareStatement("select name from organizations where id = ?");
                 statement.setInt(1, you.organizationId);
@@ -69,17 +47,21 @@ public class Controller {
         }
     }
 
+    @GetMapping("/expenses/{id}")
+    public String getExpense(@PathVariable(name = "id") int id) {
+        try {
+            Expense e = Expense.lookup(id);
+            return authorizer.authorize("read", e).toString();
+        } catch (SQLException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expense not found", e);
+        }
+    }
+
     @GetMapping("/organizations/{id}")
     public String getOrganization(@PathVariable(name = "id") int id) {
         try {
             Organization org = Organization.lookup(id);
-            if (!oso.isAllowed(currentUser.get(), "read", org)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization");
-            } else {
-                return org.toString();
-            }
-        } catch (OsoException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);
+            return authorizer.authorize("read", org).toString();
         } catch (SQLException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Organization not found", e);
         }
@@ -88,18 +70,11 @@ public class Controller {
     @PutMapping("/expenses/submit")
     public String submitExpense(@RequestBody Expense expense) {
         try {
-            User user = currentUser.get();
+            User user = (User) currentUser.get();
             if (expense.userId == 0)
                 expense.userId = user.id;
-
-            if (!oso.isAllowed(user, "create", expense)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization");
-            } else {
-                expense.save();
-                return expense.toString();
-            }
-        } catch (OsoException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);
+            ((Expense) authorizer.authorize("create", expense)).save();
+            return expense.toString();
         } catch (SQLException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "failed to save expense", e);
         }
