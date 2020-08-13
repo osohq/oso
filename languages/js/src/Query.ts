@@ -51,7 +51,6 @@ export class Query {
     if (isGenerator(jsAttr)) {
       // The Generator#next method only takes 0 or 1 args.
       if (jsArgs.length > 1) throw new InvalidCallError(attr, jsInstance);
-      // TODO(gj): is this correct?
       result = (function* () {
         while (true) {
           const { done, value } = jsArgs.length
@@ -62,7 +61,6 @@ export class Query {
         }
       })();
     } else if (isGeneratorFunction(jsAttr)) {
-      // TODO(gj): is this correct?
       result = jsInstance[attr](...jsArgs);
     } else if (typeof jsAttr === 'function') {
       result = (function* () {

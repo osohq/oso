@@ -63,7 +63,7 @@ export class Host {
     return this.#instances.has(id);
   }
 
-  // TODO(gj): Currently public for the test suite.
+  // Public for the test suite.
   getInstance(id: number): object {
     const instance = this.#instances.get(id);
     if (instance === undefined) throw new UnregisteredInstanceError(id);
@@ -103,7 +103,6 @@ export class Host {
   isa(instance: PolarTerm, name: string): boolean {
     const jsInstance = this.toJs(instance);
     const cls = this.getClass(name);
-    // TODO(gj): is this correct?
     return jsInstance instanceof cls || jsInstance.constructor === cls;
   }
 
