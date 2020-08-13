@@ -3,7 +3,7 @@ import {
   KwargsConstructorError,
   PolarError,
 } from './errors';
-import { isPolarValue, QueryEventKind } from './types';
+import { isPolarTerm, QueryEventKind } from './types';
 import type { QueryEvent } from './types';
 
 const root: Function = Object.getPrototypeOf(() => {});
@@ -58,7 +58,7 @@ export function parseQueryEvent(event: string | data): QueryEvent {
 function parseResult({ bindings }: data): QueryEvent {
   if (
     typeof bindings !== 'object' ||
-    Object.values(bindings).some(v => !isPolarValue(v))
+    Object.values(bindings).some(v => !isPolarTerm(v))
   )
     throw new Error();
   return {
@@ -79,7 +79,7 @@ function parseMakeExternal(d: data): QueryEvent {
     !Number.isSafeInteger(instanceId) ||
     typeof tag !== 'string' ||
     !Array.isArray(fields) ||
-    fields.some((v: unknown) => !isPolarValue(v))
+    fields.some((v: unknown) => !isPolarTerm(v))
   )
     throw new Error();
   return {
@@ -96,10 +96,10 @@ function parseExternalCall({
 }: data): QueryEvent {
   if (
     !Number.isSafeInteger(callId) ||
-    !isPolarValue(instance) ||
+    !isPolarTerm(instance) ||
     typeof attribute !== 'string' ||
     !Array.isArray(args) ||
-    args.some((a: unknown) => !isPolarValue(a))
+    args.some((a: unknown) => !isPolarTerm(a))
   )
     throw new Error();
   return {
@@ -134,7 +134,7 @@ function parseExternalIsa({
 }: data): QueryEvent {
   if (
     !Number.isSafeInteger(callId) ||
-    !isPolarValue(instance) ||
+    !isPolarTerm(instance) ||
     typeof tag !== 'string'
   )
     throw new Error();
