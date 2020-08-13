@@ -126,11 +126,7 @@ to stay up to speed on the latest product updates.
 What operating systems do you support?
 --------------------------------------
 
-We currently support Linux and Mac OS X.
-We have initial Windows support, and expect publish a release for Windows soon.
-
-Sign up for our newsletter in the footer anywhere on our docs if you'd like to
-stay up to speed on the latest product updates.
+We currently support Linux, Mac OS X and Windows.
 
 --------------------------
 What license does oso use?
