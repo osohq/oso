@@ -25,9 +25,9 @@ export function ancestors(cls: Function): Function[] {
   return ancestors;
 }
 
-export function parseQueryEvent(
-  event: string | { [key: string]: any }
-): QueryEvent {
+type data = { [key: string]: any };
+
+export function parseQueryEvent(event: string | data): QueryEvent {
   try {
     if (event === 'Done') return { kind: QueryEventKind.Done };
     if (typeof event === 'string') throw new Error();
@@ -55,84 +55,83 @@ export function parseQueryEvent(
   }
 }
 
-function parseResult(d: { [key: string]: any }): QueryEvent {
+function parseResult({ bindings }: data): QueryEvent {
   if (
-    typeof d.bindings !== 'object' ||
-    Object.values(d.bindings).some(v => !isPolarValue(v))
+    typeof bindings !== 'object' ||
+    Object.values(bindings).some(v => !isPolarValue(v))
   )
     throw new Error();
   return {
     kind: QueryEventKind.Result,
-    data: { bindings: d.bindings },
+    data: { bindings },
   };
 }
 
-function parseMakeExternal(d: { [key: string]: any }): QueryEvent {
-  const id = d.instance_id;
+function parseMakeExternal(d: data): QueryEvent {
+  const instanceId = d.instance_id;
+  // TODO(gj): it's a little unfortunate that the property is called 'constructor'.
   const ctor = d['constructor']?.value;
   if (ctor?.InstanceLiteral !== undefined)
     throw new KwargsConstructorError(ctor?.InstanceLiteral?.tag);
+  const tag = ctor?.Call?.name;
+  const fields = ctor?.Call?.args;
   if (
-    !Number.isSafeInteger(id) ||
-    typeof ctor?.Call?.name !== 'string' ||
-    !Array.isArray(ctor?.Call?.args) ||
-    ctor.Call.args.some((v: unknown) => !isPolarValue(v))
+    !Number.isSafeInteger(instanceId) ||
+    typeof tag !== 'string' ||
+    !Array.isArray(fields) ||
+    fields.some((v: unknown) => !isPolarValue(v))
   )
     throw new Error();
   return {
     kind: QueryEventKind.MakeExternal,
-    data: {
-      instanceId: id,
-      tag: ctor.Call.name,
-      fields: ctor.Call.args,
-    },
+    data: { fields, instanceId, tag },
   };
 }
 
-function parseExternalCall(d: { [key: string]: any }): QueryEvent {
+function parseExternalCall({
+  args,
+  attribute,
+  call_id: callId,
+  instance,
+}: data): QueryEvent {
   if (
-    !Number.isSafeInteger(d.call_id) ||
-    !isPolarValue(d.instance) ||
-    typeof d.attribute !== 'string' ||
-    !Array.isArray(d.args) ||
-    d.args.some((a: unknown) => !isPolarValue(a))
+    !Number.isSafeInteger(callId) ||
+    !isPolarValue(instance) ||
+    typeof attribute !== 'string' ||
+    !Array.isArray(args) ||
+    args.some((a: unknown) => !isPolarValue(a))
   )
     throw new Error();
   return {
     kind: QueryEventKind.ExternalCall,
-    data: {
-      callId: d.call_id,
-      instance: d.instance,
-      attribute: d.attribute,
-      args: d.args,
-    },
+    data: { args, attribute, callId, instance },
   };
 }
 
-function parseExternalIsSubspecializer(d: { [key: string]: any }): QueryEvent {
+function parseExternalIsSubspecializer({
+  call_id: callId,
+  instance_id: instanceId,
+  left_class_tag: leftTag,
+  right_class_tag: rightTag,
+}: data): QueryEvent {
   if (
-    !Number.isSafeInteger(d.instance_id) ||
-    !Number.isSafeInteger(d.call_id) ||
-    typeof d.left_class_tag !== 'string' ||
-    typeof d.right_class_tag !== 'string'
+    !Number.isSafeInteger(instanceId) ||
+    !Number.isSafeInteger(callId) ||
+    typeof leftTag !== 'string' ||
+    typeof rightTag !== 'string'
   )
     throw new Error();
   return {
     kind: QueryEventKind.ExternalIsSubspecializer,
-    data: {
-      instanceId: d.instance_id,
-      leftTag: d.left_class_tag,
-      rightTag: d.right_class_tag,
-      callId: d.call_id,
-    },
+    data: { callId, instanceId, leftTag, rightTag },
   };
 }
 
-function parseExternalIsa(d: { [key: string]: any }): QueryEvent {
-  const callId = d?.call_id;
-  // const instanceId = d?.instance?.value?.ExternalInstance?.instance_id;
-  const instance = d?.instance;
-  const tag = d?.class_tag;
+function parseExternalIsa({
+  call_id: callId,
+  instance,
+  class_tag: tag,
+}: data): QueryEvent {
   if (
     !Number.isSafeInteger(callId) ||
     !isPolarValue(instance) ||
@@ -141,31 +140,31 @@ function parseExternalIsa(d: { [key: string]: any }): QueryEvent {
     throw new Error();
   return {
     kind: QueryEventKind.ExternalIsa,
-    data: { instance, tag, callId },
+    data: { callId, instance, tag },
   };
 }
 
-function parseExternalUnify(d: { [key: string]: any }): QueryEvent {
+function parseExternalUnify({
+  call_id: callId,
+  left_instance_id: leftId,
+  right_instance_id: rightId,
+}: data): QueryEvent {
   if (
-    !Number.isSafeInteger(d.left_instance_id) ||
-    !Number.isSafeInteger(d.right_instance_id) ||
-    !Number.isSafeInteger(d.call_id)
+    !Number.isSafeInteger(callId) ||
+    !Number.isSafeInteger(leftId) ||
+    !Number.isSafeInteger(rightId)
   )
     throw new Error();
   return {
     kind: QueryEventKind.ExternalUnify,
-    data: {
-      leftId: d.left_instance_id,
-      rightId: d.right_instance_id,
-      callId: d.call_id,
-    },
+    data: { callId, leftId, rightId },
   };
 }
 
-function parseDebug(d: { [key: string]: any }): QueryEvent {
-  if (typeof d.message !== 'string') throw new Error();
+function parseDebug({ message }: data): QueryEvent {
+  if (typeof message !== 'string') throw new Error();
   return {
     kind: QueryEventKind.Debug,
-    data: { message: d.message },
+    data: { message },
   };
 }
