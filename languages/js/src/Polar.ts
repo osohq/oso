@@ -39,7 +39,7 @@ export class Polar {
     // TODO(gj): should we register more than this? Map/Set? Function? Math/Date? JSON?
   }
 
-  // For tests only.
+  // TODO(gj): For tests only.
   __host() {
     return this.#host;
   }
