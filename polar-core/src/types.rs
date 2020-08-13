@@ -518,15 +518,13 @@ impl Rule {
         self.params.iter_mut().for_each(|p| p.map_replace(f));
         self.body.map_replace(f);
     }
+
+    pub fn is_ground(&self) -> bool {
+        self.params.iter().all(|p| p.is_ground())
+    }
 }
 
 pub type Rules = Vec<Arc<Rule>>;
-
-#[derive(Debug)]
-pub struct RuleFilter {
-    pub applicable_rules: Rules,
-    pub unfiltered_rules: Rules,
-}
 
 type RuleSet = BTreeSet<u64>;
 
@@ -626,19 +624,14 @@ impl GenericRule {
     }
 
     #[allow(clippy::ptr_arg)]
-    pub fn get_applicable_rules(&self, args: &TermList) -> RuleFilter {
-        let (applicable_rules, unfiltered_rules) = self
+    pub fn get_applicable_rules(&self, args: &TermList) -> Rules {
+        self
             .index
             .get_applicable_rules(&args, 0)
             .iter()
             .map(|id| self.rules.get(id).expect("Rule missing"))
             .cloned()
-            .partition(|r| r.params.iter().all(|p| p.is_ground()));
-
-        RuleFilter {
-            applicable_rules,
-            unfiltered_rules,
-        }
+            .collect()
     }
 
     fn next_rule_id(&mut self) -> u64 {

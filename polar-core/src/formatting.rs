@@ -139,7 +139,7 @@ pub mod display {
     use std::sync::Arc;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Operation, Operator, Rule, RuleFilter, Symbol, Term, Value};
+    use crate::types::{Numeric, Operation, Operator, Rule, Symbol, Term, Value};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -295,17 +295,6 @@ pub mod display {
                 }
                 _ => panic!("Not any sorta rule I parsed"),
             }
-        }
-    }
-
-    impl fmt::Display for RuleFilter {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(
-                f,
-                "RuleFilter {{ applicable: [{}], unfiltered: [{}] }}",
-                format_rules(&self.applicable_rules, " "),
-                format_rules(&self.unfiltered_rules, " ")
-            )
         }
     }
 

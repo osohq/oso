@@ -1123,17 +1123,14 @@ impl PolarVirtualMachine {
                 assert_eq!(generic_rule.name, predicate.name);
 
                 // Pre-filter rules.
-                let RuleFilter {
-                    applicable_rules,
-                    unfiltered_rules,
-                } = generic_rule.get_applicable_rules(&predicate.args);
+                let pre_filter = generic_rule.get_applicable_rules(&predicate.args);
 
                 // Filter rules by applicability.
                 self.append_goals(vec![
                     Goal::TracePush,
                     Goal::FilterRules {
-                        applicable_rules,
-                        unfiltered_rules,
+                        applicable_rules: vec![],
+                        unfiltered_rules: pre_filter,
                         args: predicate.args,
                     },
                     Goal::TracePop,
@@ -1816,7 +1813,7 @@ impl PolarVirtualMachine {
         if unfiltered_rules.is_empty() {
             // The rules have been filtered. Sort them.
             self.push_goal(Goal::SortRules {
-                rules: applicable_rules.to_vec(),
+                rules: applicable_rules.iter().rev().cloned().collect(),
                 args: args.clone(),
                 outer: 1,
                 inner: 1,
@@ -1825,6 +1822,7 @@ impl PolarVirtualMachine {
             // Check one rule for applicability.
             let mut unfiltered_rules = unfiltered_rules.clone();
             let rule = unfiltered_rules.pop().unwrap();
+
             let inapplicable = Goal::FilterRules {
                 args: args.clone(),
                 applicable_rules: applicable_rules.clone(),
@@ -1835,12 +1833,17 @@ impl PolarVirtualMachine {
             }
 
             let mut applicable_rules = applicable_rules.clone();
-            applicable_rules.insert(0, rule.clone());
+            applicable_rules.push(rule.clone());
             let applicable = Goal::FilterRules {
                 args: args.clone(),
                 applicable_rules,
                 unfiltered_rules,
             };
+
+            // The prefilter already checks applicability for ground rules.
+            if rule.is_ground() {
+                return self.push_goal(applicable);
+            }
 
             // Try to unify the arguments with renamed parameters.
             // TODO: Think about using backtrack so that we don't

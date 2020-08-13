@@ -1398,10 +1398,38 @@ fn test_rule_index() {
     assert!(qeval(&mut polar, r#"f(1, 1, "y")"#));
     assert_eq!(
         qvar(&mut polar, r#"f(1, x, "y")"#, "x"),
-        vec![value!(2), value!(1)]
+        vec![value!(1), value!(2)]
     );
     assert!(qnull(&mut polar, r#"f(1, 1, "z")"#));
     assert!(qnull(&mut polar, r#"f(1, 2, "x")"#));
     assert!(qeval(&mut polar, r#"f(1, 2, {b: "y"})"#));
     assert!(qeval(&mut polar, r#"f(1, 3, {c: "z"})"#));
+}
+
+#[test]
+fn test_fib() {
+    let policy = r#"
+        fib(0, 1) if cut;
+        fib(1, 1) if cut;
+        fib(n, a+b) if fib(n-1, a) and fib(n-2, b);
+    "#;
+
+    let mut polar = Polar::new(None);
+    polar.load(policy).unwrap();
+
+    assert!(qeval(&mut polar, r#"fib(1, x)"#));
+}
+
+#[test]
+fn test_duplicated_rule() {
+    let policy = r#"
+        f(1);
+        f(1);
+    "#;
+
+    let mut polar = Polar::new(None);
+    polar.load(policy).unwrap();
+
+    assert_eq!(qvar(&mut polar, "f(x)", "x"),
+        vec![value!(1), value!(1)]);
 }
