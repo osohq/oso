@@ -17,7 +17,6 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import type { Class, QueryResult } from './types';
-import { repr } from './helpers';
 
 export class Polar {
   #ffiPolar: FfiPolar;
@@ -144,16 +143,7 @@ export class Polar {
   }
 
   registerConstant(name: string, value: any): void {
-    let term;
-    // TODO(gj): write TODO.
-    if (typeof value === 'object') {
-      const instance_id = this.#host.cacheInstance(value);
-      term = {
-        value: { ExternalInstance: { instance_id, repr: repr(value) } },
-      };
-    } else {
-      term = this.#host.toPolarTerm(value);
-    }
+    const term = this.#host.toPolarTerm(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 }

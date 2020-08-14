@@ -17,8 +17,8 @@ describe('PathMapper + Http', () => {
     o.registerClass(Widget);
     o.loadStr(`
       allow(actor, "get", _: Http{path: path}) if
-          new PathMapper("/widget/{id}").map(path) = {id: id} and
-          allow(actor, "get", new Widget(id));
+          new PathMapper("/widget/{id}").map(path) = x and
+          allow(actor, "get", new Widget(x.id));
       allow(_actor, "get", widget: Widget) if widget.id = "12";
     `);
     const widget12 = new Http('host', '/widget/12', {});
