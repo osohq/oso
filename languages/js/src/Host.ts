@@ -64,7 +64,7 @@ export class Host {
   }
 
   // Public for the test suite.
-  getInstance(id: number): object {
+  getInstance(id: number): any {
     const instance = this.#instances.get(id);
     if (instance === undefined) throw new UnregisteredInstanceError(id);
     return instance;
@@ -125,14 +125,8 @@ export class Host {
           value: { List: v.map((el: unknown) => this.toPolarTerm(el)) },
         };
       case v instanceof Predicate:
-        return {
-          value: {
-            Call: {
-              name: v.name,
-              args: v.args.map((el: unknown) => this.toPolarTerm(el)),
-            },
-          },
-        };
+        const args = v.args.map((el: unknown) => this.toPolarTerm(el));
+        return { value: { Call: { name: v.name, args } } };
       case v instanceof Variable:
         return { value: { Variable: v.name } };
       // JS global built-ins like Math are hard to check for.
@@ -151,14 +145,8 @@ export class Host {
           },
         };
       default:
-        return {
-          value: {
-            ExternalInstance: {
-              instance_id: this.cacheInstance(v),
-              repr: repr(v),
-            },
-          },
-        };
+        const instance_id = this.cacheInstance(v);
+        return { value: { ExternalInstance: { instance_id, repr: repr(v) } } };
     }
   }
 
@@ -178,13 +166,10 @@ export class Host {
       return t.List.map(this.toJs);
     } else if (isPolarDict(t)) {
       const { fields } = t.Dictionary;
-      let entries;
-      // TODO(gj): Why is this sometimes a Map and sometimes an Object?
-      if (typeof fields.entries === 'function') {
-        entries = [...fields.entries()];
-      } else {
-        entries = Object.entries(fields);
-      }
+      const entries =
+        typeof fields.entries === 'function'
+          ? Array.from(fields.entries())
+          : Object.entries(fields);
       return entries.reduce((obj: obj, [k, v]) => {
         obj[k] = this.toJs(v);
         return obj;

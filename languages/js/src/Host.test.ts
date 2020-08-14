@@ -9,7 +9,7 @@ describe('conversions between JS + Polar values', () => {
     const h = new Host(new FfiPolar());
     const int = 1;
     const float = 3.14159;
-    const str = 'two';
+    const str = '2';
     const bool = true;
     const list = [int, str, bool];
     const set = new Set([Math.PI, float, Infinity, NaN]);
@@ -18,7 +18,7 @@ describe('conversions between JS + Polar values', () => {
     const value = {
       a: list,
       b: obj,
-      c: pred('a', new Actor('b'), new User('c'), new Widget(int)),
+      c: pred('a', new Actor('b'), new User('c'), new Widget(str)),
       d: new Variable('x'),
     };
     expect(h.toJs(h.toPolarTerm(value))).toStrictEqual(value);

@@ -16,12 +16,12 @@ export class Actor {
   }
 
   widget(): Widget {
-    return new Widget(1);
+    return new Widget('1');
   }
 
   *widgets(): Generator<Widget> {
-    yield new Widget(2);
-    yield new Widget(3);
+    yield new Widget('2');
+    yield new Widget('3');
   }
 }
 
@@ -154,9 +154,9 @@ export class User {
 }
 
 export class Widget {
-  readonly id: number;
+  readonly id: string;
 
-  constructor(id: number) {
+  constructor(id: string) {
     this.id = id;
   }
 }
