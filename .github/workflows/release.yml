@@ -128,12 +128,10 @@ jobs:
         run: |
           gem build oso-oso.gemspec
         working-directory: languages/ruby
-      - run: gem install oso-oso-${{ steps.version.outputs.oso_version }}.gem
-        working-directory: languages/ruby
       - uses: actions/upload-artifact@v2
         with:
           name: gem
-          path: languages/ruby/oso-oso-${{ steps.version.outputs.oso_version }}.gem
+          path: languages/ruby/*.gem
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -166,7 +164,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           cargo build --release
-          mkdir -p languages/python/native
+          mkdir -p languages/python/oso/native
           cp polar-c-api/polar.h languages/python/oso/native/
           cp target/release/libpolar.a languages/python/oso/native/
       - name: Build Rust library (OSX)
@@ -202,7 +200,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: rustup target add x86_64-unknown-linux-musl
       - run: cargo build --target x86_64-unknown-linux-musl --release
-      - run: mkdir -p languages/python/native
+      - run: mkdir -p languages/python/oso/native
       - run: cp polar-c-api/polar.h languages/python/oso/native/
       - run: cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/oso/native/
       - run: docker run --rm --env ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
@@ -211,7 +209,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: musl-wheel
-          path: languages/python/dist/*.whl
+          path: languages/python/oso/dist/*.whl
 
   # docs:
   #   runs-on: ubuntu-latest
@@ -318,12 +316,12 @@ jobs:
       - name: "test"
         if: runner.os != 'Windows'
         run: |
-          gem install gem/oso-oso-${{ steps.version.outputs.oso_version }}.gem
+          gem install gem/*.gem
           ruby languages/ruby/spec/oso/language_parity_spec.rb
       - name: "test"
         if: runner.os == 'Windows'
         run: |
-          gem install gem/oso-oso-$($env:github_ref.Substring(11)).gem
+          gem install gem/*.gem
           ruby languages\ruby\spec\oso\language_parity_spec.rb
 
   validate_java:

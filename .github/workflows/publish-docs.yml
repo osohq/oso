@@ -2,19 +2,47 @@ name: Publish Docs
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "docs s3 path"
-        required: false
-        default: docs-preview.oso.dev
+      url:
+        description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
+      oso_version:
+        description: "oso release to build docs for"
+      flask_oso_version:
+        description: "flask oso release to build docs for"
 jobs:
   publish:
     name: Publish docs
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         name: Install Python
         with:
           python-version: "3.7"
+      - name: Install Ruby + gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4
+          working-directory: "languages/ruby"
+      - name: Install yard
+        run: gem install yard
+      - name: Download oso from release
+        # TODO add v to url for release below.
+        run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/${{ github.event.inputs.oso_version }} | jq -r '.assets[] | select(.name == "oso-python-${{ github.event.inputs.oso_version }}.zip") | .url') --output oso-python-${{ github.event.inputs.oso_version }}.zip
+      - run: unzip oso-python-${{ github.event.inputs.oso_version }}.zip -d oso-python
+      - name: Install oso from release
+        run: pip install oso==${{ github.event.inputs.oso_version }} -f oso-python
+      - name: Download flask-oso from release
+        run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/flask-v${{ github.event.inputs.flask_oso_version }} | jq -r '.assets[] | select(.name == "flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip") | .url') --output flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip
+      - run: unzip flask-oso-python-${{ github.event.inputs.flask_oso_version }}.zip -d flask-oso-python
+      - name: Install oso from release
+        run: pip install flask_oso==${{ github.event.inputs.flask_oso_version }} -f flask-oso-python
       - name: Build docs
-        run: make -C docs html
+        run: SPHINXOPTS="-W" make -C docs build
+      - name: s3 publish
+        run: aws s3 sync --delete docs/_build/html s3://${{ github.event.inputs.url }}
