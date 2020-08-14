@@ -625,8 +625,7 @@ impl GenericRule {
 
     #[allow(clippy::ptr_arg)]
     pub fn get_applicable_rules(&self, args: &TermList) -> Rules {
-        self
-            .index
+        self.index
             .get_applicable_rules(&args, 0)
             .iter()
             .map(|id| self.rules.get(id).expect("Rule missing"))
@@ -927,13 +926,12 @@ mod tests {
         let mut table = HashMap::new();
         table.insert(value!(0), "0");
         table.insert(value!(1), "1");
-        table.insert(value!(1.0), "1.0");
         table.insert(value!("one"), "one");
         table.insert(value!(btreemap! {sym!("a") => term!(1)}), "a:1");
         table.insert(value!(btreemap! {sym!("b") => term!(2)}), "b:2");
         assert_eq!(*table.get(&value!(0)).unwrap(), "0");
         assert_eq!(*table.get(&value!(1)).unwrap(), "1");
-        assert_eq!(*table.get(&value!(1.0)).unwrap(), "1.0");
+        assert_eq!(*table.get(&value!(1.0)).unwrap(), "1");
         assert_eq!(*table.get(&value!("one")).unwrap(), "one");
         assert_eq!(
             *table

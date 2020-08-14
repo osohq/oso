@@ -1432,6 +1432,37 @@ fn test_duplicated_rule() {
     let mut polar = Polar::new(None);
     polar.load(policy).unwrap();
 
-    assert_eq!(qvar(&mut polar, "f(x)", "x"),
-        vec![value!(1), value!(1)]);
+    assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1), value!(1)]);
+}
+
+#[test]
+fn test_numeric_applicability() {
+    let mut polar = Polar::new(None);
+    let policy = r#"
+        f(0);
+        f(1);
+        f(9007199254740991); # (1 << 53) - 1
+        f(9007199254740992); # (1 << 53)
+        f(9223372036854775807); # i64::MAX
+        f(-9223372036854775807); # i64::MIN + 1
+        f(9223372036854776000.0); # i64::MAX as f64
+    "#;
+    polar.load(policy).unwrap();
+    polar.register_constant(sym!("eps"), term!(f64::EPSILON));
+
+    assert!(qeval(&mut polar, "f(0)"));
+    assert!(qeval(&mut polar, "f(0.0)"));
+    assert!(qnull(&mut polar, "f(eps)"));
+    assert!(qeval(&mut polar, "f(1)"));
+    assert!(qeval(&mut polar, "f(1.0)"));
+    assert!(qnull(&mut polar, "f(1.0000000000000002)"));
+    assert!(qnull(&mut polar, "f(9007199254740990)"));
+    assert!(qnull(&mut polar, "f(9007199254740990.0)"));
+    assert!(qeval(&mut polar, "f(9007199254740991)"));
+    assert!(qeval(&mut polar, "f(9007199254740991.0)"));
+    assert!(qeval(&mut polar, "f(9007199254740992)"));
+    assert!(qeval(&mut polar, "f(9007199254740992.0)"));
+    assert!(qeval(&mut polar, "f(9223372036854775807)"));
+    assert!(qeval(&mut polar, "f(-9223372036854775807)"));
+    assert!(qeval(&mut polar, "f(9223372036854776000.0)"));
 }

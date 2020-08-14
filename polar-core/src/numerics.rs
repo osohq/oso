@@ -1,6 +1,10 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::mem::discriminant;
+use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Sub};
+
+use rand::prelude::*;
 
 use super::types::*;
 
@@ -64,23 +68,64 @@ impl PartialEq for Numeric {
 
 impl Eq for Numeric {}
 
+/// There are 53 bits of mantissa in an IEEE 754 double precision float.
+const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
+
+/// -i64::MIN is 2**63. The maximum positive i64 is 2**63 - 1, but this
+/// isn't representable as a double. So, we first cast i64::MIN to f64
+/// then flip the sign to get 2 ** 63.
+const MOST_POSITIVE_I64_FLOAT: f64 = -(i64::MIN as f64);
+const MOST_NEGATIVE_I64_FLOAT: f64 = i64::MIN as f64;
+
 impl Hash for Numeric {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        std::mem::discriminant(self).hash(state);
-
         match self {
-            Numeric::Integer(i) => *i as u64,
-            Numeric::Float(f) => f.to_bits(),
+            Numeric::Integer(i) => {
+                discriminant(self).hash(state);
+                *i as u64
+            }
+            Numeric::Float(f) => match f.classify() {
+                FpCategory::Zero => {
+                    // Canonicalize zero representations.
+                    discriminant(&Numeric::Integer(0)).hash(state);
+                    0u64
+                }
+                FpCategory::Nan => {
+                    // Randomize NaN hashes so they always miss.
+                    discriminant(&FpCategory::Nan).hash(state);
+                    f64::from_bits(f.to_bits() | random::<u64>()).to_bits()
+                }
+                FpCategory::Infinite | FpCategory::Subnormal => {
+                    // Infinities and subnormals are canonical.
+                    discriminant(self).hash(state);
+                    f.to_bits()
+                }
+                FpCategory::Normal => {
+                    // Hash floats the same as numerically equal integers.
+                    if f.fract() == 0.0 {
+                        if MOST_NEGATIVE_I64_FLOAT <= *f && *f < MOST_POSITIVE_I64_FLOAT {
+                            // The integral part of the float is representable as an i64.
+                            discriminant(&Numeric::Integer(0)).hash(state);
+                            (*f as i64) as u64
+                        } else {
+                            // The magnitude of the float is greater than any representable integer.
+                            discriminant(self).hash(state);
+                            f.to_bits()
+                        }
+                    } else {
+                        // The number is not an integer.
+                        discriminant(self).hash(state);
+                        f.to_bits()
+                    }
+                }
+            },
         }
         .hash(state)
     }
 }
-
-/// There are 53 bits of mantissa in an IEEE 754 double precision float.
-const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
 
 impl PartialOrd for Numeric {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -92,18 +137,14 @@ impl PartialOrd for Numeric {
             } else if -MOST_POSITIVE_EXACT_FLOAT < i && i < MOST_POSITIVE_EXACT_FLOAT {
                 // The integer is exactly representable as a float.
                 (i as f64).partial_cmp(&f)
-            // -i64 min is 2**63.  The maximum positive long is 2** 63 - 1,
-            // but this isn't representable as a double.
-            // So, we first cast i64::MIN to f64 then flip the sign to get
-            // 2 ** 63.
-            } else if f >= (-(i64::MIN as f64)) {
+            } else if f >= MOST_POSITIVE_I64_FLOAT {
                 // The float is greater than any representable integer.
                 Some(Ordering::Less)
-            } else if f < (i64::MIN as f64) {
+            } else if f < MOST_NEGATIVE_I64_FLOAT {
                 // The float is less than any representable integer.
                 Some(Ordering::Greater)
             } else {
-                // The integral part of float is representable as an i64.
+                // The integral part of the float is representable as an i64.
                 // Floats in this range do not have any fractional components.
                 i.partial_cmp(&(f as i64))
             }
@@ -126,7 +167,6 @@ impl From<f64> for Numeric {
     fn from(other: f64) -> Self {
         Self::Float(other)
     }
-
 }
 #[cfg(test)]
 mod tests {
@@ -134,7 +174,7 @@ mod tests {
 
     use std::collections::hash_map::DefaultHasher;
 
-    fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    fn hash<T: Hash>(t: &T) -> u64 {
         let mut s = DefaultHasher::new();
         t.hash(&mut s);
         s.finish()
@@ -144,16 +184,18 @@ mod tests {
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     /// Test mixed comparison of longs & doubles.
     fn test_mixed_comparison() {
-        // NaN to int -- Nothing compares equal to NaN.
+        // Nothing compares equal to NaN.
         assert!(Numeric::Integer(1) != Numeric::Float(f64::NAN));
         assert!(Numeric::Integer(-1) != Numeric::Float(f64::NAN));
         assert!(!(Numeric::Integer(1) < Numeric::Float(f64::NAN)));
         assert!(!(Numeric::Integer(1) > Numeric::Float(f64::NAN)));
         assert!(!(Numeric::Integer(-1) > Numeric::Float(f64::NAN)));
+        assert!(Numeric::Float(f64::NAN) != Numeric::Float(f64::NAN));
 
         // All zeros equal.
         assert!(Numeric::Integer(0) == Numeric::Float(0.0));
         assert!(Numeric::Integer(0) == Numeric::Float(-0.0));
+        assert!(Numeric::Float(0.0) == Numeric::Float(-0.0));
 
         // Infinity to int compares greater than all ints.
         assert!(Numeric::Integer(1) < Numeric::Float(f64::INFINITY));
@@ -222,7 +264,28 @@ mod tests {
 
     #[test]
     fn test_numeric_hash() {
-       assert_eq!(calculate_hash(&Numeric::Float(1.0)), calculate_hash(&Numeric::Float(1.0)));
-       assert_eq!(calculate_hash(&Numeric::Float(0.0)), calculate_hash(&Numeric::Float(-0.0)));
+        assert_ne!(
+            hash(&Numeric::Float(f64::NAN)),
+            hash(&Numeric::Float(f64::NAN))
+        );
+        assert_eq!(hash(&Numeric::Float(1.0)), hash(&Numeric::Float(1.0)));
+        assert_eq!(hash(&Numeric::Float(0.0)), hash(&Numeric::Float(-0.0)));
+        assert_eq!(
+            hash(&Numeric::Float(f64::INFINITY)),
+            hash(&Numeric::Float(f64::INFINITY))
+        );
+        assert_ne!(
+            hash(&Numeric::Float(f64::INFINITY)),
+            hash(&Numeric::Float(f64::NEG_INFINITY))
+        );
+        assert_eq!(
+            hash(&Numeric::Float(f64::NEG_INFINITY)),
+            hash(&Numeric::Float(f64::NEG_INFINITY))
+        );
+
+        assert_eq!(hash(&Numeric::Integer(0)), hash(&Numeric::Float(0.0)));
+        assert_eq!(hash(&Numeric::Integer(1)), hash(&Numeric::Float(1.0)));
+        assert_ne!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(1.0)));
+        assert_eq!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(-1.0)));
     }
 }

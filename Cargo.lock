@@ -748,6 +748,7 @@ dependencies = [
  "pipe",
  "pretty_assertions",
  "proptest",
+ "rand 0.7.3",
  "regex",
  "serde",
  "serde_json",
