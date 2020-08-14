@@ -969,8 +969,7 @@ mod tests {
 
         args.clear();
         args.insert(Some(value!(1)));
-        //assert_eq!(args, keys(index));
-        eprintln!("{:?}", index);
+        assert_eq!(args, keys(index));
 
         args.clear();
         args.insert(None); // x

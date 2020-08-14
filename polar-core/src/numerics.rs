@@ -98,7 +98,7 @@ impl Hash for Numeric {
                 FpCategory::Normal => {
                     // Hash floats the same as numerically equal integers.
                     if f.fract() == 0.0 {
-                        if MOST_NEGATIVE_I64_FLOAT <= *f && *f < MOST_POSITIVE_I64_FLOAT {
+                        if MOST_NEGATIVE_I64_FLOAT <= *f && *f <= MOST_POSITIVE_I64_FLOAT {
                             // The integral part of the float is representable as an i64.
                             discriminant(&Numeric::Integer(0)).hash(state);
                             (*f as i64) as u64
@@ -293,16 +293,39 @@ mod tests {
         let fmin = MOST_NEGATIVE_I64_FLOAT;
         let fmax = MOST_POSITIVE_I64_FLOAT;
         let fmid = 2_f64.powi(53);
+        assert_eq!(hash(&Numeric::Integer(0)), hash(&Numeric::Float(-0.0)));
         assert_eq!(hash(&Numeric::Integer(0)), hash(&Numeric::Float(0.0)));
         assert_eq!(hash(&Numeric::Integer(1)), hash(&Numeric::Float(1.0)));
         assert_ne!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(1.0)));
         assert_eq!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(-1.0)));
         assert_eq!(hash(&Numeric::Integer(min)), hash(&Numeric::Float(fmin)));
+
+        assert_ne!(
+            hash(&Numeric::Integer(mid)),
+            hash(&Numeric::Float(fmid - 1.0)) // representationally distinct
+        );
         assert_eq!(
             hash(&Numeric::Integer(mid - 1)),
             hash(&Numeric::Float(fmid - 1.0))
         );
         assert_eq!(hash(&Numeric::Integer(mid)), hash(&Numeric::Float(fmid)));
-        assert_ne!(hash(&Numeric::Integer(max)), hash(&Numeric::Float(fmax))); // not representable
+        assert_eq!(hash(&Numeric::Integer(max)), hash(&Numeric::Float(fmax)));
+
+        assert_ne!(
+            hash(&Numeric::Integer(max)),
+            hash(&Numeric::Float(fmax + 2048.0)) // next representationally distinct float up
+        );
+        assert_ne!(
+            hash(&Numeric::Integer(max)),
+            hash(&Numeric::Float(fmax - 1024.0)) // next representationally distinct float down
+        );
+        assert_ne!(
+            hash(&Numeric::Integer(min)),
+            hash(&Numeric::Float(fmin + 2048.0)) // next representationally distinct float up
+        );
+        assert_ne!(
+            hash(&Numeric::Integer(min)),
+            hash(&Numeric::Float(fmin - 2048.0)) // next representationally distinct float down
+        );
     }
 }
