@@ -1438,6 +1438,14 @@ fn test_duplicated_rule() {
 #[test]
 fn test_numeric_applicability() {
     let mut polar = Polar::new(None);
+    let eps = f64::EPSILON;
+    let nan1 = f64::NAN;
+    let nan2 = f64::from_bits(f64::NAN.to_bits() | 1);
+    assert!(eps.is_normal() && nan1.is_nan() && nan2.is_nan());
+    polar.register_constant(sym!("eps"), term!(eps));
+    polar.register_constant(sym!("nan1"), term!(nan1));
+    polar.register_constant(sym!("nan2"), term!(nan2));
+
     let policy = r#"
         f(0);
         f(1);
@@ -1446,9 +1454,9 @@ fn test_numeric_applicability() {
         f(9223372036854775807); # i64::MAX
         f(-9223372036854775807); # i64::MIN + 1
         f(9223372036854776000.0); # i64::MAX as f64
+        f(nan1); # NaN
     "#;
     polar.load(policy).unwrap();
-    polar.register_constant(sym!("eps"), term!(f64::EPSILON));
 
     assert!(qeval(&mut polar, "f(0)"));
     assert!(qeval(&mut polar, "f(0.0)"));
@@ -1465,4 +1473,6 @@ fn test_numeric_applicability() {
     assert!(qeval(&mut polar, "f(9223372036854775807)"));
     assert!(qeval(&mut polar, "f(-9223372036854775807)"));
     assert!(qeval(&mut polar, "f(9223372036854776000.0)"));
+    assert!(qnull(&mut polar, "f(nan1)"));
+    assert!(qnull(&mut polar, "f(nan2)"));
 }

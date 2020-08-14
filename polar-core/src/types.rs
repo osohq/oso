@@ -325,7 +325,6 @@ impl SourceInfo {
 
 /// Represents a concrete instance of a Polar value
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(clippy::derive_hash_xor_eq)]
 pub struct Term {
     /// Information about where the term was created from
     #[serde(skip, default = "SourceInfo::ffi")]

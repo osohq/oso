@@ -4,8 +4,6 @@ use std::mem::discriminant;
 use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Sub};
 
-use rand::prelude::*;
-
 use super::types::*;
 
 impl Add for Numeric {
@@ -93,14 +91,7 @@ impl Hash for Numeric {
                     discriminant(&Numeric::Integer(0)).hash(state);
                     0u64
                 }
-                FpCategory::Nan => {
-                    // NaN != NaN for every NaN. Make hash(NaN) != (NaN), too.
-                    // We do this by randomizing the NaN payload on every hash.
-                    discriminant(&FpCategory::Nan).hash(state);
-                    f64::from_bits(f.to_bits() ^ (!f64::NAN.to_bits() & random::<u64>())).to_bits()
-                }
-                FpCategory::Infinite | FpCategory::Subnormal => {
-                    // Infinities and subnormals are canonical.
+                FpCategory::Nan | FpCategory::Infinite | FpCategory::Subnormal => {
                     discriminant(self).hash(state);
                     f.to_bits()
                 }
@@ -265,28 +256,53 @@ mod tests {
 
     #[test]
     fn test_numeric_hash() {
-        assert_ne!(
-            hash(&Numeric::Float(f64::NAN)),
-            hash(&Numeric::Float(f64::NAN))
-        );
-        assert_eq!(hash(&Numeric::Float(1.0)), hash(&Numeric::Float(1.0)));
-        assert_eq!(hash(&Numeric::Float(0.0)), hash(&Numeric::Float(-0.0)));
-        assert_eq!(
-            hash(&Numeric::Float(f64::INFINITY)),
-            hash(&Numeric::Float(f64::INFINITY))
-        );
-        assert_ne!(
-            hash(&Numeric::Float(f64::INFINITY)),
-            hash(&Numeric::Float(f64::NEG_INFINITY))
-        );
-        assert_eq!(
-            hash(&Numeric::Float(f64::NEG_INFINITY)),
-            hash(&Numeric::Float(f64::NEG_INFINITY))
-        );
+        let nan1 = f64::NAN;
+        let nan2 = f64::from_bits(f64::NAN.to_bits() | 0xDEADBEEF); // frob the payload
+        assert!(nan1.is_nan() && nan2.is_nan());
 
+        assert_eq!(hash(&Numeric::Float(nan1)), hash(&Numeric::Float(nan1)));
+        assert_ne!(hash(&Numeric::Float(nan1)), hash(&Numeric::Float(nan2)));
+        assert_eq!(hash(&Numeric::Float(nan2)), hash(&Numeric::Float(nan2)));
+
+        let inf = f64::INFINITY;
+        let ninf = f64::NEG_INFINITY;
+        assert!(inf.is_infinite() && ninf.is_infinite());
+        assert_eq!(hash(&Numeric::Float(inf)), hash(&Numeric::Float(inf)));
+        assert_ne!(hash(&Numeric::Float(inf)), hash(&Numeric::Float(ninf)));
+        assert_eq!(hash(&Numeric::Float(ninf)), hash(&Numeric::Float(ninf)));
+
+        // Integral float hashing.
+        assert_eq!(hash(&Numeric::Float(0.0)), hash(&Numeric::Float(0.0)));
+        assert_eq!(hash(&Numeric::Float(0.0)), hash(&Numeric::Float(-0.0)));
+        assert_eq!(hash(&Numeric::Float(1.0)), hash(&Numeric::Float(1.0)));
+        assert_ne!(hash(&Numeric::Float(1.0)), hash(&Numeric::Float(-1.0)));
+        assert_eq!(hash(&Numeric::Float(1e100)), hash(&Numeric::Float(1e100)));
+        assert_ne!(hash(&Numeric::Float(1e100)), hash(&Numeric::Float(2e100)));
+
+        // Fractional float hashing.
+        let eps = f64::EPSILON;
+        assert!(eps.is_normal() && eps > 0.0);
+        assert_eq!(hash(&Numeric::Float(1.1)), hash(&Numeric::Float(1.1)));
+        assert_ne!(hash(&Numeric::Float(1.1)), hash(&Numeric::Float(1.1 + eps)));
+        assert_ne!(hash(&Numeric::Float(1.1)), hash(&Numeric::Float(1.1 - eps)));
+
+        // Mixed hashing.
+        let min = i64::MIN;
+        let max = i64::MAX;
+        let mid = 1_i64 << 53;
+        let fmin = MOST_NEGATIVE_I64_FLOAT;
+        let fmax = MOST_POSITIVE_I64_FLOAT;
+        let fmid = 2_f64.powi(53);
         assert_eq!(hash(&Numeric::Integer(0)), hash(&Numeric::Float(0.0)));
         assert_eq!(hash(&Numeric::Integer(1)), hash(&Numeric::Float(1.0)));
         assert_ne!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(1.0)));
         assert_eq!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(-1.0)));
+        assert_eq!(hash(&Numeric::Integer(min)), hash(&Numeric::Float(fmin)));
+        assert_eq!(
+            hash(&Numeric::Integer(mid - 1)),
+            hash(&Numeric::Float(fmid - 1.0))
+        );
+        assert_eq!(hash(&Numeric::Integer(mid)), hash(&Numeric::Float(fmid)));
+        assert_ne!(hash(&Numeric::Integer(max)), hash(&Numeric::Float(fmax))); // not representable
     }
 }
