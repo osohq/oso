@@ -164,26 +164,26 @@ export interface Debug {
 }
 
 export enum QueryEventKind {
-  Done,
-  Result,
-  MakeExternal,
-  ExternalCall,
-  ExternalIsSubspecializer,
-  ExternalIsa,
-  ExternalUnify,
   Debug,
+  Done,
+  ExternalCall,
+  ExternalIsa,
+  ExternalIsSubspecializer,
+  ExternalUnify,
+  MakeExternal,
+  Result,
 }
 
 export interface QueryEvent {
   kind: QueryEventKind;
   data?:
-    | Result
-    | MakeExternal
+    | Debug
     | ExternalCall
-    | ExternalIsSubspecializer
     | ExternalIsa
+    | ExternalIsSubspecializer
     | ExternalUnify
-    | Debug;
+    | MakeExternal
+    | Result;
 }
 
 export type QueryResult = Generator<Map<string, any>, null, never>;
