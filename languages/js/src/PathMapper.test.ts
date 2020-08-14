@@ -21,10 +21,10 @@ describe('PathMapper + Http', () => {
           allow(actor, "get", new Widget(x.id));
       allow(_actor, "get", widget: Widget) if widget.id = "12";
     `);
-    const widget12 = new Http('host', '/widget/12', {});
+    const widget12 = new Http('host', '/widget/12', new Map());
     let allowed = o.isAllowed('sam', 'get', widget12);
     expect(allowed).toBe(true);
-    const widget13 = new Http('host', '/widget/13', {});
+    const widget13 = new Http('host', '/widget/13', new Map());
     allowed = o.isAllowed('sam', 'get', widget13);
     expect(allowed).toBe(false);
   });
