@@ -276,7 +276,7 @@ describe('#registerClass', () => {
 describe('conversions between JS + Polar values', () => {
   test('returns JS instances from external calls', () => {
     const actor = new Actor('sam');
-    const widget = new Widget(1);
+    const widget = new Widget('1');
     const p = new Polar();
     p.loadStr('allow(actor, resource) if actor.widget.id = resource.id;');
     const result = Array.from(p.queryRule('allow', actor, widget));
@@ -288,7 +288,7 @@ describe('conversions between JS + Polar values', () => {
     const p = new Polar();
     p.loadStr('widgets(actor, x) if x = actor.widgets.id;');
     const result = Array.from(p.queryRule('widgets', actor, new Variable('x')));
-    expect(result).toStrictEqual([map({ x: 2 }), map({ x: 3 })]);
+    expect(result).toStrictEqual([map({ x: '2' }), map({ x: '3' })]);
   });
 
   test('caches instances and does not leak them', () => {
