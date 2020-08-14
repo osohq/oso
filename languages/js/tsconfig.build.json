@@ -1,9 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false,
-    "rootDir": "src"
+    "noEmit": false
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "test/parity.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

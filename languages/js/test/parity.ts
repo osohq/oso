@@ -1,5 +1,4 @@
 import path from 'path';
-
 import { Oso } from '../src/Oso';
 
 const oso = new Oso();
@@ -35,6 +34,10 @@ namespace B {
 
 oso.registerClass(B.C, 'C');
 
+// This path has the same nesting for development and the parity test jobs by sheer coincidence.
+// In tests it's `languages/js/test/parity.ts`
+// In parity tests it's `js_package/dist/test/parity.js`
+// In both these cases the relative path to the test.polar file is the same.
 oso.loadFile(path.resolve(__dirname, '../../../test/test.polar'));
 
 if (!oso.isAllowed('a', 'b', 'c')) throw new Error();
@@ -102,3 +105,5 @@ if (
   ].some(v => v)
 )
   throw new Error();
+
+console.log('tests pass');
