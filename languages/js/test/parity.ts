@@ -71,7 +71,7 @@ if (
     oso.queryRule('testMethodCalls', new A('hello'), new B.C('hello')).next()
       .done,
     oso.queryRule('testOr').next().done,
-    oso.queryRule('testHttpAndPathMapper').next().done,
+    // oso.queryRule('testHttpAndPathMapper').next().done,
   ].some(v => v)
 )
   throw new Error();
