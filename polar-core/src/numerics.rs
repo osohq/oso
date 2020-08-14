@@ -94,9 +94,10 @@ impl Hash for Numeric {
                     0u64
                 }
                 FpCategory::Nan => {
-                    // Randomize NaN hashes so they always miss.
+                    // NaN != NaN for every NaN. Make hash(NaN) != (NaN), too.
+                    // We do this by randomizing the NaN payload on every hash.
                     discriminant(&FpCategory::Nan).hash(state);
-                    f64::from_bits(f.to_bits() | random::<u64>()).to_bits()
+                    f64::from_bits(f.to_bits() ^ (!f64::NAN.to_bits() & random::<u64>())).to_bits()
                 }
                 FpCategory::Infinite | FpCategory::Subnormal => {
                     // Infinities and subnormals are canonical.
