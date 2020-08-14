@@ -128,8 +128,6 @@ jobs:
         run: |
           gem build oso-oso.gemspec
         working-directory: languages/ruby
-      - run: gem install oso-oso-${{ steps.version.outputs.oso_version }}.gem
-        working-directory: languages/ruby
       - uses: actions/upload-artifact@v2
         with:
           name: gem
