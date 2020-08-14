@@ -70,7 +70,7 @@ export class Host {
     return instance;
   }
 
-  cacheInstance(instance: any, id?: number): number {
+  private cacheInstance(instance: any, id?: number): number {
     let instanceId = id;
     if (instanceId === undefined) {
       instanceId = this.#ffiPolar.newId();
@@ -129,21 +129,6 @@ export class Host {
         return { value: { Call: { name: v.name, args } } };
       case v instanceof Variable:
         return { value: { Variable: v.name } };
-      // JS global built-ins like Math are hard to check for.
-      case typeof v === 'object' &&
-        v.constructor.prototype === {}.constructor.prototype:
-        return {
-          value: {
-            Dictionary: {
-              fields: Object.assign(
-                {},
-                ...Object.entries(v).map(([k, v]) => ({
-                  [k]: this.toPolarTerm(v),
-                }))
-              ),
-            },
-          },
-        };
       default:
         const instance_id = this.cacheInstance(v);
         return { value: { ExternalInstance: { instance_id, repr: repr(v) } } };
