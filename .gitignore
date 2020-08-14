@@ -15,6 +15,7 @@ languages/python/polar.egg-info
 languages/python/polar/__pycache__
 languages/python/tests/__pycache__
 languages/python/_polar_lib.abi3.so
+languages/python/native
 venv
 
 polar-c-api/polar.h

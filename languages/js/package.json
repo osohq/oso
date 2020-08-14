@@ -1,0 +1,41 @@
+{
+  "name": "oso",
+  "version": "0.4.1-rc2",
+  "description": "Oso authorization library.",
+  "main": "dist/src/index.js",
+  "repository": "https://github.com/osohq/oso",
+  "collaborators": [
+    "Oso Security <support@osohq.com>"
+  ],
+  "license": "Apache-2.0",
+  "private": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=10.13.0",
+    "npm": ">=6.4.1"
+  },
+  "scripts": {
+    "check": "gts check",
+    "clean": "gts clean",
+    "fix": "gts fix",
+    "fmtcheck": "prettier --check 'src/**/*.[jt]s'",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.9",
+    "@types/lodash": "^4.14.158",
+    "@types/node": "^14.0.14",
+    "gts": "^2.0.2",
+    "jest": "^26.3.0",
+    "prettier": "^2.0.5",
+    "temp-write": "^4.0.0",
+    "ts-jest": "^26.2.0",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.5"
+  },
+  "dependencies": {
+    "lodash": "^4.17.19"
+  }
+}

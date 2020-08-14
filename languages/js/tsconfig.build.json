@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false
+  },
+  "include": ["src/**/*", "test/parity.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}
