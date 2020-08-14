@@ -23,8 +23,9 @@ jobs:
       - name: Check java version matches
         run: grep "<version>$oso_version</version>" pom.xml
         working-directory: languages/java/oso
-      - name: Check js version matches
-        run: grep "$oso_version" package.json
+      - name: Check JS version matches
+        run: |
+          grep "\"version\": \"$oso_version\"" package.json
         working-directory: languages/js
       - name: Check docs release matches
         run: grep "release = \"$oso_version\"" conf.py
@@ -229,7 +230,6 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-          components: rustfmt, clippy
       - name: Add WebAssembly target
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
@@ -244,6 +244,7 @@ jobs:
         with:
           name: oso_js_node
           path: languages/js/*
+
   # docs:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -263,6 +264,7 @@ jobs:
   #       with:
   #         name: docs
   #         path: docs/_build/html/
+
   validate_python:
     name: Test python ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: [build_wheels]
@@ -298,6 +300,7 @@ jobs:
           pip install oso==$($env:github_ref.Substring(11)) -f ../wheel
           python test.py
         working-directory: test
+
   validate_python_musl:
     name: Test python ${{ matrix.python-version }} on Alpine
     needs: [build_musl_wheels]
@@ -319,6 +322,7 @@ jobs:
       - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:${{ matrix.python-version }}-alpine oso/scripts/test_musl.sh
         env:
           OSO_VERSION: ${{ steps.version.outputs.oso_version }}
+
   validate_ruby:
     name: Test ruby ${{ matrix.ruby-version }} on ${{ matrix.os }}
     needs: [build_gem]
@@ -353,6 +357,7 @@ jobs:
         run: |
           gem install gem/*.gem
           ruby languages\ruby\spec\oso\language_parity_spec.rb
+
   validate_java:
     name: Test java ${{ matrix.java-version }} on ${{ matrix.os }}
     needs: [build_jar]
@@ -418,6 +423,7 @@ jobs:
           yarn install --prod
           node dist/test/parity.js
         working-directory: oso_js_node
+
   release:
     name: Create release
     runs-on: ubuntu-latest
@@ -485,7 +491,7 @@ jobs:
         id: create_release
         uses: actions/create-release@latest
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ steps.version.outputs.oso_version }}
           release_name: Release ${{ steps.version.outputs.oso_version }}
@@ -498,7 +504,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-lib.zip
           asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
@@ -507,7 +513,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-python-musl.zip
           asset_name: oso-python-musl-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
@@ -516,7 +522,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-python.zip
           asset_name: oso-python-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
@@ -525,7 +531,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-ruby.zip
           asset_name: oso-ruby-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
@@ -534,7 +540,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-java.zip
           asset_name: oso-java-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
@@ -543,7 +549,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-js-node.zip
           asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
