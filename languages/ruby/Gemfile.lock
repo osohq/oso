@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    oso-oso (0.4.0)
+    oso-oso (0.4.1.pre.rc0)
       ffi (~> 1.0)
 
 GEM
@@ -49,19 +49,19 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.9.0)
     rspec-support (3.9.3)
-    rubocop (0.89.0)
+    rubocop (0.89.1)
       parallel (~> 1.10)
       parser (>= 2.7.1.1)
       rainbow (>= 2.2.2, < 4.0)
       regexp_parser (>= 1.7)
       rexml
-      rubocop-ast (>= 0.1.0, < 1.0)
+      rubocop-ast (>= 0.3.0, < 1.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 1.4.0, < 2.0)
     rubocop-ast (0.3.0)
       parser (>= 2.7.1.4)
     ruby-progressbar (1.10.1)
-    solargraph (0.39.13)
+    solargraph (0.39.14)
       backport (~> 1.1)
       benchmark
       bundler (>= 1.17.2)
@@ -88,8 +88,8 @@ DEPENDENCIES
   pry-byebug (~> 3.9.0)
   rake (~> 12.0)
   rspec (~> 3.0)
-  rubocop (~> 0.89.0)
-  solargraph (~> 0.39.8)
+  rubocop (~> 0.89.1)
+  solargraph (~> 0.39.14)
   yard (~> 0.9.25)
 
 BUNDLED WITH
