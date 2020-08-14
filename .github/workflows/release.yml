@@ -39,6 +39,12 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
       - name: Build release library
         run: cargo build --release
       - uses: actions/upload-artifact@v2
@@ -164,6 +170,12 @@ jobs:
         run: |
           python -m pip install cibuildwheel==1.4.2
 
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
       - name: Build Rust library (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -202,6 +214,12 @@ jobs:
       RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
     steps:
       - uses: actions/checkout@v2
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
       - run: rustup target add x86_64-unknown-linux-musl
       - run: cargo build --target x86_64-unknown-linux-musl --release
       - run: mkdir -p languages/python/oso/native
