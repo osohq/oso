@@ -86,16 +86,16 @@ export class Polar {
     }
   }
 
-  query(query: Predicate | string): QueryResult {
+  query(q: Predicate | string): QueryResult {
     const host = Host.clone(this.#host);
-    let q;
-    if (typeof query === 'string') {
-      q = this.#ffiPolar.newQueryFromStr(query);
+    let ffiQuery;
+    if (typeof q === 'string') {
+      ffiQuery = this.#ffiPolar.newQueryFromStr(q);
     } else {
-      const term = JSON.stringify(host.toPolarTerm(query));
-      q = this.#ffiPolar.newQueryFromTerm(term);
+      const term = JSON.stringify(host.toPolarTerm(q));
+      ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
-    return new Query(q, host).results;
+    return new Query(ffiQuery, host).results;
   }
 
   queryRule(name: string, ...args: unknown[]): QueryResult {
