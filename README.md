@@ -31,6 +31,9 @@ oso's language libraries can be developed without touching the Rust core, but
 you will still need the Rust stable toolchain installed in order to build the
 core.
 
+To build the WebAssembly core for the Node.js library, you will need to have
+[`wasm-pack`][wasm-pack] installed and available on your system PATH.
+
 #### Language requirements
 
 To work on a language library, you will need to meet the following version
@@ -39,6 +42,7 @@ requirements:
 - Java: 10+
 - Python: 3.6+
 - Ruby: 2.4+
+- Node.js: 10.14.2+
 
 ## Contributing
 
@@ -68,3 +72,4 @@ invites, whichever comes first. -->
 [languages-java]: https://github.com/osohq/oso/tree/main/languages/java
 [languages-python]: https://github.com/osohq/oso/tree/main/languages/python
 [languages-ruby]: https://github.com/osohq/oso/tree/main/languages/ruby
+[wasm-pack]: https://rustwasm.github.io/wasm-pack/installer/
