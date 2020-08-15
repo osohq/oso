@@ -113,78 +113,82 @@ export class Query {
   }
 
   private *start(): QueryResult {
-    while (true) {
-      const nextEvent = this.#ffiQuery.nextEvent();
-      const event: QueryEvent = parseQueryEvent(nextEvent);
-      switch (event.kind) {
-        case QueryEventKind.Done:
-          return null;
-        case QueryEventKind.Result:
-          const { bindings } = event.data as Result;
-          const transformed: Map<string, any> = new Map();
-          for (const [k, v] of bindings.entries()) {
-            transformed.set(k, this.#host.toJs(v));
+    try {
+      while (true) {
+        const nextEvent = this.#ffiQuery.nextEvent();
+        const event: QueryEvent = parseQueryEvent(nextEvent);
+        switch (event.kind) {
+          case QueryEventKind.Done:
+            return null;
+          case QueryEventKind.Result:
+            const { bindings } = event.data as Result;
+            const transformed: Map<string, any> = new Map();
+            for (const [k, v] of bindings.entries()) {
+              transformed.set(k, this.#host.toJs(v));
+            }
+            yield transformed;
+            break;
+          case QueryEventKind.MakeExternal: {
+            const { instanceId, tag, fields } = event.data as MakeExternal;
+            if (this.#host.hasInstance(instanceId))
+              throw new DuplicateInstanceRegistrationError(instanceId);
+            this.#host.makeInstance(tag, fields, instanceId);
+            break;
           }
-          yield transformed;
-          break;
-        case QueryEventKind.MakeExternal: {
-          const { instanceId, tag, fields } = event.data as MakeExternal;
-          if (this.#host.hasInstance(instanceId))
-            throw new DuplicateInstanceRegistrationError(instanceId);
-          this.#host.makeInstance(tag, fields, instanceId);
-          break;
+          case QueryEventKind.ExternalCall: {
+            const {
+              attribute,
+              callId,
+              instance,
+              args,
+            } = event.data as ExternalCall;
+            this.handleCall(attribute, callId, instance, args);
+            break;
+          }
+          case QueryEventKind.ExternalIsSubspecializer: {
+            const {
+              instanceId,
+              leftTag,
+              rightTag,
+              callId,
+            } = event.data as ExternalIsSubspecializer;
+            const answer = this.#host.isSubspecializer(
+              instanceId,
+              leftTag,
+              rightTag
+            );
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.ExternalIsa: {
+            const { instance, tag, callId } = event.data as ExternalIsa;
+            const answer = this.#host.isa(instance, tag);
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.ExternalUnify: {
+            const { leftId, rightId, callId } = event.data as ExternalUnify;
+            const answer = this.#host.unify(leftId, rightId);
+            this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.Debug:
+            const { message } = event.data as Debug;
+            if (message) console.log(message);
+            createInterface({
+              input: process.stdin,
+              output: process.stdout,
+              prompt: 'debug> ',
+              tabSize: 4,
+            }).on('line', line => {
+              const trimmed = line.trim().replace(/;+$/, '');
+              const command = this.#host.toPolarTerm(trimmed);
+              this.#ffiQuery.debugCommand(JSON.stringify(command));
+            });
         }
-        case QueryEventKind.ExternalCall: {
-          const {
-            attribute,
-            callId,
-            instance,
-            args,
-          } = event.data as ExternalCall;
-          this.handleCall(attribute, callId, instance, args);
-          break;
-        }
-        case QueryEventKind.ExternalIsSubspecializer: {
-          const {
-            instanceId,
-            leftTag,
-            rightTag,
-            callId,
-          } = event.data as ExternalIsSubspecializer;
-          const answer = this.#host.isSubspecializer(
-            instanceId,
-            leftTag,
-            rightTag
-          );
-          this.questionResult(answer, callId);
-          break;
-        }
-        case QueryEventKind.ExternalIsa: {
-          const { instance, tag, callId } = event.data as ExternalIsa;
-          const answer = this.#host.isa(instance, tag);
-          this.questionResult(answer, callId);
-          break;
-        }
-        case QueryEventKind.ExternalUnify: {
-          const { leftId, rightId, callId } = event.data as ExternalUnify;
-          const answer = this.#host.unify(leftId, rightId);
-          this.questionResult(answer, callId);
-          break;
-        }
-        case QueryEventKind.Debug:
-          const { message } = event.data as Debug;
-          if (message) console.log(message);
-          createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            prompt: 'debug> ',
-            tabSize: 4,
-          }).on('line', line => {
-            const trimmed = line.trim().replace(/;+$/, '');
-            const command = this.#host.toPolarTerm(trimmed);
-            this.#ffiQuery.debugCommand(JSON.stringify(command));
-          });
       }
+    } finally {
+      this.#ffiQuery.free();
     }
   }
 }
