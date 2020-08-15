@@ -1080,7 +1080,7 @@ fn test_rest_vars() {
 }
 
 #[test]
-fn test_in() {
+fn test_in_op() {
     let mut polar = Polar::new(None);
     polar.load("f(x, y) if x in y;").unwrap();
     assert!(qeval(&mut polar, "f(1, [1,2,3])"));
@@ -1088,25 +1088,29 @@ fn test_in() {
         qvar(&mut polar, "f(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
+
+    // Failure.
+    assert!(qnull(&mut polar, "4 in [1,2,3]"));
     assert!(qeval(&mut polar, "4 in [1,2,3] or 1 in [1,2,3]"));
 
-    // strange test case but it's important to note that this returns
-    // 3 results, with 1 binding each
+    // Make sure we scan the whole list.
+    let query = polar.new_query("1 in [1, 2, x, 1]", false).unwrap();
+    let results = query_results!(query);
+    assert_eq!(results.len(), 3);
+    assert!(results[0].0.is_empty());
+    assert_eq!(
+        results[1].0.get(&Symbol("x".to_string())).unwrap().clone(),
+        value!(1)
+    );
+    assert!(results[2].0.is_empty());
+
+    // This returns 3 results, with 1 binding each.
     let query = polar.new_query("f(1, [x,y,z])", false).unwrap();
     let results = query_results!(query);
     assert_eq!(results.len(), 3);
-    assert_eq!(
-        results[0].0.get(&Symbol("x".to_string())).unwrap().clone(),
-        value!(1)
-    );
-    assert_eq!(
-        results[1].0.get(&Symbol("y".to_string())).unwrap().clone(),
-        value!(1)
-    );
-    assert_eq!(
-        results[2].0.get(&Symbol("z".to_string())).unwrap().clone(),
-        value!(1)
-    );
+    assert_eq!(results[0].0[&sym!("x")], value!(1));
+    assert_eq!(results[1].0[&sym!("y")], value!(1));
+    assert_eq!(results[2].0[&sym!("z")], value!(1));
 
     assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
 
@@ -1117,13 +1121,13 @@ fn test_in() {
         ErrorKind::Runtime(RuntimeError::TypeError { .. })
     ));
 
-    // negation
+    // Negation.
     assert!(qeval(&mut polar, "not (4 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (1 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (2 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (3 in [1,2,3])"));
 
-    // empty lists
+    // Nothing is in an empty list.
     assert!(qnull(&mut polar, "x in []"));
     assert!(qnull(&mut polar, "1 in []"));
     assert!(qnull(&mut polar, "\"foo\" in []"));
@@ -1211,13 +1215,13 @@ fn test_unify_rule_head() {
 
     let query = polar.new_query("f(new Foo{a: 1}, x)", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
-    assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
+    assert_eq!(results[0].0[&sym!("x")], value!(1));
 
     let query = polar
         .new_query("g(new Foo{a: new Foo{a: 1}}, x)", false)
         .unwrap();
     let (results, _externals) = query_results_with_externals(query);
-    assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
+    assert_eq!(results[0].0[&sym!("x")], value!(1));
 }
 
 /// Test that cut commits to all choice points before the cut, not just the last.

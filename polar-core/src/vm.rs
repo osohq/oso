@@ -1217,20 +1217,28 @@ impl PolarVirtualMachine {
                 assert_eq!(args.len(), 2);
                 let item = &args[0];
                 let list = self.deref(&args[1]);
-                let mut alternatives = vec![];
-
                 match list.value() {
                     Value::List(list) if list.is_empty() => {
+                        // Nothing is in an empty list.
                         self.backtrack()?;
-                        return Ok(QueryEvent::None);
                     }
-                    Value::List(list) => {
-                        for term in list {
-                            alternatives.push(vec![Goal::Unify {
-                                left: item.clone(),
-                                right: term.clone(),
-                            }])
-                        }
+                    Value::List(terms) => {
+                        // Unify item with each element of the list, skipping non-matching ground terms.
+                        let x = self.deref(item);
+                        let v = x.value();
+                        let g = v.is_ground();
+                        self.choose(
+                            terms
+                                .iter()
+                                .filter(|term| !g || !term.is_ground() || term.value() == v)
+                                .map(|term| {
+                                    vec![Goal::Unify {
+                                        left: item.clone(),
+                                        right: term.clone(),
+                                    }]
+                                })
+                                .collect::<Vec<Goals>>(),
+                        )?;
                     }
                     _ => {
                         return Err(self.type_error(
@@ -1239,7 +1247,6 @@ impl PolarVirtualMachine {
                         ));
                     }
                 }
-                self.choose(alternatives)?;
             }
             Operator::Debug => {
                 let mut message = "Welcome to the debugger!".to_string();

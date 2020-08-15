@@ -73,10 +73,48 @@ pub fn fib(c: &mut Criterion) {
     group.finish();
 }
 
+pub fn prime(c: &mut Criterion) {
+    let policy = "
+        prime(x) if x in [
+            2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
+        ];
+    ";
+
+    fn prime(n: &u8) -> bool {
+        let small_primes = [
+            2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83,
+            89, 97,
+        ];
+        small_primes.iter().any(|m| *m == *n)
+    }
+
+    let mut group = c.benchmark_group("prime");
+    for n in &[3, 23, 43, 83, 255] {
+        group.bench_function(BenchmarkId::from_parameter(format!("prime({})", n)), |b| {
+            b.iter_batched(
+                || {
+                    let mut runner = runner_from_query(&format!("prime({})", n));
+                    runner.load(policy).unwrap();
+                    if prime(n) {
+                        runner.expected_result(maplit::hashmap!())
+                    }
+                    runner
+                },
+                |mut runner| {
+                    runner.run();
+                },
+                criterion::BatchSize::SmallInput,
+            )
+        });
+    }
+
+    group.finish();
+}
+
 /// Bench: create `TARGET` rules of the form `f(i) if f(i-1)`
 /// and measure the time to compute `f(TARGET)`
 /// This basically measures the performance of the rule sorting
-pub fn too_many_predicates(c: &mut Criterion) {
+pub fn many_rules(c: &mut Criterion) {
     const TARGET: usize = 10;
     fn make_runner() -> Runner {
         let mut runner = runner_from_query(&format!("f({})", TARGET));
@@ -180,9 +218,10 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
 criterion_group!(
     benches,
     simple_queries,
-    too_many_predicates,
+    many_rules,
     n_plus_one_queries,
-    fib
+    fib,
+    prime
 );
 criterion_main!(benches);
 
