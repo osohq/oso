@@ -110,7 +110,7 @@ export class Host {
     return isEqual(this.getInstance(left), this.getInstance(right));
   }
 
-  toPolarTerm(v: any): PolarTerm {
+  toPolar(v: any): PolarTerm {
     switch (true) {
       case typeof v === 'boolean':
         return { value: { Boolean: v } };
@@ -121,11 +121,9 @@ export class Host {
       case typeof v === 'string':
         return { value: { String: v } };
       case Array.isArray(v):
-        return {
-          value: { List: v.map((el: unknown) => this.toPolarTerm(el)) },
-        };
+        return { value: { List: v.map((el: unknown) => this.toPolar(el)) } };
       case v instanceof Predicate:
-        const args = v.args.map((el: unknown) => this.toPolarTerm(el));
+        const args = v.args.map((el: unknown) => this.toPolar(el));
         return { value: { Call: { name: v.name, args } } };
       case v instanceof Variable:
         return { value: { Variable: v.name } };

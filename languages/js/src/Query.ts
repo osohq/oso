@@ -84,7 +84,7 @@ export class Query {
   private nextCallResult(callId: number): string | undefined {
     const { done, value } = this.#calls.get(callId)!.next();
     if (done) return undefined;
-    return JSON.stringify(this.#host.toPolarTerm(value));
+    return JSON.stringify(this.#host.toPolar(value));
   }
 
   private applicationError(message: string): void {
@@ -182,7 +182,7 @@ export class Query {
               tabSize: 4,
             }).on('line', line => {
               const trimmed = line.trim().replace(/;+$/, '');
-              const command = this.#host.toPolarTerm(trimmed);
+              const command = this.#host.toPolar(trimmed);
               this.#ffiQuery.debugCommand(JSON.stringify(command));
             });
         }

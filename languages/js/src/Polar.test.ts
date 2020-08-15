@@ -429,8 +429,8 @@ describe('#makeInstance', () => {
   test('handles positional args', () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
-    const one = p.__host().toPolarTerm(1);
-    const two = p.__host().toPolarTerm(2);
+    const one = p.__host().toPolar(1);
+    const two = p.__host().toPolar(2);
     const id = p.__host().makeInstance(ConstructorArgs.name, [one, two], 1);
     const instance = p.__host().getInstance(id);
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));

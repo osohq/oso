@@ -94,7 +94,7 @@ export class Polar {
     if (typeof q === 'string') {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
     } else {
-      const term = JSON.stringify(host.toPolarTerm(q));
+      const term = JSON.stringify(host.toPolar(q));
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
     return new Query(ffiQuery, host).results;
@@ -145,7 +145,7 @@ export class Polar {
   }
 
   registerConstant(name: string, value: any): void {
-    const term = this.#host.toPolarTerm(value);
+    const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 }

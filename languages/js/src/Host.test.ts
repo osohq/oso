@@ -36,6 +36,6 @@ describe('conversions between JS + Polar values', () => {
       e: promises,
       f: functions,
     };
-    expect(h.toJs(h.toPolarTerm(value))).toStrictEqual(value);
+    expect(h.toJs(h.toPolar(value))).toStrictEqual(value);
   });
 });
