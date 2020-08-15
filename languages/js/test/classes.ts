@@ -45,6 +45,12 @@ export class Animal {
   }
 }
 
+export class Async {
+  wait(): Promise<number> {
+    return new Promise(res => res(1));
+  }
+}
+
 export class B extends A {
   b() {
     return 'B';

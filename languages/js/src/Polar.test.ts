@@ -15,6 +15,7 @@ import {
   A,
   Actor,
   Animal,
+  Async,
   B,
   Bar,
   Belonger,
@@ -500,6 +501,24 @@ describe('#registerConstant', () => {
     p.registerConstant('x', 1);
     p.registerConstant('x', 2);
     expect(() => p.loadStr('?= x == 2;')).not.toThrow();
+  });
+});
+
+describe('unifying promises', () => {
+  test('fails if both promises are the same object', () => {
+    const p = new Polar();
+    p.registerClass(Async);
+    const result = Array.from(p.query('new Async().wait() = x and x = x'));
+    expect(result).toStrictEqual([]);
+  });
+
+  test('fails if the promises are different objects', () => {
+    const p = new Polar();
+    p.registerClass(Async);
+    const result = Array.from(
+      p.query('new Async().wait() = new Async().wait()')
+    );
+    expect(result).toStrictEqual([]);
   });
 });
 
