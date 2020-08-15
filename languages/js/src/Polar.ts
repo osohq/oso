@@ -81,7 +81,9 @@ export class Polar {
     while (true) {
       const query = this.#ffiPolar.nextInlineQuery();
       if (query === undefined) break;
-      const { done } = new Query(query, this.#host).results.next();
+      const { results } = new Query(query, this.#host);
+      const { done } = results.next();
+      results.return();
       if (done) throw new InlineQueryFailedError(name);
     }
   }

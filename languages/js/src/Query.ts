@@ -119,7 +119,7 @@ export class Query {
         const event: QueryEvent = parseQueryEvent(nextEvent);
         switch (event.kind) {
           case QueryEventKind.Done:
-            return null;
+            return;
           case QueryEventKind.Result:
             const { bindings } = event.data as Result;
             const transformed: Map<string, any> = new Map();
