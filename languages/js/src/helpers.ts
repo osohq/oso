@@ -1,3 +1,5 @@
+import { inspect } from 'util';
+
 import {
   InvalidQueryEventError,
   KwargsConstructorError,
@@ -20,7 +22,7 @@ export function ancestors(cls: Function): Function[] {
 }
 
 export function repr(x: any): string {
-  return typeof x.toString === 'function' ? x.toString() : JSON.stringify(x);
+  return inspect(x);
 }
 
 export function parseQueryEvent(event: string | obj): QueryEvent {
