@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
 pub use polar_core::polar::{Polar, Query};
 use polar_core::{error, types};
 
@@ -74,27 +72,29 @@ pub extern "C" fn polar_get_error() -> *const c_char {
     })
 }
 
-lazy_static! {
-    static ref MESSAGES: types::MessageQueue = types::MessageQueue::new();
+thread_local! {
+    static MESSAGES: types::MessageQueue = types::MessageQueue::new();
 }
 
 #[no_mangle]
 pub extern "C" fn polar_get_message() -> *const c_char {
     ffi_try!({
-        if let Some(msg) = MESSAGES.next() {
-            let msg_json = serde_json::to_string(&msg).unwrap();
-            CString::new(msg_json)
-                .expect("JSON should not contain any 0 bytes")
-                .into_raw()
-        } else {
-            null()
-        }
+        MESSAGES.with(|messages| {
+            if let Some(msg) = messages.next() {
+                let msg_json = serde_json::to_string(&msg).unwrap();
+                CString::new(msg_json)
+                    .expect("JSON should not contain any 0 bytes")
+                    .into_raw()
+            } else {
+                null()
+            }
+        })
     })
 }
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
-    ffi_try!({ box_ptr!(Polar::new(Some(MESSAGES.clone()))) })
+    ffi_try!({ MESSAGES.with(|messages| box_ptr!(Polar::new(Some(messages.clone())))) })
 }
 
 #[no_mangle]
