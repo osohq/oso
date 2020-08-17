@@ -64,9 +64,8 @@ export class Host {
 
   // Public for the test suite.
   getInstance(id: number): any {
-    const instance = this.#instances.get(id);
-    if (instance === undefined) throw new UnregisteredInstanceError(id);
-    return instance;
+    if (!this.hasInstance(id)) throw new UnregisteredInstanceError(id);
+    return this.#instances.get(id);
   }
 
   private cacheInstance(instance: any, id?: number): number {
