@@ -185,6 +185,7 @@ export class Query {
               const command = this.#host.toPolar(trimmed);
               this.#ffiQuery.debugCommand(JSON.stringify(command));
             });
+            break;
         }
       }
     } finally {
