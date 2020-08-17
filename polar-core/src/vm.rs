@@ -1405,7 +1405,8 @@ impl PolarVirtualMachine {
                 })?
             }
             // Push an `ExternalLookup` goal for external instances and built-ins.
-            Value::ExternalInstance(_)
+            Value::Dictionary(_)
+            | Value::ExternalInstance(_)
             | Value::List(_)
             | Value::Number(_)
             | Value::String(_) => {
