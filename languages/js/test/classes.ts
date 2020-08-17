@@ -1,0 +1,168 @@
+export class A {
+  a() {
+    return 'A';
+  }
+
+  x() {
+    return this.a();
+  }
+}
+
+export class Actor {
+  #name: string;
+
+  constructor(name: string) {
+    this.#name = name;
+  }
+
+  widget(): Widget {
+    return new Widget('1');
+  }
+
+  *widgets(): Generator<Widget> {
+    yield new Widget('2');
+    yield new Widget('3');
+  }
+}
+
+export class Animal {
+  readonly family: string | undefined;
+  readonly genus: string | undefined;
+  readonly species: string | undefined;
+
+  constructor({
+    family,
+    genus,
+    species,
+  }: {
+    family?: string;
+    genus?: string;
+    species?: string;
+  }) {
+    this.family = family;
+    this.genus = genus;
+    this.species = species;
+  }
+}
+
+export class B extends A {
+  b() {
+    return 'B';
+  }
+
+  x() {
+    return this.b();
+  }
+}
+
+export class Bar {
+  y() {
+    return 'y';
+  }
+}
+
+export class C extends B {
+  c() {
+    return 'C';
+  }
+
+  x() {
+    return this.c();
+  }
+}
+
+export class ConstructorNoArgs {}
+
+export class ConstructorArgs {
+  readonly bar: number;
+  readonly baz: number;
+
+  constructor(bar: number, baz: number) {
+    this.bar = bar;
+    this.baz = baz;
+  }
+}
+
+let counter = 0;
+
+export class Counter {
+  static count() {
+    return counter;
+  }
+
+  constructor() {
+    counter += 1;
+  }
+}
+
+export class Foo {
+  readonly a: string;
+
+  constructor(a: string) {
+    this.a = a;
+  }
+
+  *b() {
+    yield 'b';
+  }
+
+  c() {
+    return 'c';
+  }
+
+  d(x: any) {
+    return x;
+  }
+
+  bar() {
+    return new Bar();
+  }
+
+  e() {
+    return [1, 2, 3];
+  }
+
+  *f() {
+    yield [1, 2, 3];
+    yield [4, 5, 6];
+    yield 7;
+  }
+
+  g() {
+    return { hello: 'world' };
+  }
+
+  h() {
+    return true;
+  }
+}
+
+export class Belonger {
+  groups() {
+    return ['engineering', 'social', 'admin'];
+  }
+}
+
+export class User {
+  readonly name: string;
+  special: boolean;
+
+  constructor(name: string) {
+    this.name = name;
+    this.special = false;
+  }
+}
+
+export class Widget {
+  readonly id: string;
+
+  constructor(id: string) {
+    this.id = id;
+  }
+}
+
+export class X {
+  x() {
+    return 'X';
+  }
+}
