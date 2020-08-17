@@ -47,7 +47,6 @@ export class Host {
 
   cacheClass<T>(cls: Class<T>, name?: string): string {
     const clsName = name === undefined ? cls.name : name;
-    console.assert(clsName, cls.toString());
     const existing = this.#classes.get(clsName);
     if (existing !== undefined)
       throw new DuplicateClassAliasError({
