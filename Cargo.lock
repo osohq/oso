@@ -727,6 +727,7 @@ name = "polar-c-api"
 version = "0.1.0"
 dependencies = [
  "cbindgen",
+ "lazy_static",
  "polar-core",
  "serde",
  "serde_json",
