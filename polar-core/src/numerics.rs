@@ -1,4 +1,7 @@
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
+use std::mem::discriminant;
+use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Sub};
 
 use super::types::*;
@@ -61,8 +64,60 @@ impl PartialEq for Numeric {
     }
 }
 
+impl Eq for Numeric {}
+
 /// There are 53 bits of mantissa in an IEEE 754 double precision float.
 const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
+
+/// -i64::MIN is 2**63. The maximum positive i64 is 2**63 - 1, but this
+/// isn't representable as a double. So, we first cast i64::MIN to f64
+/// then flip the sign to get 2 ** 63.
+const MOST_POSITIVE_I64_FLOAT: f64 = -(i64::MIN as f64);
+const MOST_NEGATIVE_I64_FLOAT: f64 = i64::MIN as f64;
+
+impl Hash for Numeric {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        match self {
+            Numeric::Integer(i) => {
+                discriminant(self).hash(state);
+                *i as u64
+            }
+            Numeric::Float(f) => match f.classify() {
+                FpCategory::Zero => {
+                    // Canonicalize zero representations.
+                    discriminant(&Numeric::Integer(0)).hash(state);
+                    0u64
+                }
+                FpCategory::Nan | FpCategory::Infinite | FpCategory::Subnormal => {
+                    discriminant(self).hash(state);
+                    f.to_bits()
+                }
+                FpCategory::Normal => {
+                    // Hash floats the same as numerically equal integers.
+                    if f.fract() == 0.0 {
+                        if MOST_NEGATIVE_I64_FLOAT <= *f && *f <= MOST_POSITIVE_I64_FLOAT {
+                            // The integral part of the float is representable as an i64.
+                            discriminant(&Numeric::Integer(0)).hash(state);
+                            (*f as i64) as u64
+                        } else {
+                            // The magnitude of the float is greater than any representable integer.
+                            discriminant(self).hash(state);
+                            f.to_bits()
+                        }
+                    } else {
+                        // The number is not an integer.
+                        discriminant(self).hash(state);
+                        f.to_bits()
+                    }
+                }
+            },
+        }
+        .hash(state)
+    }
+}
 
 impl PartialOrd for Numeric {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -74,18 +129,14 @@ impl PartialOrd for Numeric {
             } else if -MOST_POSITIVE_EXACT_FLOAT < i && i < MOST_POSITIVE_EXACT_FLOAT {
                 // The integer is exactly representable as a float.
                 (i as f64).partial_cmp(&f)
-            // -i64 min is 2**63.  The maximum positive long is 2** 63 - 1,
-            // but this isn't representable as a double.
-            // So, we first cast i64::MIN to f64 then flip the sign to get
-            // 2 ** 63.
-            } else if f >= (-(i64::MIN as f64)) {
+            } else if f >= MOST_POSITIVE_I64_FLOAT {
                 // The float is greater than any representable integer.
                 Some(Ordering::Less)
-            } else if f < (i64::MIN as f64) {
+            } else if f < MOST_NEGATIVE_I64_FLOAT {
                 // The float is less than any representable integer.
                 Some(Ordering::Greater)
             } else {
-                // The integral part of float is representable as an i64.
+                // The integral part of the float is representable as an i64.
                 // Floats in this range do not have any fractional components.
                 i.partial_cmp(&(f as i64))
             }
@@ -109,25 +160,34 @@ impl From<f64> for Numeric {
         Self::Float(other)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::collections::hash_map::DefaultHasher;
+
+    fn hash<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+        t.hash(&mut s);
+        s.finish()
+    }
 
     #[test]
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     /// Test mixed comparison of longs & doubles.
     fn test_mixed_comparison() {
-        // NaN to int -- Nothing compares equal to NaN.
+        // Nothing compares equal to NaN.
         assert!(Numeric::Integer(1) != Numeric::Float(f64::NAN));
         assert!(Numeric::Integer(-1) != Numeric::Float(f64::NAN));
         assert!(!(Numeric::Integer(1) < Numeric::Float(f64::NAN)));
         assert!(!(Numeric::Integer(1) > Numeric::Float(f64::NAN)));
         assert!(!(Numeric::Integer(-1) > Numeric::Float(f64::NAN)));
+        assert!(Numeric::Float(f64::NAN) != Numeric::Float(f64::NAN));
 
         // All zeros equal.
         assert!(Numeric::Integer(0) == Numeric::Float(0.0));
         assert!(Numeric::Integer(0) == Numeric::Float(-0.0));
+        assert!(Numeric::Float(0.0) == Numeric::Float(-0.0));
 
         // Infinity to int compares greater than all ints.
         assert!(Numeric::Integer(1) < Numeric::Float(f64::INFINITY));
@@ -195,5 +255,77 @@ mod tests {
     }
 
     #[test]
-    fn test_sanity() {}
+    fn test_numeric_hash() {
+        let nan1 = f64::NAN;
+        let nan2 = f64::from_bits(f64::NAN.to_bits() | 0xDEADBEEF); // frob the payload
+        assert!(nan1.is_nan() && nan2.is_nan());
+
+        assert_eq!(hash(&Numeric::Float(nan1)), hash(&Numeric::Float(nan1)));
+        assert_ne!(hash(&Numeric::Float(nan1)), hash(&Numeric::Float(nan2)));
+        assert_eq!(hash(&Numeric::Float(nan2)), hash(&Numeric::Float(nan2)));
+
+        let inf = f64::INFINITY;
+        let ninf = f64::NEG_INFINITY;
+        assert!(inf.is_infinite() && ninf.is_infinite());
+        assert_eq!(hash(&Numeric::Float(inf)), hash(&Numeric::Float(inf)));
+        assert_ne!(hash(&Numeric::Float(inf)), hash(&Numeric::Float(ninf)));
+        assert_eq!(hash(&Numeric::Float(ninf)), hash(&Numeric::Float(ninf)));
+
+        // Integral float hashing.
+        assert_eq!(hash(&Numeric::Float(0.0)), hash(&Numeric::Float(0.0)));
+        assert_eq!(hash(&Numeric::Float(0.0)), hash(&Numeric::Float(-0.0)));
+        assert_eq!(hash(&Numeric::Float(1.0)), hash(&Numeric::Float(1.0)));
+        assert_ne!(hash(&Numeric::Float(1.0)), hash(&Numeric::Float(-1.0)));
+        assert_eq!(hash(&Numeric::Float(1e100)), hash(&Numeric::Float(1e100)));
+        assert_ne!(hash(&Numeric::Float(1e100)), hash(&Numeric::Float(2e100)));
+
+        // Fractional float hashing.
+        let eps = f64::EPSILON;
+        assert!(eps.is_normal() && eps > 0.0);
+        assert_eq!(hash(&Numeric::Float(1.1)), hash(&Numeric::Float(1.1)));
+        assert_ne!(hash(&Numeric::Float(1.1)), hash(&Numeric::Float(1.1 + eps)));
+        assert_ne!(hash(&Numeric::Float(1.1)), hash(&Numeric::Float(1.1 - eps)));
+
+        // Mixed hashing.
+        let min = i64::MIN;
+        let max = i64::MAX;
+        let mid = 1_i64 << 53;
+        let fmin = MOST_NEGATIVE_I64_FLOAT;
+        let fmax = MOST_POSITIVE_I64_FLOAT;
+        let fmid = 2_f64.powi(53);
+        assert_eq!(hash(&Numeric::Integer(0)), hash(&Numeric::Float(-0.0)));
+        assert_eq!(hash(&Numeric::Integer(0)), hash(&Numeric::Float(0.0)));
+        assert_eq!(hash(&Numeric::Integer(1)), hash(&Numeric::Float(1.0)));
+        assert_ne!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(1.0)));
+        assert_eq!(hash(&Numeric::Integer(-1)), hash(&Numeric::Float(-1.0)));
+        assert_eq!(hash(&Numeric::Integer(min)), hash(&Numeric::Float(fmin)));
+
+        assert_ne!(
+            hash(&Numeric::Integer(mid)),
+            hash(&Numeric::Float(fmid - 1.0)) // representationally distinct
+        );
+        assert_eq!(
+            hash(&Numeric::Integer(mid - 1)),
+            hash(&Numeric::Float(fmid - 1.0))
+        );
+        assert_eq!(hash(&Numeric::Integer(mid)), hash(&Numeric::Float(fmid)));
+        assert_eq!(hash(&Numeric::Integer(max)), hash(&Numeric::Float(fmax)));
+
+        assert_ne!(
+            hash(&Numeric::Integer(max)),
+            hash(&Numeric::Float(fmax + 2048.0)) // next representationally distinct float up
+        );
+        assert_ne!(
+            hash(&Numeric::Integer(max)),
+            hash(&Numeric::Float(fmax - 1024.0)) // next representationally distinct float down
+        );
+        assert_ne!(
+            hash(&Numeric::Integer(min)),
+            hash(&Numeric::Float(fmin + 2048.0)) // next representationally distinct float up
+        );
+        assert_ne!(
+            hash(&Numeric::Integer(min)),
+            hash(&Numeric::Float(fmin - 2048.0)) // next representationally distinct float down
+        );
+    }
 }

@@ -9,11 +9,9 @@
 //! In addition, there are special cases like traces and sources that have their own
 //! formatting requirements.
 
+use crate::types::*;
 pub use display::*;
-
 pub use to_polar::*;
-
-use crate::types::{Node, Operation, Operator, Parameter, Source, Term, Trace, Value};
 
 impl Trace {
     /// Return the string representation of this `Trace`
@@ -102,6 +100,16 @@ pub fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
 pub fn format_params(args: &[Parameter], sep: &str) -> String {
     args.iter()
         .map(|parameter| parameter.to_polar())
+        .collect::<Vec<String>>()
+        .join(sep)
+}
+
+/// Formats a vector of rules as a string-separated list.
+#[allow(clippy::ptr_arg)]
+pub fn format_rules(rules: &Rules, sep: &str) -> String {
+    rules
+        .iter()
+        .map(|rule| rule.to_polar())
         .collect::<Vec<String>>()
         .join(sep)
 }
@@ -248,6 +256,10 @@ pub mod display {
                     fmt_rules(rules),
                     outer,
                     inner,
+                ),
+                Goal::TraceRule { trace: _ } => write!(
+                    fmt,
+                    "TraceRule(...)" // FIXME: draw trace?
                 ),
                 Goal::Unify { left, right } => {
                     write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
