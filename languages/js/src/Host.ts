@@ -86,6 +86,7 @@ export class Host {
 
   isSubspecializer(id: number, left: string, right: string): boolean {
     const instance = this.getInstance(id);
+    if (!(instance?.constructor instanceof Function)) return false;
     const mro = ancestors(instance.constructor);
     const leftIndex = mro.indexOf(this.getClass(left));
     const rightIndex = mro.indexOf(this.getClass(right));
@@ -101,7 +102,7 @@ export class Host {
   isa(instance: PolarTerm, name: string): boolean {
     const jsInstance = this.toJs(instance);
     const cls = this.getClass(name);
-    return jsInstance instanceof cls || jsInstance.constructor === cls;
+    return jsInstance instanceof cls || jsInstance?.constructor === cls;
   }
 
   unify(left: number, right: number): boolean {
