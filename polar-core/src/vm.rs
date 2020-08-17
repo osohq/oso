@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
 use std::string::ToString;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};

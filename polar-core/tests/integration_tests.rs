@@ -3,13 +3,10 @@ mod mock_externals;
 use indoc::indoc;
 use maplit::btreemap;
 use permute::permute;
-use pipe::pipe;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::io::Read;
 use std::iter::FromIterator;
-use std::thread::spawn;
 
 use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, value};
 

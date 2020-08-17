@@ -1,14 +1,11 @@
 use super::error::PolarResult;
-use super::formatting::source_lines;
 use super::parser;
 use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
 use super::warnings::check_singletons;
 
-use std::collections::{hash_map::Entry, HashMap};
-use std::io::{stderr, Write};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 pub struct Query {
     vm: PolarVirtualMachine,

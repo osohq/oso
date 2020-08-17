@@ -1,9 +1,7 @@
 use super::formatting::source_lines;
 use super::types::*;
 
-use std::collections::{hash_map::Entry, HashMap, VecDeque};
-use std::io::{stderr, Write};
-use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{hash_map::Entry, HashMap};
 
 /// Warn about singleton variables and unknown specializers in a rule,
 /// except those whose names start with `_`.
