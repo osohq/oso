@@ -188,7 +188,7 @@ pub struct PolarVirtualMachine {
     log: bool,
 
     /// Output messages.
-    pub messages: Arc<Mutex<VecDeque<Message>>>,
+    pub messages: MessageQueue,
 }
 
 impl Default for PolarVirtualMachine {
@@ -198,7 +198,7 @@ impl Default for PolarVirtualMachine {
             false,
             vec![],
             // Messages will not be exposed, only use default() for testing.
-            Arc::new(Mutex::new(VecDeque::new())),
+            MessageQueue::new(),
         )
     }
 }
@@ -211,7 +211,7 @@ impl PolarVirtualMachine {
         kb: Arc<RwLock<KnowledgeBase>>,
         trace: bool,
         goals: Goals,
-        messages: Arc<Mutex<VecDeque<Message>>>,
+        messages: MessageQueue,
     ) -> Self {
         let constants = kb
             .read()
@@ -242,7 +242,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, trace: bool, goals: Goals) -> Self {
-        PolarVirtualMachine::new(kb, trace, goals, Arc::new(Mutex::new(VecDeque::new())))
+        PolarVirtualMachine::new(kb, trace, goals, MessageQueue::new())
     }
 
     #[cfg(test)]
@@ -253,11 +253,6 @@ impl PolarVirtualMachine {
     #[cfg(test)]
     fn set_query_timeout(&mut self, timeout_s: u64) {
         self.query_timeout = std::time::Duration::from_secs(timeout_s);
-    }
-
-    pub fn push_message(&self, kind: MessageKind, msg: String) {
-        let mut messages = self.messages.lock().unwrap();
-        messages.push_back(Message { kind, msg });
     }
 
     pub fn new_id(&self) -> u64 {
@@ -629,7 +624,7 @@ impl PolarVirtualMachine {
 
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
-        self.push_message(MessageKind::Print, message.to_owned());
+        self.messages.push(MessageKind::Print, message.to_owned());
     }
 
     fn source(&self, term: &Term) -> Option<Source> {

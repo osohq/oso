@@ -6,7 +6,7 @@ use super::types::*;
 use super::vm::*;
 use super::warnings::check_singletons;
 
-use std::collections::{hash_map::Entry, HashMap, VecDeque};
+use std::collections::{hash_map::Entry, HashMap};
 use std::io::{stderr, Write};
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -55,28 +55,15 @@ impl Iterator for Query {
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
-    pub messages: Arc<Mutex<VecDeque<Message>>>,
+    pub messages: MessageQueue,
 }
 
 impl Polar {
-    pub fn new() -> Self {
+    pub fn new(messages: Option<MessageQueue>) -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
-            messages: Arc::new(Mutex::new(VecDeque::new())),
+            messages: messages.unwrap_or(MessageQueue::new()),
         }
-    }
-
-    pub fn get_message(&mut self) -> Option<Message> {
-        if let Ok(mut messages) = self.messages.lock() {
-            messages.pop_front()
-        } else {
-            None
-        }
-    }
-
-    pub fn push_message(&self, kind: MessageKind, msg: String) {
-        let mut messages = self.messages.lock().unwrap();
-        messages.push_back(Message { kind, msg });
     }
 
     pub fn load_file(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
@@ -110,8 +97,7 @@ impl Polar {
                 }
             }
         }
-        let mut messages = self.messages.lock().unwrap();
-        messages.extend(warnings.iter().map(|m| Message {
+        self.messages.extend(warnings.iter().map(|m| Message {
             kind: MessageKind::Warning,
             msg: m.to_owned(),
         }));
@@ -177,7 +163,7 @@ mod tests {
 
     #[test]
     fn can_load_and_query() {
-        let polar = Polar::new();
+        let polar = Polar::new(None);
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load("f(_);");
     }
