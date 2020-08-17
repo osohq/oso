@@ -865,10 +865,7 @@ impl PolarVirtualMachine {
                     let lookup = Goal::LookupExternal {
                         instance: left.clone(),
                         call_id,
-                        field: right_value.clone_with_value(Value::Call(Predicate {
-                            name: field.clone(),
-                            args: vec![],
-                        })),
+                        field: right_value.clone_with_value(Value::String(field.0.clone())),
                         check_errors: false,
                     };
                     let isa = Goal::Isa {
@@ -964,8 +961,8 @@ impl PolarVirtualMachine {
                 }
                 self.choose(alternatives)?;
             }
-            _ => {
-                if let Some(retrieved) = dict.fields.get(&field_name(&field)) {
+            Value::String(field) => {
+                if let Some(retrieved) = dict.fields.get(&Symbol(field.clone())) {
                     self.push_goal(Goal::Unify {
                         left: retrieved.clone(),
                         right: value.clone(),
@@ -973,6 +970,15 @@ impl PolarVirtualMachine {
                 } else {
                     self.push_goal(Goal::Backtrack)?;
                 }
+            }
+            v => {
+                return Err(self.type_error(
+                    &field,
+                    format!(
+                        "can only perform field lookups on a dictionary, this is a {:?}",
+                        v
+                    ),
+                ))
             }
         };
         Ok(())
@@ -988,12 +994,23 @@ impl PolarVirtualMachine {
         field: &Term,
         check_errors: bool,
     ) -> PolarResult<QueryEvent> {
-        let (field_name, args) = match &field.value() {
+        let (field_name, args) = match self.deref(field).value() {
             Value::Call(Predicate { name, args }) => (
                 name.clone(),
-                args.iter().map(|arg| self.deref(arg)).collect(),
+                Some(args.iter().map(|arg| self.deref(arg)).collect()),
             ),
-            _ => unreachable!("call must be a predicate"),
+            Value::String(field) => {
+                (Symbol(field.clone()), None )
+            }
+            v => {
+                return Err(self.type_error(
+                    &field,
+                    format!(
+                        "can only perform field lookups, this is a {:?}",
+                        v
+                    ),
+                ))
+            }
         };
 
         self.push_choice(vec![vec![Goal::LookupExternal {
@@ -1375,11 +1392,11 @@ impl PolarVirtualMachine {
         assert_eq!(args.len(), 3);
         let object = self.deref(&args[0]);
         let field = &args[1];
-        let value = &args[2];
+        let value = self.deref(&args[2]);
 
         match object.value() {
             // Push a `Lookup` goal for simple field lookups on dictionaries.
-            Value::Dictionary(dict) if !matches!(field.value(), Value::Call(predicate) if !predicate.args.is_empty()) => {
+            Value::Dictionary(dict) if matches!(field.value(), Value::String(_)) => {
                 self.push_goal(Goal::Lookup {
                     dict: dict.clone(),
                     field: field.clone(),
@@ -2266,9 +2283,9 @@ mod tests {
 
         assert!(vm.is_halted());
 
-        let f1 = term!(pred!("f", [1]));
-        let f2 = term!(pred!("f", [2]));
-        let f3 = term!(pred!("f", [3]));
+        let f1 = term!(call!("f", [1]));
+        let f2 = term!(call!("f", [2]));
+        let f3 = term!(call!("f", [3]));
 
         // Querying for f(1)
         vm.push_goal(query!(op!(And, f1.clone()))).unwrap();
@@ -2584,7 +2601,7 @@ mod tests {
         let dict = Dictionary { fields };
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: term!(pred!("x", [])),
+            field: term!(call!("x")),
             value: term!(1),
         })
         .unwrap();
@@ -2596,7 +2613,7 @@ mod tests {
         // Lookup with incorrect value
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: term!(pred!("x", [])),
+            field: term!(call!("x")),
             value: term!(2),
         })
         .unwrap();
@@ -2606,7 +2623,7 @@ mod tests {
         // Lookup with unbound value
         vm.push_goal(Goal::Lookup {
             dict,
-            field: term!(pred!("x", [])),
+            field: term!(call!("x")),
             value: term!(sym!("y")),
         })
         .unwrap();
@@ -2783,7 +2800,7 @@ mod tests {
         let mut vm = PolarVirtualMachine::new(
             Arc::new(RwLock::new(kb)),
             false,
-            vec![query!(pred!(
+            vec![query!(call!(
                 "bar",
                 [external_instance.clone(), external_instance, sym!("z")]
             ))],

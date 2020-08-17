@@ -16,7 +16,7 @@ use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, valu
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
-fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Vec<Term>) -> Option<Term> {
+fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Option<Vec<Term>>) -> Option<Term> {
     None
 }
 
@@ -43,7 +43,7 @@ fn query_results<F, G, H, I, J>(
     mut debug_handler: G,
 ) -> QueryResults
 where
-    F: FnMut(u64, Option<Term>, Symbol, Vec<Term>) -> Option<Term>,
+    F: FnMut(u64, Option<Term>, Symbol, Option<Vec<Term>>) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, Term),
     I: FnMut(Term, Symbol) -> bool,
@@ -647,9 +647,9 @@ fn test_lookup_derefs() {
         .unwrap();
     let query = polar.new_query("f(1)", false).unwrap();
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Vec<Term>| {
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
         // check the argument is bound to an integer
-        assert!(matches!(args[0].value(), Value::Number(_)));
+        assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
 
@@ -657,8 +657,8 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Vec<Term>| {
-        assert!(matches!(args[0].value(), Value::Number(_)));
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
+        assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
     let query = polar.new_query("f(2)", false).unwrap();
@@ -712,10 +712,10 @@ fn test_externals_instantiated() {
         .unwrap();
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Vec<Term>| {
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
-        match &args[0].value() {
+        match &args.as_ref().unwrap()[0].value() {
             Value::ExternalInstance(ExternalInstance {
                 constructor: Some(ref term),
                 ..
@@ -724,7 +724,7 @@ fn test_externals_instantiated() {
                 ref tag, ref fields
             }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
                 "expected external instance Bar {{ x: 1 }}, found: {:?}",
-                args[0].value()
+                args.unwrap()[0].value()
             ),
             _ => panic!("Expected external instance"),
         }
