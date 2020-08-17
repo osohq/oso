@@ -59,7 +59,7 @@ impl Polar {
     pub fn new(messages: Option<MessageQueue>) -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
-            messages: messages.unwrap_or(MessageQueue::new()),
+            messages: messages.unwrap_or_default(),
         }
     }
 

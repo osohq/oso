@@ -739,6 +739,12 @@ impl MessageQueue {
     }
 }
 
+impl Default for MessageQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
