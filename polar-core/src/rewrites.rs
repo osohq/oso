@@ -221,7 +221,7 @@ mod tests {
         rewrite_rule(&mut rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_2) if .(a, b, _value_3) and .(_value_3, c, _value_2);"
+            "f(_value_2) if .(a, \"b\", _value_3) and .(_value_3, \"c\", _value_2);"
         );
     }
 

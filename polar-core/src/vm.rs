@@ -637,7 +637,7 @@ impl PolarVirtualMachine {
     }
 
     /// Get the query stack as a string for printing in error messages.
-    fn stack_trace(&self) -> String {
+    pub fn stack_trace(&self) -> String {
         let mut trace_stack = self.trace_stack.clone();
         let mut trace = self.trace.clone();
 
@@ -940,7 +940,8 @@ impl PolarVirtualMachine {
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
         // check if field is a variable
-        match &field.value() {
+        let field = self.deref(&field);
+        match field.value() {
             Value::Variable(_) => {
                 let mut alternatives = vec![];
                 for (k, v) in &dict.fields {
@@ -1391,30 +1392,29 @@ impl PolarVirtualMachine {
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
         assert_eq!(args.len(), 3);
         let object = self.deref(&args[0]);
-        let field = &args[1];
-        let value = self.deref(&args[2]);
+        let field = self.deref(&args[1]);
+        let value = &args[2];
 
         match object.value() {
             // Push a `Lookup` goal for simple field lookups on dictionaries.
-            Value::Dictionary(dict) if matches!(field.value(), Value::String(_)) => {
+            Value::Dictionary(dict) if matches!(field.value(), Value::String(_) | Value::Variable(_)) => {
                 self.push_goal(Goal::Lookup {
                     dict: dict.clone(),
-                    field: field.clone(),
+                    field,
                     value: args.remove(2),
                 })?
             }
             // Push an `ExternalLookup` goal for external instances and built-ins.
-            Value::Dictionary(_)
-            | Value::ExternalInstance(_)
+            Value::ExternalInstance(_)
             | Value::List(_)
             | Value::Number(_)
             | Value::String(_) => {
-                let value = value.value().clone().symbol().expect("bad lookup value");
+                let value = value.value().clone().symbol().map_err(|mut e| {e.add_stack_trace(self); e}).expect("bad lookup value");
                 let call_id = self.new_call_id(&value);
                 self.push_goal(Goal::LookupExternal {
                     call_id,
                     instance: object.clone(),
-                    field: field.clone(),
+                    field,
                     check_errors: true,
                 })?;
             }

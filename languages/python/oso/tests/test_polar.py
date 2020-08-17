@@ -59,7 +59,7 @@ def test_load_function(polar, query, qvar):
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
 
-def test_external(polar, qvar):
+def test_external(polar, qvar, qeval):
     class Bar:
         def y(self):
             return "y"
@@ -101,17 +101,18 @@ def test_external(polar, qvar):
 
     polar.register_class(Foo, from_polar=capital_foo)
     assert qvar("new Foo{}.a = x", "x", one=True) == "A"
-    assert qvar("new Foo{}.a() = x", "x", one=True) == "A"
-    assert qvar("new Foo{}.b = x", "x", one=True) == "b"
+    with pytest.raises(RuntimeError, match="tried to call A but it is not callable"):
+        assert not qeval("new Foo{}.a() = x")
+    assert not qvar("new Foo{}.b = x", "x", one=True) == "b"
     assert qvar("new Foo{}.b() = x", "x", one=True) == "b"
-    assert qvar("Foo.c = x", "x", one=True) == "c"
+    assert not qvar("Foo.c = x", "x", one=True) == "c"
     assert qvar("Foo.c() = x", "x", one=True) == "c"
-    assert qvar("new Foo{} = f and f.a() = x", "x", one=True) == "A"
+    assert qvar("new Foo{} = f and f.a = x", "x", one=True) == "A"
     assert qvar("new Foo{}.bar().y() = x", "x", one=True) == "y"
-    assert qvar("new Foo{}.e = x", "x", one=True) == [1, 2, 3]
-    assert qvar("new Foo{}.f = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
-    assert qvar("new Foo{}.g.hello = x", "x", one=True) == "world"
-    assert qvar("new Foo{}.h = x", "x", one=True) is True
+    assert qvar("new Foo{}.e() = x", "x", one=True) == [1, 2, 3]
+    assert qvar("new Foo{}.f() = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
+    assert qvar("new Foo{}.g().hello = x", "x", one=True) == "world"
+    assert qvar("new Foo{}.h() = x", "x", one=True) is True
 
 
 def test_class_specializers(polar, qvar, qeval, query):
@@ -155,16 +156,16 @@ def test_class_specializers(polar, qvar, qeval, query):
     """
     polar.load_str(rules)
 
-    assert qvar("new A{}.a = x", "x", one=True) == "A"
-    assert qvar("new A{}.x = x", "x", one=True) == "A"
-    assert qvar("new B{}.a = x", "x", one=True) == "A"
-    assert qvar("new B{}.b = x", "x", one=True) == "B"
-    assert qvar("new B{}.x = x", "x", one=True) == "B"
-    assert qvar("new C{}.a = x", "x", one=True) == "A"
-    assert qvar("new C{}.b = x", "x", one=True) == "B"
-    assert qvar("new C{}.c = x", "x", one=True) == "C"
-    assert qvar("new C{}.x = x", "x", one=True) == "C"
-    assert qvar("new X{}.x = x", "x", one=True) == "X"
+    assert qvar("new A{}.a() = x", "x", one=True) == "A"
+    assert qvar("new A{}.x() = x", "x", one=True) == "A"
+    assert qvar("new B{}.a() = x", "x", one=True) == "A"
+    assert qvar("new B{}.b() = x", "x", one=True) == "B"
+    assert qvar("new B{}.x() = x", "x", one=True) == "B"
+    assert qvar("new C{}.a() = x", "x", one=True) == "A"
+    assert qvar("new C{}.b() = x", "x", one=True) == "B"
+    assert qvar("new C{}.c() = x", "x", one=True) == "C"
+    assert qvar("new C{}.x() = x", "x", one=True) == "C"
+    assert qvar("new X{}.x() = x", "x", one=True) == "X"
 
     assert len(query("test(new A{})")) == 1
     assert len(query("test(new B{})")) == 2
@@ -439,7 +440,7 @@ def test_return_list(polar, query):
     polar.register_class(Actor)
 
     # for testing lists
-    polar.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
+    polar.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups();')
 
     assert query(Predicate(name="allow", args=[Actor(), "join", "party"]))
 
