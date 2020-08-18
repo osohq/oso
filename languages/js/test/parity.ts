@@ -34,6 +34,19 @@ namespace B {
 
 oso.registerClass(B.C, 'C');
 
+class E extends Array<number> {
+  constructor(array: number[]) {
+    super(...array);
+
+    Object.setPrototypeOf(this, E.prototype);
+  }
+
+  static plus_one(x: number) {
+    return x + 1;
+  }
+}
+oso.registerClass(E)
+
 // This path has the same nesting for development and the parity test jobs by sheer coincidence.
 // In tests it's `languages/js/test/parity.ts`
 // In parity tests it's `js_package/dist/test/parity.js`
@@ -102,6 +115,7 @@ if (
     !oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').next().done,
     oso.query('builtinSpecializers("foo", "String")').next().done,
     !oso.query('builtinSpecializers("bar", "String")').next().done,
+    // oso.query('testFunctions()').next().done,
   ].some(v => v)
 )
   throw new Error();

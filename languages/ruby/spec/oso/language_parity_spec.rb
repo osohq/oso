@@ -37,6 +37,13 @@ module B
 end
 oso.register_class(B::C, name: 'C') { |y| B::C.new(y) }
 
+class E < Array
+    def self.plus_one(x)
+      x+1
+    end
+end
+oso.register_class(E)
+
 oso.load_file File.expand_path(File.join(__dir__, '../../../../test/test.polar'))
 
 raise unless oso.allowed?(actor: 'a', action: 'b', resource: 'c')
@@ -91,4 +98,5 @@ oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")').next
 raise unless oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').to_a.empty?
 oso.query('builtinSpecializers("foo", "String")').next
 raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?
+# oso.query('testFunctions()').next
 # rubocop:enable Layout/EmptyLineAfterGuardClause

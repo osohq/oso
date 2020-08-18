@@ -2,6 +2,7 @@ import com.osohq.oso.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Function;
 import java.lang.Math;
 
 class Test {
@@ -32,6 +33,25 @@ class Test {
 
         public int foo() {
             return -1;
+        }
+    }
+
+    public static class E {
+        int[] x;
+        public E(int[] x){
+            this.x = x;
+        }
+
+        public int[] map(Function f) {
+            int[] result = x.clone();
+            for(int i = 0; i < result.length; i++) {
+                result[i] = f(x[i]);
+            }
+            return result;
+        }
+
+        public static int plus_one(int x) {
+            return x + 1;
         }
     }
 
@@ -89,6 +109,7 @@ class Test {
         assert o.query("builtinSpecializers({foo: \"bar\"}, \"Dictionary\")").results().isEmpty();
         assert !o.query("builtinSpecializers(\"foo\", \"String\")").results().isEmpty();
         assert o.query("builtinSpecializers(\"bar\", \"String\")").results().isEmpty();
+        assert o.query("testFunctions()").results().isEmpty();
 
         System.out.println("Tests Pass");
     }

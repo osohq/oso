@@ -41,6 +41,16 @@ def custom_c_constructor(y):
 
 oso.register_class(B.C, name="C", from_polar=custom_c_constructor)
 
+class E(list):
+    def map(self, f):
+        return [f(i) for i in self]
+
+    @staticmethod
+    def plus_one(x):
+        return x+1
+
+oso.register_class(E)
+
 polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
 oso.load_file(polar_file)
 
@@ -95,3 +105,4 @@ assert list(oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")'))
 assert not list(oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")'))
 assert list(oso.query('builtinSpecializers("foo", "String")'))
 assert not list(oso.query('builtinSpecializers("bar", "String")'))
+assert list(oso.query('testFunctions()'))
