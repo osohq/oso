@@ -59,9 +59,12 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     /**
      * Helper for `ExternalCall` query events
      */
-    private void handleCall(String attrName, JSONArray jArgs, JSONObject polarInstance, long callId)
+    private void handleCall(String attrName, Optional<JSONArray> jArgs, JSONObject polarInstance, long callId)
             throws Exceptions.OsoException {
-        List<Object> args = host.polarListToJava(jArgs);
+        Optional<List<Object>> args = Optional.empty();
+        if (jArgs.isPresent()) {
+            args =  Optional.of(host.polarListToJava(jArgs.get()));
+        }
         try {
             registerCall(attrName, args, callId, polarInstance);
         } catch (Exceptions.InvalidCallError e) {
@@ -126,7 +129,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     instance = data.getJSONObject("instance");
                     callId = data.getLong("call_id");
                     String attrName = data.getString("attribute");
-                    JSONArray jArgs = data.getJSONArray("args");
+
+                    Optional<JSONArray> jArgs = Optional.empty();
+                    if (!data.get("args").equals(null)) {
+                        jArgs = Optional.of(data.getJSONArray("args"));
+                    }
                     handleCall(attrName, jArgs, instance, callId);
                     break;
                 case "ExternalIsa":
@@ -177,7 +184,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      * @param polarInstance JSONObject containing either an instance_id or an
      *                      instance of a built-in type.
      */
-    public void registerCall(String attrName, List<Object> args, long callId, JSONObject polarInstance)
+    public void registerCall(String attrName, Optional<List<Object>> args, long callId, JSONObject polarInstance)
             throws Exceptions.InvalidCallError,
                    Exceptions.UnregisteredInstanceError,
                    Exceptions.UnexpectedPolarTypeError {
@@ -192,24 +199,27 @@ public class Query implements Enumeration<HashMap<String, Object>> {
         } else {
             instance = host.toJava(polarInstance);
         }
-
         // Select a method to call based on the types of the arguments.
-        Class<?>[] argTypes = args.stream().map(a -> a.getClass())
-            .collect(Collectors.toUnmodifiableList())
-            .toArray(new Class[0]);
         Object result = null;
         try {
             Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
-            try {
-                Method method = cls.getMethod(attrName, argTypes);
-                result = method.invoke(instance, args.toArray());
-            } catch (NoSuchMethodException e) {
+            if(args.isPresent()) {
+                Class<?>[] argTypes = args.get().stream().map(a -> a.getClass())
+                    .collect(Collectors.toUnmodifiableList())
+                    .toArray(new Class[0]);
+                try {
+                    Method method = cls.getMethod(attrName, argTypes);
+                    result = method.invoke(instance, args.get().toArray());
+                } catch (NoSuchMethodException e) {
+                    throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
+                }
+            } else {
                 // Look for a field with the given name.
                 try {
                     Field field = cls.getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException f) {
-                    throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
+                    throw new Exceptions.InvalidCallError(cls.getName(), attrName);
                 }
             }
         } catch (IllegalAccessException e) {
