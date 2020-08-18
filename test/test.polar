@@ -69,7 +69,3 @@ testCut() if
 testHttpAndPathMapper() if
     new Http("foo", "/", {x: 1}).hostname = "foo"
     and new PathMapper("/foo/{id}/bar/{ego}").map("/foo/1/bar/2") = {id: "1", ego: "2"};
-
-testFunctions() if
-    list = new E([1, 2, 3]) and
-    list.map(E.plus_one) = [2, 3, 4];

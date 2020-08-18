@@ -400,11 +400,9 @@ def test_runtime_errors(polar, query):
         str(e.value)
         == """trace (most recent evaluation last):
   in query at line 1, column 1
-    foo(1, 2)
+    foo(1,2)
   in rule foo at line 2, column 17
-    _a_3 in _b_4
-  in rule foo at line 2, column 17
-    _a_3 in _b_4
+    a in b
 Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 2, column 17"""
     )
 
@@ -666,3 +664,23 @@ def test_return_none(polar, qeval):
     assert str(e.value).find(
         "Application error: 'NoneType' object has no attribute 'bad_call'"
     )
+
+
+def test_return_none(polar, qeval):
+    class Foo(list):
+        @staticmethod
+        def plus_one(x):
+            return x + 1
+
+        def map(self, f):
+            return [f(x) for x in self]
+
+    polar.register_class(Foo)
+    # polar.load_str("""
+    #     testFunctions() if
+    #     list = new E([1, 2, 3]) and
+    #     list.map(E.plus_one) = [2, 3, 4];
+
+    # """)
+    polar.load_str("f(x: Foo) if x.map(Foo.plus_one) = [2, 3, 4];")
+    assert next(polar.query_rule("f", Foo([1, 2, 3])))

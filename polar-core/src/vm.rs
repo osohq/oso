@@ -664,6 +664,10 @@ impl PolarVirtualMachine {
                     rule = Some(r.clone());
                 }
                 Node::Term(t) => {
+                    if matches!(t.value(), Value::Expression(Operation { operator: Operator::And, args}) if args.len() == 1)
+                    {
+                        continue;
+                    }
                     let _ = write!(st, "\n  ");
                     let source = { self.kb.read().unwrap().sources.get_source(&t) };
                     if let Some(source) = source {
@@ -679,7 +683,7 @@ impl PolarVirtualMachine {
                         }
                         let _ = writeln!(st);
                     };
-                    let _ = write!(st, "    {}", t.to_polar());
+                    let _ = write!(st, "    {}", self.term_source(t));
                 }
             }
         }

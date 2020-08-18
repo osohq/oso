@@ -584,11 +584,9 @@ describe('errors', () => {
       expect(() => query(p, 'foo(1,2)')).toThrow(
         `trace (most recent evaluation last):
   in query at line 1, column 1
-    foo(1, 2)
+    foo(1,2)
   in rule foo at line 1, column 13
-    _a_3 in _b_4
-  in rule foo at line 1, column 13
-    _a_3 in _b_4
+    a in b
 Type error: can only use \`in\` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13`
       );
     });
@@ -598,8 +596,14 @@ Type error: can only use \`in\` on a list, this is Variable(Symbol("_a_3")) at l
       p.registerClass(A);
       expect(query(p, 'new A() = {bar: "bar"}')).toStrictEqual([]);
       expect(() => query(p, 'new A().bar = "bar"')).toThrow(
-        "Application error: Attribute 'bar' does not exist on {} at line 1, column 1"
-      );
+        `trace (most recent evaluation last):
+  in query at line 1, column 1
+    new A().bar = \"bar\"
+  in query at line 1, column 1
+    new A().bar = \"bar\"
+  in query at line 1, column 1
+    new A().bar
+Application error: Attribute 'bar' does not exist on A {} at line 1, column 1`);
     });
   });
 });

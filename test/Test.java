@@ -36,25 +36,6 @@ class Test {
         }
     }
 
-    public static class E {
-        int[] x;
-        public E(int[] x){
-            this.x = x;
-        }
-
-        public int[] map(Function f) {
-            int[] result = x.clone();
-            for(int i = 0; i < result.length; i++) {
-                result[i] = f(x[i]);
-            }
-            return result;
-        }
-
-        public static int plus_one(int x) {
-            return x + 1;
-        }
-    }
-
     public static void main(String[] args) throws IOException, NoSuchMethodException, Exceptions.OsoException {
         Oso o = new Oso();
         o.registerClass(A.class, "A");
@@ -109,7 +90,6 @@ class Test {
         assert o.query("builtinSpecializers({foo: \"bar\"}, \"Dictionary\")").results().isEmpty();
         assert !o.query("builtinSpecializers(\"foo\", \"String\")").results().isEmpty();
         assert o.query("builtinSpecializers(\"bar\", \"String\")").results().isEmpty();
-        assert o.query("testFunctions()").results().isEmpty();
 
         System.out.println("Tests Pass");
     }
