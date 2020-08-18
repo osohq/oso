@@ -497,6 +497,7 @@ jobs:
         with:
           name: oso_js_node
       - name: Create JS release artifact
+        working-directory: oso_js_node
         run: npm pack
       # - name: Download docs
       #   uses: actions/download-artifact@v1
@@ -567,7 +568,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./oso-${{ steps.version.outputs.oso_version }}.tgz
+          asset_path: ./oso_js_node/oso-${{ steps.version.outputs.oso_version }}.tgz
           asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.tgz
           asset_content_type: application/gzip
       # - name: Upload Release Docs
