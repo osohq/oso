@@ -100,6 +100,7 @@ exclude_patterns = [
     "ruby/README.md",
     "more/language/polar-classes.rst",  # we don't currently have classes
     "**/venv/**",
+    "**/node_modules/**",
 ]
 
 # Don't copy the source or show a link

@@ -5,7 +5,7 @@
 # - representing hierachies
 
 allow(actor: User, "view", resource: Expense) if
-    employee = actor.employees and
+    employee = actor.employees() and
     employee.name = resource.submittedBy;
 
 # start-manages-rule
