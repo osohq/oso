@@ -149,7 +149,7 @@ yielded values one at a time.
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
 
-  allow(actor, action, resource) if actor.get_group = "payroll";
+  allow(actor, action, resource) if actor.get_group() = "payroll";
 
 .. code-block:: ruby
   :caption: :fas:`gem` app.rb
