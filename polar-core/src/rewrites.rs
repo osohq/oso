@@ -272,7 +272,10 @@ mod tests {
         let mut term = parse_query("{x: 1}.x = 1");
         assert_eq!(term.to_polar(), "{x: 1}.x = 1");
         rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), ".({x: 1}, \"x\", _value_5) and _value_5 = 1");
+        assert_eq!(
+            term.to_polar(),
+            ".({x: 1}, \"x\", _value_5) and _value_5 = 1"
+        );
     }
 
     #[test]

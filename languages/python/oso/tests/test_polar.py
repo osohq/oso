@@ -440,7 +440,9 @@ def test_return_list(polar, query):
     polar.register_class(Actor)
 
     # for testing lists
-    polar.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups();')
+    polar.load_str(
+        'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
+    )
 
     assert query(Predicate(name="allow", args=[Actor(), "join", "party"]))
 

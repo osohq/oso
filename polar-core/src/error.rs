@@ -226,11 +226,9 @@ pub enum RuntimeError {
 impl RuntimeError {
     pub fn add_stack_trace(&mut self, vm: &crate::vm::PolarVirtualMachine) {
         match self {
-            Self::Application {
-                stack_trace ,..
-            } | Self::TypeError {
-                stack_trace, ..
-            } => *stack_trace = Some(vm.stack_trace()),
+            Self::Application { stack_trace, .. } | Self::TypeError { stack_trace, .. } => {
+                *stack_trace = Some(vm.stack_trace())
+            }
             _ => {}
         }
     }

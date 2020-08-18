@@ -1000,16 +1000,11 @@ impl PolarVirtualMachine {
                 name.clone(),
                 Some(args.iter().map(|arg| self.deref(arg)).collect()),
             ),
-            Value::String(field) => {
-                (Symbol(field.clone()), None )
-            }
+            Value::String(field) => (Symbol(field.clone()), None),
             v => {
                 return Err(self.type_error(
                     &field,
-                    format!(
-                        "can only perform field lookups, this is a {:?}",
-                        v
-                    ),
+                    format!("can only perform field lookups, this is a {:?}", v),
                 ))
             }
         };
@@ -1410,7 +1405,15 @@ impl PolarVirtualMachine {
             | Value::List(_)
             | Value::Number(_)
             | Value::String(_) => {
-                let value = value.value().clone().symbol().map_err(|mut e| {e.add_stack_trace(self); e}).expect("bad lookup value");
+                let value = value
+                    .value()
+                    .clone()
+                    .symbol()
+                    .map_err(|mut e| {
+                        e.add_stack_trace(self);
+                        e
+                    })
+                    .expect("bad lookup value");
                 let call_id = self.new_call_id(&value);
                 self.push_goal(Goal::LookupExternal {
                     call_id,

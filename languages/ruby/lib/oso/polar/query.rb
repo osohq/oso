@@ -43,7 +43,7 @@ module Oso
       # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
-      def register_call(attribute, call_id:, instance:, args:)
+      def register_call(attribute, call_id:, instance:, args:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         return if calls.key?(call_id)
 
         instance = host.to_ruby(instance)
