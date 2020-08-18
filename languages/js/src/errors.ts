@@ -1,3 +1,5 @@
+import { repr } from './helpers';
+
 export class PolarError extends Error {
   constructor(msg: string) {
     super(msg);
@@ -44,14 +46,14 @@ export class InlineQueryFailedError extends PolarError {
 
 export class InvalidCallError extends PolarError {
   constructor(attr: string, instance: any) {
-    super(`Method '${attr}' does not exist on ${JSON.stringify(instance)}`);
+    super(`Method '${attr}' does not exist on ${repr(instance)}`);
     Object.setPrototypeOf(this, InvalidCallError.prototype);
   }
 }
 
 export class InvalidAttributeError extends PolarError {
   constructor(attr: string, instance: any) {
-    super(`Attribute '${attr}' does not exist on ${JSON.stringify(instance)}`);
+    super(`Attribute '${attr}' does not exist on ${repr(instance)}`);
     Object.setPrototypeOf(this, InvalidAttributeError.prototype);
   }
 }
