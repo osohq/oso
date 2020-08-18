@@ -4,5 +4,5 @@
     "noEmit": false
   },
   "include": ["src/**/*", "test/parity.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts", "src/polar_wasm_api*"]
 }
