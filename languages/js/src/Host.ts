@@ -47,7 +47,6 @@ export class Host {
 
   cacheClass<T>(cls: Class<T>, name?: string): string {
     const clsName = name === undefined ? cls.name : name;
-    console.assert(clsName, cls.toString());
     const existing = this.#classes.get(clsName);
     if (existing !== undefined)
       throw new DuplicateClassAliasError({
@@ -65,9 +64,8 @@ export class Host {
 
   // Public for the test suite.
   getInstance(id: number): any {
-    const instance = this.#instances.get(id);
-    if (instance === undefined) throw new UnregisteredInstanceError(id);
-    return instance;
+    if (!this.hasInstance(id)) throw new UnregisteredInstanceError(id);
+    return this.#instances.get(id);
   }
 
   private cacheInstance(instance: any, id?: number): number {
@@ -88,6 +86,7 @@ export class Host {
 
   isSubspecializer(id: number, left: string, right: string): boolean {
     const instance = this.getInstance(id);
+    if (!(instance?.constructor instanceof Function)) return false;
     const mro = ancestors(instance.constructor);
     const leftIndex = mro.indexOf(this.getClass(left));
     const rightIndex = mro.indexOf(this.getClass(right));
@@ -103,14 +102,14 @@ export class Host {
   isa(instance: PolarTerm, name: string): boolean {
     const jsInstance = this.toJs(instance);
     const cls = this.getClass(name);
-    return jsInstance instanceof cls || jsInstance.constructor === cls;
+    return jsInstance instanceof cls || jsInstance?.constructor === cls;
   }
 
   unify(left: number, right: number): boolean {
     return isEqual(this.getInstance(left), this.getInstance(right));
   }
 
-  toPolarTerm(v: any): PolarTerm {
+  toPolar(v: any): PolarTerm {
     switch (true) {
       case typeof v === 'boolean':
         return { value: { Boolean: v } };
@@ -121,11 +120,9 @@ export class Host {
       case typeof v === 'string':
         return { value: { String: v } };
       case Array.isArray(v):
-        return {
-          value: { List: v.map((el: unknown) => this.toPolarTerm(el)) },
-        };
+        return { value: { List: v.map((el: unknown) => this.toPolar(el)) } };
       case v instanceof Predicate:
-        const args = v.args.map((el: unknown) => this.toPolarTerm(el));
+        const args = v.args.map((el: unknown) => this.toPolar(el));
         return { value: { Call: { name: v.name, args } } };
       case v instanceof Variable:
         return { value: { Variable: v.name } };

@@ -1,3 +1,5 @@
+import { inspect } from 'util';
+
 import {
   InvalidQueryEventError,
   KwargsConstructorError,
@@ -20,7 +22,7 @@ export function ancestors(cls: Function): Function[] {
 }
 
 export function repr(x: any): string {
-  return typeof x.toString === 'function' ? x.toString() : JSON.stringify(x);
+  return inspect(x);
 }
 
 export function parseQueryEvent(event: string | obj): QueryEvent {
@@ -42,6 +44,8 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
         return parseExternalUnify(event['ExternalUnify']);
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
+      case event['ExternalOp'] !== undefined:
+        throw new PolarError('Comparing JS objects is not yet supported.');
       default:
         throw new Error();
     }

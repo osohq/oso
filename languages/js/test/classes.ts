@@ -45,6 +45,12 @@ export class Animal {
   }
 }
 
+export class Async {
+  wait(): Promise<number> {
+    return new Promise(res => res(1));
+  }
+}
+
 export class B extends A {
   b() {
     return 'B';
@@ -61,6 +67,12 @@ export class Bar {
   }
 }
 
+export class Belonger {
+  groups() {
+    return ['engineering', 'social', 'admin'];
+  }
+}
+
 export class C extends B {
   c() {
     return 'C';
@@ -71,8 +83,6 @@ export class C extends B {
   }
 }
 
-export class ConstructorNoArgs {}
-
 export class ConstructorArgs {
   readonly bar: number;
   readonly baz: number;
@@ -82,6 +92,8 @@ export class ConstructorArgs {
     this.baz = baz;
   }
 }
+
+export class ConstructorNoArgs {}
 
 let counter = 0;
 
@@ -134,12 +146,6 @@ export class Foo {
 
   h() {
     return true;
-  }
-}
-
-export class Belonger {
-  groups() {
-    return ['engineering', 'social', 'admin'];
   }
 }
 

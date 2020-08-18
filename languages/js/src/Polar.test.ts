@@ -15,6 +15,7 @@ import {
   A,
   Actor,
   Animal,
+  Async,
   B,
   Bar,
   Belonger,
@@ -429,8 +430,8 @@ describe('#makeInstance', () => {
   test('handles positional args', () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
-    const one = p.__host().toPolarTerm(1);
-    const two = p.__host().toPolarTerm(2);
+    const one = p.__host().toPolar(1);
+    const two = p.__host().toPolar(2);
     const id = p.__host().makeInstance(ConstructorArgs.name, [one, two], 1);
     const instance = p.__host().getInstance(id);
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
@@ -500,6 +501,24 @@ describe('#registerConstant', () => {
     p.registerConstant('x', 1);
     p.registerConstant('x', 2);
     expect(() => p.loadStr('?= x == 2;')).not.toThrow();
+  });
+});
+
+describe('unifying promises', () => {
+  test('fails if both promises are the same object', () => {
+    const p = new Polar();
+    p.registerClass(Async);
+    const result = Array.from(p.query('new Async().wait() = x and x = x'));
+    expect(result).toStrictEqual([]);
+  });
+
+  test('fails if the promises are different objects', () => {
+    const p = new Polar();
+    p.registerClass(Async);
+    const result = Array.from(
+      p.query('new Async().wait() = new Async().wait()')
+    );
+    expect(result).toStrictEqual([]);
   });
 });
 
