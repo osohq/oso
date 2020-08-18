@@ -622,6 +622,11 @@ impl PolarVirtualMachine {
         rule
     }
 
+    /// Get a generic rule by name.
+    fn get_generic_rule(&self, name: &Symbol) -> Option<GenericRule> {
+        self.kb.read().unwrap().rules.get(name).cloned()
+    }
+
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
         self.messages.push(MessageKind::Print, message.to_owned());
@@ -1112,19 +1117,20 @@ impl PolarVirtualMachine {
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
-        let generic_rule = {
-            let kb = self.kb.read().unwrap();
-            kb.rules.get(&predicate.name).cloned()
-        };
-        match generic_rule {
+        match self.get_generic_rule(&predicate.name) {
             None => self.push_goal(Goal::Backtrack)?,
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
+
+                // Pre-filter rules.
+                let pre_filter = generic_rule.get_applicable_rules(&predicate.args);
+
+                // Filter rules by applicability.
                 self.append_goals(vec![
                     Goal::TracePush,
                     Goal::FilterRules {
                         applicable_rules: vec![],
-                        unfiltered_rules: generic_rule.rules,
+                        unfiltered_rules: pre_filter,
                         args: predicate.args,
                     },
                     Goal::TracePop,
@@ -1211,20 +1217,28 @@ impl PolarVirtualMachine {
                 assert_eq!(args.len(), 2);
                 let item = &args[0];
                 let list = self.deref(&args[1]);
-                let mut alternatives = vec![];
-
                 match list.value() {
                     Value::List(list) if list.is_empty() => {
+                        // Nothing is in an empty list.
                         self.backtrack()?;
-                        return Ok(QueryEvent::None);
                     }
-                    Value::List(list) => {
-                        for term in list {
-                            alternatives.push(vec![Goal::Unify {
-                                left: item.clone(),
-                                right: term.clone(),
-                            }])
-                        }
+                    Value::List(terms) => {
+                        // Unify item with each element of the list, skipping non-matching ground terms.
+                        let x = self.deref(item);
+                        let v = x.value();
+                        let g = v.is_ground();
+                        self.choose(
+                            terms
+                                .iter()
+                                .filter(|term| !g || !term.is_ground() || term.value() == v)
+                                .map(|term| {
+                                    vec![Goal::Unify {
+                                        left: item.clone(),
+                                        right: term.clone(),
+                                    }]
+                                })
+                                .collect::<Vec<Goals>>(),
+                        )?;
                     }
                     _ => {
                         return Err(self.type_error(
@@ -1233,7 +1247,6 @@ impl PolarVirtualMachine {
                         ));
                     }
                 }
-                self.choose(alternatives)?;
             }
             Operator::Debug => {
                 let mut message = "Welcome to the debugger!".to_string();
@@ -1807,7 +1820,7 @@ impl PolarVirtualMachine {
         if unfiltered_rules.is_empty() {
             // The rules have been filtered. Sort them.
             self.push_goal(Goal::SortRules {
-                rules: applicable_rules.iter().cloned().rev().collect(),
+                rules: applicable_rules.iter().rev().cloned().collect(),
                 args: args.clone(),
                 outer: 1,
                 inner: 1,
@@ -1816,6 +1829,7 @@ impl PolarVirtualMachine {
             // Check one rule for applicability.
             let mut unfiltered_rules = unfiltered_rules.clone();
             let rule = unfiltered_rules.pop().unwrap();
+
             let inapplicable = Goal::FilterRules {
                 args: args.clone(),
                 applicable_rules: applicable_rules.clone(),
@@ -1832,6 +1846,11 @@ impl PolarVirtualMachine {
                 applicable_rules,
                 unfiltered_rules,
             };
+
+            // The prefilter already checks applicability for ground rules.
+            if rule.is_ground() {
+                return self.push_goal(applicable);
+            }
 
             // Try to unify the arguments with renamed parameters.
             // TODO: Think about using backtrack so that we don't
@@ -2232,10 +2251,7 @@ mod tests {
         let f1 = rule!("f", [1]);
         let f2 = rule!("f", [2]);
 
-        let rule = GenericRule {
-            name: sym!("f"),
-            rules: vec![Arc::new(f1), Arc::new(f2)],
-        };
+        let rule = GenericRule::new(sym!("f"), vec![Arc::new(f1), Arc::new(f2)]);
 
         let mut kb = KnowledgeBase::new();
         kb.rules.insert(rule.name.clone(), rule);

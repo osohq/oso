@@ -36,7 +36,5 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Improved performance of policies with many rules having ground (constant) parameters.
+- Improved performance of ``in`` operator (list membership) with many ground elements.

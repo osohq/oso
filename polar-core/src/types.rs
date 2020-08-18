@@ -3,7 +3,8 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -14,7 +15,7 @@ pub use super::{error, formatting::ToPolarString};
 /// but can translate to and from this type.
 pub type Bindings = HashMap<Symbol, Term>;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
     pub fields: BTreeMap<Symbol, Term>,
 }
@@ -56,7 +57,7 @@ pub fn field_name(field: &Term) -> Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
@@ -84,7 +85,7 @@ impl InstanceLiteral {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ExternalInstance {
     pub instance_id: u64,
     pub constructor: Option<Term>,
@@ -120,13 +121,13 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Predicate {
     pub name: Symbol,
     pub args: TermList,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
     Debug,
     Print,
@@ -183,14 +184,14 @@ impl Operator {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Operation {
     pub operator: Operator,
     pub args: TermList,
 }
 
 /// Represents a pattern in a specializer or after isa.
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Pattern {
     Dictionary(Dictionary),
     Instance(InstanceLiteral),
@@ -217,7 +218,7 @@ pub enum Numeric {
     Float(f64),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Value {
     Number(Numeric),
     String(String),
@@ -276,9 +277,25 @@ impl Value {
             }),
         }
     }
+
+    pub fn is_ground(&self) -> bool {
+        match self {
+            Value::Call(_)
+            | Value::ExternalInstance(_)
+            | Value::Variable(_)
+            | Value::RestVariable(_) => false,
+            Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
+            Value::InstanceLiteral(_) | Value::Pattern(_) => panic!("unexpected value type"),
+            Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
+            Value::List(terms) => terms.iter().all(|t| t.is_ground()),
+            Value::Expression(Operation { operator: _, args }) => {
+                args.iter().all(|t| t.is_ground())
+            }
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 enum SourceInfo {
     // From the parser
     Parser {
@@ -324,6 +341,16 @@ impl PartialEq for Term {
 }
 
 impl Eq for Term {}
+
+impl Hash for Term {
+    /// Hash just the value, not source information.
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.value().hash(state)
+    }
+}
 
 impl Term {
     /// Creates a new term for a temporary variable
@@ -439,6 +466,10 @@ impl Term {
     pub fn value(&self) -> &Value {
         &self.value
     }
+
+    pub fn is_ground(&self) -> bool {
+        self.value().is_ground()
+    }
 }
 
 pub fn unwrap_and(term: Term) -> TermList {
@@ -451,7 +482,7 @@ pub fn unwrap_and(term: Term) -> TermList {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Parameter {
     pub parameter: Term,
     pub specializer: Option<Term>,
@@ -465,9 +496,13 @@ impl Parameter {
         self.parameter.map_replace(f);
         self.specializer.iter_mut().for_each(|p| p.map_replace(f));
     }
+
+    pub fn is_ground(&self) -> bool {
+        self.specializer.is_none() && self.parameter.value().is_ground()
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Rule {
     pub name: Symbol,
     pub params: Vec<Parameter>,
@@ -482,19 +517,125 @@ impl Rule {
         self.params.iter_mut().for_each(|p| p.map_replace(f));
         self.body.map_replace(f);
     }
+
+    pub fn is_ground(&self) -> bool {
+        self.params.iter().all(|p| p.is_ground())
+    }
 }
 
 pub type Rules = Vec<Arc<Rule>>;
 
+type RuleSet = BTreeSet<u64>;
+
+#[derive(Clone, Default, Debug)]
+struct RuleIndex {
+    rules: RuleSet,
+    index: HashMap<Option<Value>, RuleIndex>,
+}
+
+impl RuleIndex {
+    pub fn index_rule(&mut self, rule_id: u64, params: &[Parameter], i: usize) {
+        if i < params.len() {
+            self.index
+                .entry({
+                    if params[i].is_ground() {
+                        Some(params[i].parameter.value().clone())
+                    } else {
+                        None
+                    }
+                })
+                .or_insert_with(RuleIndex::default)
+                .index_rule(rule_id, params, i + 1);
+        } else {
+            self.rules.insert(rule_id);
+        }
+    }
+
+    #[allow(clippy::comparison_chain)]
+    pub fn get_applicable_rules(&self, args: &[Term], i: usize) -> RuleSet {
+        if i < args.len() {
+            // Check this argument and recurse on the rest.
+            let filter_next_args =
+                |index: &RuleIndex| -> RuleSet { index.get_applicable_rules(args, i + 1) };
+            let arg = args[i].value();
+            if arg.is_ground() {
+                // Check the index for a ground argument.
+                let mut ruleset = self
+                    .index
+                    .get(&Some(arg.clone()))
+                    .map(|index| filter_next_args(index))
+                    .unwrap_or_else(RuleSet::default);
+
+                // Extend for a variable parameter.
+                if let Some(index) = self.index.get(&None) {
+                    ruleset.extend(filter_next_args(index));
+                }
+                ruleset
+            } else {
+                // Accumulate all indexed arguments.
+                self.index.values().fold(
+                    RuleSet::default(),
+                    |mut result: RuleSet, index: &RuleIndex| {
+                        result.extend(filter_next_args(index).into_iter());
+                        result
+                    },
+                )
+            }
+        } else {
+            // No more arguments.
+            self.rules.clone()
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct GenericRule {
     pub name: Symbol,
-    pub rules: Rules,
+    rules: HashMap<u64, Arc<Rule>>,
+    index: RuleIndex,
+    next_rule_id: u64,
 }
 
 impl GenericRule {
     pub fn new(name: Symbol, rules: Rules) -> Self {
-        GenericRule { name, rules }
+        let mut generic_rule = Self {
+            name,
+            rules: Default::default(),
+            index: Default::default(),
+            next_rule_id: 0,
+        };
+
+        for rule in rules {
+            generic_rule.add_rule(rule);
+        }
+
+        generic_rule
+    }
+
+    pub fn add_rule(&mut self, rule: Arc<Rule>) {
+        let rule_id = self.next_rule_id();
+
+        assert!(
+            self.rules.insert(rule_id, rule.clone()).is_none(),
+            "Rule id already used."
+        );
+        self.index.index_rule(rule_id, &rule.params[..], 0);
+    }
+
+    #[allow(clippy::ptr_arg)]
+    pub fn get_applicable_rules(&self, args: &TermList) -> Rules {
+        self.index
+            .get_applicable_rules(&args, 0)
+            .iter()
+            .map(|id| self.rules.get(id).expect("Rule missing"))
+            .cloned()
+            .collect()
+    }
+
+    fn next_rule_id(&mut self) -> u64 {
+        let v = self.next_rule_id;
+        self.next_rule_id += 1;
+        v
     }
 }
 
@@ -747,7 +888,11 @@ impl Default for MessageQueue {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
+    use crate::polar::Polar;
+
     #[test]
     fn serialize_test() {
         let pred = Predicate {
@@ -822,5 +967,85 @@ mod tests {
         assert_eq!(MAX_ID, kb.new_id());
         assert_eq!(1, kb.new_id());
         assert_eq!(2, kb.new_id());
+    }
+
+    #[test]
+    fn test_value_hash() {
+        let mut table = HashMap::new();
+        table.insert(value!(0), "0");
+        table.insert(value!(1), "1");
+        table.insert(value!("one"), "one");
+        table.insert(value!(btreemap! {sym!("a") => term!(1)}), "a:1");
+        table.insert(value!(btreemap! {sym!("b") => term!(2)}), "b:2");
+        assert_eq!(*table.get(&value!(0)).unwrap(), "0");
+        assert_eq!(*table.get(&value!(1)).unwrap(), "1");
+        assert_eq!(*table.get(&value!(1.0)).unwrap(), "1");
+        assert_eq!(*table.get(&value!("one")).unwrap(), "one");
+        assert_eq!(
+            *table
+                .get(&value!(btreemap! {sym!("a") => term!(1)}))
+                .unwrap(),
+            "a:1"
+        );
+        assert_eq!(
+            *table
+                .get(&value!(btreemap! {sym!("b") => term!(2)}))
+                .unwrap(),
+            "b:2"
+        );
+    }
+
+    #[test]
+    fn test_rule_index() {
+        let polar = Polar::new(None);
+        polar.load(r#"f(1, 1, "x");"#).unwrap();
+        polar.load(r#"f(1, 1, "y");"#).unwrap();
+        polar.load(r#"f(1, x, "y") if x = 2;"#).unwrap();
+        polar.load(r#"f(1, 2, {b: "y"});"#).unwrap();
+        polar.load(r#"f(1, 3, {c: "z"});"#).unwrap();
+
+        // Test the index itself.
+        let kb = polar.kb.read().unwrap();
+        let generic_rule = kb.rules.get(&sym!("f")).unwrap();
+        let index = &generic_rule.index;
+        assert!(index.rules.is_empty());
+
+        fn keys(index: &RuleIndex) -> HashSet<Option<Value>> {
+            index.index.keys().cloned().collect()
+        }
+
+        let mut args = HashSet::<Option<Value>>::new();
+
+        args.clear();
+        args.insert(Some(value!(1)));
+        assert_eq!(args, keys(index));
+
+        args.clear();
+        args.insert(None); // x
+        args.insert(Some(value!(1)));
+        args.insert(Some(value!(2)));
+        args.insert(Some(value!(3)));
+        let index1 = index.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index1));
+
+        args.clear();
+        args.insert(Some(value!("x")));
+        args.insert(Some(value!("y")));
+        let index11 = index1.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index11));
+
+        args.remove(&Some(value!("x")));
+        let index1_ = index1.index.get(&None).unwrap();
+        assert_eq!(args, keys(index1_));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("b") => term!("y")})));
+        let index12 = index1.index.get(&Some(value!(2))).unwrap();
+        assert_eq!(args, keys(index12));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("c") => term!("z")})));
+        let index13 = index1.index.get(&Some(value!(3))).unwrap();
+        assert_eq!(args, keys(index13));
     }
 }

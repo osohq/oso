@@ -1072,7 +1072,7 @@ fn test_rest_vars() {
 }
 
 #[test]
-fn test_in() {
+fn test_in_op() {
     let mut polar = Polar::new(None);
     polar.load("f(x, y) if x in y;").unwrap();
     assert!(qeval(&mut polar, "f(1, [1,2,3])"));
@@ -1080,25 +1080,29 @@ fn test_in() {
         qvar(&mut polar, "f(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
     );
+
+    // Failure.
+    assert!(qnull(&mut polar, "4 in [1,2,3]"));
     assert!(qeval(&mut polar, "4 in [1,2,3] or 1 in [1,2,3]"));
 
-    // strange test case but it's important to note that this returns
-    // 3 results, with 1 binding each
+    // Make sure we scan the whole list.
+    let query = polar.new_query("1 in [1, 2, x, 1]", false).unwrap();
+    let results = query_results!(query);
+    assert_eq!(results.len(), 3);
+    assert!(results[0].0.is_empty());
+    assert_eq!(
+        results[1].0.get(&Symbol("x".to_string())).unwrap().clone(),
+        value!(1)
+    );
+    assert!(results[2].0.is_empty());
+
+    // This returns 3 results, with 1 binding each.
     let query = polar.new_query("f(1, [x,y,z])", false).unwrap();
     let results = query_results!(query);
     assert_eq!(results.len(), 3);
-    assert_eq!(
-        results[0].0.get(&Symbol("x".to_string())).unwrap().clone(),
-        value!(1)
-    );
-    assert_eq!(
-        results[1].0.get(&Symbol("y".to_string())).unwrap().clone(),
-        value!(1)
-    );
-    assert_eq!(
-        results[2].0.get(&Symbol("z".to_string())).unwrap().clone(),
-        value!(1)
-    );
+    assert_eq!(results[0].0[&sym!("x")], value!(1));
+    assert_eq!(results[1].0[&sym!("y")], value!(1));
+    assert_eq!(results[2].0[&sym!("z")], value!(1));
 
     assert!(qeval(&mut polar, "f({a:1}, [{a:1}, b, c])"));
 
@@ -1109,13 +1113,13 @@ fn test_in() {
         ErrorKind::Runtime(RuntimeError::TypeError { .. })
     ));
 
-    // negation
+    // Negation.
     assert!(qeval(&mut polar, "not (4 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (1 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (2 in [1,2,3])"));
     assert!(qnull(&mut polar, "not (3 in [1,2,3])"));
 
-    // empty lists
+    // Nothing is in an empty list.
     assert!(qnull(&mut polar, "x in []"));
     assert!(qnull(&mut polar, "1 in []"));
     assert!(qnull(&mut polar, "\"foo\" in []"));
@@ -1203,13 +1207,13 @@ fn test_unify_rule_head() {
 
     let query = polar.new_query("f(new Foo{a: 1}, x)", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
-    assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
+    assert_eq!(results[0].0[&sym!("x")], value!(1));
 
     let query = polar
         .new_query("g(new Foo{a: new Foo{a: 1}}, x)", false)
         .unwrap();
     let (results, _externals) = query_results_with_externals(query);
-    assert_eq!(results[0].0.get(&sym!("x")).unwrap(), &value!(1));
+    assert_eq!(results[0].0[&sym!("x")], value!(1));
 }
 
 /// Test that cut commits to all choice points before the cut, not just the last.
@@ -1348,6 +1352,7 @@ fn test_float_parsing() {
     assert_eq!(qvar(&mut polar, "x=1.0E+15", "x"), vec![value!(1e15)]);
     assert_eq!(qvar(&mut polar, "x=1.0e-15", "x"), vec![value!(1e-15)]);
 }
+
 #[test]
 fn test_assignment() {
     let mut polar = Polar::new(None);
@@ -1370,4 +1375,100 @@ fn test_assignment() {
         e.kind,
         ErrorKind::Parse(ParseError::UnrecognizedToken { .. })
     ));
+}
+
+#[test]
+fn test_rule_index() {
+    let mut polar = Polar::new(None);
+    polar.load(r#"f(1, 1, "x");"#).unwrap();
+    polar.load(r#"f(1, 1, "y");"#).unwrap();
+    polar.load(r#"f(1, x, "y") if x = 2;"#).unwrap();
+    polar.load(r#"f(1, 2, {b: "y"});"#).unwrap();
+    polar.load(r#"f(1, 3, {c: "z"});"#).unwrap();
+
+    // Exercise the index.
+    assert!(qeval(&mut polar, r#"f(1, 1, "x")"#));
+    assert!(qeval(&mut polar, r#"f(1, 1, "y")"#));
+    assert_eq!(
+        qvar(&mut polar, r#"f(1, x, "y")"#, "x"),
+        vec![value!(1), value!(2)]
+    );
+    assert!(qnull(&mut polar, r#"f(1, 1, "z")"#));
+    assert!(qnull(&mut polar, r#"f(1, 2, "x")"#));
+    assert!(qeval(&mut polar, r#"f(1, 2, {b: "y"})"#));
+    assert!(qeval(&mut polar, r#"f(1, 3, {c: "z"})"#));
+}
+
+#[test]
+fn test_fib() {
+    let policy = r#"
+        fib(0, 1) if cut;
+        fib(1, 1) if cut;
+        fib(n, a+b) if fib(n-1, a) and fib(n-2, b);
+    "#;
+
+    let mut polar = Polar::new(None);
+    polar.load(policy).unwrap();
+
+    assert_eq!(qvar(&mut polar, r#"fib(0, x)"#, "x"), vec![value!(1)]);
+    assert_eq!(qvar(&mut polar, r#"fib(1, x)"#, "x"), vec![value!(1)]);
+    assert_eq!(qvar(&mut polar, r#"fib(2, x)"#, "x"), vec![value!(2)]);
+    assert_eq!(qvar(&mut polar, r#"fib(3, x)"#, "x"), vec![value!(3)]);
+    assert_eq!(qvar(&mut polar, r#"fib(4, x)"#, "x"), vec![value!(5)]);
+    assert_eq!(qvar(&mut polar, r#"fib(5, x)"#, "x"), vec![value!(8)]);
+}
+
+#[test]
+fn test_duplicated_rule() {
+    let policy = r#"
+        f(1);
+        f(1);
+    "#;
+
+    let mut polar = Polar::new(None);
+    polar.load(policy).unwrap();
+
+    assert_eq!(qvar(&mut polar, "f(x)", "x"), vec![value!(1), value!(1)]);
+}
+
+#[test]
+fn test_numeric_applicability() {
+    let mut polar = Polar::new(None);
+    let eps = f64::EPSILON;
+    let nan1 = f64::NAN;
+    let nan2 = f64::from_bits(f64::NAN.to_bits() | 1);
+    assert!(eps.is_normal() && nan1.is_nan() && nan2.is_nan());
+    polar.register_constant(sym!("eps"), term!(eps));
+    polar.register_constant(sym!("nan1"), term!(nan1));
+    polar.register_constant(sym!("nan2"), term!(nan2));
+
+    let policy = r#"
+        f(0);
+        f(1);
+        f(9007199254740991); # (1 << 53) - 1
+        f(9007199254740992); # (1 << 53)
+        f(9223372036854775807); # i64::MAX
+        f(-9223372036854775807); # i64::MIN + 1
+        f(9223372036854776000.0); # i64::MAX as f64
+        f(nan1); # NaN
+    "#;
+    polar.load(policy).unwrap();
+
+    assert!(qeval(&mut polar, "f(0)"));
+    assert!(qeval(&mut polar, "f(0.0)"));
+    assert!(qnull(&mut polar, "f(eps)"));
+    assert!(qeval(&mut polar, "f(1)"));
+    assert!(qeval(&mut polar, "f(1.0)"));
+    assert!(qnull(&mut polar, "f(1.0000000000000002)"));
+    assert!(qnull(&mut polar, "f(9007199254740990)"));
+    assert!(qnull(&mut polar, "f(9007199254740990.0)"));
+    assert!(qeval(&mut polar, "f(9007199254740991)"));
+    assert!(qeval(&mut polar, "f(9007199254740991.0)"));
+    assert!(qeval(&mut polar, "f(9007199254740992)"));
+    assert!(qeval(&mut polar, "f(9007199254740992.0)"));
+    assert!(qeval(&mut polar, "f(9223372036854775807)"));
+    assert!(qeval(&mut polar, "f(-9223372036854775807)"));
+    assert!(qeval(&mut polar, "f(9223372036854776000.0)"));
+    assert!(qnull(&mut polar, "f(nan1)"));
+    assert!(qnull(&mut polar, "f(nan2)"));
 }
