@@ -35,10 +35,21 @@ class Test {
         }
     }
 
+    public static class E {
+        public static int sum(int[] args) {
+            int sum = 0;
+            for(int arg: args) {
+                sum += arg;
+            }
+            return sum;
+        }
+    }
+
     public static void main(String[] args) throws IOException, NoSuchMethodException, Exceptions.OsoException {
         Oso o = new Oso();
         o.registerClass(A.class, "A");
         o.registerClass(BC.class, "C");
+        o.registerClass(E.class, "E");
         o.loadFile("test.polar");
         assert o.isAllowed("a", "b", "c");
 
@@ -68,6 +79,11 @@ class Test {
         assert o.queryRule("testCut").results().isEmpty();
 
         assert !o.queryRule("testHttpAndPathMapper").results().isEmpty();
+
+        // Test we can unify against a class
+        assert o.queryRule("testUnifyClass", A).results().isEmpty();
+        assert o.queryRule("testDerefJava").results().isEmpty();
+
 
         // Test that a constant can be called.
         o.registerConstant("Math", Math.class);

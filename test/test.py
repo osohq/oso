@@ -41,6 +41,15 @@ def custom_c_constructor(y):
 
 oso.register_class(B.C, name="C", from_polar=custom_c_constructor)
 
+
+class E:
+    @staticmethod
+    def sum(*args):
+        return sum(*args)
+
+
+oso.register_class(E)
+
 polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
 oso.load_file(polar_file)
 
@@ -71,6 +80,8 @@ assert list(oso.query_rule("testMatches", A("hello")))
 assert list(oso.query_rule("testMethodCalls", A("hello"), B.C("hello")))
 assert list(oso.query_rule("testOr"))
 assert list(oso.query_rule("testHttpAndPathMapper"))
+assert list(oso.query_rule("testUnifyClass", A))
+assert list(oso.query_rule("testDeref"))
 
 # Test that cut doesn't return anything.
 assert not list(oso.query_rule("testCut"))
@@ -95,3 +106,4 @@ assert list(oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")'))
 assert not list(oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")'))
 assert list(oso.query('builtinSpecializers("foo", "String")'))
 assert not list(oso.query('builtinSpecializers("bar", "String")'))
+assert list(oso.query('builtinSpecializers("foo", "String")'))

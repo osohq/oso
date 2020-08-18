@@ -37,6 +37,14 @@ module B
 end
 oso.register_class(B::C, name: 'C') { |y| B::C.new(y) }
 
+class E
+  def self.sum(args)
+    args.sum
+  end
+end
+
+oso.register_class(E)
+
 oso.load_file File.expand_path(File.join(__dir__, '../../../../test/test.polar'))
 
 raise unless oso.allowed?(actor: 'a', action: 'b', resource: 'c')
@@ -66,6 +74,8 @@ oso.query_rule('testMatches', A.new('hello')).next
 oso.query_rule('testMethodCalls', A.new('hello'), B::C.new('hello')).next
 oso.query_rule('testOr').next
 oso.query_rule('testHttpAndPathMapper').next
+oso.query_rule('testUnifyClass', A).next
+oso.query_rule('testDeref').next
 
 # Test that cut doesn't return anything.
 raise unless oso.query_rule('testCut').to_a.empty?
