@@ -63,7 +63,7 @@ interface PolarInstance {
   ExternalInstance: {
     instance_id: number;
     repr: string;
-    constructor?: PolarTerm
+    constructor?: PolarTerm;
   };
 }
 

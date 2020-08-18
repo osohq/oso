@@ -81,7 +81,7 @@ describe('#registerClass', () => {
     p.registerClass(Foo);
     p.registerClass(Bar);
     expect(qvar(p, 'new Foo("A").a = x', 'x', true)).toStrictEqual('A');
-    expect(() => qvar(p, 'new Foo("A").a() = x', 'x', true)).toThrow()
+    expect(() => qvar(p, 'new Foo("A").a() = x', 'x', true)).toThrow();
     expect(qvar(p, 'new Foo("A").b = x', 'x', true)).not.toStrictEqual('b');
     expect(qvar(p, 'new Foo("A").b() = x', 'x', true)).toStrictEqual('b');
     expect(qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual('c');

@@ -3,7 +3,11 @@ import type { Query as FfiQuery } from './polar_wasm_api';
 import { createInterface } from 'readline';
 
 import { parseQueryEvent } from './helpers';
-import { DuplicateInstanceRegistrationError, InvalidAttributeError, InvalidCallError } from './errors';
+import {
+  DuplicateInstanceRegistrationError,
+  InvalidAttributeError,
+  InvalidCallError,
+} from './errors';
 import { Host } from './Host';
 import type {
   PolarTerm,
@@ -43,10 +47,10 @@ export class Query {
     args?: PolarTerm[]
   ): void {
     if (this.#calls.has(callId)) return;
-    
+
     const jsInstance = this.#host.toJs(instance);
     const jsAttr = jsInstance[attr];
-    
+
     let result: Generator;
     if (args) {
       if (jsAttr === undefined) throw new InvalidCallError(attr, jsInstance);
@@ -76,7 +80,8 @@ export class Query {
         throw new InvalidCallError(attr, jsInstance);
       }
     } else {
-      if (jsAttr === undefined) throw new InvalidAttributeError(attr, jsInstance);
+      if (jsAttr === undefined)
+        throw new InvalidAttributeError(attr, jsInstance);
       result = (function* () {
         yield jsAttr;
       })();
