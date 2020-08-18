@@ -189,3 +189,9 @@ export interface QueryEvent {
 export type QueryResult = Generator<Map<string, any>, void, never>;
 
 export type obj = { [key: string]: any };
+
+export type EqualityFn = (x: any, y: any) => boolean;
+
+export interface Options {
+  equalityFn?: EqualityFn;
+}

@@ -1,5 +1,3 @@
-import isEqual from 'lodash/isEqual';
-
 import {
   DuplicateClassAliasError,
   UnregisteredClassError,
@@ -9,7 +7,7 @@ import { ancestors, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { Variable } from './Variable';
-import type { Class, obj, PolarTerm } from './types';
+import type { Class, EqualityFn, obj, PolarTerm } from './types';
 import {
   isPolarStr,
   isPolarNum,
@@ -25,18 +23,20 @@ export class Host {
   #ffiPolar: FfiPolar;
   #classes: Map<string, Class>;
   #instances: Map<number, any>;
+  #equalityFn: EqualityFn;
 
   static clone(host: Host): Host {
-    const clone = new Host(host.#ffiPolar);
+    const clone = new Host(host.#ffiPolar, host.#equalityFn);
     clone.#classes = new Map(host.#classes);
     clone.#instances = new Map(host.#instances);
     return clone;
   }
 
-  constructor(ffiPolar: FfiPolar) {
+  constructor(ffiPolar: FfiPolar, equalityFn: EqualityFn) {
     this.#ffiPolar = ffiPolar;
     this.#classes = new Map();
     this.#instances = new Map();
+    this.#equalityFn = equalityFn;
   }
 
   private getClass(name: string): Class {
@@ -106,7 +106,7 @@ export class Host {
   }
 
   unify(left: number, right: number): boolean {
-    return isEqual(this.getInstance(left), this.getInstance(right));
+    return this.#equalityFn(this.getInstance(left), this.getInstance(right));
   }
 
   toPolar(v: any): PolarTerm {
