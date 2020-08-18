@@ -44,8 +44,15 @@ export class InlineQueryFailedError extends PolarError {
 
 export class InvalidCallError extends PolarError {
   constructor(attr: string, instance: any) {
-    super(`Property '${attr}' does not exist on ${JSON.stringify(instance)}`);
+    super(`Method '${attr}' does not exist on ${JSON.stringify(instance)}`);
     Object.setPrototypeOf(this, InvalidCallError.prototype);
+  }
+}
+
+export class InvalidAttributeError extends PolarError {
+  constructor(attr: string, instance: any) {
+    super(`Attribute '${attr}' does not exist on ${JSON.stringify(instance)}`);
+    Object.setPrototypeOf(this, InvalidAttributeError.prototype);
   }
 }
 

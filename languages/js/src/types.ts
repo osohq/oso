@@ -63,6 +63,7 @@ interface PolarInstance {
   ExternalInstance: {
     instance_id: number;
     repr: string;
+    constructor?: PolarTerm
   };
 }
 
@@ -137,7 +138,7 @@ export interface ExternalCall {
   callId: number;
   instance: PolarTerm;
   attribute: string;
-  args: PolarTerm[];
+  args?: PolarTerm[];
 }
 
 export interface ExternalIsSubspecializer {

@@ -36,6 +36,7 @@ import {
   PolarFileExtensionError,
   PolarFileAlreadyLoadedError,
   PolarFileNotFoundError,
+  InvalidAttributeError,
 } from './errors';
 
 test('it works', () => {
@@ -80,25 +81,25 @@ describe('#registerClass', () => {
     p.registerClass(Foo);
     p.registerClass(Bar);
     expect(qvar(p, 'new Foo("A").a = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new Foo("A").a() = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new Foo("A").b = x', 'x', true)).toStrictEqual('b');
+    expect(() => qvar(p, 'new Foo("A").a() = x', 'x', true)).toThrow()
+    expect(qvar(p, 'new Foo("A").b = x', 'x', true)).not.toStrictEqual('b');
     expect(qvar(p, 'new Foo("A").b() = x', 'x', true)).toStrictEqual('b');
-    expect(qvar(p, 'new Foo("A").c = x', 'x', true)).toStrictEqual('c');
+    expect(qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual('c');
     expect(qvar(p, 'new Foo("A").c() = x', 'x', true)).toStrictEqual('c');
-    expect(qvar(p, 'new Foo("A") = f and f.a() = x', 'x', true)).toStrictEqual(
+    expect(qvar(p, 'new Foo("A") = f and f.a = x', 'x', true)).toStrictEqual(
       'A'
     );
     expect(qvar(p, 'new Foo("A").bar().y() = x', 'x', true)).toStrictEqual('y');
-    expect(qvar(p, 'new Foo("A").e = x', 'x')).toStrictEqual([[1, 2, 3]]);
-    expect(qvar(p, 'new Foo("A").f = x', 'x')).toStrictEqual([
+    expect(qvar(p, 'new Foo("A").e() = x', 'x')).toStrictEqual([[1, 2, 3]]);
+    expect(qvar(p, 'new Foo("A").f() = x', 'x')).toStrictEqual([
       [1, 2, 3],
       [4, 5, 6],
       7,
     ]);
-    expect(qvar(p, 'new Foo("A").g.hello = x', 'x', true)).toStrictEqual(
+    expect(qvar(p, 'new Foo("A").g().hello = x', 'x', true)).toStrictEqual(
       'world'
     );
-    expect(qvar(p, 'new Foo("A").h = x', 'x', true)).toBe(true);
+    expect(qvar(p, 'new Foo("A").h() = x', 'x', true)).toBe(true);
   });
 
   test('respects the JS prototype hierarchy for class specialization', () => {
@@ -115,16 +116,16 @@ describe('#registerClass', () => {
       try(_: C, res) if res = 3;
       try(_: A, res) if res = 1;
     `);
-    expect(qvar(p, 'new A().a = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new A().x = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new B().a = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new B().b = x', 'x', true)).toStrictEqual('B');
-    expect(qvar(p, 'new B().x = x', 'x', true)).toStrictEqual('B');
-    expect(qvar(p, 'new C().a = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new C().b = x', 'x', true)).toStrictEqual('B');
-    expect(qvar(p, 'new C().c = x', 'x', true)).toStrictEqual('C');
-    expect(qvar(p, 'new C().x = x', 'x', true)).toStrictEqual('C');
-    expect(qvar(p, 'new X().x = x', 'x', true)).toStrictEqual('X');
+    expect(qvar(p, 'new A().a() = x', 'x', true)).toStrictEqual('A');
+    expect(qvar(p, 'new A().x() = x', 'x', true)).toStrictEqual('A');
+    expect(qvar(p, 'new B().a() = x', 'x', true)).toStrictEqual('A');
+    expect(qvar(p, 'new B().b() = x', 'x', true)).toStrictEqual('B');
+    expect(qvar(p, 'new B().x() = x', 'x', true)).toStrictEqual('B');
+    expect(qvar(p, 'new C().a() = x', 'x', true)).toStrictEqual('A');
+    expect(qvar(p, 'new C().b() = x', 'x', true)).toStrictEqual('B');
+    expect(qvar(p, 'new C().c() = x', 'x', true)).toStrictEqual('C');
+    expect(qvar(p, 'new C().x() = x', 'x', true)).toStrictEqual('C');
+    expect(qvar(p, 'new X().x() = x', 'x', true)).toStrictEqual('X');
 
     expect(query(p, 'test(new A())')).toHaveLength(1);
     expect(query(p, 'test(new B())')).toHaveLength(2);
@@ -276,7 +277,7 @@ describe('conversions between JS + Polar values', () => {
     const actor = new Actor('sam');
     const widget = new Widget('1');
     const p = new Polar();
-    p.loadStr('allow(actor, resource) if actor.widget.id = resource.id;');
+    p.loadStr('allow(actor, resource) if actor.widget().id = resource.id;');
     const result = Array.from(p.queryRule('allow', actor, widget));
     expect(result).toStrictEqual([map()]);
   });
@@ -284,7 +285,7 @@ describe('conversions between JS + Polar values', () => {
   test('handles Generator external call results', () => {
     const actor = new Actor('sam');
     const p = new Polar();
-    p.loadStr('widgets(actor, x) if x = actor.widgets.id;');
+    p.loadStr('widgets(actor, x) if x = actor.widgets().id;');
     const result = Array.from(p.queryRule('widgets', actor, new Variable('x')));
     expect(result).toStrictEqual([map({ x: '2' }), map({ x: '3' })]);
   });
@@ -292,7 +293,7 @@ describe('conversions between JS + Polar values', () => {
   test('caches instances and does not leak them', () => {
     const p = new Polar();
     p.registerClass(Counter);
-    p.loadStr('f(c: Counter) if Counter.count > 0;');
+    p.loadStr('f(c: Counter) if Counter.count() > 0;');
     expect(Counter.count()).toBe(0);
     const c = new Counter();
     expect(Counter.count()).toBe(1);
@@ -396,7 +397,7 @@ describe('#queryRule', () => {
       const p = new Polar();
       p.registerClass(Belonger, 'Actor');
       p.loadStr(
-        'allow(actor: Actor, "join", "party") if "social" in actor.groups;'
+        'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
       );
       expect(
         Array.from(p.queryRule('allow', new Belonger(), 'join', 'party'))
@@ -454,7 +455,7 @@ describe('#registerConstant', () => {
     test('on numbers', () => {
       const p = new Polar();
       expect(
-        query(p, 'f = 314.159 and f.toExponential = "3.14159e+2"')
+        query(p, 'f = 314.159 and f.toExponential() = "3.14159e+2"')
       ).toStrictEqual([map({ f: 314.159 })]);
     });
 
@@ -597,7 +598,7 @@ Type error: can only use \`in\` on a list, this is Variable(Symbol("_a_3")) at l
       p.registerClass(A);
       expect(query(p, 'new A() = {bar: "bar"}')).toStrictEqual([]);
       expect(() => query(p, 'new A().bar = "bar"')).toThrow(
-        "Application error: Property 'bar' does not exist on {} at line 1, column 1"
+        "Application error: Attribute 'bar' does not exist on {} at line 1, column 1"
       );
     });
   });
