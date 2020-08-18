@@ -38,9 +38,9 @@ end
 oso.register_class(B::C, name: 'C') { |y| B::C.new(y) }
 
 class E < Array
-    def self.plus_one(x)
-      x+1
-    end
+  def self.plus_one(num)
+    num + 1
+  end
 end
 oso.register_class(E)
 

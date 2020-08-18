@@ -45,7 +45,7 @@ class E extends Array<number> {
     return x + 1;
   }
 }
-oso.registerClass(E)
+oso.registerClass(E);
 
 // This path has the same nesting for development and the parity test jobs by sheer coincidence.
 // In tests it's `languages/js/test/parity.ts`
