@@ -100,7 +100,9 @@ class Query:
                 args = [self.host.to_python(arg) for arg in data["args"]]
                 result = attr(*args)
             elif not data["args"] is None:
-                raise RuntimeError(f"tried to call '{attribute}' but it is not callable")
+                raise RuntimeError(
+                    f"tried to call '{attribute}' but it is not callable"
+                )
             else:  # If it's just an attribute, it's the result.
                 result = attr
 
