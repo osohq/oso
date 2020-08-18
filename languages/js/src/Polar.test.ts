@@ -603,7 +603,8 @@ Type error: can only use \`in\` on a list, this is Variable(Symbol("_a_3")) at l
     new A().bar = \"bar\"
   in query at line 1, column 1
     new A().bar
-Application error: Attribute 'bar' does not exist on A {} at line 1, column 1`);
+Application error: Attribute 'bar' does not exist on A {} at line 1, column 1`
+      );
     });
   });
 });
