@@ -172,7 +172,9 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
-    let query = polar.new_query(query_str, false).unwrap();
+    let query = polar
+        .new_query(query_str, false)
+        .expect("Expected result for var, got None");
     query_results!(query)
         .iter()
         .map(|bindings| bindings.0.get(&Symbol(var.to_string())).unwrap().clone())
@@ -1480,3 +1482,33 @@ fn test_numeric_applicability() {
     assert!(qnull(&mut polar, "f(nan1)"));
     assert!(qnull(&mut polar, "f(nan2)"));
 }
+
+#[test]
+fn test_list_results() {
+    let mut polar = Polar::new(None);
+    let policy = r#"
+    delete([x, *xs], x, ys) if delete(xs, x, ys);
+    delete([x, *xs], z, [x, *ys]) if
+        x != z and delete(xs, z, ys);
+    delete([], _, []);
+    "#;
+    polar.load(policy).unwrap();
+    assert!(qeval(&mut polar, "delete([1,2,3,2,1],2,[1,3,1])"));
+    assert_eq!(
+        qvar(&mut polar, "delete([1,2,3,2,1],2,result)", "result"),
+        vec![value!([value!(1), value!(3), value!(1)])]
+    );
+}
+// [List(
+//     [Term { source_info: Parser { src_id: 3, left: 8, right: 9 }, value: Number(Integer(1)) },
+//      Term { source_info: Parser { src_id: 1, left: 75, right: 83 }, value: List([
+//          Term { source_info: Parser { src_id: 3, left: 12, right: 13 }, value: Number(Integer(3)) },
+//          Term { source_info: Parser { src_id: 1, left: 75, right: 83 }, value: List([
+//              Term { source_info: Parser { src_id: 3, left: 16, right: 17 }, value: Number(Integer(1)) },
+//              Term { source_info: Parser { src_id: 1, left: 144, right: 146 }, value: List([
+//              ]) }
+//         ]) }
+//     ]) }
+// ])]
+
+// [1, [3, [ 1 []]]]

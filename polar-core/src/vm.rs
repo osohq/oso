@@ -543,6 +543,10 @@ impl PolarVirtualMachine {
     /// Recursively dereference a variable.
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
+            Value::List(list) => {
+                let derefed = list.iter().map(|t| self.deref(t)).collect();
+                term.clone_with_value(Value::List(derefed))
+            }
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
                 self.value(&symbol).map_or(term.clone(), |t| {
                     if t == term {
@@ -894,6 +898,34 @@ impl PolarVirtualMachine {
             }
 
             (_, Value::Variable(symbol)) => {
+                if let Some(value) = self.value(&symbol).cloned() {
+                    self.push_goal(Goal::Isa {
+                        left: left.clone(),
+                        right: value,
+                    })?;
+                } else {
+                    self.push_goal(Goal::Unify {
+                        left: left.clone(),
+                        right: right.clone(),
+                    })?;
+                }
+            }
+
+            (Value::RestVariable(symbol), _) => {
+                if let Some(value) = self.value(&symbol).cloned() {
+                    self.push_goal(Goal::Isa {
+                        left: value,
+                        right: right.clone(),
+                    })?;
+                } else {
+                    self.push_goal(Goal::Unify {
+                        left: left.clone(),
+                        right: right.clone(),
+                    })?;
+                }
+            }
+
+            (_, Value::RestVariable(symbol)) => {
                 if let Some(value) = self.value(&symbol).cloned() {
                     self.push_goal(Goal::Isa {
                         left: left.clone(),
@@ -1614,7 +1646,7 @@ impl PolarVirtualMachine {
             (_, Value::Variable(var)) => self.unify_var(var, left)?,
 
             // Unify rest-variables with list tails.
-            (Value::RestVariable(var), Value::List(_)) => self.unify_var(var, right)?,
+            (Value::RestVariable(var), _) => self.unify_var(var, right)?,
             (Value::List(_), Value::RestVariable(var)) => self.unify_var(var, left)?,
 
             // Unify lists by recursively unifying their elements.
@@ -1796,12 +1828,22 @@ impl PolarVirtualMachine {
         F: FnMut((&Term, &Term)) -> Goal,
     {
         assert!(has_rest_var(left));
+
+        // [1,2,*rest] , [1,*rest]
+        // [1, *rest], [1, *rest]
+
+        // left: [*rest], right: []
+
         let n = left.len() - 1;
-        if right.len() >= n {
-            let rest = unify((
-                &left[n].clone(),
-                &Term::new_temporary(Value::List(right[n..].to_vec())),
-            ));
+        if n > 0 && right.len() >= n {
+            let rest = if has_rest_var(right) && right.len() == left.len() {
+                unify((&left[n].clone(), &right[n].clone()))
+            } else {
+                unify((
+                    &left[n].clone(),
+                    &Term::new_temporary(Value::List(right[n..].to_vec())),
+                ))
+            };
             self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
         } else {
             self.push_goal(Goal::Backtrack)
