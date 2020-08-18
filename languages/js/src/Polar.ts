@@ -16,7 +16,7 @@ import { Query } from './Query';
 import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
-import type { Class, QueryResult } from './types';
+import type { Class, OsoOptions, QueryResult } from './types';
 
 export class Polar {
   #ffiPolar: FfiPolar;
@@ -24,9 +24,10 @@ export class Polar {
   #loadedContents: Map<string, string>;
   #loadedFiles: Map<string, string>;
 
-  constructor() {
+  constructor(opts: OsoOptions = {}) {
     this.#ffiPolar = new FfiPolar();
-    this.#host = new Host(this.#ffiPolar);
+    const equalityFn = opts.equalityFn || ((x, y) => x == y);
+    this.#host = new Host(this.#ffiPolar, equalityFn);
     this.#loadedContents = new Map();
     this.#loadedFiles = new Map();
 

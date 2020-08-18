@@ -70,12 +70,9 @@ describe('#registerClass', () => {
 
   test('can register the same class under different aliases', () => {
     const p = new Polar();
-    p.registerClass(ConstructorNoArgs, 'A');
-    p.registerClass(ConstructorNoArgs, 'B');
-    p.registerClass(ConstructorArgs, 'C');
-    expect(() =>
-      p.loadStr('?= new A() = new B() and not new A() = new C();')
-    ).not.toThrow();
+    p.registerClass(A, 'A');
+    p.registerClass(A, 'B');
+    expect(() => p.loadStr('?= new A().a() = new B().a();')).not.toThrow();
   });
 
   test('registers a JS class with Polar', () => {
@@ -147,8 +144,8 @@ describe('#registerClass', () => {
     const canid = 'new Animal({family: "canidae"})';
     const animal = 'new Animal({})';
 
-    test('can unify instances', () => {
-      const p = new Polar();
+    test('can unify instances with a custom equality function', () => {
+      const p = new Polar({ equalityFn: (x, y) => x.family === y.family });
       p.registerClass(Animal);
       p.loadStr(`
           yup() if new Animal({family: "steve"}) = new Animal({family: "steve"});

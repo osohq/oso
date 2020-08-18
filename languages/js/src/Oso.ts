@@ -1,10 +1,11 @@
 import { Polar } from './Polar';
 import { Http } from './Http';
 import { PathMapper } from './PathMapper';
+import type { OsoOptions } from './types';
 
 export class Oso extends Polar {
-  constructor() {
-    super();
+  constructor(opts: OsoOptions = {}) {
+    super(opts);
     this.registerClass(Http);
     this.registerClass(PathMapper);
   }
