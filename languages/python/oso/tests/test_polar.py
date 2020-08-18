@@ -101,7 +101,7 @@ def test_external(polar, qvar, qeval):
 
     polar.register_class(Foo, from_polar=capital_foo)
     assert qvar("new Foo{}.a = x", "x", one=True) == "A"
-    with pytest.raises(RuntimeError, match="tried to call A but it is not callable"):
+    with pytest.raises(RuntimeError, match="tried to call 'a' but it is not callable"):
         assert not qeval("new Foo{}.a() = x")
     assert not qvar("new Foo{}.b = x", "x", one=True) == "b"
     assert qvar("new Foo{}.b() = x", "x", one=True) == "b"
