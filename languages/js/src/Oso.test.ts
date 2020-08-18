@@ -1,5 +1,5 @@
 import { Oso } from './Oso';
-import { InlineQueryFailedError } from './errors';
+import { map } from '../test/helpers';
 
 test('#isAllowed', () => {
   const o = new Oso();
@@ -13,17 +13,13 @@ describe('Equality function used for unification', () => {
     const o = new Oso();
     o.registerConstant('undefined', undefined);
     o.registerConstant('null', null);
-    expect(() => o.loadStr('?= undefined = null;')).not.toThrow(
-      InlineQueryFailedError
-    );
+    expect(Array.from(o.query('undefined = null'))).toStrictEqual([map()]);
   });
 
   test('can be overridden with a custom equality function', () => {
     const o = new Oso({ equalityFn: (x, y) => x === y });
     o.registerConstant('undefined', undefined);
     o.registerConstant('null', null);
-    expect(() => o.loadStr('?= undefined = null;')).toThrow(
-      InlineQueryFailedError
-    );
+    expect(Array.from(o.query('undefined = null'))).toStrictEqual([]);
   });
 });

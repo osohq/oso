@@ -72,7 +72,7 @@ describe('#registerClass', () => {
     const p = new Polar();
     p.registerClass(A, 'A');
     p.registerClass(A, 'B');
-    expect(() => p.loadStr('?= new A().a() = new B().a();')).not.toThrow();
+    expect(query(p, 'new A().a() = new B().a()')).toStrictEqual([map()]);
   });
 
   test('registers a JS class with Polar', () => {
