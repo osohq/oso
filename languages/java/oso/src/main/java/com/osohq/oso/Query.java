@@ -185,7 +185,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      *                      instance of a built-in type.
      */
     public void registerCall(String attrName, Optional<List<Object>> args, long callId, JSONObject polarInstance)
-            throws Exceptions.InvalidCallError,
+            throws Exceptions.InvalidAttributeError,
+                   Exceptions.InvalidCallError,
                    Exceptions.UnregisteredInstanceError,
                    Exceptions.UnexpectedPolarTypeError {
         if (calls.containsKey(callId)) {
@@ -219,7 +220,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     Field field = cls.getField(attrName);
                     result = field.get(instance);
                 } catch (NoSuchFieldException f) {
-                    throw new Exceptions.InvalidCallError(cls.getName(), attrName);
+                    throw new Exceptions.InvalidAttributeError(cls.getName(), attrName);
                 }
             }
         } catch (IllegalAccessException e) {
