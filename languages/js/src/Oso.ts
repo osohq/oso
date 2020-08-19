@@ -10,9 +10,13 @@ export class Oso extends Polar {
     this.registerClass(PathMapper);
   }
 
-  isAllowed(actor: unknown, action: unknown, resource: unknown): boolean {
+  async isAllowed(
+    actor: unknown,
+    action: unknown,
+    resource: unknown
+  ): Promise<boolean> {
     const results = this.queryRule('allow', actor, action, resource);
-    const { done } = results.next();
+    const { done } = await results.next();
     results.return();
     return !done;
   }

@@ -17,11 +17,11 @@ import type {
   QueryResult,
   Result,
 } from './types';
-import { isIterableIterator, QueryEventKind } from './types';
+import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
 
 export class Query {
   #ffiQuery: FfiQuery;
-  #calls: Map<number, Generator>;
+  #calls: Map<number, AsyncGenerator>;
   #host: Host;
   results: QueryResult;
 
@@ -36,28 +36,34 @@ export class Query {
     this.#ffiQuery.questionResult(callId, result);
   }
 
-  private registerCall(
+  private async registerCall(
     field: string,
     callId: number,
     instance: PolarTerm,
     args?: PolarTerm[]
-  ): void {
+  ): Promise<void> {
     if (this.#calls.has(callId)) return;
-    const receiver = this.#host.toJs(instance);
+    const receiver = await this.#host.toJs(instance);
     let value = receiver[field];
     if (args !== undefined) {
       if (typeof value === 'function') {
         // If value is a function, call it with the provided args.
-        value = receiver[field](...args!.map(a => this.#host.toJs(a)));
+        const jsArgs = args!.map(async a => await this.#host.toJs(a));
+        value = receiver[field](...(await Promise.all(jsArgs)));
       } else {
         // Error on attempt to call non-function.
         throw new InvalidCallError(receiver, field);
       }
     }
-    const generator = (function* () {
+    const generator = (async function* () {
       if (isIterableIterator(value)) {
         // If the call result is an iterable iterator, yield from it.
         yield* value;
+      } else if (isAsyncIterator(value)) {
+        // Same for async iterators.
+        for await (const result of value) {
+          yield result;
+        }
       } else {
         // Otherwise, yield it.
         yield value;
@@ -70,8 +76,8 @@ export class Query {
     this.#ffiQuery.callResult(callId, result);
   }
 
-  private nextCallResult(callId: number): string | undefined {
-    const { done, value } = this.#calls.get(callId)!.next();
+  private async nextCallResult(callId: number): Promise<string | undefined> {
+    const { done, value } = await this.#calls.get(callId)!.next();
     if (done) return undefined;
     return JSON.stringify(this.#host.toPolar(value));
   }
@@ -80,16 +86,16 @@ export class Query {
     this.#ffiQuery.appError(message);
   }
 
-  private handleCall(
+  private async handleCall(
     attr: string,
     callId: number,
     instance: PolarTerm,
     args?: PolarTerm[]
-  ): void {
+  ): Promise<void> {
     let result;
     try {
-      this.registerCall(attr, callId, instance, args);
-      result = this.nextCallResult(callId);
+      await this.registerCall(attr, callId, instance, args);
+      result = await this.nextCallResult(callId);
     } catch (e) {
       if (e instanceof TypeError || e instanceof InvalidCallError) {
         this.applicationError(e.message);
@@ -101,7 +107,7 @@ export class Query {
     }
   }
 
-  private *start(): QueryResult {
+  private async *start(): QueryResult {
     try {
       while (true) {
         const nextEvent = this.#ffiQuery.nextEvent();
@@ -113,7 +119,7 @@ export class Query {
             const { bindings } = event.data as Result;
             const transformed: Map<string, any> = new Map();
             for (const [k, v] of bindings.entries()) {
-              transformed.set(k, this.#host.toJs(v));
+              transformed.set(k, await this.#host.toJs(v));
             }
             yield transformed;
             break;
@@ -121,7 +127,7 @@ export class Query {
             const { instanceId, tag, fields } = event.data as MakeExternal;
             if (this.#host.hasInstance(instanceId))
               throw new DuplicateInstanceRegistrationError(instanceId);
-            this.#host.makeInstance(tag, fields, instanceId);
+            await this.#host.makeInstance(tag, fields, instanceId);
             break;
           }
           case QueryEventKind.ExternalCall: {
@@ -131,7 +137,7 @@ export class Query {
               instance,
               args,
             } = event.data as ExternalCall;
-            this.handleCall(attribute, callId, instance, args);
+            await this.handleCall(attribute, callId, instance, args);
             break;
           }
           case QueryEventKind.ExternalIsSubspecializer: {
@@ -141,7 +147,7 @@ export class Query {
               rightTag,
               callId,
             } = event.data as ExternalIsSubspecializer;
-            const answer = this.#host.isSubspecializer(
+            const answer = await this.#host.isSubspecializer(
               instanceId,
               leftTag,
               rightTag
@@ -151,13 +157,13 @@ export class Query {
           }
           case QueryEventKind.ExternalIsa: {
             const { instance, tag, callId } = event.data as ExternalIsa;
-            const answer = this.#host.isa(instance, tag);
+            const answer = await this.#host.isa(instance, tag);
             this.questionResult(answer, callId);
             break;
           }
           case QueryEventKind.ExternalUnify: {
             const { leftId, rightId, callId } = event.data as ExternalUnify;
-            const answer = this.#host.unify(leftId, rightId);
+            const answer = await this.#host.unify(leftId, rightId);
             this.questionResult(answer, callId);
             break;
           }

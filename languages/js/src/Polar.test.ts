@@ -1,4 +1,4 @@
-import { truncateSync } from 'fs';
+import { truncate } from 'fs/promises';
 
 import { Polar } from './Polar';
 import { Variable } from './Variable';
@@ -6,6 +6,7 @@ import {
   map,
   pred,
   query,
+  queryRule,
   qvar,
   tempFile,
   tempFileFx,
@@ -15,7 +16,6 @@ import {
   A,
   Actor,
   Animal,
-  Async,
   B,
   Bar,
   Belonger,
@@ -38,19 +38,19 @@ import {
   PolarFileNotFoundError,
 } from './errors';
 
-test('it works', () => {
+test('it works', async () => {
   const p = new Polar();
-  p.loadStr('f(1);');
-  const result = query(p, 'f(x)');
+  await p.loadStr('f(1);');
+  const result = await query(p, 'f(x)');
   expect(result).toStrictEqual([map({ x: 1 })]);
 });
 
 describe('#registerClass', () => {
-  test('can specialize on a registered class', () => {
+  test('can specialize on a registered class', async () => {
     const p = new Polar();
     p.registerClass(User);
-    p.loadStr('allow(u: User, 1, 2) if u.name = "alice";');
-    const result = query(p, pred('allow', new User('alice'), 1, 2));
+    await p.loadStr('allow(u: User, 1, 2) if u.name = "alice";');
+    const result = await query(p, pred('allow', new User('alice'), 1, 2));
     expect(result).toStrictEqual([map()]);
   });
 
@@ -68,19 +68,19 @@ describe('#registerClass', () => {
     );
   });
 
-  test('can register the same class under different aliases', () => {
+  test('can register the same class under different aliases', async () => {
     const p = new Polar();
     p.registerClass(A, 'A');
     p.registerClass(A, 'B');
-    expect(query(p, 'new A().a() = new B().a()')).toStrictEqual([map()]);
+    expect(await query(p, 'new A().a() = new B().a()')).toStrictEqual([map()]);
   });
 
-  test('registers a JS class with Polar', () => {
+  test('registers a JS class with Polar', async () => {
     const p = new Polar();
     p.registerClass(Foo);
     p.registerClass(Bar);
-    expect(qvar(p, 'new Foo("A").a = x', 'x', true)).toStrictEqual('A');
-    expect(() => qvar(p, 'new Foo("A").a() = x', 'x', true)).toThrow(
+    expect(await qvar(p, 'new Foo("A").a = x', 'x', true)).toStrictEqual('A');
+    expect(qvar(p, 'new Foo("A").a() = x', 'x', true)).rejects.toThrow(
       `trace (most recent evaluation last):
   in query at line 1, column 1
     new Foo(\"A\").a() = x
@@ -90,33 +90,41 @@ describe('#registerClass', () => {
     new Foo(\"A\").a()
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
-    expect(qvar(p, 'new Foo("A").b = x', 'x', true)).not.toStrictEqual('b');
-    expect(qvar(p, 'new Foo("A").b() = x', 'x', true)).toStrictEqual('b');
-    expect(qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual('c');
-    expect(qvar(p, 'new Foo("A").c() = x', 'x', true)).toStrictEqual('c');
-    expect(qvar(p, 'new Foo("A") = f and f.a = x', 'x', true)).toStrictEqual(
-      'A'
+    expect(await qvar(p, 'new Foo("A").b = x', 'x', true)).not.toStrictEqual(
+      'b'
     );
-    expect(qvar(p, 'new Foo("A").bar().y() = x', 'x', true)).toStrictEqual('y');
-    expect(qvar(p, 'new Foo("A").e() = x', 'x')).toStrictEqual([[1, 2, 3]]);
-    expect(qvar(p, 'new Foo("A").f() = x', 'x')).toStrictEqual([
+    expect(await qvar(p, 'new Foo("A").b() = x', 'x', true)).toStrictEqual('b');
+    expect(await qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual(
+      'c'
+    );
+    expect(await qvar(p, 'new Foo("A").c() = x', 'x', true)).toStrictEqual('c');
+    expect(
+      await qvar(p, 'new Foo("A") = f and f.a = x', 'x', true)
+    ).toStrictEqual('A');
+    expect(
+      await qvar(p, 'new Foo("A").bar().y() = x', 'x', true)
+    ).toStrictEqual('y');
+    expect(await qvar(p, 'new Foo("A").e() = x', 'x')).toStrictEqual([
+      [1, 2, 3],
+    ]);
+    expect(await qvar(p, 'new Foo("A").f() = x', 'x')).toStrictEqual([
       [1, 2, 3],
       [4, 5, 6],
       7,
     ]);
-    expect(qvar(p, 'new Foo("A").g().hello = x', 'x', true)).toStrictEqual(
-      'world'
-    );
-    expect(qvar(p, 'new Foo("A").h() = x', 'x', true)).toBe(true);
+    expect(
+      await qvar(p, 'new Foo("A").g().hello = x', 'x', true)
+    ).toStrictEqual('world');
+    expect(await qvar(p, 'new Foo("A").h() = x', 'x', true)).toBe(true);
   });
 
-  test('respects the JS prototype hierarchy for class specialization', () => {
+  test('respects the JS prototype hierarchy for class specialization', async () => {
     const p = new Polar();
     p.registerClass(A);
     p.registerClass(B);
     p.registerClass(C);
     p.registerClass(X);
-    p.loadStr(`
+    await p.loadStr(`
       test(_: A);
       test(_: B);
 
@@ -124,24 +132,24 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
       try(_: C, res) if res = 3;
       try(_: A, res) if res = 1;
     `);
-    expect(qvar(p, 'new A().a() = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new A().x() = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new B().a() = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new B().b() = x', 'x', true)).toStrictEqual('B');
-    expect(qvar(p, 'new B().x() = x', 'x', true)).toStrictEqual('B');
-    expect(qvar(p, 'new C().a() = x', 'x', true)).toStrictEqual('A');
-    expect(qvar(p, 'new C().b() = x', 'x', true)).toStrictEqual('B');
-    expect(qvar(p, 'new C().c() = x', 'x', true)).toStrictEqual('C');
-    expect(qvar(p, 'new C().x() = x', 'x', true)).toStrictEqual('C');
-    expect(qvar(p, 'new X().x() = x', 'x', true)).toStrictEqual('X');
+    expect(await qvar(p, 'new A().a() = x', 'x', true)).toStrictEqual('A');
+    expect(await qvar(p, 'new A().x() = x', 'x', true)).toStrictEqual('A');
+    expect(await qvar(p, 'new B().a() = x', 'x', true)).toStrictEqual('A');
+    expect(await qvar(p, 'new B().b() = x', 'x', true)).toStrictEqual('B');
+    expect(await qvar(p, 'new B().x() = x', 'x', true)).toStrictEqual('B');
+    expect(await qvar(p, 'new C().a() = x', 'x', true)).toStrictEqual('A');
+    expect(await qvar(p, 'new C().b() = x', 'x', true)).toStrictEqual('B');
+    expect(await qvar(p, 'new C().c() = x', 'x', true)).toStrictEqual('C');
+    expect(await qvar(p, 'new C().x() = x', 'x', true)).toStrictEqual('C');
+    expect(await qvar(p, 'new X().x() = x', 'x', true)).toStrictEqual('X');
 
-    expect(query(p, 'test(new A())')).toHaveLength(1);
-    expect(query(p, 'test(new B())')).toHaveLength(2);
+    expect(await query(p, 'test(new A())')).toHaveLength(1);
+    expect(await query(p, 'test(new B())')).toHaveLength(2);
 
-    expect(qvar(p, 'try(new A(), x)', 'x')).toStrictEqual([1]);
-    expect(qvar(p, 'try(new B(), x)', 'x')).toStrictEqual([2, 1]);
-    expect(qvar(p, 'try(new C(), x)', 'x')).toStrictEqual([3, 2, 1]);
-    expect(qvar(p, 'try(new X(), x)', 'x')).toStrictEqual([]);
+    expect(await qvar(p, 'try(new A(), x)', 'x')).toStrictEqual([1]);
+    expect(await qvar(p, 'try(new B(), x)', 'x')).toStrictEqual([2, 1]);
+    expect(await qvar(p, 'try(new C(), x)', 'x')).toStrictEqual([3, 2, 1]);
+    expect(await qvar(p, 'try(new X(), x)', 'x')).toStrictEqual([]);
   });
 
   describe('animal tests', () => {
@@ -153,40 +161,42 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     const canid = 'new Animal({family: "canidae"})';
     const animal = 'new Animal({})';
 
-    test('can unify instances with a custom equality function', () => {
+    test('can unify instances with a custom equality function', async () => {
       const p = new Polar({ equalityFn: (x, y) => x.family === y.family });
       p.registerClass(Animal);
-      p.loadStr(`
+      await p.loadStr(`
           yup() if new Animal({family: "steve"}) = new Animal({family: "steve"});
           nope() if new Animal({family: "steve"}) = new Animal({family: "gabe"});
         `);
-      expect(query(p, 'yup()')).toStrictEqual([map()]);
-      expect(query(p, 'nope()')).toStrictEqual([]);
+      expect(await query(p, 'yup()')).toStrictEqual([map()]);
+      expect(await query(p, 'nope()')).toStrictEqual([]);
     });
 
-    test('can specialize on dict fields', () => {
+    test('can specialize on dict fields', async () => {
       const p = new Polar();
       p.registerClass(Animal);
-      p.loadStr(`
+      await p.loadStr(`
           what_is(_: {genus: "canis"}, r) if r = "canine";
           what_is(_: {species: "canis lupus", genus: "canis"}, r) if r = "wolf";
           what_is(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog";
         `);
-      expect(qvar(p, `what_is(${wolf}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${wolf}, r)`, 'r')).toStrictEqual([
         'wolf',
         'canine',
       ]);
-      expect(qvar(p, `what_is(${dog}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${dog}, r)`, 'r')).toStrictEqual([
         'dog',
         'canine',
       ]);
-      expect(qvar(p, `what_is(${canine}, r)`, 'r')).toStrictEqual(['canine']);
+      expect(await qvar(p, `what_is(${canine}, r)`, 'r')).toStrictEqual([
+        'canine',
+      ]);
     });
 
-    test('can specialize on class fields', () => {
+    test('can specialize on class fields', async () => {
       const p = new Polar();
       p.registerClass(Animal);
-      p.loadStr(`
+      await p.loadStr(`
           what_is(_: Animal, r) if r = "animal";
           what_is(_: Animal{genus: "canis"}, r) if r = "canine";
           what_is(_: Animal{family: "canidae"}, r) if r = "canid";
@@ -194,37 +204,39 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
           what_is(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog";
           what_is(_: Animal{species: s, genus: "canis"}, r) if r = s;
         `);
-      expect(qvar(p, `what_is(${wolf}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${wolf}, r)`, 'r')).toStrictEqual([
         'wolf',
         'canis lupus',
         'canine',
         'canid',
         'animal',
       ]);
-      expect(qvar(p, `what_is(${dog}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${dog}, r)`, 'r')).toStrictEqual([
         'dog',
         'canis familiaris',
         'canine',
         'canid',
         'animal',
       ]);
-      expect(qvar(p, `what_is(${canine}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${canine}, r)`, 'r')).toStrictEqual([
         undefined, // Canine has no species, so looking up the 'species' prop returns undefined.
         'canine',
         'canid',
         'animal',
       ]);
-      expect(qvar(p, `what_is(${canid}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${canid}, r)`, 'r')).toStrictEqual([
         'canid',
         'animal',
       ]);
-      expect(qvar(p, `what_is(${animal}, r)`, 'r')).toStrictEqual(['animal']);
+      expect(await qvar(p, `what_is(${animal}, r)`, 'r')).toStrictEqual([
+        'animal',
+      ]);
     });
 
-    test('can specialize with a mix of class and dict fields', () => {
+    test('can specialize with a mix of class and dict fields', async () => {
       const p = new Polar();
       p.registerClass(Animal);
-      p.loadStr(`
+      await p.loadStr(`
           what_is(_: Animal, r) if r = "animal_class";
           what_is(_: Animal{genus: "canis"}, r) if r = "canine_class";
           what_is(_: {genus: "canis"}, r) if r = "canine_dict";
@@ -242,7 +254,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
       const canine_dict = '{genus: "canis", family: "canidae"}';
 
       // test rule ordering for instances
-      expect(qvar(p, `what_is(${wolf}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${wolf}, r)`, 'r')).toStrictEqual([
         'wolf_class',
         'canine_class',
         'canid_class',
@@ -250,7 +262,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
         'wolf_dict',
         'canine_dict',
       ]);
-      expect(qvar(p, `what_is(${dog}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${dog}, r)`, 'r')).toStrictEqual([
         'dog_class',
         'canine_class',
         'canid_class',
@@ -258,7 +270,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
         'dog_dict',
         'canine_dict',
       ]);
-      expect(qvar(p, `what_is(${canine}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${canine}, r)`, 'r')).toStrictEqual([
         'canine_class',
         'canid_class',
         'animal_class',
@@ -266,15 +278,15 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
       ]);
 
       // test rule ordering for dicts
-      expect(qvar(p, `what_is(${wolf_dict}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${wolf_dict}, r)`, 'r')).toStrictEqual([
         'wolf_dict',
         'canine_dict',
       ]);
-      expect(qvar(p, `what_is(${dog_dict}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${dog_dict}, r)`, 'r')).toStrictEqual([
         'dog_dict',
         'canine_dict',
       ]);
-      expect(qvar(p, `what_is(${canine_dict}, r)`, 'r')).toStrictEqual([
+      expect(await qvar(p, `what_is(${canine_dict}, r)`, 'r')).toStrictEqual([
         'canine_dict',
       ]);
     });
@@ -282,31 +294,33 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
 });
 
 describe('conversions between JS + Polar values', () => {
-  test('returns JS instances from external calls', () => {
+  test('returns JS instances from external calls', async () => {
     const actor = new Actor('sam');
     const widget = new Widget('1');
     const p = new Polar();
-    p.loadStr('allow(actor, resource) if actor.widget().id = resource.id;');
-    const result = Array.from(p.queryRule('allow', actor, widget));
+    await p.loadStr(
+      'allow(actor, resource) if actor.widget().id = resource.id;'
+    );
+    const result = await queryRule(p, 'allow', actor, widget);
     expect(result).toStrictEqual([map()]);
   });
 
-  test('handles Generator external call results', () => {
+  test('handles Generator external call results', async () => {
     const actor = new Actor('sam');
     const p = new Polar();
-    p.loadStr('widgets(actor, x) if x = actor.widgets().id;');
-    const result = Array.from(p.queryRule('widgets', actor, new Variable('x')));
+    await p.loadStr('widgets(actor, x) if x = actor.widgets().id;');
+    const result = await queryRule(p, 'widgets', actor, new Variable('x'));
     expect(result).toStrictEqual([map({ x: '2' }), map({ x: '3' })]);
   });
 
-  test('caches instances and does not leak them', () => {
+  test('caches instances and does not leak them', async () => {
     const p = new Polar();
     p.registerClass(Counter);
-    p.loadStr('f(c: Counter) if Counter.count() > 0;');
+    await p.loadStr('f(c: Counter) if Counter.count() > 0;');
     expect(Counter.count()).toBe(0);
     const c = new Counter();
     expect(Counter.count()).toBe(1);
-    expect(Array.from(p.queryRule('f', c))).toStrictEqual([map()]);
+    expect(await queryRule(p, 'f', c)).toStrictEqual([map()]);
     expect(Counter.count()).toBe(1);
     // There are 7 classes registered in the Polar instance cache, including
     // the Counter class.
@@ -318,105 +332,105 @@ describe('conversions between JS + Polar values', () => {
 });
 
 describe('#loadFile', () => {
-  test('loads a Polar file', () => {
+  test('loads a Polar file', async () => {
     const p = new Polar();
-    p.loadFile(tempFileFx());
-    expect(qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
+    await p.loadFile(await tempFileFx());
+    expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
   });
 
-  test('passes the filename across the FFI boundary', () => {
+  test('passes the filename across the FFI boundary', async () => {
     const p = new Polar();
-    const file = tempFile(';', 'invalid.polar');
-    expect(() => p.loadFile(file)).toThrow(
+    const file = await tempFile(';', 'invalid.polar');
+    expect(p.loadFile(file)).rejects.toThrow(
       `did not expect to find the token ';' at line 1, column 1 in file ${file}`
     );
   });
 
   test('throws if given a non-Polar file', () => {
     const p = new Polar();
-    expect(() => p.loadFile('other.ext')).toThrow(PolarFileExtensionError);
+    expect(p.loadFile('other.ext')).rejects.toThrow(PolarFileExtensionError);
   });
 
   test('throws if given a non-existent file', () => {
     const p = new Polar();
-    expect(() => p.loadFile('other.polar')).toThrow(PolarFileNotFoundError);
+    expect(p.loadFile('other.polar')).rejects.toThrow(PolarFileNotFoundError);
   });
 
-  test('throws if two files with the same contents are loaded', () => {
+  test('throws if two files with the same contents are loaded', async () => {
     const p = new Polar();
-    expect(() => p.loadFile(tempFile('', 'a.polar'))).not.toThrow(
+    expect(p.loadFile(await tempFile('', 'a.polar'))).resolves;
+    expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
       PolarFileDuplicateContentError
     );
-    expect(() => p.loadFile(tempFile('', 'b.polar'))).toThrow(
-      PolarFileDuplicateContentError
+  });
+
+  test('throws if two files with the same name are loaded', async () => {
+    const p = new Polar();
+    const file = await tempFile('f();', 'a.polar');
+    await expect(p.loadFile(file)).resolves.not.toThrow();
+    await truncate(file);
+    await expect(p.loadFile(file)).rejects.toThrow(
+      PolarFileContentsChangedError
     );
   });
 
-  test('throws if two files with the same name are loaded', () => {
+  test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
-    const file = tempFile('f();', 'a.polar');
-    expect(() => p.loadFile(file)).not.toThrow(PolarFileContentsChangedError);
-    truncateSync(file);
-    expect(() => p.loadFile(file)).toThrow(PolarFileContentsChangedError);
+    const file = await tempFileFx();
+    expect(p.loadFile(file)).resolves;
+    expect(p.loadFile(file)).rejects.toThrow(PolarFileAlreadyLoadedError);
   });
 
-  test('throws if the same file is loaded twice', () => {
+  test('can load multiple files', async () => {
     const p = new Polar();
-    const file = tempFileFx();
-    expect(() => p.loadFile(file)).not.toThrow(PolarFileAlreadyLoadedError);
-    expect(() => p.loadFile(file)).toThrow(PolarFileAlreadyLoadedError);
-  });
-
-  test('can load multiple files', () => {
-    const p = new Polar();
-    p.loadFile(tempFileFx());
-    p.loadFile(tempFileGx());
-    expect(qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
-    expect(qvar(p, 'g(x)', 'x')).toStrictEqual([1, 2, 3]);
+    await p.loadFile(await tempFileFx());
+    await p.loadFile(await tempFileGx());
+    expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
+    expect(await qvar(p, 'g(x)', 'x')).toStrictEqual([1, 2, 3]);
   });
 });
 
 describe('#clear', () => {
-  test('clears the KB', () => {
+  test('clears the KB', async () => {
     const p = new Polar();
-    p.loadFile(tempFileFx());
-    expect(qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
+    await p.loadFile(await tempFileFx());
+    expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     p.clear();
-    expect(query(p, 'f(x)')).toStrictEqual([]);
+    expect(await query(p, 'f(x)')).toStrictEqual([]);
   });
 });
 
 describe('#query', () => {
-  test('makes basic queries', () => {
+  test('makes basic queries', async () => {
     const p = new Polar();
-    p.loadStr('f(1);');
-    expect(Array.from(p.query('f(1)'))).toStrictEqual([map()]);
+    await p.loadStr('f(1);');
+    expect(await query(p, 'f(1)')).toStrictEqual([map()]);
   });
 });
 
 describe('#queryRule', () => {
-  test('makes basic queries', () => {
+  test('makes basic queries', async () => {
     const p = new Polar();
-    p.loadStr('allow(1, 2, 3);');
-    expect(Array.from(p.queryRule('allow', 1, 2, 3))).toStrictEqual([map()]);
+    await p.loadStr('allow(1, 2, 3);');
+    expect(await queryRule(p, 'allow', 1, 2, 3)).toStrictEqual([map()]);
   });
 
   describe('querying for a predicate', () => {
-    test('can return a list', () => {
+    test('can return a list', async () => {
       const p = new Polar();
       p.registerClass(Belonger, 'Actor');
-      p.loadStr(
+      await p.loadStr(
         'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
       );
       expect(
-        Array.from(p.queryRule('allow', new Belonger(), 'join', 'party'))
+        await queryRule(p, 'allow', new Belonger(), 'join', 'party')
       ).toStrictEqual([map()]);
     });
 
-    test('can handle variables as arguments', () => {
+    test('can handle variables as arguments', async () => {
       const p = new Polar();
-      p.loadFile(tempFileFx());
-      expect(Array.from(p.queryRule('f', new Variable('a')))).toStrictEqual([
+      await p.loadFile(await tempFileFx());
+      expect(await queryRule(p, 'f', new Variable('a'))).toStrictEqual([
         map({ a: 1 }),
         map({ a: 2 }),
         map({ a: 3 }),
@@ -426,71 +440,73 @@ describe('#queryRule', () => {
 });
 
 describe('#makeInstance', () => {
-  test('handles no args', () => {
+  test('handles no args', async () => {
     const p = new Polar();
     p.registerClass(ConstructorNoArgs);
-    const id = p.__host().makeInstance(ConstructorNoArgs.name, [], 1);
+    const id = await p.__host().makeInstance(ConstructorNoArgs.name, [], 1);
     const instance = p.__host().getInstance(id);
     expect(instance).toStrictEqual(new ConstructorNoArgs());
   });
 
-  test('handles positional args', () => {
+  test('handles positional args', async () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
     const one = p.__host().toPolar(1);
     const two = p.__host().toPolar(2);
-    const id = p.__host().makeInstance(ConstructorArgs.name, [one, two], 1);
+    const id = await p
+      .__host()
+      .makeInstance(ConstructorArgs.name, [one, two], 1);
     const instance = p.__host().getInstance(id);
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
   });
 });
 
 describe('#registerConstant', () => {
-  test('works', () => {
+  test('works', async () => {
     const p = new Polar();
     const d = { a: 1 };
     p.registerConstant('d', d);
-    expect(qvar(p, 'd.a = x', 'x')).toStrictEqual([1]);
+    expect(await qvar(p, 'd.a = x', 'x')).toStrictEqual([1]);
   });
 
   describe('can call host language methods', () => {
-    test('on strings', () => {
-      const p = new Polar();
-      expect(query(p, 'x = "abc" and x.indexOf("bc") = 1')).toStrictEqual([
-        map({ x: 'abc' }),
-      ]);
-    });
-
-    test('on numbers', () => {
+    test('on strings', async () => {
       const p = new Polar();
       expect(
-        query(p, 'f = 314.159 and f.toExponential() = "3.14159e+2"')
+        await query(p, 'x = "abc" and x.indexOf("bc") = 1')
+      ).toStrictEqual([map({ x: 'abc' })]);
+    });
+
+    test('on numbers', async () => {
+      const p = new Polar();
+      expect(
+        await query(p, 'f = 314.159 and f.toExponential() = "3.14159e+2"')
       ).toStrictEqual([map({ f: 314.159 })]);
     });
 
-    test('on lists', () => {
+    test('on lists', async () => {
       const p = new Polar();
       expect(
-        query(
+        await query(
           p,
           'l = [1, 2, 3] and l.indexOf(3) = 2 and l.concat([4]) = [1, 2, 3, 4]'
         )
       ).toStrictEqual([map({ l: [1, 2, 3] })]);
     });
 
-    test('on dicts', () => {
+    test('on dicts', async () => {
       const p = new Polar();
       expect(
-        query(p, 'd = {a: 1} and d.a = 1 and d.hasOwnProperty("a")')
+        await query(p, 'd = {a: 1} and d.a = 1 and d.hasOwnProperty("a")')
       ).toStrictEqual([map({ d: { a: 1 } })]);
     });
 
     describe('that return undefined', () => {
-      xtest('without things blowing up', () => {
+      test('without things blowing up', async () => {
         const p = new Polar();
         p.registerConstant('u', {});
-        expect(query(p, 'u.x == u.y')).toStrictEqual([map()]);
-        expect(() => query(p, 'u.x.y')).toThrow();
+        expect(await query(p, 'u.x = u.y')).toStrictEqual([map()]);
+        expect(query(p, 'u.x.y')).rejects.toThrow();
       });
     });
   });
@@ -498,7 +514,7 @@ describe('#registerConstant', () => {
   // TODO(gj): Is this expected?
   test('errors when calling host language methods on booleans', () => {
     const p = new Polar();
-    expect(() => query(p, 'b = true and b.constructor = Boolean')).toThrow(
+    expect(query(p, 'b = true and b.constructor = Boolean')).rejects.toThrow(
       'Type error: can only perform lookups on dicts and instances, this is Boolean(true) at line 1, column 5'
     );
   });
@@ -507,25 +523,50 @@ describe('#registerConstant', () => {
     const p = new Polar();
     p.registerConstant('x', 1);
     p.registerConstant('x', 2);
-    expect(() => p.loadStr('?= x == 2;')).not.toThrow();
+    expect(p.loadStr('?= x == 2;')).resolves;
   });
 });
 
-describe('unifying promises', () => {
-  test('fails if both promises are the same object', () => {
-    const p = new Polar();
-    p.registerClass(Async);
-    const result = Array.from(p.query('new Async().wait() = x and x = x'));
-    expect(result).toStrictEqual([]);
+describe('unifying a promise', () => {
+  describe('with another promise', () => {
+    test('succeeds if the resolved values unify', async () => {
+      const p = new Polar();
+      const a = Promise.resolve(1);
+      const b = Promise.resolve(1);
+      p.registerConstant('a', a);
+      p.registerConstant('b', b);
+      const result = await query(p, 'a = b');
+      expect(result).toStrictEqual([map()]);
+    });
+
+    test("fails if the resolved values don't unify", async () => {
+      const p = new Polar();
+      const a = Promise.resolve(1);
+      const b = Promise.resolve(2);
+      p.registerConstant('a', a);
+      p.registerConstant('b', b);
+      const result = await query(p, 'a = b');
+      expect(result).toStrictEqual([]);
+    });
   });
 
-  test('fails if the promises are different objects', () => {
-    const p = new Polar();
-    p.registerClass(Async);
-    const result = Array.from(
-      p.query('new Async().wait() = new Async().wait()')
-    );
-    expect(result).toStrictEqual([]);
+  describe('with a non-promise', () => {
+    // TODO(gj): Un-skip when external instances can unify with non-external instances.
+    xtest('succeeds if the resolved value unifies with the non-promise', async () => {
+      const p = new Polar();
+      const a = Promise.resolve(1);
+      p.registerConstant('a', a);
+      const result = await query(p, 'a = 1');
+      expect(result).toStrictEqual([map()]);
+    });
+
+    test("fails if the resolved value doesn't unify with the non-promise", async () => {
+      const p = new Polar();
+      const a = Promise.resolve(1);
+      p.registerConstant('a', a);
+      const result = await query(p, 'a = 2');
+      expect(result).toStrictEqual([]);
+    });
   });
 });
 
@@ -533,14 +574,14 @@ describe('errors', () => {
   describe('with inline queries', () => {
     test('succeeds if all inline queries succeed', () => {
       const p = new Polar();
-      expect(() =>
-        p.loadStr('f(1); f(2); ?= f(1); ?= not f(3);')
-      ).not.toThrow();
+      expect(p.loadStr('f(1); f(2); ?= f(1); ?= not f(3);')).resolves;
     });
 
     test('fails if an inline query fails', () => {
       const p = new Polar();
-      expect(() => p.loadStr('g(1); ?= g(2);')).toThrow(InlineQueryFailedError);
+      expect(p.loadStr('g(1); ?= g(2);')).rejects.toThrow(
+        InlineQueryFailedError
+      );
     });
   });
 
@@ -549,7 +590,7 @@ describe('errors', () => {
       const p = new Polar();
       const int = '18446744073709551616';
       const rule = `f(a) if a = ${int};`;
-      expect(() => p.loadStr(rule)).toThrow(
+      expect(p.loadStr(rule)).rejects.toThrow(
         `'${int}' caused an integer overflow at line 1, column 13`
       );
     });
@@ -560,7 +601,7 @@ describe('errors', () => {
         f(a) if a = "this is not
         allowed";
       `;
-      expect(() => p.loadStr(rule)).toThrow(
+      expect(p.loadStr(rule)).rejects.toThrow(
         "'\\n' is not a valid character. Found in this is not at line 2, column 33"
       );
     });
@@ -570,7 +611,7 @@ describe('errors', () => {
     test('raises on UnrecognizedEOF errors', () => {
       const p = new Polar();
       const rule = 'f(a)';
-      expect(() => p.loadStr(rule)).toThrow(
+      expect(p.loadStr(rule)).rejects.toThrow(
         'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 5'
       );
     });
@@ -578,7 +619,7 @@ describe('errors', () => {
     test('raises on UnrecognizedToken errors', () => {
       const p = new Polar();
       const rule = '1;';
-      expect(() => p.loadStr(rule)).toThrow(
+      expect(p.loadStr(rule)).rejects.toThrow(
         "did not expect to find the token '1' at line 1, column 1"
       );
     });
@@ -587,10 +628,10 @@ describe('errors', () => {
   });
 
   describe('runtime errors', () => {
-    test('include a stack trace', () => {
+    test('include a stack trace', async () => {
       const p = new Polar();
-      p.loadStr('foo(a,b) if a in b;');
-      expect(() => query(p, 'foo(1,2)')).toThrow(
+      await p.loadStr('foo(a,b) if a in b;');
+      expect(query(p, 'foo(1,2)')).rejects.toThrow(
         `trace (most recent evaluation last):
   in query at line 1, column 1
     foo(1,2)
@@ -603,7 +644,7 @@ Type error: can only use \`in\` on a list, this is Variable(Symbol("_a_3")) at l
     test('work for lookups', () => {
       const p = new Polar();
       p.registerConstant('undefined', undefined);
-      expect(() => query(p, 'undefined.foo')).toThrow(
+      expect(query(p, 'undefined.foo')).rejects.toThrow(
         `trace (most recent evaluation last):
   in query at line 1, column 1
     undefined.foo
@@ -616,11 +657,11 @@ Application error: Cannot read property 'foo' of undefined at line 1, column 1`
 });
 
 describe('unbound variables', () => {
-  test('returns unbound properly', () => {
+  test('returns unbound properly', async () => {
     const p = new Polar();
-    p.loadStr('rule(x, y) if y = 1;');
+    await p.loadStr('rule(x, y) if y = 1;');
 
-    const result = query(p, 'rule(x, y)')[0];
+    const result = (await query(p, 'rule(x, y)'))[0];
 
     expect(result.get('y')).toBe(1);
     expect(result.get('x')).toBeInstanceOf(Variable);
