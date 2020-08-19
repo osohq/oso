@@ -112,18 +112,6 @@ export function isPolarTerm(v: any): v is PolarTerm {
 
 export type Class<T extends {} = {}> = new (...args: any[]) => T;
 
-export function isGenerator(x: any): x is Generator {
-  return [x.next, x.return, x.throw].every(f => typeof f === 'function');
-}
-
-export function isGeneratorFunction(x: any): x is GeneratorFunction {
-  if (!x.constructor) return false;
-  return (
-    x.constructor.name === 'GeneratorFunction' ||
-    isGenerator(x.constructor.prototype)
-  );
-}
-
 export interface Result {
   bindings: Map<string, PolarTerm>;
 }

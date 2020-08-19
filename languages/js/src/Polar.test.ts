@@ -36,7 +36,6 @@ import {
   PolarFileExtensionError,
   PolarFileAlreadyLoadedError,
   PolarFileNotFoundError,
-  InvalidAttributeError,
 } from './errors';
 
 test('it works', () => {
@@ -81,7 +80,16 @@ describe('#registerClass', () => {
     p.registerClass(Foo);
     p.registerClass(Bar);
     expect(qvar(p, 'new Foo("A").a = x', 'x', true)).toStrictEqual('A');
-    expect(() => qvar(p, 'new Foo("A").a() = x', 'x', true)).toThrow();
+    expect(() => qvar(p, 'new Foo("A").a() = x', 'x', true)).toThrow(
+      `trace (most recent evaluation last):
+  in query at line 1, column 1
+    new Foo(\"A\").a() = x
+  in query at line 1, column 1
+    new Foo(\"A\").a() = x
+  in query at line 1, column 1
+    new Foo(\"A\").a()
+Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
+    );
     expect(qvar(p, 'new Foo("A").b = x', 'x', true)).not.toStrictEqual('b');
     expect(qvar(p, 'new Foo("A").b() = x', 'x', true)).toStrictEqual('b');
     expect(qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual('c');
@@ -201,6 +209,7 @@ describe('#registerClass', () => {
         'animal',
       ]);
       expect(qvar(p, `what_is(${canine}, r)`, 'r')).toStrictEqual([
+        undefined, // Canine has no species, so looking up the 'species' prop returns undefined.
         'canine',
         'canid',
         'animal',
@@ -593,17 +602,14 @@ Type error: can only use \`in\` on a list, this is Variable(Symbol("_a_3")) at l
 
     test('work for lookups', () => {
       const p = new Polar();
-      p.registerClass(A);
-      expect(query(p, 'new A() = {bar: "bar"}')).toStrictEqual([]);
-      expect(() => query(p, 'new A().bar = "bar"')).toThrow(
+      p.registerConstant('undefined', undefined);
+      expect(() => query(p, 'undefined.foo')).toThrow(
         `trace (most recent evaluation last):
   in query at line 1, column 1
-    new A().bar = \"bar\"
+    undefined.foo
   in query at line 1, column 1
-    new A().bar = \"bar\"
-  in query at line 1, column 1
-    new A().bar
-Application error: Attribute 'bar' does not exist on A {} at line 1, column 1`
+    undefined.foo
+Application error: Cannot read property 'foo' of undefined at line 1, column 1`
       );
     });
   });

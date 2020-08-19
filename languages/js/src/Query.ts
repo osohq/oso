@@ -3,11 +3,7 @@ import type { Query as FfiQuery } from './polar_wasm_api';
 import { createInterface } from 'readline';
 
 import { parseQueryEvent } from './helpers';
-import {
-  DuplicateInstanceRegistrationError,
-  InvalidAttributeError,
-  InvalidCallError,
-} from './errors';
+import { DuplicateInstanceRegistrationError, InvalidCallError } from './errors';
 import { Host } from './Host';
 import type {
   PolarTerm,
@@ -21,7 +17,7 @@ import type {
   ExternalUnify,
   Debug,
 } from './types';
-import { isGenerator, isGeneratorFunction, QueryEventKind } from './types';
+import { QueryEventKind } from './types';
 
 export class Query {
   #ffiQuery: FfiQuery;
@@ -41,49 +37,29 @@ export class Query {
   }
 
   private registerCall(
-    attr: string,
+    field: string,
     callId: number,
     instance: PolarTerm,
     args?: PolarTerm[]
   ): void {
     if (this.#calls.has(callId)) return;
-
-    const jsInstance = this.#host.toJs(instance);
-    const jsAttr = jsInstance[attr];
-
-    let result: Generator;
-    if (args) {
-      if (jsAttr === undefined) throw new InvalidCallError(attr, jsInstance);
-      const jsArgs = args.map(a => this.#host.toJs(a));
-
-      if (isGeneratorFunction(jsAttr)) {
-        result = jsInstance[attr](...jsArgs);
-      } else if (typeof jsAttr === 'function') {
-        result = (function* () {
-          yield jsInstance[attr](...jsArgs);
-        })();
-      } else if (isGenerator(jsAttr)) {
-        // The Generator#next method only takes 0 or 1 args.
-        if (jsArgs.length > 1) throw new InvalidCallError(attr, jsInstance);
-        result = (function* () {
-          while (true) {
-            const { done, value } = jsArgs.length
-              ? jsAttr.next(jsArgs[0])
-              : jsAttr.next();
-            if (done) return;
-            yield value;
-          }
-        })();
-      } else {
-        // tried to call something which isn't a function or generator
-        // with args
-        throw new InvalidCallError(attr, jsInstance);
-      }
-    } else {
-      if (jsAttr === undefined)
-        throw new InvalidAttributeError(attr, jsInstance);
+    const receiver = this.#host.toJs(instance);
+    let value = receiver[field];
+    let result;
+    if (args === undefined) {
       result = (function* () {
-        yield jsAttr;
+        yield value;
+      })();
+    } else if (typeof value !== 'function') {
+      throw new InvalidCallError(receiver, field);
+    } else {
+      value = receiver[field](...args.map(a => this.#host.toJs(a)));
+      result = (function* () {
+        if (typeof value?.next !== 'function') {
+          yield value;
+        } else {
+          yield* value;
+        }
       })();
     }
     this.#calls.set(callId, result);
@@ -114,7 +90,7 @@ export class Query {
       this.registerCall(attr, callId, instance, args);
       result = this.nextCallResult(callId);
     } catch (e) {
-      if (e instanceof InvalidCallError || e instanceof InvalidAttributeError) {
+      if (e instanceof TypeError || e instanceof InvalidCallError) {
         this.applicationError(e.message);
       } else {
         throw e;
