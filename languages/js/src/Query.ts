@@ -17,6 +17,7 @@ import type {
   ExternalUnify,
   Debug,
 } from './types';
+import { processMessage } from './Messages';
 import { isGenerator, isGeneratorFunction, QueryEventKind } from './types';
 
 export class Query {
@@ -32,8 +33,19 @@ export class Query {
     this.results = this.start();
   }
 
+  private processMessages() {
+    while (true) {
+      let msg = this.#ffiQuery.getMessage();
+      if (!msg) {
+        break;
+      }
+      processMessage(msg);
+    }
+  }
+
   private questionResult(result: boolean, callId: number): void {
     this.#ffiQuery.questionResult(callId, result);
+    this.processMessages();
   }
 
   private registerCall(
@@ -79,6 +91,7 @@ export class Query {
 
   private callResult(callId: number, result?: string): void {
     this.#ffiQuery.callResult(callId, result);
+    this.processMessages();
   }
 
   private nextCallResult(callId: number): string | undefined {
@@ -89,6 +102,7 @@ export class Query {
 
   private applicationError(message: string): void {
     this.#ffiQuery.appError(message);
+    this.processMessages();
   }
 
   private handleCall(
@@ -116,6 +130,7 @@ export class Query {
     try {
       while (true) {
         const nextEvent = this.#ffiQuery.nextEvent();
+        this.processMessages();
         const event: QueryEvent = parseQueryEvent(nextEvent);
         switch (event.kind) {
           case QueryEventKind.Done:
@@ -184,6 +199,7 @@ export class Query {
               const trimmed = line.trim().replace(/;+$/, '');
               const command = this.#host.toPolar(trimmed);
               this.#ffiQuery.debugCommand(JSON.stringify(command));
+              this.processMessages();
             });
             break;
         }

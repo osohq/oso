@@ -8,8 +8,8 @@ use super::warnings::check_singletons;
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
-    vm: PolarVirtualMachine,
-    done: bool,
+    pub vm: PolarVirtualMachine,
+    pub done: bool,
 }
 
 impl Query {

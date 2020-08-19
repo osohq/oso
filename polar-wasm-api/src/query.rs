@@ -59,4 +59,10 @@ impl Query {
     pub fn wasm_app_error(&mut self, msg: &str) {
         self.0.application_error(msg.to_owned())
     }
+
+    #[wasm_bindgen(js_class = Query, js_name = getMessage)]
+    pub fn wasm_get_message(&self) -> JsResult<JsValue> {
+        let message = self.0.vm.messages.next();
+        serde_wasm_bindgen::to_value(&message).map_err(|e| serialization_error(e.to_string()))
+    }
 }
