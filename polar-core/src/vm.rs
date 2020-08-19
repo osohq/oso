@@ -979,10 +979,7 @@ impl PolarVirtualMachine {
             v => {
                 return Err(self.type_error(
                     &field,
-                    format!(
-                        "can only perform field lookups on a dictionary, this is a {:?}",
-                        v
-                    ),
+                    format!("cannot look up field {:?} on a dictionary", v),
                 ))
             }
         };
@@ -1008,7 +1005,7 @@ impl PolarVirtualMachine {
             v => {
                 return Err(self.type_error(
                     &field,
-                    format!("can only perform field lookups, this is a {:?}", v),
+                    format!("cannot look up field {:?} on an external instance", v),
                 ))
             }
         };
