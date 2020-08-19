@@ -38,15 +38,11 @@ public class Ffi {
         }
 
         protected Query newQueryFromStr(String queryStr) throws Exceptions.OsoException {
-            Pointer query = checkResult(polarLib.polar_new_query(ptr, queryStr, 0));
-            processMessages();
-            return new Query(query);
+            return new Query(checkResult(polarLib.polar_new_query(ptr, queryStr, 0)));
         }
 
         protected Query newQueryFromTerm(String queryTerm) throws Exceptions.OsoException {
-            Pointer query = checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm, 0));
-            processMessages();
-            return new Query(query);
+            return new Query(checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm, 0)));
         }
 
         protected Query nextInlineQuery() throws Exceptions.OsoException {
@@ -62,9 +58,7 @@ public class Ffi {
         }
 
         protected int registerConstant(String name, String value) throws Exceptions.OsoException {
-            int result = checkResult(polarLib.polar_register_constant(ptr, name, value));
-            processMessages();
-            return result;
+            return checkResult(polarLib.polar_register_constant(ptr, name, value));
         }
 
         @Override
@@ -85,21 +79,15 @@ public class Ffi {
         }
 
         protected int questionResult(long call_id, int result) throws Exceptions.OsoException {
-            int success = checkResult(polarLib.polar_question_result(ptr, call_id, result));
-            processMessages();
-            return success;
+            return checkResult(polarLib.polar_question_result(ptr, call_id, result));
         }
 
         protected int callResult(long call_id, String value) throws Exceptions.OsoException {
-            int success = checkResult(polarLib.polar_call_result(ptr, call_id, value));
-            processMessages();
-            return success;
+            return checkResult(polarLib.polar_call_result(ptr, call_id, value));
         }
 
         protected int applicationError(String message) throws Exceptions.OsoException {
-            int success = checkResult(polarLib.polar_application_error(ptr, message));
-            processMessages();
-            return success;
+            return checkResult(polarLib.polar_application_error(ptr, message));
         }
 
         protected QueryEvent nextEvent() throws Exceptions.OsoException {
@@ -109,9 +97,7 @@ public class Ffi {
         }
 
         protected int debugCommand(String value) throws Exceptions.OsoException {
-            int success = checkResult(polarLib.polar_debug_command(ptr, value));
-            processMessages();
-            return success;
+            return checkResult(polarLib.polar_debug_command(ptr, value));
         }
 
         @Override
@@ -264,6 +250,7 @@ public class Ffi {
     }
 
     private Pointer checkResult(Pointer p) throws Exceptions.OsoException {
+        processMessages();
         if (p == null) {
             throw new Error().get();
         } else {
