@@ -97,7 +97,7 @@ function parseExternalCall({
     !Number.isSafeInteger(callId) ||
     !isPolarTerm(instance) ||
     typeof attribute !== 'string' ||
-    (args &&
+    (args !== undefined &&
       (!Array.isArray(args) || args.some((a: unknown) => !isPolarTerm(a))))
   )
     throw new Error();
