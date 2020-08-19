@@ -1,4 +1,3 @@
-import { readFile } from 'fs/promises';
 import { createHash } from 'crypto';
 import { extname, isAbsolute, resolve } from 'path';
 import { createInterface } from 'readline';
@@ -17,6 +16,7 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import type { Class, Options, QueryResult } from './types';
+import { readFile } from './helpers';
 
 export class Polar {
   #ffiPolar: FfiPolar;
@@ -57,7 +57,7 @@ export class Polar {
     let file = isAbsolute(name) ? name : resolve(__dirname, name);
     let contents;
     try {
-      contents = await readFile(file, { encoding: 'utf8' });
+      contents = await readFile(file);
     } catch (e) {
       if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
       throw e;

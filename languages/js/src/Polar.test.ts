@@ -1,5 +1,3 @@
-import { truncate } from 'fs/promises';
-
 import { Polar } from './Polar';
 import { Variable } from './Variable';
 import {
@@ -11,6 +9,7 @@ import {
   tempFile,
   tempFileFx,
   tempFileGx,
+  truncate,
 } from '../test/helpers';
 import {
   A,

@@ -1,3 +1,5 @@
+import { truncate as _truncate } from 'fs';
+
 import type { Polar } from '../src/Polar';
 import { Predicate } from '../src/Predicate';
 import type { obj } from '../src/types';
@@ -55,4 +57,10 @@ export function tempFileFx(): Promise<string> {
 
 export function tempFileGx(): Promise<string> {
   return tempFile('g(1);g(2);g(3);', 'g.polar');
+}
+
+export function truncate(file: string): Promise<string> {
+  return new Promise((res, rej) =>
+    _truncate(file, err => (err === null ? res() : rej(err)))
+  );
 }
