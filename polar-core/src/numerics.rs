@@ -98,7 +98,7 @@ impl Hash for Numeric {
                 FpCategory::Normal => {
                     // Hash floats the same as numerically equal integers.
                     if f.fract() == 0.0 {
-                        if MOST_NEGATIVE_I64_FLOAT <= *f && *f <= MOST_POSITIVE_I64_FLOAT {
+                        if MOST_NEGATIVE_I64_FLOAT <= *f && *f < MOST_POSITIVE_I64_FLOAT {
                             // The integral part of the float is representable as an i64.
                             discriminant(&Numeric::Integer(0)).hash(state);
                             (*f as i64) as u64
@@ -309,7 +309,7 @@ mod tests {
             hash(&Numeric::Float(fmid - 1.0))
         );
         assert_eq!(hash(&Numeric::Integer(mid)), hash(&Numeric::Float(fmid)));
-        assert_eq!(hash(&Numeric::Integer(max)), hash(&Numeric::Float(fmax)));
+        assert_ne!(hash(&Numeric::Integer(max)), hash(&Numeric::Float(fmax)));
 
         assert_ne!(
             hash(&Numeric::Integer(max)),
