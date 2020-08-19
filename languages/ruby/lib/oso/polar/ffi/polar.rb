@@ -24,7 +24,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def self.create
           polar = Rust.new
-          Message.process_messages()
+          Message.process_messages
           raise FFI::Error.get if polar.null?
 
           polar
@@ -35,7 +35,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def load_str(src, filename: nil)
           loaded = Rust.load_str(self, src, filename)
-          Message.process_messages()
+          Message.process_messages
           raise FFI::Error.get if loaded.zero?
         end
 
@@ -44,7 +44,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def next_inline_query
           query = Rust.next_inline_query(self, 0)
-          Message.process_messages()
+          Message.process_messages
           query.null? ? nil : query
         end
 
@@ -52,7 +52,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_id
           id = Rust.new_id(self)
-          Message.process_messages()
+          Message.process_messages
           # TODO(gj): I don't think this error check is correct. If getting a new ID fails on the
           # Rust side, it'll probably surface as a panic (e.g., the KB lock is poisoned).
           raise FFI::Error.get if id.zero?
@@ -65,7 +65,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str, 0)
-          Message.process_messages()
+          Message.process_messages
           raise FFI::Error.get if query.null?
 
           query
@@ -76,7 +76,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term), 0)
-          Message.process_messages()
+          Message.process_messages
           raise FFI::Error.get if query.null?
 
           query
@@ -87,7 +87,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_constant(name, value:)
           registered = Rust.register_constant(self, name, JSON.dump(value))
-          Message.process_messages()
+          Message.process_messages
           raise FFI::Error.get if registered.zero?
         end
       end

@@ -18,22 +18,25 @@ module Oso
           attach_function :free, :string_free, [Message], :int32
         end
 
-        def self.process_messages()
+        # rubocop:disable Metrics/MethodLength
+        def self.process_messages
           loop do
-            message_ptr = Rust.get()
+            message_ptr = Rust.get
             break if message_ptr.null?
-            
+
             message = JSON.parse(message_ptr.to_s)
-            kind = message["kind"]
-            msg = message["msg"]
-            
-            if kind == "Print"
+            kind = message['kind']
+            msg = message['msg']
+
+            case kind
+            when 'Print'
               puts(msg)
-            elsif kind == "Warning"
-              puts("[warning] %s" % msg)
+            when 'Warning'
+              puts('[warning] %<msg>s')
             end
           end
         end
+        # rubocop:enable Metrics/MethodLength
 
         private_constant :Rust
       end
