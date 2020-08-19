@@ -40,6 +40,12 @@ module Oso
           Rust.free(ptr)
         end
       end
+      # Wrapper class for Message FFI pointer + operations.
+      class Message < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr)
+        end
+      end
     end
     private_constant :FFI
   end
@@ -49,3 +55,4 @@ require 'oso/polar/ffi/polar'
 require 'oso/polar/ffi/query'
 require 'oso/polar/ffi/query_event'
 require 'oso/polar/ffi/error'
+require 'oso/polar/ffi/message'

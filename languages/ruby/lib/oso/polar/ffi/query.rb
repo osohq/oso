@@ -22,6 +22,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def debug_command(cmd)
           res = Rust.debug_command(self, cmd)
+          Message.process_messages()
           raise FFI::Error.get if res.zero?
         end
 
@@ -30,6 +31,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def call_result(result, call_id:)
           res = Rust.call_result(self, call_id, result)
+          Message.process_messages()
           raise FFI::Error.get if res.zero?
         end
 
@@ -39,6 +41,7 @@ module Oso
         def question_result(result, call_id:)
           result = result ? 1 : 0
           res = Rust.question_result(self, call_id, result)
+          Message.process_messages()
           raise FFI::Error.get if res.zero?
         end
 
@@ -47,6 +50,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def application_error(message)
           res = Rust.application_error(self, message)
+          Message.process_messages()
           raise FFI::Error.get if res.zero?
         end
 
@@ -54,6 +58,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def next_event
           event = Rust.next_event(self)
+          Message.process_messages()
           raise FFI::Error.get if event.null?
 
           ::Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
