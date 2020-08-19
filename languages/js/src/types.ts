@@ -184,3 +184,7 @@ export type EqualityFn = (x: any, y: any) => boolean;
 export interface Options {
   equalityFn?: EqualityFn;
 }
+
+export function isIterableIterator(x: any): boolean {
+  return typeof x?.next === 'function' && Symbol.iterator in Object(x);
+}
