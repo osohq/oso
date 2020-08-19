@@ -102,7 +102,7 @@ macro_rules! sym {
 }
 
 #[macro_export]
-macro_rules! pred {
+macro_rules! call {
     ($name:expr, [$($args:expr),*]) => {
         Predicate {
             name: sym!($name),
@@ -110,7 +110,10 @@ macro_rules! pred {
                 $(term!($args)),*
             ]
         }
-    }
+    };
+    ($name:expr) => {
+        Value::String($name.into())
+    };
 }
 
 #[macro_export]
@@ -198,12 +201,6 @@ macro_rules! value {
     };
     ($arg:expr) => {
         $crate::macros::TestHelper::<Value>::from($arg).0
-    };
-    ("true") => {
-        $crate::types::Value::Boolean(true)
-    };
-    ("false") => {
-        $crate::types::Value::Boolean(false)
     };
 }
 

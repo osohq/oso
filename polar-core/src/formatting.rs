@@ -406,12 +406,12 @@ pub mod to_polar {
                 // `Dot` sometimes formats as a predicate
                 Dot => {
                     if self.args.len() == 2 {
-                        let call = self.args[1].value().clone().call().unwrap();
-                        if call.args.is_empty() {
-                            format!("{}.{}", self.args[0].to_polar(), call.name.to_polar())
+                        let call_term = if let Value::String(s) = self.args[1].value() {
+                            s.to_string()
                         } else {
-                            format!("{}.{}", self.args[0].to_polar(), call.to_polar())
-                        }
+                            self.args[1].to_polar()
+                        };
+                        format!("{}.{}", self.args[0].to_polar(), call_term)
                     } else {
                         format!(".({})", format_args(self.operator, &self.args, ", "))
                     }

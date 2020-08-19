@@ -49,14 +49,6 @@ impl Dictionary {
     }
 }
 
-pub fn field_name(field: &Term) -> Symbol {
-    if let Value::Call(Predicate { name, .. }) = &field.value() {
-        name.clone()
-    } else {
-        panic!("keys must be symbols; received: {:?}", field.value)
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
@@ -800,7 +792,7 @@ pub enum QueryEvent {
         /// should be called.
         attribute: Symbol,
         /// List of arguments to use if this is a method call.
-        args: Vec<Term>,
+        args: Option<Vec<Term>>,
     },
 
     /// Checks if the instance is an instance of (a subclass of) the class_tag.
@@ -858,10 +850,10 @@ mod tests {
             call_id: 2,
             instance: None,
             attribute: Symbol::new("foo"),
-            args: vec![
+            args: Some(vec![
                 Term::new_from_test(value!(0)),
                 Term::new_from_test(value!("hello")),
-            ],
+            ]),
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let term = Term::new_from_test(value!(1));

@@ -204,8 +204,8 @@ def test_dictionaries(tell, qeval, qvar):
 def test_external_classes(tell, qeval, qvar, externals):
     assert qeval("new Bar{} matches Foo")
     assert not qeval("new Qux{} matches Foo")
-    assert qeval('new Foo{}.foo = "Foo!"')
-    assert qeval('new Bar{}.foo = "Bar!"')
+    assert qeval('new Foo{}.foo() = "Foo!"')
+    assert qeval('new Bar{}.foo() = "Bar!"')
 
 
 @pytest.mark.xfail(
