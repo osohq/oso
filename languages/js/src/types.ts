@@ -63,6 +63,7 @@ interface PolarInstance {
   ExternalInstance: {
     instance_id: number;
     repr: string;
+    constructor?: PolarTerm;
   };
 }
 
@@ -111,18 +112,6 @@ export function isPolarTerm(v: any): v is PolarTerm {
 
 export type Class<T extends {} = {}> = new (...args: any[]) => T;
 
-export function isGenerator(x: any): x is Generator {
-  return [x.next, x.return, x.throw].every(f => typeof f === 'function');
-}
-
-export function isGeneratorFunction(x: any): x is GeneratorFunction {
-  if (!x.constructor) return false;
-  return (
-    x.constructor.name === 'GeneratorFunction' ||
-    isGenerator(x.constructor.prototype)
-  );
-}
-
 export interface Result {
   bindings: Map<string, PolarTerm>;
 }
@@ -137,7 +126,7 @@ export interface ExternalCall {
   callId: number;
   instance: PolarTerm;
   attribute: string;
-  args: PolarTerm[];
+  args?: PolarTerm[];
 }
 
 export interface ExternalIsSubspecializer {
@@ -194,4 +183,8 @@ export type EqualityFn = (x: any, y: any) => boolean;
 
 export interface Options {
   equalityFn?: EqualityFn;
+}
+
+export function isIterableIterator(x: any): boolean {
+  return typeof x?.next === 'function' && Symbol.iterator in Object(x);
 }

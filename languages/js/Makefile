@@ -18,6 +18,9 @@ dev: wasm
 build: wasm
 	yarn tsc --project tsconfig.build.json
 
+fmt: clean
+	yarn fmt
+
 fmtcheck: clean
 	yarn fmtcheck
 

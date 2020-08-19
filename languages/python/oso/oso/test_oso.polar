@@ -4,7 +4,7 @@ allow(actor, action, resource) if
 
 allow(token, action, resource) if
     jwt = new Jwt{token: token} and
-    jwt.attributes = attributes and
+    jwt.attributes() = attributes and
     allow(attributes, action, resource);
 
 allow(_: {sub: sub}, action, resource) if
@@ -21,7 +21,7 @@ allow(actor: Actor, "create", resource: Company) if
     resource.role(actor) = "admin";
 
 allow(actor: Actor, "frob", resource: Company) if
-    actor.company.id = resource.id;
+    actor.company().id = resource.id;
 
 allow(actor: Actor, "list", Company) if
     actor.name = "auditor";

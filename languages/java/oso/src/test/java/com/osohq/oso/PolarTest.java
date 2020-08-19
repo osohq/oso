@@ -228,7 +228,7 @@ public class PolarTest {
         p.host.cacheInstance(instance, Long.valueOf(1));
         JSONObject polarInstance = p.host.toPolarTerm(instance);
         Query query = p.query("f(x)");
-        query.registerCall("myMethod", List.of("hello world"), 1, polarInstance);
+        query.registerCall("myMethod", Optional.of(List.of("hello world")), 1, polarInstance);
         JSONObject res = query.nextCallResult(1);
         assertTrue(p.host.toJava(res).equals("hello world"));
     }
@@ -256,14 +256,14 @@ public class PolarTest {
     @Test
     public void testEnumerationCallResults() throws Exception {
         MyClass c = new MyClass("test", 1);
-        p.loadStr("test(c: MyClass, x) if x = c.myEnumeration;");
+        p.loadStr("test(c: MyClass, x) if x = c.myEnumeration();");
         List<HashMap<String, Object>> results = p.queryRule("test", c, new Variable("x")).results();
         assertTrue(results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world"))));
     }
 
     @Test
     public void testStringMethods() throws Exception {
-        p.loadStr("f(x) if x.length = 3;");
+        p.loadStr("f(x) if x.length() = 3;");
         assertFalse(p.query("f(\"oso\")").results().isEmpty());
         assertTrue(p.query("f(\"notoso\")").results().isEmpty());
     }
@@ -309,14 +309,14 @@ public class PolarTest {
 
     @Test
     public void testReturnListFromCall() throws Exception {
-        p.loadStr("test(c: MyClass) if \"hello\" in c.myList;");
+        p.loadStr("test(c: MyClass) if \"hello\" in c.myList();");
         MyClass c = new MyClass("test", 1);
         assertFalse(p.queryRule("test", c).results().isEmpty());
     }
 
     @Test
     public void testClassMethods() throws Exception {
-        p.loadStr("test(x) if x=1 and MyClass.myStaticMethod = \"hello world\";");
+        p.loadStr("test(x) if x=1 and MyClass.myStaticMethod() = \"hello world\";");
 
         assertFalse(p.query("test(1)").results().isEmpty());
     }

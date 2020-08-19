@@ -128,7 +128,15 @@ export class Host {
         return { value: { Variable: v.name } };
       default:
         const instance_id = this.cacheInstance(v);
-        return { value: { ExternalInstance: { instance_id, repr: repr(v) } } };
+        return {
+          value: {
+            ExternalInstance: {
+              instance_id,
+              repr: repr(v),
+              constructor: undefined,
+            },
+          },
+        };
     }
   }
 

@@ -3,7 +3,7 @@ allow(actor, action, resource) if
     allowRole(role, action, resource);
 
 actorInRole(actor, role, resource: Widget) if
-    role = resource.company.role(actor);
+    role = resource.company().role(actor);
 
 allow(actor, "get", _: Http{path: path}) if
     new PathMapper("/widget/{id}").map(path) = {id: id} and
@@ -33,9 +33,9 @@ allow_with_cut(actor, "get", resource: DooDad) if cut and resource.frob("DooDad"
 allowRole("admin", "create", resource: Widget);
 
 allow(actor: Actor, "frob", resource: Widget) if
-    actor.company.id = resource.company.id and
-    actor.company.default_role = resource.company.default_role and
-    actor.company.roles = resource.company.roles;
+    actor.company().id = resource.company().id and
+    actor.company().default_role = resource.company().default_role and
+    actor.company().roles() = resource.company().roles();
 
 # for testing resource mappings with query parameters
 allow(actor, "parameterised_get", resource: Widget) if
@@ -63,4 +63,4 @@ allow(actor: Actor, "keep", resource: Widget) if
 
 # for testing iter
 allow(actor: Actor, "can_have", _: Widget{name: "stapler"}) if
-    actor.companies_iter matches Company{id: "Initech"};
+    actor.companies_iter() matches Company{id: "Initech"};

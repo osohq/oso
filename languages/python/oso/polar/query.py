@@ -83,14 +83,9 @@ class Query:
         call_id = data["call_id"]
         if call_id not in self.calls:
             value = data["instance"]["value"]
-            if "ExternalInstance" in value:
-                instance_id = value["ExternalInstance"]["instance_id"]
-                instance = self.host.get_instance(instance_id)
-            else:
-                instance = self.host.to_python(data["instance"])
+            instance = self.host.to_python(data["instance"])
 
             attribute = data["attribute"]
-            args = [self.host.to_python(arg) for arg in data["args"]]
 
             # Lookup the attribute on the instance.
             try:
@@ -99,9 +94,15 @@ class Query:
                 self.ffi_query.application_error(str(e))
                 self.ffi_query.call_result(call_id, None)
                 return
-
-            if callable(attr):  # If it's a function, call it with the args.
+            if (
+                callable(attr) and not data["args"] is None
+            ):  # If it's a function, call it with the args.
+                args = [self.host.to_python(arg) for arg in data["args"]]
                 result = attr(*args)
+            elif not data["args"] is None:
+                raise RuntimeError(
+                    f"tried to call '{attribute}' but it is not callable"
+                )
             else:  # If it's just an attribute, it's the result.
                 result = attr
 

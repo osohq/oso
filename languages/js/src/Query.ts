@@ -6,19 +6,19 @@ import { parseQueryEvent } from './helpers';
 import { DuplicateInstanceRegistrationError, InvalidCallError } from './errors';
 import { Host } from './Host';
 import type {
-  PolarTerm,
-  QueryEvent,
-  QueryResult,
-  Result,
-  MakeExternal,
+  Debug,
   ExternalCall,
   ExternalIsa,
   ExternalIsSubspecializer,
   ExternalUnify,
-  Debug,
+  MakeExternal,
+  PolarTerm,
+  QueryEvent,
+  QueryResult,
+  Result,
 } from './types';
 import { processMessage } from './Messages';
-import { isGenerator, isGeneratorFunction, QueryEventKind } from './types';
+import { isIterableIterator, QueryEventKind } from './types';
 
 export class Query {
   #ffiQuery: FfiQuery;
@@ -49,44 +49,33 @@ export class Query {
   }
 
   private registerCall(
-    attr: string,
+    field: string,
     callId: number,
     instance: PolarTerm,
-    args: PolarTerm[]
+    args?: PolarTerm[]
   ): void {
     if (this.#calls.has(callId)) return;
-    const jsArgs = args.map(a => this.#host.toJs(a));
-    const jsInstance = this.#host.toJs(instance);
-    const jsAttr = jsInstance[attr];
-    if (jsAttr === undefined) throw new InvalidCallError(attr, jsInstance);
-    let result: Generator;
-    if (isGenerator(jsAttr)) {
-      // The Generator#next method only takes 0 or 1 args.
-      if (jsArgs.length > 1) throw new InvalidCallError(attr, jsInstance);
-      result = (function* () {
-        while (true) {
-          const { done, value } = jsArgs.length
-            ? jsAttr.next(jsArgs[0])
-            : jsAttr.next();
-          if (done) return;
-          yield value;
-        }
-      })();
-    } else if (isGeneratorFunction(jsAttr)) {
-      result = jsInstance[attr](...jsArgs);
-    } else if (typeof jsAttr === 'function') {
-      result = (function* () {
-        yield jsInstance[attr](...jsArgs);
-      })();
-    } else {
-      // Blow up if jsArgs is not [] since the user is attempting to invoke +
-      // pass args to something that isn't callable.
-      if (jsArgs.length > 0) throw new InvalidCallError(attr, jsInstance);
-      result = (function* () {
-        yield jsAttr;
-      })();
+    const receiver = this.#host.toJs(instance);
+    let value = receiver[field];
+    if (args !== undefined) {
+      if (typeof value === 'function') {
+        // If value is a function, call it with the provided args.
+        value = receiver[field](...args!.map(a => this.#host.toJs(a)));
+      } else {
+        // Error on attempt to call non-function.
+        throw new InvalidCallError(receiver, field);
+      }
     }
-    this.#calls.set(callId, result);
+    const generator = (function* () {
+      if (isIterableIterator(value)) {
+        // If the call result is an iterable iterator, yield from it.
+        yield* value;
+      } else {
+        // Otherwise, yield it.
+        yield value;
+      }
+    })();
+    this.#calls.set(callId, generator);
   }
 
   private callResult(callId: number, result?: string): void {
@@ -109,14 +98,14 @@ export class Query {
     attr: string,
     callId: number,
     instance: PolarTerm,
-    args: PolarTerm[]
+    args?: PolarTerm[]
   ): void {
     let result;
     try {
       this.registerCall(attr, callId, instance, args);
       result = this.nextCallResult(callId);
     } catch (e) {
-      if (e instanceof InvalidCallError) {
+      if (e instanceof TypeError || e instanceof InvalidCallError) {
         this.applicationError(e.message);
       } else {
         throw e;

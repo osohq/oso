@@ -244,7 +244,7 @@ Exp10<T>: Term = {
 
 CallTerm: Value = {
     <Predicate>,
-    <name:Name> => Value::Call(Predicate{name, args: vec![]}),
+    <s:"Symbol"> => Value::String(s.0),
     "(" <Value> ")",
 }
 
