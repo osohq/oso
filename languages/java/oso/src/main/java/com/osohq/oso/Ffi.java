@@ -9,6 +9,9 @@ import java.io.OutputStream;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 
+import org.json.JSONObject;
+import org.json.JSONException;
+
 public class Ffi {
     // singleton variable
     private static Ffi ffi = null;
@@ -35,17 +38,22 @@ public class Ffi {
         }
 
         protected Query newQueryFromStr(String queryStr) throws Exceptions.OsoException {
-            return new Query(checkResult(polarLib.polar_new_query(ptr, queryStr, 0)));
+            Pointer query = checkResult(polarLib.polar_new_query(ptr, queryStr, 0));
+            processMessages();
+            return new Query(query);
         }
 
         protected Query newQueryFromTerm(String queryTerm) throws Exceptions.OsoException {
-            return new Query(checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm, 0)));
+            Pointer query = checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm, 0));
+            processMessages();
+            return new Query(query);
         }
 
         protected Query nextInlineQuery() throws Exceptions.OsoException {
             // Don't check result here because the returned Pointer is null to indicate
             // termination
             Pointer p = polarLib.polar_next_inline_query(ptr, 0);
+            processMessages();
             if (p == null) {
                 return null;
             } else {
@@ -54,7 +62,9 @@ public class Ffi {
         }
 
         protected int registerConstant(String name, String value) throws Exceptions.OsoException {
-            return checkResult(polarLib.polar_register_constant(ptr, name, value));
+            int result = checkResult(polarLib.polar_register_constant(ptr, name, value));
+            processMessages();
+            return result;
         }
 
         @Override
@@ -75,23 +85,33 @@ public class Ffi {
         }
 
         protected int questionResult(long call_id, int result) throws Exceptions.OsoException {
-            return checkResult(polarLib.polar_question_result(ptr, call_id, result));
+            int success = checkResult(polarLib.polar_question_result(ptr, call_id, result));
+            processMessages();
+            return success;
         }
 
         protected int callResult(long call_id, String value) throws Exceptions.OsoException {
-            return checkResult(polarLib.polar_call_result(ptr, call_id, value));
+            int success = checkResult(polarLib.polar_call_result(ptr, call_id, value));
+            processMessages();
+            return success;
         }
 
         protected int applicationError(String message) throws Exceptions.OsoException {
-            return checkResult(polarLib.polar_application_error(ptr, message));
+            int success = checkResult(polarLib.polar_application_error(ptr, message));
+            processMessages();
+            return success;
         }
 
         protected QueryEvent nextEvent() throws Exceptions.OsoException {
-            return new QueryEvent(checkResult(polarLib.polar_next_query_event(ptr)));
+            QueryEvent event = new QueryEvent(checkResult(polarLib.polar_next_query_event(ptr)));
+            processMessages();
+            return event;
         }
 
         protected int debugCommand(String value) throws Exceptions.OsoException {
-            return checkResult(polarLib.polar_debug_command(ptr, value));
+            int success = checkResult(polarLib.polar_debug_command(ptr, value));
+            processMessages();
+            return success;
         }
 
         @Override
@@ -145,6 +165,8 @@ public class Ffi {
         Pointer polar_get_error();
 
         long polar_get_external_id(Pointer polar_ptr);
+
+        Pointer polar_get_message();
 
         int polar_load(Pointer polar_ptr, String src, String filename);
 
@@ -246,6 +268,28 @@ public class Ffi {
             throw new Error().get();
         } else {
             return p;
+        }
+    }
+
+    private void processMessages() throws Exceptions.OsoException {
+        while(true) {
+            Pointer msgPtr = polarLib.polar_get_message();
+            if (msgPtr == null) {
+                break;
+            }
+            String msgStr = msgPtr.getString(0);
+            try {
+                JSONObject message = new JSONObject(msgStr);
+                String kind = message.getString("kind");
+                String msg = message.getString("msg");
+                if (kind.equals("Print")) {
+                    System.out.println(msg);
+                } else if (kind.equals("Warning")) {
+                    System.err.printf("[warning] %s\n", msg);
+                }
+            } catch (JSONException e) {
+            }
+            stringFree(msgPtr);
         }
     }
 }
