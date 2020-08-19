@@ -676,11 +676,5 @@ def test_return_none(polar, qeval):
             return [f(x) for x in self]
 
     polar.register_class(Foo)
-    # polar.load_str("""
-    #     testFunctions() if
-    #     list = new E([1, 2, 3]) and
-    #     list.map(E.plus_one) = [2, 3, 4];
-
-    # """)
     polar.load_str("f(x: Foo) if x.map(Foo.plus_one) = [2, 3, 4];")
     assert next(polar.query_rule("f", Foo([1, 2, 3])))
