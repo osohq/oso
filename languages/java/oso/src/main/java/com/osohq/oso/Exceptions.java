@@ -194,6 +194,16 @@ public class Exceptions {
         }
     }
 
+    public static class InvalidAttributeError extends PolarRuntimeException {
+        public InvalidAttributeError(String className, String attrName) {
+            super("Invalid attribute `" + attrName + "` on class " + className);
+        }
+
+        public InvalidAttributeError(String msg) {
+            super(msg);
+        }
+    }
+
     public static class InvalidConstructorError extends PolarRuntimeException {
         public InvalidConstructorError(String msg) {
             super(msg);

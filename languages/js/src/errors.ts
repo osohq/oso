@@ -1,3 +1,5 @@
+import { repr } from './helpers';
+
 export class PolarError extends Error {
   constructor(msg: string) {
     super(msg);
@@ -43,8 +45,8 @@ export class InlineQueryFailedError extends PolarError {
 }
 
 export class InvalidCallError extends PolarError {
-  constructor(attr: string, instance: any) {
-    super(`Property '${attr}' does not exist on ${JSON.stringify(instance)}`);
+  constructor(instance: any, field: string) {
+    super(`${repr(instance)}.${field} is not a function`);
     Object.setPrototypeOf(this, InvalidCallError.prototype);
   }
 }

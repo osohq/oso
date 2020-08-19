@@ -37,6 +37,7 @@ docs-test: python-build
 fmt:
 	cargo fmt
 	$(MAKE) -C languages/python/oso fmt
+	$(MAKE) -C languages/js fmt
 
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings

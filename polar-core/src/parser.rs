@@ -116,13 +116,13 @@ mod tests {
         let exp = parse_term(r#"foo(a, b(c), "d")"#);
         assert_eq!(
             exp,
-            term!(pred!("foo", [sym!("a"), pred!("b", [sym!("c")]), "d"]))
+            term!(call!("foo", [sym!("a"), call!("b", [sym!("c")]), "d"]))
         );
 
         let exp2 = parse_term(r#"foo.a(b)"#);
         assert_eq!(
             exp2,
-            term!(op!(Dot, term!(sym!("foo")), term!(pred!("a", [sym!("b")])))),
+            term!(op!(Dot, term!(sym!("foo")), term!(call!("a", [sym!("b")])))),
             "{}",
             exp2.to_polar()
         );
@@ -133,16 +133,16 @@ mod tests {
             term!(op!(
                 Dot,
                 term!(sym!("foo")),
-                term!(pred!(
+                term!(call!(
                     "bar",
                     [
                         sym!("a"),
-                        pred!(
+                        call!(
                             "b",
                             [op!(
                                 Dot,
                                 term!(sym!("c")),
-                                term!(pred!("d", [sym!("e"), value!([sym!("f"), sym!("g")])]))
+                                term!(call!("d", [sym!("e"), value!([sym!("f"), sym!("g")])]))
                             )]
                         )
                     ]
@@ -152,7 +152,7 @@ mod tests {
             exp3.to_polar()
         );
         let rule = parse_rule(r#"f(x) if g(x);"#);
-        assert_eq!(rule, rule!("f", [sym!("x")] => pred!("g", [sym!("x")])));
+        assert_eq!(rule, rule!("f", [sym!("x")] => call!("g", [sym!("x")])));
         let rule = parse_rule(r#"f(x);"#);
         assert_eq!(rule, rule!("f", [sym!("x")]));
     }
@@ -223,7 +223,7 @@ mod tests {
         let f = r#"?= f(1);"#;
         let line = parse_lines(&f);
 
-        assert_eq!(line[0], Line::Query(term!(pred!("f", [1]))));
+        assert_eq!(line[0], Line::Query(term!(call!("f", [1]))));
     }
 
     #[test]
@@ -274,7 +274,7 @@ mod tests {
         let q = r#""abc".startswith("a")"#;
         assert_eq!(
             parse_query(q),
-            term!(op!(Dot, term!("abc"), term!(pred!("startswith", ["a"])))),
+            term!(op!(Dot, term!("abc"), term!(call!("startswith", ["a"])))),
         );
 
         let q = r#"x.("invalid-key")"#;

@@ -202,7 +202,7 @@ mod tests {
 
         // First rewrite
         rewrite_rule(&mut rule, &mut kb);
-        assert_eq!(rule.to_polar(), "f(_value_1) if .(a, b(), _value_1);");
+        assert_eq!(rule.to_polar(), "f(_value_1) if .(a, \"b\", _value_1);");
 
         // Check we can parse the rules back again
         let again = parse_rules(&rule.to_polar());
@@ -221,7 +221,7 @@ mod tests {
         rewrite_rule(&mut rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_2) if .(a, b(), _value_3) and .(_value_3, c(), _value_2);"
+            "f(_value_2) if .(a, \"b\", _value_3) and .(_value_3, \"c\", _value_2);"
         );
     }
 
@@ -240,9 +240,9 @@ mod tests {
         );
 
         // Nested lookups
-        let rules = parse_rules("f(a, c, e) if a.b(c.d(e.f));");
+        let rules = parse_rules("f(a, c, e) if a.b(c.d(e.f()));");
         let mut rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a, c, e) if a.b(c.d(e.f));");
+        assert_eq!(rule.to_polar(), "f(a, c, e) if a.b(c.d(e.f()));");
         rewrite_rule(&mut rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
@@ -256,23 +256,26 @@ mod tests {
         let mut term = parse_query("x and a.b");
         assert_eq!(term.to_polar(), "x and a.b");
         rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), "x and .(a, b(), _value_1) and _value_1");
+        assert_eq!(term.to_polar(), "x and .(a, \"b\", _value_1) and _value_1");
 
-        let mut query = parse_query("f(a.b.c)");
-        assert_eq!(query.to_polar(), "f(a.b.c)");
+        let mut query = parse_query("f(a.b().c)");
+        assert_eq!(query.to_polar(), "f(a.b().c)");
         rewrite_term(&mut query, &mut kb);
         assert_eq!(
             query.to_polar(),
-            ".(a, b(), _value_3) and .(_value_3, c(), _value_2) and f(_value_2)"
+            ".(a, b(), _value_3) and .(_value_3, \"c\", _value_2) and f(_value_2)"
         );
 
         let mut term = parse_query("a.b = 1");
         rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), ".(a, b(), _value_4) and _value_4 = 1");
+        assert_eq!(term.to_polar(), ".(a, \"b\", _value_4) and _value_4 = 1");
         let mut term = parse_query("{x: 1}.x = 1");
         assert_eq!(term.to_polar(), "{x: 1}.x = 1");
         rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), ".({x: 1}, x(), _value_5) and _value_5 = 1");
+        assert_eq!(
+            term.to_polar(),
+            ".({x: 1}, \"x\", _value_5) and _value_5 = 1"
+        );
     }
 
     #[test]
@@ -283,7 +286,7 @@ mod tests {
         rewrite_term(&mut term, &mut kb);
         assert_eq!(
             term.to_polar(),
-            ".(bar, y(), _value_2) and new (Foo{x: _value_2}, _instance_1) and _instance_1"
+            ".(bar, \"y\", _value_2) and new (Foo{x: _value_2}, _instance_1) and _instance_1"
         );
 
         let mut term = parse_query("f(new Foo { x: bar.y })");
@@ -291,7 +294,7 @@ mod tests {
         rewrite_term(&mut term, &mut kb);
         assert_eq!(
             term.to_polar(),
-            ".(bar, y(), _value_4) and new (Foo{x: _value_4}, _instance_3) and f(_instance_3)"
+            ".(bar, \"y\", _value_4) and new (Foo{x: _value_4}, _instance_3) and f(_instance_3)"
         );
     }
 
@@ -344,7 +347,7 @@ mod tests {
         rewrite_term(&mut term, &mut kb);
         pretty_assertions::assert_eq!(
             term.to_polar(),
-            "not (.(foo, x(), _value_1) and _value_1 = 1)"
+            "not (.(foo, \"x\", _value_1) and _value_1 = 1)"
         )
     }
 }
