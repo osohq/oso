@@ -88,3 +88,28 @@ jobs:
           working-directory: "languages/ruby"
       - run: gem push oso-oso-${{ github.event.inputs.version }}.gem
         working-directory: "oso-ruby-${{ github.event.inputs.version }}"
+  js:
+    name: Publish Node.js package to NPM
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: "v${{ github.event.inputs.version }}"
+      - run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/v${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "oso-js-node-${{ github.event.inputs.version }}.tgz") | .url') --output oso-js-node-${{ github.event.inputs.version }}.tgz
+      - name: Extract gzipped archive
+        run: |
+          mkdir -p oso-js-node-${{ github.event.inputs.version }}
+          tar -xzf oso-js-node-${{ github.event.inputs.version }}.tgz -C oso-js-node-${{ github.event.inputs.version }} --strip-components=1
+      - name: Use Node.js 10.14.2
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.14.2
+      - name: Set up .npmrc
+        working-directory: "oso-js-node-${{ github.event.inputs.version }}"
+        run: echo '//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}' > .npmrc
+      - run: npm publish
+        working-directory: "oso-js-node-${{ github.event.inputs.version }}"

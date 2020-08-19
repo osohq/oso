@@ -6,7 +6,7 @@ import { Variable } from './Variable';
 
 describe('conversions between JS + Polar values', () => {
   test('converts Polar values into JS values', () => {
-    const h = new Host(new FfiPolar());
+    const h = new Host(new FfiPolar(), (x, y) => x == y);
     const int = 1;
     const float = Math.PI;
     const str = '2';

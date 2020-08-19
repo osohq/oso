@@ -253,11 +253,10 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build
+        working-directory: languages/js
         run: |
-          make install
           make CARGO_FLAGS=--release build
           rm -rf node_modules
-        working-directory: languages/js
       - uses: actions/upload-artifact@v2
         with:
           name: oso_js_node
@@ -497,8 +496,9 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: oso_js_node
-      - name: Zip file
-        run: zip -r oso-js-node.zip oso_js_node
+      - name: Create JS release artifact
+        working-directory: oso_js_node
+        run: npm pack
       # - name: Download docs
       #   uses: actions/download-artifact@v1
       #   with:
@@ -568,9 +568,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./oso-js-node.zip
-          asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.zip
-          asset_content_type: application/zip
+          asset_path: ./oso_js_node/oso-${{ steps.version.outputs.oso_version }}.tgz
+          asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.tgz
+          asset_content_type: application/gzip
       # - name: Upload Release Docs
       #   uses: actions/upload-release-asset@v1
       #   env:

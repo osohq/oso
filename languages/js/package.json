@@ -1,6 +1,6 @@
 {
   "name": "oso",
-  "version": "0.4.1-rc2",
+  "version": "0.4.1-rc4",
   "description": "Oso authorization library.",
   "main": "dist/src/index.js",
   "repository": "https://github.com/osohq/oso",
@@ -35,7 +35,5 @@
     "ts-node": "^8.10.2",
     "typescript": "^3.9.5"
   },
-  "dependencies": {
-    "lodash": "^4.17.19"
-  }
+  "dependencies": {}
 }
