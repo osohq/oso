@@ -2,7 +2,6 @@ import com.osohq.oso.*;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.function.Function;
 import java.lang.Math;
 
 class Test {
