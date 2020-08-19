@@ -13,12 +13,13 @@ Breaking changes
 Method/Attribute syntax
 -----------------------
 
-Previously, writing ``x.foo`` in Polar could be either accessing the attribute OR the
-method called ``foo`` on ``x`` - the host language libraries would pick whichever it
-found.
+Previously, ``x.foo`` and ``x.foo()`` in a Polar policy could either be
+performing an attribute lookup or invoking a zero-arity method on ``x``. If
+looking up the ``foo`` property returned a method, the host language libraries
+would transparently invoke it and return the result.
 
-This syntax is no longer supporting. Methods can only be called by writing ``x.foo()``.
-
+**As of this release, parentheses are required for invocation**. ``x.foo``
+performs a lookup, and ``x.foo()`` invokes a zero-arity method.
 
 New features
 ==============
