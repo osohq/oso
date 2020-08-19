@@ -37,13 +37,6 @@ module B
 end
 oso.register_class(B::C, name: 'C') { |y| B::C.new(y) }
 
-class E < Array
-  def self.plus_one(num)
-    num + 1
-  end
-end
-oso.register_class(E)
-
 oso.load_file File.expand_path(File.join(__dir__, '../../../../test/test.polar'))
 
 raise unless oso.allowed?(actor: 'a', action: 'b', resource: 'c')
