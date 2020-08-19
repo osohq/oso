@@ -38,3 +38,4 @@ Other bugs & improvements
 
 - Improved performance of policies with many rules having ground (constant) parameters.
 - Improved performance of ``in`` operator (list membership) with many ground elements.
+- New ffi methods for passing printing and warning messages from rust to app languages.
