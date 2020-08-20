@@ -141,13 +141,10 @@ class Polar:
         """
         return self.query(Predicate(name=name, args=args))
 
-    def repl(self, load=True):
+    def repl(self, files=[]):
         """Start an interactive REPL session."""
-        if load:
-            import sys
-
-            for f in sys.argv[1:]:
-                self.load_file(f)
+        for f in files:
+            self.load_file(f)
 
         while True:
             try:
