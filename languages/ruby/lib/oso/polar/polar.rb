@@ -125,9 +125,10 @@ module Oso
 
       # Start a REPL session.
       #
+      # @param files [Array<String>]
       # @raise [Error] if the FFI call raises one.
-      def repl(load: false) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
-        ARGV.map { |f| load_file(f) } if load
+      def repl(files = []) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
+        files.map { |f| load_file(f) }
 
         loop do # rubocop:disable Metrics/BlockLength
           print 'query> '
