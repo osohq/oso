@@ -1,12 +1,20 @@
+enum MessageKind {
+  Print = 'Print',
+  Warning = 'Warning',
+}
+
 export interface Message {
-  kind: String;
-  msg: String;
+  kind: MessageKind;
+  msg: string;
 }
 
 export function processMessage(message: Message) {
-  if (message.kind === 'Print') {
-    console.log(message.msg);
-  } else if (message.kind === 'Warning') {
-    console.warn(message.msg);
+  switch (message.kind) {
+    case MessageKind.Print:
+      console.log(message.msg);
+      break;
+    case MessageKind.Warning:
+      console.warn(message.msg);
+      break;
   }
 }
