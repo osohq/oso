@@ -36,7 +36,9 @@ oso.registerClass(B.C, 'C');
 
 class E {
   static sum(args: number[]) {
-    return args.reduce((a, b) => { return a + b }, 0);
+    return args.reduce((a, b) => {
+      return a + b;
+    }, 0);
   }
 }
 
