@@ -56,7 +56,7 @@ impl Iterator for Query {
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
-    pub messages: MessageQueue,
+    messages: MessageQueue,
 }
 
 impl Default for Polar {
