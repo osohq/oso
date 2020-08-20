@@ -5,7 +5,7 @@ import { Actor, User, Widget } from '../test/classes';
 import { Variable } from './Variable';
 
 describe('conversions between JS + Polar values', () => {
-  test('converts Polar values into JS values', () => {
+  test('converts Polar values into JS values', async () => {
     const h = new Host(new FfiPolar(), (x, y) => x == y);
     const int = 1;
     const float = Math.PI;
@@ -36,6 +36,6 @@ describe('conversions between JS + Polar values', () => {
       e: promises,
       f: functions,
     };
-    expect(h.toJs(h.toPolar(value))).toStrictEqual(value);
+    expect(await h.toJs(h.toPolar(value))).toStrictEqual(value);
   });
 });
