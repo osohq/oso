@@ -14,7 +14,7 @@ export function processMessage(message: Message) {
       console.log(message.msg);
       break;
     case MessageKind.Warning:
-      console.warn(message.msg);
+      console.warn('[warning]', message.msg);
       break;
   }
 }
