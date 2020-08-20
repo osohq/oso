@@ -59,6 +59,12 @@ pub struct Polar {
     pub messages: MessageQueue,
 }
 
+impl Default for Polar {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Polar {
     pub fn new() -> Self {
         Self {
