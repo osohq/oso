@@ -77,15 +77,25 @@ export class Host {
     return instanceId;
   }
 
-  makeInstance(name: string, fields: PolarTerm[], id: number): number {
+  // Return value only used in tests.
+  async makeInstance(
+    name: string,
+    fields: PolarTerm[],
+    id: number
+  ): Promise<number> {
     const cls = this.getClass(name);
-    const args = fields.map(f => this.toJs(f));
+    const args = await Promise.all(fields.map(async f => await this.toJs(f)));
     const instance = new cls(...args);
     return this.cacheInstance(instance, id);
   }
 
-  isSubspecializer(id: number, left: string, right: string): boolean {
-    const instance = this.getInstance(id);
+  async isSubspecializer(
+    id: number,
+    left: string,
+    right: string
+  ): Promise<boolean> {
+    let instance = this.getInstance(id);
+    instance = instance instanceof Promise ? await instance : instance;
     if (!(instance?.constructor instanceof Function)) return false;
     const mro = ancestors(instance.constructor);
     const leftIndex = mro.indexOf(this.getClass(left));
@@ -99,14 +109,18 @@ export class Host {
     }
   }
 
-  isa(instance: PolarTerm, name: string): boolean {
-    const jsInstance = this.toJs(instance);
+  async isa(polarInstance: PolarTerm, name: string): Promise<boolean> {
+    const instance = await this.toJs(polarInstance);
     const cls = this.getClass(name);
-    return jsInstance instanceof cls || jsInstance?.constructor === cls;
+    return instance instanceof cls || instance?.constructor === cls;
   }
 
-  unify(left: number, right: number): boolean {
-    return this.#equalityFn(this.getInstance(left), this.getInstance(right));
+  async unify(leftId: number, rightId: number): Promise<boolean> {
+    let left = this.getInstance(leftId);
+    let right = this.getInstance(rightId);
+    left = left instanceof Promise ? await left : left;
+    right = right instanceof Promise ? await right : right;
+    return this.#equalityFn(left, right);
   }
 
   toPolar(v: any): PolarTerm {
@@ -140,7 +154,7 @@ export class Host {
     }
   }
 
-  toJs(v: PolarTerm): any {
+  async toJs(v: PolarTerm): Promise<any> {
     const t = v.value;
     if (isPolarStr(t)) {
       return t.String;
@@ -153,24 +167,29 @@ export class Host {
     } else if (isPolarBool(t)) {
       return t.Boolean;
     } else if (isPolarList(t)) {
-      return t.List.map(this.toJs);
+      return await Promise.all(t.List.map(async el => await this.toJs(el)));
     } else if (isPolarDict(t)) {
       const { fields } = t.Dictionary;
-      const entries =
+      let entries =
         typeof fields.entries === 'function'
           ? Array.from(fields.entries())
           : Object.entries(fields);
+      entries = await Promise.all(
+        entries.map(async ([k, v]) => [k, await this.toJs(v)]) as Promise<
+          [string, any]
+        >[]
+      );
       return entries.reduce((obj: obj, [k, v]) => {
-        obj[k] = this.toJs(v);
+        obj[k] = v;
         return obj;
       }, {});
     } else if (isPolarInstance(t)) {
-      return this.getInstance(t.ExternalInstance.instance_id);
+      const i = this.getInstance(t.ExternalInstance.instance_id);
+      return i instanceof Promise ? await i : i;
     } else if (isPolarPredicate(t)) {
-      return new Predicate(
-        t.Call.name,
-        t.Call.args.map(a => this.toJs(a))
-      );
+      let { name, args } = t.Call;
+      args = await Promise.all(args.map(async a => await this.toJs(a)));
+      return new Predicate(name, args);
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
     }

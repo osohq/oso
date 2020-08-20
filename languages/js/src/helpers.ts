@@ -1,4 +1,5 @@
 import { inspect } from 'util';
+import { readFile as _readFile } from 'fs';
 
 import {
   InvalidQueryEventError,
@@ -166,4 +167,12 @@ function parseDebug({ message }: obj): QueryEvent {
     kind: QueryEventKind.Debug,
     data: { message },
   };
+}
+
+export function readFile(file: string): Promise<string> {
+  return new Promise((res, rej) =>
+    _readFile(file, { encoding: 'utf8' }, (err, contents) =>
+      err === null ? res(contents) : rej(err)
+    )
+  );
 }
