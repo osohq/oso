@@ -175,7 +175,11 @@ export interface QueryEvent {
     | Result;
 }
 
-export type QueryResult = Generator<Map<string, any>, void, never>;
+export type QueryResult = AsyncGenerator<
+  Map<string, any>,
+  void,
+  undefined | void
+>;
 
 export type obj = { [key: string]: any };
 
@@ -187,4 +191,8 @@ export interface Options {
 
 export function isIterableIterator(x: any): boolean {
   return typeof x?.next === 'function' && Symbol.iterator in Object(x);
+}
+
+export function isAsyncIterator(x: any): boolean {
+  return Symbol.asyncIterator in Object(x);
 }
