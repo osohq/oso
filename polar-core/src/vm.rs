@@ -1723,12 +1723,10 @@ impl PolarVirtualMachine {
                     ..
                 }),
             ) => {
-                if left_instance != right_instance {
-                    self.push_goal(Goal::UnifyExternal {
-                        left_instance_id: *left_instance,
-                        right_instance_id: *right_instance,
-                    })?;
-                }
+                self.push_goal(Goal::UnifyExternal {
+                    left_instance_id: *left_instance,
+                    right_instance_id: *right_instance,
+                })?;
             }
 
             (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {
