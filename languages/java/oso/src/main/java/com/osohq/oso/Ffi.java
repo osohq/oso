@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import com.sun.org.apache.bcel.internal.generic.IFGT;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 
@@ -310,7 +311,7 @@ public class Ffi {
             } else if (kind.equals("Warning")) {
                 System.err.printf("[warning] %s\n", msg);
             }
-        } catch (JSONException e) {
+        } catch (JSONException ignored) {
         }
     }
 }
