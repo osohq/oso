@@ -102,3 +102,5 @@ raise unless oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').to_a.e
 oso.query('builtinSpecializers("foo", "String")').next
 raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?
 # rubocop:enable Layout/EmptyLineAfterGuardClause
+
+oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'

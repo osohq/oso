@@ -107,6 +107,9 @@ class Test {
         assert !o.query("builtinSpecializers(\"foo\", \"String\")").results().isEmpty();
         assert o.query("builtinSpecializers(\"bar\", \"String\")").results().isEmpty();
 
+        // Test deref behaviour
+        o.loadStr("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;");
+
         System.out.println("Tests Pass");
     }
 }

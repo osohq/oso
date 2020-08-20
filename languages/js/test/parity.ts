@@ -34,6 +34,14 @@ namespace B {
 
 oso.registerClass(B.C, 'C');
 
+class E {
+  static sum(args: number[]) {
+    return args.reduce((a, b) => { return a + b }, 0);
+  }
+}
+
+oso.registerClass(E);
+
 (async function () {
   // This path has the same nesting for development and the parity test jobs by sheer coincidence.
   // In tests it's `languages/js/test/parity.ts`
@@ -79,6 +87,7 @@ oso.registerClass(B.C, 'C');
           .next()
       ).done,
       (await oso.queryRule('testOr').next()).done,
+      (await oso.queryRule('testUnifyClass', E).next()).done,
       // oso.queryRule('testHttpAndPathMapper').next().done,
     ].some(v => v)
   )
@@ -128,6 +137,9 @@ oso.registerClass(B.C, 'C');
     ].some(v => v)
   )
     throw new Error();
+
+  // Test deref behaviour
+  await oso.loadStr('?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;');
 
   console.log('tests pass');
 })();
