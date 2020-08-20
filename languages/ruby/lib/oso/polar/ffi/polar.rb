@@ -64,9 +64,8 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str, 0)
-          raise FFI::Error.get if query.null?
-
           process_messages
+          raise FFI::Error.get if query.null?
 
           query
         end
@@ -76,9 +75,8 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term), 0)
-          raise FFI::Error.get if query.null?
-
           process_messages
+          raise FFI::Error.get if query.null?
 
           query
         end

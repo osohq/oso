@@ -23,9 +23,8 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def debug_command(cmd)
           res = Rust.debug_command(self, cmd)
-          raise FFI::Error.get if res.zero?
-
           process_messages
+          raise FFI::Error.get if res.zero?
         end
 
         # @param result [String]
@@ -57,9 +56,8 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def next_event
           event = Rust.next_event(self)
-          raise FFI::Error.get if event.null?
-
           process_messages
+          raise FFI::Error.get if event.null?
 
           ::Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
         end

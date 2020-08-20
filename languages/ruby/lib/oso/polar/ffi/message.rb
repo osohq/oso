@@ -26,7 +26,7 @@ module Oso
           when 'Print'
             puts(msg)
           when 'Warning'
-            puts('[warning] %<msg>s')
+            $stderr.puts('[warning] %<msg>s')
           end
         end
 

@@ -37,7 +37,7 @@ module Oso
       # Wrapper class for Error FFI pointer + operations.
       class Error < ::FFI::AutoPointer
         def self.release(ptr)
-          Rust.free(ptr)
+          Rust.free(ptr) unless ptr.null?
         end
       end
       # Wrapper class for Message FFI pointer + operations.
