@@ -48,9 +48,7 @@ export class Polar {
   private processMessages() {
     while (true) {
       let msg = this.#ffiPolar.nextMessage();
-      if (!msg) {
-        break;
-      }
+      if (msg === undefined) break;
       processMessage(msg);
     }
   }

@@ -36,9 +36,7 @@ export class Query {
   private processMessages() {
     while (true) {
       let msg = this.#ffiQuery.nextMessage();
-      if (!msg) {
-        break;
-      }
+      if (msg === undefined) break;
       processMessage(msg);
     }
   }
