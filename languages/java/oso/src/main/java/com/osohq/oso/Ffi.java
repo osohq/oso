@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.sun.org.apache.bcel.internal.generic.IFGT;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 
