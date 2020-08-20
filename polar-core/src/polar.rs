@@ -60,10 +60,10 @@ pub struct Polar {
 }
 
 impl Polar {
-    pub fn new(messages: Option<MessageQueue>) -> Self {
+    pub fn new() -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
-            messages: messages.unwrap_or_default(),
+            messages: MessageQueue::new(),
         }
     }
 
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn can_load_and_query() {
-        let polar = Polar::new(None);
+        let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load("f(_);");
     }

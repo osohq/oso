@@ -989,7 +989,7 @@ mod tests {
 
     #[test]
     fn test_rule_index() {
-        let polar = Polar::new(None);
+        let polar = Polar::new();
         polar.load(r#"f(1, 1, "x");"#).unwrap();
         polar.load(r#"f(1, 1, "y");"#).unwrap();
         polar.load(r#"f(1, x, "y") if x = 2;"#).unwrap();
