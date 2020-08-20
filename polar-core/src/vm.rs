@@ -1722,7 +1722,7 @@ impl PolarVirtualMachine {
                     instance_id: right_instance,
                     ..
                 }),
-            )  => {
+            ) => {
                 if left_instance != right_instance {
                     self.push_goal(Goal::UnifyExternal {
                         left_instance_id: *left_instance,
