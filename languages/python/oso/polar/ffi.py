@@ -27,22 +27,24 @@ class Polar:
         process_messages(self.next_message)
 
     def new_query_from_str(self, query_str):
-        query = check_result(lib.polar_new_query(self.ptr, to_c_str(query_str), 0))
+        new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
         process_messages(self.next_message)
+        query = check_result(new_q_ptr)
         return Query(query)
 
     def new_query_from_term(self, query_term):
-        query = check_result(
-            lib.polar_new_query_from_term(self.ptr, ffi_serialize(query_term), 0)
+        new_q_ptr = lib.polar_new_query_from_term(
+            self.ptr, ffi_serialize(query_term), 0
         )
         process_messages(self.next_message)
+        query = check_result(new_q_ptr)
         return Query(query)
 
     def next_inline_query(self):
         q = lib.polar_next_inline_query(self.ptr, 0)
+        process_messages(self.next_message)
         if is_null(q):
             return None
-        process_messages(self.next_message)
         return Query(q)
 
     def register_constant(self, name, value):
