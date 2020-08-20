@@ -23,8 +23,9 @@ class Polar:
         """Load a Polar string, checking that all inline queries succeed."""
         string = to_c_str(string)
         filename = to_c_str(str(filename)) if filename else ffi.NULL
-        check_result(lib.polar_load(self.ptr, string, filename))
+        result = lib.polar_load(self.ptr, string, filename)
         process_messages(self.next_message)
+        check_result(result)
 
     def new_query_from_str(self, query_str):
         new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
@@ -50,8 +51,9 @@ class Polar:
     def register_constant(self, name, value):
         name = to_c_str(name)
         value = ffi_serialize(value)
-        check_result(lib.polar_register_constant(self.ptr, name, value))
+        result = lib.polar_register_constant(self.ptr, name, value)
         process_messages(self.next_message)
+        check_result(result)
 
     def next_message(self):
         return lib.polar_next_polar_message(self.ptr)
@@ -82,13 +84,15 @@ class Query:
         check_result(lib.polar_application_error(self.ptr, message))
 
     def next_event(self):
-        event = check_result(lib.polar_next_query_event(self.ptr))
+        event = lib.polar_next_query_event(self.ptr)
         process_messages(self.next_message)
+        event = check_result(event)
         return QueryEvent(event)
 
     def debug_command(self, command):
-        check_result(lib.polar_debug_command(self.ptr, ffi_serialize(command)))
+        result = lib.polar_debug_command(self.ptr, ffi_serialize(command))
         process_messages(self.next_message)
+        check_result(result)
 
     def next_message(self):
         return lib.polar_next_query_message(self.ptr)
@@ -140,8 +144,8 @@ def process_messages(next_message_method):
         if is_null(msg_ptr):
             break
         msg_str = ffi.string(msg_ptr).decode()
-        message = json.loads(msg_str)
         lib.string_free(msg_ptr)
+        message = json.loads(msg_str)
 
         kind = message["kind"]
         msg = message["msg"]

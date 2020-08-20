@@ -35,21 +35,21 @@ public class Ffi {
         }
 
         protected int loadStr(String src, String filename) throws Exceptions.OsoException {
-            int result = checkResult(polarLib.polar_load(ptr, src, filename));
+            int result = polarLib.polar_load(ptr, src, filename);
             processMessages();
-            return result;
+            return checkResult(result);
         }
 
         protected Query newQueryFromStr(String queryStr) throws Exceptions.OsoException {
-            Query query = new Query(checkResult(polarLib.polar_new_query(ptr, queryStr, 0)));
+            Pointer queryPtr = polarLib.polar_new_query(ptr, queryStr, 0);
             processMessages();
-            return query;
+            return new Query(checkResult(queryPtr));
         }
 
         protected Query newQueryFromTerm(String queryTerm) throws Exceptions.OsoException {
-            Query query = new Query(checkResult(polarLib.polar_new_query_from_term(ptr, queryTerm, 0)));
+            Pointer queryPtr = polarLib.polar_new_query_from_term(ptr, queryTerm, 0);
             processMessages();
-            return query;
+            return new Query(checkResult(queryPtr));
         }
 
         protected Query nextInlineQuery() throws Exceptions.OsoException {
@@ -112,15 +112,15 @@ public class Ffi {
         }
 
         protected QueryEvent nextEvent() throws Exceptions.OsoException {
-            QueryEvent event = new QueryEvent(checkResult(polarLib.polar_next_query_event(ptr)));
+            Pointer eventPtr = polarLib.polar_next_query_event(ptr);
             processMessages();
-            return event;
+            return new QueryEvent(checkResult(eventPtr));
         }
 
         protected int debugCommand(String value) throws Exceptions.OsoException {
-            int result = checkResult(polarLib.polar_debug_command(ptr, value));
+            int result = polarLib.polar_debug_command(ptr, value);
             processMessages();
-            return result;
+            return checkResult(result);
         }
 
         protected Pointer nextMessage() throws Exceptions.OsoException {
@@ -312,6 +312,7 @@ public class Ffi {
                 System.err.printf("[warning] %s\n", msg);
             }
         } catch (JSONException ignored) {
+            throw new Exceptions.SerializationError(String.format("Invalid JSON Message: %s", msgStr), null);
         }
     }
 }
