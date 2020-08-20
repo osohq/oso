@@ -1,4 +1,3 @@
-import { readFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { extname, isAbsolute, resolve } from 'path';
 import { createInterface } from 'readline';
@@ -18,6 +17,7 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './Messages';
 import type { Class, Options, QueryResult } from './types';
+import { readFile } from './helpers';
 
 export class Polar {
   #ffiPolar: FfiPolar;
@@ -63,12 +63,12 @@ export class Polar {
     previous.free();
   }
 
-  loadFile(name: string): void {
+  async loadFile(name: string): Promise<void> {
     if (extname(name) !== '.polar') throw new PolarFileExtensionError(name);
     let file = isAbsolute(name) ? name : resolve(__dirname, name);
     let contents;
     try {
-      contents = readFileSync(file, { encoding: 'utf8' });
+      contents = await readFile(file);
     } catch (e) {
       if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
       throw e;
@@ -83,12 +83,12 @@ export class Polar {
     const existingFile = this.#loadedContents.get(hash);
     if (existingFile !== undefined)
       throw new PolarFileDuplicateContentError(file, existingFile);
-    this.loadStr(contents, file);
+    await this.loadStr(contents, file);
     this.#loadedContents.set(hash, file);
     this.#loadedFiles.set(file, hash);
   }
 
-  loadStr(contents: string, name?: string): void {
+  async loadStr(contents: string, name?: string): Promise<void> {
     this.#ffiPolar.loadFile(contents, name);
     this.processMessages();
 
@@ -97,7 +97,7 @@ export class Polar {
       this.processMessages();
       if (query === undefined) break;
       const { results } = new Query(query, this.#host);
-      const { done } = results.next();
+      const { done } = await results.next();
       results.return();
       if (done) throw new InlineQueryFailedError(name);
     }
@@ -127,11 +127,15 @@ export class Polar {
       output: process.stdout,
       prompt: 'query> ',
       tabSize: 4,
-    }).on('line', line => {
+    }).on('line', async line => {
       const input = line.trim().replace(/;+$/, '');
       try {
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
-        const results = Array.from(new Query(ffiQuery, this.#host).results);
+        const query = new Query(ffiQuery, this.#host);
+        const results = [];
+        for await (const result of query.results) {
+          results.push(result);
+        }
         if (results.length === 0) {
           console.log(false);
         } else {
