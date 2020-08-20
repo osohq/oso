@@ -300,6 +300,7 @@ public class Ffi {
             return;
         }
         String msgStr = msgPtr.getString(0);
+        stringFree(msgPtr);
         try {
             JSONObject message = new JSONObject(msgStr);
             String kind = message.getString("kind");
@@ -311,6 +312,5 @@ public class Ffi {
             }
         } catch (JSONException e) {
         }
-        stringFree(msgPtr);
     }
 }
