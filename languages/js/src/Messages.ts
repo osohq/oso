@@ -3,7 +3,7 @@ enum MessageKind {
   Warning = 'Warning',
 }
 
-export interface Message {
+interface Message {
   kind: MessageKind;
   msg: string;
 }
