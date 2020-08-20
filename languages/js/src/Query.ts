@@ -17,7 +17,7 @@ import type {
   QueryResult,
   Result,
 } from './types';
-import { processMessage } from './Messages';
+import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
 
 export class Query {

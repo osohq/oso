@@ -15,7 +15,7 @@ import { Query } from './Query';
 import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
-import { processMessage } from './Messages';
+import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
 import { readFile } from './helpers';
 
