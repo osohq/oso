@@ -24,6 +24,7 @@ module Oso
         def debug_command(cmd)
           res = Rust.debug_command(self, cmd)
           raise FFI::Error.get if res.zero?
+
           process_messages
         end
 
@@ -57,19 +58,21 @@ module Oso
         def next_event
           event = Rust.next_event(self)
           raise FFI::Error.get if event.null?
+
           process_messages
 
           ::Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
         end
 
-        def next_message()
+        def next_message
           Rust.next_message(self)
         end
 
-        def process_messages()
+        def process_messages
           loop do
-            message = next_message()
+            message = next_message
             break if message.null?
+
             message.process
           end
         end

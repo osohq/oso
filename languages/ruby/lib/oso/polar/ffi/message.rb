@@ -18,7 +18,7 @@ module Oso
         end
 
         def process
-          message = JSON.parse(self.to_s)
+          message = JSON.parse(to_s)
           kind = message['kind']
           msg = message['msg']
 

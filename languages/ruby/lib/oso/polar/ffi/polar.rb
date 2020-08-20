@@ -65,6 +65,7 @@ module Oso
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str, 0)
           raise FFI::Error.get if query.null?
+
           process_messages
 
           query
@@ -76,6 +77,7 @@ module Oso
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term), 0)
           raise FFI::Error.get if query.null?
+
           process_messages
 
           query
@@ -89,14 +91,15 @@ module Oso
           raise FFI::Error.get if registered.zero?
         end
 
-        def next_message()
+        def next_message
           Rust.next_message(self)
         end
 
-        def process_messages()
+        def process_messages
           loop do
-            message = next_message()
+            message = next_message
             break if message.null?
+
             message.process
           end
         end
