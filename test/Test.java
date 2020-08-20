@@ -36,7 +36,7 @@ class Test {
     }
 
     public static class E {
-        public static int sum(int[] args) {
+        public static int sum(List<Integer> args) {
             int sum = 0;
             for(int arg: args) {
                 sum += arg;
@@ -81,8 +81,9 @@ class Test {
         assert !o.queryRule("testHttpAndPathMapper").results().isEmpty();
 
         // Test we can unify against a class
-        assert o.queryRule("testUnifyClass", A).results().isEmpty();
-        assert o.queryRule("testDerefJava").results().isEmpty();
+        // TODO: Enable when ExternalUnify implemented
+        // assert o.queryRule("testUnifyClass", A.class).results().isEmpty();
+        assert !o.queryRule("testDerefJava").results().isEmpty();
 
 
         // Test that a constant can be called.

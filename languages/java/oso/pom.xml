@@ -12,7 +12,7 @@
 
   <groupId>com.osohq</groupId>
   <artifactId>oso</artifactId>
-  <version>0.4.1-rc2</version>
+  <version>0.4.1-rc4</version>
   
   <distributionManagement>
     <snapshotRepository>
@@ -60,6 +60,12 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
       <version>5.5.2</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/commons-beanutils/commons-beanutils -->
+    <dependency>
+        <groupId>commons-beanutils</groupId>
+        <artifactId>commons-beanutils</artifactId>
+        <version>1.9.4</version>
     </dependency>
   </dependencies>
 
