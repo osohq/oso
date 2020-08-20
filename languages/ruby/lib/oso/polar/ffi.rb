@@ -43,7 +43,7 @@ module Oso
       # Wrapper class for Message FFI pointer + operations.
       class Message < ::FFI::AutoPointer
         def self.release(ptr)
-          Rust.free(ptr)
+          Rust.free(ptr) unless ptr.null?
         end
       end
     end

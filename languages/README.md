@@ -115,7 +115,20 @@ Maintain mappings & caches for host language classes & instances.
 
 ## Messages
 
+### Handle Message Types
+
 | MessageType | Python | Ruby | Java | Node.js |
 | ----------- | ------ | ---- | ---- | ------- |
 | Print       | x      | x    | x    | x       |
 | Warning     | x      | x    | x    | x       |
+
+### Check Messages After Calls
+
+| Methods             | Python | Ruby | Java | Node.js |
+| ------------------- | ------ | ---- | ---- | ------- |
+| Load Str            | x      | x    | x    | x       |
+| New Query from str  | x      | x    | x    | x       |
+| New Query from term | x      | x    | x    | x       |
+| next inline query   | x      | x    | x    | x       |
+| next event          | x      | x    | x    | x       |
+| debug command       | x      | x    | x    | x       |

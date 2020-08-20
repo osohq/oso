@@ -24,33 +24,35 @@ class Polar:
         string = to_c_str(string)
         filename = to_c_str(str(filename)) if filename else ffi.NULL
         check_result(lib.polar_load(self.ptr, string, filename))
-        process_messages()
+        process_messages(self.next_message)
 
     def new_query_from_str(self, query_str):
         query = check_result(lib.polar_new_query(self.ptr, to_c_str(query_str), 0))
-        process_messages()
+        process_messages(self.next_message)
         return Query(query)
 
     def new_query_from_term(self, query_term):
         query = check_result(
             lib.polar_new_query_from_term(self.ptr, ffi_serialize(query_term), 0)
         )
-        process_messages()
+        process_messages(self.next_message)
         return Query(query)
 
     def next_inline_query(self):
         q = lib.polar_next_inline_query(self.ptr, 0)
-        process_messages()
         if is_null(q):
             return None
-        else:
-            return Query(q)
+        process_messages(self.next_message)
+        return Query(q)
 
     def register_constant(self, name, value):
         name = to_c_str(name)
         value = ffi_serialize(value)
         check_result(lib.polar_register_constant(self.ptr, name, value))
-        process_messages()
+        process_messages(self.next_message)
+
+    def next_message(self):
+        return lib.polar_next_polar_message(self.ptr)
 
 
 class Query:
@@ -67,27 +69,27 @@ class Query:
         else:
             value = ffi_serialize(value)
         check_result(lib.polar_call_result(self.ptr, call_id, value))
-        process_messages()
 
     def question_result(self, call_id, answer):
         answer = 1 if answer else 0
         check_result(lib.polar_question_result(self.ptr, call_id, answer))
-        process_messages()
 
     def application_error(self, message):
         """Pass an error back to polar to get stack trace and other info."""
         message = to_c_str(message)
         check_result(lib.polar_application_error(self.ptr, message))
-        process_messages()
 
     def next_event(self):
         event = check_result(lib.polar_next_query_event(self.ptr))
-        process_messages()
+        process_messages(self.next_message)
         return QueryEvent(event)
 
     def debug_command(self, command):
         check_result(lib.polar_debug_command(self.ptr, ffi_serialize(command)))
-        process_messages()
+        process_messages(self.next_message)
+
+    def next_message(self):
+        return lib.polar_next_query_message(self.ptr)
 
 
 class QueryEvent:
@@ -130,9 +132,9 @@ def ffi_serialize(value):
     return to_c_str(json.dumps(value))
 
 
-def process_messages():
+def process_messages(next_message_method):
     while True:
-        msg_ptr = lib.polar_get_message()
+        msg_ptr = next_message_method()
         if is_null(msg_ptr):
             break
         msg_str = ffi.string(msg_ptr).decode()

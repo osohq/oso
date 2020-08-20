@@ -14,29 +14,21 @@ module Oso
           extend ::FFI::Library
           ffi_lib FFI::LIB_PATH
 
-          attach_function :get, :polar_get_message, [], Message
           attach_function :free, :string_free, [Message], :int32
         end
 
-        # rubocop:disable Metrics/MethodLength
-        def self.process_messages
-          loop do
-            message_ptr = Rust.get
-            break if message_ptr.null?
+        def process
+          message = JSON.parse(self.to_s)
+          kind = message['kind']
+          msg = message['msg']
 
-            message = JSON.parse(message_ptr.to_s)
-            kind = message['kind']
-            msg = message['msg']
-
-            case kind
-            when 'Print'
-              puts(msg)
-            when 'Warning'
-              puts('[warning] %<msg>s')
-            end
+          case kind
+          when 'Print'
+            puts(msg)
+          when 'Warning'
+            puts('[warning] %<msg>s')
           end
         end
-        # rubocop:enable Metrics/MethodLength
 
         private_constant :Rust
       end

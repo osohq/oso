@@ -47,7 +47,7 @@ export class Polar {
 
   private processMessages() {
     while (true) {
-      let msg = this.#ffiPolar.getMessage();
+      let msg = this.#ffiPolar.nextMessage();
       if (!msg) {
         break;
       }
@@ -94,6 +94,7 @@ export class Polar {
 
     while (true) {
       const query = this.#ffiPolar.nextInlineQuery();
+      this.processMessages();
       if (query === undefined) break;
       const { results } = new Query(query, this.#host);
       const { done } = results.next();
@@ -162,6 +163,5 @@ export class Polar {
   registerConstant(name: string, value: any): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
-    this.processMessages();
   }
 }

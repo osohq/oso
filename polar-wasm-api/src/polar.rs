@@ -59,9 +59,9 @@ impl Polar {
         self.0.get_external_id() as f64
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = getMessage)]
-    pub fn wasm_get_message(&self) -> JsResult<JsValue> {
-        let message = self.0.messages.next();
+    #[wasm_bindgen(js_class = Polar, js_name = nextMessage)]
+    pub fn wasm_next_message(&self) -> JsResult<JsValue> {
+        let message = self.0.next_message();
         serde_wasm_bindgen::to_value(&message).map_err(|e| serialization_error(e.to_string()))
     }
 }

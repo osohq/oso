@@ -35,7 +35,7 @@ export class Query {
 
   private processMessages() {
     while (true) {
-      let msg = this.#ffiQuery.getMessage();
+      let msg = this.#ffiQuery.nextMessage();
       if (!msg) {
         break;
       }
@@ -45,7 +45,6 @@ export class Query {
 
   private questionResult(result: boolean, callId: number): void {
     this.#ffiQuery.questionResult(callId, result);
-    this.processMessages();
   }
 
   private registerCall(
@@ -80,7 +79,6 @@ export class Query {
 
   private callResult(callId: number, result?: string): void {
     this.#ffiQuery.callResult(callId, result);
-    this.processMessages();
   }
 
   private nextCallResult(callId: number): string | undefined {
@@ -91,7 +89,6 @@ export class Query {
 
   private applicationError(message: string): void {
     this.#ffiQuery.appError(message);
-    this.processMessages();
   }
 
   private handleCall(

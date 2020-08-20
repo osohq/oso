@@ -8,8 +8,8 @@ use super::warnings::check_singletons;
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
-    pub vm: PolarVirtualMachine,
-    pub done: bool,
+    vm: PolarVirtualMachine,
+    done: bool,
 }
 
 impl Query {
@@ -31,6 +31,10 @@ impl Query {
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         self.vm.debug_command(command)
+    }
+
+    pub fn next_message(&self) -> Option<Message> {
+        self.vm.messages.next()
     }
 }
 
@@ -151,6 +155,10 @@ impl Polar {
 
     pub fn register_constant(&mut self, name: Symbol, value: Term) {
         self.kb.write().unwrap().constant(name, value)
+    }
+
+    pub fn next_message(&self) -> Option<Message> {
+        self.messages.next()
     }
 }
 
