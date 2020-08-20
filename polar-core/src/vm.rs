@@ -187,8 +187,8 @@ pub struct PolarVirtualMachine {
     /// Logging flag.
     log: bool,
 
-    /// Output stream.
-    output: Arc<RwLock<Box<dyn std::io::Write>>>,
+    /// Output messages.
+    pub messages: MessageQueue,
 }
 
 impl Default for PolarVirtualMachine {
@@ -197,7 +197,8 @@ impl Default for PolarVirtualMachine {
             Arc::new(RwLock::new(KnowledgeBase::default())),
             false,
             vec![],
-            None,
+            // Messages will not be exposed, only use default() for testing.
+            MessageQueue::new(),
         )
     }
 }
@@ -210,7 +211,7 @@ impl PolarVirtualMachine {
         kb: Arc<RwLock<KnowledgeBase>>,
         trace: bool,
         goals: Goals,
-        output: Option<Arc<RwLock<Box<dyn std::io::Write>>>>,
+        messages: MessageQueue,
     ) -> Self {
         let constants = kb
             .read()
@@ -234,14 +235,14 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
-            output: if let Some(output) = output {
-                output
-            } else {
-                Arc::new(RwLock::new(Box::new(std::io::stderr())))
-            },
+            messages,
         };
         vm.bind_constants(constants);
         vm
+    }
+
+    pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, trace: bool, goals: Goals) -> Self {
+        PolarVirtualMachine::new(kb, trace, goals, MessageQueue::new())
     }
 
     #[cfg(test)]
@@ -628,8 +629,7 @@ impl PolarVirtualMachine {
 
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
-        let mut writer = self.output.write().unwrap();
-        let _ = writeln!(&mut writer, "{}", message);
+        self.messages.push(MessageKind::Print, message.to_owned());
     }
 
     fn source(&self, term: &Term) -> Option<Source> {
@@ -2280,7 +2280,7 @@ mod tests {
 
         let goal = query!(op!(And));
 
-        let mut vm = PolarVirtualMachine::new(Arc::new(RwLock::new(kb)), false, vec![goal], None);
+        let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![goal]);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
             QueryEvent::Done
@@ -2650,13 +2650,12 @@ mod tests {
 
     #[test]
     fn debug() {
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(KnowledgeBase::new())),
             false,
             vec![Goal::Debug {
                 message: "Hello".to_string(),
             }],
-            None,
         );
         assert!(matches!(
             vm.run().unwrap(),
@@ -2666,11 +2665,10 @@ mod tests {
 
     #[test]
     fn halt() {
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(KnowledgeBase::new())),
             false,
             vec![Goal::Halt],
-            None,
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.goals.len(), 0);
@@ -2685,14 +2683,13 @@ mod tests {
         let zero = value!(0);
         let one = value!(1);
         let vals = term!([zero.clone(), one.clone()]);
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(KnowledgeBase::new())),
             false,
             vec![Goal::Unify {
                 left: vars,
                 right: vals,
             }],
-            None,
         );
         let _ = vm.run().unwrap();
         assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
@@ -2802,14 +2799,13 @@ mod tests {
             repr: None,
         });
 
-        let mut vm = PolarVirtualMachine::new(
+        let mut vm = PolarVirtualMachine::new_test(
             Arc::new(RwLock::new(kb)),
             false,
             vec![query!(call!(
                 "bar",
                 [external_instance.clone(), external_instance, sym!("z")]
             ))],
-            None,
         );
 
         let mut results = Vec::new();

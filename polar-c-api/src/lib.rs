@@ -74,7 +74,7 @@ pub extern "C" fn polar_get_error() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn polar_new() -> *mut Polar {
-    ffi_try!({ box_ptr!(Polar::new(None)) })
+    ffi_try!({ box_ptr!(Polar::new()) })
 }
 
 #[no_mangle]
@@ -179,6 +179,21 @@ pub extern "C" fn polar_new_query(
                 set_error(e);
                 null_mut()
             }
+        }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_next_polar_message(polar_ptr: *mut Polar) -> *const c_char {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+        if let Some(msg) = polar.next_message() {
+            let msg_json = serde_json::to_string(&msg).unwrap();
+            CString::new(msg_json)
+                .expect("JSON should not contain any 0 bytes")
+                .into_raw()
+        } else {
+            null()
         }
     })
 }
@@ -301,6 +316,21 @@ pub extern "C" fn polar_application_error(query_ptr: *mut Query, message: *mut c
         };
         query.application_error(s);
         POLAR_SUCCESS
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_next_query_message(query_ptr: *mut Query) -> *const c_char {
+    ffi_try!({
+        let query = unsafe { ffi_ref!(query_ptr) };
+        if let Some(msg) = query.next_message() {
+            let msg_json = serde_json::to_string(&msg).unwrap();
+            CString::new(msg_json)
+                .expect("JSON should not contain any 0 bytes")
+                .into_raw()
+        } else {
+            null()
+        }
     })
 }
 

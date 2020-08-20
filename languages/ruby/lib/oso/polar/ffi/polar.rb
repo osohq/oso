@@ -16,6 +16,7 @@ module Oso
           attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], FFI::Query
           attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string, :uint32], FFI::Query
           attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
+          attach_function :next_message, :polar_next_polar_message, [FFI::Polar], FFI::Message
           attach_function :free, :polar_free, [FFI::Polar], :int32
         end
         private_constant :Rust
@@ -33,7 +34,9 @@ module Oso
         # @param filename [String]
         # @raise [FFI::Error] if the FFI call returns an error.
         def load_str(src, filename: nil)
-          raise FFI::Error.get if Rust.load_str(self, src, filename).zero?
+          loaded = Rust.load_str(self, src, filename)
+          process_messages
+          raise FFI::Error.get if loaded.zero?
         end
 
         # @return [FFI::Query] if there are remaining inline queries.
@@ -41,6 +44,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def next_inline_query
           query = Rust.next_inline_query(self, 0)
+          process_messages
           query.null? ? nil : query
         end
 
@@ -60,6 +64,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str, 0)
+          process_messages
           raise FFI::Error.get if query.null?
 
           query
@@ -70,6 +75,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term), 0)
+          process_messages
           raise FFI::Error.get if query.null?
 
           query
@@ -79,7 +85,21 @@ module Oso
         # @param value [Hash<String, Object>]
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_constant(name, value:)
-          raise FFI::Error.get if Rust.register_constant(self, name, JSON.dump(value)).zero?
+          registered = Rust.register_constant(self, name, JSON.dump(value))
+          raise FFI::Error.get if registered.zero?
+        end
+
+        def next_message
+          Rust.next_message(self)
+        end
+
+        def process_messages
+          loop do
+            message = next_message
+            break if message.null?
+
+            message.process
+          end
         end
       end
     end

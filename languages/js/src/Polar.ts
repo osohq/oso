@@ -15,6 +15,7 @@ import { Query } from './Query';
 import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
+import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
 import { readFile } from './helpers';
 
@@ -42,6 +43,14 @@ export class Polar {
   // For tests only.
   __host() {
     return this.#host;
+  }
+
+  private processMessages() {
+    while (true) {
+      let msg = this.#ffiPolar.nextMessage();
+      if (msg === undefined) break;
+      processMessage(msg);
+    }
   }
 
   clear() {
@@ -79,8 +88,11 @@ export class Polar {
 
   async loadStr(contents: string, name?: string): Promise<void> {
     this.#ffiPolar.loadFile(contents, name);
+    this.processMessages();
+
     while (true) {
       const query = this.#ffiPolar.nextInlineQuery();
+      this.processMessages();
       if (query === undefined) break;
       const { results } = new Query(query, this.#host);
       const { done } = await results.next();
@@ -98,6 +110,7 @@ export class Polar {
       const term = JSON.stringify(host.toPolar(q));
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
+    this.processMessages();
     return new Query(ffiQuery, host).results;
   }
 

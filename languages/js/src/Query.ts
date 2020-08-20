@@ -17,6 +17,7 @@ import type {
   QueryResult,
   Result,
 } from './types';
+import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
 
 export class Query {
@@ -30,6 +31,14 @@ export class Query {
     this.#calls = new Map();
     this.#host = host;
     this.results = this.start();
+  }
+
+  private processMessages() {
+    while (true) {
+      let msg = this.#ffiQuery.nextMessage();
+      if (msg === undefined) break;
+      processMessage(msg);
+    }
   }
 
   private questionResult(result: boolean, callId: number): void {
@@ -111,6 +120,7 @@ export class Query {
     try {
       while (true) {
         const nextEvent = this.#ffiQuery.nextEvent();
+        this.processMessages();
         const event: QueryEvent = parseQueryEvent(nextEvent);
         switch (event.kind) {
           case QueryEventKind.Done:
@@ -179,6 +189,7 @@ export class Query {
               const trimmed = line.trim().replace(/;+$/, '');
               const command = this.#host.toPolar(trimmed);
               this.#ffiQuery.debugCommand(JSON.stringify(command));
+              this.processMessages();
             });
             break;
         }
