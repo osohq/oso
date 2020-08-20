@@ -122,13 +122,13 @@ Maintain mappings & caches for host language classes & instances.
 | Print       | x      | x    | x    | x       |
 | Warning     | x      | x    | x    | x       |
 
-### Check Messages After Calls
+### Check Messages After FFI Calls
 
-| Methods             | Python | Ruby | Java | Node.js |
-| ------------------- | ------ | ---- | ---- | ------- |
-| Load Str            | x      | x    | x    | x       |
-| New Query from str  | x      | x    | x    | x       |
-| New Query from term | x      | x    | x    | x       |
-| next inline query   | x      | x    | x    | x       |
-| next event          | x      | x    | x    | x       |
-| debug command       | x      | x    | x    | x       |
+| FFI call              | Python | Ruby | Java | Node.js |
+| --------------------- | ------ | ---- | ---- | ------- |
+| `load`                | x      | x    | x    | x       |
+| `new_query_from_str`  | x      | x    | x    | x       |
+| `new_query_from_term` | x      | x    | x    | x       |
+| `next_inline_query`   | x      | x    | x    | x       |
+| `next_query_event`    | x      | x    | x    | x       |
+| `debug_command`       | x      | x    | x    | x       |
