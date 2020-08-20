@@ -106,7 +106,6 @@ assert list(oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")'))
 assert not list(oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")'))
 assert list(oso.query('builtinSpecializers("foo", "String")'))
 assert not list(oso.query('builtinSpecializers("bar", "String")'))
-assert list(oso.query('builtinSpecializers("foo", "String")'))
 
 # Test deref works
 oso.load_str('x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;')
