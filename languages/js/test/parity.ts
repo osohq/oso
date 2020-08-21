@@ -141,7 +141,9 @@ oso.registerClass(E);
     throw new Error();
 
   // Test deref behaviour
-  await oso.loadStr('?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;');
+  await oso.loadStr(
+    '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;'
+  );
 
   console.log('tests pass');
 })();
