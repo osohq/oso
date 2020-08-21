@@ -1041,6 +1041,7 @@ impl PolarVirtualMachine {
         let result = self.kb.read().unwrap().gensym("isa");
         let call_id = self.new_call_id(&result);
 
+        self.bind(&result, Term::new_temporary(Value::Boolean(false)));
         self.push_goal(Goal::Unify {
             left: Term::new_temporary(Value::Variable(result)),
             right: Term::new_temporary(Value::Boolean(true)),
@@ -1061,6 +1062,7 @@ impl PolarVirtualMachine {
         let result = self.kb.read().unwrap().gensym("unify");
         let call_id = self.new_call_id(&result);
 
+        self.bind(&result, Term::new_temporary(Value::Boolean(false)));
         self.push_goal(Goal::Unify {
             left: Term::new_temporary(Value::Variable(result)),
             right: Term::new_temporary(Value::Boolean(true)),
@@ -1296,7 +1298,6 @@ impl PolarVirtualMachine {
                     "Must have result variable as second arg."
                 );
                 let constructor = args.pop().unwrap();
-                let constructor = self.deep_deref(&constructor);
 
                 let instance_id = self.new_id();
                 let instance =
@@ -1723,10 +1724,14 @@ impl PolarVirtualMachine {
                     ..
                 }),
             ) => {
-                self.push_goal(Goal::UnifyExternal {
-                    left_instance_id: *left_instance,
-                    right_instance_id: *right_instance,
-                })?;
+                // If the two have identical IDs, the two _are_ the same
+                // value so unify.
+                if left_instance != right_instance {
+                    self.push_goal(Goal::UnifyExternal {
+                        left_instance_id: *left_instance,
+                        right_instance_id: *right_instance,
+                    })?;
+                }
             }
 
             (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {

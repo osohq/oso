@@ -75,7 +75,6 @@ oso.query_rule('testMethodCalls', A.new('hello'), B::C.new('hello')).next
 oso.query_rule('testOr').next
 oso.query_rule('testHttpAndPathMapper').next
 oso.query_rule('testUnifyClass', A).next
-oso.query_rule('testDeref').next
 
 # Test that cut doesn't return anything.
 raise unless oso.query_rule('testCut').to_a.empty?
@@ -103,4 +102,5 @@ oso.query('builtinSpecializers("foo", "String")').next
 raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?
 # rubocop:enable Layout/EmptyLineAfterGuardClause
 
+# Test deref behaviour
 oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'

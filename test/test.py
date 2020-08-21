@@ -81,7 +81,6 @@ assert list(oso.query_rule("testMethodCalls", A("hello"), B.C("hello")))
 assert list(oso.query_rule("testOr"))
 assert list(oso.query_rule("testHttpAndPathMapper"))
 assert list(oso.query_rule("testUnifyClass", A))
-assert list(oso.query_rule("testDeref"))
 
 # Test that cut doesn't return anything.
 assert not list(oso.query_rule("testCut"))
@@ -108,4 +107,4 @@ assert list(oso.query('builtinSpecializers("foo", "String")'))
 assert not list(oso.query('builtinSpecializers("bar", "String")'))
 
 # Test deref works
-oso.load_str('x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;')
+oso.load_str('?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;')

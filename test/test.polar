@@ -71,11 +71,3 @@ testHttpAndPathMapper() if
     and new PathMapper("/foo/{id}/bar/{ego}").map("/foo/1/bar/2") = {id: "1", ego: "2"};
 
 testUnifyClass(A);
-
-testDeref() if
-    x = 1 and E.sum([x, 2, x]) = 4 and 
-    [x].index(1) = 0;
-
-testDerefJava() if
-    x = 1 and E.sum([x, 2, x]) = 4 and 
-    [x].indexOf(1) = 0;

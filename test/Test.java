@@ -1,4 +1,5 @@
 import com.osohq.oso.*;
+import com.osohq.oso.Exceptions.OsoException;
 
 import java.io.IOException;
 import java.util.List;
@@ -82,9 +83,14 @@ class Test {
 
         // Test we can unify against a class
         // TODO: Enable when ExternalUnify implemented
-        // assert o.queryRule("testUnifyClass", A.class).results().isEmpty();
-        assert !o.queryRule("testDerefJava").results().isEmpty();
-
+        throwsException = false;
+        try {
+            o.loadStr("missingSemicolon()");
+            o.queryRule("testUnifyClass", A.class).results().isEmpty();
+        } catch (OsoException e) {
+            throwsException = true;
+        }
+        assert throwsException;
 
         // Test that a constant can be called.
         o.registerConstant("Math", Math.class);
