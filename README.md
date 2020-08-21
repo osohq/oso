@@ -40,9 +40,12 @@ To work on a language library, you will need to meet the following version
 requirements:
 
 - Java: 10+
+  - Maven: 3.6+
 - Python: 3.6+
 - Ruby: 2.4+
+  - Bundler 2.1.4+
 - Node.js: 10.14.2+
+  - Yarn 1.22+
 
 ## Contributing
 
@@ -61,8 +64,6 @@ See: [LICENSE][license].
 [badge-python]: https://badge.fury.io/py/oso.svg
 [badge-python-link]: https://pypi.org/project/oso/
 [badge-slack]: https://img.shields.io/badge/slack-oso--oss-orange
-<!-- NOTE: the Slack invite link must be recreated every 30 days or every 2000
-invites, whichever comes first. -->
 [badge-slack-link]: https://join-slack.osohq.com/
 [contributing]: https://github.com/osohq/oso/blob/main/CONTRIBUTING.md
 [docs]: https://docs.osohq.com
