@@ -645,10 +645,10 @@ impl PolarVirtualMachine {
 
     fn log(&self, message: &str) {
         let mut indent = String::new();
-        // for _ in 0..=self.choices.len() {
-        //     indent.push_str("  ");
-        // }
         for _ in 0..=self.queries.len() {
+            indent.push_str("  ");
+        }
+        for _ in 0..self.steve_log_stack {
             indent.push_str("  ");
         }
         let lines = message.split('\n').collect::<Vec<&str>>();
@@ -854,6 +854,44 @@ impl PolarVirtualMachine {
             !matches!(&right.value(), Value::Dictionary(_)),
             "Called isa with bare dictionary!"
         );
+
+        if self.steve_log {
+            let mut symbols = HashSet::new();
+
+            left.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+            right.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+
+            let mut relevant_bindings = HashMap::new();
+            let bindings = self.bindings(true);
+            for (s, t) in &bindings {
+                if symbols.contains(s) {
+                    relevant_bindings.insert(s.0.clone(), t.to_string());
+                }
+            }
+
+            self.log(&format!(
+                "ISA:'{}' matches '{}', BINDINGS: {:?}",
+                left.to_string(),
+                right.to_string(),
+                relevant_bindings
+            ));
+        }
 
         match (&left.value(), &right.value()) {
             (Value::List(left), Value::List(right)) => {
@@ -1136,32 +1174,41 @@ impl PolarVirtualMachine {
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
         if self.steve_log {
-            let mut symbols = HashSet::new();
+            // @WOWHACK: Don't log if it's just a single element AND like lots of rule bodies tend to be.
+            match &term.value() {
+                Value::Expression(Operation {
+                    operator: Operator::And,
+                    args,
+                }) if args.len() == 1 => (),
+                _ => {
+                    let mut symbols = HashSet::new();
 
-            // @TODO: Probably want a walker that doesn't have to return something for stuff like this.
-            term.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
+                    // @TODO: Probably want a walker that doesn't have to return something for stuff like this.
+                    term.cloned_map_replace(&mut |term| {
+                        match term.value() {
+                            Value::Variable(s) => {
+                                symbols.insert(s.clone());
+                            }
+                            _ => (),
+                        };
+                        term.clone()
+                    });
+
+                    let mut relevant_bindings = HashMap::new();
+                    let bindings = self.bindings(true);
+                    for (s, t) in &bindings {
+                        if symbols.contains(s) {
+                            relevant_bindings.insert(s.0.clone(), t.to_string());
+                        }
                     }
-                    _ => (),
-                };
-                term.clone()
-            });
-
-            let mut relevant_bindings = HashMap::new();
-            let bindings = self.bindings(true);
-            for (s, t) in &bindings {
-                if symbols.contains(s) {
-                    relevant_bindings.insert(s.0.clone(), t.to_string());
+                    //let source = self.term_source(term);
+                    self.log(&format!(
+                        "QUERY: '{}', BINDINGS: {:?}",
+                        term.to_string(),
+                        relevant_bindings
+                    ));
                 }
-            }
-            //let source = self.term_source(term);
-            self.log(&format!(
-                "QUERY: '{}', BINDINGS: {:?}",
-                term.to_string(),
-                relevant_bindings
-            ));
+            };
         }
 
         self.queries.push(term.clone());
@@ -1197,6 +1244,11 @@ impl PolarVirtualMachine {
 
                 // Pre-filter rules.
                 let pre_filter = generic_rule.get_applicable_rules(&predicate.args);
+
+                if self.steve_log {
+                    self.log("FILTERING RULES");
+                    self.steve_log_stack += 1;
+                }
 
                 // Filter rules by applicability.
                 self.append_goals(vec![
@@ -1689,6 +1741,43 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+        if self.steve_log {
+            let mut symbols = HashSet::new();
+
+            left.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+            right.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+
+            let mut relevant_bindings = HashMap::new();
+            let bindings = self.bindings(true);
+            for (s, t) in &bindings {
+                if symbols.contains(s) {
+                    relevant_bindings.insert(s.0.clone(), t.to_string());
+                }
+            }
+
+            self.log(&format!(
+                "UNIFY: '{}' = '{}', BINDINGS: {:?}",
+                left.to_string(),
+                right.to_string(),
+                relevant_bindings
+            ));
+        }
         match (&left.value(), &right.value()) {
             // Unify variables.
             (Value::Variable(var), _) => self.unify_var(var, right)?,
@@ -1900,6 +1989,11 @@ impl PolarVirtualMachine {
     ) -> PolarResult<()> {
         if unfiltered_rules.is_empty() {
             // The rules have been filtered. Sort them.
+            if self.steve_log {
+                self.steve_log_stack -= 1;
+                self.log("SORTING RULES");
+                self.steve_log_stack += 1;
+            }
             self.push_goal(Goal::SortRules {
                 rules: applicable_rules.iter().rev().cloned().collect(),
                 args: args.clone(),
@@ -2028,6 +2122,7 @@ impl PolarVirtualMachine {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
             if self.steve_log {
+                self.steve_log_stack -= 1;
                 let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
                 for rule in rules {
                     rule_strs.push_str(&format!("  {}\n", rule.to_string()))
