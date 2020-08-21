@@ -29,7 +29,7 @@ public class Application {
         oso.registerClass(User.class, "User");
         oso.registerClass(Expense.class, "Expense");
         oso.registerClass(Organization.class, "Organization");
-        oso.loadFile("src/main/oso/policy.polar");
+        oso.loadFile("src/main/oso/authorization.polar");
         return oso;
     }
 }

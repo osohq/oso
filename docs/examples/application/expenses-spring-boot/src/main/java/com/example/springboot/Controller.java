@@ -73,7 +73,7 @@ public class Controller {
             User user = (User) currentUser.get();
             if (expense.userId == 0)
                 expense.userId = user.id;
-            ((Expense) authorizer.authorize("create", expense)).save();
+            expense.save();
             return expense.toString();
         } catch (SQLException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "failed to save expense", e);

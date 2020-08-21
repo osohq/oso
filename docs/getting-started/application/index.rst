@@ -266,14 +266,14 @@ when the actor is an instance of a ``User``:
     Check out the :doc:`/using/examples/user_types` example.
 
 .. tabs::
-    .. group_tab:: Python
+    .. group-tab:: Python
 
         The inputs to the ``is_allowed`` call are the current user, the HTTP method,
         and the HTTP request. This information can often be enough to cover a large
         number of uses. For example, if we know that some paths should only
         be accessed by certain roles, we can certainly check for this at this point.
 
-    .. group_tab:: Java
+    .. group-tab:: Java
 
         The inputs to the ``isAllowed`` call are the current user, the HTTP method,
         and the HTTP request. This information can often be enough to cover a large
@@ -302,24 +302,25 @@ section.
 Authorizing Access to Data
 --------------------------
 
-In the :doc:`/getting-started/quickstart`, our main objective was to
-determine who could "GET" expenses. Our final policy looked like:
-
-.. literalinclude:: /examples/quickstart/polar/expenses-04.polar
-    :language: polar
-    :caption: :fa:`oso` expenses.polar
-
-In our expenses sample application, we have something similar,
-but we've rewritten the policy to use a new ``submitted`` predicate in case we want
-to change the logic in the future.
-
-.. literalinclude:: /examples/application/expenses-flask/app/authorization.polar
-    :caption: :fa:`oso` authorization.polar
-    :language: polar
-    :lines: 21-25
-
 .. tabs::
     .. group-tab:: Python
+
+        In the :doc:`/getting-started/quickstart`, our main objective was to
+        determine who could "GET" expenses. Our final policy looked like:
+
+        .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+            :language: polar
+            :caption: :fa:`oso` expenses.polar
+
+        In our expenses sample application, we have something similar,
+        but we've rewritten the policy to use a new ``submitted`` predicate in case we want
+        to change the logic in the future.
+
+        .. literalinclude:: /examples/application/expenses-flask/app/authorization.polar
+            :caption: :fa:`oso` authorization.polar
+            :language: polar
+            :lines: 21-25
+
 
         To handle authorizing access to data, we've implemented a little helper method
         for us to use throughout the application:
@@ -368,6 +369,22 @@ to change the logic in the future.
             <p>Not Authorized!</p>
 
     .. group-tab:: Java
+
+        In the :doc:`/getting-started/quickstart`, our main objective was to
+        determine who could "GET" expenses. Our final policy looked like:
+
+        .. literalinclude:: /examples/quickstart/polar/expenses-04-java.polar
+            :language: polar
+            :caption: :fa:`oso` expenses.polar
+
+        In our expenses sample application, we have something similar,
+        but we've rewritten the policy to use a new ``submitted`` predicate in case we want
+        to change the logic in the future.
+
+        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/oso/authorization.polar
+            :caption: :fa:`oso` authorization.polar
+            :language: polar
+            :lines: 21-25
 
         To handle authorizing access to data, we've implemented a little helper method
         for us to use throughout the application:
@@ -451,10 +468,10 @@ we want to make sure only authorized expenses are submitted.
 
     .. group-tab:: Java
 
-        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Expense.java
-            :caption: :fab:`java` Expense.java
+        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
+            :caption: :fab:`java` Controller.java
             :language: java
-            .. :lines: 49-52
+            :lines: 70-81
 
 Right now you can see that anyone can submit an expense:
 
@@ -467,10 +484,10 @@ Right now you can see that anyone can submit an expense:
 
 How might we use the ``authorize`` method from before, to make sure that
 we check the user is allowed to ``create`` this expense?
-
 We would like to do the authorization on the full ``Expense`` object,
 but before it is persisted to the database, so perhaps between these two
 lines:
+
 
 .. tabs::
     .. group-tab:: Python
@@ -489,16 +506,20 @@ lines:
 
     .. group-tab:: Java
 
-        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Expense.java
-            :caption: :fab:`java` Expense.java
-            :language: java
-            .. :lines: 49-52
+        We would like to do the authorization on the full ``Expense`` object,
+        but before it is persisted to the database, so perhaps before this line:
 
-        We could change the first highlighted line to:
+        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
+            :caption: :fab:`java` Controller.java
+            :language: java
+            :lines: 70-81
+            :emphasize-lines: 6-7
+
+        We could change the second highlighted line to:
 
         .. code-block:: java
 
-            expense = authorizer.authorize("create", Expense(**expense_data))
+            ((Expense) authorizer.authorize("create", expense)).save();
 
 
 This checks the current user is authorized to create the expense.
@@ -515,16 +536,29 @@ added any rules saying they can.
 
 Once you have it working, you can test it by verifying as follows:
 
-.. code-block:: console
+.. tabs::
+    .. group-tab:: Python
 
-    $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 1, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
-    Expense(amount=100, description='Gummy Bears', user_id=1, id=111)
+        .. code-block:: console
 
-    $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-    <title>403 Forbidden</title>
-    <h1>Forbidden</h1>
-    <p>Not Authorized!</p>
+            $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 1, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            Expense(amount=100, description='Gummy Bears', user_id=1, id=111)
+
+            $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+            <title>403 Forbidden</title>
+            <h1>Forbidden</h1>
+            <p>Not Authorized!</p>
+
+    .. group-tab:: Java
+
+        .. code-block:: console
+
+            $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 1, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            Expense(amount=100, description='Gummy Bears', user_id=1, id=111)
+
+            $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            HTTP/1.1 401
 
 Summary
 =======
