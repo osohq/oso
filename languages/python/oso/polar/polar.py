@@ -150,7 +150,7 @@ class Polar:
         while True:
             try:
                 query = input("query> ").strip(";")
-            except EOFError:
+            except (EOFError, KeyboardInterrupt):
                 return
             try:
                 ffi_query = self.ffi_polar.new_query_from_str(query)

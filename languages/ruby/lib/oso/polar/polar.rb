@@ -134,7 +134,7 @@ module Oso
           print 'query> '
           begin
             query = $stdin.readline.chomp.chomp(';')
-          rescue EOFError
+          rescue EOFError, Interrupt
             return
           end
 
