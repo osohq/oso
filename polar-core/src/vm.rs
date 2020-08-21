@@ -186,6 +186,8 @@ pub struct PolarVirtualMachine {
 
     /// Logging flag.
     log: bool,
+    steve_log: bool,
+    steve_log_stack: usize,
 
     /// Output messages.
     pub messages: MessageQueue,
@@ -235,6 +237,8 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
+            steve_log: std::env::var("STEVE_LOG").is_ok(),
+            steve_log_stack: 0,
             messages,
         };
         vm.bind_constants(constants);
@@ -340,6 +344,13 @@ impl PolarVirtualMachine {
                 self.trace.push(Rc::new(trace.clone()));
             }
             Goal::TraceRule { trace } => {
+                if self.steve_log {
+                    if let Node::Rule(rule) = &trace.node {
+                        let source_str = self.rule_source(&rule);
+                        self.log(&format!("RULE:\n{}", source_str));
+                        // @TODO: Add file and line number, where do I get those?
+                    }
+                }
                 self.trace.push(trace.clone());
             }
             Goal::Unify { left, right } => self.unify(&left, &right)?,
@@ -632,6 +643,21 @@ impl PolarVirtualMachine {
         self.messages.push(MessageKind::Print, message.to_owned());
     }
 
+    fn log(&self, message: &str) {
+        let mut indent = String::new();
+        // for _ in 0..=self.choices.len() {
+        //     indent.push_str("  ");
+        // }
+        for _ in 0..=self.queries.len() {
+            indent.push_str("  ");
+        }
+        let lines = message.split('\n').collect::<Vec<&str>>();
+        for line in lines {
+            self.messages
+                .push(MessageKind::Print, format!("[trace] {}{}", &indent, line));
+        }
+    }
+
     fn source(&self, term: &Term) -> Option<Source> {
         self.kb.read().unwrap().sources.get_source(&term)
     }
@@ -741,6 +767,7 @@ impl PolarVirtualMachine {
         if self.log {
             self.print("⇒ backtrack");
         }
+
         loop {
             match self.choices.pop() {
                 None => return self.push_goal(Goal::Halt),
@@ -804,6 +831,9 @@ impl PolarVirtualMachine {
 
     /// Halt the VM by clearing all goals and choices.
     pub fn halt(&mut self) -> QueryEvent {
+        if self.steve_log {
+            self.log("HALT");
+        }
         self.goals.clear();
         self.choices.clear();
         assert!(self.is_halted());
@@ -1105,6 +1135,35 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        if self.steve_log {
+            let mut symbols = HashSet::new();
+
+            // @TODO: Probably want a walker that doesn't have to return something for stuff like this.
+            term.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+
+            let mut relevant_bindings = HashMap::new();
+            let bindings = self.bindings(true);
+            for (s, t) in &bindings {
+                if symbols.contains(s) {
+                    relevant_bindings.insert(s.0.clone(), t.to_string());
+                }
+            }
+            //let source = self.term_source(term);
+            self.log(&format!(
+                "QUERY: '{}', BINDINGS: {:?}",
+                term.to_string(),
+                relevant_bindings
+            ));
+        }
+
         self.queries.push(term.clone());
         self.push_goal(Goal::PopQuery { term: term.clone() })?;
         self.trace.push(Rc::new(Trace {
@@ -1968,6 +2027,15 @@ impl PolarVirtualMachine {
         } else {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
+            if self.steve_log {
+                let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
+                for rule in rules {
+                    rule_strs.push_str(&format!("  {}\n", rule.to_string()))
+                }
+                rule_strs.push_str("]");
+                self.log(&rule_strs);
+            }
+
             let mut alternatives = Vec::with_capacity(rules.len());
             for rule in rules.iter() {
                 let mut goals = Vec::with_capacity(2 * args.len() + 4);
