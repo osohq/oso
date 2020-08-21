@@ -1559,6 +1559,56 @@ impl PolarVirtualMachine {
         let right_term = self.deref(&args[1]);
         let result = &args[2];
         assert!(matches!(result.value(), Value::Variable(_)));
+
+        if self.steve_log {
+            let mut symbols = HashSet::new();
+
+            left_term.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+            right_term.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+            result.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+
+            let mut relevant_bindings = HashMap::new();
+            let bindings = self.bindings(true);
+            for (s, t) in &bindings {
+                if symbols.contains(s) {
+                    relevant_bindings.insert(s.0.clone(), t.to_string());
+                }
+            }
+
+            self.log(&format!(
+                "MATH: '{}' {} '{}' = '{}', BINDINGS: {:?}",
+                left_term.to_string(),
+                op.to_polar(),
+                right_term.to_string(),
+                result.to_string(),
+                relevant_bindings
+            ));
+        }
+
         match (left_term.value(), right_term.value()) {
             (Value::Number(left), Value::Number(right)) => {
                 if let Some(answer) = match op {
@@ -1603,6 +1653,45 @@ impl PolarVirtualMachine {
         assert_eq!(args.len(), 2);
         let mut left_term = self.deref(&args[0]);
         let mut right_term = self.deref(&args[1]);
+
+        if self.steve_log {
+            let mut symbols = HashSet::new();
+
+            left_term.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+            right_term.cloned_map_replace(&mut |term| {
+                match term.value() {
+                    Value::Variable(s) => {
+                        symbols.insert(s.clone());
+                    }
+                    _ => (),
+                };
+                term.clone()
+            });
+
+            let mut relevant_bindings = HashMap::new();
+            let bindings = self.bindings(true);
+            for (s, t) in &bindings {
+                if symbols.contains(s) {
+                    relevant_bindings.insert(s.0.clone(), t.to_string());
+                }
+            }
+
+            self.log(&format!(
+                "CMP: '{}' {} '{}', BINDINGS: {:?}",
+                left_term.to_string(),
+                op.to_polar(),
+                right_term.to_string(),
+                relevant_bindings
+            ));
+        }
 
         // Coerce booleans to integers.
         fn to_int(x: bool) -> i64 {
