@@ -5,6 +5,7 @@ from pathlib import Path
 from pprint import pprint
 import sys
 import hashlib
+import readline
 
 from _polar_lib import lib
 
