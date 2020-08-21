@@ -29,37 +29,52 @@ public class Authorizer extends HandlerInterceptorAdapter {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
-        Map<String, String> query = request.getParameterMap().entrySet().stream()
-                .collect(Collectors.toMap(Entry::getKey, e -> e.getValue()[0]));
         try {
-            // Set current user from authorization header
-            String email = request.getHeader("user");
-            User user = (email == null) ? new User(0, 0, 0, 0, "Guest", "") : User.lookup(email);
-            currentUser.set(user);
+            setCurrentUser(request);
 
-            Http http = new Http(request.getServerName(), request.getServletPath().toString(), query);
-            if (oso.isAllowed(user, request.getMethod(), http)) {
-                return true;
-            } else {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "oso authorization");
-                return false;
+            // Authorize the incoming request
+            Http http = new Http(request.getServerName(), request.getServletPath().toString(), getQuery(request));
+            if (!oso.isAllowed(currentUser.get(), request.getMethod(), http)) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization: unauthorized");
             }
         } catch (SQLException e) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "user not found");
-            return false;
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found", e);
+        }
+        return true;
+    }
+
+    /**
+     * Get query from request parameters
+     */
+    private Map<String, String> getQuery(HttpServletRequest request) {
+        return request.getParameterMap().entrySet().stream()
+                .collect(Collectors.toMap(Entry::getKey, e -> e.getValue()[0]));
+    }
+
+    /**
+     * Set current user from authorization header
+     */
+    private void setCurrentUser(HttpServletRequest request) throws SQLException {
+        String email = request.getHeader("user");
+        if (email == null) {
+            currentUser.set(new Guest());
+        } else {
+            currentUser.set(User.lookup(email));
         }
     }
 
+    /**
+     * oso authorization helper
+     */
     public Object authorize(String action, Object resource) {
         try {
-            if (oso.isAllowed(currentUser.get(), action, resource)) {
-                return resource;
-            } else {
+            if (!oso.isAllowed(currentUser.get(), action, resource)) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization");
             }
         } catch (OsoException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);
         }
+        return resource;
     }
 
 }
