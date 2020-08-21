@@ -167,7 +167,7 @@ to allow some users to only have access to certain routes if they are logged in.
         .. literalinclude:: /examples/application/expenses-flask/app/authorization.py
             :caption: :fab:`python` authorization.py
             :language: python
-            :lines: 9-13
+            :lines: 10-15
 
 
     .. group-tab:: Java
@@ -178,7 +178,7 @@ to allow some users to only have access to certain routes if they are logged in.
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java
             :caption: :fab:`java` Authorizer.java
             :language: java
-            :lines: 21-51
+            :lines: 21-44
 
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:
@@ -209,24 +209,25 @@ The latter corresponds to users who have authenticated.
         .. literalinclude:: /examples/application/expenses-flask/app/user.py
             :caption: :fab:`python` user.py
             :language: python
-            :lines: 16-25
+            :lines: 52-53
 
         .. literalinclude:: /examples/application/expenses-flask/app/user.py
             :caption: :fab:`python` user.py
             :language: python
-            :lines: 52-53
+            :lines: 16-25
+
 
     .. group-tab:: Java
-
-        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/User.java
-            :caption: :fab:`java` User.java
-            :language: java
-            :lines: 9-20
 
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Guest.java
             :caption: :fab:`java` Guest.java
             :language: java
             :lines: 3-7
+
+        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/User.java
+            :caption: :fab:`java` User.java
+            :language: java
+            :lines: 9-20
 
 We can use :ref:`specializer rules <specializer>` to only allow the request
 when the actor is an instance of a ``User``:
@@ -254,8 +255,8 @@ when the actor is an instance of a ``User``:
 
         .. code-block:: console
 
-            $ curl localhost:5000/whoami
-            .. TODO
+            $ curl -i localhost:5000/whoami
+            HTTP/1.1 401
 
             $ curl -H "user: alice@foo.com"  localhost:5000/whoami
             You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
@@ -285,12 +286,24 @@ logic from the HTTP path to actions and classes in the application.
 
 For example:
 
-.. code-block:: polar
-    :caption: :fa:`oso` authorization.polar
+.. tabs::
+    .. group-tab:: Python
 
-        allow(user, "GET", http_request) if
-            http_request.starts_with("/expenses/")
-            and allow(user, "read", Expense);
+        .. code-block:: polar
+            :caption: :fa:`oso` authorization.polar
+
+                allow(user, "GET", http_request) if
+                    http_request.startswith("/expenses/")
+                    and allow(user, "read", Expense);
+
+    .. group-tab:: Java
+
+        .. code-block:: polar
+            :caption: :fa:`oso` authorization.polar
+
+                allow(user, "GET", http_request) if
+                    http_request.startsWith("/expenses/")
+                    and allow(user, "read", Expense);
 
 This rule is translating something like ``GET /expenses/3`` into a check
 whether the user should be allowed to "read" the ``Expense`` class.
@@ -328,7 +341,7 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-flask/app/authorization.py
             :caption: :fab:`python` authorization.py
             :language: python
-            :lines: 14-19
+            :lines: 18-23
 
         ... so authorizing the GET request looks like:
 
@@ -392,7 +405,7 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java
             :caption: :fab:`java` Authorizer.java
             :language: java
-            :lines: 53-63
+            :lines: 66-78
 
         ... so authorizing the GET request looks like:
 
@@ -405,7 +418,7 @@ Authorizing Access to Data
 
         .. code-block:: console
 
-            $ curl localhost:5000/expenses/2
+            $ curl -i localhost:5000/expenses/2
             HTTP/1.1 401
 
             $ curl -H "user: alice@foo.com" localhost:5000/expenses/2
@@ -423,7 +436,7 @@ Authorizing Access to Data
             $ curl -H "user: alice@foo.com" localhost:5000/organizations/1
             Organization(name='Foo Industries', id=1)
 
-            $ curl -H "user: alice@foo.com" localhost:5000/organizations/2
+            $ curl -i -H "user: alice@foo.com" localhost:5000/organizations/2
             HTTP/1.1 401
 
 
@@ -557,7 +570,7 @@ Once you have it working, you can test it by verifying as follows:
             $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 1, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
             Expense(amount=100, description='Gummy Bears', user_id=1, id=111)
 
-            $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            $ curl -i -H "user: alice@foo.com" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
             HTTP/1.1 401
 
 Summary
