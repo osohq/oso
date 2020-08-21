@@ -85,9 +85,8 @@ class Test {
         // TODO: Enable when ExternalUnify implemented
         throwsException = false;
         try {
-            o.loadStr("missingSemicolon()");
             o.queryRule("testUnifyClass", A.class).results().isEmpty();
-        } catch (OsoException e) {
+        } catch (Exceptions.PolarRuntimeException e) {
             throwsException = true;
         }
         assert throwsException;
