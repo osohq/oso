@@ -12,6 +12,26 @@ class TrueClass; include PolarBoolean; end
 # Monkey-patch Ruby false type.
 class FalseClass; include PolarBoolean; end
 
+# https://github.com/ruby/ruby/blob/bb9ecd026a6cadd5d0f85ac061649216806ed935/lib/bundler/vendor/thor/lib/thor/shell/color.rb#L99-L105
+def supports_color
+  $stdout.tty? && $stderr.tty? && ENV['NO_COLOR'].nil?
+end
+
+if supports_color
+  RESET = "\x1b[0m"
+  FG_BLUE = "\x1b[34m"
+  FG_RED = "\x1b[31m"
+else
+  RESET = ""
+  FG_BLUE = ""
+  FG_RED = ""
+end
+
+def print_error(error)
+  warn FG_RED + error.class.name.split('::').last + RESET
+  warn error.message
+end
+
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
@@ -131,7 +151,7 @@ module Oso
         files.map { |f| load_file(f) }
 
         loop do # rubocop:disable Metrics/BlockLength
-          print 'query> '
+          print FG_BLUE + 'query> ' + RESET
           begin
             query = $stdin.readline.chomp.chomp(';')
           rescue EOFError, Interrupt
@@ -141,25 +161,27 @@ module Oso
           begin
             ffi_query = ffi_polar.new_query_from_str(query)
           rescue ParseError => e
-            puts "Parse error: #{e}"
+            print_error(e)
             next
           end
 
           begin
             results = Query.new(ffi_query, host: host).results.to_a
           rescue PolarRuntimeError => e
-            puts e
+            print_error(e)
             next
           end
 
           if results.empty?
-            pp false
+            puts false
           else
             results.each do |result|
               if result.empty?
-                pp true
+                puts true
               else
-                pp result
+                result.each do |variable, value|
+                  puts variable + ' => ' + value.inspect
+                end
               end
             end
           end

@@ -6,6 +6,7 @@ from pprint import pprint
 import sys
 import hashlib
 import readline
+import os
 
 from _polar_lib import lib
 
@@ -22,6 +23,29 @@ from .host import Host
 from .query import Query, QueryResult
 from .predicate import Predicate
 from .variable import Variable
+
+
+# https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
+def supports_color():
+    supported_platform = sys.platform != "win32" or "ANSICON" in os.environ
+    is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+    return supported_platform and is_a_tty
+
+
+RESET = ""
+FG_BLUE = ""
+FG_RED = ""
+
+
+if supports_color():
+    RESET = "\x1b[0m"
+    FG_BLUE = "\x1b[34m"
+    FG_RED = "\x1b[31m"
+
+
+def print_error(error):
+    print(FG_RED + type(error).__name__ + RESET)
+    print(error)
 
 
 CLASSES = {}
@@ -149,13 +173,13 @@ class Polar:
 
         while True:
             try:
-                query = input("query> ").strip(";")
+                query = input(FG_BLUE + "query> " + RESET).strip(";")
             except (EOFError, KeyboardInterrupt):
                 return
             try:
                 ffi_query = self.ffi_polar.new_query_from_str(query)
             except ParserException as e:
-                print("Parse error: ", str(e.value()))
+                print_error(e)
                 continue
 
             result = False
@@ -164,12 +188,16 @@ class Polar:
                 for res in query:
                     result = True
                     bindings = res["bindings"]
-                    pprint(bindings if bindings else True)
+                    if bindings:
+                        for variable, value in bindings.items():
+                            print(variable + " => " + repr(value))
+                    else:
+                        print(True)
             except PolarRuntimeException as e:
-                pprint(e)
+                print_error(e)
                 continue
             if not result:
-                pprint(False)
+                print(False)
 
     def register_class(self, cls, *, name=None, from_polar=None):
         """Register `cls` as a class accessible by Polar. `from_polar` can
