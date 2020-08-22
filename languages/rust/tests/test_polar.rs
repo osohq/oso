@@ -231,7 +231,7 @@ fn test_external() {
 
     let mut test = PolarTest::new();
 
-    let mut class = oso::host::Class::with_constructor::<Foo, fn() -> Foo>(capital_foo);
+    let mut class = oso::host::Class::with_constructor(capital_foo);
     class.add_attribute_getter("a", |receiver: &Foo| receiver.a);
     class.add_method::<_, fn(&Foo) -> _>("b", |receiver: &Foo| oso::host::PolarIter(receiver.b()));
     class.add_class_method::<Foo, _, _>("c", || Foo::c());

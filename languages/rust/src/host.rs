@@ -43,85 +43,166 @@ pub trait IntoConstructor: 'static {
 //     }
 // }
 
-impl<R: 'static> IntoConstructor for dyn Fn() -> R {
-    fn into_constructor(self) -> Constructor {
-        Constructor(Arc::new(move |args: Vec<Term>, _host: &mut Host| {
-            assert!(args.is_empty());
-            Arc::new((self)())
-        }))
+// impl<R, F> IntoConstructor for F
+// where
+//     F: Fn() -> R + 'static,
+//     R: 'static,
+// {
+//     fn into_constructor(self) -> Constructor {
+//         Constructor(Arc::new(move |args: Vec<Term>, _host: &mut Host| {
+//             assert!(args.is_empty());
+//             Arc::new((self)())
+//         }))
+//     }
+// }
+
+pub trait Function<Args = ()> {
+    type Result;
+
+    fn invoke(&self, args: Args) -> Self::Result;
+}
+
+impl<F, R> Function<()> for F
+where
+    F: Fn() -> R,
+{
+    type Result = R;
+
+    fn invoke(&self, _: ()) -> Self::Result {
+        (self)()
     }
 }
 
-impl<A, R> IntoConstructor for fn(A) -> R
+impl<A, F, R> Function<(A,)> for F
 where
-    A: FromPolar + 'static,
+    F: Fn(A) -> R,
+{
+    type Result = R;
+
+    fn invoke(&self, arg: (A,)) -> Self::Result {
+        (self)(arg.0)
+    }
+}
+
+impl<A, B, F, R> Function<(A, B)> for F
+where
+    F: Fn(A, B) -> R,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B)) -> Self::Result {
+        (self)(args.0, args.1)
+    }
+}
+
+impl<A, F, R> IntoConstructor for FnArg<F, A, R>
+where
+    F: 'static + Function<A, Result = R>,
     R: 'static,
+    A: 'static + FromPolar,
 {
     fn into_constructor(self) -> Constructor {
         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            assert_eq!(args.len(), 1);
-            let arg = A::from_polar(&args[0], host).unwrap();
-            Arc::new((self)(arg))
+            let args = A::from_polar_list(&args, host).unwrap();
+            Arc::new(self.f.invoke(args))
         }))
     }
 }
 
-impl<A, R> IntoConstructor for &'static dyn Fn(A) -> R
+struct FnArg<F, A, R>
 where
-    A: FromPolar,
+    F: Function<A, Result = R>,
 {
-    fn into_constructor(self) -> Constructor {
-        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            assert_eq!(args.len(), 1);
-            let arg = A::from_polar(&args[0], host).unwrap();
-            Arc::new((self)(arg))
-        }))
+    f: F,
+    a: std::marker::PhantomData<A>,
+}
+
+impl<F, A, R> FnArg<F, A, R>
+where
+    F: Function<A, Result = R>,
+{
+    fn new(f: F) -> Self {
+        Self {
+            f,
+            a: std::marker::PhantomData,
+        }
     }
 }
 
-impl<A1, A2, R> IntoConstructor for fn(A1, A2) -> R
-where
-    A1: FromPolar + 'static,
-    A2: FromPolar + 'static,
-    R: 'static,
-{
-    fn into_constructor(self) -> Constructor {
-        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            assert_eq!(args.len(), 2);
-            let arg1 = A1::from_polar(&args[0], host).unwrap();
-            let arg2 = A2::from_polar(&args[0], host).unwrap();
-            Arc::new((self)(arg1, arg2))
-        }))
-    }
-}
+// impl<A, R> IntoConstructor for fn(A) -> R
+// where
+//     A: FromPolar + 'static,
+//     R: 'static,
+// {
+//     fn into_constructor(self) -> Constructor {
+//         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+//             assert_eq!(args.len(), 1);
+//             let arg = A::from_polar(&args[0], host).unwrap();
+//             Arc::new((self)(arg))
+//         }))
+//     }
+// }
 
-impl<A1, A2, R> IntoConstructor for &'static dyn Fn(A1, A2) -> R
-where
-    A1: FromPolar,
-    A2: FromPolar,
-{
-    fn into_constructor(self) -> Constructor {
-        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            assert_eq!(args.len(), 2);
-            let arg1 = A1::from_polar(&args[0], host).unwrap();
-            let arg2 = A2::from_polar(&args[0], host).unwrap();
-            Arc::new((self)(arg1, arg2))
-        }))
-    }
-}
+// impl<F, A, R> IntoConstructor for FnArg1<F, A, R>
+// where
+//     F: 'static + Fn(A) -> R,
+//     R: 'static,
+//     A: 'static + FromPolar,
+// {
+//     fn into_constructor(self) -> Constructor {
+//         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+//             assert_eq!(args.len(), 1);
+//             let arg = A::from_polar(&args[0], host).unwrap();
+//             Arc::new((self.f)(arg))
+//         }))
+//     }
+// }
+
+// impl<A1, A2, R> IntoConstructor for fn(A1, A2) -> R
+// where
+//     A1: FromPolar + 'static,
+//     A2: FromPolar + 'static,
+//     R: 'static,
+// {
+//     fn into_constructor(self) -> Constructor {
+//         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+//             assert_eq!(args.len(), 2);
+//             let arg1 = A1::from_polar(&args[0], host).unwrap();
+//             let arg2 = A2::from_polar(&args[0], host).unwrap();
+//             Arc::new((self)(arg1, arg2))
+//         }))
+//     }
+// }
+
+// impl<A1, A2, R> IntoConstructor for &'static dyn Fn(A1, A2) -> R
+// where
+//     A1: FromPolar,
+//     A2: FromPolar,
+// {
+//     fn into_constructor(self) -> Constructor {
+//         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+//             assert_eq!(args.len(), 2);
+//             let arg1 = A1::from_polar(&args[0], host).unwrap();
+//             let arg2 = A2::from_polar(&args[0], host).unwrap();
+//             Arc::new((self)(arg1, arg2))
+//         }))
+//     }
+// }
 
 impl Class {
     pub fn new<T: std::default::Default + 'static>() -> Self {
-        Self::with_constructor::<T, fn() -> T>(T::default)
+        Self::with_constructor::<T, _, _>(T::default)
     }
 
-    pub fn with_constructor<T, F: IntoConstructor>(f: F) -> Self
+    pub fn with_constructor<T, A, F>(f: F) -> Self
     where
         T: 'static,
+        A: FromPolar + 'static,
+        F: 'static + Function<A, Result = T>,
     {
         Self {
             name: std::any::type_name::<Self>().to_string(),
-            constructor: f.into_constructor(),
+            constructor: FnArg::new(f).into_constructor(),
             attributes: AttrMethods::new(),
             instance_methods: InstanceMethods::new(),
             class_methods: ClassMethods::new(),
@@ -383,6 +464,11 @@ impl ToPolar for Box<dyn ToPolar> {
 
 pub trait FromPolar: Sized {
     fn from_polar(term: &Term, host: &mut Host) -> Option<Self>;
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> Option<Self> {
+        assert_eq!(terms.len(), 1);
+        Self::from_polar(&terms[0], host)
+    }
 }
 
 impl FromPolar for bool {
@@ -447,6 +533,10 @@ impl<T: FromPolar> FromPolar for Vec<T> {
             None
         }
     }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> Option<Self> {
+        terms.iter().map(|t| T::from_polar(t, host)).collect()
+    }
 }
 
 impl<T: FromPolar> FromPolar for HashMap<String, T> {
@@ -475,6 +565,65 @@ impl FromPolar for Instance {
         }) = term.value()
         {
             host.get_instance(*instance_id).cloned()
+        } else {
+            None
+        }
+    }
+}
+
+impl FromPolar for () {
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
+        if let Value::List(l) = term.value() {
+            if l.is_empty() {
+                Some(())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> Option<Self> {
+        if terms.is_empty() {
+            Some(())
+        } else {
+            None
+        }
+    }
+}
+
+impl<A> FromPolar for (A,)
+where
+    A: FromPolar,
+{
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
+        None
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> Option<Self> {
+        if terms.len() == 1 {
+            A::from_polar(&terms[0], host).map(|a| (a,))
+        } else {
+            None
+        }
+    }
+}
+
+impl<A, B> FromPolar for (A, B)
+where
+    A: FromPolar,
+    B: FromPolar,
+{
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
+        None
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> Option<Self> {
+        if terms.len() == 2 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            Some((a, b))
         } else {
             None
         }

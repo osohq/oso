@@ -51,7 +51,7 @@ pub fn custom_c_constructor(y: String) -> B::C {
 fn test() {
     let mut polar = Polar::new();
 
-    let mut a_class = Class::with_constructor::<A, _>(A::new);
+    let mut a_class = Class::with_constructor(A::new);
     a_class.add_attribute_getter("x", |a_self: &A| a_self.x.clone());
     a_class.add_method::<_, fn(&A) -> _>("foo", A::foo)
 }
