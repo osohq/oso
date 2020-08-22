@@ -36,8 +36,8 @@ impl Query {
                 }
                 QueryEvent::MakeExternal {
                     instance_id,
-                    instance,
-                } => self.handle_make_external(instance_id, instance),
+                    constructor,
+                } => self.handle_make_external(instance_id, constructor),
                 QueryEvent::ExternalCall {
                     call_id,
                     instance,
@@ -78,16 +78,17 @@ impl Query {
         }
     }
 
-    fn handle_make_external(
-        &mut self,
-        instance_id: u64,
-        instance: polar_core::types::InstanceLiteral,
-    ) -> anyhow::Result<()> {
-        let _instance = self.host.lock().unwrap().make_instance(
-            &instance.tag,
-            instance.fields.fields,
-            instance_id,
-        );
+    fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> anyhow::Result<()> {
+        let mut host = self.host.lock().unwrap();
+        match constructor.value() {
+            Value::InstanceLiteral(InstanceLiteral { tag, fields }) => {
+                todo!("instantiate from literal")
+            }
+            Value::Call(Predicate { name, args }) => {
+                let _instance = host.make_instance(name, args.clone(), instance_id);
+            }
+            _ => panic!("not valid"),
+        }
         Ok(())
     }
 
@@ -95,8 +96,8 @@ impl Query {
         &mut self,
         call_id: u64,
         instance: Term,
-        attribute: Name,
-        args: Vec<Term>,
+        name: Name,
+        args: Option<Vec<Term>>,
     ) -> anyhow::Result<()> {
         if self.calls.get(&call_id).is_none() {
             let instance = match instance.value() {
@@ -112,11 +113,24 @@ impl Query {
                     return Ok(());
                 }
             };
-            if let Some(m) = instance.methods.get(&attribute) {
-                // TODO: Make this handle multiple results with iters?
-                let result = m(&instance, args);
-                self.calls
-                    .insert(call_id, Box::new(std::iter::once(result)));
+            if let Some(args) = args {
+                if let Some(m) = instance.methods.get(&name) {
+                    // TODO: Make this handle multiple results with iters?
+                    let result = m.invoke(
+                        instance.instance.as_ref(),
+                        args,
+                        &mut self.host.lock().unwrap(),
+                    );
+                    self.calls
+                        .insert(call_id, Box::new(std::iter::once(result)));
+                }
+            } else {
+                if let Some(attr) = instance.attributes.get(&name) {
+                    // TODO: Make this handle multiple results with iters?
+                    let result = attr(&instance, vec![]);
+                    self.calls
+                        .insert(call_id, Box::new(std::iter::once(result)));
+                }
             }
         }
 

@@ -14,7 +14,7 @@ pub struct Polar {
 
 impl Polar {
     pub fn new() -> Self {
-        let inner = Rc::new(crate::PolarCore::new(None));
+        let inner = Rc::new(crate::PolarCore::new());
         Self {
             host: Arc::new(Mutex::new(Host::new(Rc::downgrade(&inner)))),
             inner,

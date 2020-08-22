@@ -1,3 +1,4 @@
+use std::any::Any;
 /// Translate between Polar and the host language (Rust).
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Weak;
@@ -6,39 +7,134 @@ use std::sync::Arc;
 use polar_core::types::Symbol as Name;
 use polar_core::types::{Numeric, Term, Value};
 
+#[path = "methods.rs"]
+mod methods;
+
+pub use methods::*;
+
 #[derive(Clone)]
 pub struct Class {
     name: String,
-    constructor: Arc<dyn Fn() -> Arc<dyn std::any::Any>>,
+    constructor: Constructor,
+    attributes: AttrMethods,
     instance_methods: InstanceMethods,
     class_methods: ClassMethods,
 }
 
+#[derive(Clone)]
+pub struct Constructor(Arc<dyn Fn(Vec<Term>, &mut Host) -> Arc<dyn Any>>);
+
+impl Constructor {
+    fn invoke(&self, args: Vec<Term>, host: &mut Host) -> Arc<dyn Any> {
+        self.0(args, host)
+    }
+}
+
+pub trait IntoConstructor: 'static {
+    fn into_constructor(self) -> Constructor;
+}
+
+// impl<R: 'static> IntoConstructor for fn() -> R {
+//     fn into_constructor(self) -> Constructor {
+//         Constructor(Arc::new(move |args: Vec<Term>, _host: &mut Host| {
+//             assert!(args.is_empty());
+//             Arc::new((self)())
+//         }))
+//     }
+// }
+
+impl<R: 'static> IntoConstructor for dyn Fn() -> R {
+    fn into_constructor(self) -> Constructor {
+        Constructor(Arc::new(move |args: Vec<Term>, _host: &mut Host| {
+            assert!(args.is_empty());
+            Arc::new((self)())
+        }))
+    }
+}
+
+impl<A, R> IntoConstructor for fn(A) -> R
+where
+    A: FromPolar + 'static,
+    R: 'static,
+{
+    fn into_constructor(self) -> Constructor {
+        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+            assert_eq!(args.len(), 1);
+            let arg = A::from_polar(&args[0], host).unwrap();
+            Arc::new((self)(arg))
+        }))
+    }
+}
+
+impl<A, R> IntoConstructor for &'static dyn Fn(A) -> R
+where
+    A: FromPolar,
+{
+    fn into_constructor(self) -> Constructor {
+        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+            assert_eq!(args.len(), 1);
+            let arg = A::from_polar(&args[0], host).unwrap();
+            Arc::new((self)(arg))
+        }))
+    }
+}
+
+impl<A1, A2, R> IntoConstructor for fn(A1, A2) -> R
+where
+    A1: FromPolar + 'static,
+    A2: FromPolar + 'static,
+    R: 'static,
+{
+    fn into_constructor(self) -> Constructor {
+        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+            assert_eq!(args.len(), 2);
+            let arg1 = A1::from_polar(&args[0], host).unwrap();
+            let arg2 = A2::from_polar(&args[0], host).unwrap();
+            Arc::new((self)(arg1, arg2))
+        }))
+    }
+}
+
+impl<A1, A2, R> IntoConstructor for &'static dyn Fn(A1, A2) -> R
+where
+    A1: FromPolar,
+    A2: FromPolar,
+{
+    fn into_constructor(self) -> Constructor {
+        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
+            assert_eq!(args.len(), 2);
+            let arg1 = A1::from_polar(&args[0], host).unwrap();
+            let arg2 = A2::from_polar(&args[0], host).unwrap();
+            Arc::new((self)(arg1, arg2))
+        }))
+    }
+}
+
 impl Class {
     pub fn new<T: std::default::Default + 'static>() -> Self {
+        Self::with_constructor::<T, fn() -> T>(T::default)
+    }
+
+    pub fn with_constructor<T, F: IntoConstructor>(f: F) -> Self
+    where
+        T: 'static,
+    {
         Self {
             name: std::any::type_name::<Self>().to_string(),
-            constructor: Arc::new(|| Arc::new(T::default())),
+            constructor: f.into_constructor(),
+            attributes: AttrMethods::new(),
             instance_methods: InstanceMethods::new(),
             class_methods: ClassMethods::new(),
         }
     }
 
-    pub fn with_constructor<T: 'static, F: 'static + Fn() -> T>(constructor: F) -> Self {
-        Self {
-            name: std::any::type_name::<Self>().to_string(),
-            constructor: Arc::new(move || Arc::new(constructor())),
-            instance_methods: InstanceMethods::new(),
-            class_methods: ClassMethods::new(),
-        }
-    }
-
-    pub fn add_method<T: 'static, R: 'static + ToPolar, F: 'static + Fn(&T) -> R>(
-        &mut self,
-        name: &str,
-        f: F,
-    ) {
-        self.instance_methods.insert(
+    pub fn add_attribute_getter<T, R, F>(&mut self, name: &str, f: F)
+    where
+        T: 'static,
+        R: 'static + ToPolar,
+        F: 'static + Fn(&T) -> R,
+    {
+        self.attributes.insert(
             Name(name.to_string()),
             Arc::new(
                 move |self_arg: &Instance, args: Vec<polar_core::types::Term>| {
@@ -50,8 +146,16 @@ impl Class {
                     let result = f(&self_arg);
                     Arc::new(result) as Arc<dyn ToPolar>
                 },
-            ) as InstanceMethod,
+            ) as AttrMethod,
         );
+    }
+    pub fn add_method<T, F>(&mut self, name: &str, f: F)
+    where
+        T: 'static,
+        F: IntoInstanceMethod<T>,
+    {
+        self.instance_methods
+            .insert(Name(name.to_string()), f.into_instance_method());
     }
 
     pub fn add_class_method<T: 'static, R: 'static + ToPolar, F: 'static + Fn() -> R>(
@@ -81,7 +185,8 @@ impl Class {
 
 #[derive(Clone)]
 pub struct Instance {
-    pub instance: Arc<dyn std::any::Any>,
+    pub instance: Arc<dyn Any>,
+    pub attributes: Arc<AttrMethods>,
     pub methods: Arc<InstanceMethods>,
 }
 
@@ -125,14 +230,20 @@ impl Host {
         id
     }
 
-    pub fn make_instance(&mut self, name: &Name, fields: BTreeMap<Name, Term>, id: u64) {
-        let class = self.get_class(name).unwrap();
+    pub fn make_instance(&mut self, name: &Name, fields: Vec<Term>, id: u64) {
+        let Class {
+            constructor,
+            attributes,
+            instance_methods,
+            ..
+        } = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
-        let _fields = fields; // TODO: use
-        let instance = (class.constructor)();
+        let fields = fields; // TODO: use
+        let instance = constructor.invoke(fields, self);
         let instance = Instance {
             instance,
-            methods: Arc::new(class.instance_methods.clone()),
+            attributes: Arc::new(attributes),
+            methods: Arc::new(instance_methods),
         };
         self.cache_instance(instance, Some(id));
     }
@@ -165,7 +276,7 @@ impl Host {
         value.to_polar(self)
     }
 
-    pub fn to_rust(&mut self, term: Term) -> impl std::any::Any {
+    pub fn to_rust(&mut self, term: Term) -> impl Any {
         todo!()
     }
 }
@@ -370,8 +481,8 @@ impl FromPolar for Instance {
     }
 }
 
-pub type InstanceMethod = Arc<dyn Fn(&Instance, Vec<Term>) -> Arc<dyn ToPolar>>;
-pub type InstanceMethods = HashMap<Name, InstanceMethod>;
+pub type AttrMethod = Arc<dyn Fn(&Instance, Vec<Term>) -> Arc<dyn ToPolar>>;
+pub type AttrMethods = HashMap<Name, AttrMethod>;
 
 pub type ClassMethod = Arc<dyn Fn(&Class, Vec<Term>) -> Arc<dyn ToPolar>>;
 pub type ClassMethods = HashMap<Name, ClassMethod>;

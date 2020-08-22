@@ -376,7 +376,7 @@ impl Term {
     pub fn new_from_ffi(value: Value) -> Self {
         Self {
             source_info: SourceInfo::Ffi,
-            value: Rc::new(value),
+            value: Arc::new(value),
         }
     }
 
