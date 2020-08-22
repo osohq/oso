@@ -1,4 +1,4 @@
-use oso::host::{Class, FromPolar, ToPolar};
+use oso::host::Class;
 use oso::polar::Polar;
 
 struct A {
@@ -25,9 +25,10 @@ struct D;
 
 // oso.register_class(A)
 
-pub mod B {
+pub mod b {
+    #[derive(Default)]
     pub struct C {
-        y: String,
+        pub y: String,
     }
 
     impl C {
@@ -41,8 +42,8 @@ pub mod B {
     }
 }
 
-pub fn custom_c_constructor(y: String) -> B::C {
-    B::C::new(y)
+pub fn custom_c_constructor(y: String) -> b::C {
+    b::C::new(y)
 }
 
 // oso.register_class(B.C, name="C", from_polar=custom_c_constructor)
@@ -53,7 +54,21 @@ fn test() {
 
     let mut a_class = Class::with_constructor(A::new);
     a_class.add_attribute_getter("x", |a_self: &A| a_self.x.clone());
-    a_class.add_method::<_, fn(&A) -> _>("foo", A::foo)
+    a_class.add_method("foo", A::foo);
+    polar
+        .register_class(a_class, Some("A".to_string()))
+        .unwrap();
+
+    let mut c_class = Class::with_constructor(b::C::new);
+    c_class.add_attribute_getter("y", |c: &b::C| c.y.clone());
+    c_class.add_method("foo", b::C::foo);
+    polar
+        .register_class(c_class, Some("C".to_string()))
+        .unwrap();
+
+    let polar_file = std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/../../test/test.polar";
+    println!("Loading: {}", polar_file);
+    polar.load_file(&polar_file).unwrap();
 }
 
 // polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"

@@ -53,9 +53,18 @@ impl PolarTest {
         let mut results = self.polar.query(q).unwrap();
         let mut result_vec = vec![];
         while let Some(r) = results.next() {
-            result_vec.push(r.expect("result is ok"))
+            result_vec.push(r.expect("result is an error"))
         }
         result_vec
+    }
+
+    fn query_err(&mut self, q: &str) -> String {
+        let mut results = self.polar.query(q).unwrap();
+        let err = results
+            .next()
+            .unwrap()
+            .expect_err("query should return an error");
+        err.to_string()
     }
 
     fn qvar<T: oso::host::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
@@ -233,22 +242,22 @@ fn test_external() {
 
     let mut class = oso::host::Class::with_constructor(capital_foo);
     class.add_attribute_getter("a", |receiver: &Foo| receiver.a);
-    class.add_method::<_, fn(&Foo) -> _>("b", |receiver: &Foo| oso::host::PolarIter(receiver.b()));
-    class.add_class_method::<Foo, _, _>("c", || Foo::c());
-    class.add_method::<_, fn(&Foo, u32) -> _>("d", Foo::d);
-    class.add_method::<_, fn(&Foo) -> _>("e", Foo::e);
-    class.add_method::<_, fn(&Foo) -> _>("f", |receiver: &Foo| oso::host::PolarIter(receiver.f()));
-    class.add_method::<_, fn(&Foo) -> _>("g", Foo::g);
-    class.add_method::<_, fn(&Foo) -> _>("h", Foo::h);
+    class.add_method("b", |receiver: &Foo| oso::host::PolarIter(receiver.b()));
+    class.add_class_method("c", Foo::c);
+    class.add_method::<_, _, _, u32>("d", Foo::d);
+    class.add_method("e", Foo::e);
+    class.add_method("f", |receiver: &Foo| oso::host::PolarIter(receiver.f()));
+    class.add_method("g", Foo::g);
+    class.add_method("h", Foo::h);
 
     test.polar
         .register_class(class, Some("Foo".to_string()))
         .unwrap();
 
     test.qvar_one("new Foo().a = x", "x", "A".to_string());
-    test.qnull("new Foo().a() = x");
+    test.query_err("new Foo().a() = x");
 
-    test.qnull("new Foo().b = x");
+    test.query_err("new Foo().b = x");
     test.qvar_one("new Foo().b() = x", "x", vec!["b".to_string()]);
 
     // TODO: Register Foo as a constant

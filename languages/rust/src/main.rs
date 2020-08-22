@@ -8,8 +8,7 @@ use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 use oso::Oso;
 
 use std::env;
-use std::fs::{File, OpenOptions};
-use std::io::Read;
+use std::fs::OpenOptions;
 
 pub fn load_files(oso: &mut Oso, files: &mut dyn Iterator<Item = String>) -> anyhow::Result<()> {
     for file in files {

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use crate::host::Instance;
 use polar_core::types::Symbol as Name;
 use polar_core::types::*;
 
@@ -28,7 +29,7 @@ impl Query {
             let result = match event.unwrap() {
                 QueryEvent::None => Ok(()),
                 QueryEvent::Done => return None,
-                QueryEvent::Result { bindings, trace } => {
+                QueryEvent::Result { bindings, .. } => {
                     return Some(Ok(ResultSet {
                         bindings,
                         host: self.host.clone(),
@@ -81,13 +82,40 @@ impl Query {
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> anyhow::Result<()> {
         let mut host = self.host.lock().unwrap();
         match constructor.value() {
-            Value::InstanceLiteral(InstanceLiteral { tag, fields }) => {
-                todo!("instantiate from literal")
-            }
+            Value::InstanceLiteral(InstanceLiteral { .. }) => todo!("instantiate from literal"),
             Value::Call(Predicate { name, args }) => {
                 let _instance = host.make_instance(name, args.clone(), instance_id);
             }
             _ => panic!("not valid"),
+        }
+        Ok(())
+    }
+
+    fn register_call(
+        &mut self,
+        call_id: u64,
+        instance: Instance,
+        name: Name,
+        args: Option<Vec<Term>>,
+    ) -> anyhow::Result<()> {
+        if self.calls.get(&call_id).is_none() {
+            let host = &mut self.host.lock().unwrap();
+            let (f, args) = if let Some(args) = args {
+                if let Some(m) = instance.methods.get(&name) {
+                    (m, args)
+                } else {
+                    return Err(anyhow::anyhow!("instance method not found"));
+                }
+            } else {
+                if let Some(attr) = instance.attributes.get(&name) {
+                    (attr, vec![])
+                } else {
+                    return Err(anyhow::anyhow!("attribute lookup not found"));
+                }
+            };
+            let result = f.invoke(instance.instance.as_ref(), args, host);
+            self.calls
+                .insert(call_id, Box::new(std::iter::once(result)));
         }
         Ok(())
     }
@@ -99,40 +127,20 @@ impl Query {
         name: Name,
         args: Option<Vec<Term>>,
     ) -> anyhow::Result<()> {
-        if self.calls.get(&call_id).is_none() {
-            let instance = match instance.value() {
-                Value::ExternalInstance(ExternalInstance { instance_id, .. }) => self
-                    .host
-                    .lock()
-                    .unwrap()
-                    .get_instance(*instance_id)
-                    .expect("instance not found")
-                    .clone(),
-                _ => {
-                    self.inner.call_result(call_id, None)?;
-                    return Ok(());
-                }
-            };
-            if let Some(args) = args {
-                if let Some(m) = instance.methods.get(&name) {
-                    // TODO: Make this handle multiple results with iters?
-                    let result = m.invoke(
-                        instance.instance.as_ref(),
-                        args,
-                        &mut self.host.lock().unwrap(),
-                    );
-                    self.calls
-                        .insert(call_id, Box::new(std::iter::once(result)));
-                }
-            } else {
-                if let Some(attr) = instance.attributes.get(&name) {
-                    // TODO: Make this handle multiple results with iters?
-                    let result = attr(&instance, vec![]);
-                    self.calls
-                        .insert(call_id, Box::new(std::iter::once(result)));
-                }
+        let instance = match instance.value() {
+            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => self
+                .host
+                .lock()
+                .unwrap()
+                .get_instance(*instance_id)
+                .expect("instance not found")
+                .clone(),
+            _ => {
+                self.inner.application_error("not an instance".to_string());
+                return Ok(());
             }
-        }
+        };
+        self.register_call(call_id, instance, name, args)?;
 
         if let Some(result) = self.calls.get_mut(&call_id).and_then(|c| c.next()) {
             self.inner.call_result(
@@ -152,7 +160,22 @@ impl Query {
         operator: Operator,
         args: Vec<Term>,
     ) -> anyhow::Result<()> {
-        todo!()
+        assert_eq!(args.len(), 2);
+        let host = self.host.lock().unwrap();
+        let args = match (args[0].value(), args[1].value()) {
+            (
+                Value::ExternalInstance(ExternalInstance {
+                    instance_id: left, ..
+                }),
+                Value::ExternalInstance(ExternalInstance {
+                    instance_id: right, ..
+                }),
+            ) => [*left, *right],
+            _ => return Err(anyhow::anyhow!("incompatible types for operator")),
+        };
+        let res = host.operator(operator, args);
+        self.inner.question_result(call_id, res);
+        Ok(())
     }
 
     fn handle_external_isa(
@@ -161,7 +184,14 @@ impl Query {
         instance: Term,
         class_tag: Name,
     ) -> anyhow::Result<()> {
-        todo!()
+        if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = instance.value() {
+            let host = self.host.lock().unwrap();
+            let res = host.isa(*instance_id, &class_tag);
+            self.inner.question_result(call_id, res);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("not sure what to do with this yet"))
+        }
     }
 
     fn handle_external_unify(
@@ -170,7 +200,13 @@ impl Query {
         left_instance_id: u64,
         right_instance_id: u64,
     ) -> anyhow::Result<()> {
-        todo!()
+        let res = self
+            .host
+            .lock()
+            .unwrap()
+            .unify(left_instance_id, right_instance_id);
+        self.inner.question_result(call_id, res);
+        Ok(())
     }
 
     fn handle_external_is_subspecializer(
@@ -180,11 +216,18 @@ impl Query {
         left_class_tag: Name,
         right_class_tag: Name,
     ) -> anyhow::Result<()> {
-        todo!()
+        let res = self.host.lock().unwrap().is_subspecializer(
+            instance_id,
+            &left_class_tag,
+            &right_class_tag,
+        );
+        self.inner.question_result(call_id, res);
+        Ok(())
     }
 
     fn handle_debug(&mut self, message: String) -> anyhow::Result<()> {
-        todo!()
+        eprintln!("TODO: {}", message);
+        Ok(())
     }
 }
 

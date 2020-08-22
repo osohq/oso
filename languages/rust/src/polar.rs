@@ -9,7 +9,6 @@ use crate::host::Host;
 pub struct Polar {
     inner: Rc<crate::PolarCore>,
     host: Arc<Mutex<Host>>,
-    load_queue: Vec<String>,
 }
 
 impl Polar {
@@ -18,7 +17,6 @@ impl Polar {
         Self {
             host: Arc::new(Mutex::new(Host::new(Rc::downgrade(&inner)))),
             inner,
-            load_queue: Vec::new(),
         }
     }
 
