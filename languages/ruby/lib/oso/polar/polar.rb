@@ -42,8 +42,6 @@ module Oso
       def initialize
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
-        @loaded_names = {}
-        @loaded_contents = {}
 
         # Register built-in classes.
         register_class PolarBoolean, name: 'Boolean'
@@ -56,8 +54,6 @@ module Oso
 
       # Replace the current Polar instance but retain all registered classes and constructors.
       def clear
-        loaded_names.clear
-        loaded_contents.clear
         @ffi_polar = FFI::Polar.create
       end
 
@@ -70,19 +66,7 @@ module Oso
         raise PolarFileExtensionError, name unless File.extname(name) == '.polar'
 
         file_data = File.open(name, &:read)
-        hash = Digest::MD5.hexdigest(file_data)
-
-        if loaded_names.key?(name)
-          raise PolarFileAlreadyLoadedError, name if loaded_names[name] == hash
-
-          raise PolarFileContentsChangedError, name
-        elsif loaded_contents.key?(hash)
-          raise PolarFileNameChangedError, name, loaded_contents[hash]
-        else
-          load_str(file_data, filename: name)
-          loaded_names[name] = hash
-          loaded_contents[hash] = name
-        end
+        load_str(file_data, filename: name)
       rescue Errno::ENOENT
         raise PolarFileNotFoundError, name
       end
@@ -97,7 +81,7 @@ module Oso
       def load_str(str, filename: nil) # rubocop:disable Metrics/MethodLength
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
-        ffi_polar.load_str(str, filename: filename)
+        ffi_polar.load(str, filename: filename)
         loop do
           next_query = ffi_polar.next_inline_query
           break if next_query.nil?

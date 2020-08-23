@@ -5,14 +5,14 @@ use wasm_bindgen_test::*;
 #[wasm_bindgen_test]
 fn load_file_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load_file("x() if 1 == 1;\n", Some("foo.polar".to_owned()));
+    let res = polar.wasm_load("x() if 1 == 1;\n", Some("foo.polar".to_owned()));
     assert!(matches!(res, Ok(())));
 }
 
 #[wasm_bindgen_test]
 fn load_file_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let err = polar.wasm_load_file(";", None).unwrap_err();
+    let err = polar.wasm_load(";", None).unwrap_err();
     let err: Error = err.dyn_into().unwrap();
     assert_eq!(err.name(), "ParseError::UnrecognizedToken");
     assert_eq!(
@@ -24,7 +24,7 @@ fn load_file_errors() {
 #[wasm_bindgen_test]
 fn next_inline_query_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load_file("?= 1 = 1;", None);
+    let res = polar.wasm_load("?= 1 = 1;", None);
     assert!(matches!(res, Ok(())));
 
     let mut query = polar.wasm_next_inline_query().unwrap();
@@ -44,7 +44,7 @@ fn next_inline_query_succeeds() {
 #[wasm_bindgen_test]
 fn next_inline_query_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load_file("?= 1 = 2;", None);
+    let res = polar.wasm_load("?= 1 = 2;", None);
     assert!(matches!(res, Ok(())));
     let mut query = polar.wasm_next_inline_query().unwrap();
     let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
