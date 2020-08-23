@@ -62,10 +62,6 @@ impl PolarTest {
         assert_eq!(res.len(), 1, "expected exactly one result");
         assert_eq!(res.pop().unwrap(), expected);
     }
-
-    fn qnull(&mut self, q: &str) {
-        assert!(self.query(q).is_empty(), "expected no results");
-    }
 }
 
 #[test]
@@ -160,13 +156,6 @@ fn test_load_function() {
 
 #[test]
 fn test_external() {
-    struct Bar;
-    impl Bar {
-        fn y(&self) -> &'static str {
-            "y"
-        }
-    }
-
     struct Foo {
         a: &'static str,
     }
@@ -188,10 +177,6 @@ fn test_external() {
 
         fn d<X>(&self, x: X) -> X {
             x
-        }
-
-        fn bar(&self) -> Bar {
-            Bar
         }
 
         fn e(&self) -> Vec<u32> {

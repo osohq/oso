@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::host::{FromPolar, Instance};
+use crate::host::{FromPolar, Instance, ToPolar};
 use polar_core::types::Symbol as Name;
 use polar_core::types::*;
 
@@ -13,8 +13,8 @@ impl Iterator for Query {
 }
 
 pub struct Query {
-    calls: HashMap<u64, Box<dyn Iterator<Item = Arc<dyn crate::host::ToPolar>>>>,
     inner: polar_core::polar::Query,
+    calls: HashMap<u64, Box<dyn Iterator<Item = Arc<dyn crate::host::ToPolar>>>>,
     host: Arc<Mutex<crate::host::Host>>,
 }
 
@@ -30,12 +30,7 @@ impl Query {
     pub fn next(&mut self) -> Option<anyhow::Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
-            while let Some(msg) = self.inner.next_message() {
-                match msg.kind {
-                    polar_core::types::MessageKind::Print => tracing::trace!("{}", msg.msg),
-                    polar_core::types::MessageKind::Warning => tracing::warn!("{}", msg.msg),
-                }
-            }
+            self.check_messages();
             if let Err(e) = event {
                 return Some(Err(e.into()));
             }
@@ -89,9 +84,36 @@ impl Query {
                 QueryEvent::Debug { message } => self.handle_debug(message),
             };
             if let Err(e) = result {
-                return Some(Err(e.into()));
+                self.application_error(e);
             }
         }
+    }
+
+    fn check_messages(&mut self) {
+        while let Some(msg) = self.inner.next_message() {
+            match msg.kind {
+                polar_core::types::MessageKind::Print => tracing::trace!("{}", msg.msg),
+                polar_core::types::MessageKind::Warning => tracing::warn!("{}", msg.msg),
+            }
+        }
+    }
+
+    fn question_result(&mut self, call_id: u64, result: bool) {
+        self.inner.question_result(call_id, result);
+    }
+
+    fn call_result(&mut self, call_id: u64, result: Arc<dyn ToPolar>) -> anyhow::Result<()> {
+        let mut host = self.host.lock().unwrap();
+        let value = host.to_polar(result.as_ref());
+        Ok(self.inner.call_result(call_id, Some(value))?)
+    }
+
+    fn call_result_none(&mut self, call_id: u64) -> anyhow::Result<()> {
+        Ok(self.inner.call_result(call_id, None)?)
+    }
+
+    fn application_error(&mut self, error: anyhow::Error) {
+        self.inner.application_error(error.to_string())
     }
 
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> anyhow::Result<()> {
@@ -114,7 +136,6 @@ impl Query {
         args: Option<Vec<Term>>,
     ) -> anyhow::Result<()> {
         if self.calls.get(&call_id).is_none() {
-            let host = &mut self.host.lock().unwrap();
             let (f, args) = if let Some(args) = args {
                 if let Some(m) = instance.methods.get(&name) {
                     (m, args)
@@ -129,11 +150,16 @@ impl Query {
                 }
             };
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
+            let host = &mut self.host.lock().unwrap();
             let result = f.invoke(instance.instance.as_ref(), args, host);
             self.calls
                 .insert(call_id, Box::new(std::iter::once(result)));
         }
         Ok(())
+    }
+
+    fn next_call_result(&mut self, call_id: u64) -> Option<Arc<dyn ToPolar>> {
+        self.calls.get_mut(&call_id).and_then(|c| c.next())
     }
 
     fn handle_external_call(
@@ -146,13 +172,10 @@ impl Query {
         let instance = Instance::from_polar(&instance, &mut self.host.lock().unwrap()).unwrap();
         self.register_call(call_id, instance, name, args)?;
 
-        if let Some(result) = self.calls.get_mut(&call_id).and_then(|c| c.next()) {
-            self.inner.call_result(
-                call_id,
-                Some(result.to_polar(&mut self.host.lock().unwrap())),
-            )?;
+        if let Some(result) = self.next_call_result(call_id) {
+            self.call_result(call_id, result)?;
         } else {
-            self.inner.call_result(call_id, None)?;
+            self.call_result_none(call_id)?;
         }
 
         Ok(())
@@ -165,13 +188,15 @@ impl Query {
         args: Vec<Term>,
     ) -> anyhow::Result<()> {
         assert_eq!(args.len(), 2);
-        let mut host = self.host.lock().unwrap();
-        let args = [
-            Instance::from_polar(&args[0], &mut host).unwrap(),
-            Instance::from_polar(&args[1], &mut host).unwrap(),
-        ];
-        let res = host.operator(operator, args);
-        self.inner.question_result(call_id, res);
+        let res = {
+            let mut host = self.host.lock().unwrap();
+            let args = [
+                Instance::from_polar(&args[0], &mut host).unwrap(),
+                Instance::from_polar(&args[1], &mut host).unwrap(),
+            ];
+            host.operator(operator, args)
+        };
+        self.question_result(call_id, res);
         Ok(())
     }
 
@@ -182,9 +207,8 @@ impl Query {
         class_tag: Name,
     ) -> anyhow::Result<()> {
         tracing::debug!(instance = ?instance, class = %class_tag, "isa");
-        let host = self.host.lock().unwrap();
-        let res = host.isa(instance, &class_tag);
-        self.inner.question_result(call_id, res);
+        let res = self.host.lock().unwrap().isa(instance, &class_tag);
+        self.question_result(call_id, res);
         Ok(())
     }
 
@@ -199,7 +223,7 @@ impl Query {
             .lock()
             .unwrap()
             .unify(left_instance_id, right_instance_id);
-        self.inner.question_result(call_id, res);
+        self.question_result(call_id, res);
         Ok(())
     }
 
@@ -215,12 +239,13 @@ impl Query {
             &left_class_tag,
             &right_class_tag,
         );
-        self.inner.question_result(call_id, res);
+        self.question_result(call_id, res);
         Ok(())
     }
 
     fn handle_debug(&mut self, message: String) -> anyhow::Result<()> {
         eprintln!("TODO: {}", message);
+        self.check_messages();
         Ok(())
     }
 }

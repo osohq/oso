@@ -130,7 +130,7 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
-    def to_polar_term(self, v):
+    def to_polar(self, v):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
             val = {"Boolean": v}
@@ -141,19 +141,14 @@ class Host:
         elif type(v) == str:
             val = {"String": v}
         elif type(v) == list:
-            val = {"List": [self.to_polar_term(i) for i in v]}
+            val = {"List": [self.to_polar(i) for i in v]}
         elif type(v) == dict:
             val = {
-                "Dictionary": {
-                    "fields": {k: self.to_polar_term(v) for k, v in v.items()}
-                }
+                "Dictionary": {"fields": {k: self.to_polar(v) for k, v in v.items()}}
             }
         elif isinstance(v, Predicate):
             val = {
-                "Call": {
-                    "name": v.name,
-                    "args": [self.to_polar_term(v) for v in v.args],
-                }
+                "Call": {"name": v.name, "args": [self.to_polar(v) for v in v.args],}
             }
         elif isinstance(v, Variable):
             val = {"Variable": v}

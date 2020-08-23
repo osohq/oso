@@ -35,7 +35,7 @@ end
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
-    class Polar # rubocop:disable Metrics/ClassLength
+    class Polar
       # @return [Host]
       attr_reader :host
 
@@ -110,7 +110,7 @@ module Oso
         when String
           ffi_query = ffi_polar.new_query_from_str(query)
         when Predicate
-          ffi_query = ffi_polar.new_query_from_term(new_host.to_polar_term(query))
+          ffi_query = ffi_polar.new_query_from_term(new_host.to_polar(query))
         else
           raise InvalidQueryTypeError
         end
@@ -140,7 +140,7 @@ module Oso
       end
 
       def register_constant(name, value:)
-        ffi_polar.register_constant(name, value: host.to_polar_term(value))
+        ffi_polar.register_constant(name, value: host.to_polar(value))
       end
 
       # Start a REPL session.

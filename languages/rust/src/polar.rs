@@ -32,6 +32,15 @@ impl Polar {
         *self = Self::new();
     }
 
+    fn check_messages(&mut self) {
+        while let Some(msg) = self.inner.next_message() {
+            match msg.kind {
+                polar_core::types::MessageKind::Print => tracing::trace!("{}", msg.msg),
+                polar_core::types::MessageKind::Warning => tracing::warn!("{}", msg.msg),
+            }
+        }
+    }
+
     fn check_inline_queries(&mut self) -> anyhow::Result<()> {
         while let Some(q) = self.inner.next_inline_query(false) {
             let query = crate::query::Query::new(q, self.host.clone());
@@ -43,6 +52,7 @@ impl Polar {
                 }
             }
         }
+        self.check_messages();
         Ok(())
     }
 
@@ -51,7 +61,6 @@ impl Polar {
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
         self.inner.load(&policy, Some(file.to_string()))?;
-
         self.check_inline_queries()
     }
 
@@ -62,6 +71,27 @@ impl Polar {
 
     pub fn query(&mut self, s: &str) -> anyhow::Result<crate::query::Query> {
         let query = self.inner.new_query(s, false)?;
+        self.check_messages();
+        let query = crate::query::Query::new(query, self.host.clone());
+        Ok(query)
+    }
+
+    pub fn query_rule<'a>(
+        &mut self,
+        name: &str,
+        args: impl IntoIterator<Item = &'a dyn crate::host::ToPolar>,
+    ) -> anyhow::Result<crate::query::Query> {
+        let args = args
+            .into_iter()
+            .map(|arg| arg.to_polar(&mut self.host.lock().unwrap()))
+            .collect();
+        let query_value = polar_core::types::Value::Call(polar_core::types::Predicate {
+            name: polar_core::types::Symbol(name.to_string()),
+            args,
+        });
+        let query_term = polar_core::types::Term::new_from_ffi(query_value);
+        let query = self.inner.new_query_from_term(query_term, false);
+        self.check_messages();
         let query = crate::query::Query::new(query, self.host.clone());
         Ok(query)
     }
@@ -84,24 +114,5 @@ impl Polar {
             host.to_polar(value),
         );
         Ok(())
-    }
-
-    pub fn query_rule<'a>(
-        &mut self,
-        name: &str,
-        args: impl IntoIterator<Item = &'a dyn crate::host::ToPolar>,
-    ) -> anyhow::Result<crate::query::Query> {
-        let args = args
-            .into_iter()
-            .map(|arg| arg.to_polar(&mut self.host.lock().unwrap()))
-            .collect();
-        let query_value = polar_core::types::Value::Call(polar_core::types::Predicate {
-            name: polar_core::types::Symbol(name.to_string()),
-            args,
-        });
-        let query_term = polar_core::types::Term::new_from_ffi(query_value);
-        let query = self.inner.new_query_from_term(query_term, false);
-        let query = crate::query::Query::new(query, self.host.clone());
-        Ok(query)
     }
 }

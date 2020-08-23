@@ -117,7 +117,7 @@ class Query:
         # Return the next result of the call.
         try:
             value = next(self.calls[call_id])
-            self.ffi_query.call_result(call_id, self.host.to_polar_term(value))
+            self.ffi_query.call_result(call_id, self.host.to_polar(value))
         except StopIteration:
             self.ffi_query.call_result(call_id, None)
 
@@ -153,4 +153,4 @@ class Query:
             command = input("debug> ").strip(";")
         except EOFError:
             command = "continue"
-        self.ffi_query.debug_command(self.host.to_polar_term(command))
+        self.ffi_query.debug_command(self.host.to_polar(command))

@@ -14,10 +14,10 @@ pub use class::*;
 
 /// Maintain mappings and caches for Python classes & instances
 pub struct Host {
-    class_names: HashMap<std::any::TypeId, Name>,
+    polar: Weak<crate::PolarCore>,
     classes: HashMap<Name, Class>,
     instances: HashMap<u64, Instance>,
-    polar: Weak<crate::PolarCore>,
+    class_names: HashMap<std::any::TypeId, Name>,
 }
 
 impl Host {

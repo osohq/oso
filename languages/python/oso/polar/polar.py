@@ -129,7 +129,7 @@ class Polar:
         if isinstance(query, str):
             query = self.ffi_polar.new_query_from_str(query)
         elif isinstance(query, Predicate):
-            query = self.ffi_polar.new_query_from_term(host.to_polar_term(query))
+            query = self.ffi_polar.new_query_from_term(host.to_polar(query))
         else:
             raise PolarApiException(f"Can not query for {query}")
 
@@ -188,7 +188,7 @@ class Polar:
 
     def register_constant(self, name, value):
         """Register `value` as a Polar constant variable called `name`."""
-        self.ffi_polar.register_constant(name, self.host.to_polar_term(value))
+        self.ffi_polar.register_constant(name, self.host.to_polar(value))
 
 
 def polar_class(_cls=None, *, name=None, from_polar=None):

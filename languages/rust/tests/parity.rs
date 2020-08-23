@@ -30,7 +30,8 @@ impl A {
 
 // pub trait A {}
 
-struct D;
+// TODO
+// struct D;
 
 // impl A for D {
 

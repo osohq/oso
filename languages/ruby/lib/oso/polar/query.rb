@@ -68,13 +68,13 @@ module Oso
         ffi_query.call_result(result, call_id: call_id)
       end
 
-      # Retrieve the next result from a registered call and pass it to {#to_polar_term}.
+      # Retrieve the next result from a registered call and pass it to {#to_polar}.
       #
       # @param id [Integer]
       # @return [Hash]
       # @raise [StopIteration] if the call has been exhausted.
       def next_call_result(id)
-        host.to_polar_term(calls[id].next)
+        host.to_polar(calls[id].next)
       end
 
       # Send application error across FFI boundary.
@@ -164,7 +164,7 @@ module Oso
               rescue EOFError
                 next
               end
-              command = JSON.dump(host.to_polar_term(input))
+              command = JSON.dump(host.to_polar(input))
               ffi_query.debug_command(command)
             else
               raise "Unhandled event: #{JSON.dump(event.inspect)}"
