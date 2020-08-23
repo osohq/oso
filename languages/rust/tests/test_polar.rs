@@ -66,6 +66,8 @@ impl PolarTest {
 
 #[test]
 fn test_anything_works() {
+    let _ = tracing_subscriber::fmt::try_init();
+
     let mut test = PolarTest::new();
     test.load_str("f(1);");
     let results = test.query("f(x)");
@@ -76,6 +78,8 @@ fn test_anything_works() {
 
 #[test]
 fn test_helpers() {
+    let _ = tracing_subscriber::fmt::try_init();
+
     let mut test = PolarTest::new();
     test.load_file(file!(), "test_file.polar");
     assert_eq!(
@@ -91,6 +95,8 @@ fn test_helpers() {
 
 #[test]
 fn test_data_conversions() {
+    let _ = tracing_subscriber::fmt::try_init();
+
     let mut test = PolarTest::new();
     test.load_str(
         r#"
@@ -120,6 +126,8 @@ fn test_data_conversions() {
 #[ignore]
 #[test]
 fn test_load_function() {
+    let _ = tracing_subscriber::fmt::try_init();
+
     let mut test = PolarTest::new();
     test.load_file(file!(), "test_file.polar");
     test.load_file(file!(), "test_file.polar");
@@ -156,6 +164,8 @@ fn test_load_function() {
 
 #[test]
 fn test_external() {
+    let _ = tracing_subscriber::fmt::try_init();
+
     struct Foo {
         a: &'static str,
     }
@@ -221,8 +231,7 @@ fn test_external() {
     test.query_err("new Foo().b = x");
     test.qvar_one("new Foo().b() = x", "x", vec!["b".to_string()]);
 
-    // TODO: Register Foo as a constant
-    // test.qvar_one("Foo.c() = x", "x", "c".to_string());
+    test.qvar_one("Foo.c() = x", "x", "c".to_string());
     test.qvar_one("new Foo() = f and f.a = x", "x", "A".to_string());
     test.qvar_one("new Foo().e() = x", "x", vec![1, 2, 3]);
     test.qvar_one(

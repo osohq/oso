@@ -1,16 +1,5 @@
 use super::*;
 
-#[derive(Clone, Default)]
-struct Type;
-
-pub fn type_class() -> Class {
-    let class = Class::<Type>::with_default();
-
-    // class.instance_check = Arc::new()
-
-    class.erase_type()
-}
-
 fn boolean() -> Class<bool> {
     Class::<bool>::with_default().name("Boolean")
 }
@@ -41,21 +30,7 @@ fn string() -> Class<String> {
 }
 
 /// Returns the builtin types, the name, class, and instance
-pub fn constants(host: &mut Host) -> Vec<(Name, Class, Term)> {
-    let type_class = type_class();
-    host.cache_class(type_class.clone(), None);
-
-    let to_term = |class: Class, host: &mut Host| -> Term {
-        let repr = format!("type<{}>", class.name);
-        let instance = type_class.cast_to_instance(class);
-        let instance = host.cache_instance(instance, None);
-        Term::new_from_ffi(Value::ExternalInstance(ExternalInstance {
-            constructor: None,
-            repr: Some(repr),
-            instance_id: instance,
-        }))
-    };
-
+pub fn constants() -> Vec<(Name, Class)> {
     vec![
         (Name("Boolean".to_string()), boolean().erase_type()),
         (Name("Number".to_string()), number().erase_type()),
@@ -65,10 +40,4 @@ pub fn constants(host: &mut Host) -> Vec<(Name, Class, Term)> {
         (Name("List".to_string()), list().erase_type()),
         (Name("Dictionary".to_string()), dictionary().erase_type()),
     ]
-    .into_iter()
-    .map(|(name, class)| {
-        let instance = to_term(class.clone(), host);
-        (name, class, instance)
-    })
-    .collect()
 }

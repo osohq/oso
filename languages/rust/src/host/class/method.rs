@@ -53,20 +53,6 @@ pub trait Method<Receiver, Args = ()> {
     fn invoke(&self, receiver: &Receiver, args: Args) -> Self::Result;
 }
 
-// /// Wrapper to convert a function into a method with an ignored receiver
-// struct FunctionAsMethod<F>(F);
-
-// impl<F, R, Args> Method<(), Args> for FunctionAsMethod<F>
-// where
-//     F: Function<Args, Result = R>,
-// {
-//     type Result = R;
-
-//     fn invoke(&self, _receiver: &(), args: Args) -> Self::Result {
-//         self.0.invoke(args)
-//     }
-// }
-
 impl<F, R, Receiver> Method<Receiver, ()> for F
 where
     F: Fn(&Receiver) -> R,
@@ -145,6 +131,18 @@ impl InstanceMethod {
 
     pub fn invoke(&self, receiver: &dyn Any, args: Vec<Term>, host: &mut Host) -> Arc<dyn ToPolar> {
         self.0(receiver, args, host)
+    }
+
+    pub fn from_class_method(name: Name) -> Self {
+        Self(Arc::new(
+            move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
+                let class: &Class = receiver.downcast_ref().unwrap();
+                tracing::trace!(class = %class.name, method=%name, "class_method");
+                let class_method: &ClassMethod =
+                    class.class_methods.get(&name).expect("get class method");
+                class_method.invoke(args, host)
+            },
+        ))
     }
 }
 

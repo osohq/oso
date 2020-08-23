@@ -4,7 +4,7 @@ use super::*;
 
 pub mod builtins;
 mod method;
-use method::*;
+pub use method::*;
 
 #[derive(Clone)]
 pub struct Class<T = ()> {
@@ -99,7 +99,7 @@ impl<T> Class<T> {
     /// that the host can store all of the same type. The generic paramtere
     /// is just used for the builder pattern part of Class
     /// TODO: Skip this shenanigans and make there a builder instead?
-    fn erase_type(self) -> Class<()> {
+    pub fn erase_type(self) -> Class<()> {
         Class {
             name: self.name,
             constructor: self.constructor,

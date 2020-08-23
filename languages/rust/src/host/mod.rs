@@ -6,11 +6,18 @@ use std::rc::Weak;
 use std::sync::Arc;
 
 use polar_core::types::Symbol as Name;
-use polar_core::types::{ExternalInstance, Numeric, Term, Value};
+use polar_core::types::{ExternalInstance, Numeric, Operator, Term, Value};
 
-#[path = "class/mod.rs"]
 mod class;
 pub use class::*;
+
+#[derive(Clone, Default)]
+pub struct Type;
+
+pub fn type_class() -> Class {
+    let class = Class::<Type>::with_default();
+    class.erase_type()
+}
 
 /// Maintain mappings and caches for Python classes & instances
 pub struct Host {
@@ -22,12 +29,21 @@ pub struct Host {
 
 impl Host {
     pub fn new(polar: Weak<crate::PolarCore>) -> Self {
-        Self {
+        let mut host = Self {
             class_names: HashMap::new(),
             classes: HashMap::new(),
             instances: HashMap::new(),
             polar,
-        }
+        };
+        let type_class = type_class();
+        let name = Name("Type".to_string());
+        host.class_names.insert(type_class.type_id, name.clone());
+        host.classes.insert(name.clone(), type_class);
+        host
+    }
+
+    pub fn type_class(&mut self) -> &mut Class {
+        self.classes.get_mut(&Name("Type".to_string())).unwrap()
     }
 
     pub fn get_class(&self, name: &Name) -> Option<&Class> {
@@ -44,11 +60,29 @@ impl Host {
         self.classes.get_mut(name)
     }
 
-    pub fn cache_class(&mut self, class: Class, name: Option<Name>) -> Name {
-        let name = name.unwrap_or_else(|| Name(class.name.clone()));
+    pub fn cache_class(&mut self, class: Class, name: Name) -> Term {
         self.class_names.insert(class.type_id, name.clone());
-        self.classes.insert(name.clone(), class);
-        name
+        self.classes.insert(name.clone(), class.clone());
+
+        let type_class = self.type_class();
+        for method_name in class.class_methods.keys() {
+            type_class
+                .instance_methods
+                .entry(method_name.clone())
+                .or_insert_with(|| {
+                    crate::host::InstanceMethod::from_class_method(method_name.clone())
+                });
+        }
+        let repr = format!("type<{}>", class.name);
+        let instance = type_class.cast_to_instance(class.clone());
+        let instance = self.cache_instance(instance, None);
+        let class_term = Term::new_from_ffi(Value::ExternalInstance(ExternalInstance {
+            constructor: None,
+            repr: Some(repr),
+            instance_id: instance,
+        }));
+
+        class_term
     }
 
     pub fn get_instance(&self, id: u64) -> Option<&Instance> {
@@ -106,7 +140,7 @@ impl Host {
         todo!("????")
     }
 
-    pub fn operator(&self, _op: polar_core::types::Operator, _args: [Instance; 2]) -> bool {
+    pub fn operator(&self, _op: Operator, _args: [Instance; 2]) -> bool {
         todo!()
     }
 

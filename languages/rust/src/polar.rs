@@ -17,8 +17,8 @@ impl Polar {
         let mut host = Host::new(Rc::downgrade(&inner));
 
         // register all builtin constants
-        for (name, class, value) in crate::host::builtins::constants(&mut host) {
-            host.cache_class(class, Some(name.clone()));
+        for (name, class) in crate::host::builtins::constants() {
+            let value = host.cache_class(class, name.clone());
             inner.register_constant(name, value);
         }
 
@@ -99,7 +99,9 @@ impl Polar {
     pub fn register_class(&mut self, class: crate::host::Class) -> anyhow::Result<()> {
         let mut host = self.host.lock().unwrap();
         let name = class.name.clone();
-        let _name = host.cache_class(class, Some(polar_core::types::Symbol(name)));
+        let name = polar_core::types::Symbol(name);
+        let class_term = host.cache_class(class, name.clone());
+        self.inner.register_constant(name, class_term);
         Ok(())
     }
 
