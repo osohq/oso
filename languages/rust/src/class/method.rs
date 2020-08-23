@@ -134,7 +134,6 @@ impl InstanceMethod {
     {
         Self(Arc::new(
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                assert!(args.is_empty());
                 let receiver = receiver
                     .downcast_ref()
                     .expect("incorrect type for receiver");

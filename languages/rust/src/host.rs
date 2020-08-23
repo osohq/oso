@@ -6,7 +6,7 @@ use std::rc::Weak;
 use std::sync::Arc;
 
 use polar_core::types::Symbol as Name;
-use polar_core::types::{Numeric, Term, Value};
+use polar_core::types::{ExternalInstance, Numeric, Term, Value};
 
 #[path = "class/mod.rs"]
 mod class;
@@ -14,6 +14,7 @@ pub use class::*;
 
 /// Maintain mappings and caches for Python classes & instances
 pub struct Host {
+    class_names: HashMap<std::any::TypeId, Name>,
     classes: HashMap<Name, Class>,
     instances: HashMap<u64, Instance>,
     polar: Weak<crate::PolarCore>,
@@ -22,6 +23,7 @@ pub struct Host {
 impl Host {
     pub fn new(polar: Weak<crate::PolarCore>) -> Self {
         Self {
+            class_names: HashMap::new(),
             classes: HashMap::new(),
             instances: HashMap::new(),
             polar,
@@ -32,12 +34,19 @@ impl Host {
         self.classes.get(name)
     }
 
+    pub fn get_class_from_type<C: 'static>(&self) -> Option<&Class> {
+        self.class_names
+            .get(&std::any::TypeId::of::<C>())
+            .and_then(|name| self.get_class(name))
+    }
+
     pub fn get_class_mut(&mut self, name: &Name) -> Option<&mut Class> {
         self.classes.get_mut(name)
     }
 
     pub fn cache_class(&mut self, class: Class, name: Option<Name>) -> Name {
         let name = name.unwrap_or_else(|| Name(class.name.clone()));
+        self.class_names.insert(class.type_id, name.clone());
         self.classes.insert(name.clone(), class);
         name
     }
@@ -53,20 +62,10 @@ impl Host {
     }
 
     pub fn make_instance(&mut self, name: &Name, fields: Vec<Term>, id: u64) {
-        let Class {
-            constructor,
-            attributes,
-            instance_methods,
-            ..
-        } = self.get_class(name).unwrap().clone();
+        let class = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
         let fields = fields; // TODO: use
-        let instance = constructor.invoke(fields, self);
-        let instance = Instance {
-            instance,
-            attributes: Arc::new(attributes),
-            methods: Arc::new(instance_methods),
-        };
+        let instance = class.new(fields, self);
         self.cache_instance(instance, Some(id));
     }
 
@@ -76,10 +75,27 @@ impl Host {
         todo!("left == right")
     }
 
-    pub fn isa(&self, id: u64, class_tag: &Name) -> bool {
-        let instance = self.get_instance(id).unwrap();
-        let class = self.get_class(class_tag).unwrap();
-        class.isinstance(instance)
+    pub fn isa(&self, term: Term, class_tag: &Name) -> bool {
+        let name = &class_tag.0;
+        match term.value() {
+            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                let class = self.get_class(class_tag).unwrap();
+                let instance = self.get_instance(*instance_id).unwrap();
+                class.is_instance(instance)
+            }
+            Value::Boolean(_) => name == "Boolean",
+            Value::Dictionary(_) => name == "Dictionary",
+            Value::List(_) => name == "List",
+            Value::Number(n) => {
+                name == "Number"
+                    || match n {
+                        Numeric::Integer(_) => name == "Integer",
+                        Numeric::Float(_) => name == "Float",
+                    }
+            }
+            Value::String(_) => name == "String",
+            _ => false,
+        }
     }
 
     pub fn is_subspecializer(&self, id: u64, left_tag: &Name, right_tag: &Name) -> bool {
@@ -90,7 +106,7 @@ impl Host {
         todo!("????")
     }
 
-    pub fn operator(&self, _op: polar_core::types::Operator, _args: [u64; 2]) -> bool {
+    pub fn operator(&self, _op: polar_core::types::Operator, _args: [Instance; 2]) -> bool {
         todo!()
     }
 
@@ -297,14 +313,41 @@ impl FromPolar for Value {
 
 impl FromPolar for Instance {
     fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
-        if let Value::ExternalInstance(polar_core::types::ExternalInstance {
-            instance_id, ..
-        }) = term.value()
-        {
-            host.get_instance(*instance_id).cloned()
-        } else {
-            None
-        }
+        let instance = match term.value().clone() {
+            Value::Boolean(b) => host
+                .get_class_from_type::<bool>()
+                .unwrap()
+                .cast_to_instance(b),
+            Value::Number(Numeric::Integer(i)) => host
+                .get_class_from_type::<i64>()
+                .unwrap()
+                .cast_to_instance(i),
+            Value::Number(Numeric::Float(f)) => host
+                .get_class_from_type::<f64>()
+                .unwrap()
+                .cast_to_instance(f),
+            Value::List(v) => host
+                .get_class_from_type::<Vec<Term>>()
+                .unwrap()
+                .cast_to_instance(v),
+            Value::String(s) => host
+                .get_class_from_type::<String>()
+                .unwrap()
+                .cast_to_instance(s),
+            Value::Dictionary(d) => host
+                .get_class_from_type::<HashMap<Name, Term>>()
+                .unwrap()
+                .cast_to_instance(d.fields),
+            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => host
+                .get_instance(instance_id)
+                .expect("instance not found")
+                .clone(),
+            v => {
+                tracing::warn!(value = ?v, "invalid conversion attempted");
+                return None;
+            }
+        };
+        Some(instance)
     }
 }
 
@@ -364,5 +407,35 @@ where
         } else {
             None
         }
+    }
+}
+
+/// Marker trait: implements "ToPolar" via a registered class
+pub trait HostClass {}
+
+impl<C: 'static + Clone + HostClass> FromPolar for C {
+    fn from_polar(term: &Term, host: &mut Host) -> Option<Self> {
+        match term.value() {
+            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+                let instance = host.get_instance(*instance_id)?;
+                instance.instance.downcast_ref::<C>().cloned()
+            }
+            _ => None,
+        }
+    }
+}
+
+impl<C: 'static + Clone + HostClass> ToPolar for C {
+    fn to_polar_value(&self, host: &mut Host) -> Value {
+        let class = host
+            .get_class_from_type::<C>()
+            .expect("Class not registered");
+        let instance = class.cast_to_instance(self.clone());
+        let instance = host.cache_instance(instance, None);
+        Value::ExternalInstance(ExternalInstance {
+            constructor: None,
+            repr: None,
+            instance_id: instance,
+        })
     }
 }

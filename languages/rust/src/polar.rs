@@ -14,8 +14,16 @@ pub struct Polar {
 impl Polar {
     pub fn new() -> Self {
         let inner = Rc::new(crate::PolarCore::new());
+        let mut host = Host::new(Rc::downgrade(&inner));
+
+        // register all builtin constants
+        for (name, class, value) in crate::host::builtins::constants(&mut host) {
+            host.cache_class(class, Some(name.clone()));
+            inner.register_constant(name, value);
+        }
+
         Self {
-            host: Arc::new(Mutex::new(Host::new(Rc::downgrade(&inner)))),
+            host: Arc::new(Mutex::new(host)),
             inner,
         }
     }
@@ -24,16 +32,32 @@ impl Polar {
         *self = Self::new();
     }
 
+    fn check_inline_queries(&mut self) -> anyhow::Result<()> {
+        while let Some(q) = self.inner.next_inline_query(false) {
+            let query = crate::query::Query::new(q, self.host.clone());
+            match query.collect::<anyhow::Result<Vec<_>>>() {
+                Ok(v) if !v.is_empty() => continue,
+                Ok(_) => anyhow::bail!("inline query result was false"),
+                Err(e) => {
+                    anyhow::bail!("error in inline query: {}", e);
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn load_file(&mut self, file: &str) -> anyhow::Result<()> {
         let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
         self.inner.load_file(&policy, Some(file.to_string()))?;
-        Ok(())
+
+        self.check_inline_queries()
     }
 
     pub fn load_str(&mut self, s: &str) -> anyhow::Result<()> {
-        Ok(self.inner.load(s)?)
+        self.inner.load(s)?;
+        self.check_inline_queries()
     }
 
     pub fn query(&mut self, s: &str) -> anyhow::Result<crate::query::Query> {
@@ -42,74 +66,42 @@ impl Polar {
         Ok(query)
     }
 
-    pub fn register_class(
-        &mut self,
-        class: crate::host::Class,
-        name: Option<String>,
-    ) -> anyhow::Result<()> {
+    pub fn register_class(&mut self, class: crate::host::Class) -> anyhow::Result<()> {
         let mut host = self.host.lock().unwrap();
-        let _name = host.cache_class(class, name.map(polar_core::types::Symbol));
+        let name = class.name.clone();
+        let _name = host.cache_class(class, Some(polar_core::types::Symbol(name)));
         Ok(())
     }
-    // pub fn query_rule<'a>(
-    //     &mut self,
-    //     name: &str,
-    //     args: impl IntoIterator<Item = &'a dyn crate::host::ToPolar>,
-    // ) -> anyhow::Result<crate::query::Query> {
-    //     let args = args.into_iter().map(|arg| arg.to_polar(&mut self.host.lock().unwrap())).collect();
-    //     let query = polar_core::types::Term::new_from_ffi(value)
 
-    // }
+    pub fn register_constant<V: crate::host::ToPolar>(
+        &mut self,
+        name: &str,
+        value: &V,
+    ) -> anyhow::Result<()> {
+        let mut host = self.host.lock().unwrap();
+        self.inner.register_constant(
+            polar_core::types::Symbol(name.to_string()),
+            host.to_polar(value),
+        );
+        Ok(())
+    }
+
+    pub fn query_rule<'a>(
+        &mut self,
+        name: &str,
+        args: impl IntoIterator<Item = &'a dyn crate::host::ToPolar>,
+    ) -> anyhow::Result<crate::query::Query> {
+        let args = args
+            .into_iter()
+            .map(|arg| arg.to_polar(&mut self.host.lock().unwrap()))
+            .collect();
+        let query_value = polar_core::types::Value::Call(polar_core::types::Predicate {
+            name: polar_core::types::Symbol(name.to_string()),
+            args,
+        });
+        let query_term = polar_core::types::Term::new_from_ffi(query_value);
+        let query = self.inner.new_query_from_term(query_term, false);
+        let query = crate::query::Query::new(query, self.host.clone());
+        Ok(query)
+    }
 }
-
-// class Polar:
-//     """Polar API"""
-
-//     def query_rule(self, name, *args):
-//         """Query for rule with name ``name`` and arguments ``args``.
-
-//         :param name: The name of the predicate to query.
-//         :param args: Arguments for the predicate.
-
-//         :return: The result of the query.
-//         """
-//         return self.query(Predicate(name=name, args=args))
-
-//     def register_class(self, cls, *, name=None, from_polar=None):
-//         """Register `cls` as a class accessible by Polar. `from_polar` can
-//         either be a method or a string. In the case of a string, Polar will
-//         look for the method using `getattr(cls, from_polar)`."""
-//         cls_name = self.host.cache_class(cls, name, from_polar)
-//         self.register_constant(cls_name, cls)
-
-//     def register_constant(self, name, value):
-//         """Register `value` as a Polar constant variable called `name`."""
-//         name = to_c_str(name)
-//         value = ffi_serialize(self.host.to_polar_term(value))
-//         lib.polar_register_constant(self.ffi_polar, name, value)
-
-//     def _load_queued_files(self):
-//         """Load queued policy files into the knowledge base."""
-//         while self.load_queue:
-//             filename = self.load_queue.pop(0)
-//             with open(filename) as file:
-//                 load_str(self.ffi_polar, file.read(), filename)
-
-// def polar_class(_cls=None, *, name=None, from_polar=None):
-//     """Decorator to register a Python class with Polar.
-//     An alternative to ``register_class()``.
-
-//     :param str from_polar: Name of class function to create a new instance from ``fields``.
-//                            Defaults to class constructor.
-//     """
-
-//     def wrap(cls):
-//         cls_name = cls.__name__ if name is None else name
-//         CLASSES[cls_name] = cls
-//         CONSTRUCTORS[cls_name] = from_polar or cls
-//         return cls
-
-//     if _cls is None:
-//         return wrap
-
-//     return wrap(_cls)

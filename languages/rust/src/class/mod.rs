@@ -1,24 +1,42 @@
+use std::fmt;
+
 use super::*;
 
+pub mod builtins;
 mod method;
 use method::*;
 
 #[derive(Clone)]
-pub struct Class {
+pub struct Class<T = ()> {
     pub name: String,
     pub constructor: Constructor,
     pub attributes: InstanceMethods,
     pub instance_methods: InstanceMethods,
     pub class_methods: ClassMethods,
-    is_check: Arc<dyn Fn(&dyn Any) -> bool>,
+    pub type_id: std::any::TypeId,
+    instance_check: Arc<dyn Fn(&dyn Any) -> bool>,
+    class_check: Arc<dyn Fn(std::any::TypeId) -> bool>,
+    ty: std::marker::PhantomData<T>,
 }
 
-impl Class {
-    pub fn new<T: std::default::Default + 'static>() -> Self {
-        Self::with_constructor::<T, _, _>(T::default)
+impl fmt::Debug for Class {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Class")
+            .field("name", &self.name)
+            .field("type_id", &self.type_id)
+            .finish()
+    }
+}
+
+impl<T> Class<T> {
+    pub fn with_default() -> Self
+    where
+        T: std::default::Default + 'static,
+    {
+        Self::with_constructor::<_, _>(T::default)
     }
 
-    pub fn with_constructor<T, F, Args>(f: F) -> Self
+    pub fn with_constructor<F, Args>(f: F) -> Self
     where
         T: 'static,
         F: Function<Args, Result = T> + 'static,
@@ -30,11 +48,14 @@ impl Class {
             attributes: InstanceMethods::new(),
             instance_methods: InstanceMethods::new(),
             class_methods: ClassMethods::new(),
-            is_check: Arc::new(|any| any.downcast_ref::<T>().is_some()),
+            instance_check: Arc::new(|any| any.is::<T>()),
+            class_check: Arc::new(|type_id| std::any::TypeId::of::<T>() == type_id),
+            ty: std::marker::PhantomData,
+            type_id: std::any::TypeId::of::<T>(),
         }
     }
 
-    pub fn add_attribute_getter<T, F, R>(&mut self, name: &str, f: F)
+    pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
     where
         F: Method<T, Result = R> + 'static,
         F::Result: ToPolar + 'static,
@@ -42,8 +63,15 @@ impl Class {
     {
         self.attributes
             .insert(Name(name.to_string()), InstanceMethod::new(f));
+        self
     }
-    pub fn add_method<T, F, Args, R>(&mut self, name: &str, f: F)
+
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = name.to_string();
+        self
+    }
+
+    pub fn add_method<F, Args, R>(mut self, name: &str, f: F) -> Self
     where
         Args: FromPolar,
         F: Method<T, Args, Result = R> + 'static,
@@ -52,9 +80,10 @@ impl Class {
     {
         self.instance_methods
             .insert(Name(name.to_string()), InstanceMethod::new(f));
+        self
     }
 
-    pub fn add_class_method<F, Args, R>(&mut self, name: &str, f: F)
+    pub fn add_class_method<F, Args, R>(mut self, name: &str, f: F) -> Self
     where
         F: Function<Args, Result = R> + 'static,
         Args: FromPolar + 'static,
@@ -62,24 +91,75 @@ impl Class {
     {
         self.class_methods
             .insert(Name(name.to_string()), ClassMethod::new(f));
+        self
     }
 
-    pub fn register(
-        self,
-        name: Option<String>,
-        polar: &mut crate::polar::Polar,
-    ) -> anyhow::Result<()> {
-        polar.register_class(self, name)?;
+    /// Erase the generic type parameter
+    /// This is done before registering so
+    /// that the host can store all of the same type. The generic paramtere
+    /// is just used for the builder pattern part of Class
+    /// TODO: Skip this shenanigans and make there a builder instead?
+    fn erase_type(self) -> Class<()> {
+        Class {
+            name: self.name,
+            constructor: self.constructor,
+            attributes: self.attributes,
+            instance_methods: self.instance_methods,
+            class_methods: self.class_methods,
+            instance_check: self.instance_check,
+            class_check: self.class_check,
+            type_id: self.type_id,
+            ty: std::marker::PhantomData,
+        }
+    }
+
+    pub fn register(self, polar: &mut crate::polar::Polar) -> anyhow::Result<()> {
+        // erase the type before registering
+        polar.register_class(self.erase_type())?;
         Ok(())
     }
 
-    pub fn isinstance(&self, instance: &dyn Any) -> bool {
-        (self.is_check)(instance)
+    pub fn is_class<C: 'static>(&self) -> bool {
+        tracing::trace!(
+            input = %std::any::type_name::<C>(),
+            class = %self.name,
+            "is_class"
+        );
+        (self.class_check)(std::any::TypeId::of::<C>())
+    }
+
+    pub fn is_instance(&self, instance: &Instance) -> bool {
+        tracing::trace!(
+            instance = %instance.name,
+            class = %self.name,
+            "is_instance"
+        );
+        (self.instance_check)(instance.instance.as_ref())
+    }
+
+    pub fn new(&self, fields: Vec<Term>, host: &mut Host) -> Instance {
+        let instance = self.constructor.invoke(fields, host);
+        Instance {
+            name: self.name.clone(),
+            instance: instance,
+            attributes: Arc::new(self.attributes.clone()),
+            methods: Arc::new(self.instance_methods.clone()),
+        }
+    }
+
+    pub fn cast_to_instance(&self, instance: impl Any) -> Instance {
+        Instance {
+            name: self.name.clone(),
+            instance: Arc::new(instance),
+            attributes: Arc::new(self.attributes.clone()),
+            methods: Arc::new(self.instance_methods.clone()),
+        }
     }
 }
 
 #[derive(Clone)]
 pub struct Instance {
+    pub name: String,
     pub instance: Arc<dyn Any>,
     pub attributes: Arc<InstanceMethods>,
     pub methods: Arc<InstanceMethods>,

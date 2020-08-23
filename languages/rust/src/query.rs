@@ -1,9 +1,16 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::host::Instance;
+use crate::host::{FromPolar, Instance};
 use polar_core::types::Symbol as Name;
 use polar_core::types::*;
+
+impl Iterator for Query {
+    type Item = anyhow::Result<ResultSet>;
+    fn next(&mut self) -> Option<Self::Item> {
+        Query::next(self)
+    }
+}
 
 pub struct Query {
     calls: HashMap<u64, Box<dyn Iterator<Item = Arc<dyn crate::host::ToPolar>>>>,
@@ -23,17 +30,25 @@ impl Query {
     pub fn next(&mut self) -> Option<anyhow::Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
+            while let Some(msg) = self.inner.next_message() {
+                match msg.kind {
+                    polar_core::types::MessageKind::Print => tracing::trace!("{}", msg.msg),
+                    polar_core::types::MessageKind::Warning => tracing::warn!("{}", msg.msg),
+                }
+            }
             if let Err(e) = event {
                 return Some(Err(e.into()));
             }
-            let result = match event.unwrap() {
+            let event = event.unwrap();
+            tracing::debug!(event=?event);
+            let result = match event {
                 QueryEvent::None => Ok(()),
                 QueryEvent::Done => return None,
                 QueryEvent::Result { bindings, .. } => {
                     return Some(Ok(ResultSet {
                         bindings,
                         host: self.host.clone(),
-                    }))
+                    }));
                 }
                 QueryEvent::MakeExternal {
                     instance_id,
@@ -113,6 +128,7 @@ impl Query {
                     return Err(anyhow::anyhow!("attribute lookup not found"));
                 }
             };
+            tracing::trace!(call_id, name = %name, args = ?args, "register_call");
             let result = f.invoke(instance.instance.as_ref(), args, host);
             self.calls
                 .insert(call_id, Box::new(std::iter::once(result)));
@@ -127,19 +143,7 @@ impl Query {
         name: Name,
         args: Option<Vec<Term>>,
     ) -> anyhow::Result<()> {
-        let instance = match instance.value() {
-            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => self
-                .host
-                .lock()
-                .unwrap()
-                .get_instance(*instance_id)
-                .expect("instance not found")
-                .clone(),
-            _ => {
-                self.inner.application_error("not an instance".to_string());
-                return Ok(());
-            }
-        };
+        let instance = Instance::from_polar(&instance, &mut self.host.lock().unwrap()).unwrap();
         self.register_call(call_id, instance, name, args)?;
 
         if let Some(result) = self.calls.get_mut(&call_id).and_then(|c| c.next()) {
@@ -161,18 +165,11 @@ impl Query {
         args: Vec<Term>,
     ) -> anyhow::Result<()> {
         assert_eq!(args.len(), 2);
-        let host = self.host.lock().unwrap();
-        let args = match (args[0].value(), args[1].value()) {
-            (
-                Value::ExternalInstance(ExternalInstance {
-                    instance_id: left, ..
-                }),
-                Value::ExternalInstance(ExternalInstance {
-                    instance_id: right, ..
-                }),
-            ) => [*left, *right],
-            _ => return Err(anyhow::anyhow!("incompatible types for operator")),
-        };
+        let mut host = self.host.lock().unwrap();
+        let args = [
+            Instance::from_polar(&args[0], &mut host).unwrap(),
+            Instance::from_polar(&args[1], &mut host).unwrap(),
+        ];
         let res = host.operator(operator, args);
         self.inner.question_result(call_id, res);
         Ok(())
@@ -184,14 +181,11 @@ impl Query {
         instance: Term,
         class_tag: Name,
     ) -> anyhow::Result<()> {
-        if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = instance.value() {
-            let host = self.host.lock().unwrap();
-            let res = host.isa(*instance_id, &class_tag);
-            self.inner.question_result(call_id, res);
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("not sure what to do with this yet"))
-        }
+        tracing::debug!(instance = ?instance, class = %class_tag, "isa");
+        let host = self.host.lock().unwrap();
+        let res = host.isa(instance, &class_tag);
+        self.inner.question_result(call_id, res);
+        Ok(())
     }
 
     fn handle_external_unify(

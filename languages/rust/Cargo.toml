@@ -12,3 +12,5 @@ rustyline = {version = "6.2"}
 rustyline-derive = {version = "0.3.1"}
 anyhow = "1.0.32"
 maplit = "1.0.2"
+tracing = "0.1.19"
+tracing-subscriber ={version = "0.2.11", features = ["fmt"] }
