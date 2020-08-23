@@ -50,13 +50,13 @@ impl Polar {
         let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
-        self.inner.load_file(&policy, Some(file.to_string()))?;
+        self.inner.load(&policy, Some(file.to_string()))?;
 
         self.check_inline_queries()
     }
 
     pub fn load_str(&mut self, s: &str) -> anyhow::Result<()> {
-        self.inner.load(s)?;
+        self.inner.load(s, None)?;
         self.check_inline_queries()
     }
 
