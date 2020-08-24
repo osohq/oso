@@ -201,6 +201,12 @@ export interface PolarTerm {
   value: PolarValue;
 }
 
+/**
+ * Type guard to test if a JSON payload received from across the WebAssembly
+ * boundary contains a valid Polar value.
+ *
+ * @internal
+ */
 function isPolarValue(v: any): v is PolarValue {
   if (typeof v !== 'object' || v === null) return false;
   return (
@@ -215,22 +221,52 @@ function isPolarValue(v: any): v is PolarValue {
   );
 }
 
+/**
+ * Type guard to test if a JSON payload received from across the WebAssembly
+ * boundary contains a valid Polar term.
+ *
+ * @internal
+ */
 export function isPolarTerm(v: any): v is PolarTerm {
   return isPolarValue(v?.value);
 }
 
+/**
+ * A constructable (via the `new` keyword) application class.
+ *
+ * @internal
+ */
 export type Class<T extends {} = {}> = new (...args: any[]) => T;
 
+/**
+ * The `Result` [[`QueryEvent`]] represents a single result from a query
+ * containing any variables bound during the evaluation of the query.
+ *
+ * @internal
+ */
 export interface Result {
   bindings: Map<string, PolarTerm>;
 }
 
+/**
+ * The `MakeExternal` [[`QueryEvent`]] is how Polar constructs application
+ * instances during the evaluation of a query.
+ *
+ * @internal
+ */
 export interface MakeExternal {
   instanceId: number;
   tag: string;
   fields: PolarTerm[];
 }
 
+/**
+ * The `ExternalCall` [[`QueryEvent`]] is how Polar invokes JavaScript
+ * functions registered as constants, methods on built-in types, and methods on
+ * registered application classes during the evaluation of a query.
+ *
+ * @internal
+ */
 export interface ExternalCall {
   callId: number;
   instance: PolarTerm;
@@ -238,6 +274,12 @@ export interface ExternalCall {
   args?: PolarTerm[];
 }
 
+/**
+ * The `ExternalIsSubspecializer` [[`QueryEvent`]] is how Polar determines
+ * which of two classes is more specific with respect to a given instance.
+ *
+ * @internal
+ */
 export interface ExternalIsSubspecializer {
   instanceId: number;
   leftTag: string;
@@ -245,22 +287,46 @@ export interface ExternalIsSubspecializer {
   callId: number;
 }
 
+/**
+ * The `ExternalIsa` [[`QueryEvent`]] is how Polar determines whether a given
+ * value is an instance of a particular class.
+ *
+ * @internal
+ */
 export interface ExternalIsa {
   instance: PolarTerm;
   tag: string;
   callId: number;
 }
 
+/**
+ * The `ExternalUnify` [[`QueryEvent`]] is how Polar determines whether a pair
+ * of values unify where at least one of the values is an application instance
+ * (and, as such, Polar cannot determine unification internally).
+ *
+ * @internal
+ */
 export interface ExternalUnify {
   leftId: number;
   rightId: number;
   callId: number;
 }
 
+/**
+ * The `Debug` [[`QueryEvent`]] is how Polar relays debugging messages to
+ * JavaScript from the internal debugger attached to the Polar VM.
+ *
+ * @internal
+ */
 export interface Debug {
   message: string;
 }
 
+/**
+ * Union of all [[`QueryEvent`]] types.
+ *
+ * @internal
+ */
 export enum QueryEventKind {
   Debug,
   Done,
@@ -272,6 +338,11 @@ export enum QueryEventKind {
   Result,
 }
 
+/**
+ * An event from the Polar VM.
+ *
+ * @internal
+ */
 export interface QueryEvent {
   kind: QueryEventKind;
   data?:
@@ -284,24 +355,64 @@ export interface QueryEvent {
     | Result;
 }
 
+/**
+ * An `AsyncGenerator` over query results.
+ *
+ * Each result is a `Map` of variables bound during the computation of that
+ * result.
+ *
+ * If you don't need access to the bindings and only wish to know whether a
+ * query succeeded or failed, you may check the `done` property of the yielded
+ * value (and then optionally "complete" the generator by calling its
+ * `return()` method). If `done` is `true`, the query failed. If `done` is
+ * `false`, the query yielded at least one result and therefore succeeded.
+ */
 export type QueryResult = AsyncGenerator<
   Map<string, any>,
   void,
   undefined | void
 >;
 
+/**
+ * An object with string keys.
+ *
+ * @hidden
+ */
 export type obj = { [key: string]: any };
 
+/**
+ * A function that compares two values and returns `true` if they are equal and
+ * `false` otherwise.
+ *
+ * A custom `EqualityFn` may be passed in the [[`Options`]] provided to the
+ * [[`Oso.constructor`]] in order to override the default equality function,
+ * which uses `==` (loose equality).
+ */
 export type EqualityFn = (x: any, y: any) => boolean;
 
+/**
+ * Optional configuration for the [[`Oso.constructor`]].
+ */
 export interface Options {
   equalityFn?: EqualityFn;
 }
 
+/**
+ * Type guard to test if a value conforms to both the iterable and iterator
+ * protocols. This is basically a slightly relaxed check for whether the value
+ * is a `Generator`.
+ *
+ * @internal
+ */
 export function isIterableIterator(x: any): boolean {
   return typeof x?.next === 'function' && Symbol.iterator in Object(x);
 }
 
+/**
+ * Type guard to test if a value is an `AsyncIterator`.
+ *
+ * @internal
+ */
 export function isAsyncIterator(x: any): boolean {
   return Symbol.asyncIterator in Object(x);
 }

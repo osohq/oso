@@ -19,6 +19,7 @@ import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
 import { readFile, repr } from './helpers';
 
+// Optional ANSI escape sequences for the REPL.
 let RESET = '';
 let FG_BLUE = '';
 let FG_RED = '';
@@ -33,10 +34,33 @@ if (
   FG_RED = '\x1b[31m';
 }
 
+/** Create and manage an instance of the Polar runtime. */
 export class Polar {
+  /**
+   * Internal WebAssembly module.
+   *
+   * @internal
+   */
   #ffiPolar: FfiPolar;
+  /**
+   * Manages registration and comparison of JavaScript classes and instances
+   * as well as translations between Polar and JavaScript values.
+   *
+   * @internal
+   */
   #host: Host;
+  /**
+   * Tracking Polar files loaded into the knowledge base by a hash of their
+   * contents.
+   *
+   * @internal
+   */
   #loadedContents: Map<string, string>;
+  /**
+   * Tracking Polar files loaded into the knowledge base by file name.
+   *
+   * @internal
+   */
   #loadedFiles: Map<string, string>;
 
   constructor(opts: Options = {}) {
@@ -46,6 +70,7 @@ export class Polar {
     this.#loadedContents = new Map();
     this.#loadedFiles = new Map();
 
+    // Register built-in classes.
     this.registerClass(Boolean);
     this.registerClass(Number, 'Integer');
     this.registerClass(Number, 'Float');
@@ -54,11 +79,20 @@ export class Polar {
     this.registerClass(Object, 'Dictionary');
   }
 
-  // For tests only.
+  /**
+   * For tests only.
+   *
+   * @hidden
+   */
   __host() {
     return this.#host;
   }
 
+  /**
+   * Process messages received from the Polar VM.
+   *
+   * @internal
+   */
   private processMessages() {
     while (true) {
       let msg = this.#ffiPolar.nextMessage();
@@ -67,6 +101,10 @@ export class Polar {
     }
   }
 
+  /**
+   * Replace the current Polar VM instance, clearing out all loaded policy but
+   * retaining all registered classes and constants.
+   */
   clear() {
     this.#loadedContents.clear();
     this.#loadedFiles.clear();
@@ -75,6 +113,9 @@ export class Polar {
     previous.free();
   }
 
+  /**
+   * Load a Polar policy file.
+   */
   async loadFile(file: string): Promise<void> {
     if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
     let contents;
@@ -99,6 +140,9 @@ export class Polar {
     this.#loadedFiles.set(file, hash);
   }
 
+  /**
+   * Load a Polar policy string.
+   */
   async loadStr(contents: string, name?: string): Promise<void> {
     this.#ffiPolar.loadFile(contents, name);
     this.processMessages();
@@ -114,6 +158,9 @@ export class Polar {
     }
   }
 
+  /**
+   * Query for a Polar predicate or string.
+   */
   query(q: Predicate | string): QueryResult {
     const host = Host.clone(this.#host);
     let ffiQuery;
@@ -127,10 +174,16 @@ export class Polar {
     return new Query(ffiQuery, host).results;
   }
 
+  /**
+   * Query for a Polar rule.
+   */
   queryRule(name: string, ...args: unknown[]): QueryResult {
     return this.query(new Predicate(name, args));
   }
 
+  /**
+   * Start a REPL session.
+   */
   async repl(files?: string[]): Promise<void> {
     const rl = createInterface({
       input: process.stdin,
@@ -183,11 +236,17 @@ export class Polar {
     });
   }
 
+  /**
+   * Register a JavaScript class for use in Polar policies.
+   */
   registerClass<T>(cls: Class<T>, alias?: string): void {
     const name = this.#host.cacheClass(cls, alias);
     this.registerConstant(name, cls);
   }
 
+  /**
+   * Register a JavaScript value for use in Polar policies.
+   */
   registerConstant(name: string, value: any): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));

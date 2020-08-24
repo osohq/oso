@@ -1,3 +1,4 @@
+/** Polar variable. */
 export class Variable {
   readonly name: string;
 

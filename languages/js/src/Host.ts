@@ -19,12 +19,23 @@ import {
   isPolarVariable,
 } from './types';
 
+/**
+ * Translator between Polar and JavaScript.
+ *
+ * @internal
+ */
 export class Host {
   #ffiPolar: FfiPolar;
   #classes: Map<string, Class>;
   #instances: Map<number, any>;
   #equalityFn: EqualityFn;
 
+  /**
+   * Shallow clone a host to extend its state for the duration of a particular
+   * query without modifying the longer-lived [[`Polar.#host`]] state.
+   *
+   * @internal
+   */
   static clone(host: Host): Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
     clone.#classes = new Map(host.#classes);
@@ -32,6 +43,7 @@ export class Host {
     return clone;
   }
 
+  /** @internal */
   constructor(ffiPolar: FfiPolar, equalityFn: EqualityFn) {
     this.#ffiPolar = ffiPolar;
     this.#classes = new Map();
@@ -39,12 +51,28 @@ export class Host {
     this.#equalityFn = equalityFn;
   }
 
+  /**
+   * Fetch a JavaScript class from the [[`#classes`]] cache.
+   *
+   * @param name Class name to look up.
+   *
+   * @internal
+   */
   private getClass(name: string): Class {
     const cls = this.#classes.get(name);
     if (cls === undefined) throw new UnregisteredClassError(name);
     return cls;
   }
 
+  /**
+   * Store a JavaScript class in the [[`#classes`]] cache.
+   *
+   * @param cls Class to cache.
+   * @param name Optional alias under which to cache the class. Defaults to the
+   * class's `name` property.
+   *
+   * @internal
+   */
   cacheClass<T>(cls: Class<T>, name?: string): string {
     const clsName = name === undefined ? cls.name : name;
     const existing = this.#classes.get(clsName);
@@ -58,16 +86,33 @@ export class Host {
     return clsName;
   }
 
+  /**
+   * Check if an instance exists in the [[`instances`]] cache.
+   *
+   * @internal
+   */
   hasInstance(id: number): boolean {
     return this.#instances.has(id);
   }
 
-  // Public for the test suite.
+  /**
+   * Fetch a JavaScript instance from the [[`#instances`]] cache.
+   *
+   * Public for the test suite.
+   *
+   * @internal
+   */
   getInstance(id: number): any {
     if (!this.hasInstance(id)) throw new UnregisteredInstanceError(id);
     return this.#instances.get(id);
   }
 
+  /**
+   * Store a JavaScript instance in the [[`#instances`]] cache, fetching a new
+   * instance ID from the Polar VM if an ID is not provided.
+   *
+   * @internal
+   */
   private cacheInstance(instance: any, id?: number): number {
     let instanceId = id;
     if (instanceId === undefined) {
@@ -94,6 +139,12 @@ export class Host {
     this.cacheInstance(instance, id);
   }
 
+  /**
+   * Check if the left class is more specific than the right class with respect
+   * to the given instance.
+   *
+   * @internal
+   */
   async isSubspecializer(
     id: number,
     left: string,
@@ -114,12 +165,22 @@ export class Host {
     }
   }
 
+  /**
+   * Check if the given instance is an instance of a particular class.
+   *
+   * @internal
+   */
   async isa(polarInstance: PolarTerm, name: string): Promise<boolean> {
     const instance = await this.toJs(polarInstance);
     const cls = this.getClass(name);
     return instance instanceof cls || instance?.constructor === cls;
   }
 
+  /**
+   * Check if two instances unify according to the [[`#equalityFn`]].
+   *
+   * @internal
+   */
   async unify(leftId: number, rightId: number): Promise<boolean> {
     let left = this.getInstance(leftId);
     let right = this.getInstance(rightId);
@@ -128,6 +189,12 @@ export class Host {
     return this.#equalityFn(left, right);
   }
 
+  /**
+   * Turn a JavaScript value into a Polar term that's ready to be sent to the
+   * Polar VM.
+   *
+   * @internal
+   */
   toPolar(v: any): PolarTerm {
     switch (true) {
       case typeof v === 'boolean':
@@ -159,6 +226,11 @@ export class Host {
     }
   }
 
+  /**
+   * Turn a Polar term from the Polar VM into a JavaScript value.
+   *
+   * @internal
+   */
   async toJs(v: PolarTerm): Promise<any> {
     const t = v.value;
     if (isPolarStr(t)) {
