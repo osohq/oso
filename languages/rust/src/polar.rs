@@ -6,9 +6,16 @@ use std::sync::{Arc, Mutex};
 
 use crate::host::Host;
 
+#[derive(Clone)]
 pub struct Polar {
     inner: Rc<crate::PolarCore>,
     host: Arc<Mutex<Host>>,
+}
+
+impl Default for Polar {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Polar {
@@ -113,7 +120,7 @@ impl Polar {
         let mut host = self.host.lock().unwrap();
         self.inner.register_constant(
             polar_core::types::Symbol(name.to_string()),
-            host.to_polar(value),
+            host.value_to_polar(value),
         );
         Ok(())
     }

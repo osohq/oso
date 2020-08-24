@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use super::*;
 
 pub type ClassMethods = HashMap<Name, ClassMethod>;

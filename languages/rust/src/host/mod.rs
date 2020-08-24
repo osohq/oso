@@ -38,7 +38,7 @@ impl Host {
         let type_class = type_class();
         let name = Name("Type".to_string());
         host.class_names.insert(type_class.type_id, name.clone());
-        host.classes.insert(name.clone(), type_class);
+        host.classes.insert(name, type_class);
         host
     }
 
@@ -60,9 +60,12 @@ impl Host {
         self.classes.get_mut(name)
     }
 
+    /// Add the class to the host classes
+    ///
+    /// Returns an instance of `Type` for this class.
     pub fn cache_class(&mut self, class: Class, name: Name) -> Term {
         self.class_names.insert(class.type_id, name.clone());
-        self.classes.insert(name.clone(), class.clone());
+        self.classes.insert(name, class.clone());
 
         let type_class = self.type_class();
         for method_name in class.class_methods.keys() {
@@ -74,15 +77,13 @@ impl Host {
                 });
         }
         let repr = format!("type<{}>", class.name);
-        let instance = type_class.cast_to_instance(class.clone());
+        let instance = type_class.cast_to_instance(class);
         let instance = self.cache_instance(instance, None);
-        let class_term = Term::new_from_ffi(Value::ExternalInstance(ExternalInstance {
+        Term::new_from_ffi(Value::ExternalInstance(ExternalInstance {
             constructor: None,
             repr: Some(repr),
             instance_id: instance,
-        }));
-
-        class_term
+        }))
     }
 
     pub fn get_instance(&self, id: u64) -> Option<&Instance> {
@@ -99,7 +100,7 @@ impl Host {
         let class = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
         let fields = fields; // TODO: use
-        let instance = class.new(fields, self);
+        let instance = class.init(fields, self);
         self.cache_instance(instance, Some(id));
     }
 
@@ -144,7 +145,7 @@ impl Host {
         todo!()
     }
 
-    pub fn to_polar(&mut self, value: &dyn ToPolar) -> Term {
+    pub fn value_to_polar(&mut self, value: &dyn ToPolar) -> Term {
         value.to_polar(self)
     }
 }

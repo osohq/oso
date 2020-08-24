@@ -8,7 +8,7 @@ use polar_core::types::*;
 impl Iterator for Query {
     type Item = anyhow::Result<ResultSet>;
     fn next(&mut self) -> Option<Self::Item> {
-        Query::next(self)
+        Query::next_result(self)
     }
 }
 
@@ -27,7 +27,7 @@ impl Query {
         }
     }
 
-    pub fn next(&mut self) -> Option<anyhow::Result<ResultSet>> {
+    pub fn next_result(&mut self) -> Option<anyhow::Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
             self.check_messages();
@@ -104,7 +104,7 @@ impl Query {
 
     fn call_result(&mut self, call_id: u64, result: Arc<dyn ToPolar>) -> anyhow::Result<()> {
         let mut host = self.host.lock().unwrap();
-        let value = host.to_polar(result.as_ref());
+        let value = host.value_to_polar(result.as_ref());
         Ok(self.inner.call_result(call_id, Some(value))?)
     }
 
@@ -142,12 +142,10 @@ impl Query {
                 } else {
                     return Err(anyhow::anyhow!("instance method not found"));
                 }
+            } else if let Some(attr) = instance.attributes.get(&name) {
+                (attr, vec![])
             } else {
-                if let Some(attr) = instance.attributes.get(&name) {
-                    (attr, vec![])
-                } else {
-                    return Err(anyhow::anyhow!("attribute lookup not found"));
-                }
+                return Err(anyhow::anyhow!("attribute lookup not found"));
             };
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
             let host = &mut self.host.lock().unwrap();

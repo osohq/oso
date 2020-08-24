@@ -6,6 +6,7 @@ pub use polar_core::polar::Polar as PolarCore;
 
 use host::ToPolar;
 
+#[derive(Clone, Default)]
 pub struct Oso(polar::Polar);
 
 impl std::ops::Deref for Oso {

@@ -137,11 +137,11 @@ impl<T> Class<T> {
         (self.instance_check)(instance.instance.as_ref())
     }
 
-    pub fn new(&self, fields: Vec<Term>, host: &mut Host) -> Instance {
+    pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> Instance {
         let instance = self.constructor.invoke(fields, host);
         Instance {
             name: self.name.clone(),
-            instance: instance,
+            instance,
             attributes: Arc::new(self.attributes.clone()),
             methods: Arc::new(self.instance_methods.clone()),
         }
