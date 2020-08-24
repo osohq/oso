@@ -1,6 +1,7 @@
 .PHONY: build test test-requirements fmt
 build:
 	rm -rf build
+	rm _polar_lib.abi3.so
 	python setup.py build
 	python setup.py develop
 
