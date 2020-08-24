@@ -1724,8 +1724,7 @@ impl PolarVirtualMachine {
                     ..
                 }),
             ) => {
-                // If the two have identical IDs, the two _are_ the same
-                // value so unify.
+                // If IDs match, they're the same _instance_ (not just the same _value_), so unify.
                 if left_instance != right_instance {
                     self.push_goal(Goal::UnifyExternal {
                         left_instance_id: *left_instance,
