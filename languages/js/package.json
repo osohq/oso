@@ -1,8 +1,9 @@
 {
   "name": "oso",
   "version": "0.4.1-rc4",
-  "description": "Oso authorization library.",
+  "description": "oso authorization library.",
   "main": "dist/src/index.js",
+  "bin": "bin/repl.js",
   "repository": "https://github.com/osohq/oso",
   "collaborators": [
     "Oso Security <support@osohq.com>"
@@ -10,7 +11,8 @@
   "license": "Apache-2.0",
   "private": false,
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
   "engines": {
     "node": ">=10",

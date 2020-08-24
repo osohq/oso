@@ -34,3 +34,6 @@ parity: wasm
 
 test: wasm
 	yarn test
+
+repl: build
+	./bin/repl.js
