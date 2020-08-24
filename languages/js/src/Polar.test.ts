@@ -444,8 +444,8 @@ describe('#makeInstance', () => {
   test('handles no args', async () => {
     const p = new Polar();
     p.registerClass(ConstructorNoArgs);
-    const id = await p.__host().makeInstance(ConstructorNoArgs.name, [], 1);
-    const instance = p.__host().getInstance(id);
+    await p.__host().makeInstance(ConstructorNoArgs.name, [], 1);
+    const instance = p.__host().getInstance(1);
     expect(instance).toStrictEqual(new ConstructorNoArgs());
   });
 
@@ -454,10 +454,8 @@ describe('#makeInstance', () => {
     p.registerClass(ConstructorArgs);
     const one = p.__host().toPolar(1);
     const two = p.__host().toPolar(2);
-    const id = await p
-      .__host()
-      .makeInstance(ConstructorArgs.name, [one, two], 1);
-    const instance = p.__host().getInstance(id);
+    await p.__host().makeInstance(ConstructorArgs.name, [one, two], 1);
+    const instance = p.__host().getInstance(1);
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
   });
 });

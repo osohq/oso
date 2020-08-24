@@ -77,16 +77,21 @@ export class Host {
     return instanceId;
   }
 
-  // Return value only used in tests.
+  /**
+   * Construct a JavaScript instance and store it in the [[`#instances`]]
+   * cache.
+   *
+   * @internal
+   */
   async makeInstance(
     name: string,
     fields: PolarTerm[],
     id: number
-  ): Promise<number> {
+  ): Promise<void> {
     const cls = this.getClass(name);
     const args = await Promise.all(fields.map(async f => await this.toJs(f)));
     const instance = new cls(...args);
-    return this.cacheInstance(instance, id);
+    this.cacheInstance(instance, id);
   }
 
   async isSubspecializer(
