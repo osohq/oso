@@ -103,6 +103,7 @@ impl Drop for Repl {
 }
 
 pub fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
     let mut repl = Repl::new();
     let mut oso = Oso::new();
 

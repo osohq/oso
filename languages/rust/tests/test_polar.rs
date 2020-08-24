@@ -27,9 +27,9 @@ impl PolarTest {
     }
 
     fn query(&mut self, q: &str) -> Vec<oso::query::ResultSet> {
-        let mut results = self.polar.query(q).unwrap();
+        let results = self.polar.query(q).unwrap();
         let mut result_vec = vec![];
-        while let Some(r) = results.next() {
+        for r in results {
             result_vec.push(r.expect("result is an error"))
         }
         result_vec
@@ -49,7 +49,7 @@ impl PolarTest {
         res.into_iter()
             .map(|set| {
                 set.get(var)
-                    .expect(&format!("query: '{}', binding for '{}'", q, var))
+                    .unwrap_or_else(|| panic!("query: '{}', binding for '{}'", q, var))
             })
             .collect()
     }

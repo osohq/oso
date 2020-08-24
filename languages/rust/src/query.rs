@@ -168,15 +168,16 @@ impl Query {
         args: Option<Vec<Term>>,
     ) -> anyhow::Result<()> {
         let instance = Instance::from_polar(&instance, &mut self.host.lock().unwrap()).unwrap();
-        self.register_call(call_id, instance, name, args)?;
-
-        if let Some(result) = self.next_call_result(call_id) {
-            self.call_result(call_id, result)?;
-        } else {
-            self.call_result_none(call_id)?;
+        if let Err(e) = self.register_call(call_id, instance, name, args) {
+            self.application_error(e);
+            return self.call_result_none(call_id);
         }
 
-        Ok(())
+        if let Some(result) = self.next_call_result(call_id) {
+            self.call_result(call_id, result)
+        } else {
+            self.call_result_none(call_id)
+        }
     }
 
     fn handle_external_op(
