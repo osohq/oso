@@ -17,14 +17,9 @@ public class Db {
     private Connection db;
 
     @Autowired
-    public Db() {
-        try {
-            final String url = "jdbc:sqlite:src/main/expenses.db";
-            this.db = DriverManager.getConnection(url);
-
-        } catch (final SQLException e) {
-            throw new Error("Problem", e);
-        }
+    public Db() throws SQLException {
+        final String url = "jdbc:sqlite:expenses.db";
+        this.db = DriverManager.getConnection(url);
     }
 
     @PreDestroy
