@@ -35,10 +35,10 @@ public class Authorizer extends HandlerInterceptorAdapter {
             // Authorize the incoming request
             Http http = new Http(request.getServerName(), request.getServletPath().toString(), getQuery(request));
             if (!oso.isAllowed(currentUser.get(), request.getMethod(), http)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization: unauthorized");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization: unauthorized");
             }
         } catch (SQLException e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found", e);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not found", e);
         }
         return true;
     }
@@ -69,7 +69,7 @@ public class Authorizer extends HandlerInterceptorAdapter {
     public Object authorize(String action, Object resource) {
         try {
             if (!oso.isAllowed(currentUser.get(), action, resource)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "oso authorization");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization");
             }
         } catch (OsoException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, null, e);

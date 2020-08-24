@@ -263,7 +263,7 @@ when the actor is an instance of a ``User``:
         .. code-block:: console
 
             $ curl -i localhost:5000/whoami
-            HTTP/1.1 401
+            HTTP/1.1 403
 
             $ curl -H "user: alice@foo.com"  localhost:5000/whoami
             You are alice@foo.com, the CEO at Foo Industries. (User ID: 1)
@@ -426,7 +426,7 @@ Authorizing Access to Data
         .. code-block:: console
 
             $ curl -i localhost:5000/expenses/2
-            HTTP/1.1 401
+            HTTP/1.1 403
 
             $ curl -H "user: alice@foo.com" localhost:5000/expenses/2
             Expense(amount=17743, description='Pug irony.', user_id=1, id=2)
@@ -444,7 +444,7 @@ Authorizing Access to Data
             Organization(name='Foo Industries', id=1)
 
             $ curl -i -H "user: alice@foo.com" localhost:5000/organizations/2
-            HTTP/1.1 401
+            HTTP/1.1 403
 
 
 Applying this pattern to authorizing data means that the objects we are passing
@@ -587,7 +587,7 @@ Once you have it working, you can test it by verifying as follows:
             Expense(amount=100, description='Gummy Bears', user_id=1, id=111)
 
             $ curl -i -H "user: alice@foo.com" -H "Content-Type: application/json" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
-            HTTP/1.1 401
+            HTTP/1.1 403
 
 Summary
 =======
