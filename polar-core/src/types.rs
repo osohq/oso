@@ -3,7 +3,7 @@
 //! Polar types
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -461,6 +461,19 @@ impl Term {
 
     pub fn is_ground(&self) -> bool {
         self.value().is_ground()
+    }
+
+    /// Get a set of all the variables used within a term.
+    pub fn variables(&self, vars: &mut HashSet<Symbol>) {
+        self.cloned_map_replace(&mut |term| {
+            match term.value() {
+                Value::Variable(s) => {
+                    vars.insert(s.clone());
+                }
+                _ => (),
+            };
+            term.clone()
+        });
     }
 }
 

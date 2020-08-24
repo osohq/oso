@@ -348,7 +348,6 @@ impl PolarVirtualMachine {
                     if let Node::Rule(rule) = &trace.node {
                         let source_str = self.rule_source(&rule);
                         self.log(&format!("RULE:\n{}", source_str));
-                        // @TODO: Add file and line number, where do I get those?
                     }
                 }
                 self.trace.push(trace.clone());
@@ -535,6 +534,34 @@ impl PolarVirtualMachine {
             bindings.insert(var.clone(), self.deref(value));
         }
         bindings
+    }
+
+    /// Retrieve the current non-constant bindings for symbols in variables.
+    pub fn variable_bindings(&self, variables: &HashSet<Symbol>) -> Bindings {
+        let mut bindings = HashMap::new();
+        for Binding(var, value) in &self.bindings[self.csp..] {
+            if !variables.contains(var) {
+                continue;
+            }
+            bindings.insert(var.clone(), self.deref(value));
+        }
+        bindings
+    }
+
+    /// Returns bindings for all vars used by terms in terms.
+    pub fn relevant_bindings(&self, terms: &[&Term]) -> HashMap<String, String> {
+        let mut variables = HashSet::new();
+
+        for t in terms {
+            t.variables(&mut variables);
+        }
+
+        let mut relevant_bindings = HashMap::new();
+        let bindings = self.variable_bindings(&variables);
+        for (v, t) in &bindings {
+            relevant_bindings.insert(v.0.clone(), t.to_string());
+        }
+        relevant_bindings
     }
 
     /// Return the current binding stack pointer.
@@ -856,35 +883,7 @@ impl PolarVirtualMachine {
         );
 
         if self.steve_log {
-            let mut symbols = HashSet::new();
-
-            left.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-            right.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-
-            let mut relevant_bindings = HashMap::new();
-            let bindings = self.bindings(true);
-            for (s, t) in &bindings {
-                if symbols.contains(s) {
-                    relevant_bindings.insert(s.0.clone(), t.to_string());
-                }
-            }
-
+            let relevant_bindings = self.relevant_bindings(&[left, right]);
             self.log(&format!(
                 "ISA:'{}' matches '{}', BINDINGS: {:?}",
                 left.to_string(),
@@ -1190,34 +1189,14 @@ impl PolarVirtualMachine {
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
         if self.steve_log {
-            // @WOWHACK: Don't log if it's just a single element AND like lots of rule bodies tend to be.
+            // Don't log if it's just a single element AND like lots of rule bodies tend to be.
             match &term.value() {
                 Value::Expression(Operation {
                     operator: Operator::And,
                     args,
                 }) if args.len() == 1 => (),
                 _ => {
-                    let mut symbols = HashSet::new();
-
-                    // @TODO: Probably want a walker that doesn't have to return something for stuff like this.
-                    term.cloned_map_replace(&mut |term| {
-                        match term.value() {
-                            Value::Variable(s) => {
-                                symbols.insert(s.clone());
-                            }
-                            _ => (),
-                        };
-                        term.clone()
-                    });
-
-                    let mut relevant_bindings = HashMap::new();
-                    let bindings = self.bindings(true);
-                    for (s, t) in &bindings {
-                        if symbols.contains(s) {
-                            relevant_bindings.insert(s.0.clone(), t.to_string());
-                        }
-                    }
-                    //let source = self.term_source(term);
+                    let relevant_bindings = self.relevant_bindings(&[term]);
                     self.log(&format!(
                         "QUERY: '{}', BINDINGS: {:?}",
                         term.to_string(),
@@ -1577,44 +1556,7 @@ impl PolarVirtualMachine {
         assert!(matches!(result.value(), Value::Variable(_)));
 
         if self.steve_log {
-            let mut symbols = HashSet::new();
-
-            left_term.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-            right_term.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-            result.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-
-            let mut relevant_bindings = HashMap::new();
-            let bindings = self.bindings(true);
-            for (s, t) in &bindings {
-                if symbols.contains(s) {
-                    relevant_bindings.insert(s.0.clone(), t.to_string());
-                }
-            }
-
+            let relevant_bindings = self.relevant_bindings(&[&left_term, &right_term, result]);
             self.log(&format!(
                 "MATH: '{}' {} '{}' = '{}', BINDINGS: {:?}",
                 left_term.to_string(),
@@ -1671,35 +1613,7 @@ impl PolarVirtualMachine {
         let mut right_term = self.deref(&args[1]);
 
         if self.steve_log {
-            let mut symbols = HashSet::new();
-
-            left_term.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-            right_term.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-
-            let mut relevant_bindings = HashMap::new();
-            let bindings = self.bindings(true);
-            for (s, t) in &bindings {
-                if symbols.contains(s) {
-                    relevant_bindings.insert(s.0.clone(), t.to_string());
-                }
-            }
-
+            let relevant_bindings = self.relevant_bindings(&[&left_term, &right_term]);
             self.log(&format!(
                 "CMP: '{}' {} '{}', BINDINGS: {:?}",
                 left_term.to_string(),
@@ -1855,35 +1769,7 @@ impl PolarVirtualMachine {
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         if self.steve_log {
-            let mut symbols = HashSet::new();
-
-            left.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-            right.cloned_map_replace(&mut |term| {
-                match term.value() {
-                    Value::Variable(s) => {
-                        symbols.insert(s.clone());
-                    }
-                    _ => (),
-                };
-                term.clone()
-            });
-
-            let mut relevant_bindings = HashMap::new();
-            let bindings = self.bindings(true);
-            for (s, t) in &bindings {
-                if symbols.contains(s) {
-                    relevant_bindings.insert(s.0.clone(), t.to_string());
-                }
-            }
-
+            let relevant_bindings = self.relevant_bindings(&[left, right]);
             self.log(&format!(
                 "UNIFY: '{}' = '{}', BINDINGS: {:?}",
                 left.to_string(),
