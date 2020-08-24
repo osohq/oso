@@ -70,8 +70,13 @@ Running The Example
 
         .. code-block:: console
 
-            $ cd src/main
             $ sqlite3 expenses.db ".read expenses.sql"
+
+        You can then run the app by calling
+
+        .. code-block:: console
+
+            $ mvn spring-boot:run
 
 
 In Your Application
