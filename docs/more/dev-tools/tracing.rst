@@ -8,15 +8,15 @@ Polar tracing shows logs of how a query is evaluated.
 Enabling Tracing
 ********************
 
-Debug mode is enabled by setting an environment variable ``POLAR_LOG=1``
+Debug mode is enabled by setting an environment variable: ``POLAR_LOG=1``.
 
-It will print out ``[debug]`` messages during query evaluation that shows how the query is executed.
-Notable things include
+It will print out ``[debug]`` messages during query evaluation that show how the query is executed.
+Notable things include:
 
 * Queries and subquery evaluations.
 * Showing values that are bound to variables for each expression.
-* Showing which rules a polar predicate call will evaluate.
-* Showing values returned from application classes.
+* Showing which rules a Polar predicate call will evaluate.
+* Showing values returned from calls into the application.
 
 Example
 -------

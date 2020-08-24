@@ -27,7 +27,7 @@ New features
 Debug Mode
 =========
 
-Oso can be run in debug mode by setting an environment variable `POLAR_DEBUG=1`
+Oso can be run in debug mode by setting an environment variable ``POLAR_DEBUG=1``
 This prints debug output when polar queries are evaluated to show what's happening.
 
 Other bugs & improvements
