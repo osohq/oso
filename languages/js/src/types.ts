@@ -1,53 +1,123 @@
+/**
+ * Polar string type.
+ *
+ * @internal
+ */
 interface PolarStr {
   String: string;
 }
 
-export function isPolarStr(v: PolarType): v is PolarStr {
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar string.
+ *
+ * @internal
+ */
+export function isPolarStr(v: PolarValue): v is PolarStr {
   return (v as PolarStr).String !== undefined;
 }
 
+/**
+ * Polar numeric type.
+ *
+ * @internal
+ */
 interface PolarNum {
   Number: PolarFloat | PolarInt;
 }
 
-export function isPolarNum(v: PolarType): v is PolarNum {
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar numeric.
+ *
+ * @internal
+ */
+export function isPolarNum(v: PolarValue): v is PolarNum {
   return (v as PolarNum).Number !== undefined;
 }
 
+/**
+ * Polar floating point type.
+ *
+ * @internal
+ */
 interface PolarFloat {
   Float: number;
 }
 
+/**
+ * Polar integer type.
+ *
+ * @internal
+ */
 interface PolarInt {
   Integer: number;
 }
 
+/**
+ * Polar boolean type.
+ *
+ * @internal
+ */
 interface PolarBool {
   Boolean: boolean;
 }
 
-export function isPolarBool(v: PolarType): v is PolarBool {
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar boolean.
+ *
+ * @internal
+ */
+export function isPolarBool(v: PolarValue): v is PolarBool {
   return (v as PolarBool).Boolean !== undefined;
 }
 
+/**
+ * Polar list type.
+ *
+ * @internal
+ */
 interface PolarList {
   List: PolarTerm[];
 }
 
-export function isPolarList(v: PolarType): v is PolarList {
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar list.
+ *
+ * @internal
+ */
+export function isPolarList(v: PolarValue): v is PolarList {
   return (v as PolarList).List !== undefined;
 }
 
+/**
+ * Polar dictionary type.
+ *
+ * @internal
+ */
 interface PolarDict {
   Dictionary: {
     fields: Map<string, PolarTerm> | { [key: string]: PolarTerm };
   };
 }
 
-export function isPolarDict(v: PolarType): v is PolarDict {
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar dictionary.
+ *
+ * @internal
+ */
+export function isPolarDict(v: PolarValue): v is PolarDict {
   return (v as PolarDict).Dictionary !== undefined;
 }
 
+/**
+ * Polar predicate type.
+ *
+ * @internal
+ */
 interface PolarPredicate {
   Call: {
     name: string;
@@ -55,10 +125,40 @@ interface PolarPredicate {
   };
 }
 
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar predicate.
+ *
+ * @internal
+ */
+export function isPolarPredicate(v: PolarValue): v is PolarPredicate {
+  return (v as PolarPredicate).Call !== undefined;
+}
+
+/**
+ * Polar variable type.
+ *
+ * @internal
+ */
 interface PolarVariable {
   Variable: string;
 }
 
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar variable.
+ *
+ * @internal
+ */
+export function isPolarVariable(v: PolarValue): v is PolarVariable {
+  return (v as PolarVariable).Variable !== undefined;
+}
+
+/**
+ * Polar application instance type.
+ *
+ * @internal
+ */
 interface PolarInstance {
   ExternalInstance: {
     instance_id: number;
@@ -67,19 +167,22 @@ interface PolarInstance {
   };
 }
 
-export function isPolarInstance(v: PolarType): v is PolarInstance {
+/**
+ * Type guard to test if a Polar value received from across the WebAssembly
+ * boundary is a Polar application instance.
+ *
+ * @internal
+ */
+export function isPolarInstance(v: PolarValue): v is PolarInstance {
   return (v as PolarInstance).ExternalInstance !== undefined;
 }
 
-export function isPolarPredicate(v: PolarType): v is PolarPredicate {
-  return (v as PolarPredicate).Call !== undefined;
-}
-
-export function isPolarVariable(v: PolarType): v is PolarVariable {
-  return (v as PolarVariable).Variable !== undefined;
-}
-
-type PolarType =
+/**
+ * Union of Polar value types.
+ *
+ * @internal
+ */
+type PolarValue =
   | PolarStr
   | PolarNum
   | PolarBool
@@ -89,11 +192,16 @@ type PolarType =
   | PolarVariable
   | PolarInstance;
 
+/**
+ * Union of Polar value types.
+ *
+ * @internal
+ */
 export interface PolarTerm {
-  value: PolarType;
+  value: PolarValue;
 }
 
-function isPolarType(v: any): v is PolarType {
+function isPolarValue(v: any): v is PolarValue {
   return (
     isPolarStr(v) ||
     isPolarNum(v) ||
@@ -107,7 +215,7 @@ function isPolarType(v: any): v is PolarType {
 }
 
 export function isPolarTerm(v: any): v is PolarTerm {
-  return isPolarType(v?.value);
+  return isPolarValue(v?.value);
 }
 
 export type Class<T extends {} = {}> = new (...args: any[]) => T;
