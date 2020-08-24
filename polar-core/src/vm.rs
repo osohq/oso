@@ -676,7 +676,7 @@ impl PolarVirtualMachine {
             }
             let lines = message.split('\n').collect::<Vec<&str>>();
             if let Some(line) = lines.first() {
-                let mut msg = format!("[trace] {}{}", &indent, line);
+                let mut msg = format!("[debug] {}{}", &indent, line);
                 if !terms.is_empty() {
                     let relevant_bindings = self.relevant_bindings(terms);
                     msg.push_str(&format!(", BINDINGS: {:?}", relevant_bindings));
@@ -684,7 +684,7 @@ impl PolarVirtualMachine {
                 self.messages.push(MessageKind::Print, msg);
                 for line in &lines[1..] {
                     self.messages
-                        .push(MessageKind::Print, format!("[trace] {}{}", &indent, line));
+                        .push(MessageKind::Print, format!("[debug] {}{}", &indent, line));
                 }
             }
         }
