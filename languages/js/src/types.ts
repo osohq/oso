@@ -202,6 +202,7 @@ export interface PolarTerm {
 }
 
 function isPolarValue(v: any): v is PolarValue {
+  if (typeof v !== 'object' || v === null) return false;
   return (
     isPolarStr(v) ||
     isPolarNum(v) ||
