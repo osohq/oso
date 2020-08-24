@@ -573,7 +573,7 @@ To accomplish that, we can **replace** our existing rule with:
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
-Behind the scenes, oso looks up the ``submitted_by`` field on the provided
+Behind the scenes, oso looks up the associated field on the provided
 ``Expense`` instance and compares that value against the provided **actor**.
 And just like that, an actor can only see an expense if they submitted the expense.
 
