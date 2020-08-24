@@ -187,6 +187,7 @@ pub struct PolarVirtualMachine {
     /// Logging flag.
     log: bool,
     polar_log: bool,
+    polar_log_mute: bool,
 
     /// Output messages.
     pub messages: MessageQueue,
@@ -237,6 +238,7 @@ impl PolarVirtualMachine {
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
             polar_log: std::env::var("POLAR_LOG").is_ok(),
+            polar_log_mute: false,
             messages,
         };
         vm.bind_constants(constants);
@@ -667,7 +669,7 @@ impl PolarVirtualMachine {
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {
-        if self.polar_log {
+        if self.polar_log && !self.polar_log_mute {
             let mut indent = String::new();
             for _ in 0..=self.queries.len() {
                 indent.push_str("  ");
@@ -797,6 +799,7 @@ impl PolarVirtualMachine {
         if self.log {
             self.print("⇒ backtrack");
         }
+        self.log("BACKTRACK", &[]);
 
         loop {
             match self.choices.pop() {
@@ -1226,6 +1229,8 @@ impl PolarVirtualMachine {
 
                 // Pre-filter rules.
                 let pre_filter = generic_rule.get_applicable_rules(&predicate.args);
+
+                self.polar_log_mute = true;
 
                 // Filter rules by applicability.
                 self.append_goals(vec![
@@ -2089,6 +2094,7 @@ impl PolarVirtualMachine {
                 rule_strs.push_str(&format!("  {}\n", rule.to_string()))
             }
             rule_strs.push_str("]");
+            self.polar_log_mute = false;
             self.log(&rule_strs, &[]);
 
             let mut alternatives = Vec::with_capacity(rules.len());
