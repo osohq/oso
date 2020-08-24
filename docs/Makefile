@@ -63,12 +63,9 @@ java-test: $(JAVA_PACKAGE_JAR_PATH)
 	# The way this test works for context is pretty sketchy.
 	# We can't set environment variables from within Java like the Python & Ruby
 	# tests, so instead we call the test twice, expecting it to fail for production.
-	cd examples/context/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext.java && ENV="development" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext
-	cd examples/context/java && (ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
+	cd examples/context/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext.java && OSO_ENV="development" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext
+	cd examples/context/java && (OSO_ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
 	@echo "Ignore that failure it actually worked!"
-
-test-env:
-	ENV="development" echo && ENV="development" java Test.java -- ENV
 
 python-test:
 	cd examples/inheritance/python && pytest .
