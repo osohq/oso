@@ -56,15 +56,22 @@ Running The Example
             $ pip3 install -r requirements.txt
             $ FLASK_ENV=development flask run --extra-files app/authorization.polar
 
+        The example comes with some example data, which you can load with:
+
+        .. code-block:: console
+
+            $ sqlite3 expenses.db ".read expenses.sql"
+
     .. group-tab:: Java
 
         After cloning the example app, make sure to run ``mvn install`` to download the necessary JARs.
 
-    The example comes with some example data, which you can load with:
+        The example comes with some example data, which you can load by calling:
 
-    .. code-block:: console
+        .. code-block:: console
 
-        $ sqlite3 expenses.db ".read expenses.sql"
+            $ cd src/main
+            $ sqlite3 expenses.db ".read expenses.sql"
 
 
 In Your Application
