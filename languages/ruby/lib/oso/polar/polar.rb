@@ -4,6 +4,7 @@ require 'json'
 require 'pp'
 require 'set'
 require 'digest/md5'
+require 'readline'
 
 # Missing Ruby type.
 module PolarBoolean; end
@@ -22,9 +23,9 @@ if supports_color
   FG_BLUE = "\x1b[34m"
   FG_RED = "\x1b[31m"
 else
-  RESET = ""
-  FG_BLUE = ""
-  FG_RED = ""
+  RESET = ''
+  FG_BLUE = ''
+  FG_RED = ''
 end
 
 def print_error(error)
@@ -150,14 +151,14 @@ module Oso
       def repl(files = []) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
         files.map { |f| load_file(f) }
 
-        loop do # rubocop:disable Metrics/BlockLength
-          print FG_BLUE + 'query> ' + RESET
-          begin
-            query = $stdin.readline.chomp.chomp(';')
-          rescue EOFError, Interrupt
-            return
+        prompt = "#{FG_BLUE}query>#{RESET} "
+        while (buf = Readline.readline(prompt, true))
+          if /^\s*$/ =~ buf # Don't add empty entries to history.
+            Readline::HISTORY.pop
+            next
           end
 
+          query = buf.chomp.chomp(';')
           begin
             ffi_query = ffi_polar.new_query_from_str(query)
           rescue ParseError => e
@@ -180,12 +181,13 @@ module Oso
                 puts true
               else
                 result.each do |variable, value|
-                  puts variable + ' => ' + value.inspect
+                  puts "#{variable} => #{value.inspect}"
                 end
               end
             end
           end
         end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
       end
 
       # Register a Ruby class with Polar.
