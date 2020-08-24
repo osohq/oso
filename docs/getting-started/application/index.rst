@@ -479,31 +479,19 @@ we want to make sure only authorized expenses are submitted.
             :language: python
             :lines: 55-63
 
-    .. group-tab:: Java
+        Right now you can see that anyone can submit an expense:
 
-        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
-            :caption: :fab:`java` Controller.java
-            :language: java
-            :lines: 70-81
+        .. code-block:: console
 
-Right now you can see that anyone can submit an expense:
+            $ curl -H "user: alice@foo.com" -X PUT -d '{"amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            Expense(amount=100, description='Gummy Bears', user_id=1, id=108)
 
 
-.. code-block:: console
-
-    $ curl -H "user: alice@foo.com" -X PUT -d '{"amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
-    Expense(amount=100, description='Gummy Bears', user_id=1, id=108)
-
-
-How might we use the ``authorize`` method from before, to make sure that
-we check the user is allowed to ``create`` this expense?
-We would like to do the authorization on the full ``Expense`` object,
-but before it is persisted to the database, so perhaps between these two
-lines:
-
-
-.. tabs::
-    .. group-tab:: Python
+        How might we use the ``authorize`` method from before, to make sure that
+        we check the user is allowed to ``create`` this expense?
+        We would like to do the authorization on the full ``Expense`` object,
+        but before it is persisted to the database, so perhaps between these two
+        lines:
 
         .. literalinclude:: /examples/application/expenses-flask/app/expense.py
             :caption: :fab:`python` expense.py
@@ -517,8 +505,29 @@ lines:
 
             expense = authorize("create", Expense(**expense_data))
 
+        This checks the current user is authorized to create the expense.
+        If this passes, then we can happily move on to the ``expense.save()``.
+
+        Now, nobody will be able to submit expenses, since we haven't yet
+        added any rules saying they can.
+
     .. group-tab:: Java
 
+        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
+            :caption: :fab:`java` Controller.java
+            :language: java
+            :lines: 70-81
+
+        Right now you can see that anyone can submit an expense:
+
+        .. code-block:: console
+
+            $ curl -H "user: alice@foo.com" -H "Content-Type: application/json" -X PUT -d '{"amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            Expense(amount=100, description='Gummy Bears', user_id=1, id=108)
+
+
+        How might we use the ``authorize`` method from before, to make sure that
+        we check the user is allowed to ``create`` this expense?
         We would like to do the authorization on the full ``Expense`` object,
         but before it is persisted to the database, so perhaps before this line:
 
@@ -526,20 +535,20 @@ lines:
             :caption: :fab:`java` Controller.java
             :language: java
             :lines: 70-81
-            :emphasize-lines: 6-7
+            :emphasize-lines: 7
 
-        We could change the second highlighted line to:
+        We could change the highlighted line to:
 
         .. code-block:: java
 
             ((Expense) authorizer.authorize("create", expense)).save();
 
 
-This checks the current user is authorized to create the expense.
-If this passes, then we can happily move on to the ``expense.save()``.
+        This checks the current user is authorized to create the expense.
+        If this passes, then we can happily move on to the ``expense.save()``.
 
-Now, nobody will be able to submit expenses, since we haven't yet
-added any rules saying they can.
+        Now, nobody will be able to submit expenses, since we haven't yet
+        added any rules saying they can.
 
 .. admonition:: Add a new rule
 
@@ -567,10 +576,10 @@ Once you have it working, you can test it by verifying as follows:
 
         .. code-block:: console
 
-            $ curl -H "user: alice@foo.com" -X PUT -d '{"user_id": 1, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            $ curl -H "user: alice@foo.com" -H "Content-Type: application/json" -X PUT -d '{"user_id": 1, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
             Expense(amount=100, description='Gummy Bears', user_id=1, id=111)
 
-            $ curl -i -H "user: alice@foo.com" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
+            $ curl -i -H "user: alice@foo.com" -H "Content-Type: application/json" -X PUT -d '{"user_id": 2, "amount": 100, "description": "Gummy Bears"}' localhost:5000/expenses/submit
             HTTP/1.1 401
 
 Summary
