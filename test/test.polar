@@ -69,3 +69,5 @@ testCut() if
 testHttpAndPathMapper() if
     new Http("foo", "/", {x: 1}).hostname = "foo"
     and new PathMapper("/foo/{id}/bar/{ego}").map("/foo/1/bar/2") = {id: "1", ego: "2"};
+
+testUnifyClass(A);
