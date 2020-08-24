@@ -13,7 +13,7 @@ Debug mode is enabled by setting an environment variable: ``POLAR_LOG=1``.
 It will print out ``[debug]`` messages during query evaluation that show how the query is executed.
 Notable things include:
 
-* Queries and subquery evaluations.
+* Queries and sub-query evaluations.
 * Showing values that are bound to variables for each expression.
 * Showing which rules a Polar predicate call will evaluate.
 * Showing values returned from calls into the application.
