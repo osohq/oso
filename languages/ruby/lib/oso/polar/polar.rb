@@ -4,6 +4,7 @@ require 'json'
 require 'pp'
 require 'set'
 require 'digest/md5'
+require 'readline'
 
 # Missing Ruby type.
 module PolarBoolean; end
@@ -11,6 +12,26 @@ module PolarBoolean; end
 class TrueClass; include PolarBoolean; end
 # Monkey-patch Ruby false type.
 class FalseClass; include PolarBoolean; end
+
+# https://github.com/ruby/ruby/blob/bb9ecd026a6cadd5d0f85ac061649216806ed935/lib/bundler/vendor/thor/lib/thor/shell/color.rb#L99-L105
+def supports_color
+  $stdout.tty? && $stderr.tty? && ENV['NO_COLOR'].nil?
+end
+
+if supports_color
+  RESET = "\x1b[0m"
+  FG_BLUE = "\x1b[34m"
+  FG_RED = "\x1b[31m"
+else
+  RESET = ''
+  FG_BLUE = ''
+  FG_RED = ''
+end
+
+def print_error(error)
+  warn FG_RED + error.class.name.split('::').last + RESET
+  warn error.message
+end
 
 module Oso
   module Polar
@@ -125,44 +146,48 @@ module Oso
 
       # Start a REPL session.
       #
+      # @param files [Array<String>]
       # @raise [Error] if the FFI call raises one.
-      def repl(load: false) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
-        ARGV.map { |f| load_file(f) } if load
+      def repl(files = []) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
+        files.map { |f| load_file(f) }
 
-        loop do # rubocop:disable Metrics/BlockLength
-          print 'query> '
-          begin
-            query = $stdin.readline.chomp.chomp(';')
-          rescue EOFError
-            return
+        prompt = "#{FG_BLUE}query>#{RESET} "
+        while (buf = Readline.readline(prompt, true))
+          if /^\s*$/ =~ buf # Don't add empty entries to history.
+            Readline::HISTORY.pop
+            next
           end
 
+          query = buf.chomp.chomp(';')
           begin
             ffi_query = ffi_polar.new_query_from_str(query)
           rescue ParseError => e
-            puts "Parse error: #{e}"
+            print_error(e)
             next
           end
 
           begin
             results = Query.new(ffi_query, host: host).results.to_a
           rescue PolarRuntimeError => e
-            puts e
+            print_error(e)
             next
           end
 
           if results.empty?
-            pp false
+            puts false
           else
             results.each do |result|
               if result.empty?
-                pp true
+                puts true
               else
-                pp result
+                result.each do |variable, value|
+                  puts "#{variable} => #{value.inspect}"
+                end
               end
             end
           end
         end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
       end
 
       # Register a Ruby class with Polar.
