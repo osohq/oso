@@ -186,8 +186,8 @@ pub struct PolarVirtualMachine {
 
     /// Logging flag.
     log: bool,
-    steve_log: bool,
-    steve_log_stack: usize,
+    polar_log: bool,
+    polar_log_stack: usize,
 
     /// Output messages.
     pub messages: MessageQueue,
@@ -237,8 +237,8 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
-            steve_log: std::env::var("STEVE_LOG").is_ok(),
-            steve_log_stack: 0,
+            polar_log: std::env::var("POLAR_LOG").is_ok(),
+            polar_log_stack: 0,
             messages,
         };
         vm.bind_constants(constants);
@@ -344,7 +344,7 @@ impl PolarVirtualMachine {
                 self.trace.push(Rc::new(trace.clone()));
             }
             Goal::TraceRule { trace } => {
-                if self.steve_log {
+                if self.polar_log {
                     if let Node::Rule(rule) = &trace.node {
                         let source_str = self.rule_source(&rule);
                         self.log(&format!("RULE:\n{}", source_str));
@@ -675,7 +675,7 @@ impl PolarVirtualMachine {
         for _ in 0..=self.queries.len() {
             indent.push_str("  ");
         }
-        for _ in 0..self.steve_log_stack {
+        for _ in 0..self.polar_log_stack {
             indent.push_str("  ");
         }
         let lines = message.split('\n').collect::<Vec<&str>>();
@@ -858,7 +858,7 @@ impl PolarVirtualMachine {
 
     /// Halt the VM by clearing all goals and choices.
     pub fn halt(&mut self) -> QueryEvent {
-        if self.steve_log {
+        if self.polar_log {
             self.log("HALT");
         }
         self.goals.clear();
@@ -882,7 +882,7 @@ impl PolarVirtualMachine {
             "Called isa with bare dictionary!"
         );
 
-        if self.steve_log {
+        if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[left, right]);
             self.log(&format!(
                 "ISA:'{}' matches '{}', BINDINGS: {:?}",
@@ -1088,7 +1088,7 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::CheckError)?;
         }
 
-        if self.steve_log {
+        if self.polar_log {
             let mut msg = format!("LOOKUP: {}.{}", instance.to_string(), field_name);
             if let Some(arguments) = &args {
                 msg.push('(');
@@ -1188,7 +1188,7 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        if self.steve_log {
+        if self.polar_log {
             // Don't log if it's just a single element AND like lots of rule bodies tend to be.
             match &term.value() {
                 Value::Expression(Operation {
@@ -1240,9 +1240,9 @@ impl PolarVirtualMachine {
                 // Pre-filter rules.
                 let pre_filter = generic_rule.get_applicable_rules(&predicate.args);
 
-                if self.steve_log {
+                if self.polar_log {
                     self.log("FILTERING RULES");
-                    self.steve_log_stack += 1;
+                    self.polar_log_stack += 1;
                 }
 
                 // Filter rules by applicability.
@@ -1555,7 +1555,7 @@ impl PolarVirtualMachine {
         let result = &args[2];
         assert!(matches!(result.value(), Value::Variable(_)));
 
-        if self.steve_log {
+        if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[&left_term, &right_term, result]);
             self.log(&format!(
                 "MATH: '{}' {} '{}' = '{}', BINDINGS: {:?}",
@@ -1612,7 +1612,7 @@ impl PolarVirtualMachine {
         let mut left_term = self.deref(&args[0]);
         let mut right_term = self.deref(&args[1]);
 
-        if self.steve_log {
+        if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[&left_term, &right_term]);
             self.log(&format!(
                 "CMP: '{}' {} '{}', BINDINGS: {:?}",
@@ -1708,7 +1708,7 @@ impl PolarVirtualMachine {
         // For example what happens if the call asked for a field that doesn't exist?
 
         if let Some(value) = term {
-            if self.steve_log {
+            if self.polar_log {
                 self.log(&format!("=> {}", value.to_string()));
             }
 
@@ -1721,7 +1721,7 @@ impl PolarVirtualMachine {
                 value,
             );
         } else {
-            if self.steve_log {
+            if self.polar_log {
                 self.log("=> No more results.");
             }
 
@@ -1768,7 +1768,7 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
-        if self.steve_log {
+        if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[left, right]);
             self.log(&format!(
                 "UNIFY: '{}' = '{}', BINDINGS: {:?}",
@@ -1988,10 +1988,10 @@ impl PolarVirtualMachine {
     ) -> PolarResult<()> {
         if unfiltered_rules.is_empty() {
             // The rules have been filtered. Sort them.
-            if self.steve_log {
-                self.steve_log_stack -= 1;
+            if self.polar_log {
+                self.polar_log_stack -= 1;
                 self.log("SORTING RULES");
-                self.steve_log_stack += 1;
+                self.polar_log_stack += 1;
             }
             self.push_goal(Goal::SortRules {
                 rules: applicable_rules.iter().rev().cloned().collect(),
@@ -2120,8 +2120,8 @@ impl PolarVirtualMachine {
         } else {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
-            if self.steve_log {
-                self.steve_log_stack -= 1;
+            if self.polar_log {
+                self.polar_log_stack -= 1;
                 let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
                 for rule in rules {
                     rule_strs.push_str(&format!("  {}\n", rule.to_string()))
