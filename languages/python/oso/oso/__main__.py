@@ -1,3 +1,5 @@
+import sys
+
 from .oso import Oso
 
-Oso().repl(load=True)
+Oso().repl(files=sys.argv[1:])

@@ -1,10 +1,10 @@
 import { createHash } from 'crypto';
-import { extname, isAbsolute, resolve } from 'path';
+import { extname } from 'path';
 import { createInterface } from 'readline';
+import { stdout, stderr } from 'process';
 
 import {
   InlineQueryFailedError,
-  PolarError,
   PolarFileAlreadyLoadedError,
   PolarFileContentsChangedError,
   PolarFileDuplicateContentError,
@@ -17,7 +17,21 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
-import { readFile } from './helpers';
+import { readFile, repr } from './helpers';
+
+let RESET = '';
+let FG_BLUE = '';
+let FG_RED = '';
+if (
+  typeof stdout.hasColors === 'function' &&
+  stdout.hasColors() &&
+  typeof stderr.hasColors === 'function' &&
+  stderr.hasColors()
+) {
+  RESET = '\x1b[0m';
+  FG_BLUE = '\x1b[34m';
+  FG_RED = '\x1b[31m';
+}
 
 export class Polar {
   #ffiPolar: FfiPolar;
@@ -61,9 +75,8 @@ export class Polar {
     previous.free();
   }
 
-  async loadFile(name: string): Promise<void> {
-    if (extname(name) !== '.polar') throw new PolarFileExtensionError(name);
-    let file = isAbsolute(name) ? name : resolve(__dirname, name);
+  async loadFile(file: string): Promise<void> {
+    if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
     let contents;
     try {
       contents = await readFile(file);
@@ -118,16 +131,30 @@ export class Polar {
     return this.query(new Predicate(name, args));
   }
 
-  repl(load: boolean): void {
-    if (load) process.argv.slice(2).forEach(this.loadFile);
-    createInterface({
+  async repl(files?: string[]): Promise<void> {
+    const rl = createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: 'query> ',
+      prompt: FG_BLUE + 'query> ' + RESET,
       tabSize: 4,
-    }).on('line', async line => {
+    });
+
+    let loadError;
+    try {
+      if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
+    } catch (e) {
+      loadError = e;
+    }
+    if (loadError !== undefined) {
+      console.error(FG_RED + 'One or more files failed to load.' + RESET);
+      console.error(loadError.message);
+    }
+
+    rl.prompt();
+    rl.on('line', async line => {
       const input = line.trim().replace(/;+$/, '');
       try {
+        if (input === '') return;
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
         const query = new Query(ffiQuery, this.#host);
         const results = [];
@@ -141,18 +168,17 @@ export class Polar {
             if (result.size === 0) {
               console.log(true);
             } else {
-              console.log(JSON.stringify(result, null, 4));
+              for (const [variable, value] of result) {
+                console.log(variable + ' => ' + repr(value));
+              }
             }
           }
         }
       } catch (e) {
-        if (e.kind.split('::')[0] === 'ParseError') {
-          console.log(`Parse error: ${e}`);
-        } else if (e instanceof PolarError) {
-          console.log(e);
-        } else {
-          throw e;
-        }
+        console.error(FG_RED + e.name + RESET);
+        console.error(e.message);
+      } finally {
+        rl.prompt();
       }
     });
   }
