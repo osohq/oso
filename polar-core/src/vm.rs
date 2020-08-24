@@ -885,9 +885,9 @@ impl PolarVirtualMachine {
         if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[left, right]);
             self.log(&format!(
-                "ISA:'{}' matches '{}', BINDINGS: {:?}",
-                left.to_string(),
-                right.to_string(),
+                "ISA:{} matches {}, BINDINGS: {:?}",
+                left.to_polar(),
+                right.to_polar(),
                 relevant_bindings
             ));
         }
@@ -1095,7 +1095,7 @@ impl PolarVirtualMachine {
                 msg.push_str(
                     &arguments
                         .iter()
-                        .map(|a| a.to_string())
+                        .map(|a| a.to_polar())
                         .collect::<Vec<String>>()
                         .join(", "),
                 );
@@ -1198,8 +1198,8 @@ impl PolarVirtualMachine {
                 _ => {
                     let relevant_bindings = self.relevant_bindings(&[term]);
                     self.log(&format!(
-                        "QUERY: '{}', BINDINGS: {:?}",
-                        term.to_string(),
+                        "QUERY: {}, BINDINGS: {:?}",
+                        term.to_polar(),
                         relevant_bindings
                     ));
                 }
@@ -1558,11 +1558,11 @@ impl PolarVirtualMachine {
         if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[&left_term, &right_term, result]);
             self.log(&format!(
-                "MATH: '{}' {} '{}' = '{}', BINDINGS: {:?}",
-                left_term.to_string(),
+                "MATH: {} {} {} = {}, BINDINGS: {:?}",
+                left_term.to_polar(),
                 op.to_polar(),
-                right_term.to_string(),
-                result.to_string(),
+                right_term.to_polar(),
+                result.to_polar(),
                 relevant_bindings
             ));
         }
@@ -1615,10 +1615,10 @@ impl PolarVirtualMachine {
         if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[&left_term, &right_term]);
             self.log(&format!(
-                "CMP: '{}' {} '{}', BINDINGS: {:?}",
-                left_term.to_string(),
+                "CMP: {} {} {}, BINDINGS: {:?}",
+                left_term.to_polar(),
                 op.to_polar(),
-                right_term.to_string(),
+                right_term.to_polar(),
                 relevant_bindings
             ));
         }
@@ -1771,9 +1771,9 @@ impl PolarVirtualMachine {
         if self.polar_log {
             let relevant_bindings = self.relevant_bindings(&[left, right]);
             self.log(&format!(
-                "UNIFY: '{}' = '{}', BINDINGS: {:?}",
-                left.to_string(),
-                right.to_string(),
+                "UNIFY: {} = {}, BINDINGS: {:?}",
+                left.to_polar(),
+                right.to_polar(),
                 relevant_bindings
             ));
         }
