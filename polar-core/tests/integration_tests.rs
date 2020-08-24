@@ -720,8 +720,8 @@ fn test_externals_instantiated() {
                 matches!(term.value(), Value::InstanceLiteral(InstanceLiteral {
                 ref tag, ref fields
             }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
-                "expected external instance Bar {{ x: 1 }}, found: {:?}",
-                args.unwrap()[0].value()
+                "expected external instance Bar {{ x: 1 }}, found: {}",
+                args.unwrap()[0].value().to_polar()
             ),
             _ => panic!("Expected external instance"),
         }
@@ -1469,4 +1469,18 @@ fn test_numeric_applicability() {
     assert!(qeval(&mut polar, "f(9223372036854776000.0)"));
     assert!(qnull(&mut polar, "f(nan1)"));
     assert!(qnull(&mut polar, "f(nan2)"));
+}
+
+#[test]
+fn test_external_unify() {
+    let polar = Polar::new();
+    polar.load("selfEq(x) if eq(x, x); eq(x, x);").unwrap();
+
+    let query = polar.new_query("selfEq(new Foo{})", false).unwrap();
+    let (results, _externals) = query_results_with_externals(query);
+    assert_eq!(results.len(), 1);
+
+    let query = polar.new_query("eq(new Foo{}, new Foo{})", false).unwrap();
+    let (results, _externals) = query_results_with_externals(query);
+    assert!(results.is_empty());
 }

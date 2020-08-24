@@ -424,7 +424,10 @@ impl Term {
             Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
                 fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
             }
-            Value::ExternalInstance(_) => {}
+            Value::ExternalInstance(ExternalInstance {
+                ref mut constructor,
+                ..
+            }) => constructor.iter_mut().for_each(|t| t.map_replace(f)),
             Value::Dictionary(Dictionary { ref mut fields }) => {
                 fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
             }

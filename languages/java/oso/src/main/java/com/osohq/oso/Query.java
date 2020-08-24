@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.json.JSONObject;
 import org.json.JSONException;
 import org.json.JSONArray;
+import org.apache.commons.beanutils.MethodUtils;
 
 public class Query implements Enumeration<HashMap<String, Object>> {
     private HashMap<String, Object> next;
@@ -208,12 +209,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                 Class<?>[] argTypes = args.get().stream().map(a -> a.getClass())
                     .collect(Collectors.toUnmodifiableList())
                     .toArray(new Class[0]);
-                try {
-                    Method method = cls.getMethod(attrName, argTypes);
-                    result = method.invoke(instance, args.get().toArray());
-                } catch (NoSuchMethodException e) {
+                Method method = MethodUtils.getMatchingAccessibleMethod(cls, attrName, argTypes);
+                if (method == null) {
                     throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
                 }
+                result = method.invoke(instance, args.get().toArray());
             } else {
                 // Look for a field with the given name.
                 try {
