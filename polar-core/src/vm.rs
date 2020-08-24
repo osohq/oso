@@ -677,7 +677,7 @@ impl PolarVirtualMachine {
             let lines = message.split('\n').collect::<Vec<&str>>();
             if let Some(line) = lines.first() {
                 let mut msg = format!("[trace] {}{}", &indent, line);
-                if terms.len() > 0 {
+                if !terms.is_empty() {
                     let relevant_bindings = self.relevant_bindings(terms);
                     msg.push_str(&format!(", BINDINGS: {:?}", relevant_bindings));
                 }
