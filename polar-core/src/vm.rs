@@ -1064,7 +1064,7 @@ impl PolarVirtualMachine {
         field: &Term,
         check_errors: bool,
     ) -> PolarResult<QueryEvent> {
-        let (field_name, args) = match self.deref(field).value() {
+        let (field_name, args): (Symbol, Option<Vec<Term>>) = match self.deref(field).value() {
             Value::Call(Predicate { name, args }) => (
                 name.clone(),
                 Some(args.iter().map(|arg| self.deref(arg)).collect()),
@@ -1087,6 +1087,22 @@ impl PolarVirtualMachine {
 
         if check_errors {
             self.push_goal(Goal::CheckError)?;
+        }
+
+        if self.steve_log {
+            let mut msg = format!("LOOKUP: {}.{}", instance.to_string(), field_name);
+            if let Some(arguments) = &args {
+                msg.push('(');
+                msg.push_str(
+                    &arguments
+                        .iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                );
+                msg.push(')');
+            }
+            self.log(&msg);
         }
 
         Ok(QueryEvent::ExternalCall {
@@ -1778,6 +1794,10 @@ impl PolarVirtualMachine {
         // For example what happens if the call asked for a field that doesn't exist?
 
         if let Some(value) = term {
+            if self.steve_log {
+                self.log(&format!("=> {}", value.to_string()));
+            }
+
             self.bind(
                 &self
                     .call_id_symbols
@@ -1787,6 +1807,10 @@ impl PolarVirtualMachine {
                 value,
             );
         } else {
+            if self.steve_log {
+                self.log("=> No more results.");
+            }
+
             // No more results. Clean up, cut out the retry alternative,
             // and backtrack.
             self.call_id_symbols.remove(&call_id).expect("bad call ID");
