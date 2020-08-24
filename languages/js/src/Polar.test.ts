@@ -315,7 +315,7 @@ describe('conversions between JS + Polar values', () => {
   test('caches instances and does not leak them', async () => {
     const p = new Polar();
     p.registerClass(Counter);
-    await p.loadStr('f(c: Counter) if Counter.count() > 0;');
+    await p.loadStr('f(_: Counter) if Counter.count() > 0;');
     expect(Counter.count()).toBe(0);
     const c = new Counter();
     expect(Counter.count()).toBe(1);

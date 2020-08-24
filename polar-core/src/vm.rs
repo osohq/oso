@@ -529,7 +529,7 @@ impl PolarVirtualMachine {
             if !include_temps && self.is_temporary_var(&var) {
                 continue;
             }
-            bindings.insert(var.clone(), self.deref(value));
+            bindings.insert(var.clone(), self.deep_deref(value));
         }
         bindings
     }
@@ -575,6 +575,10 @@ impl PolarVirtualMachine {
             .rev()
             .find(|binding| binding.0 == *variable)
             .map(|binding| &binding.1)
+    }
+
+    pub fn deep_deref(&self, term: &Term) -> Term {
+        term.cloned_map_replace(&mut |t| self.deref(t))
     }
 
     /// Recursively dereference a variable.
@@ -1065,7 +1069,7 @@ impl PolarVirtualMachine {
         let (field_name, args): (Symbol, Option<Vec<Term>>) = match self.deref(field).value() {
             Value::Call(Predicate { name, args }) => (
                 name.clone(),
-                Some(args.iter().map(|arg| self.deref(arg)).collect()),
+                Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
             ),
             Value::String(field) => (Symbol(field.clone()), None),
             v => {
@@ -1103,7 +1107,7 @@ impl PolarVirtualMachine {
 
         Ok(QueryEvent::ExternalCall {
             call_id,
-            instance: Some(instance.clone()),
+            instance: Some(self.deep_deref(instance)),
             attribute: field_name,
             args,
         })
@@ -1117,6 +1121,7 @@ impl PolarVirtualMachine {
         let result = self.kb.read().unwrap().gensym("isa");
         let call_id = self.new_call_id(&result);
 
+        self.bind(&result, Term::new_temporary(Value::Boolean(false)));
         self.push_goal(Goal::Unify {
             left: Term::new_temporary(Value::Variable(result)),
             right: Term::new_temporary(Value::Boolean(true)),
@@ -1124,7 +1129,7 @@ impl PolarVirtualMachine {
 
         Ok(QueryEvent::ExternalIsa {
             call_id,
-            instance: instance.clone(),
+            instance: self.deep_deref(instance),
             class_tag: literal.tag.clone(),
         })
     }
@@ -1137,6 +1142,7 @@ impl PolarVirtualMachine {
         let result = self.kb.read().unwrap().gensym("unify");
         let call_id = self.new_call_id(&result);
 
+        self.bind(&result, Term::new_temporary(Value::Boolean(false)));
         self.push_goal(Goal::Unify {
             left: Term::new_temporary(Value::Variable(result)),
             right: Term::new_temporary(Value::Boolean(true)),
@@ -1152,7 +1158,7 @@ impl PolarVirtualMachine {
     pub fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
             instance_id,
-            constructor: constructor.clone(),
+            constructor: self.deep_deref(&constructor),
         }
     }
 
@@ -1384,8 +1390,7 @@ impl PolarVirtualMachine {
                     matches!(result.value(), Value::Variable(_)),
                     "Must have result variable as second arg."
                 );
-                let mut constructor = args.pop().unwrap();
-                constructor.map_replace(&mut |t| self.deref(t));
+                let constructor = args.pop().unwrap();
 
                 let instance_id = self.new_id();
                 let instance =
@@ -1824,9 +1829,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // TODO(gj): Is this case necessary to handle at all? What is an example rule that
-            // would lead to this? When would you need to unify an instance with itself?
-            //
             // External instances can unify if they are the same instance, i.e., have the same
             // instance ID. This is necessary for the case where an instance appears multiple times
             // in the same rule head. For example, `f(foo, foo) if ...` or `isa(x, y, x: y) if ...`
@@ -1840,11 +1842,14 @@ impl PolarVirtualMachine {
                     instance_id: right_instance,
                     ..
                 }),
-            ) if left_instance != right_instance => {
-                self.push_goal(Goal::UnifyExternal {
-                    left_instance_id: *left_instance,
-                    right_instance_id: *right_instance,
-                })?;
+            ) => {
+                // If IDs match, they're the same _instance_ (not just the same _value_), so unify.
+                if left_instance != right_instance {
+                    self.push_goal(Goal::UnifyExternal {
+                        left_instance_id: *left_instance,
+                        right_instance_id: *right_instance,
+                    })?;
+                }
             }
 
             (Value::InstanceLiteral(_), Value::InstanceLiteral(_)) => {

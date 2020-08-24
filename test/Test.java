@@ -1,4 +1,5 @@
 import com.osohq.oso.*;
+import com.osohq.oso.Exceptions.OsoException;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,10 +36,21 @@ class Test {
         }
     }
 
+    public static class E {
+        public static int sum(List<Integer> args) {
+            int sum = 0;
+            for(int arg: args) {
+                sum += arg;
+            }
+            return sum;
+        }
+    }
+
     public static void main(String[] args) throws IOException, NoSuchMethodException, Exceptions.OsoException {
         Oso o = new Oso();
         o.registerClass(A.class, "A");
         o.registerClass(BC.class, "C");
+        o.registerClass(E.class, "E");
         o.loadFile("test.polar");
         assert o.isAllowed("a", "b", "c");
 
@@ -69,6 +81,16 @@ class Test {
 
         assert !o.queryRule("testHttpAndPathMapper").results().isEmpty();
 
+        // Test we can unify against a class
+        // TODO: Enable when ExternalUnify implemented
+        throwsException = false;
+        try {
+            o.queryRule("testUnifyClass", A.class).results().isEmpty();
+        } catch (Exceptions.PolarRuntimeException e) {
+            throwsException = true;
+        }
+        assert throwsException;
+
         // Test that a constant can be called.
         o.registerConstant("Math", Math.class);
         o.loadStr("?= Math.PI == 3.141592653589793;");
@@ -89,6 +111,9 @@ class Test {
         assert o.query("builtinSpecializers({foo: \"bar\"}, \"Dictionary\")").results().isEmpty();
         assert !o.query("builtinSpecializers(\"foo\", \"String\")").results().isEmpty();
         assert o.query("builtinSpecializers(\"bar\", \"String\")").results().isEmpty();
+
+        // Test deref behaviour
+        o.loadStr("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;");
 
         System.out.println("Tests Pass");
     }
