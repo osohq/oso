@@ -35,7 +35,7 @@ end
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
-    class Polar # rubocop:disable Metrics/ClassLength
+    class Polar
       # @return [Host]
       attr_reader :host
 
@@ -62,7 +62,7 @@ module Oso
       # @param name [String]
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
       # @raise [PolarFileNotFoundError] if provided filename does not exist.
-      def load_file(name) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def load_file(name)
         raise PolarFileExtensionError, name unless File.extname(name) == '.polar'
 
         file_data = File.open(name, &:read)
