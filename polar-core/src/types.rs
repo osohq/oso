@@ -466,12 +466,9 @@ impl Term {
     /// Get a set of all the variables used within a term.
     pub fn variables(&self, vars: &mut HashSet<Symbol>) {
         self.cloned_map_replace(&mut |term| {
-            match term.value() {
-                Value::Variable(s) => {
-                    vars.insert(s.clone());
-                }
-                _ => (),
-            };
+            if let Value::Variable(s) = term.value() {
+                vars.insert(s.clone());
+            }
             term.clone()
         });
     }
