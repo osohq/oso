@@ -9,12 +9,19 @@ import {
 import { isPolarTerm, QueryEventKind } from './types';
 import type { obj, QueryEvent } from './types';
 
-const root: Function = Object.getPrototypeOf(() => {});
+/**
+ * Assemble the prototypal inheritance chain of a class.
+ *
+ * @returns The inheritance chain as a list of prototypes in most-to-least
+ * specific order.
+ *
+ * @internal
+ */
 export function ancestors(cls: Function): Function[] {
   const ancestors = [cls];
   function next(cls: Function): void {
     const parent = Object.getPrototypeOf(cls);
-    if (parent === root) return;
+    if (parent === Function.prototype) return;
     ancestors.push(parent);
     next(parent);
   }
