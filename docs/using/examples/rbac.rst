@@ -110,8 +110,8 @@ between users and the roles they've been assigned.
 
     .. group-tab:: Ruby
 
-        Our Ruby application has the following :py:class:`User` model that can
-        look up its assigned roles from the database:
+        Our Ruby application has the following ``User`` model that can look up
+        its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/ruby/03-external.rb
            :caption: :fas:`gem` rbac.rb
@@ -129,8 +129,8 @@ between users and the roles they've been assigned.
 
     .. group-tab:: Java
 
-        Our Java application has the following :py:class:`User` model that can
-        look up its assigned roles from the database:
+        Our Java application has the following ``User`` model that can look up
+        its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/java/User.java
            :caption: :fab:`java` User.java
