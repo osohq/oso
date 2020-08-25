@@ -147,7 +147,7 @@ module Oso
       #
       # @param files [Array<String>]
       # @raise [Error] if the FFI call raises one.
-      def repl(files = []) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
+      def repl(files = [])
         files.map { |f| load_file(f) }
         prompt = "#{FG_BLUE}query>#{RESET} "
         # Try loading the readline module from the Ruby stdlib. If we get a
@@ -207,7 +207,7 @@ module Oso
       rescue Interrupt # rubocop:disable Lint/SuppressedException
       end
 
-      def process_line(buf)
+      def process_line(buf) # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/AbcSize
         query = buf.chomp.chomp(';')
         begin
           ffi_query = ffi_polar.new_query_from_str(query)
