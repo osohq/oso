@@ -11,6 +11,7 @@ BUILDDIR      = _build
 export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
 export RUBY_DIR := $(abspath ../languages/ruby)
 export JAVA_DIR := $(abspath ../languages/java/oso)
+export JS_DIR := $(abspath ../languages/js)
 
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
@@ -19,6 +20,7 @@ JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.5.0.jar
 
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
+JS_FILES := $(call rwildcard ../languages/js/src, *.ts)
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -38,7 +40,13 @@ _api_docs/java: $(JAVA_FILES)
 	rm -rf _api_docs/java
 	cp -R $(JAVA_DIR)/target/site/apidocs _api_docs/java
 
-_api_docs: _api_docs/ruby _api_docs/java
+_api_docs/js: $(JS_FILES)
+	mkdir -p _api_docs
+	make -C $(JS_DIR) docs
+	rm -rf _api_docs/js
+	cp -R $(JS_DIR)/docs _api_docs/js
+
+_api_docs: _api_docs/ruby _api_docs/java _api_docs/js
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
