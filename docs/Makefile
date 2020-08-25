@@ -94,6 +94,7 @@ nodejs-test:
 	$(MAKE) -C ../languages/js build
 	cd examples/rbac/nodejs && yarn && yarn jest
 	cd examples/abac/nodejs && yarn && yarn jest
+	cd examples/context/nodejs && yarn && yarn jest
 
 test: doctest
 	$(MAKE) python-test
