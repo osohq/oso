@@ -29,22 +29,22 @@ const greta = new User('greta');
 
 test('05-external', async () => {
   const oso = await loadFile('../05-external.polar');
-  expect(oso.isAllowed(employee, 'submit', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(admin, 'approve', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(employee, 'approve', 'expense')).resolves.toBe(false);
-  expect(oso.isAllowed(accountant, 'view', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(greta, 'approve', 'expense')).resolves.toBe(true);
+  expect(await oso.isAllowed(employee, 'submit', 'expense')).toBe(true);
+  expect(await oso.isAllowed(admin, 'approve', 'expense')).toBe(true);
+  expect(await oso.isAllowed(employee, 'approve', 'expense')).toBe(false);
+  expect(await oso.isAllowed(accountant, 'view', 'expense')).toBe(true);
+  expect(await oso.isAllowed(greta, 'approve', 'expense')).toBe(true);
 });
 
 test('06-external', async () => {
   const oso = await loadFile('../06-external.polar');
-  expect(oso.isAllowed(employee, 'submit', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(employee, 'view', 'expense')).resolves.toBe(false);
-  expect(oso.isAllowed(employee, 'approve', 'expense')).resolves.toBe(false);
-  expect(oso.isAllowed(accountant, 'submit', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(accountant, 'view', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(accountant, 'approve', 'expense')).resolves.toBe(false);
-  expect(oso.isAllowed(admin, 'submit', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(admin, 'view', 'expense')).resolves.toBe(true);
-  expect(oso.isAllowed(admin, 'approve', 'expense')).resolves.toBe(true);
+  expect(await oso.isAllowed(employee, 'submit', 'expense')).toBe(true);
+  expect(await oso.isAllowed(employee, 'view', 'expense')).toBe(false);
+  expect(await oso.isAllowed(employee, 'approve', 'expense')).toBe(false);
+  expect(await oso.isAllowed(accountant, 'submit', 'expense')).toBe(true);
+  expect(await oso.isAllowed(accountant, 'view', 'expense')).toBe(true);
+  expect(await oso.isAllowed(accountant, 'approve', 'expense')).toBe(false);
+  expect(await oso.isAllowed(admin, 'submit', 'expense')).toBe(true);
+  expect(await oso.isAllowed(admin, 'view', 'expense')).toBe(true);
+  expect(await oso.isAllowed(admin, 'approve', 'expense')).toBe(true);
 });
