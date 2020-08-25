@@ -97,6 +97,12 @@ class Query:
     def next_message(self):
         return lib.polar_next_query_message(self.ptr)
 
+    def source(self):
+        source = lib.polar_query_source(self.ptr)
+        if is_null(source):
+            return None
+        return Source(source)
+
 
 class QueryEvent:
     def __init__(self, ptr):
@@ -115,6 +121,17 @@ class Error:
 
     def get(self):
         return get_python_error(ffi.string(self.ptr).decode())
+
+    def __del__(self):
+        lib.string_free(self.ptr)
+
+
+class Source:
+    def __init__(self, ptr):
+        self.ptr = ptr
+
+    def get(self):
+        return ffi.string(self.ptr).decode()
 
     def __del__(self):
         lib.string_free(self.ptr)

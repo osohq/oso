@@ -9,6 +9,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct Query {
     vm: PolarVirtualMachine,
+    source: Term,
     done: bool,
 }
 
@@ -35,6 +36,10 @@ impl Query {
 
     pub fn next_message(&self) -> Option<Message> {
         self.vm.messages.next()
+    }
+
+    pub fn source(&self) -> String {
+        self.vm.term_source(&self.source)
     }
 }
 
@@ -136,10 +141,14 @@ impl Polar {
             rewrite_term(&mut term, &mut kb);
             term
         };
-        let query = Goal::Query { term };
+        let query = Goal::Query { term: term.clone() };
         let vm =
             PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
-        Ok(Query { done: false, vm })
+        Ok(Query {
+            done: false,
+            source: term,
+            vm,
+        })
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
@@ -147,10 +156,14 @@ impl Polar {
             let mut kb = self.kb.write().unwrap();
             rewrite_term(&mut term, &mut kb);
         }
-        let query = Goal::Query { term };
+        let query = Goal::Query { term: term.clone() };
         let vm =
             PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
-        Query { done: false, vm }
+        Query {
+            done: false,
+            source: term,
+            vm,
+        }
     }
 
     // @TODO: Direct load_rules endpoint.
