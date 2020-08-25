@@ -45,6 +45,10 @@ policy to express this logic.
 
         Java example coming soon.
 
+    .. group-tab:: Node
+
+        Node example coming soon.
+
 Note that if we already had classes in our application that represented customers and internal users,
 we could have simply decorated them with :py:func:`oso.polar_class`.
 
@@ -87,6 +91,10 @@ For our example, making a request might look like this:
 
         Java example coming soon.
 
+    .. group-tab:: Node
+
+        Node example coming soon.
+
 Hooray, our customer and internal dashboards are now secure!
 
 Adding Actor Attributes
@@ -119,6 +127,10 @@ We can add a ``role`` attribute to our ``InternalUser`` class:
     .. group-tab:: Java
 
         Java example coming soon.
+
+    .. group-tab:: Node
+
+        Node example coming soon.
 
 
 Then add the following rule to our policy:
@@ -161,6 +173,10 @@ attributes:
 
         Java example coming soon.
 
+    .. group-tab:: Node
+
+        Node example coming soon.
+
 Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
 This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :doc:`inheritance`).
 
@@ -199,6 +215,10 @@ We can update our application code slightly to generate ``AccountManager`` users
     .. group-tab:: Java
 
         Java example coming soon.
+
+    .. group-tab:: Node
+
+        Node example coming soon.
 
 We've now successfully secured all three dashboards and customer account data.
 

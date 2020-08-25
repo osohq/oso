@@ -1,3 +1,4 @@
+/** Polar predicate. */
 export class Predicate {
   readonly name: string;
   readonly args: unknown[];
