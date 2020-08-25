@@ -4,7 +4,6 @@ require 'json'
 require 'pp'
 require 'set'
 require 'digest/md5'
-require 'readline'
 
 # Missing Ruby type.
 module PolarBoolean; end
@@ -150,44 +149,13 @@ module Oso
       # @raise [Error] if the FFI call raises one.
       def repl(files = []) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
         files.map { |f| load_file(f) }
-
         prompt = "#{FG_BLUE}query>#{RESET} "
-        while (buf = Readline.readline(prompt, true))
-          if /^\s*$/ =~ buf # Don't add empty entries to history.
-            Readline::HISTORY.pop
-            next
-          end
-
-          query = buf.chomp.chomp(';')
-          begin
-            ffi_query = ffi_polar.new_query_from_str(query)
-          rescue ParseError => e
-            print_error(e)
-            next
-          end
-
-          begin
-            results = Query.new(ffi_query, host: host).results.to_a
-          rescue PolarRuntimeError => e
-            print_error(e)
-            next
-          end
-
-          if results.empty?
-            puts false
-          else
-            results.each do |result|
-              if result.empty?
-                puts true
-              else
-                result.each do |variable, value|
-                  puts "#{variable} => #{value.inspect}"
-                end
-              end
-            end
-          end
-        end
-      rescue Interrupt # rubocop:disable Lint/SuppressedException
+        # Try loading the readline module from the Ruby stdlib. If we get a
+        # LoadError, fall back to the standard REPL with no readline support.
+        require 'readline'
+        repl_readline(prompt)
+      rescue LoadError
+        repl_standard(prompt)
       end
 
       # Register a Ruby class with Polar.
@@ -214,6 +182,61 @@ module Oso
       attr_reader :loaded_names
       # @return [Hash<String, String>]
       attr_reader :loaded_contents
+
+      def repl_readline(prompt)
+        while (buf = Readline.readline(prompt, true))
+          if /^\s*$/ =~ buf # Don't add empty entries to history.
+            Readline::HISTORY.pop
+            next
+          end
+          process_line(buf)
+        end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
+      end
+
+      def repl_standard(prompt)
+        loop do
+          puts prompt
+          begin
+            buf = $stdin.readline
+          rescue EOFError
+            return
+          end
+          process_line(buf)
+        end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
+      end
+
+      def process_line(buf)
+        query = buf.chomp.chomp(';')
+        begin
+          ffi_query = ffi_polar.new_query_from_str(query)
+        rescue ParseError => e
+          print_error(e)
+          return
+        end
+
+        begin
+          results = Query.new(ffi_query, host: host).results.to_a
+        rescue PolarRuntimeError => e
+          print_error(e)
+          return
+        end
+
+        if results.empty?
+          puts false
+        else
+          results.each do |result|
+            if result.empty?
+              puts true
+            else
+              result.each do |variable, value|
+                puts "#{variable} => #{value.inspect}"
+              end
+            end
+          end
+        end
+      end
     end
   end
 end

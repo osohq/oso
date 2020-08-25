@@ -7,8 +7,10 @@ import sys
 import hashlib
 import os
 
-if os.name != "nt":
+try:
     import readline
+except:
+    pass
 
 from _polar_lib import lib
 
