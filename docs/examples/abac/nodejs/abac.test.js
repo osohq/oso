@@ -1,12 +1,4 @@
-const { Expense, Organization, Project, Team, User } = require('./01-simple');
-const { Oso } = require('oso');
-
-const oso = new Oso();
-oso.registerClass(Expense);
-oso.registerClass(Organization);
-oso.registerClass(Project);
-oso.registerClass(Team);
-oso.registerClass(User);
+const { oso, Expense, User } = require('./01-simple');
 
 const EXPENSES_DEFAULT = {
   submitted_by: 'steve',

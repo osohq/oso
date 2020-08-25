@@ -1,12 +1,15 @@
+const { Oso } = require('oso');
+
+const oso = new Oso();
+
 const EXPENSES = [
   { amount: 500, submitted_by: 'alice', location: 'NYC', project_id: 2 },
 ];
 
 // expense-class-start
 class Expense {
-  // expense-class-end
-
   constructor({ amount, submitted_by, location, project_id }) {
+    // ...
     this.amount = amount;
     this.submitted_by = submitted_by;
     this.location = location;
@@ -19,6 +22,8 @@ class Expense {
   }
 }
 
+oso.registerClass(Expense);
+
 const MANAGERS = {
   cora: ['bhavik'],
   bhavik: ['alice'],
@@ -27,7 +32,8 @@ const MANAGERS = {
 // user-class-start
 class User {
   constructor(name, location) {
-    this.name = name; // user-class-end
+    // ...
+    this.name = name;
     this.location = location || 'NYC';
   }
 
@@ -40,6 +46,8 @@ class User {
   }
 }
 
+oso.registerClass(User);
+
 class Project {
   constructor(id, teamId) {
     this.id = id;
@@ -51,6 +59,8 @@ class Project {
   }
 }
 
+oso.registerClass(Project);
+
 class Team {
   constructor(organizationId) {
     this.organizationId = organizationId;
@@ -60,6 +70,8 @@ class Team {
     return new Team(0);
   }
 }
+
+oso.registerClass(Team);
 
 class Organization {
   constructor(name) {
@@ -71,10 +83,10 @@ class Organization {
   }
 }
 
+oso.registerClass(Organization);
+
 module.exports = {
   Expense,
-  Organization,
-  Project,
-  Team,
+  oso,
   User,
 };
