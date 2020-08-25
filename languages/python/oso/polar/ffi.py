@@ -99,8 +99,7 @@ class Query:
 
     def source(self):
         source = lib.polar_query_source(self.ptr)
-        if is_null(source):
-            return None
+        source = check_result(source)
         return Source(source)
 
 
