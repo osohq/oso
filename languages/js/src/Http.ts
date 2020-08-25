@@ -1,3 +1,4 @@
+/** An HTTP resource. */
 export class Http {
   readonly hostname: string;
   readonly path: string;

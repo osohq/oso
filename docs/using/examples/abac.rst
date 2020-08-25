@@ -80,7 +80,21 @@ We can register our user classes with oso:
                 }
             }
 
+    .. group-tab:: Node.js
 
+        .. literalinclude:: /examples/abac/nodejs/01-simple.js
+           :caption: :fab:`node-js` abac.js
+           :language: javascript
+           :start-after: user-class-start
+           :lines: 1-3,15-17
+
+        We can do the same with the resources being requested:
+
+        .. literalinclude:: /examples/abac/nodejs/01-simple.js
+           :caption: :fab:`node-js` abac.js
+           :language: javascript
+           :start-after: expense-class-start
+           :lines: 1-3,14-16
 
 An ``allow`` rule that checks that the user reading the
 expense is the same person who submitted the expense, would look like:

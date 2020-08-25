@@ -61,7 +61,7 @@ module Oso
         @ffi_polar = FFI::Polar.create
       end
 
-      # Enqueue a Polar policy file for loading into the KB.
+      # Load a Polar policy file.
       #
       # @param name [String]
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
@@ -110,7 +110,7 @@ module Oso
         end
       end
 
-      # Query for a predicate, parsing it if necessary.
+      # Query for a Polar predicate or string.
       #
       # @overload query(query)
       #   @param query [String]
