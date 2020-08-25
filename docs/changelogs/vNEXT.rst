@@ -37,3 +37,4 @@ Other bugs & improvements
 - Improved performance of ``in`` operator (list membership) with many ground elements.
 - Stack traces return the original policy source instead of the internal version.
 - New FFI methods for passing print and warning messages from the core runtime to the language libraries.
+- When an inline query fails the query that failed is printed in the error message.
