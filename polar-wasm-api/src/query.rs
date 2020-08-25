@@ -65,4 +65,10 @@ impl Query {
         let message = self.0.next_message();
         serde_wasm_bindgen::to_value(&message).map_err(|e| serialization_error(e.to_string()))
     }
+
+    #[wasm_bindgen(js_class = Query, js_name = source)]
+    pub fn wasm_source(&self) -> JsResult<JsValue> {
+        let source = self.0.source();
+        serde_wasm_bindgen::to_value(&source).map_err(|e| serialization_error(e.to_string()))
+    }
 }

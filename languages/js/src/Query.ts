@@ -33,6 +33,10 @@ export class Query {
     this.results = this.start();
   }
 
+  public source(): string {
+    return this.#ffiQuery.source();
+  }
+
   private processMessages() {
     while (true) {
       let msg = this.#ffiQuery.nextMessage();
