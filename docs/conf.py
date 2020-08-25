@@ -98,6 +98,7 @@ exclude_patterns = [
     "changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
+    "js/README.md",
     "more/language/polar-classes.rst",  # we don't currently have classes
     "**/venv/**",
     "**/node_modules/**",
