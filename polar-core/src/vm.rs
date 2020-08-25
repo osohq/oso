@@ -694,7 +694,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn source(&self, term: &Term) -> Option<Source> {
+    pub fn source(&self, term: &Term) -> Option<Source> {
         self.kb.read().unwrap().sources.get_source(&term)
     }
 
