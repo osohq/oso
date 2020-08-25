@@ -142,7 +142,7 @@ class Polar:
                 except StopIteration:
                     source = query.source()
                     raise PolarRuntimeException(
-                        f"Inline query in file failed. '{source.get()}'"
+                        f"Inline query in file failed. {source.get()}"
                     )
 
     def query(self, query):
