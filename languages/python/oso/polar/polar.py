@@ -5,8 +5,12 @@ from pathlib import Path
 from pprint import pprint
 import sys
 import hashlib
-import readline
 import os
+
+try:
+    import readline
+except:
+    pass
 
 from _polar_lib import lib
 
