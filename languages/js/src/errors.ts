@@ -1,5 +1,6 @@
 import { repr } from './helpers';
 
+/** Base error type. */
 export class PolarError extends Error {
   constructor(msg: string) {
     super(msg);

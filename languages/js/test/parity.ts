@@ -1,4 +1,3 @@
-import path from 'path';
 import { Oso } from '../src/Oso';
 
 const oso = new Oso();
@@ -49,7 +48,7 @@ oso.registerClass(E);
   // In tests it's `languages/js/test/parity.ts`
   // In parity tests it's `js_package/dist/test/parity.js`
   // In both these cases the relative path to the test.polar file is the same.
-  await oso.loadFile(path.resolve(__dirname, '../../../test/test.polar'));
+  await oso.loadFile('../../../test/test.polar');
 
   if (!(await oso.isAllowed('a', 'b', 'c'))) throw new Error();
 
