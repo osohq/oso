@@ -181,6 +181,7 @@ html_favicon = "favicon.ico"
 
 doctest_test_doctest_blocks = ""
 
+lexers["node"] = lexer.NodeShellLexer()
 lexers["polar"] = lexer.PolarLexer()
 lexers["jshell"] = lexer.JShellLexer()
 lexers["oso"] = lexer.OsoLexer()

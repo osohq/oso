@@ -347,7 +347,7 @@ start a REPL session and follow along:
 
     Run: ``node --experimental-repl-await``
 
-    .. code-block:: javascript
+    .. code-block:: node
 
       > const { EXPENSES } = require('./expense');
       > const { Oso } = require('oso');
@@ -367,7 +367,7 @@ start a REPL session and follow along:
 
     ...which we can load into our oso instance:
 
-    .. code-block:: javascript
+    .. code-block:: node
 
       > const { Expense } = require('./expense');
       > oso.registerClass(Expense);
@@ -375,14 +375,14 @@ start a REPL session and follow along:
 
     ...and now Alice has the power...
 
-    .. code-block:: javascript
+    .. code-block:: node
 
       > await oso.isAllowed(alice, 'GET', expense);
       true
 
     ...and everyone else is still denied:
 
-    .. code-block:: javascript
+    .. code-block:: node
 
       > await oso.isAllowed('bhavik@example.com', 'GET', expense);
       false
