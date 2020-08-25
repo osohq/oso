@@ -84,6 +84,7 @@ ruby-test:
 
 nodejs-test:
 	cd examples/rbac/nodejs && yarn && yarn jest
+	cd examples/abac/nodejs && yarn && yarn jest
 
 test: doctest
 	$(MAKE) python-test
