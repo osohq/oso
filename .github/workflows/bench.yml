@@ -2,7 +2,6 @@ name: Rust benchmark
 on:
   push:
     branches:
-      - sam/bench-ci
 
 jobs:
   benchmark:
@@ -23,4 +22,4 @@ jobs:
           auto-push: true
           alert-comment-cc-users: '@osohq/eng'
           comment-always: true
-          save-data-file: ${{ github.ref == 'refs/branch/sam/bench-ci' }}
+          save-data-file: ${{ github.ref == 'refs/branch/main' }}
