@@ -312,7 +312,7 @@ Because it always succeeds it can be embedded in other polar expressions.
 
 For example::
 
-  hello(x) if print("hello", x);
+  hello(x) if print("hello", x) and x = "world";
 
   query> hello("world");
   "hello", "world"
