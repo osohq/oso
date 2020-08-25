@@ -1234,7 +1234,8 @@ impl PolarVirtualMachine {
                 assert_eq!(generic_rule.name, predicate.name);
 
                 // Pre-filter rules.
-                let pre_filter = generic_rule.get_applicable_rules(&predicate.args);
+                let args = predicate.args.iter().map(|t| self.deep_deref(&t)).collect();
+                let pre_filter = generic_rule.get_applicable_rules(&args);
 
                 self.polar_log_mute = true;
 
@@ -3041,5 +3042,39 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_prefiltering() {
+        let bar_rule = GenericRule::new(
+            sym!("bar"),
+            vec![
+                Arc::new(rule!("bar", [value!([1])])),
+                Arc::new(rule!("bar", [value!([2])])),
+            ],
+        );
+
+        let mut kb = KnowledgeBase::new();
+        kb.add_generic_rule(bar_rule);
+
+        let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
+        vm.bind(&sym!("x"), term!(1));
+        let _ = vm.run();
+        let _ = vm.next(Rc::new(query!(call!("bar", [value!([sym!("x")])]))));
+        // After calling the query goal we should be left with the
+        // prefiltered rules
+        let next_goal = vm
+            .goals
+            .iter()
+            .find(|g| matches!(g.as_ref(), Goal::FilterRules { .. }))
+            .unwrap();
+        let goal_debug = format!("{:#?}", next_goal);
+        assert!(
+            matches!(next_goal.as_ref(), Goal::FilterRules {
+            ref applicable_rules, ref unfiltered_rules, ..
+        } if unfiltered_rules.len() == 1 && applicable_rules.is_empty()),
+            "Goal should contain just one prefiltered rule: {}",
+            goal_debug
+        );
     }
 }
