@@ -42,8 +42,16 @@ Once oso is installed, launch the REPL from the terminal:
         .. code-block:: console
             :caption: :fab:`js` Launch the REPL
 
-            $ npm run oso
+            $ ./node_modules/.bin/oso
             query>
+
+        .. tip::
+
+           Install oso globally with ``npm install -g`` if you'd like to have
+           the ``oso`` command on your path instead of in your project's
+           ``node_modules`` directory.
+
+           If you are using ``yarn``, ``yarn oso`` will launch the repl.
 
 .. todo:: test above
 
@@ -115,7 +123,7 @@ on the command line:
         .. code-block:: console
             :caption: :fab:`js` Load files and launch the REPL
 
-            $ npm run oso -- alice.polar
+            $ ./node_modules/.bin/oso -- alice.polar
 
 And now we can use the rule that was loaded:
 
