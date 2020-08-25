@@ -15,17 +15,17 @@ application code, but it executes inside the application and can call
 directly into it. oso ships as a library with a built-in debugger and REPL.
 
 oso is ideal for building permissions into user-facing applications, but you can
-check out [Use Cases][https://docs.oso.dev/more/use-cases.html] to learn about
+check out [Use Cases](https://docs.oso.dev/more/use-cases.html) to learn about
 other applications for oso.
 
 ## Getting started
 
-There are two main elements to using oso:
+There are two parts to using oso:
 
 1. Writing oso policies
 2. Embedding oso in your application using the appropriate language-specific authorization library
 
-To get up and running with oso, check out the [Getting Started guides][https://docs.oso.dev/getting-started/quickstart.html] in the [oso documentation][docs].
+To get up and running with oso, check out the [Getting Started guides](https://docs.oso.dev/getting-started/quickstart.html) in the [oso documentation][docs].
 
 ## Development
 
