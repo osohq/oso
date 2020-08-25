@@ -27,4 +27,4 @@ jobs:
           fail-on-alert: true
           alert-comment-cc-users: '@osohq/eng'
           comment-always: true
-          # save-data-file: ${{ github.ref == 'refs/branch/main' }}
+          save-data-file: ${{ github.ref == 'refs/branch/sam/bench-ci' }}
