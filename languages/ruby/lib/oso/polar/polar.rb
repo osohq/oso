@@ -143,21 +143,6 @@ module Oso
         query(Predicate.new(name, args: args))
       end
 
-      # Start a REPL session.
-      #
-      # @param files [Array<String>]
-      # @raise [Error] if the FFI call raises one.
-      def repl(files = [])
-        files.map { |f| load_file(f) }
-        prompt = "#{FG_BLUE}query>#{RESET} "
-        # Try loading the readline module from the Ruby stdlib. If we get a
-        # LoadError, fall back to the standard REPL with no readline support.
-        require 'readline'
-        repl_readline(prompt)
-      rescue LoadError
-        repl_standard(prompt)
-      end
-
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
@@ -174,6 +159,21 @@ module Oso
         ffi_polar.register_constant(name, value: host.to_polar_term(value))
       end
 
+      # Start a REPL session.
+      #
+      # @param files [Array<String>]
+      # @raise [Error] if the FFI call raises one.
+      def repl(files = [])
+        files.map { |f| load_file(f) }
+        prompt = "#{FG_BLUE}query>#{RESET} "
+        # Try loading the readline module from the Ruby stdlib. If we get a
+        # LoadError, fall back to the standard REPL with no readline support.
+        require 'readline'
+        repl_readline(prompt)
+      rescue LoadError
+        repl_standard(prompt)
+      end
+
       private
 
       # @return [FFI::Polar]
@@ -183,6 +183,7 @@ module Oso
       # @return [Hash<String, String>]
       attr_reader :loaded_contents
 
+      # The R and L in REPL for systems where readline is available.
       def repl_readline(prompt)
         while (buf = Readline.readline(prompt, true))
           if /^\s*$/ =~ buf # Don't add empty entries to history.
@@ -194,6 +195,7 @@ module Oso
       rescue Interrupt # rubocop:disable Lint/SuppressedException
       end
 
+      # The R and L in REPL for systems where readline is not available.
       def repl_standard(prompt)
         loop do
           puts prompt
@@ -207,6 +209,9 @@ module Oso
       rescue Interrupt # rubocop:disable Lint/SuppressedException
       end
 
+      # Process a line of user input in the REPL.
+      #
+      # @param buf [String]
       def process_line(buf) # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/AbcSize
         query = buf.chomp.chomp(';')
         begin
