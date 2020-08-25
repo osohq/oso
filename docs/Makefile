@@ -91,6 +91,7 @@ ruby-test:
 	cd examples/inheritance/ruby && bundle exec rspec test_spec.rb
 
 nodejs-test:
+	$(MAKE) -C ../languages/js build
 	cd examples/rbac/nodejs && yarn && yarn jest
 	cd examples/abac/nodejs && yarn && yarn jest
 
