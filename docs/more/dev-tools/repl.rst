@@ -115,7 +115,7 @@ on the command line:
         .. code-block:: console
             :caption: :fab:`js` Load files and launch the REPL
 
-            $ npm run oso alice.polar
+            $ npm run oso -- alice.polar
 
 And now we can use the rule that was loaded:
 
@@ -178,13 +178,15 @@ plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
                 }
             }
 
-        .. code-block:: Node
+    .. group-tab:: Node
+
+        .. code-block:: javascript
             :caption: :fab:`js` app_repl.js
 
             const { Expense, User } = require("./models");
             const { Oso } = require("oso");
 
-            const o = new Oso();
+            const oso = new Oso();
             oso.registerClass(Expense);
             oso.registerClass(User);
             await oso.repl();
