@@ -27,7 +27,7 @@ RSpec.describe "example" do
 
     # 02-rbac
     oso = load_file("02-rbac.polar")
-    oso.load_str('role(_: User { name: "sam" }, "admin", __: Project { id: 2 });')
+    oso.load_str('role(_: User { name: "sam" }, "admin", _: Project { id: 2 });')
 
     expense = Expense.new(location: "NYC", amount: 50, project_id: 0, submitted_by: "steve")
     expect(oso.allowed?(actor: User.new("sam"), action: "view", resource: expense)).to be false
