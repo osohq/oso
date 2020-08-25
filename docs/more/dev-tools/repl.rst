@@ -40,7 +40,7 @@ Once oso is installed, launch the REPL from the terminal:
     .. group-tab:: Node.js
 
         .. code-block:: console
-            :caption: :fab:`js` Launch the REPL
+            :caption: :fab:`node-js` Launch the REPL
 
             $ ./node_modules/.bin/oso
             query>
@@ -121,7 +121,7 @@ on the command line:
     .. group-tab:: Node
 
         .. code-block:: console
-            :caption: :fab:`js` Load files and launch the REPL
+            :caption: :fab:`node-js` Load files and launch the REPL
 
             $ ./node_modules/.bin/oso -- alice.polar
 
@@ -189,7 +189,7 @@ plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
     .. group-tab:: Node
 
         .. code-block:: javascript
-            :caption: :fab:`js` app_repl.js
+            :caption: :fab:`node-js` app_repl.js
 
             const { Expense, User } = require("./models");
             const { Oso } = require("oso");
