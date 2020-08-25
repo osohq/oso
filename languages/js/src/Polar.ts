@@ -234,6 +234,10 @@ export class Polar {
         rl.prompt();
       }
     });
+
+    return new Promise((resolve, _) => {
+      rl.on('close', () => resolve());
+    });
   }
 
   /**
