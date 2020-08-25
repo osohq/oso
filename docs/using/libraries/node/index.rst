@@ -16,12 +16,12 @@ To install, see :doc:`installation instructions </download>`.
 
 .. todo:: typescript
 
-Working with JavaScript Objects
-===============================
+Working with JavaScript Types
+=============================
 
 oso's Node.js authorization library allows you to write policy rules over
-JavaScript objects directly.  This document explains how different types of
-JavaScript objects can be used in oso policies.
+JavaScript types directly. This document explains how different types of
+JavaScript values can be used in oso policies.
 
 .. note::
   More detailed examples of working with application objects can be found in :doc:`/using/examples/index`.
@@ -32,14 +32,15 @@ Objects
 You can pass any JavaScript object into oso and access its properties from
 your policy (see :ref:`application-types`).
 
-Objects can be constructed from inside an oso policy using the
-:ref:`operator-new` operator if the class has been **registered** using the
-``#register_class`` method. An example of this can be found :ref:`here
-<application-types>`.
+Class Instances
+^^^^^^^^^^^^^^^
 
-``register_class`` will work with ES6 style classes, or plain JavaScript classes
-implemented using the prototype chain.  The constructor of the class should be
-passed to ``register_class`` in the latter case.
+Any ``new``-able JavaScript object (including ES6-style classes) can be
+constructed from inside an oso policy using the :ref:`operator-new` operator if
+the constructor (a ``class`` or ``function`` that responds to `the new operator
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/new>`_)
+has been **registered** using the ``#registerClass`` method. An example of
+this can be found :ref:`here <application-types>`.
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
@@ -57,7 +58,7 @@ JavaScript strings are mapped to Polar :ref:`strings`. JavaScript's string metho
   allow(actor, action, resource) if actor.username.endsWith("example.com");
 
 .. code-block:: javascript
-  :caption: :fab:`js` app.js
+  :caption: :fab:`node-js` app.js
 
   class User {
     constructor(username) {
@@ -67,12 +68,7 @@ JavaScript strings are mapped to Polar :ref:`strings`. JavaScript's string metho
 
   const user = new User('alice@example.com');
   oso.isAllowed(user, 'foo', 'bar').then(
-    result => {
-      console.assert(result);
-    },
-    err => {
-      throw err;
-    }
+    result => assert(result)
   );
 
 .. warning::
@@ -90,7 +86,7 @@ are mapped to Polar :ref:`Lists <lists>`. JavaScript's Array methods may be call
   allow(actor, action, resource) if actor.groups.includes("HR");
 
 .. code-block:: javascript
-  :caption: :fab:`js` app.js
+  :caption: :fab:`node-js` app.js
 
   class User {
     constructor(groups) {
@@ -99,13 +95,8 @@ are mapped to Polar :ref:`Lists <lists>`. JavaScript's Array methods may be call
   }
 
   const user = new User(["HR", "payroll"]);
-  oso.isAllowed(user, "foo", "bar").then(
-    result => {
-      console.assert(result);
-    },
-    err => {
-      throw err;
-    }
+  oso.isAllowed(user, 'foo', 'bar').then(
+    result => assert(result)
   );
 
 .. warning::
@@ -116,10 +107,10 @@ Likewise, lists constructed in Polar may be passed into JavaScript methods:
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
 
-  allow(actor, action, resource) if actor.has_groups(["HR", "payroll"]);
+  allow(actor, action, resource) if actor.hasGroups(["HR", "payroll"]);
 
-.. code-block:: ruby
-  :caption: :fas:`gem` app.rb
+.. code-block:: javascript
+  :caption: :fas:`node-js` app.js
 
   class User {
     constructor(groups) {
@@ -127,24 +118,13 @@ Likewise, lists constructed in Polar may be passed into JavaScript methods:
     }
 
     hasGroups(other) {
-      for (const group of other) {
-        if (!this.groups.includes(group)) {
-          return false;
-        }
-      }
-
-      return true;
+      return other.every(group => this.groups.includes(group));
     }
   }
 
   const user = new User(["HR", "payroll"]);
-  oso.isAllowed(user, "foo", "bar").then(
-    result => {
-      console.assert(result);
-    },
-    err => {
-      throw err;
-    }
+  oso.isAllowed(user, 'foo', 'bar').then(
+    result => assert(result)
   );
 
 .. todo:: Mention no dictionary type conversion?
@@ -153,7 +133,7 @@ Iterators
 ^^^^^^^^^
 
 oso handles JavaScript `iterators <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols>`_
-by evaluating the iterated values one at a time.
+by evaluating the yielded values one at a time.
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
@@ -161,35 +141,39 @@ by evaluating the iterated values one at a time.
   allow(actor, action, resource) if actor.getGroup() = "payroll";
 
 .. code-block:: javascript
-  :caption: :fab:`js` app.js
+  :caption: :fab:`node-js` app.js
 
   class User {
     getGroup() {
-        return ["HR", "payroll"].values()
+      return ["HR", "payroll"].values()
     }
   }
 
   const user = new User();
-  oso.isAllowed(user, "foo", "bar").then(
-    result => {
-      console.assert(result);
-    },
-    err => {
-      throw err;
-    }
+  oso.isAllowed(user, 'foo', 'bar').then(
+    result => assert(result)
   );
 
 In the policy above, the body of the ``allow`` rule will first evaluate ``"HR" =
 "payroll"`` and then ``"payroll" = "payroll"``. Because the latter evaluation
-succeeds, the call to ``Oso.isAllowed`` will succeed.  Note that if
+succeeds, the call to ``Oso.isAllowed`` will succeed. Note that if
 ``getGroup`` returned an array instead of an iterator, the rule would fail
 because it would be comparing an array (``["HR", "payroll"]``) against a string
 (``"payroll"``).
 
-.. todo:: mention generators, async generators?
+Asynchronous Iterators
+^^^^^^^^^^^^^^^^^^^^^^
 
-Asynchronous Application Methods
-================================
+oso handles `async iterators
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator>`_
+in the same manner as synchronous iterators.
+
+Promises
+^^^^^^^^
+
+oso will ``await`` any `Promise
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise>`_
+and then use the resolved value during evaluation of a policy.
 
 Summary
 ^^^^^^^
@@ -200,11 +184,13 @@ Summary
 
   * - JavaScript type
     - Polar type
-  * - Integer
-    - Number (Integer)
-  * - Float
-    - Number (Float)
+  * - number (Integer)
+    - Integer
+  * - number (Float)
+    - Float
   * - boolean
     - Boolean
+  * - string
+    - String
   * - Array
     - List
