@@ -357,7 +357,9 @@ describe('#loadFile', () => {
 
   test('throws if two files with the same contents are loaded', async () => {
     const p = new Polar();
-    expect(p.loadFile(await tempFile('', 'a.polar'))).resolves;
+    await expect(
+      p.loadFile(await tempFile('', 'a.polar'))
+    ).resolves.not.toThrow();
     expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
       PolarFileDuplicateContentError
     );
@@ -376,8 +378,8 @@ describe('#loadFile', () => {
   test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
     const file = await tempFileFx();
-    expect(p.loadFile(file)).resolves;
-    expect(p.loadFile(file)).rejects.toThrow(PolarFileAlreadyLoadedError);
+    await expect(p.loadFile(file)).resolves.not.toThrow();
+    await expect(p.loadFile(file)).rejects.toThrow(PolarFileAlreadyLoadedError);
   });
 
   test('can load multiple files', async () => {
