@@ -5,8 +5,10 @@ from pathlib import Path
 from pprint import pprint
 import sys
 import hashlib
-import readline
 import os
+
+if os.name != "nt":
+    import readline
 
 from _polar_lib import lib
 
