@@ -4,6 +4,16 @@ NEXT
 
 **Release date:** XXXX-XX-XX
 
+Major news
+==========
+
+Node.js support
+---------------
+
+oso now supports applications written in Node.js, using our
+:doc:`Node.js library </using/libraries/node/index>`. Download :doc:`here
+</download>`.
+
 Breaking changes
 ================
 
