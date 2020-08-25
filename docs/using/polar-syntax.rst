@@ -302,6 +302,21 @@ For example::
 
 will compare the value of the variable age with 10 and unify if it's less than 10.
 
+.. _print-operator:
+
+Print
+^^^^^
+
+``print`` is a built-in operator that prints its arguments to the console. It always succeeds, and can therefore be added anywhere in the body of a Polar rule.
+
+For example::
+
+  hello(x) if print("hello", x) and x = "world";
+
+  query> hello("world");
+  "hello", "world"
+  True
+
 .. _cut-operator:
 
 Cut
@@ -499,6 +514,7 @@ perform a match.  The same operation is used by the engine to test whether a
 rule argument matches the specializer.
 
 .. _inline-queries:
+
 
 Inline Queries (``?=``)
 -----------------------
