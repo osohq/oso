@@ -82,10 +82,14 @@ ruby-test:
 	cd examples/context/ruby && bundle exec rspec test_spec.rb
 	cd examples/inheritance/ruby && bundle exec rspec test_spec.rb
 
+nodejs-test:
+	cd examples/rbac/nodejs && yarn && yarn jest
+
 test: doctest
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
+	$(MAKE) nodejs-test
 
 deps:
 	pip3 install -r requirements-docs.txt
