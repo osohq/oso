@@ -18,7 +18,7 @@ oso is ideal for building permissions into user-facing applications, but you can
 check out [Use Cases](https://docs.oso.dev/more/use-cases.html) to learn about
 other applications for oso.
 
-Using oso basically consists of two parts:
+Using oso consists of two parts:
 
 1. Writing oso policies in a declarative policy language called Polar
 2. Embedding oso in your application using the appropriate language-specific authorization library
