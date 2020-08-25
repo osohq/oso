@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run benchmark
-        run: cargo bench -- --output-format bencher | tee output.txt
+        run:  cargo bench -- -n --output-format bencher | grep -Ev 'Gnuplot|Warning' | tee output.txt
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
