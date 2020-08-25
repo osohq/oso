@@ -42,9 +42,4 @@ RSpec.describe "example" do
                      action: "view",
                      resource: Expense.new(**EXPENSES_DEFAULT, submitted_by: "alice"))).to be true
   end
-
-  context User do
-    #u = User.new("cora")
-    #expect (u.employees().next().name).to be "bhavik"
-  end
 end
