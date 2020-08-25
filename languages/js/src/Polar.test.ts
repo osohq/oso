@@ -357,7 +357,8 @@ describe('#loadFile', () => {
 
   test('throws if two files with the same contents are loaded', async () => {
     const p = new Polar();
-    await expect(p.loadFile(await tempFile('', 'a.polar'))).resolves.not.toThrow;
+    await expect(p.loadFile(await tempFile('', 'a.polar'))).resolves.not
+      .toThrow;
     await expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
       PolarFileDuplicateContentError
     );
