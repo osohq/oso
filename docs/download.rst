@@ -112,9 +112,11 @@ oso is available as a library in several languages:
             - OS X
             - Windows
 
+    .. group-tab:: Node.js
+        .. TODO
+
 **Libraries coming soon:**
 
-- JavaScript / TypeScript
 - Go
 - Rust
 
