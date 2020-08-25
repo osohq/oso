@@ -40,13 +40,13 @@ _api_docs/java: $(JAVA_FILES)
 	rm -rf _api_docs/java
 	cp -R $(JAVA_DIR)/target/site/apidocs _api_docs/java
 
-_api_docs/js: $(JS_FILES)
-	mkdir -p _api_docs
+_api_docs/js/node: $(JS_FILES)
+	mkdir -p _api_docs/js
 	make -C $(JS_DIR) docs
-	rm -rf _api_docs/js
-	cp -R $(JS_DIR)/docs _api_docs/js
+	rm -rf _api_docs/js/node
+	cp -R $(JS_DIR)/docs _api_docs/js/node
 
-_api_docs: _api_docs/ruby _api_docs/java _api_docs/js
+_api_docs: _api_docs/ruby _api_docs/java _api_docs/js/node
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
