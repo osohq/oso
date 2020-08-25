@@ -302,6 +302,22 @@ For example::
 
 will compare the value of the variable age with 10 and unify if it's less than 10.
 
+.. _print-operator:
+
+Print
+^^^^^
+
+Print is a special built-in operator that lets you print things. It always succeeds and as a side effect prints it's arguments to the console.
+Because it always succeeds it can be embedded in other polar expressions.
+
+For example::
+
+  hello(x) if print("hello", x);
+
+  query> hello("world");
+  "hello", "world"
+  True
+
 .. _cut-operator:
 
 Cut
@@ -499,6 +515,7 @@ perform a match.  The same operation is used by the engine to test whether a
 rule argument matches the specializer.
 
 .. _inline-queries:
+
 
 Inline Queries (``?=``)
 -----------------------
