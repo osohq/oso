@@ -98,7 +98,7 @@ class Query:
         return lib.polar_next_query_message(self.ptr)
 
     def source(self):
-        source = lib.polar_query_source(self.ptr)
+        source = lib.polar_query_source_info(self.ptr)
         source = check_result(source)
         return Source(source)
 

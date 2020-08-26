@@ -335,10 +335,10 @@ pub extern "C" fn polar_next_query_message(query_ptr: *mut Query) -> *const c_ch
 }
 
 #[no_mangle]
-pub extern "C" fn polar_query_source(query_ptr: *mut Query) -> *const c_char {
+pub extern "C" fn polar_query_source_info(query_ptr: *mut Query) -> *const c_char {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
-        CString::new(query.source())
+        CString::new(query.source_info())
             .expect("No null bytes")
             .into_raw()
     })

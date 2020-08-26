@@ -9,7 +9,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct Query {
     vm: PolarVirtualMachine,
-    source: Term,
+    term: Term,
     done: bool,
 }
 
@@ -38,17 +38,17 @@ impl Query {
         self.vm.messages.next()
     }
 
-    pub fn source(&self) -> String {
-        let mut source_str = self.vm.term_source(&self.source);
-        if let Some(source) = self.vm.source(&self.source) {
-            let offset = self.source.offset();
+    pub fn source_info(&self) -> String {
+        let mut source_info = self.vm.term_source_string(&self.term);
+        if let Some(source) = self.vm.source(&self.term) {
+            let offset = self.term.offset();
             let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
-            source_str.push_str(&format!(" at line {}, column {}", row, column));
+            source_info.push_str(&format!(" at line {}, column {}", row, column));
             if let Some(filename) = source.filename {
-                source_str.push_str(&format!(" in file {}", filename));
+                source_info.push_str(&format!(" in file {}", filename));
             }
         }
-        source_str
+        source_info
     }
 }
 
@@ -155,7 +155,7 @@ impl Polar {
             PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
         Ok(Query {
             done: false,
-            source: term,
+            term,
             vm,
         })
     }
@@ -170,7 +170,7 @@ impl Polar {
             PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
         Query {
             done: false,
-            source: term,
+            term,
             vm,
         }
     }

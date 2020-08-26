@@ -345,7 +345,7 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
-                    let source_str = self.rule_source(&rule);
+                    let source_str = self.rule_source_string(&rule);
                     self.log(&format!("RULE:\n{}", source_str), &[]);
                 }
                 self.trace.push(trace.clone());
@@ -745,7 +745,7 @@ impl PolarVirtualMachine {
                         }
                         let _ = writeln!(st);
                     };
-                    let _ = write!(st, "    {}", self.term_source(t));
+                    let _ = write!(st, "    {}", self.term_source_string(t));
                 }
             }
         }
@@ -2258,7 +2258,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn term_source(&self, term: &Term) -> String {
+    pub fn term_source_string(&self, term: &Term) -> String {
         let source = self.source(term);
         let span = term.span();
         match (source, span) {
@@ -2269,7 +2269,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn rule_source(&self, rule: &Rule) -> String {
+    pub fn rule_source_string(&self, rule: &Rule) -> String {
         let mut head = format!(
             "{}({})",
             rule.name,
@@ -2277,17 +2277,17 @@ impl PolarVirtualMachine {
                 if acc != "" {
                     acc += ", ";
                 }
-                acc += &self.term_source(&p.parameter);
+                acc += &self.term_source_string(&p.parameter);
                 if let Some(spec) = &p.specializer {
                     acc += ": ";
-                    acc += &self.term_source(&spec);
+                    acc += &self.term_source_string(&spec);
                 }
                 acc
             })
         );
         // head
         head += " if\n  ";
-        head + &self.term_source(&rule.body)
+        head + &self.term_source_string(&rule.body)
     }
 
     fn set_error_context(
