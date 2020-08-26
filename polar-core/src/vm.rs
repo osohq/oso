@@ -1973,13 +1973,11 @@ impl PolarVirtualMachine {
             self.unify_rest_list_with_list(left, right, unify)
         } else if has_rest_var(right) {
             self.unify_rest_list_with_list(right, left, unify)
+        } else if left.len() == right.len() {
+            // No rest-variables; unify element-wise.
+            self.append_goals(left.iter().zip(right).map(unify))
         } else {
-            if left.len() == right.len() {
-                // No rest-variables; unify element-wise.
-                self.append_goals(left.iter().zip(right).map(unify))
-            } else {
-                self.push_goal(Goal::Backtrack)
-            }
+            self.push_goal(Goal::Backtrack)
         }
     }
 
