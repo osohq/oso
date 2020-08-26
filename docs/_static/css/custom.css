@@ -64,8 +64,22 @@
 }
 
 
+@media only screen and (max-width:44.9375em) {
+    .md-typeset pre {
+        margin: 0;
+    }
+    .button-text {
+        display: none;
+    }
+    .md-header-nav__source {
+        width: 12rem !important;
+        max-width: 12rem !important;
+    }
 
-/*** Set our own custom colours ***/
+    .md-header-nav__title {
+        display: none;
+    }
+}
 
 /* Sidebar colour on mobile */
 @media only screen and (max-width:76.1875em){
@@ -132,9 +146,8 @@
 	width: 20rem;
     max-width: 20rem;
     padding-top: 8px;
+    display: block !important; 
 }
-
-
 
 .md-footer-meta {
     padding-top: 1rem;
@@ -334,10 +347,4 @@ footer .subscribe-form {
 
 body {
     font-family: "Space Grotesk", sans-serif;
-}
-
-@media only screen and (max-width:44.9375em) {
-    .md-typeset pre {
-    margin: 0;
-    }
 }
