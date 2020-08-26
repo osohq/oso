@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598469723283,
+  "lastUpdate": 1598469807070,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -1559,6 +1559,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 22133,
             "range": "± 1615",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "distinct": true,
+          "id": "e3cc655d6168528e2e58fb4d8671db3600444e64",
+          "message": "Check conditional push.",
+          "timestamp": "2020-08-26T15:13:22-04:00",
+          "tree_id": "a988ce35de2f297a2b6d044bdc31efa5ee4e37af",
+          "url": "https://github.com/osohq/oso/commit/e3cc655d6168528e2e58fb4d8671db3600444e64"
+        },
+        "date": 1598469806366,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1195,
+            "range": "± 99",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4492,
+            "range": "± 489",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 104193,
+            "range": "± 7054",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 585029,
+            "range": "± 65031",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 22691,
+            "range": "± 1645",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 25563,
+            "range": "± 3361",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 23498,
+            "range": "± 2069",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 23116,
+            "range": "± 2251",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 26147,
+            "range": "± 2289",
             "unit": "ns/iter"
           }
         ]
