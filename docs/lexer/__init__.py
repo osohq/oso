@@ -23,7 +23,10 @@ class PolarLexer(RegexLexer):
             (r"\#.*$", token.Comment.Single),
             (r'"', token.String, "string"),
         ],
-        "string": [(r'[^"]+', token.String), (r'"', token.String, "#pop"),],
+        "string": [
+            (r'[^"]+', token.String),
+            (r'"', token.String, "#pop"),
+        ],
     }
 
 

@@ -15,14 +15,14 @@ fn runner_from_query(q: &str) -> Runner {
 }
 
 pub fn simple_queries(c: &mut Criterion) {
-    c.bench_function("1=1", |b| {
+    c.bench_function("unify_once", |b| {
         b.iter_batched(
             || runner_from_query("1=1"),
             |mut runner| runner.run(),
             criterion::BatchSize::SmallInput,
         )
     });
-    c.bench_function("1=1 and 2=2", |b| {
+    c.bench_function("unify_twice", |b| {
         b.iter_batched(
             || runner_from_query("1=1 and 2=2"),
             |mut runner| runner.run(),
@@ -52,7 +52,7 @@ pub fn fib(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("fib");
     for n in &n_array {
-        group.bench_function(BenchmarkId::from_parameter(format!("fib({})", n)), |b| {
+        group.bench_function(BenchmarkId::from_parameter(format!("{}", n)), |b| {
             b.iter_batched(
                 || {
                     let mut runner = runner_from_query(&format!("fib({}, result)", n));
@@ -90,7 +90,7 @@ pub fn prime(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("prime");
     for n in &[3, 23, 43, 83, 255] {
-        group.bench_function(BenchmarkId::from_parameter(format!("prime({})", n)), |b| {
+        group.bench_function(BenchmarkId::from_parameter(format!("{}", n)), |b| {
             b.iter_batched(
                 || {
                     let mut runner = runner_from_query(&format!("prime({})", n));
@@ -126,7 +126,7 @@ pub fn many_rules(c: &mut Criterion) {
         runner
     }
 
-    c.bench_function("many_rules f(N) if f(N-1) if ... if f(0)", |b| {
+    c.bench_function("many_rules", |b| {
         b.iter_batched(
             make_runner,
             |mut runner| runner.run(),
@@ -182,14 +182,14 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
         runner.expected_result(Bindings::new());
     }
 
-    let n_array = [1, 20];
-    let delays = [100_000];
+    let n_array = [1, 5];
+    let delays = [10_000];
 
-    let mut group = c.benchmark_group("n_plus_one query");
+    let mut group = c.benchmark_group("n_plus_one");
     for delay in &delays {
         for n in &n_array {
             group.bench_function(
-                BenchmarkId::from_parameter(format!("N={}, cost={}ns", n, delay)),
+                BenchmarkId::from_parameter(format!("{}, cost={}ns", n, delay)),
                 |b| {
                     b.iter_batched(
                         || {
