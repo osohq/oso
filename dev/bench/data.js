@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598458679476,
+  "lastUpdate": 1598460620918,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -623,6 +623,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 27570,
             "range": "± 973",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7a9acc389c2bd3be41f8ebf0e4fbf76679582a2c",
+          "message": "Merge branch 'main' into leina/new_readme",
+          "timestamp": "2020-08-26T12:39:34-04:00",
+          "tree_id": "5e3927a2589bef8047b2312c7e7e9c0247b39e91",
+          "url": "https://github.com/osohq/oso/commit/7a9acc389c2bd3be41f8ebf0e4fbf76679582a2c"
+        },
+        "date": 1598460617979,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1501,
+            "range": "± 139",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4731,
+            "range": "± 173",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 133813,
+            "range": "± 3353",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 716767,
+            "range": "± 19224",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 29177,
+            "range": "± 1245",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 29667,
+            "range": "± 914",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 29806,
+            "range": "± 1741",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 30212,
+            "range": "± 1581",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 27565,
+            "range": "± 1506",
             "unit": "ns/iter"
           }
         ]
