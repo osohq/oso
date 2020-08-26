@@ -26,7 +26,7 @@ module Oso
           when 'Print'
             puts(msg)
           when 'Warning'
-            warn('[warning] %<msg>s')
+            warn('[warning] %<msg>s' % {msg: msg})
           end
         end
 
