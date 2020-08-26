@@ -28,8 +28,8 @@ import lexer
 project = "oso"
 copyright = "2020 Oso Security, Inc"
 author = "oso"
-version = "0.4"
-release = "0.4.1-rc4"
+version = "0.5"
+release = "0.5.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -98,8 +98,10 @@ exclude_patterns = [
     "changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
+    "js/README.md",
     "more/language/polar-classes.rst",  # we don't currently have classes
     "**/venv/**",
+    "**/node_modules/**",
 ]
 
 # Don't copy the source or show a link
@@ -180,6 +182,7 @@ html_favicon = "favicon.ico"
 
 doctest_test_doctest_blocks = ""
 
+lexers["node"] = lexer.NodeShellLexer()
 lexers["polar"] = lexer.PolarLexer()
 lexers["jshell"] = lexer.JShellLexer()
 lexers["oso"] = lexer.OsoLexer()

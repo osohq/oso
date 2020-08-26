@@ -107,6 +107,10 @@ We haven't talked about the application side of this yet.  So far, we've assumed
 
         Java example coming soon.
 
+    .. group-tab:: Node
+
+        Node example coming soon.
+
 
 We used inheritance to capture some of the common
 functionality needed (storing the patient).  In a real application these

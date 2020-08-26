@@ -109,7 +109,7 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
     end
 
     def has_groups(other)
-      groups & other == other
+      @groups & other == other
     end
   end
 
@@ -143,13 +143,13 @@ Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
 
 Enumerators
 ^^^^^^^^^^^^
-Oso handles Ruby `enumerators <https://ruby-doc.org/core/Enumerator.html>`_ by evaluating the
+oso handles Ruby `enumerators <https://ruby-doc.org/core/Enumerator.html>`_ by evaluating the
 yielded values one at a time.
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
 
-  allow(actor, action, resource) if actor.get_group = "payroll";
+  allow(actor, action, resource) if actor.get_group() = "payroll";
 
 .. code-block:: ruby
   :caption: :fas:`gem` app.rb

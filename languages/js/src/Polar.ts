@@ -1,11 +1,10 @@
-import { readFileSync } from 'fs';
 import { createHash } from 'crypto';
-import { extname, isAbsolute, resolve } from 'path';
+import { extname } from 'path';
 import { createInterface } from 'readline';
+import { stdout, stderr } from 'process';
 
 import {
   InlineQueryFailedError,
-  PolarError,
   PolarFileAlreadyLoadedError,
   PolarFileContentsChangedError,
   PolarFileDuplicateContentError,
@@ -16,12 +15,52 @@ import { Query } from './Query';
 import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
+import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
+import { readFile, repr } from './helpers';
 
+// Optional ANSI escape sequences for the REPL.
+let RESET = '';
+let FG_BLUE = '';
+let FG_RED = '';
+if (
+  typeof stdout.hasColors === 'function' &&
+  stdout.hasColors() &&
+  typeof stderr.hasColors === 'function' &&
+  stderr.hasColors()
+) {
+  RESET = '\x1b[0m';
+  FG_BLUE = '\x1b[34m';
+  FG_RED = '\x1b[31m';
+}
+
+/** Create and manage an instance of the Polar runtime. */
 export class Polar {
+  /**
+   * Internal WebAssembly module.
+   *
+   * @internal
+   */
   #ffiPolar: FfiPolar;
+  /**
+   * Manages registration and comparison of JavaScript classes and instances
+   * as well as translations between Polar and JavaScript values.
+   *
+   * @internal
+   */
   #host: Host;
+  /**
+   * Tracking Polar files loaded into the knowledge base by a hash of their
+   * contents.
+   *
+   * @internal
+   */
   #loadedContents: Map<string, string>;
+  /**
+   * Tracking Polar files loaded into the knowledge base by file name.
+   *
+   * @internal
+   */
   #loadedFiles: Map<string, string>;
 
   constructor(opts: Options = {}) {
@@ -31,6 +70,7 @@ export class Polar {
     this.#loadedContents = new Map();
     this.#loadedFiles = new Map();
 
+    // Register built-in classes.
     this.registerClass(Boolean);
     this.registerClass(Number, 'Integer');
     this.registerClass(Number, 'Float');
@@ -39,11 +79,32 @@ export class Polar {
     this.registerClass(Object, 'Dictionary');
   }
 
-  // For tests only.
+  /**
+   * For tests only.
+   *
+   * @hidden
+   */
   __host() {
     return this.#host;
   }
 
+  /**
+   * Process messages received from the Polar VM.
+   *
+   * @internal
+   */
+  private processMessages() {
+    while (true) {
+      let msg = this.#ffiPolar.nextMessage();
+      if (msg === undefined) break;
+      processMessage(msg);
+    }
+  }
+
+  /**
+   * Replace the current Polar VM instance, clearing out all loaded policy but
+   * retaining all registered classes and constants.
+   */
   clear() {
     this.#loadedContents.clear();
     this.#loadedFiles.clear();
@@ -52,12 +113,14 @@ export class Polar {
     previous.free();
   }
 
-  loadFile(name: string): void {
-    if (extname(name) !== '.polar') throw new PolarFileExtensionError(name);
-    let file = isAbsolute(name) ? name : resolve(__dirname, name);
+  /**
+   * Load a Polar policy file.
+   */
+  async loadFile(file: string): Promise<void> {
+    if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
     let contents;
     try {
-      contents = readFileSync(file, { encoding: 'utf8' });
+      contents = await readFile(file);
     } catch (e) {
       if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
       throw e;
@@ -72,23 +135,32 @@ export class Polar {
     const existingFile = this.#loadedContents.get(hash);
     if (existingFile !== undefined)
       throw new PolarFileDuplicateContentError(file, existingFile);
-    this.loadStr(contents, file);
+    await this.loadStr(contents, file);
     this.#loadedContents.set(hash, file);
     this.#loadedFiles.set(file, hash);
   }
 
-  loadStr(contents: string, name?: string): void {
+  /**
+   * Load a Polar policy string.
+   */
+  async loadStr(contents: string, name?: string): Promise<void> {
     this.#ffiPolar.loadFile(contents, name);
+    this.processMessages();
+
     while (true) {
       const query = this.#ffiPolar.nextInlineQuery();
+      this.processMessages();
       if (query === undefined) break;
       const { results } = new Query(query, this.#host);
-      const { done } = results.next();
+      const { done } = await results.next();
       results.return();
       if (done) throw new InlineQueryFailedError(name);
     }
   }
 
+  /**
+   * Query for a Polar predicate or string.
+   */
   query(q: Predicate | string): QueryResult {
     const host = Host.clone(this.#host);
     let ffiQuery;
@@ -98,25 +170,50 @@ export class Polar {
       const term = JSON.stringify(host.toPolar(q));
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
+    this.processMessages();
     return new Query(ffiQuery, host).results;
   }
 
+  /**
+   * Query for a Polar rule.
+   */
   queryRule(name: string, ...args: unknown[]): QueryResult {
     return this.query(new Predicate(name, args));
   }
 
-  repl(load: boolean): void {
-    if (load) process.argv.slice(2).forEach(this.loadFile);
-    createInterface({
+  /**
+   * Start a REPL session.
+   */
+  async repl(files?: string[]): Promise<void> {
+    const rl = createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: 'query> ',
+      prompt: FG_BLUE + 'query> ' + RESET,
       tabSize: 4,
-    }).on('line', line => {
+    });
+
+    let loadError;
+    try {
+      if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
+    } catch (e) {
+      loadError = e;
+    }
+    if (loadError !== undefined) {
+      console.error(FG_RED + 'One or more files failed to load.' + RESET);
+      console.error(loadError.message);
+    }
+
+    rl.prompt();
+    rl.on('line', async line => {
       const input = line.trim().replace(/;+$/, '');
       try {
+        if (input === '') return;
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
-        const results = Array.from(new Query(ffiQuery, this.#host).results);
+        const query = new Query(ffiQuery, this.#host);
+        const results = [];
+        for await (const result of query.results) {
+          results.push(result);
+        }
         if (results.length === 0) {
           console.log(false);
         } else {
@@ -124,27 +221,36 @@ export class Polar {
             if (result.size === 0) {
               console.log(true);
             } else {
-              console.log(JSON.stringify(result, null, 4));
+              for (const [variable, value] of result) {
+                console.log(variable + ' => ' + repr(value));
+              }
             }
           }
         }
       } catch (e) {
-        if (e.kind.split('::')[0] === 'ParseError') {
-          console.log(`Parse error: ${e}`);
-        } else if (e instanceof PolarError) {
-          console.log(e);
-        } else {
-          throw e;
-        }
+        console.error(FG_RED + e.name + RESET);
+        console.error(e.message);
+      } finally {
+        rl.prompt();
       }
+    });
+
+    return new Promise((resolve, _) => {
+      rl.on('close', () => resolve());
     });
   }
 
+  /**
+   * Register a JavaScript class for use in Polar policies.
+   */
   registerClass<T>(cls: Class<T>, alias?: string): void {
     const name = this.#host.cacheClass(cls, alias);
     this.registerConstant(name, cls);
   }
 
+  /**
+   * Register a JavaScript value for use in Polar policies.
+   */
   registerConstant(name: string, value: any): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));

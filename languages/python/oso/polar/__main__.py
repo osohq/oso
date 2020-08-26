@@ -1,3 +1,5 @@
+import sys
+
 from .polar import Polar
 
-Polar().repl(load=True)
+Polar().repl(files=sys.argv[1:])

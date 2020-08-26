@@ -28,9 +28,9 @@ impl MockExternal {
         call_id: u64,
         instance: Option<Term>,
         attribute: Symbol,
-        args: Vec<Term>,
+        args: Option<Vec<Term>>,
     ) -> Option<Term> {
-        assert_eq!(args.len(), 0, "Only support field lookups.");
+        assert!(args.is_none(), "Only support field lookups.");
 
         if self.calls.remove(&call_id) {
             // Calls only return one result, so we have none if the call is in progress.

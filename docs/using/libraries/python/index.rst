@@ -127,7 +127,7 @@ object's elements one at a time. `Generator <https://docs.python.org/3/glossary.
 .. code-block:: polar
    :caption: :fa:`oso` policy.polar
 
-   allow(actor, action, resource) if actor.get_group = "payroll";
+   allow(actor, action, resource) if actor.get_group() = "payroll";
 
 .. code-block:: python
    :caption: :fab:`python` app.py

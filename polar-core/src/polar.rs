@@ -1,12 +1,10 @@
 use super::error::PolarResult;
-use super::formatting::source_lines;
 use super::parser;
 use super::rewrites::*;
 use super::types::*;
 use super::vm::*;
+use super::warnings::check_singletons;
 
-use std::collections::{hash_map::Entry, HashMap};
-use std::io::{stderr, Write};
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -34,6 +32,10 @@ impl Query {
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         self.vm.debug_command(command)
     }
+
+    pub fn next_message(&self) -> Option<Message> {
+        self.vm.messages.next()
+    }
 }
 
 // Query as an iterator returns `None` after the first time `Done` is seen
@@ -54,14 +56,20 @@ impl Iterator for Query {
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
-    pub output: Arc<RwLock<Box<dyn Write>>>,
+    messages: MessageQueue,
+}
+
+impl Default for Polar {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Polar {
-    pub fn new(output: Option<Box<dyn Write>>) -> Self {
+    pub fn new() -> Self {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
-            output: Arc::new(RwLock::new(output.unwrap_or_else(|| Box::new(stderr())))),
+            messages: MessageQueue::new(),
         }
     }
 
@@ -76,10 +84,12 @@ impl Polar {
             parser::parse_lines(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
         lines.reverse();
         kb.sources.add_source(source, src_id);
+        let mut warnings = vec![];
         while let Some(line) = lines.pop() {
             match line {
                 parser::Line::Rule(mut rule) => {
-                    self.check_singletons(&rule, &kb);
+                    let mut rule_warnings = check_singletons(&rule, &kb);
+                    warnings.append(&mut rule_warnings);
                     rewrite_rule(&mut rule, &mut kb);
 
                     let name = rule.name.clone();
@@ -94,58 +104,12 @@ impl Polar {
                 }
             }
         }
+        self.messages.extend(warnings.iter().map(|m| Message {
+            kind: MessageKind::Warning,
+            msg: m.to_owned(),
+        }));
 
         Ok(())
-    }
-
-    /// Warn about singleton variables and unknown specializers in a rule,
-    /// except those whose names start with `_`.
-    pub fn check_singletons(&self, rule: &Rule, kb: &KnowledgeBase) {
-        let mut singletons = HashMap::<Symbol, Option<Term>>::new();
-        let mut check_term = |term: &Term| {
-            if let Value::Variable(sym)
-            | Value::RestVariable(sym)
-            | Value::Pattern(Pattern::Instance(InstanceLiteral { tag: sym, .. })) = term.value()
-            {
-                if !sym.0.starts_with('_') && !kb.is_constant(sym) {
-                    match singletons.entry(sym.clone()) {
-                        Entry::Occupied(mut o) => {
-                            o.insert(None);
-                        }
-                        Entry::Vacant(v) => {
-                            v.insert(Some(term.clone()));
-                        }
-                    }
-                }
-            }
-            term.clone()
-        };
-
-        for param in &rule.params {
-            param.parameter.clone().map_replace(&mut check_term);
-            if let Some(mut spec) = param.specializer.clone() {
-                spec.map_replace(&mut check_term);
-            }
-        }
-        rule.body.clone().map_replace(&mut check_term);
-
-        let mut singletons = singletons
-            .into_iter()
-            .collect::<Vec<(Symbol, Option<Term>)>>();
-        singletons.sort_by_key(|(_sym, term)| term.as_ref().map_or(0, |term| term.offset()));
-        for (sym, singleton) in singletons {
-            if let Some(term) = singleton {
-                let mut writer = self.output.write().unwrap();
-                let _ = if let Value::Pattern(..) = term.value() {
-                    writeln!(&mut writer, "Unknown specializer {}", sym)
-                } else {
-                    writeln!(&mut writer, "Singleton variable {} is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>", sym)
-                };
-                if let Some(ref source) = kb.sources.get_source(&term) {
-                    let _ = writeln!(&mut writer, "{}", source_lines(source, term.offset(), 0));
-                }
-            }
-        }
     }
 
     // Used in integration tests
@@ -173,12 +137,8 @@ impl Polar {
             term
         };
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(
-            self.kb.clone(),
-            trace,
-            vec![query],
-            Some(self.output.clone()),
-        );
+        let vm =
+            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
         Ok(Query { done: false, vm })
     }
 
@@ -188,12 +148,8 @@ impl Polar {
             rewrite_term(&mut term, &mut kb);
         }
         let query = Goal::Query { term };
-        let vm = PolarVirtualMachine::new(
-            self.kb.clone(),
-            trace,
-            vec![query],
-            Some(self.output.clone()),
-        );
+        let vm =
+            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
         Query { done: false, vm }
     }
 
@@ -206,6 +162,10 @@ impl Polar {
     pub fn register_constant(&mut self, name: Symbol, value: Term) {
         self.kb.write().unwrap().constant(name, value)
     }
+
+    pub fn next_message(&self) -> Option<Message> {
+        self.messages.next()
+    }
 }
 
 #[cfg(test)]
@@ -214,7 +174,7 @@ mod tests {
 
     #[test]
     fn can_load_and_query() {
-        let polar = Polar::new(None);
+        let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load("f(_);");
     }

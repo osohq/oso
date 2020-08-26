@@ -1,7 +1,7 @@
 use polar_core::{polar, types::Symbol};
 use wasm_bindgen::prelude::*;
 
-use crate::errors::{serde_serialization_error, Error};
+use crate::errors::{serde_serialization_error, serialization_error, Error};
 use crate::JsResult;
 use crate::Query;
 
@@ -13,7 +13,7 @@ impl Polar {
     #[wasm_bindgen(constructor)]
     pub fn wasm_new() -> Self {
         console_error_panic_hook::set_once();
-        Self(polar::Polar::new(None))
+        Self(polar::Polar::new())
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = loadFile)]
@@ -57,5 +57,11 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = newId)]
     pub fn wasm_get_external_id(&self) -> f64 {
         self.0.get_external_id() as f64
+    }
+
+    #[wasm_bindgen(js_class = Polar, js_name = nextMessage)]
+    pub fn wasm_next_message(&self) -> JsResult<JsValue> {
+        let message = self.0.next_message();
+        serde_wasm_bindgen::to_value(&message).map_err(|e| serialization_error(e.to_string()))
     }
 }

@@ -18,6 +18,9 @@ dev: wasm
 build: wasm
 	yarn tsc --project tsconfig.build.json
 
+fmt: clean
+	yarn fmt
+
 fmtcheck: clean
 	yarn fmtcheck
 
@@ -31,3 +34,9 @@ parity: wasm
 
 test: wasm
 	yarn test
+
+repl: build
+	./bin/repl.js
+
+docs: install
+	yarn docs-build

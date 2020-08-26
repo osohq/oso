@@ -6,22 +6,28 @@ import { parseQueryEvent } from './helpers';
 import { DuplicateInstanceRegistrationError, InvalidCallError } from './errors';
 import { Host } from './Host';
 import type {
-  PolarTerm,
-  QueryEvent,
-  QueryResult,
-  Result,
-  MakeExternal,
+  Debug,
   ExternalCall,
   ExternalIsa,
   ExternalIsSubspecializer,
   ExternalUnify,
-  Debug,
+  MakeExternal,
+  PolarTerm,
+  QueryEvent,
+  QueryResult,
+  Result,
 } from './types';
-import { isGenerator, isGeneratorFunction, QueryEventKind } from './types';
+import { processMessage } from './messages';
+import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
 
+/**
+ * A single Polar query.
+ *
+ * @internal
+ */
 export class Query {
   #ffiQuery: FfiQuery;
-  #calls: Map<number, Generator>;
+  #calls: Map<number, AsyncGenerator>;
   #host: Host;
   results: QueryResult;
 
@@ -32,77 +38,125 @@ export class Query {
     this.results = this.start();
   }
 
+  /**
+   * Process messages received from the Polar VM.
+   *
+   * @internal
+   */
+  private processMessages() {
+    while (true) {
+      let msg = this.#ffiQuery.nextMessage();
+      if (msg === undefined) break;
+      processMessage(msg);
+    }
+  }
+
+  /**
+   * Send result of predicate check back to the Polar VM.
+   *
+   * @internal
+   */
   private questionResult(result: boolean, callId: number): void {
     this.#ffiQuery.questionResult(callId, result);
   }
 
-  private registerCall(
-    attr: string,
+  /**
+   * Register a JavaScript method call or property lookup, wrapping the call
+   * result in an `AsyncGenerator` if it isn't already one.
+   *
+   * @param field The field to look up.
+   * @param callId The Polar VM-assigned ID of the call.
+   * @param instance The instance on which to perform the field lookup.
+   * @param args If it's a method call (as opposed to a field lookup), the
+   * method will be called with these arguments.
+   *
+   * @internal
+   */
+  private async registerCall(
+    field: string,
     callId: number,
     instance: PolarTerm,
-    args: PolarTerm[]
-  ): void {
+    args?: PolarTerm[]
+  ): Promise<void> {
     if (this.#calls.has(callId)) return;
-    const jsArgs = args.map(a => this.#host.toJs(a));
-    const jsInstance = this.#host.toJs(instance);
-    const jsAttr = jsInstance[attr];
-    if (jsAttr === undefined) throw new InvalidCallError(attr, jsInstance);
-    let result: Generator;
-    if (isGenerator(jsAttr)) {
-      // The Generator#next method only takes 0 or 1 args.
-      if (jsArgs.length > 1) throw new InvalidCallError(attr, jsInstance);
-      result = (function* () {
-        while (true) {
-          const { done, value } = jsArgs.length
-            ? jsAttr.next(jsArgs[0])
-            : jsAttr.next();
-          if (done) return;
-          yield value;
-        }
-      })();
-    } else if (isGeneratorFunction(jsAttr)) {
-      result = jsInstance[attr](...jsArgs);
-    } else if (typeof jsAttr === 'function') {
-      result = (function* () {
-        yield jsInstance[attr](...jsArgs);
-      })();
-    } else {
-      // Blow up if jsArgs is not [] since the user is attempting to invoke +
-      // pass args to something that isn't callable.
-      if (jsArgs.length > 0) throw new InvalidCallError(attr, jsInstance);
-      result = (function* () {
-        yield jsAttr;
-      })();
+    const receiver = await this.#host.toJs(instance);
+    let value = receiver[field];
+    if (args !== undefined) {
+      if (typeof value === 'function') {
+        // If value is a function, call it with the provided args.
+        const jsArgs = args!.map(async a => await this.#host.toJs(a));
+        value = receiver[field](...(await Promise.all(jsArgs)));
+      } else {
+        // Error on attempt to call non-function.
+        throw new InvalidCallError(receiver, field);
+      }
     }
-    this.#calls.set(callId, result);
+    const generator = (async function* () {
+      if (isIterableIterator(value)) {
+        // If the call result is an iterable iterator, yield from it.
+        yield* value;
+      } else if (isAsyncIterator(value)) {
+        // Same for async iterators.
+        for await (const result of value) {
+          yield result;
+        }
+      } else {
+        // Otherwise, yield it.
+        yield value;
+      }
+    })();
+    this.#calls.set(callId, generator);
   }
 
+  /**
+   * Send next result of JavaScript method call or property lookup to the Polar
+   * VM.
+   *
+   * @internal
+   */
   private callResult(callId: number, result?: string): void {
     this.#ffiQuery.callResult(callId, result);
   }
 
-  private nextCallResult(callId: number): string | undefined {
-    const { done, value } = this.#calls.get(callId)!.next();
+  /**
+   * Retrieve the next result from a registered call and prepare it for
+   * transmission back to the Polar VM.
+   *
+   * @internal
+   */
+  private async nextCallResult(callId: number): Promise<string | undefined> {
+    const { done, value } = await this.#calls.get(callId)!.next();
     if (done) return undefined;
     return JSON.stringify(this.#host.toPolar(value));
   }
 
+  /**
+   * Send application error back to the Polar VM.
+   *
+   * @internal
+   */
   private applicationError(message: string): void {
     this.#ffiQuery.appError(message);
   }
 
-  private handleCall(
+  /**
+   * Coordinate between [[`registerCall`]], [[`nextCallResult`]], and
+   * [[`callResult`]] to handle an application call.
+   *
+   * @internal
+   */
+  private async handleCall(
     attr: string,
     callId: number,
     instance: PolarTerm,
-    args: PolarTerm[]
-  ): void {
+    args?: PolarTerm[]
+  ): Promise<void> {
     let result;
     try {
-      this.registerCall(attr, callId, instance, args);
-      result = this.nextCallResult(callId);
+      await this.registerCall(attr, callId, instance, args);
+      result = await this.nextCallResult(callId);
     } catch (e) {
-      if (e instanceof InvalidCallError) {
+      if (e instanceof TypeError || e instanceof InvalidCallError) {
         this.applicationError(e.message);
       } else {
         throw e;
@@ -112,10 +166,16 @@ export class Query {
     }
   }
 
-  private *start(): QueryResult {
+  /**
+   * Create an `AsyncGenerator` that can be polled to advance the query loop.
+   *
+   * @internal
+   */
+  private async *start(): QueryResult {
     try {
       while (true) {
         const nextEvent = this.#ffiQuery.nextEvent();
+        this.processMessages();
         const event: QueryEvent = parseQueryEvent(nextEvent);
         switch (event.kind) {
           case QueryEventKind.Done:
@@ -124,7 +184,7 @@ export class Query {
             const { bindings } = event.data as Result;
             const transformed: Map<string, any> = new Map();
             for (const [k, v] of bindings.entries()) {
-              transformed.set(k, this.#host.toJs(v));
+              transformed.set(k, await this.#host.toJs(v));
             }
             yield transformed;
             break;
@@ -132,7 +192,7 @@ export class Query {
             const { instanceId, tag, fields } = event.data as MakeExternal;
             if (this.#host.hasInstance(instanceId))
               throw new DuplicateInstanceRegistrationError(instanceId);
-            this.#host.makeInstance(tag, fields, instanceId);
+            await this.#host.makeInstance(tag, fields, instanceId);
             break;
           }
           case QueryEventKind.ExternalCall: {
@@ -142,7 +202,7 @@ export class Query {
               instance,
               args,
             } = event.data as ExternalCall;
-            this.handleCall(attribute, callId, instance, args);
+            await this.handleCall(attribute, callId, instance, args);
             break;
           }
           case QueryEventKind.ExternalIsSubspecializer: {
@@ -152,7 +212,7 @@ export class Query {
               rightTag,
               callId,
             } = event.data as ExternalIsSubspecializer;
-            const answer = this.#host.isSubspecializer(
+            const answer = await this.#host.isSubspecializer(
               instanceId,
               leftTag,
               rightTag
@@ -162,13 +222,13 @@ export class Query {
           }
           case QueryEventKind.ExternalIsa: {
             const { instance, tag, callId } = event.data as ExternalIsa;
-            const answer = this.#host.isa(instance, tag);
+            const answer = await this.#host.isa(instance, tag);
             this.questionResult(answer, callId);
             break;
           }
           case QueryEventKind.ExternalUnify: {
             const { leftId, rightId, callId } = event.data as ExternalUnify;
-            const answer = this.#host.unify(leftId, rightId);
+            const answer = await this.#host.unify(leftId, rightId);
             this.questionResult(answer, callId);
             break;
           }
@@ -184,6 +244,7 @@ export class Query {
               const trimmed = line.trim().replace(/;+$/, '');
               const command = this.#host.toPolar(trimmed);
               this.#ffiQuery.debugCommand(JSON.stringify(command));
+              this.processMessages();
             });
             break;
         }

@@ -618,11 +618,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         error = <<~TRACE.chomp
           trace (most recent evaluation last):
             in query at line 1, column 1
-              foo(1, 2)
+              foo(1,2)
             in rule foo at line 1, column 13
-              _a_3 in _b_4
-            in rule foo at line 1, column 13
-              _a_3 in _b_4
+              a in b
           Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13
         TRACE
         expect(e.message).to eq(error)

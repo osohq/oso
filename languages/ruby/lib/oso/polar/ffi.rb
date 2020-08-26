@@ -37,7 +37,13 @@ module Oso
       # Wrapper class for Error FFI pointer + operations.
       class Error < ::FFI::AutoPointer
         def self.release(ptr)
-          Rust.free(ptr)
+          Rust.free(ptr) unless ptr.null?
+        end
+      end
+      # Wrapper class for Message FFI pointer + operations.
+      class Message < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr) unless ptr.null?
         end
       end
     end
@@ -49,3 +55,4 @@ require 'oso/polar/ffi/polar'
 require 'oso/polar/ffi/query'
 require 'oso/polar/ffi/query_event'
 require 'oso/polar/ffi/error'
+require 'oso/polar/ffi/message'

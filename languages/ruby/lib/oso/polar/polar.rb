@@ -12,6 +12,26 @@ class TrueClass; include PolarBoolean; end
 # Monkey-patch Ruby false type.
 class FalseClass; include PolarBoolean; end
 
+# https://github.com/ruby/ruby/blob/bb9ecd026a6cadd5d0f85ac061649216806ed935/lib/bundler/vendor/thor/lib/thor/shell/color.rb#L99-L105
+def supports_color
+  $stdout.tty? && $stderr.tty? && ENV['NO_COLOR'].nil?
+end
+
+if supports_color
+  RESET = "\x1b[0m"
+  FG_BLUE = "\x1b[34m"
+  FG_RED = "\x1b[31m"
+else
+  RESET = ''
+  FG_BLUE = ''
+  FG_RED = ''
+end
+
+def print_error(error)
+  warn FG_RED + error.class.name.split('::').last + RESET
+  warn error.message
+end
+
 module Oso
   module Polar
     # Create and manage an instance of the Polar runtime.
@@ -41,7 +61,7 @@ module Oso
         @ffi_polar = FFI::Polar.create
       end
 
-      # Enqueue a Polar policy file for loading into the KB.
+      # Load a Polar policy file.
       #
       # @param name [String]
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
@@ -90,7 +110,7 @@ module Oso
         end
       end
 
-      # Query for a predicate, parsing it if necessary.
+      # Query for a Polar predicate or string.
       #
       # @overload query(query)
       #   @param query [String]
@@ -123,48 +143,6 @@ module Oso
         query(Predicate.new(name, args: args))
       end
 
-      # Start a REPL session.
-      #
-      # @raise [Error] if the FFI call raises one.
-      def repl(load: false) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
-        ARGV.map { |f| load_file(f) } if load
-
-        loop do # rubocop:disable Metrics/BlockLength
-          print 'query> '
-          begin
-            query = $stdin.readline.chomp.chomp(';')
-          rescue EOFError
-            return
-          end
-
-          begin
-            ffi_query = ffi_polar.new_query_from_str(query)
-          rescue ParseError => e
-            puts "Parse error: #{e}"
-            next
-          end
-
-          begin
-            results = Query.new(ffi_query, host: host).results.to_a
-          rescue PolarRuntimeError => e
-            puts e
-            next
-          end
-
-          if results.empty?
-            pp false
-          else
-            results.each do |result|
-              if result.empty?
-                pp true
-              else
-                pp result
-              end
-            end
-          end
-        end
-      end
-
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
@@ -181,6 +159,21 @@ module Oso
         ffi_polar.register_constant(name, value: host.to_polar_term(value))
       end
 
+      # Start a REPL session.
+      #
+      # @param files [Array<String>]
+      # @raise [Error] if the FFI call raises one.
+      def repl(files = [])
+        files.map { |f| load_file(f) }
+        prompt = "#{FG_BLUE}query>#{RESET} "
+        # Try loading the readline module from the Ruby stdlib. If we get a
+        # LoadError, fall back to the standard REPL with no readline support.
+        require 'readline'
+        repl_readline(prompt)
+      rescue LoadError
+        repl_standard(prompt)
+      end
+
       private
 
       # @return [FFI::Polar]
@@ -189,6 +182,66 @@ module Oso
       attr_reader :loaded_names
       # @return [Hash<String, String>]
       attr_reader :loaded_contents
+
+      # The R and L in REPL for systems where readline is available.
+      def repl_readline(prompt)
+        while (buf = Readline.readline(prompt, true))
+          if /^\s*$/ =~ buf # Don't add empty entries to history.
+            Readline::HISTORY.pop
+            next
+          end
+          process_line(buf)
+        end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
+      end
+
+      # The R and L in REPL for systems where readline is not available.
+      def repl_standard(prompt)
+        loop do
+          puts prompt
+          begin
+            buf = $stdin.readline
+          rescue EOFError
+            return
+          end
+          process_line(buf)
+        end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
+      end
+
+      # Process a line of user input in the REPL.
+      #
+      # @param buf [String]
+      def process_line(buf) # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/AbcSize
+        query = buf.chomp.chomp(';')
+        begin
+          ffi_query = ffi_polar.new_query_from_str(query)
+        rescue ParseError => e
+          print_error(e)
+          return
+        end
+
+        begin
+          results = Query.new(ffi_query, host: host).results.to_a
+        rescue PolarRuntimeError => e
+          print_error(e)
+          return
+        end
+
+        if results.empty?
+          puts false
+        else
+          results.each do |result|
+            if result.empty?
+              puts true
+            else
+              result.each do |variable, value|
+                puts "#{variable} => #{value.inspect}"
+              end
+            end
+          end
+        end
+      end
     end
   end
 end
