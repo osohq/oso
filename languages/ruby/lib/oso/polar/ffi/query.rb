@@ -82,7 +82,7 @@ module Oso
           res = Rust.source(self)
           raise FFI::Error.get if res.null?
 
-          res
+          res.to_s
         end
       end
     end
