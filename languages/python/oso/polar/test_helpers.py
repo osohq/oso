@@ -105,8 +105,8 @@ def oso_monkeypatch(monkeypatch):
 
 class OsoMonkeyPatch:
     """Convenience class to shortcut creating a context-based
-       monkeypatch method. Create using the above `oso_monkeypatch`
-       fixture.
+    monkeypatch method. Create using the above `oso_monkeypatch`
+    fixture.
     """
 
     def __init__(self, monkeypatch):
