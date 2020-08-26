@@ -37,7 +37,4 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Fixed parsing of list match statements: ``[1, 2, 3] matches [1, 2, 3]``.
