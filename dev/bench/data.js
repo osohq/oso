@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598466345106,
+  "lastUpdate": 1598466655657,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -1013,6 +1013,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 21495,
             "range": "± 1417",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "distinct": true,
+          "id": "5ae225b0e10e875e3961dea820d097a7014379a2",
+          "message": "Add Node.js Context example to Context page",
+          "timestamp": "2020-08-26T14:19:21-04:00",
+          "tree_id": "7a0362cc4b2b2fc0dcb95e5c5518cae84517e7b4",
+          "url": "https://github.com/osohq/oso/commit/5ae225b0e10e875e3961dea820d097a7014379a2"
+        },
+        "date": 1598466654879,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1527,
+            "range": "± 118",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4892,
+            "range": "± 599",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 132512,
+            "range": "± 7928",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 719440,
+            "range": "± 43630",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 30493,
+            "range": "± 3427",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 31432,
+            "range": "± 2347",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 31541,
+            "range": "± 1825",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 30640,
+            "range": "± 3103",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 29023,
+            "range": "± 2529",
             "unit": "ns/iter"
           }
         ]
