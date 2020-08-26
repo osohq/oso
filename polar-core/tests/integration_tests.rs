@@ -1488,7 +1488,7 @@ fn test_external_unify() {
 
 #[test]
 fn test_list_results() {
-    let mut polar = Polar::new(None);
+    let mut polar = Polar::new();
     let policy = r#"
     delete([x, *xs], x, ys) if delete(xs, x, ys);
     delete([x, *xs], z, [x, *ys]) if

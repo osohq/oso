@@ -585,7 +585,20 @@ impl PolarVirtualMachine {
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::List(list) => {
-                let derefed = list.iter().map(|t| self.deref(t)).collect();
+                let mut rest = false;
+                if let Some(last) = list.last() {
+                    if matches!(last.value(), Value::RestVariable(_)) {
+                        rest = true;
+                    }
+                }
+                let mut derefed: Vec<Term> = list.iter().map(|t| self.deref(t)).collect();
+                if rest {
+                    if let Some(last_term) = derefed.pop() {
+                        if let Value::List(terms) = last_term.value() {
+                            derefed.append(&mut terms.clone());
+                        }
+                    }
+                }
                 term.clone_with_value(Value::List(derefed))
             }
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
@@ -1787,6 +1800,11 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+        self.log(
+            &format!("UNIFY: {} = {}", left.to_polar(), right.to_polar()),
+            &[left, right],
+        );
+
         match (&left.value(), &right.value()) {
             // Unify variables.
             (Value::Variable(var), _) => self.unify_var(var, right)?,
