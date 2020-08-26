@@ -4,6 +4,16 @@ NEXT
 
 **Release date:** XXXX-XX-XX
 
+Major news
+==========
+
+Node.js support
+---------------
+
+oso now supports applications written in Node.js, using our
+:doc:`Node.js library </using/libraries/node/index>`. Download :doc:`here
+</download>`.
+
 Breaking changes
 ================
 
@@ -24,14 +34,11 @@ performs a lookup, and ``x.foo()`` invokes a zero-arity method.
 New features
 ==============
 
-Feature 1
+Debug Mode
 =========
 
-- summary
-- of
-- user facing changes
-
-Link to relevant documentation section
+Oso can be run in debug mode by setting an environment variable ``POLAR_DEBUG=1``
+This prints debug output when polar queries are evaluated to show what's happening.
 
 Other bugs & improvements
 =========================

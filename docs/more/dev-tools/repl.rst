@@ -37,6 +37,24 @@ Once oso is installed, launch the REPL from the terminal:
             $ mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso"
             query>
 
+    .. group-tab:: Node.js
+
+        .. code-block:: console
+            :caption: :fab:`node-js` Launch the REPL
+
+            $ ./node_modules/.bin/oso
+            query>
+
+        .. tip::
+
+           Install oso globally with ``npm install -g`` if you'd like to have
+           the ``oso`` command on your path instead of in your project's
+           ``node_modules`` directory.
+
+           If you are using ``yarn``, ``yarn oso`` will launch the repl.
+
+.. todo:: test above
+
 At the ``query>`` prompt, type a Polar expression and press ``Enter``.
 The system responds with an answer, then prints the ``query>`` prompt
 again, allowing an interactive dialog:
@@ -100,6 +118,13 @@ on the command line:
 
             $ mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="alice.polar"
 
+    .. group-tab:: Node
+
+        .. code-block:: console
+            :caption: :fab:`node-js` Load files and launch the REPL
+
+            $ ./node_modules/.bin/oso -- alice.polar
+
 And now we can use the rule that was loaded:
 
 .. code-block:: oso
@@ -160,3 +185,16 @@ plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
                     oso.repl(args)
                 }
             }
+
+    .. group-tab:: Node
+
+        .. code-block:: javascript
+            :caption: :fab:`node-js` app_repl.js
+
+            const { Expense, User } = require("./models");
+            const { Oso } = require("oso");
+
+            const oso = new Oso();
+            oso.registerClass(Expense);
+            oso.registerClass(User);
+            await oso.repl();

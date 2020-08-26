@@ -1,0 +1,20 @@
+module.exports = {
+  inputFiles: ['./src'],
+  mode: 'library',
+  out: 'docs',
+  exclude: [
+    './test/*',
+    './src/**/*.test.ts',
+    './src/**/polar_wasm_api*',
+    './src/index.ts',
+  ],
+  excludeNotExported: true,
+  excludePrivate: true,
+  excludeProtected: true,
+  ignoreCompilerErrors: true,
+  theme: 'default',
+  readme: '../../README.md',
+  gaID: 'UA-139858805-1',
+  hideGenerator: true,
+  listInvalidSymbolLinks: true,
+};

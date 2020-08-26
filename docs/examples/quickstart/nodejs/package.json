@@ -1,0 +1,10 @@
+{
+  "name": "oso-docs-quickstart",
+  "version": "0",
+  "main": "n/a",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "oso": "../../../../languages/js"
+  }
+}

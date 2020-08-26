@@ -9,6 +9,7 @@ Developer Tools
 
     repl
     debugger
+    tracing
     ide
 
 oso offers several developer tools to make it easier to write and understand policies.
@@ -25,6 +26,12 @@ when learning Polar, and during development and debugging.
 The Polar debugger is for debugging policies.
 
 :doc:`Read on <debugger>` to see how to use the debugger.
+
+:doc:`Tracing <tracing>`
+==========================
+Polar debug tracing can be turned on to see logs while queries are evaluated.
+
+:doc:`Read on <tracing>` to see how to enable tracing.
 
 :doc:`IDE Support <ide>`
 ==========================
