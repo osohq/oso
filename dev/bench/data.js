@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598463541802,
+  "lastUpdate": 1598464968964,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -857,6 +857,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 26205,
             "range": "± 857",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c1ed5f55a4f88299616e9886f94c73af72e4b72",
+          "message": "Merge branch 'main' into salex/fix-lists",
+          "timestamp": "2020-08-26T12:51:36-05:00",
+          "tree_id": "cc24c3709bb6a87d87dd6ce1e0d252832891bdae",
+          "url": "https://github.com/osohq/oso/commit/5c1ed5f55a4f88299616e9886f94c73af72e4b72"
+        },
+        "date": 1598464968167,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1521,
+            "range": "± 164",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4937,
+            "range": "± 416",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 135473,
+            "range": "± 12724",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 710969,
+            "range": "± 44554",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 29938,
+            "range": "± 3381",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 31608,
+            "range": "± 3234",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 30359,
+            "range": "± 3212",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 30770,
+            "range": "± 2402",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 28078,
+            "range": "± 1948",
             "unit": "ns/iter"
           }
         ]
