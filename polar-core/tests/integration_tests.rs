@@ -1484,7 +1484,7 @@ fn test_numeric_applicability() {
 #[test]
 fn test_external_unify() {
     let polar = Polar::new();
-    polar.load("selfEq(x) if eq(x, x); eq(x, x);").unwrap();
+    polar.load_str("selfEq(x) if eq(x, x); eq(x, x);").unwrap();
 
     let query = polar.new_query("selfEq(new Foo{})", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);

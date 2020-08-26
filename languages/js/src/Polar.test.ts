@@ -358,7 +358,7 @@ describe('#loadFile', () => {
       p.loadFile(await tempFile('', 'a.polar'))
     ).resolves.not.toThrow();
     expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
-      "test"
+      /Problem loading file: A file with the same contents as .*b.polar named .*a.polar has already been loaded./
     );
   });
 
@@ -367,14 +367,14 @@ describe('#loadFile', () => {
     const file = await tempFile('f();', 'a.polar');
     await expect(p.loadFile(file)).resolves.not.toThrow();
     await truncate(file);
-    await expect(p.loadFile(file)).rejects.toThrow("test");
+    await expect(p.loadFile(file)).rejects.toThrow(/Problem loading file: A file with the name .*a.polar, but different contents has already been loaded./);
   });
 
   test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
     const file = await tempFileFx();
     await expect(p.loadFile(file)).resolves.not.toThrow();
-    await expect(p.loadFile(file)).rejects.toThrow("test");
+    await expect(p.loadFile(file)).rejects.toThrow(/Problem loading file: File .*f.polar has already been loaded./);
   });
 
   test('can load multiple files', async () => {
