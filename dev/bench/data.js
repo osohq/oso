@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598461655625,
+  "lastUpdate": 1598463541802,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -779,6 +779,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 30186,
             "range": "± 2302",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6013ab2a0faa6b40b8d7a5146d2439221206cef8",
+          "message": "Small updates to README (#375)\n\n* update readme\r\n\r\n* links\r\n\r\n* small change\r\n\r\n* Update README.md\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\n\r\n* correct docs site\r\n\r\n* black\r\n\r\n* more black\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-08-26T13:29:03-04:00",
+          "tree_id": "5e3927a2589bef8047b2312c7e7e9c0247b39e91",
+          "url": "https://github.com/osohq/oso/commit/6013ab2a0faa6b40b8d7a5146d2439221206cef8"
+        },
+        "date": 1598463540943,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1419,
+            "range": "± 90",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4517,
+            "range": "± 233",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 127032,
+            "range": "± 3931",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 676491,
+            "range": "± 21989",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 28118,
+            "range": "± 870",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 27901,
+            "range": "± 1591",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 28135,
+            "range": "± 860",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 28071,
+            "range": "± 1136",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 26205,
+            "range": "± 857",
             "unit": "ns/iter"
           }
         ]
