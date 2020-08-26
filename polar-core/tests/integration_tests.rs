@@ -1473,6 +1473,7 @@ fn test_numeric_applicability() {
     assert!(qnull(&mut polar, "f(nan2)"));
 }
 
+#[test]
 fn test_external_unify() {
     let polar = Polar::new();
     polar.load("selfEq(x) if eq(x, x); eq(x, x);").unwrap();

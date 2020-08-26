@@ -596,6 +596,8 @@ impl PolarVirtualMachine {
                     if let Some(last_term) = derefed.pop() {
                         if let Value::List(terms) = last_term.value() {
                             derefed.append(&mut terms.clone());
+                        } else {
+                            derefed.push(last_term);
                         }
                     }
                 }
@@ -1800,11 +1802,6 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
-        self.log(
-            &format!("UNIFY: {} = {}", left.to_polar(), right.to_polar()),
-            &[left, right],
-        );
-
         match (&left.value(), &right.value()) {
             // Unify variables.
             (Value::Variable(var), _) => self.unify_var(var, right)?,
@@ -1992,26 +1989,35 @@ impl PolarVirtualMachine {
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
-        assert!(has_rest_var(left));
-
-        // [1,2,*rest] , [1,*rest]
-        // [1, *rest], [1, *rest]
-
-        // left: [*rest], right: []
-
-        let n = left.len() - 1;
-        if n > 0 && right.len() >= n {
-            let rest = if has_rest_var(right) && right.len() == left.len() {
-                unify((&left[n].clone(), &right[n].clone()))
-            } else {
-                unify((
+        if !has_rest_var(right) {
+            let n = left.len() - 1;
+            if right.len() >= n {
+                let rest = unify((
                     &left[n].clone(),
                     &Term::new_temporary(Value::List(right[n..].to_vec())),
-                ))
-            };
+                ));
+                self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
+            } else {
+                self.push_goal(Goal::Backtrack)
+            }
+        } else if right.len() > left.len() {
+            let n = left.len() - 1;
+            let rest = unify((
+                &left[n].clone(),
+                &Term::new_temporary(Value::List(right[n..].to_vec())),
+            ));
             self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
+        } else if left.len() > right.len() {
+            let n = right.len() - 1;
+            let rest = unify((
+                &right[n].clone(),
+                &Term::new_temporary(Value::List(left[n..].to_vec())),
+            ));
+            self.append_goals(right.iter().take(n).zip(left).map(unify).chain(vec![rest]))
         } else {
-            self.push_goal(Goal::Backtrack)
+            let n = right.len() - 1;
+            let rest = unify((&right[n].clone(), &left[n].clone()));
+            self.append_goals(right.iter().take(n).zip(left).map(unify).chain(vec![rest]))
         }
     }
 
