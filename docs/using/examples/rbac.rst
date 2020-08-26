@@ -110,8 +110,8 @@ between users and the roles they've been assigned.
 
     .. group-tab:: Ruby
 
-        Our Ruby application has the following :py:class:`User` model that can
-        look up its assigned roles from the database:
+        Our Ruby application has the following ``User`` model that can look up
+        its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/ruby/03-external.rb
            :caption: :fas:`gem` rbac.rb
@@ -129,8 +129,8 @@ between users and the roles they've been assigned.
 
     .. group-tab:: Java
 
-        Our Java application has the following :py:class:`User` model that can
-        look up its assigned roles from the database:
+        Our Java application has the following ``User`` model that can look up
+        its assigned roles from the database:
 
         .. literalinclude:: /examples/rbac/java/User.java
            :caption: :fab:`java` User.java
@@ -139,6 +139,25 @@ between users and the roles they've been assigned.
 
         By registering our application class with oso, we can begin leveraging
         it from within our policy.
+
+    .. group-tab:: Node.js
+
+        Our Node.js application has the following ``User`` model that can look
+        up its assigned roles from the database:
+
+        .. literalinclude:: /examples/rbac/nodejs/03-external.js
+           :caption: :fab:`node-js` rbac.js
+           :language: javascript
+
+        By registering our application class with oso, we can begin leveraging
+        it from within our policy:
+
+        .. literalinclude:: /examples/rbac/nodejs/04-external.js
+           :caption: :fab:`node-js` rbac.js
+           :language: javascript
+           :emphasize-lines: 7
+           :start-after: user-start
+           :end-before: user-end
 
 Our policy currently expects actors to be simple strings, but we can write
 policy over our existing domain model by adding the :polar:`User` :ref:`type

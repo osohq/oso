@@ -20,6 +20,11 @@ import type {
 import { processMessage } from './messages';
 import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
 
+/**
+ * A single Polar query.
+ *
+ * @internal
+ */
 export class Query {
   #ffiQuery: FfiQuery;
   #calls: Map<number, AsyncGenerator>;
@@ -33,6 +38,11 @@ export class Query {
     this.results = this.start();
   }
 
+  /**
+   * Process messages received from the Polar VM.
+   *
+   * @internal
+   */
   private processMessages() {
     while (true) {
       let msg = this.#ffiQuery.nextMessage();
@@ -41,10 +51,27 @@ export class Query {
     }
   }
 
+  /**
+   * Send result of predicate check back to the Polar VM.
+   *
+   * @internal
+   */
   private questionResult(result: boolean, callId: number): void {
     this.#ffiQuery.questionResult(callId, result);
   }
 
+  /**
+   * Register a JavaScript method call or property lookup, wrapping the call
+   * result in an `AsyncGenerator` if it isn't already one.
+   *
+   * @param field The field to look up.
+   * @param callId The Polar VM-assigned ID of the call.
+   * @param instance The instance on which to perform the field lookup.
+   * @param args If it's a method call (as opposed to a field lookup), the
+   * method will be called with these arguments.
+   *
+   * @internal
+   */
   private async registerCall(
     field: string,
     callId: number,
@@ -81,20 +108,43 @@ export class Query {
     this.#calls.set(callId, generator);
   }
 
+  /**
+   * Send next result of JavaScript method call or property lookup to the Polar
+   * VM.
+   *
+   * @internal
+   */
   private callResult(callId: number, result?: string): void {
     this.#ffiQuery.callResult(callId, result);
   }
 
+  /**
+   * Retrieve the next result from a registered call and prepare it for
+   * transmission back to the Polar VM.
+   *
+   * @internal
+   */
   private async nextCallResult(callId: number): Promise<string | undefined> {
     const { done, value } = await this.#calls.get(callId)!.next();
     if (done) return undefined;
     return JSON.stringify(this.#host.toPolar(value));
   }
 
+  /**
+   * Send application error back to the Polar VM.
+   *
+   * @internal
+   */
   private applicationError(message: string): void {
     this.#ffiQuery.appError(message);
   }
 
+  /**
+   * Coordinate between [[`registerCall`]], [[`nextCallResult`]], and
+   * [[`callResult`]] to handle an application call.
+   *
+   * @internal
+   */
   private async handleCall(
     attr: string,
     callId: number,
@@ -116,6 +166,11 @@ export class Query {
     }
   }
 
+  /**
+   * Create an `AsyncGenerator` that can be polled to advance the query loop.
+   *
+   * @internal
+   */
   private async *start(): QueryResult {
     try {
       while (true) {

@@ -96,6 +96,38 @@ make it possible to take advantage of an app's existing domain model. For exampl
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has a field
         called ``isAdmin``, it is evaluated by the Polar rule and found to be true.
 
+    .. group-tab:: Node.js
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            allow(actor, action, resource) if actor.isAdmin;
+
+        The above rule expects the ``actor`` variable to be a JavaScript object
+        with an ``isAdmin`` field. The JavaScript object is passed into oso
+        with a call to ``Oso.isAllowed``:
+
+        .. code-block:: javascript
+            :caption: :fab:`node-js` user.js
+
+            class User {
+              constructor (name, isAdmin) {
+                this.name = name;
+                this.isAdmin = isAdmin;
+              }
+            }
+
+            const user = new User("alice", true);
+
+            (async () => {
+              const decision = await oso.isAllowed(user, 'foo', 'bar');
+              assert(decision);
+            })();
+
+        The code above provides a ``User`` instance as the *actor* for our
+        ``allow`` rule. Since ``User`` has a field called ``isAdmin``, it is
+        evaluated by the Polar rule and found to be true.
+
 In addition to accessing attributes, you can also call methods on application
 instances in a policy:
 
@@ -195,6 +227,25 @@ using the :ref:`operator-new` operator if the class has been **registered**:
         We must pass positional arguments to the class constructor because
         Java does not support keyword arguments.
 
+    .. group-tab:: Node.js
+        JavaScript classes are registered using ``registerClass()``:
+
+        .. code-block:: javascript
+            :caption: :fab:`node-js` app.js
+
+            oso.registerClass(User);
+
+        Once the class is registered, we can make a ``User`` object in Polar.
+        This can be helpful for writing inline test queries:
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            ?= allow(new User("alice", true), "foo", "bar");
+
+        We must pass positional arguments to the class constructor because
+        JavaScript does not support keyword arguments.
+
 Registering classes also makes it possible to use :ref:`specialization`
 and the :ref:`operator-matches` with the registered class. Here's what
 specialization on an application type looks like.
@@ -253,6 +304,19 @@ Either way, using the rule could look like this:
                 assert oso.isAllowed(user, "foo", "bar");
                 assert !oso.isAllowed("notauser", "foo", "bar");
             }
+
+    .. group-tab:: Node.js
+
+        .. code-block:: javascript
+            :caption: :fab:`node-js` user.js
+
+            oso.registerClass(User);
+            const user = new User('alice', true);
+
+            (async () => {
+              assert.equal(true, await oso.isAllowed(user, "foo", "bar"));
+              assert.equal(false, await oso.isAllowed("notauser", "foo", "bar"));
+            })();
 
 
 .. note::
@@ -327,6 +391,32 @@ Once a class is registered, class or static methods can also be called from oso 
                 User user = new User("alice", true);
                 assert oso.isAllowed(user, "foo", "bar");
             }
+
+    .. group-tab:: Node.js
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            allow(actor: User, action, resource) if actor.name in User.superusers();
+
+        .. code-block:: javascript
+            :caption: :fab:`node-js` user.js
+
+            class User {
+              constructor (name, isAdmin) {
+                this.name = name;
+                this.isAdmin = isAdmin;
+              }
+
+              static superusers() {
+                return ['alice', 'bhavik', 'clarice'];
+              }
+            }
+
+            oso.registerClass(User);
+            const user = new User('alice', true);
+
+            (async () => assert(await oso.isAllowed(user, "foo", "bar")))();
 
 .. _built-in-types:
 

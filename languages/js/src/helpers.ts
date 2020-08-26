@@ -9,12 +9,19 @@ import {
 import { isPolarTerm, QueryEventKind } from './types';
 import type { obj, QueryEvent } from './types';
 
-const root: Function = Object.getPrototypeOf(() => {});
+/**
+ * Assemble the prototypal inheritance chain of a class.
+ *
+ * @returns The inheritance chain as a list of prototypes in most-to-least
+ * specific order.
+ *
+ * @internal
+ */
 export function ancestors(cls: Function): Function[] {
   const ancestors = [cls];
   function next(cls: Function): void {
     const parent = Object.getPrototypeOf(cls);
-    if (parent === root) return;
+    if (parent === Function.prototype) return;
     ancestors.push(parent);
     next(parent);
   }
@@ -22,10 +29,23 @@ export function ancestors(cls: Function): Function[] {
   return ancestors;
 }
 
+/**
+ * Stringify a value.
+ *
+ * @returns A string representation of the input value.
+ *
+ * @internal
+ */
 export function repr(x: any): string {
   return inspect(x);
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary
+ * into a valid [[`QueryEvent`]].
+ *
+ * @internal
+ */
 export function parseQueryEvent(event: string | obj): QueryEvent {
   try {
     if (event === 'Done') return { kind: QueryEventKind.Done };
@@ -56,6 +76,12 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
   }
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * a [[`Result`]].
+ *
+ * @hidden
+ */
 function parseResult({ bindings }: obj): QueryEvent {
   if (
     typeof bindings !== 'object' ||
@@ -68,6 +94,12 @@ function parseResult({ bindings }: obj): QueryEvent {
   };
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * a [[`MakeExternal`]].
+ *
+ * @hidden
+ */
 function parseMakeExternal(d: obj): QueryEvent {
   const instanceId = d.instance_id;
   const ctor = d['constructor']?.value;
@@ -88,6 +120,12 @@ function parseMakeExternal(d: obj): QueryEvent {
   };
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalCall`]].
+ *
+ * @hidden
+ */
 function parseExternalCall({
   args,
   attribute,
@@ -108,6 +146,12 @@ function parseExternalCall({
   };
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalIsSubspecializer`]].
+ *
+ * @hidden
+ */
 function parseExternalIsSubspecializer({
   call_id: callId,
   instance_id: instanceId,
@@ -127,6 +171,12 @@ function parseExternalIsSubspecializer({
   };
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalIsa`]].
+ *
+ * @hidden
+ */
 function parseExternalIsa({
   call_id: callId,
   instance,
@@ -144,6 +194,12 @@ function parseExternalIsa({
   };
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * an [[`ExternalUnify`]].
+ *
+ * @hidden
+ */
 function parseExternalUnify({
   call_id: callId,
   left_instance_id: leftId,
@@ -161,6 +217,12 @@ function parseExternalUnify({
   };
 }
 
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * a [[`Debug`]].
+ *
+ * @hidden
+ */
 function parseDebug({ message }: obj): QueryEvent {
   if (typeof message !== 'string') throw new Error();
   return {
@@ -169,6 +231,19 @@ function parseDebug({ message }: obj): QueryEvent {
   };
 }
 
+/**
+ * Promisified version of the pre-`fs/promises` asynchronous `fs.readFile`
+ * function since none of the following work on all Node.js versions we want to
+ * support (>= 10):
+ *
+ * ```ts
+ * import { readFile } from 'fs/promises';
+ * import { promises } from 'fs';
+ * const { readFile } = require('fs/promises');
+ * ```
+ *
+ * @internal
+ */
 export function readFile(file: string): Promise<string> {
   return new Promise((res, rej) =>
     _readFile(file, { encoding: 'utf8' }, (err, contents) =>

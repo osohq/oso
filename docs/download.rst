@@ -112,9 +112,44 @@ oso is available as a library in several languages:
             - OS X
             - Windows
 
+    .. group-tab:: Node.js
+
+        The Node.js version of oso is available on NPM_ and can be installed
+        globally with NPM::
+
+            $ npm install -g oso@{release}
+
+        or added as a dependency to a project's ``package.json`` manifest with
+        NPM::
+
+            $ npm install oso@{release}
+
+        or Yarn::
+
+            $ yarn add oso@{release}
+
+        For more information on the oso Node.js library, see the :doc:`library
+        documentation </using/libraries/node/index>`.
+
+        .. admonition:: What's next
+            :class: tip
+
+            After you've installed oso, check out the
+            :doc:`/getting-started/quickstart`.
+
+        **Requirements**
+
+        - Node.js version 10 or greater
+        - Supported platforms:
+            - Linux
+            - OS X
+            - Windows
+
+        .. _NPM: https://www.npmjs.com/package/oso
+
 **Libraries coming soon:**
 
-- JavaScript / TypeScript
+- JavaScript in the browser
 - Go
 - Rust
 
