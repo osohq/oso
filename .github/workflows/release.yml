@@ -157,7 +157,7 @@ jobs:
       # 64-bit builds only
       CIBW_BUILD: "*64"
       # Used in build.py to find right files
-      CIBW_ENVIRONMENT: ENV=CI
+      CIBW_ENVIRONMENT: OSO_ENV=CI
 
     steps:
       - uses: actions/checkout@v2
@@ -210,7 +210,7 @@ jobs:
     name: Build musl wheels
     runs-on: ubuntu-18.04
     env:
-      ENV: CI
+      OSO_ENV: CI
       RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
     steps:
       - uses: actions/checkout@v2
@@ -225,9 +225,9 @@ jobs:
       - run: mkdir -p languages/python/oso/native
       - run: cp polar-c-api/polar.h languages/python/oso/native/
       - run: cp target/x86_64-unknown-linux-musl/release/libpolar.a languages/python/oso/native/
-      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
+      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
+      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
+      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
       - uses: actions/upload-artifact@v2
         with:
           name: musl-wheel
