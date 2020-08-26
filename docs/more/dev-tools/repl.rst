@@ -118,7 +118,7 @@ on the command line:
 
             $ mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="alice.polar"
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
         .. code-block:: console
             :caption: :fab:`node-js` Load files and launch the REPL
@@ -186,7 +186,7 @@ plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
                 }
             }
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
         .. code-block:: javascript
             :caption: :fab:`node-js` app_repl.js
