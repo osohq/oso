@@ -35,12 +35,8 @@ export class DuplicateInstanceRegistrationError extends PolarError {
 }
 
 export class InlineQueryFailedError extends PolarError {
-  constructor(source: string, file?: string) {
-    if (file !== undefined) {
-      super(`Inline query failed while loading '${file}', ${source}.`);
-    } else {
-      super(`Inline query failed, ${source}.`);
-    }
+  constructor(source: string) {
+    super(`Inline query failed: ${source}`);
     Object.setPrototypeOf(this, InlineQueryFailedError.prototype);
   }
 }

@@ -226,7 +226,7 @@ public class Exceptions {
 
     public static class InlineQueryFailedError extends PolarRuntimeException {
         public InlineQueryFailedError(String source) {
-            super("Inline Query Failed " + source);
+            super("Inline query failed: " + source);
         }
     }
 

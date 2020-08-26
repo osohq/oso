@@ -38,10 +38,6 @@ export class Query {
     this.results = this.start();
   }
 
-  public source(): string {
-    return this.#ffiQuery.source();
-  }
-
   /**
    * Process messages received from the Polar VM.
    *

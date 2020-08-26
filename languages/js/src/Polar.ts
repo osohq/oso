@@ -155,9 +155,7 @@ export class Polar {
       const { results } = new Query(query, this.#host);
       const { done } = await results.next();
       results.return();
-      if (done) {
-        throw new InlineQueryFailedError(source, name);
-      }
+      if (done) throw new InlineQueryFailedError(source);
     }
   }
 

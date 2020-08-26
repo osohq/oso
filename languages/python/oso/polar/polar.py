@@ -141,9 +141,7 @@ class Polar:
                     next(Query(query, host=self.host.copy()).run())
                 except StopIteration:
                     source = query.source()
-                    raise PolarRuntimeException(
-                        f"Inline query in file failed. {source.get()}"
-                    )
+                    raise PolarRuntimeException(f"Inline query failed: {source.get()}")
 
     def query(self, query):
         """Query for a predicate, parsing it if necessary.
