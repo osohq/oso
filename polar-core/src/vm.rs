@@ -1975,7 +1975,6 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::Backtrack)
         }
     }
-
     /// Unify a list that ends with a rest-variable with another.
     /// We assume that the left list has the rest-variable.
     /// A helper method for `unify_lists`.
@@ -1989,31 +1988,28 @@ impl PolarVirtualMachine {
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
-        if !has_rest_var(right) {
-            let n = left.len() - 1;
-            if right.len() >= n {
+        let mut unify_prefix_and_rest =
+            |left: &TermList, right: &TermList, n: usize, mut unify: F| {
                 let rest = unify((
                     &left[n].clone(),
                     &Term::new_temporary(Value::List(right[n..].to_vec())),
                 ));
                 self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
+            };
+
+        if !has_rest_var(right) {
+            let n = left.len() - 1;
+            if right.len() >= n {
+                unify_prefix_and_rest(left, right, n, unify)
             } else {
                 self.push_goal(Goal::Backtrack)
             }
         } else if right.len() > left.len() {
             let n = left.len() - 1;
-            let rest = unify((
-                &left[n].clone(),
-                &Term::new_temporary(Value::List(right[n..].to_vec())),
-            ));
-            self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
+            unify_prefix_and_rest(left, right, n, unify)
         } else if left.len() > right.len() {
             let n = right.len() - 1;
-            let rest = unify((
-                &right[n].clone(),
-                &Term::new_temporary(Value::List(left[n..].to_vec())),
-            ));
-            self.append_goals(right.iter().take(n).zip(left).map(unify).chain(vec![rest]))
+            unify_prefix_and_rest(right, left, n, unify)
         } else {
             let n = right.len() - 1;
             let rest = unify((&right[n].clone(), &left[n].clone()));
