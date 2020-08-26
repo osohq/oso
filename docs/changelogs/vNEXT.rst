@@ -4,47 +4,38 @@ NEXT
 
 **Release date:** XXXX-XX-XX
 
-Major news
-==========
-
-Node.js support
----------------
-
-oso now supports applications written in Node.js, using our
-:doc:`Node.js library </using/libraries/node/index>`. Download :doc:`here
-</download>`.
-
 Breaking changes
 ================
+
+.. TODO remove warning and replace with "None" if no breaking
+   changes.
 
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-Method/Attribute syntax
------------------------
+Breaking change 1
+-----------------
 
-Previously, ``x.foo`` and ``x.foo()`` in a Polar policy could either be
-performing an attribute lookup or invoking a zero-arity method on ``x``. If
-looking up the ``foo`` property returned a method, the host language libraries
-would transparently invoke it and return the result.
+- summary of breaking change
 
-**As of this release, parentheses are required for invocation**. ``x.foo``
-performs a lookup, and ``x.foo()`` invokes a zero-arity method.
+Link to migration guide
+
 
 New features
 ==============
 
-Debug Mode
+Feature 1
 =========
 
-Oso can be run in debug mode by setting an environment variable ``POLAR_DEBUG=1``
-This prints debug output when polar queries are evaluated to show what's happening.
+- summary
+- of
+- user facing changes
+
+Link to relevant documentation section
+
 
 Other bugs & improvements
 =========================
 
-- Improved performance of policies with many rules having ground (constant) parameters.
-- Improved performance of ``in`` operator (list membership) with many ground elements.
-- Stack traces return the original policy source instead of the internal version.
-- New FFI methods for passing print and warning messages from the core runtime to the language libraries.
+
 - When an inline query fails the query that failed is printed in the error message.
