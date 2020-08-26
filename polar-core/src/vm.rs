@@ -1967,59 +1967,97 @@ impl PolarVirtualMachine {
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
-        if has_rest_var(left) {
-            self.unify_lists_with_rest(left, right, unify)
+        if has_rest_var(left) && has_rest_var(right) {
+            self.unify_two_lists_with_rest(left, right, unify)
+        } else if has_rest_var(left) {
+            self.unify_rest_list_with_list(left, right, unify)
         } else if has_rest_var(right) {
-            self.unify_lists_with_rest(right, left, unify)
-        } else if left.len() == right.len() {
-            // No rest-variables; unify element-wise.
-            self.append_goals(left.iter().zip(right).map(unify))
+            self.unify_rest_list_with_list(right, left, unify)
         } else {
-            self.push_goal(Goal::Backtrack)
+            if left.len() == right.len() {
+                // No rest-variables; unify element-wise.
+                self.append_goals(left.iter().zip(right).map(unify))
+            } else {
+                self.push_goal(Goal::Backtrack)
+            }
         }
     }
-    /// Unify a list that ends with a rest-variable with another.
-    /// We assume that the left list has the rest-variable.
+
+    /// Unify two list that end with a rest-variable with eachother.
     /// A helper method for `unify_lists`.
     #[allow(clippy::ptr_arg)]
-    fn unify_lists_with_rest<F>(
+    fn unify_two_lists_with_rest<F>(
         &mut self,
-        left: &TermList,
-        right: &TermList,
+        rest_list_a: &TermList,
+        rest_list_b: &TermList,
         mut unify: F,
     ) -> PolarResult<()>
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
-        let mut unify_prefix_and_rest =
-            |left: &TermList, right: &TermList, n: usize, mut unify: F| {
-                let rest = unify((
-                    &left[n].clone(),
-                    &Term::new_temporary(Value::List(right[n..].to_vec())),
-                ));
-                self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
-            };
-        // [a,b,*rest] = [x,y,z]
-        if !has_rest_var(right) {
-            let n = left.len() - 1;
-            if right.len() >= n {
-                unify_prefix_and_rest(left, right, n, unify)
-            } else {
-                self.push_goal(Goal::Backtrack)
-            }
-        // [a,b,*rest] = [x,y,z,*rest]
-        } else if right.len() > left.len() {
-            let n = left.len() - 1;
-            unify_prefix_and_rest(left, right, n, unify)
-        // [a,b,c,*rest] = [x,y,*rest]
-        } else if left.len() > right.len() {
-            let n = right.len() - 1;
-            unify_prefix_and_rest(right, left, n, unify)
-        // [a,b,*rest] = [x,y,*rest]
+        if rest_list_a.len() == rest_list_b.len() {
+            let n = rest_list_b.len() - 1;
+            let rest = unify((&rest_list_b[n].clone(), &rest_list_a[n].clone()));
+            self.append_goals(
+                rest_list_b
+                    .iter()
+                    .take(n)
+                    .zip(rest_list_a)
+                    .map(unify)
+                    .chain(vec![rest]),
+            )
         } else {
-            let n = right.len() - 1;
-            let rest = unify((&right[n].clone(), &left[n].clone()));
-            self.append_goals(right.iter().take(n).zip(left).map(unify).chain(vec![rest]))
+            let (shorter, longer) = {
+                if rest_list_a.len() < rest_list_b.len() {
+                    (rest_list_a, rest_list_b)
+                } else {
+                    (rest_list_b, rest_list_a)
+                }
+            };
+            let n = shorter.len() - 1;
+            let rest = unify((
+                &shorter[n].clone(),
+                &Term::new_temporary(Value::List(longer[n..].to_vec())),
+            ));
+            self.append_goals(
+                shorter
+                    .iter()
+                    .take(n)
+                    .zip(longer)
+                    .map(unify)
+                    .chain(vec![rest]),
+            )
+        }
+    }
+
+    /// Unify a list that ends with a rest-variable with another that doesn't.
+    /// A helper method for `unify_lists`.
+    #[allow(clippy::ptr_arg)]
+    fn unify_rest_list_with_list<F>(
+        &mut self,
+        rest_list: &TermList,
+        list: &TermList,
+        mut unify: F,
+    ) -> PolarResult<()>
+    where
+        F: FnMut((&Term, &Term)) -> Goal,
+    {
+        let n = rest_list.len() - 1;
+        if list.len() >= n {
+            let rest = unify((
+                &rest_list[n].clone(),
+                &Term::new_temporary(Value::List(list[n..].to_vec())),
+            ));
+            self.append_goals(
+                rest_list
+                    .iter()
+                    .take(n)
+                    .zip(list)
+                    .map(unify)
+                    .chain(vec![rest]),
+            )
+        } else {
+            self.push_goal(Goal::Backtrack)
         }
     }
 
