@@ -29,7 +29,13 @@ class Expense:
             INSERT INTO expenses (amount, description, user_id, created_at, updated_at)
                 VALUES(?, ?, ?, ?, ?) 
         """,
-            [self.amount, self.description, self.user_id, now, now,],
+            [
+                self.amount,
+                self.description,
+                self.user_id,
+                now,
+                now,
+            ],
         )
         self.id = id
 
