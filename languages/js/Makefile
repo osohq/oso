@@ -37,3 +37,6 @@ test: wasm
 
 repl: build
 	./bin/repl.js
+
+docs: install
+	yarn docs-build

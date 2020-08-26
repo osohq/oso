@@ -11,14 +11,16 @@ BUILDDIR      = _build
 export BUNDLE_GEMFILE := $(abspath ../languages/ruby/Gemfile)
 export RUBY_DIR := $(abspath ../languages/ruby)
 export JAVA_DIR := $(abspath ../languages/java/oso)
+export JS_DIR := $(abspath ../languages/js)
 
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.4.1-rc4.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.5.0.jar
 
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
+JS_FILES := $(call rwildcard ../languages/js/src, *.ts)
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -38,7 +40,13 @@ _api_docs/java: $(JAVA_FILES)
 	rm -rf _api_docs/java
 	cp -R $(JAVA_DIR)/target/site/apidocs _api_docs/java
 
-_api_docs: _api_docs/ruby _api_docs/java
+_api_docs/js/node: $(JS_FILES)
+	mkdir -p _api_docs/js
+	make -C $(JS_DIR) docs
+	rm -rf _api_docs/js/node
+	cp -R $(JS_DIR)/docs _api_docs/js/node
+
+_api_docs: _api_docs/ruby _api_docs/java _api_docs/js/node
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
@@ -82,10 +90,17 @@ ruby-test:
 	cd examples/context/ruby && bundle exec rspec test_spec.rb
 	cd examples/inheritance/ruby && bundle exec rspec test_spec.rb
 
+nodejs-test:
+	$(MAKE) -C ../languages/js build
+	cd examples/rbac/nodejs && yarn && yarn jest
+	cd examples/abac/nodejs && yarn && yarn jest
+	cd examples/context/nodejs && yarn && yarn jest
+
 test: doctest
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
+	$(MAKE) nodejs-test
 
 deps:
 	pip3 install -r requirements-docs.txt

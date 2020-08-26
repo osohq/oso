@@ -44,6 +44,13 @@ To start with, we have a simple ``Expense`` class, and some stored data in the
       :caption: :fab:`java` expense.java :download:`(link) </examples/quickstart/java/Expense.java>`
       :language: java
 
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/quickstart/nodejs/expense.js
+      :class: copybutton
+      :caption: :fab:`node-js` expense.js :download:`(link) </examples/quickstart/nodejs/expense.js>`
+      :language: javascript
+
 We'll need our application to be able to control who has access to this data.
 Before we add a web server and start making some requests, lets see if we can get
 some basic authorization in place!
@@ -88,6 +95,15 @@ Adding oso
 
         $ javac -cp {JAR}:. Expense.java
 
+    .. group-tab:: Node.js
+
+      oso v{release} supports Node.js versions **>= 10**
+
+      .. code-block:: console
+
+        $ npm install -g oso@{release}
+
+
 
 Now that we've installed oso, let's see how to make some basic authorization
 decisions.
@@ -118,6 +134,12 @@ arguments, **actor**, **action**, and **resource**:
       :language: java
       :lines: 6-8
       :dedent: 8
+
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/quickstart/nodejs/allow-01.js
+      :language: javascript
+      :lines: 6-8
 
 The above method call returns ``true`` if the **actor** ``"alice@example.com"`` may
 perform the **action** ``"GET"`` on the
@@ -321,6 +343,50 @@ start a REPL session and follow along:
           jshell> oso.isAllowed("bhavik@example.com", "GET", expense)
           $15 ==> false
 
+  .. group-tab:: Node.js
+
+    Run: ``node --experimental-repl-await``
+
+    .. code-block:: node
+
+      > const { EXPENSES } = require('./expense');
+      > const { Oso } = require('oso');
+      > const oso = new Oso();
+      > const alice = 'alice@example.com';
+      > const expense = EXPENSES[1];
+      > await oso.isAllowed(alice, 'GET', expense);
+      false
+
+    We can create a new policy file, and
+    explicitly allow Alice to GET any expense...
+
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    ...which we can load into our oso instance:
+
+    .. code-block:: node
+
+      > const { Expense } = require('./expense');
+      > oso.registerClass(Expense);
+      > await oso.loadFile("expenses.polar");
+
+    ...and now Alice has the power...
+
+    .. code-block:: node
+
+      > await oso.isAllowed(alice, 'GET', expense);
+      true
+
+    ...and everyone else is still denied:
+
+    .. code-block:: node
+
+      > await oso.isAllowed('bhavik@example.com', 'GET', expense);
+      false
+
 .. note::
   Each time you load a file, it will load the policy
   **without** clearing previously loaded rules. Be sure to
@@ -392,6 +458,14 @@ oso:
       :language: java
       :emphasize-lines: 4,7-12,34-38
 
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/quickstart/nodejs/server.js
+      :class: copybutton
+      :caption: :fab:`node-js` server.js :download:`(link) </examples/quickstart/nodejs/server.js>`
+      :language: javascript
+      :emphasize-lines: 3,7-9,19-22
+
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
 ``"Not Found!"``.
@@ -425,6 +499,13 @@ We'll first start our server...
         $ javac -cp {JAR}:. Server.java
         $ java -cp {JAR}:. Server
         Server running on /127.0.0.1:5050
+
+  .. group-tab:: Node.js
+
+    .. code-block:: console
+
+      $ node server.js
+      running on port 5050
 
 ...and then, in another terminal, we can test everything works by making some requests:
 
@@ -506,21 +587,46 @@ able to view expenses, but no one outside the company will be able to:
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
-    .. |string_endsWith| replace:: the ``String.endsWith?`` method
-    .. _string_endsWith: https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#endsWith-java.lang.String-
+    .. |string_endsWithJava| replace:: the ``String.endsWith`` method
+    .. _string_endsWithJava: https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#endsWith-java.lang.String-
 
-    We bind the provided email to the ``actor`` variable in the rule head (specialized on the built-in :ref:`String <strings>` class),
-    and then perform the ``.endsWith("@example.com")`` check in the rule body. If you
-    noticed that the ``.endsWith`` call looks pretty familiar, you're right on ---
-    oso is actually calling out to |string_endsWith|_ defined in the Java standard
-    library. The **actor** value passed to oso is a Java string, and oso allows us
-    to call any ``String`` method from Java's standard library on it.
+    We bind the provided email to the ``actor`` variable in the rule head
+    (specialized on the built-in :ref:`String <strings>` class), and then
+    perform the ``.endsWith("@example.com")`` check in the rule body. If you
+    noticed that the ``.endsWith`` call looks pretty familiar, you're right on
+    --- oso is actually calling out to |string_endsWithJava|_ defined in the
+    Java standard library. The **actor** value passed to oso is a Java string,
+    and oso allows us to call any ``String`` method from Java's standard
+    library on it.
 
-    And that's just the tip of the iceberg. You can register *any* application object with
-    oso and then leverage it in your application's authorization policy.
-    In the next section, we'll update
-    our existing policy to leverage the ``Expense`` class defined in our
-    application.
+    And that's just the tip of the iceberg. You can register *any* application
+    object with oso and then leverage it in your application's authorization
+    policy. In the next section, we'll update our existing policy to leverage
+    the ``Expense`` class defined in our application.
+
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-nodejs.polar
+      :language: polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    .. |string_endsWithJS| replace:: the ``String.prototype.endsWith`` method
+    .. _string_endsWithJS: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith
+
+    We bind the provided email to the ``actor`` variable in the rule head
+    (specialized on the built-in :ref:`String <strings>` class), and then
+    perform the ``.endsWith("@example.com")`` check in the rule body. If you
+    noticed that the ``.endsWith`` call looks pretty familiar, you're right on
+    --- oso is actually calling out to |string_endsWithJS|_ defined in the
+    JavaScript standard library. The **actor** value passed to oso is a
+    JavaScript string, and oso allows us to call any ``String`` method from
+    JavaScript's standard library on it.
+
+    And that's just the tip of the iceberg. You can register *any* application
+    object with oso and then leverage it in your application's authorization
+    policy. In the next section, we'll update our existing policy to leverage
+    the ``Expense`` class defined in our application.
 
 
 Once we've added our new dynamic rule and restarted the web server, every user
@@ -559,12 +665,20 @@ To accomplish that, we can **replace** our existing rule with:
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
+    Behind the scenes, oso looks up the ``submitted_by`` field on the provided
+    ``Expense`` instance and compares that value against the provided **actor**.
+    And just like that, an actor can only see an expense if they submitted the expense.
+
   .. group-tab:: Ruby
 
     .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
       :language: polar
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
+
+    Behind the scenes, oso looks up the ``submitted_by`` field on the provided
+    ``Expense`` instance and compares that value against the provided **actor**.
+    And just like that, an actor can only see an expense if they submitted the expense.
 
   .. group-tab:: Java
 
@@ -573,9 +687,20 @@ To accomplish that, we can **replace** our existing rule with:
       :caption: :fa:`oso` expenses.polar
       :class: copybutton
 
-Behind the scenes, oso looks up the ``submitted_by`` field on the provided
-``Expense`` instance and compares that value against the provided **actor**.
-And just like that, an actor can only see an expense if they submitted the expense.
+    Behind the scenes, oso looks up the ``submittedBy`` field on the provided
+    ``Expense`` instance and compares that value against the provided **actor**.
+    And just like that, an actor can only see an expense if they submitted the expense.
+
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/quickstart/polar/expenses-04-nodejs.polar
+      :language: polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    Behind the scenes, oso looks up the ``submittedBy`` field on the provided
+    ``Expense`` instance and compares that value against the provided **actor**.
+    And just like that, an actor can only see an expense if they submitted the expense.
 
 Now Alice can see her own expenses but not Bhavik's:
 
@@ -604,12 +729,43 @@ approve an ``Expense`` if they manage the ``User`` who submitted the expense
 and the expense's amount is less than $100.00:
 
 
-.. code-block:: polar
-  :class: no-select
+.. tabs::
 
-  allow(approver: User, "approve", expense: Expense) if
-      approver = expense.submitted_by.manager
-      and expense.amount < 10000;
+  .. group-tab:: Python
+
+    .. code-block:: polar
+      :class: no-select
+
+      allow(approver: User, "approve", expense: Expense) if
+          approver = expense.submitted_by.manager
+          and expense.amount < 10000;
+
+  .. group-tab:: Ruby
+
+    .. code-block:: polar
+      :class: no-select
+
+      allow(approver: User, "approve", expense: Expense) if
+          approver = expense.submitted_by.manager
+          and expense.amount < 10000;
+
+  .. group-tab:: Java
+
+    .. code-block:: polar
+      :class: no-select
+
+      allow(approver: User, "approve", expense: Expense) if
+          approver = expense.submittedBy.manager
+          and expense.amount < 10000;
+
+  .. group-tab:: Node.js
+
+    .. code-block:: polar
+      :class: no-select
+
+      allow(approver: User, "approve", expense: Expense) if
+          approver = expense.submittedBy.manager
+          and expense.amount < 10000;
 
 In the process of evaluating that rule, the oso engine would call back into the
 application in order to make determinations that rely on application data, such

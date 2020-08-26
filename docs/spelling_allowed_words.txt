@@ -55,6 +55,8 @@ url
 stderr
 musl
 glibc
+repl
+arity
 
 ## Product names
 sqlite
@@ -71,6 +73,7 @@ Okta
 Rego
 Hashicorp
 JShell
+js
 
 
 ## Misc terms

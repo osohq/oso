@@ -4,7 +4,6 @@ require 'json'
 require 'pp'
 require 'set'
 require 'digest/md5'
-require 'readline'
 
 # Missing Ruby type.
 module PolarBoolean; end
@@ -62,7 +61,7 @@ module Oso
         @ffi_polar = FFI::Polar.create
       end
 
-      # Enqueue a Polar policy file for loading into the KB.
+      # Load a Polar policy file.
       #
       # @param name [String]
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
@@ -111,7 +110,7 @@ module Oso
         end
       end
 
-      # Query for a predicate, parsing it if necessary.
+      # Query for a Polar predicate or string.
       #
       # @overload query(query)
       #   @param query [String]
@@ -144,52 +143,6 @@ module Oso
         query(Predicate.new(name, args: args))
       end
 
-      # Start a REPL session.
-      #
-      # @param files [Array<String>]
-      # @raise [Error] if the FFI call raises one.
-      def repl(files = []) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Metrics/AbcSize
-        files.map { |f| load_file(f) }
-
-        prompt = "#{FG_BLUE}query>#{RESET} "
-        while (buf = Readline.readline(prompt, true))
-          if /^\s*$/ =~ buf # Don't add empty entries to history.
-            Readline::HISTORY.pop
-            next
-          end
-
-          query = buf.chomp.chomp(';')
-          begin
-            ffi_query = ffi_polar.new_query_from_str(query)
-          rescue ParseError => e
-            print_error(e)
-            next
-          end
-
-          begin
-            results = Query.new(ffi_query, host: host).results.to_a
-          rescue PolarRuntimeError => e
-            print_error(e)
-            next
-          end
-
-          if results.empty?
-            puts false
-          else
-            results.each do |result|
-              if result.empty?
-                puts true
-              else
-                result.each do |variable, value|
-                  puts "#{variable} => #{value.inspect}"
-                end
-              end
-            end
-          end
-        end
-      rescue Interrupt # rubocop:disable Lint/SuppressedException
-      end
-
       # Register a Ruby class with Polar.
       #
       # @param cls [Class]
@@ -206,6 +159,21 @@ module Oso
         ffi_polar.register_constant(name, value: host.to_polar_term(value))
       end
 
+      # Start a REPL session.
+      #
+      # @param files [Array<String>]
+      # @raise [Error] if the FFI call raises one.
+      def repl(files = [])
+        files.map { |f| load_file(f) }
+        prompt = "#{FG_BLUE}query>#{RESET} "
+        # Try loading the readline module from the Ruby stdlib. If we get a
+        # LoadError, fall back to the standard REPL with no readline support.
+        require 'readline'
+        repl_readline(prompt)
+      rescue LoadError
+        repl_standard(prompt)
+      end
+
       private
 
       # @return [FFI::Polar]
@@ -214,6 +182,66 @@ module Oso
       attr_reader :loaded_names
       # @return [Hash<String, String>]
       attr_reader :loaded_contents
+
+      # The R and L in REPL for systems where readline is available.
+      def repl_readline(prompt)
+        while (buf = Readline.readline(prompt, true))
+          if /^\s*$/ =~ buf # Don't add empty entries to history.
+            Readline::HISTORY.pop
+            next
+          end
+          process_line(buf)
+        end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
+      end
+
+      # The R and L in REPL for systems where readline is not available.
+      def repl_standard(prompt)
+        loop do
+          puts prompt
+          begin
+            buf = $stdin.readline
+          rescue EOFError
+            return
+          end
+          process_line(buf)
+        end
+      rescue Interrupt # rubocop:disable Lint/SuppressedException
+      end
+
+      # Process a line of user input in the REPL.
+      #
+      # @param buf [String]
+      def process_line(buf) # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/AbcSize
+        query = buf.chomp.chomp(';')
+        begin
+          ffi_query = ffi_polar.new_query_from_str(query)
+        rescue ParseError => e
+          print_error(e)
+          return
+        end
+
+        begin
+          results = Query.new(ffi_query, host: host).results.to_a
+        rescue PolarRuntimeError => e
+          print_error(e)
+          return
+        end
+
+        if results.empty?
+          puts false
+        else
+          results.each do |result|
+            if result.empty?
+              puts true
+            else
+              result.each do |variable, value|
+                puts "#{variable} => #{value.inspect}"
+              end
+            end
+          end
+        end
+      end
     end
   end
 end

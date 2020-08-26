@@ -76,7 +76,7 @@ module Oso
         constructors[name]
       end
 
-      # Check if an instance has been cached.
+      # Check if an instance exists in the {#instances} cache.
       #
       # @param id [Integer]
       # @return [Boolean]
@@ -100,7 +100,8 @@ module Oso
         instances[id]
       end
 
-      # Cache a Ruby instance, fetching a {#new_id} if one isn't provided.
+      # Cache a Ruby instance in the {#instances} cache, fetching a {#new_id}
+      # if one isn't provided.
       #
       # @param instance [Object]
       # @param id [Integer]
