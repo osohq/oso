@@ -14,10 +14,18 @@ authorization logic. You define this logic separately from the rest of your
 application code, but it executes inside the application and can call
 directly into it. oso ships as a library with a built-in debugger and REPL.
 
+oso is ideal for building permissions into user-facing applications, but you can
+check out [Use Cases](https://docs.osohq.com/more/use-cases.html) to learn about
+other applications for oso.
+
+Using oso consists of two parts:
+
+1. Writing oso policies in a declarative policy language called Polar
+2. Embedding oso in your application using the appropriate language-specific authorization library
+
 ## Getting started
 
-To get up and running with oso, check out the [Getting Started guide][docs] in
-the [oso documentation][docs].
+To get up and running with oso, check out the [Getting Started guides](https://docs.osohq.com/getting-started/quickstart.html) in the [oso documentation][docs].
 
 ## Development
 
@@ -61,8 +69,10 @@ See: [LICENSE][license].
 [badge-python]: https://badge.fury.io/py/oso.svg
 [badge-python-link]: https://pypi.org/project/oso/
 [badge-slack]: https://img.shields.io/badge/slack-oso--oss-orange
+
 <!-- NOTE: the Slack invite link must be recreated every 30 days or every 2000
 invites, whichever comes first. -->
+
 [badge-slack-link]: https://join-slack.osohq.com/
 [contributing]: https://github.com/osohq/oso/blob/main/CONTRIBUTING.md
 [docs]: https://docs.osohq.com
