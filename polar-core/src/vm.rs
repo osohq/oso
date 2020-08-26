@@ -585,13 +585,16 @@ impl PolarVirtualMachine {
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::List(list) => {
+                // Check if last element in list is a rest variable.
                 let mut rest = false;
                 if let Some(last) = list.last() {
                     if matches!(last.value(), Value::RestVariable(_)) {
                         rest = true;
                     }
                 }
+                // Deref all elements.
                 let mut derefed: Vec<Term> = list.iter().map(|t| self.deref(t)).collect();
+                // If last element was a rest variable, append the list it derefed to.
                 if rest {
                     if let Some(last_term) = derefed.pop() {
                         if let Value::List(terms) = last_term.value() {
@@ -1996,7 +1999,7 @@ impl PolarVirtualMachine {
                 ));
                 self.append_goals(left.iter().take(n).zip(right).map(unify).chain(vec![rest]))
             };
-
+        // [a,b,*rest] = [x,y,z]
         if !has_rest_var(right) {
             let n = left.len() - 1;
             if right.len() >= n {
@@ -2004,12 +2007,15 @@ impl PolarVirtualMachine {
             } else {
                 self.push_goal(Goal::Backtrack)
             }
+        // [a,b,*rest] = [x,y,z,*rest]
         } else if right.len() > left.len() {
             let n = left.len() - 1;
             unify_prefix_and_rest(left, right, n, unify)
+        // [a,b,c,*rest] = [x,y,*rest]
         } else if left.len() > right.len() {
             let n = right.len() - 1;
             unify_prefix_and_rest(right, left, n, unify)
+        // [a,b,*rest] = [x,y,*rest]
         } else {
             let n = right.len() - 1;
             let rest = unify((&right[n].clone(), &left[n].clone()));
