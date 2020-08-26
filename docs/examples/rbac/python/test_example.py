@@ -20,7 +20,12 @@ def load(oso):
 
 @pytest.mark.parametrize(
     "policy",
-    ["01-simple.polar", "02-simple.polar", "05-external.polar", "06-external.polar",],
+    [
+        "01-simple.polar",
+        "02-simple.polar",
+        "05-external.polar",
+        "06-external.polar",
+    ],
 )
 def test_parses(oso, policy, load):
     class User:
