@@ -14,7 +14,7 @@ include_dirs = {
     "RELEASE": "../../../polar-c-api",
     "CI": "native",
 }
-env = os.environ.get("ENV", "DEVELOPMENT")
+env = os.environ.get("OSO_ENV", "DEVELOPMENT")
 libs = []
 if sys.platform.startswith("win"):
     libs.append(lib_dirs[env] + "/polar.lib")
