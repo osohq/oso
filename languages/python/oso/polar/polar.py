@@ -17,6 +17,7 @@ from _polar_lib import lib
 from .exceptions import (
     PolarApiException,
     PolarRuntimeException,
+    InlineQueryFailedError,
     ParserException,
     PolarFileAlreadyLoadedError,
     PolarFileContentsChangedError,
@@ -140,7 +141,8 @@ class Polar:
                 try:
                     next(Query(query, host=self.host.copy()).run())
                 except StopIteration:
-                    raise PolarRuntimeException("Inline query in file failed.")
+                    source = query.source()
+                    raise InlineQueryFailedError(f"Inline query failed: {source.get()}")
 
     def query(self, query):
         """Query for a predicate, parsing it if necessary.

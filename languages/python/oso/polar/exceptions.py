@@ -45,6 +45,10 @@ class PolarFileNameChangedError(PolarRuntimeException):
     pass
 
 
+class InlineQueryFailedError(PolarRuntimeException):
+    pass
+
+
 class PolarOperationalException(PolarException):
     """Exceptions from polar that are not necessarily the user's fault. OOM etc..."""
 
