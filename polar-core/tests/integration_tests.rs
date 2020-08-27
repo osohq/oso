@@ -1533,4 +1533,5 @@ fn test_list_results() {
         vec![value!([value!(2), value!(3)])]
     );
     assert!(qeval(&mut polar, "xs = [2] and [1,2] = [1, *xs]"));
+    assert!(qnull(&mut polar, "[1, 2] = [2, *ys]"));
 }
