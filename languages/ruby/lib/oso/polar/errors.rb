@@ -37,9 +37,14 @@ module Oso
     class InvalidCallError < PolarRuntimeError; end
     class InvalidConstructorError < PolarRuntimeError; end
     class InvalidQueryTypeError < PolarRuntimeError; end
-    class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end
+    class InlineQueryFailedError < PolarRuntimeError; # rubocop:disable Style/Documentation
+      # @param source [String]
+      def initialize(source)
+        super("Inline query failed: #{source}")
+      end
+    end
     class PolarFileAlreadyLoadedError < PolarRuntimeError # rubocop:disable Style/Documentation
       # @param file [String]
       def initialize(file)

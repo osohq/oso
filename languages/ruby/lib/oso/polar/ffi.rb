@@ -46,6 +46,13 @@ module Oso
           Rust.free(ptr) unless ptr.null?
         end
       end
+
+      # Wrapper class for Source FFI pointer.
+      class Source < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr) unless ptr.null?
+        end
+      end
     end
     private_constant :FFI
   end
@@ -56,3 +63,4 @@ require 'oso/polar/ffi/query'
 require 'oso/polar/ffi/query_event'
 require 'oso/polar/ffi/error'
 require 'oso/polar/ffi/message'
+require 'oso/polar/ffi/source'

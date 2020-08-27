@@ -105,7 +105,7 @@ module Oso
           begin
             Query.new(next_query, host: host).results.next
           rescue StopIteration
-            raise InlineQueryFailedError
+            raise InlineQueryFailedError, next_query.source
           end
         end
       end

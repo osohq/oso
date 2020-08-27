@@ -151,10 +151,11 @@ export class Polar {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
       if (query === undefined) break;
+      const source = query.source();
       const { results } = new Query(query, this.#host);
       const { done } = await results.next();
       results.return();
-      if (done) throw new InlineQueryFailedError(name);
+      if (done) throw new InlineQueryFailedError(source);
     }
   }
 
