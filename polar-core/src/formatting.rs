@@ -11,8 +11,10 @@
 
 use crate::types::*;
 
+use crate::rules::*;
 use crate::sources::*;
 use crate::terms::*;
+use crate::traces::*;
 pub use display::*;
 pub use to_polar::*;
 
@@ -143,8 +145,8 @@ pub mod display {
 
     use super::ToPolarString;
     use crate::numerics::Numeric;
+    use crate::rules::Rule;
     use crate::terms::{Operation, Operator, Symbol, Term, Value};
-    use crate::types::Rule;
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -315,8 +317,8 @@ pub mod display {
 
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
+    use crate::rules::*;
     use crate::terms::*;
-    use crate::types::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
     /// back into polar-parseable strings.

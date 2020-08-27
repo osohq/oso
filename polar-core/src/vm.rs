@@ -6,13 +6,17 @@ use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
+use super::events::*;
 use super::formatting::ToPolarString;
+use super::kb::*;
 use super::lexer::loc_to_pos;
 use super::messages::*;
 use super::numerics::*;
+use super::rewrites::unwrap_and;
+use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-use super::types::*;
+use super::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]
