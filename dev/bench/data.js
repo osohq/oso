@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598566329227,
+  "lastUpdate": 1598569295989,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -1871,6 +1871,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 30182,
             "range": "± 3739",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e0fa0baa16b3443ac32c9a896402f25daa230e49",
+          "message": "Changelog entry incorrect for POLAR_DEBUG. (#385)\n\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-08-27T18:52:22-04:00",
+          "tree_id": "9703057c25cd81bcb4d943b1d880381d7fb04750",
+          "url": "https://github.com/osohq/oso/commit/e0fa0baa16b3443ac32c9a896402f25daa230e49"
+        },
+        "date": 1598569295225,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1270,
+            "range": "± 52",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4110,
+            "range": "± 101",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 113599,
+            "range": "± 523",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 600900,
+            "range": "± 1199",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 25876,
+            "range": "± 608",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 25678,
+            "range": "± 730",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 25591,
+            "range": "± 675",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 25618,
+            "range": "± 599",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 23951,
+            "range": "± 593",
             "unit": "ns/iter"
           }
         ]
