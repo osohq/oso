@@ -3,6 +3,49 @@
 # @TODO: Should we just generate these from the rust code?
 
 
+class OsoException(Exception):
+    def __init__(self, message=None, details=None):
+        self.details = details
+        self.stack_trace = details.stack_trace
+        super(message)
+
+
+class FFIErrorNotFound(OsoException):
+    pass
+
+
+class PolarRuntimeException(OsoException):
+    pass
+
+
+class SerializationError(PolarRuntimeException):
+    pass
+
+
+class UnsupportedError(PolarRuntimeException):
+    pass
+
+
+class PolarTypeError(PolarRuntimeException):
+    pass
+
+
+class StackOverflowError(PolarRuntimeException):
+    pass
+
+
+class UnregisteredClassError(PolarRuntimeException):
+    pass
+
+
+class MissingConstructorError(PolarRuntimeException):
+    pass
+
+
+class UnregisteredInstanceError(PolarRuntimeException):
+    pass
+
+
 class PolarException(Exception):
     """Base class for all exceptions from within polar."""
 
