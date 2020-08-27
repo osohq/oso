@@ -1,3 +1,4 @@
+use super::terms::*;
 use super::types::*;
 
 /// Replace the left value by the AND of the right and the left.

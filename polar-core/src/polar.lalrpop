@@ -9,6 +9,8 @@ use crate::lexer::{self, Token};
 use crate::parser::Line;
 use crate::error;
 use crate::types::*;
+use crate::terms::*;
+use crate::numerics::*;
 
 use lalrpop_util::ParseError;
 

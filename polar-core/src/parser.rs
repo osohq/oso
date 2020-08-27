@@ -8,6 +8,7 @@ lalrpop_mod!(
 
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
+use super::terms::*;
 use super::types::*;
 
 #[derive(Clone, Debug, PartialEq)]

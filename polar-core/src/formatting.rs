@@ -10,6 +10,9 @@
 //! formatting requirements.
 
 use crate::types::*;
+
+use crate::sources::*;
+use crate::terms::*;
 pub use display::*;
 pub use to_polar::*;
 
@@ -139,7 +142,9 @@ pub mod display {
     use std::sync::Arc;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Operation, Operator, Rule, Symbol, Term, Value};
+    use crate::numerics::Numeric;
+    use crate::terms::{Operation, Operator, Symbol, Term, Value};
+    use crate::types::Rule;
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -310,6 +315,7 @@ pub mod display {
 
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
+    use crate::terms::*;
     use crate::types::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned

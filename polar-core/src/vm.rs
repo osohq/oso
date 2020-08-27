@@ -9,6 +9,9 @@ use super::error::{self, PolarResult};
 use super::formatting::ToPolarString;
 use super::lexer::loc_to_pos;
 use super::messages::*;
+use super::numerics::*;
+use super::sources::*;
+use super::terms::*;
 use super::types::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
@@ -696,7 +699,8 @@ impl PolarVirtualMachine {
     }
 
     pub fn source(&self, term: &Term) -> Option<Source> {
-        self.kb.read().unwrap().sources.get_source(&term)
+        term.get_source_id()
+            .and_then(|id| self.kb.read().unwrap().sources.get_source(id))
     }
 
     /// Get the query stack as a string for printing in error messages.
@@ -732,7 +736,11 @@ impl PolarVirtualMachine {
                         continue;
                     }
                     let _ = write!(st, "\n  ");
-                    let source = { self.kb.read().unwrap().sources.get_source(&t) };
+
+                    let source = {
+                        t.get_source_id()
+                            .and_then(|src_id| self.kb.read().unwrap().sources.get_source(src_id))
+                    };
                     if let Some(source) = source {
                         if let Some(rule) = &rule {
                             let _ = write!(st, "in rule {} ", rule.name.to_polar());

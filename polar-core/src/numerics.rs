@@ -1,10 +1,16 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::mem::discriminant;
 use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Sub};
 
-use super::types::*;
+/// A number. See the [`numerics`] module for implementations.
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum Numeric {
+    Integer(i64),
+    Float(f64),
+}
 
 impl Add for Numeric {
     type Output = Option<Self>;

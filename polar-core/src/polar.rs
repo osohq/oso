@@ -2,6 +2,8 @@ use super::error::PolarResult;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
+use super::sources::*;
+use super::terms::*;
 use super::types::*;
 use super::vm::*;
 use super::warnings::check_singletons;
