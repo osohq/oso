@@ -39,16 +39,7 @@ impl Query {
     }
 
     pub fn source_info(&self) -> String {
-        let mut source_info = self.vm.term_source_string(&self.term);
-        if let Some(source) = self.vm.source(&self.term) {
-            let offset = self.term.offset();
-            let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
-            source_info.push_str(&format!(" at line {}, column {}", row, column));
-            if let Some(filename) = source.filename {
-                source_info.push_str(&format!(" in file {}", filename));
-            }
-        }
-        source_info
+        self.vm.term_source_info(&self.term)
     }
 }
 

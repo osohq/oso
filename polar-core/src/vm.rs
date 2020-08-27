@@ -2258,15 +2258,37 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn term_source_string(&self, term: &Term) -> String {
+    pub fn term_source(&self, term: &Term, include_info: bool) -> String {
         let source = self.source(term);
         let span = term.span();
-        match (source, span) {
+
+        let mut source_string = match (&source, &span) {
             (Some(source), Some((left, right))) => {
-                source.src.chars().take(right).skip(left).collect()
+                source.src.chars().take(*right).skip(*left).collect()
             }
             _ => term.to_polar(),
+        };
+
+        if include_info {
+            if let Some(source) = source {
+                let offset = term.offset();
+                let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
+                source_string.push_str(&format!(" at line {}, column {}", row + 1, column));
+                if let Some(filename) = source.filename {
+                    source_string.push_str(&format!(" in file {}", filename));
+                }
+            }
         }
+
+        source_string
+    }
+
+    pub fn term_source_info(&self, term: &Term) -> String {
+        self.term_source(term, true)
+    }
+
+    pub fn term_source_string(&self, term: &Term) -> String {
+        self.term_source(term, false)
     }
 
     pub fn rule_source_string(&self, rule: &Rule) -> String {
