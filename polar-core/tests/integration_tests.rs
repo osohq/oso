@@ -169,7 +169,9 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
 }
 
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
-    let query = polar.new_query(query_str, false).unwrap();
+    let query = polar
+        .new_query(query_str, false)
+        .expect("Expected result for var, got None");
     query_results!(query)
         .iter()
         .map(|bindings| bindings.0.get(&Symbol(var.to_string())).unwrap().clone())
@@ -1483,4 +1485,53 @@ fn test_external_unify() {
     let query = polar.new_query("eq(new Foo{}, new Foo{})", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert!(results.is_empty());
+}
+
+#[test]
+fn test_list_results() {
+    let mut polar = Polar::new();
+    let policy = r#"
+    delete([x, *xs], x, ys) if delete(xs, x, ys);
+    delete([x, *xs], z, [x, *ys]) if
+        x != z and delete(xs, z, ys);
+    delete([], _, []);
+    "#;
+    polar.load(policy).unwrap();
+    assert!(qeval(&mut polar, "delete([1,2,3,2,1],2,[1,3,1])"));
+    assert_eq!(
+        qvar(&mut polar, "delete([1,2,3,2,1],2,result)", "result"),
+        vec![value!([value!(1), value!(3), value!(1)])]
+    );
+
+    assert_eq!(
+        qvar(&mut polar, "[1,2] = [1, *ys]", "ys"),
+        vec![value!([value!(2)])]
+    );
+
+    assert_eq!(
+        qvar(
+            &mut polar,
+            "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+            "xs"
+        ),
+        vec![value!([value!(3)])]
+    );
+    assert_eq!(
+        qvar(
+            &mut polar,
+            "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+            "ys"
+        ),
+        vec![value!([value!(2), value!(3)])]
+    );
+    assert_eq!(
+        qvar(
+            &mut polar,
+            "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+            "ys"
+        ),
+        vec![value!([value!(2), value!(3)])]
+    );
+    assert!(qeval(&mut polar, "xs = [2] and [1,2] = [1, *xs]"));
+    assert!(qnull(&mut polar, "[1, 2] = [2, *ys]"));
 }
