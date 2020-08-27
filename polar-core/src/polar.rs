@@ -80,8 +80,8 @@ impl Polar {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
-            loaded_content: Arc::new(RwLock::new(HashMap::new())),    // file content -> file name
-            loaded_files: Arc::new(RwLock::new(HashSet::new())),            // set of file names
+            loaded_content: Arc::new(RwLock::new(HashMap::new())), // file content -> file name
+            loaded_files: Arc::new(RwLock::new(HashSet::new())),   // set of file names
         }
     }
 
