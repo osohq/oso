@@ -83,7 +83,6 @@ Execute a Polar query through the FFI event interface.
 | `results`           |        |         | x            |         |
 | `getCall`           |        |         | x            |         |
 | `run`               | `run`  | `start` | `nextResult` | `start` |
-| `source`            | x      | x       | x            | x       |
 
 ## Host
 
