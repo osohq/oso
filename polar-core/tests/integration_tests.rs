@@ -1502,4 +1502,35 @@ fn test_list_results() {
         qvar(&mut polar, "delete([1,2,3,2,1],2,result)", "result"),
         vec![value!([value!(1), value!(3), value!(1)])]
     );
+
+    assert_eq!(
+        qvar(&mut polar, "[1,2] = [1, *ys]", "ys"),
+        vec![value!([value!(2)])]
+    );
+
+    assert_eq!(
+        qvar(
+            &mut polar,
+            "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+            "xs"
+        ),
+        vec![value!([value!(3)])]
+    );
+    assert_eq!(
+        qvar(
+            &mut polar,
+            "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+            "ys"
+        ),
+        vec![value!([value!(2), value!(3)])]
+    );
+    assert_eq!(
+        qvar(
+            &mut polar,
+            "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+            "ys"
+        ),
+        vec![value!([value!(2), value!(3)])]
+    );
+    assert!(qeval(&mut polar, "xs = [2] and [1,2] = [1, *xs]"));
 }
