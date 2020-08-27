@@ -1,5 +1,5 @@
 pub use polar_core::polar::{Polar, Query};
-use polar_core::{error, types, terms};
+use polar_core::{error, terms};
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};

@@ -4,7 +4,7 @@ use super::error::PolarResult;
 use super::formatting::{source_lines, ToPolarString};
 use super::sources::*;
 use super::terms::*;
-use super::types::*;
+
 use super::vm::*;
 
 impl PolarVirtualMachine {

@@ -4,7 +4,7 @@ use std::fmt;
 
 use crate::sources::*;
 use crate::terms::*;
-use crate::types::*;
+
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
