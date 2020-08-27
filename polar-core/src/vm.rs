@@ -8,6 +8,7 @@ use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
 use super::formatting::ToPolarString;
 use super::lexer::loc_to_pos;
+use super::messages::*;
 use super::types::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
