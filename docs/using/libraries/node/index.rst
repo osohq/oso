@@ -145,7 +145,7 @@ by evaluating the yielded values one at a time.
 
   class User {
     getGroup() {
-      return ["HR", "payroll"].values()
+      return ["HR", "payroll"].values();
     }
   }
 

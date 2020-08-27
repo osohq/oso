@@ -247,7 +247,8 @@ public class Polar {
         Ffi.Query nextQuery = ffiPolar.nextInlineQuery();
         while (nextQuery != null) {
             if (!new Query(nextQuery, host).hasMoreElements()) {
-                throw new Exceptions.InlineQueryFailedError();
+                String source = nextQuery.source();
+                throw new Exceptions.InlineQueryFailedError(source);
             }
             nextQuery = ffiPolar.nextInlineQuery();
         }

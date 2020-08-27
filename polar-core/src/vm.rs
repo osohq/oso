@@ -716,7 +716,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn source(&self, term: &Term) -> Option<Source> {
+    pub fn source(&self, term: &Term) -> Option<Source> {
         self.kb.read().unwrap().sources.get_source(&term)
     }
 
@@ -767,7 +767,7 @@ impl PolarVirtualMachine {
                         }
                         let _ = writeln!(st);
                     };
-                    let _ = write!(st, "    {}", self.term_source(t));
+                    let _ = write!(st, "    {}", self.term_source(t, false));
                 }
             }
         }
@@ -2362,15 +2362,29 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn term_source(&self, term: &Term) -> String {
+    pub fn term_source(&self, term: &Term, include_info: bool) -> String {
         let source = self.source(term);
         let span = term.span();
-        match (source, span) {
+
+        let mut source_string = match (&source, &span) {
             (Some(source), Some((left, right))) => {
-                source.src.chars().take(right).skip(left).collect()
+                source.src.chars().take(*right).skip(*left).collect()
             }
             _ => term.to_polar(),
+        };
+
+        if include_info {
+            if let Some(source) = source {
+                let offset = term.offset();
+                let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
+                source_string.push_str(&format!(" at line {}, column {}", row + 1, column));
+                if let Some(filename) = source.filename {
+                    source_string.push_str(&format!(" in file {}", filename));
+                }
+            }
         }
+
+        source_string
     }
 
     pub fn rule_source(&self, rule: &Rule) -> String {
@@ -2381,17 +2395,17 @@ impl PolarVirtualMachine {
                 if acc != "" {
                     acc += ", ";
                 }
-                acc += &self.term_source(&p.parameter);
+                acc += &self.term_source(&p.parameter, false);
                 if let Some(spec) = &p.specializer {
                     acc += ": ";
-                    acc += &self.term_source(&spec);
+                    acc += &self.term_source(&spec, false);
                 }
                 acc
             })
         );
         // head
         head += " if\n  ";
-        head + &self.term_source(&rule.body)
+        head + &self.term_source(&rule.body, false)
     }
 
     fn set_error_context(

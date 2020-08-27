@@ -19,7 +19,10 @@ jobs:
           output-file-path: output.txt
           # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t5/GitHub-Actions/Github-action-not-triggering-gh-pages-upon-push/td-p/26869/highlight/false
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: ${{ github.ref == 'refs/branch/main' }}
+          comment-on-alert: true
           alert-comment-cc-users: '@osohq/eng'
-          comment-always: true
-          save-data-file: ${{ github.ref == 'refs/branch/main' }}
+          alert-threshold: "150%"
+          # Only push, save + comment on main
+          auto-push: ${{ github.ref == 'refs/heads/main' }}
+          comment-always: ${{ github.ref == 'refs/heads/main' }}
+          save-data-file: ${{ github.ref == 'refs/heads/main' }}
