@@ -549,6 +549,12 @@ impl PolarVirtualMachine {
         self.bindings.push(Binding(var.clone(), value));
     }
 
+    /// Push a binding of a parital onto the binding stack.
+    fn bind_partial(&mut self, var: &Symbol, value: Term) {
+        let new_var = Symbol(format!("partial_{}", var.0));
+        self.bind(&new_var, value);
+    }
+
     /// Augment the bindings stack with constants from a hash map.
     /// There must be no temporaries bound yet.
     pub fn bind_constants(&mut self, bindings: Bindings) {
@@ -608,7 +614,11 @@ impl PolarVirtualMachine {
     }
 
     pub fn deep_deref(&self, term: &Term) -> Term {
-        term.cloned_map_replace(&mut |t| self.deref(t))
+        match term.value() {
+            // Partial eval expression so don't deref SKETCHY
+            Value::Expression(_) => term.clone(),
+            _ => term.cloned_map_replace(&mut |t| self.deref(t)),
+        }
     }
 
     /// Recursively dereference a variable.
@@ -1611,6 +1621,19 @@ impl PolarVirtualMachine {
                     check_errors: true,
                 })?;
             }
+            Value::Partial(partial) => {
+                let mut partial = partial.clone();
+
+                let (name, next_partial) = partial.lookup(field, value.clone());
+
+                self.push_goal(Goal::Unify {
+                    left: value.clone(),
+                    right: next_partial.clone(),
+                })?;
+
+                self.bind_partial(&name, next_partial);
+                self.bind_partial(partial.name(), partial.clone().finalize());
+            }
             _ => {
                 return Err(self.type_error(
                     &object,
@@ -1852,6 +1875,22 @@ impl PolarVirtualMachine {
             // Unify variables.
             (Value::Variable(var), _) => self.unify_var(var, right)?,
             (_, Value::Variable(var)) => self.unify_var(var, left)?,
+
+            (Value::Partial(_), Value::Partial(_)) => {
+                unimplemented!("idk");
+            }
+
+            (Value::Partial(partial), _) => {
+                let mut partial = partial.clone();
+                partial.unify(right.clone());
+                self.bind_partial(&partial.name().clone(), partial.finalize());
+            }
+
+            (_, Value::Partial(partial)) => {
+                let mut partial = partial.clone();
+                partial.unify(left.clone());
+                self.bind_partial(&partial.name().clone(), partial.finalize());
+            }
 
             // Unify rest-variables with list tails.
             (Value::RestVariable(var), _) => self.unify_var(var, right)?,

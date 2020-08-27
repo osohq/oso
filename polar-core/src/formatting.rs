@@ -553,6 +553,7 @@ pub mod to_polar {
                 Value::Variable(s) => s.to_polar(),
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
+                Value::Partial(p) => format!("partial {{ {} }}", p.clone().finalize().to_polar()),
             }
         }
     }

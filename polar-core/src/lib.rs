@@ -13,6 +13,7 @@ pub mod kb;
 pub mod messages;
 mod numerics;
 pub mod parser;
+mod partial;
 pub mod polar;
 mod rewrites;
 pub mod rules;
