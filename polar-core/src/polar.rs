@@ -39,7 +39,7 @@ impl Query {
     }
 
     pub fn source_info(&self) -> String {
-        self.vm.term_source_info(&self.term)
+        self.vm.term_source(&self.term, true)
     }
 }
 
