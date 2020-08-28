@@ -182,9 +182,7 @@ export class Polar {
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 
-  /**
-   * Start a REPL session.
-   */
+  /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
     let loadError;
     try {
@@ -199,7 +197,7 @@ export class Polar {
 
     if (repl) {
       repl.setPrompt(PROMPT);
-      const evalQuery = this.evalQuery.bind(this);
+      const evalQuery = this.evalReplInput.bind(this);
       repl.eval = async (cmd: string, _ctx: any, _file: string, cb: Function) =>
         cb(null, await evalQuery(cmd));
       const listeners: Function[] = repl.listeners('exit');
@@ -217,14 +215,19 @@ export class Polar {
       });
       rl.prompt();
       rl.on('line', async line => {
-        const result = await this.evalQuery(line);
+        const result = await this.evalReplInput(line);
         console.log(result);
         rl.prompt();
       });
     }
   }
 
-  private async evalQuery(query: string): Promise<boolean | void> {
+  /**
+   * Evaluate REPL input.
+   *
+   * @internal
+   */
+  private async evalReplInput(query: string): Promise<boolean | void> {
     const input = query.trim().replace(/;+$/, '');
     try {
       if (input !== '') {
