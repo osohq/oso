@@ -500,6 +500,15 @@ def test_constructor(polar, qvar):
         == 2
     )
 
+    assert (
+        qvar(
+            "instance = new TestConstructorTwo(1, y: 2) and x = instance.x and y = instance.y",
+            "y",
+            one=True,
+        )
+        == 2
+    )
+
 
 def test_instance_cache(polar, qeval, query):
     class Counter:
