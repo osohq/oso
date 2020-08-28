@@ -109,6 +109,17 @@ Predicate: Value = {
     }
 };
 
+Constructor: Value = {
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> <kwargs:("," <Fields<Exp5<"Term">>>)?>")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Constructor(Constructor{name, args, kwargs})
+    }
+
+}
+
 Fields<T>: BTreeMap<Symbol, Term> = {
     <name:Name> ":" <value:T> => {
         let mut fields = BTreeMap::new();

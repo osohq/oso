@@ -119,6 +119,13 @@ pub struct Predicate {
     pub args: TermList,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct Constructor {
+    pub name: Symbol,
+    pub args: TermList,
+    pub kwargs: Option<BTreeMap<Symbol, Term>>,
+}
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operator {
     Debug,
@@ -226,6 +233,7 @@ pub enum Value {
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),
+    Constructor(Constructor),
 }
 
 impl Value {
@@ -275,7 +283,8 @@ impl Value {
             Value::Call(_)
             | Value::ExternalInstance(_)
             | Value::Variable(_)
-            | Value::RestVariable(_) => false,
+            | Value::RestVariable(_)
+            | Value::Constructor(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
             Value::InstanceLiteral(_) | Value::Pattern(_) => panic!("unexpected value type"),
             Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
@@ -436,6 +445,16 @@ impl Term {
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
                 fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+            }
+            Value::Constructor(Constructor {
+                ref mut args,
+                ref mut kwargs,
+                ..
+            }) => {
+                args.iter_mut().for_each(|term| term.map_replace(f));
+                if let Some(ref mut fields) = kwargs {
+                    fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+                }
             }
         };
         self.replace_value(value);

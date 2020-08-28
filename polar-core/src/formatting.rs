@@ -466,6 +466,21 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for Constructor {
+        fn to_polar(&self) -> String {
+            let args = format_args(Operator::And, &self.args, ", ");
+            let kwargs = match &self.kwargs {
+                Some(dict) => dict
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                None => "".to_owned(),
+            };
+            format!("{}({})", self.name.to_polar(), vec![args, kwargs].join(","))
+        }
+    }
+
     impl ToPolarString for Rule {
         fn to_polar(&self) -> String {
             match &self.body.value() {
@@ -535,6 +550,7 @@ pub mod to_polar {
                 Value::Variable(s) => s.to_polar(),
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
+                Value::Constructor(c) => c.to_polar(),
             }
         }
     }
