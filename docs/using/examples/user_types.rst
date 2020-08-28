@@ -47,7 +47,14 @@ policy to express this logic.
 
     .. group-tab:: Node.js
 
-        Node.js example coming soon.
+        Let's start by defining JavaScript classes to represent customers and
+        internal users:
+
+        .. literalinclude:: /examples/user_types/nodejs/01-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: classes-start
+            :end-before: classes-end
 
 Note that if we already had classes in our application that represented customers and internal users,
 we could have simply decorated them with :py:func:`oso.polar_class`.
@@ -77,7 +84,12 @@ We can now write a simple policy over these Actor types:
 
   .. group-tab:: Node.js
 
-    Node.js example coming soon.
+    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
+
 
 This policy uses :ref:`specialized rules <specializer>` to control rules execution based on
 the Actor types that is passed into the authorization request.
@@ -112,7 +124,12 @@ For our example, making a request might look like this:
 
     .. group-tab:: Node.js
 
-        Node.js example coming soon.
+        .. literalinclude:: /examples/user_types/nodejs/01-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: app-start
+            :end-before: app-end
+
 
 Hooray, our customer and internal dashboards are now secure!
 
@@ -149,7 +166,12 @@ We can add a ``role`` attribute to our ``InternalUser`` class:
 
     .. group-tab:: Node.js
 
-        Node.js example coming soon.
+        .. literalinclude:: /examples/user_types/nodejs/02-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: internal-start
+            :end-before: internal-end
+
 
 
 Then add the following rule to our policy:
@@ -194,7 +216,12 @@ attributes:
 
     .. group-tab:: Node.js
 
-        Node.js example coming soon.
+        .. literalinclude:: /examples/user_types/nodejs/02-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: account-start
+            :end-before: account-end
+
 
 Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
 This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :doc:`inheritance`).
@@ -237,7 +264,12 @@ We can update our application code slightly to generate ``AccountManager`` users
 
     .. group-tab:: Node.js
 
-        Node.js example coming soon.
+        .. literalinclude:: /examples/user_types/nodejs/02-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: account-end
+            :emphasize-lines: 5-7
+
 
 We've now successfully secured all three dashboards and customer account data.
 
