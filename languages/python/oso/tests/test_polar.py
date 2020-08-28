@@ -100,19 +100,19 @@ def test_external(polar, qvar, qeval):
         return Foo(a="A")
 
     polar.register_class(Foo, from_polar=capital_foo)
-    assert qvar("new Foo{}.a = x", "x", one=True) == "A"
+    assert qvar("new Foo().a = x", "x", one=True) == "A"
     with pytest.raises(RuntimeError, match="tried to call 'a' but it is not callable"):
-        assert not qeval("new Foo{}.a() = x")
-    assert not qvar("new Foo{}.b = x", "x", one=True) == "b"
-    assert qvar("new Foo{}.b() = x", "x", one=True) == "b"
+        assert not qeval("new Foo().a() = x")
+    assert not qvar("new Foo().b = x", "x", one=True) == "b"
+    assert qvar("new Foo().b() = x", "x", one=True) == "b"
     assert not qvar("Foo.c = x", "x", one=True) == "c"
     assert qvar("Foo.c() = x", "x", one=True) == "c"
-    assert qvar("new Foo{} = f and f.a = x", "x", one=True) == "A"
-    assert qvar("new Foo{}.bar().y() = x", "x", one=True) == "y"
-    assert qvar("new Foo{}.e() = x", "x", one=True) == [1, 2, 3]
-    assert qvar("new Foo{}.f() = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
-    assert qvar("new Foo{}.g().hello = x", "x", one=True) == "world"
-    assert qvar("new Foo{}.h() = x", "x", one=True) is True
+    assert qvar("new Foo() = f and f.a = x", "x", one=True) == "A"
+    assert qvar("new Foo().bar().y() = x", "x", one=True) == "y"
+    assert qvar("new Foo().e() = x", "x", one=True) == [1, 2, 3]
+    assert qvar("new Foo().f() = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
+    assert qvar("new Foo().g().hello = x", "x", one=True) == "world"
+    assert qvar("new Foo().h() = x", "x", one=True) is True
 
 
 def test_class_specializers(polar, qvar, qeval, query):
@@ -147,33 +147,33 @@ def test_class_specializers(polar, qvar, qeval, query):
     polar.register_class(X)
 
     rules = """
-    test(_: A{});
-    test(_: B{});
+    test(_: A);
+    test(_: B);
 
-    try(_: B{}, res) if res = 2;
-    try(_: C{}, res) if res = 3;
-    try(_: A{}, res) if res = 1;
+    try(_: B, res) if res = 2;
+    try(_: C, res) if res = 3;
+    try(_: A, res) if res = 1;
     """
     polar.load_str(rules)
 
-    assert qvar("new A{}.a() = x", "x", one=True) == "A"
-    assert qvar("new A{}.x() = x", "x", one=True) == "A"
-    assert qvar("new B{}.a() = x", "x", one=True) == "A"
-    assert qvar("new B{}.b() = x", "x", one=True) == "B"
-    assert qvar("new B{}.x() = x", "x", one=True) == "B"
-    assert qvar("new C{}.a() = x", "x", one=True) == "A"
-    assert qvar("new C{}.b() = x", "x", one=True) == "B"
-    assert qvar("new C{}.c() = x", "x", one=True) == "C"
-    assert qvar("new C{}.x() = x", "x", one=True) == "C"
-    assert qvar("new X{}.x() = x", "x", one=True) == "X"
+    assert qvar("new A().a() = x", "x", one=True) == "A"
+    assert qvar("new A().x() = x", "x", one=True) == "A"
+    assert qvar("new B().a() = x", "x", one=True) == "A"
+    assert qvar("new B().b() = x", "x", one=True) == "B"
+    assert qvar("new B().x() = x", "x", one=True) == "B"
+    assert qvar("new C().a() = x", "x", one=True) == "A"
+    assert qvar("new C().b() = x", "x", one=True) == "B"
+    assert qvar("new C().c() = x", "x", one=True) == "C"
+    assert qvar("new C().x() = x", "x", one=True) == "C"
+    assert qvar("new X().x() = x", "x", one=True) == "X"
 
-    assert len(query("test(new A{})")) == 1
-    assert len(query("test(new B{})")) == 2
+    assert len(query("test(new A())")) == 1
+    assert len(query("test(new B())")) == 2
 
-    assert qvar("try(new A{}, x)", "x") == [1]
-    assert qvar("try(new B{}, x)", "x") == [2, 1]
-    assert qvar("try(new C{}, x)", "x") == [3, 2, 1]
-    assert qvar("try(new X{}, x)", "x") == []
+    assert qvar("try(new A(), x)", "x") == [1]
+    assert qvar("try(new B(), x)", "x") == [2, 1]
+    assert qvar("try(new C(), x)", "x") == [3, 2, 1]
+    assert qvar("try(new X(), x)", "x") == []
 
 
 def test_dict_specializers(polar, qvar, qeval, query):
@@ -191,9 +191,9 @@ def test_dict_specializers(polar, qvar, qeval, query):
     """
     polar.load_str(rules)
 
-    wolf = 'new Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
-    dog = 'new Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
-    canine = 'new Animal{genus: "canis", family: "canidae"}'
+    wolf = 'new Animal(species: "canis lupus", genus: "canis", family: "canidae")'
+    dog = 'new Animal(species: "canis familiaris", genus: "canis", family: "canidae")'
+    canine = 'new Animal(genus: "canis", family: "canidae")'
 
     assert len(query(f"what_is({wolf}, res)")) == 2
     assert len(query(f"what_is({dog}, res)")) == 2
@@ -223,11 +223,11 @@ def test_class_field_specializers(polar, qvar, qeval, query):
     """
     polar.load_str(rules)
 
-    wolf = 'new Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
-    dog = 'new Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
-    canine = 'new Animal{genus: "canis", family: "canidae"}'
-    canid = 'new Animal{family: "canidae"}'
-    animal = "new Animal{}"
+    wolf = 'new Animal(species: "canis lupus", genus: "canis", family: "canidae")'
+    dog = 'new Animal(species: "canis familiaris", genus: "canis", family: "canidae")'
+    canine = 'new Animal(genus: "canis", family: "canidae")'
+    canid = 'new Animal(family: "canidae")'
+    animal = "new Animal()"
 
     assert len(query(f"what_is({wolf}, res)")) == 5
     assert len(query(f"what_is({dog}, res)")) == 5
@@ -276,9 +276,9 @@ def test_specializers_mixed(polar, qvar, qeval, query):
     """
     polar.load_str(rules)
 
-    wolf = 'new Animal{species: "canis lupus", genus: "canis", family: "canidae"}'
-    dog = 'new Animal{species: "canis familiaris", genus: "canis", family: "canidae"}'
-    canine = 'new Animal{genus: "canis", family: "canidae"}'
+    wolf = 'new Animal(species: "canis lupus", genus: "canis", family: "canidae")'
+    dog = 'new Animal(species: "canis familiaris", genus: "canis", family: "canidae")'
+    canine = 'new Animal(genus: "canis", family: "canidae")'
 
     wolf_dict = '{species: "canis lupus", genus: "canis", family: "canidae"}'
     dog_dict = '{species: "canis familiaris", genus: "canis", family: "canidae"}'
@@ -415,10 +415,10 @@ def test_lookup_errors(polar, query):
     polar.register_class(Foo)
 
     # Unify with an invalid field doesn't error.
-    assert query('new Foo{} = {bar: "bar"}') == []
+    assert query('new Foo() = {bar: "bar"}') == []
     # Dot op with an invalid field does error.
     with pytest.raises(exceptions.PolarRuntimeException) as e:
-        query('new Foo{}.bar = "bar"') == []
+        query('new Foo().bar = "bar"') == []
     assert "Application error: 'Foo' object has no attribute 'bar'" in str(e.value)
 
 
@@ -468,16 +468,16 @@ def test_constructor(polar, qvar):
     polar.register_class(TestConstructor)
 
     assert (
-        qvar("instance = new TestConstructor{x: 1} and y = instance.x", "y", one=True)
+        qvar("instance = new TestConstructor(x: 1) and y = instance.x", "y", one=True)
         == 1
     )
     assert (
-        qvar("instance = new TestConstructor{x: 2} and y = instance.x", "y", one=True)
+        qvar("instance = new TestConstructor(x: 2) and y = instance.x", "y", one=True)
         == 2
     )
     assert (
         qvar(
-            "instance = new TestConstructor{x: new TestConstructor{x: 3}} and y = instance.x.x",
+            "instance = new TestConstructor(x: new TestConstructor(x: 3)) and y = instance.x.x",
             "y",
             one=True,
         )
@@ -493,7 +493,7 @@ def test_constructor(polar, qvar):
 
     assert (
         qvar(
-            "instance = new TestConstructorTwo{x: 1, y: 2} and x = instance.x and y = instance.y",
+            "instance = new TestConstructorTwo(x: 1, y: 2) and x = instance.x and y = instance.y",
             "y",
             one=True,
         )
@@ -548,7 +548,7 @@ def test_unify(polar, qeval):
 
     polar.register_class(Foo)
 
-    polar.load_str("foo() if new Foo{foo: 1} = new Foo{foo: 1};")
+    polar.load_str("foo() if new Foo(foo: 1) = new Foo(foo: 1);")
     assert qeval("foo()")
 
 
@@ -590,14 +590,14 @@ def test_datetime(polar, query):
     assert not query(Predicate("lt", [t2, t1]))
 
     # test creating datetime from polar
-    polar.load_str("dt(x) if x = new Datetime{year: 2020, month: 5, day: 25};")
+    polar.load_str("dt(x) if x = new Datetime(year: 2020, month: 5, day: 25);")
     assert query(Predicate("dt", [Variable("x")])) == [{"x": datetime(2020, 5, 25)}]
     polar.load_str("ltnow(x) if x < Datetime.now();")
     assert query(Predicate("ltnow", [t1]))
     assert not query(Predicate("ltnow", [t3]))
 
     polar.load_str(
-        "timedelta(a: Datetime, b: Datetime) if a.__sub__(b) == new Timedelta{days: 1};"
+        "timedelta(a: Datetime, b: Datetime) if a.__sub__(b) == new Timedelta(days: 1);"
     )
     assert query(Predicate("timedelta", [t4, t1]))
 
