@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import { extname } from 'path';
 import { createInterface } from 'readline';
-import { stdout, stderr } from 'process';
 
 import {
   InlineQueryFailedError,
@@ -17,17 +16,7 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
-import { readFile, repr } from './helpers';
-
-// Optional ANSI escape sequences for the REPL.
-let RESET = '';
-let FG_BLUE = '';
-let FG_RED = '';
-if (stdout.getColorDepth() >= 4 && stderr.getColorDepth() >= 4) {
-  RESET = '\x1b[0m';
-  FG_BLUE = '\x1b[34m';
-  FG_RED = '\x1b[31m';
-}
+import { printError, PROMPT, readFile, repr } from './helpers';
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -187,16 +176,13 @@ export class Polar {
     } catch (e) {
       loadError = e;
     }
-    if (loadError !== undefined) {
-      console.error(FG_RED + 'One or more files failed to load.' + RESET);
-      console.error(loadError.message);
-    }
+    if (loadError !== undefined) printError(loadError);
 
     // @ts-ignore
     const repl = global.repl?.repl;
 
     if (repl) {
-      repl.setPrompt(FG_BLUE + 'query> ' + RESET);
+      repl.setPrompt(PROMPT);
       const evalQuery = this.evalQuery.bind(this);
       repl.eval = async (cmd: string, _ctx: any, _file: string, cb: Function) =>
         cb(null, await evalQuery(cmd));
@@ -209,11 +195,10 @@ export class Polar {
     } else {
       const rl = createInterface({
         input: process.stdin,
-        output: stdout,
-        prompt: FG_BLUE + 'query> ' + RESET,
+        output: process.stdout,
+        prompt: PROMPT,
         tabSize: 4,
       });
-
       rl.prompt();
       rl.on('line', async line => {
         const result = await this.evalQuery(line);
@@ -245,8 +230,7 @@ export class Polar {
         }
       }
     } catch (e) {
-      console.error(FG_RED + e.name + RESET);
-      console.error(e.message);
+      printError(e);
     }
   }
 
