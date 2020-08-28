@@ -54,11 +54,30 @@ we could have simply decorated them with :py:func:`oso.polar_class`.
 
 We can now write a simple policy over these Actor types:
 
-.. literalinclude:: /examples/user_types/user_policy.polar
-    :caption: :fa:`oso` user_types.polar
-    :language: polar
-    :start-after: simple-start
-    :end-before: simple-end
+.. tabs::
+  .. group-tab:: Python
+
+    .. literalinclude:: /examples/user_types/python/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
+
+  .. group-tab:: Ruby
+
+    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
+
+  .. group-tab:: Java
+
+      Java example coming soon.
+
+  .. group-tab:: Node.js
+
+    Node.js example coming soon.
 
 This policy uses :ref:`specialized rules <specializer>` to control rules execution based on
 the Actor types that is passed into the authorization request.

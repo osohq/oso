@@ -28,7 +28,7 @@ def user_from_id(id):
     if user_type == "internal":
         return InternalUser(id)
     elif user_type == "customer":
-        return CustomerUser(id)
+        return Customer(id)
 
 
 # app-end
