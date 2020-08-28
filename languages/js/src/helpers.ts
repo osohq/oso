@@ -257,7 +257,9 @@ let RESET = '';
 let FG_BLUE = '';
 let FG_RED = '';
 if (
+  typeof process.stdout.getColorDepth === 'function' &&
   process.stdout.getColorDepth() >= 4 &&
+  typeof process.stderr.getColorDepth === 'function' &&
   process.stderr.getColorDepth() >= 4
 ) {
   RESET = '\x1b[0m';
