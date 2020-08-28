@@ -216,7 +216,7 @@ export class Polar {
       rl.prompt();
       rl.on('line', async line => {
         const result = await this.evalReplInput(line);
-        console.log(result);
+        if (result !== undefined) console.log(result);
         rl.prompt();
       });
     }
