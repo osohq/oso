@@ -23,12 +23,7 @@ import { readFile, repr } from './helpers';
 let RESET = '';
 let FG_BLUE = '';
 let FG_RED = '';
-if (
-  typeof stdout.hasColors === 'function' &&
-  stdout.hasColors() &&
-  typeof stderr.hasColors === 'function' &&
-  stderr.hasColors()
-) {
+if (stdout.getColorDepth() >= 4 && stderr.getColorDepth() >= 4) {
   RESET = '\x1b[0m';
   FG_BLUE = '\x1b[34m';
   FG_RED = '\x1b[31m';
@@ -188,7 +183,7 @@ export class Polar {
   async repl(files?: string[]): Promise<void> {
     const rl = createInterface({
       input: process.stdin,
-      output: process.stdout,
+      output: stdout,
       prompt: FG_BLUE + 'query> ' + RESET,
       tabSize: 4,
     });
