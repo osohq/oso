@@ -5,7 +5,7 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::iter::{once, repeat};
 
 use polar_core::*;
-use polar_core::{polar::Polar, polar::Query, types::*};
+use polar_core::{events::*, kb::Bindings, polar::Polar, polar::Query, terms::*};
 
 fn runner_from_query(q: &str) -> Runner {
     let polar = Polar::new();

@@ -12,7 +12,6 @@ use super::kb::*;
 use super::lexer::loc_to_pos;
 use super::messages::*;
 use super::numerics::*;
-use super::rewrites::unwrap_and;
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -2339,8 +2338,10 @@ impl PolarVirtualMachine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use permute::permute;
+
+    use super::*;
+    use crate::rewrites::unwrap_and;
 
     /// Shorthand for constructing Goal::Query.
     ///

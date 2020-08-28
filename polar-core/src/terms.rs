@@ -441,3 +441,36 @@ impl Term {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+
+    #[test]
+    fn test_value_hash() {
+        let mut table = HashMap::new();
+        table.insert(value!(0), "0");
+        table.insert(value!(1), "1");
+        table.insert(value!("one"), "one");
+        table.insert(value!(btreemap! {sym!("a") => term!(1)}), "a:1");
+        table.insert(value!(btreemap! {sym!("b") => term!(2)}), "b:2");
+        assert_eq!(*table.get(&value!(0)).unwrap(), "0");
+        assert_eq!(*table.get(&value!(1)).unwrap(), "1");
+        assert_eq!(*table.get(&value!(1.0)).unwrap(), "1");
+        assert_eq!(*table.get(&value!("one")).unwrap(), "one");
+        assert_eq!(
+            *table
+                .get(&value!(btreemap! {sym!("a") => term!(1)}))
+                .unwrap(),
+            "a:1"
+        );
+        assert_eq!(
+            *table
+                .get(&value!(btreemap! {sym!("b") => term!(2)}))
+                .unwrap(),
+            "b:2"
+        );
+    }
+}

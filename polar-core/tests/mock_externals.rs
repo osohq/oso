@@ -1,7 +1,7 @@
 /// Utils for mocking externals in tests.
 use std::collections::{HashMap, HashSet};
 
-use polar_core::types::{ExternalInstance, Symbol, Term, Value};
+use polar_core::terms::{ExternalInstance, Symbol, Term, Value};
 
 #[derive(Default)]
 /// Mock external that keeps track of instance literals and allows

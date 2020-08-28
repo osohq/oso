@@ -5,7 +5,6 @@ use std::fmt;
 use crate::sources::*;
 use crate::terms::*;
 
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
 pub struct PolarError {

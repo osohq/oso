@@ -9,8 +9,6 @@
 //! In addition, there are special cases like traces and sources that have their own
 //! formatting requirements.
 
-use crate::types::*;
-
 use crate::rules::*;
 use crate::sources::*;
 use crate::terms::*;

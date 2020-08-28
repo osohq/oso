@@ -12,6 +12,7 @@ fn and_wrap(a: &mut Term, b: Term) {
     a.replace_value(new_value);
 }
 
+#[cfg(test)]
 pub fn unwrap_and(term: Term) -> TermList {
     match term.value() {
         Value::Expression(Operation {

@@ -1,7 +1,7 @@
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// A map of bindings: variable name → value. The VM uses a stack internally,
@@ -84,4 +84,14 @@ impl KnowledgeBase {
     pub fn is_constant(&self, name: &Symbol) -> bool {
         self.constants.contains_key(name)
     }
+}
+
+#[test]
+fn test_id_wrapping() {
+    let kb = KnowledgeBase::new();
+    kb.id_counter.store(MAX_ID - 1, Ordering::SeqCst);
+    assert_eq!(MAX_ID - 1, kb.new_id());
+    assert_eq!(MAX_ID, kb.new_id());
+    assert_eq!(1, kb.new_id());
+    assert_eq!(2, kb.new_id());
 }

@@ -1,8 +1,8 @@
-use super::terms::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
+
+use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Parameter {
@@ -158,5 +158,66 @@ impl GenericRule {
         let v = self.next_rule_id;
         self.next_rule_id += 1;
         v
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+    use crate::polar::Polar;
+
+    #[test]
+    fn test_rule_index() {
+        let polar = Polar::new();
+        polar.load(r#"f(1, 1, "x");"#).unwrap();
+        polar.load(r#"f(1, 1, "y");"#).unwrap();
+        polar.load(r#"f(1, x, "y") if x = 2;"#).unwrap();
+        polar.load(r#"f(1, 2, {b: "y"});"#).unwrap();
+        polar.load(r#"f(1, 3, {c: "z"});"#).unwrap();
+
+        let kb = polar.kb.read().unwrap();
+        let generic_rule = kb.rules.get(&sym!("f")).unwrap();
+        let index = &generic_rule.index;
+        assert!(index.rules.is_empty());
+
+        fn keys(index: &RuleIndex) -> HashSet<Option<Value>> {
+            index.index.keys().cloned().collect()
+        }
+
+        let mut args = HashSet::<Option<Value>>::new();
+
+        args.clear();
+        args.insert(Some(value!(1)));
+        assert_eq!(args, keys(index));
+
+        args.clear();
+        args.insert(None); // x
+        args.insert(Some(value!(1)));
+        args.insert(Some(value!(2)));
+        args.insert(Some(value!(3)));
+        let index1 = index.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index1));
+
+        args.clear();
+        args.insert(Some(value!("x")));
+        args.insert(Some(value!("y")));
+        let index11 = index1.index.get(&Some(value!(1))).unwrap();
+        assert_eq!(args, keys(index11));
+
+        args.remove(&Some(value!("x")));
+        let index1_ = index1.index.get(&None).unwrap();
+        assert_eq!(args, keys(index1_));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("b") => term!("y")})));
+        let index12 = index1.index.get(&Some(value!(2))).unwrap();
+        assert_eq!(args, keys(index12));
+
+        args.clear();
+        args.insert(Some(value!(btreemap! {sym!("c") => term!("z")})));
+        let index13 = index1.index.get(&Some(value!(3))).unwrap();
+        assert_eq!(args, keys(index13));
     }
 }
