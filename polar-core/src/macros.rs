@@ -161,8 +161,8 @@ impl From<InstanceLiteral> for TestHelper<Value> {
         Self(Value::InstanceLiteral(other))
     }
 }
-impl From<Predicate> for TestHelper<Value> {
-    fn from(other: Predicate) -> Self {
+impl From<Call> for TestHelper<Value> {
+    fn from(other: Call) -> Self {
         Self(Value::Call(other))
     }
 }

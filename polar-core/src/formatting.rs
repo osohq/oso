@@ -456,17 +456,7 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for Predicate {
-        fn to_polar(&self) -> String {
-            format!(
-                "{}({})",
-                self.name.to_polar(),
-                format_args(Operator::And, &self.args, ", ")
-            )
-        }
-    }
-
-    impl ToPolarString for Constructor {
+    impl ToPolarString for Call {
         fn to_polar(&self) -> String {
             let args = format_args(Operator::And, &self.args, ", ");
             let kwargs = match &self.kwargs {
@@ -550,7 +540,6 @@ pub mod to_polar {
                 Value::Variable(s) => s.to_polar(),
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
-                Value::Constructor(c) => c.to_polar(),
             }
         }
     }

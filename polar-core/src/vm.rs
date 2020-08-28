@@ -1117,7 +1117,11 @@ impl PolarVirtualMachine {
         check_errors: bool,
     ) -> PolarResult<QueryEvent> {
         let (field_name, args): (Symbol, Option<Vec<Term>>) = match self.deref(field).value() {
-            Value::Call(Predicate { name, args }) => (
+            Value::Call(Call {
+                name,
+                args,
+                kwargs: None,
+            }) => (
                 name.clone(),
                 Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
             ),
@@ -1277,7 +1281,7 @@ impl PolarVirtualMachine {
     /// Select applicable rules for predicate.
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
-    fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
+    fn query_for_predicate(&mut self, predicate: Call) -> PolarResult<()> {
         match self.get_generic_rule(&predicate.name) {
             None => self.push_goal(Goal::Backtrack)?,
             Some(generic_rule) => {

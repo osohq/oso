@@ -99,23 +99,18 @@ Variable: Value  = <n:Name> => {
     Value::Variable(n)
 };
 
-Predicate: Value = {
+Call: Value = {
     <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
         match arg {
             Some(arg) => args.push(arg),
             None => ()
         };
-        Value::Call(Predicate{name, args})
-    }
-};
-
-Constructor: Value = {
-    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> <kwargs:("," <Fields<Exp5<"Term">>>)?>")" => {
-        match arg {
-            Some(arg) => args.push(arg),
-            None => ()
-        };
-        Value::Constructor(Constructor{name, args, kwargs})
+        let kwargs = None;
+        Value::Call(Call{name, args, kwargs})
+    },
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <fields:(<Fields<Exp5<"Term">>>)>")" => {
+        let kwargs = Some(fields);
+        Value::Call(Call{name, args, kwargs})
     }
 
 }
@@ -178,8 +173,8 @@ New: Value = {
         Value::Expression(op)
     },
 
-    // Positional argument constructor.
-    "new" <call:Spanned<Predicate>> => {
+    // Mixed argument constructor.
+    "new" <call:Spanned<Call>> => {
         let args = vec![call];
         let op = Operation{operator: Operator::New, args};
         Value::Expression(op)
@@ -254,7 +249,7 @@ Exp10<T>: Term = {
 }
 
 CallTerm: Value = {
-    <Predicate>,
+    <Call>,
     <s:"Symbol"> => Value::String(s.0),
     "(" <Value> ")",
 }
@@ -473,7 +468,7 @@ pub Value: Value = {
     <DictionaryTerm>,
     <BuiltinOperation>,
     <RewrittenOperation>,
-    <Predicate>,
+    <Call>,
     "[" <mut terms:(<Term> ",")*> <term:Spanned<RestVar<"Term">>?> "]" => {
         match term {
             Some(term) => {
