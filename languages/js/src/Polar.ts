@@ -181,13 +181,6 @@ export class Polar {
    * Start a REPL session.
    */
   async repl(files?: string[]): Promise<void> {
-    const rl = createInterface({
-      input: process.stdin,
-      output: stdout,
-      prompt: FG_BLUE + 'query> ' + RESET,
-      tabSize: 4,
-    });
-
     let loadError;
     try {
       if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
@@ -199,11 +192,41 @@ export class Polar {
       console.error(loadError.message);
     }
 
-    rl.prompt();
-    rl.on('line', async line => {
-      const input = line.trim().replace(/;+$/, '');
-      try {
-        if (input === '') return;
+    // @ts-ignore
+    const repl = global.repl?.repl;
+
+    if (repl) {
+      repl.setPrompt(FG_BLUE + 'query> ' + RESET);
+      const evalQuery = this.evalQuery.bind(this);
+      repl.eval = async (cmd: string, _ctx: any, _file: string, cb: Function) =>
+        cb(null, await evalQuery(cmd));
+      const listeners: Function[] = repl.listeners('exit');
+      repl.removeAllListeners('exit');
+      repl.prependOnceListener('exit', () => {
+        listeners.forEach(l => repl.addListener('exit', l));
+        require('repl').start({ useGlobal: true });
+      });
+    } else {
+      const rl = createInterface({
+        input: process.stdin,
+        output: stdout,
+        prompt: FG_BLUE + 'query> ' + RESET,
+        tabSize: 4,
+      });
+
+      rl.prompt();
+      rl.on('line', async line => {
+        const result = await this.evalQuery(line);
+        console.log(result);
+        rl.prompt();
+      });
+    }
+  }
+
+  private async evalQuery(query: string): Promise<boolean | void> {
+    const input = query.trim().replace(/;+$/, '');
+    try {
+      if (input !== '') {
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
         const query = new Query(ffiQuery, this.#host);
         const results = [];
@@ -211,29 +234,20 @@ export class Polar {
           results.push(result);
         }
         if (results.length === 0) {
-          console.log(false);
+          return false;
         } else {
           for (const result of results) {
-            if (result.size === 0) {
-              console.log(true);
-            } else {
-              for (const [variable, value] of result) {
-                console.log(variable + ' => ' + repr(value));
-              }
+            for (const [variable, value] of result) {
+              console.log(variable + ' => ' + repr(value));
             }
           }
+          return true;
         }
-      } catch (e) {
-        console.error(FG_RED + e.name + RESET);
-        console.error(e.message);
-      } finally {
-        rl.prompt();
       }
-    });
-
-    return new Promise((resolve, _) => {
-      rl.on('close', () => resolve());
-    });
+    } catch (e) {
+      console.error(FG_RED + e.name + RESET);
+      console.error(e.message);
+    }
   }
 
   /**
