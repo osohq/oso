@@ -167,6 +167,22 @@ export class Polar {
   }
 
   /**
+   * Register a JavaScript class for use in Polar policies.
+   */
+  registerClass<T>(cls: Class<T>, alias?: string): void {
+    const name = this.#host.cacheClass(cls, alias);
+    this.registerConstant(name, cls);
+  }
+
+  /**
+   * Register a JavaScript value for use in Polar policies.
+   */
+  registerConstant(name: string, value: any): void {
+    const term = this.#host.toPolar(value);
+    this.#ffiPolar.registerConstant(name, JSON.stringify(term));
+  }
+
+  /**
    * Start a REPL session.
    */
   async repl(files?: string[]): Promise<void> {
@@ -232,21 +248,5 @@ export class Polar {
     } catch (e) {
       printError(e);
     }
-  }
-
-  /**
-   * Register a JavaScript class for use in Polar policies.
-   */
-  registerClass<T>(cls: Class<T>, alias?: string): void {
-    const name = this.#host.cacheClass(cls, alias);
-    this.registerConstant(name, cls);
-  }
-
-  /**
-   * Register a JavaScript value for use in Polar policies.
-   */
-  registerConstant(name: string, value: any): void {
-    const term = this.#host.toPolar(value);
-    this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 }
