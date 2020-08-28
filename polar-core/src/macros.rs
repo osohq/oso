@@ -101,14 +101,16 @@ macro_rules! sym {
     };
 }
 
+// TODO: support kwargs
 #[macro_export]
 macro_rules! call {
     ($name:expr, [$($args:expr),*]) => {
-        Predicate {
+        Call {
             name: sym!($name),
             args: vec![
                 $(term!($args)),*
-            ]
+            ],
+            kwargs: None
         }
     };
     ($name:expr) => {

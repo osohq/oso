@@ -911,6 +911,7 @@ mod tests {
         let pred = Call {
             name: Symbol("foo".to_owned()),
             args: vec![Term::new_from_test(value!(0))],
+            kwargs: None,
         };
         assert_eq!(
             serde_json::to_string(&pred).unwrap(),
