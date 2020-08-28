@@ -56,9 +56,6 @@ policy to express this logic.
             :start-after: classes-start
             :end-before: classes-end
 
-Note that if we already had classes in our application that represented customers and internal users,
-we could have simply decorated them with :py:func:`oso.polar_class`.
-
 We can now write a simple policy over these Actor types:
 
 .. tabs::
