@@ -1,4 +1,11 @@
-const { Actor, Lab, Order, oso, Test } = require('./inheritanceExternal');
+const { Oso } = require('oso');
+const {
+  Actor,
+  Lab,
+  Order,
+  PatientData,
+  Test,
+} = require('./inheritanceExternal');
 
 const files = [
   '../01-polar.polar',
@@ -17,7 +24,12 @@ describe('inheritance', () => {
   const diagnostic = new Test(patient);
 
   async function loadFile(example) {
-    oso.clear();
+    const oso = new Oso();
+    oso.registerClass(Actor);
+    oso.registerClass(Lab);
+    oso.registerClass(Order);
+    oso.registerClass(PatientData);
+    oso.registerClass(Test);
     await oso.loadFile(example);
     return oso;
   }
@@ -32,7 +44,7 @@ describe('inheritance', () => {
       });
 
       test('denies for mismatched patient', async () => {
-        await loadFile(file);
+        const oso = await loadFile(file);
         expect(await oso.isAllowed(medStaffBadPatient, 'read', order)).toBe(
           false
         );
@@ -45,7 +57,7 @@ describe('inheritance', () => {
       });
 
       test('denies for regular staff', async () => {
-        await loadFile(file);
+        const oso = await loadFile(file);
         expect(await oso.isAllowed(regStaff, 'read', order)).toBe(false);
         expect(await oso.isAllowed(regStaff, 'read', lab)).toBe(false);
         expect(await oso.isAllowed(regStaff, 'read', diagnostic)).toBe(false);

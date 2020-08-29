@@ -37,4 +37,4 @@ class Test extends PatientData {}
 oso.registerClass(Test);
 // end-patient-data
 
-module.exports = { Actor, Lab, Order, oso, Test };
+module.exports = { Actor, Lab, Order, oso, PatientData, Test };
