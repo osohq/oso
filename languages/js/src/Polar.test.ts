@@ -657,7 +657,7 @@ Application error: Cannot read property 'foo' of undefined at line 1, column 1`
 describe('unbound variables', () => {
   test('returns unbound properly', async () => {
     const p = new Polar();
-    await p.loadStr('rule(x, y) if y = 1;');
+    await p.loadStr('rule(_x, y) if y = 1;');
 
     const result = (await query(p, 'rule(x, y)'))[0];
 
