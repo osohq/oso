@@ -87,7 +87,7 @@ export class Host {
   }
 
   /**
-   * Check if an instance exists in the [[`instances`]] cache.
+   * Check if an instance exists in the [[`#instances`]] cache.
    *
    * @internal
    */
