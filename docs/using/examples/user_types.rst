@@ -277,14 +277,16 @@ Let's add the following lines to our policy:
         :start-after: manager-start
         :end-before: manager-end
 
-The first rule replaces the RBAC rule we previously used to control access to the accounts dashboard.
-The second rule controls access to account data. For the purposes of this example, let's assume that ``AccountData`` is a resource that has an ``account_id``
-attribute.
-
-We can update our application code slightly to generate ``AccountManager`` users:
+The first rule replaces the RBAC rule we previously used to control access to
+the accounts dashboard. The second rule controls access to account data.
 
 .. tabs::
     .. group-tab:: Python
+
+        For the purposes of this example, let's assume that ``AccountData`` is a
+        resource that has an ``account_id`` attribute.
+
+        We can update our application code slightly to generate ``AccountManager`` users:
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
             :caption: :fab:`python` user_types.py
@@ -292,6 +294,11 @@ We can update our application code slightly to generate ``AccountManager`` users
             :emphasize-lines: 5-6
 
     .. group-tab:: Ruby
+
+        For the purposes of this example, let's assume that ``AccountData`` is a
+        resource that has an ``account_id`` attribute.
+
+        We can update our application code slightly to generate ``AccountManager`` users:
 
         .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
             :caption: :fas:`gem` user_types.rb
@@ -304,6 +311,11 @@ We can update our application code slightly to generate ``AccountManager`` users
         Java example coming soon.
 
     .. group-tab:: Node.js
+
+        For the purposes of this example, let's assume that ``AccountData`` is a
+        resource that has an ``accountId`` attribute.
+
+        We can update our application code slightly to generate ``AccountManager`` users:
 
         .. literalinclude:: /examples/user_types/nodejs/02-userClasses.js
             :caption: :fab:`node-js` userTypes.js
