@@ -1,3 +1,4 @@
+use super::numerics::MOST_POSITIVE_EXACT_FLOAT;
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -19,14 +20,14 @@ pub struct KnowledgeBase {
     pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
-    // For symbols returned from gensym
+    /// For symbols returned from gensym.
     gensym_counter: AtomicU64,
-    // For call IDs, instance IDs, symbols, etc.
+    /// For call IDs, instance IDs, symbols, etc.
     id_counter: AtomicU64,
     pub inline_queries: Vec<Term>,
 }
 
-const MAX_ID: u64 = (1 << 53) - 1;
+const MAX_ID: u64 = (MOST_POSITIVE_EXACT_FLOAT - 1) as u64;
 
 impl KnowledgeBase {
     pub fn new() -> Self {
@@ -43,8 +44,8 @@ impl KnowledgeBase {
 
     /// Return a monotonically increasing integer ID.
     ///
-    /// Wraps around at 52 bits of precision so that it can be safely coerced to an IEEE-754
-    /// double-float (f64).
+    /// Wraps around at 52 bits of precision so that it can be safely
+    /// coerced to an IEEE-754 double-float (f64).
     pub fn new_id(&self) -> u64 {
         if self
             .id_counter

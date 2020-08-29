@@ -73,7 +73,7 @@ impl PartialEq for Numeric {
 impl Eq for Numeric {}
 
 /// There are 53 bits of mantissa in an IEEE 754 double precision float.
-const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
+pub const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
 
 /// -i64::MIN is 2**63. The maximum positive i64 is 2**63 - 1, but this
 /// isn't representable as a double. So, we first cast i64::MIN to f64
