@@ -1157,7 +1157,7 @@ impl PolarVirtualMachine {
 
         Ok(QueryEvent::ExternalCall {
             call_id,
-            instance: Some(self.deep_deref(instance)),
+            instance: self.deep_deref(instance),
             attribute: field_name,
             args,
         })
