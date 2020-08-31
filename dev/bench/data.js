@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598569295989,
+  "lastUpdate": 1598889265571,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -1949,6 +1949,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 23951,
             "range": "± 593",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b317a2169dcd6f54fb6ec2e9766f866f237e0f8b",
+          "message": "Fix Node.js REPL (#387)",
+          "timestamp": "2020-08-31T11:44:07-04:00",
+          "tree_id": "f66f967859255038aa29224bb78317b35a74e1d4",
+          "url": "https://github.com/osohq/oso/commit/b317a2169dcd6f54fb6ec2e9766f866f237e0f8b"
+        },
+        "date": 1598889264727,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1499,
+            "range": "± 83",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4814,
+            "range": "± 173",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 134369,
+            "range": "± 3195",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 718588,
+            "range": "± 22899",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 30155,
+            "range": "± 957",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 29967,
+            "range": "± 1247",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 29947,
+            "range": "± 988",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 30152,
+            "range": "± 1422",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 28022,
+            "range": "± 992",
             "unit": "ns/iter"
           }
         ]
