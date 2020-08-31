@@ -10,7 +10,7 @@ module Oso
           ffi_lib FFI::LIB_PATH
 
           attach_function :new, :polar_new, [], FFI::Polar
-          attach_function :load_str, :polar_load, [FFI::Polar, :string, :string], :int32
+          attach_function :load, :polar_load, [FFI::Polar, :string, :string], :int32
           attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar, :uint32], FFI::Query
           attach_function :new_id, :polar_get_external_id, [FFI::Polar], :uint64
           attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], FFI::Query
@@ -33,8 +33,8 @@ module Oso
         # @param src [String]
         # @param filename [String]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def load_str(src, filename: nil)
-          loaded = Rust.load_str(self, src, filename)
+        def load(src, filename: nil)
+          loaded = Rust.load(self, src, filename)
           process_messages
           raise FFI::Error.get if loaded.zero?
         end

@@ -2,7 +2,6 @@ package com.osohq.oso;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -46,7 +45,8 @@ public class Host implements Cloneable {
      * Store a Java class in the cache by name.
      *
      * @param name The name used to reference the class from within Polar.
-     * @throws Exceptions.DuplicateClassAliasError If the name is already registered.
+     * @throws Exceptions.DuplicateClassAliasError If the name is already
+     *                                             registered.
      */
     public String cacheClass(Class<?> cls, Constructor<?> constructor, String name)
             throws Exceptions.DuplicateClassAliasError {
@@ -92,16 +92,13 @@ public class Host implements Cloneable {
      * Make an instance of a Java class from a {@code Map<String, Object>} of
      * fields.
      */
-    public Object makeInstance(String className, List<Object> initargs, long id)
-            throws Exceptions.OsoException
-    {
+    public Object makeInstance(String className, List<Object> initargs, long id) throws Exceptions.OsoException {
         Constructor<?> constructor = constructors.get(className);
         if (constructor == null) {
             // Try to find a constructor applicable to the supplied arguments.
             Class<?> cls = classes.get(className);
-            Class<?>[] argTypes = initargs.stream().map(arg -> arg.getClass())
-                .collect(Collectors.toUnmodifiableList())
-                .toArray(new Class[0]);
+            Class<?>[] argTypes = initargs.stream().map(arg -> arg.getClass()).collect(Collectors.toUnmodifiableList())
+                    .toArray(new Class[0]);
             search: for (Constructor<?> c : cls.getConstructors()) {
                 Class<?>[] paramTypes = c.getParameterTypes();
                 if (argTypes.length == paramTypes.length) {
@@ -156,10 +153,8 @@ public class Host implements Cloneable {
     /**
      * Check if a Java instance is an instance of a class.
      */
-    public boolean isa(JSONObject instance, String classTag)
-            throws Exceptions.UnregisteredClassError,
-                   Exceptions.UnregisteredInstanceError,
-                   Exceptions.UnexpectedPolarTypeError {
+    public boolean isa(JSONObject instance, String classTag) throws Exceptions.UnregisteredClassError,
+            Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
         Class<?> cls = getClass(classTag);
         return cls.isInstance(toJava(instance));
     }

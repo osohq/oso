@@ -4,9 +4,6 @@ import { createInterface } from 'readline';
 
 import {
   InlineQueryFailedError,
-  PolarFileAlreadyLoadedError,
-  PolarFileContentsChangedError,
-  PolarFileDuplicateContentError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
 } from './errors';
@@ -33,26 +30,11 @@ export class Polar {
    * @internal
    */
   #host: Host;
-  /**
-   * Tracking Polar files loaded into the knowledge base by a hash of their
-   * contents.
-   *
-   * @internal
-   */
-  #loadedContents: Map<string, string>;
-  /**
-   * Tracking Polar files loaded into the knowledge base by file name.
-   *
-   * @internal
-   */
-  #loadedFiles: Map<string, string>;
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
     const equalityFn = opts.equalityFn || ((x, y) => x == y);
     this.#host = new Host(this.#ffiPolar, equalityFn);
-    this.#loadedContents = new Map();
-    this.#loadedFiles = new Map();
 
     // Register built-in classes.
     this.registerClass(Boolean);
@@ -90,8 +72,6 @@ export class Polar {
    * retaining all registered classes and constants.
    */
   clear() {
-    this.#loadedContents.clear();
-    this.#loadedFiles.clear();
     const previous = this.#ffiPolar;
     this.#ffiPolar = new FfiPolar();
     previous.free();
@@ -109,26 +89,14 @@ export class Polar {
       if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
       throw e;
     }
-    const hash = createHash('md5').update(contents).digest('hex');
-    const existingContents = this.#loadedFiles.get(file);
-    if (existingContents !== undefined) {
-      if (existingContents === hash)
-        throw new PolarFileAlreadyLoadedError(file);
-      throw new PolarFileContentsChangedError(file);
-    }
-    const existingFile = this.#loadedContents.get(hash);
-    if (existingFile !== undefined)
-      throw new PolarFileDuplicateContentError(file, existingFile);
     await this.loadStr(contents, file);
-    this.#loadedContents.set(hash, file);
-    this.#loadedFiles.set(file, hash);
   }
 
   /**
    * Load a Polar policy string.
    */
   async loadStr(contents: string, name?: string): Promise<void> {
-    this.#ffiPolar.loadFile(contents, name);
+    this.#ffiPolar.load(contents, name);
     this.processMessages();
 
     while (true) {
