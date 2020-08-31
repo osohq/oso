@@ -915,7 +915,7 @@ mod tests {
         };
         assert_eq!(
             serde_json::to_string(&pred).unwrap(),
-            r#"{"name":"foo","args":[{"value":{"Number":{"Integer":0}}}]}"#
+            r#"{"name":"foo","args":[{"value":{"Number":{"Integer":0}}}],"kwargs":null}"#
         );
         let event = QueryEvent::ExternalCall {
             call_id: 2,
