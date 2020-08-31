@@ -48,19 +48,19 @@ export class InvalidCallError extends PolarError {
   }
 }
 
+export class InvalidQueryEventError extends PolarError {
+  constructor(event: string) {
+    super(`Invalid query event: ${event}`);
+    Object.setPrototypeOf(this, InvalidQueryEventError.prototype);
+  }
+}
+
 export class KwargsConstructorError extends PolarError {
   constructor(tag: string) {
     super(
       `To construct a JavaScript instance, use the positional args constructor syntax: new ${tag}(...)`
     );
     Object.setPrototypeOf(this, KwargsConstructorError.prototype);
-  }
-}
-
-export class InvalidQueryEventError extends PolarError {
-  constructor(event: string) {
-    super(`Invalid query event: ${event}`);
-    Object.setPrototypeOf(this, InvalidQueryEventError.prototype);
   }
 }
 
