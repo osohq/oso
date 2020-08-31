@@ -241,6 +241,22 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_new_mixed_args() {
+        let f = r#"a(x) if x = new Foo(1, 2, bar: 3);"#;
+        let results = parse_rules(0, f).unwrap();
+        assert_eq!(
+            results[0].to_polar(),
+            r#"a(x) if x = new Foo(1, 2, bar: 3);"#
+        );
+        let f = r#"a(x) if x = new Foo(bar: 3, baz: 4);"#;
+        let results = parse_rules(0, f).unwrap();
+        assert_eq!(
+            results[0].to_polar(),
+            r#"a(x) if x = new Foo(bar: 3, baz: 4);"#
+        );
+    }
+
+    #[test]
     fn test_parse_matches() {
         let term = parse_query("{} matches {}");
         assert_eq!(term.to_polar(), r#"{} matches {}"#);

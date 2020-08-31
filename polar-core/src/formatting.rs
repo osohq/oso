@@ -466,7 +466,11 @@ pub mod to_polar {
                         .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
                         .collect::<Vec<String>>()
                         .join(", ");
-                    vec![args, kwargs].join(",")
+                    if args.is_empty() {
+                        kwargs
+                    } else {
+                        vec![args, kwargs].join(", ")
+                    }
                 }
                 None => args,
             };
