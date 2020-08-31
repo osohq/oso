@@ -1143,6 +1143,10 @@ fn test_matches() {
     qeval(&mut polar, "x = {foo: 1} and x matches {foo: 1}");
     qnull(&mut polar, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
     qnull(&mut polar, "x = {foo: 1} and x matches {foo: 2}");
+
+    qeval(&mut polar, "[1, 2, 3] matches [1, 2, 3]");
+    qeval(&mut polar, "[1, 2, 3] matches [1, 2, *rest]");
+    qnull(&mut polar, "[1, 2, 3] matches [1, 2]");
 }
 
 #[test]
