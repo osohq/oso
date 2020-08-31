@@ -1504,7 +1504,7 @@ fn test_list_results() {
         x != z and delete(xs, z, ys);
     delete([], _, []);
     "#;
-    polar.load(policy).unwrap();
+    polar.load_str(policy).unwrap();
     assert!(qeval(&mut polar, "delete([1,2,3,2,1],2,[1,3,1])"));
     assert_eq!(
         qvar(&mut polar, "delete([1,2,3,2,1],2,result)", "result"),
