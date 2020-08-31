@@ -184,13 +184,11 @@ export class Polar {
 
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
-    let loadError;
     try {
       if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
     } catch (e) {
-      loadError = e;
+      printError(e);
     }
-    if (loadError !== undefined) printError(loadError);
 
     // @ts-ignore
     const repl = global.repl?.repl;
