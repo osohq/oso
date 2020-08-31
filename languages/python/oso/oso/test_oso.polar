@@ -3,18 +3,18 @@ allow(actor, action, resource) if
     actorInRole(actor, role, resource);
 
 allow(token, action, resource) if
-    jwt = new Jwt{token: token} and
+    jwt = new Jwt(token: token) and
     jwt.attributes() = attributes and
     allow(attributes, action, resource);
 
 allow(_: {sub: sub}, action, resource) if
-    allow(new Actor{name: sub}, action, resource);
+    allow(new Actor(name: sub), action, resource);
 
 allow("guest", action, resource) if
-    allow(new Actor{name: "guest"}, action, resource);
+    allow(new Actor(name: "guest"), action, resource);
 
 allow(_: {username: name}, action, resource) if
-    allow(new Actor{name: name}, action, resource);
+    allow(new Actor(name: name), action, resource);
 
 allow(_actor: Actor, "get", _resource: Widget);
 allow(actor: Actor, "create", resource: Company) if

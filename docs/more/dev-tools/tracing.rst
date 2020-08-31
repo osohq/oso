@@ -26,15 +26,15 @@ Example
   query> f(12);
   [debug]   QUERY: f(12), BINDINGS: {}
   [debug]     APPLICABLE_RULES: [
-  [debug]       f(x) if new (Foo{x: x}, _instance_2) and .(_instance_2, foo(), _value_1) and _value_1 = x;
+  [debug]       f(x) if new (Foo(x: x), _instance_2) and .(_instance_2, foo(), _value_1) and _value_1 = x;
   [debug]       f(x) if x = 1;
   [debug]       f(x) if x + 1 and _op_3 == 2;
   [debug]     ]
   [debug]     RULE:
   [debug]     f(x) if
-  [debug]       new Foo{x: x}.foo() = x
-  [debug]       QUERY: new (Foo{x: _x_10}, _instance_2_11) and .(_instance_2_11, foo(), _value_1_12) and _value_1_12 = _x_10, BINDINGS: {"_x_10": "12"}
-  [debug]         QUERY: new (Foo{x: _x_10}, _instance_2_11), BINDINGS: {"_x_10": "12"}
+  [debug]       new Foo(x: x).foo() = x
+  [debug]       QUERY: new (Foo(x: _x_10), _instance_2_11) and .(_instance_2_11, foo(), _value_1_12) and _value_1_12 = _x_10, BINDINGS: {"_x_10": "12"}
+  [debug]         QUERY: new (Foo(x: _x_10), _instance_2_11), BINDINGS: {"_x_10": "12"}
   [debug]         QUERY: .(_instance_2_11, foo(), _value_1_12) and _value_1_12 = _x_10, BINDINGS: {"_instance_2_11": "Foo{x: 12}", "_x_10": "12"}
   [debug]           QUERY: .(_instance_2_11, foo(), _value_1_12), BINDINGS: {"_instance_2_11": "Foo{x: 12}"}
   [debug]             LOOKUP: Foo{x: 12}.foo()

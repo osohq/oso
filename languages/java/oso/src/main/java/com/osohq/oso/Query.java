@@ -64,7 +64,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
             throws Exceptions.OsoException {
         Optional<List<Object>> args = Optional.empty();
         if (jArgs.isPresent()) {
-            args =  Optional.of(host.polarListToJava(jArgs.get()));
+            args = Optional.of(host.polarListToJava(jArgs.get()));
         }
         try {
             registerCall(attrName, args, callId, polarInstance);

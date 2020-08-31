@@ -194,7 +194,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                     b.iter_batched(
                         || {
                             let mut runner =
-                                runner_from_query("has_grandchild_called(new Person{}, \"bert\")");
+                                runner_from_query("has_grandchild_called(new Person(), \"bert\")");
                             runner.register_pseudo_class("Person");
                             runner.load(policy).unwrap();
                             n_results(&mut runner, *n);

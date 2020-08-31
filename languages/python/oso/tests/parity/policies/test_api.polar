@@ -7,19 +7,19 @@ actorInRole(actor, role, resource: Widget) if
 
 allow(actor, "get", _: Http{path: path}) if
     new PathMapper("/widget/{id}").map(path) = {id: id} and
-    allow(actor, "get", new Widget{id: id});
+    allow(actor, "get", new Widget(id: id));
 
 allow(actor, "post", _: Http{path: path}) if
-    new PathMapper{template: "/widget/"}.map(path) = {} and
-    allow(actor, "create", new Widget{});
+    new PathMapper(template: "/widget/").map(path) = {} and
+    allow(actor, "create", new Widget());
 
 allow(actor, "what", _: Http{path: path}) if
     new PathMapper("/widget/{id}").map(path) = {id: id} and
-    allow(actor, "unparameterised_get", new Widget{id: id});
+    allow(actor, "unparameterised_get", new Widget(id: id));
 
 allow(actor, "what", _: Http{path: path, query: {param: "foo"}}) if
     new PathMapper("/widget/{id}").map(path) = {id: id} and
-    allow(actor, "parameterised_get", new Widget{id: id});
+    allow(actor, "parameterised_get", new Widget(id: id));
 
 allow(actor, "get", resource: Widget) if resource.frob("Widget") = x;
 allow(actor, "get", resource: DooDad) if resource.frob("DooDad") = x;
@@ -51,7 +51,7 @@ allow_two(actor, action, resource) if checkResource(_x, resource);
 checkResource(1, resource: Widget); # two slightly different specs so need to check
 checkResource("1", resource: Widget); # which to prioritise
 
-?= allow_two(_actor, _action, new Widget{});
+?= allow_two(_actor, _action, new Widget());
 
 # for testing lists
 allow(actor: Actor, "invite", resource: Widget) if

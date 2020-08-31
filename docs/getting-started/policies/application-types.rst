@@ -164,7 +164,7 @@ using the :ref:`operator-new` operator if the class has been **registered**:
         .. code-block:: polar
             :caption: :fa:`oso` policy.polar
 
-            ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
+            ?= allow(new User(name: "alice", is_admin: true), "foo", "bar");
 
         Initialization arguments provided in this way are passed as keywords.
         We can also pass positional arguments to the class constructor:
@@ -188,7 +188,7 @@ using the :ref:`operator-new` operator if the class has been **registered**:
         .. code-block:: polar
             :caption: :fa:`oso` policy.polar
 
-            ?= allow(new User{name: "alice", is_admin: true}, "foo", "bar");
+            ?= allow(new User(name: "alice", is_admin: true), "foo", "bar");
 
         Initialization arguments provided in this way are passed as keywords.
         We can also pass positional arguments to the class constructor:
