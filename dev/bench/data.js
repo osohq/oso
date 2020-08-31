@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598889265571,
+  "lastUpdate": 1598900972071,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -2027,6 +2027,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 28022,
             "range": "± 992",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ff33520cee42b6e1108dde38eeeb99369f49d82b",
+          "message": "Move file checking into core. (#365)\n\nReduces the duplication needed, and unlocks handling conflicts\r\nin the core (e.g. remove all rules whose source matches the\r\nnew filename).\r\n\r\nMade the usage of `load` and `load_str` a little more consistent\r\nacross core + host languages.\r\n\r\n\r\nCo-authored-by: Leina McDermott <leina05@gmail.com>",
+          "timestamp": "2020-08-31T14:59:14-04:00",
+          "tree_id": "44d6c87961342d01573f5bd5202254606eb16d66",
+          "url": "https://github.com/osohq/oso/commit/ff33520cee42b6e1108dde38eeeb99369f49d82b"
+        },
+        "date": 1598900971336,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1514,
+            "range": "± 122",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4574,
+            "range": "± 343",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 119995,
+            "range": "± 6851",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 637973,
+            "range": "± 55222",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 27715,
+            "range": "± 2329",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 27613,
+            "range": "± 2504",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 28424,
+            "range": "± 3116",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 27948,
+            "range": "± 2378",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 26471,
+            "range": "± 1981",
             "unit": "ns/iter"
           }
         ]
