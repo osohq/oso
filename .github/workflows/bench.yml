@@ -10,17 +10,18 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run benchmark
-        run:  cargo bench -- --output-format bencher | tee output.txt
+        run: cargo bench -- --output-format bencher | tee ../output.txt
+        working-directory: polar-core
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
           name: Rust Benchmark
-          tool: 'cargo'
+          tool: "cargo"
           output-file-path: output.txt
           # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t5/GitHub-Actions/Github-action-not-triggering-gh-pages-upon-push/td-p/26869/highlight/false
           github-token: ${{ secrets.GITHUB_TOKEN }}
           comment-on-alert: true
-          alert-comment-cc-users: '@osohq/eng'
+          alert-comment-cc-users: "@osohq/eng"
           alert-threshold: "150%"
           # Only push, save + comment on main
           auto-push: ${{ github.ref == 'refs/heads/main' }}
