@@ -41,3 +41,4 @@ Other bugs & improvements
   message.
 - Fixed a bug whereby running the oso REPL from within a Node.js REPL session
   would result in duplicated STDIN and overlapping STDOUT streams.
+- Make it possible to use expressions inside lists.
