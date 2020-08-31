@@ -104,6 +104,26 @@ module Oso
         call_result(nil, call_id: call_id)
       end
 
+      def handle_make_external(data)
+        id = data['instance_id']
+        raise DuplicateInstanceRegistrationError, id if host.instance? id
+
+        constructor = data['constructor']['value']
+        if constructor.key? 'Call'
+          cls_name = constructor['Call']['name']
+          args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
+          kwargs = constructor['Call']['kwargs']
+          if kwargs.nil?
+            kwargs = {}
+          else
+            kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+          end
+        else
+          raise InvalidConstructorError
+        end
+        host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
+      end
+
       # Create a generator that can be polled to advance the query loop.
       #
       # @yieldparam [Hash<String, Object>]
@@ -119,21 +139,7 @@ module Oso
             when 'Result'
               yielder << event.data['bindings'].transform_values { |v| host.to_ruby(v) }
             when 'MakeExternal'
-              id = event.data['instance_id']
-              raise DuplicateInstanceRegistrationError, id if host.instance? id
-
-              constructor = event.data['constructor']['value']
-              if constructor.key? 'InstanceLiteral'
-                cls_name = constructor['InstanceLiteral']['tag']
-                fields = constructor['InstanceLiteral']['fields']['fields']
-                initargs = Hash[fields.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-              elsif constructor.key? 'Call'
-                cls_name = constructor['Call']['name']
-                initargs = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
-              else
-                raise InvalidConstructorError
-              end
-              host.make_instance(cls_name, initargs: initargs, id: id)
+              handle_make_external(event.data)
             when 'ExternalCall'
               call_id = event.data['call_id']
               instance = event.data['instance']
