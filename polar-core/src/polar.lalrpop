@@ -446,10 +446,13 @@ pub Pattern: Value = {
     <Variable>,
     <DictionaryPattern>,
     <InstanceLiteralPattern>,
-    "[" <terms:(<Spanned<Pattern>> ",")*> <term:Spanned<RestVar<"Pattern">>?> "]" => {
-        match term {
-            Some(term) => Value::List(vec![term]),
-            None => Value::List(terms)
+    "[" <mut head:(<Spanned<Pattern>> ",")*> <last:Spanned<RestVar<"Pattern">>?> "]" => {
+        match last {
+            Some(last) =>{ 
+                head.push(last);
+                Value::List(head)
+            },
+            None => Value::List(head)
         }
     },
 };
@@ -463,13 +466,13 @@ pub Value: Value = {
     <BuiltinOperation>,
     <RewrittenOperation>,
     <Predicate>,
-    "[" <mut terms:(<Term> ",")*> <term:Spanned<RestVar<"Term">>?> "]" => {
-        match term {
-            Some(term) => {
-                terms.push(term);
-                Value::List(terms)
+    "[" <mut head:(<Term> ",")*> <last:Spanned<RestVar<"Term">>?> "]" => {
+        match last {
+            Some(last) => {
+                head.push(last);
+                Value::List(head)
             },
-            None => Value::List(terms)
+            None => Value::List(head)
         }
     },
 }

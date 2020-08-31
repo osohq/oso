@@ -267,6 +267,12 @@ mod tests {
                 ..
             }
         ));
+
+        let q = "[1, 2, 3] matches [1, 2, 3]";
+        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+
+        let q = "[1, 2, 3] matches [1, *rest]";
+        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
     }
 
     #[test]
