@@ -99,6 +99,10 @@ Variable: Value  = <n:Name> => {
     Value::Variable(n)
 };
 
+RestVar: Value  = "*" <n:Name> => {
+    Value::RestVariable(n)
+};
+
 Predicate: Value = {
     <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
         match arg {
@@ -275,7 +279,7 @@ Matches = {"matches"};
 // matches
 MatchExp<T>: Value = {
     // Symbols on the RHS are treated as class names, just like in a specializers
-    <left:Exp8<T>> Matches <right:Spanned<Pattern>> => {
+    <left:Exp8<T>> Matches <right:PatternExp> => {
         let right = if let Value::Variable(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
@@ -438,6 +442,24 @@ Exp1<T>: Term = {
     <Exp2<T>>,
 }
 
+ListTerms<T>: Vec<Term> = {
+    <Exp6<T>> => vec![<>],
+    <mut list:ListTerms<T>> "," <tail:Exp6<T>> => {
+        list.push(tail);
+        list
+    },
+}
+
+List<T>: Value = {
+    "[" "]" => Value::List(vec![]),
+    "[" <Spanned<RestVar>> "]" => Value::List(vec![<>]),
+    "[" <ListTerms<T>> "]" => Value::List(<>),
+    "[" <mut terms:ListTerms<T>> "," <rest:Spanned<RestVar>> "]" => {
+        terms.push(rest);
+        Value::List(terms)
+    }
+}
+
 
 pub Pattern: Value = {
     <Number>,
@@ -446,15 +468,7 @@ pub Pattern: Value = {
     <Variable>,
     <DictionaryPattern>,
     <InstanceLiteralPattern>,
-    "[" <mut head:(<Spanned<Pattern>> ",")*> <last:Spanned<RestVar<"Pattern">>?> "]" => {
-        match last {
-            Some(last) =>{ 
-                head.push(last);
-                Value::List(head)
-            },
-            None => Value::List(head)
-        }
-    },
+    <List<"Pattern">>,
 };
 
 pub Value: Value = {
@@ -466,30 +480,12 @@ pub Value: Value = {
     <BuiltinOperation>,
     <RewrittenOperation>,
     <Predicate>,
-    "[" <mut head:(<Term> ",")*> <last:Spanned<RestVar<"Term">>?> "]" => {
-        match last {
-            Some(last) => {
-                head.push(last);
-                Value::List(head)
-            },
-            None => Value::List(head)
-        }
-    },
+    <List<"Term">>,
 }
 
 
 
 // ****** Terms + Patterns ******* //
-
-// Either a *rest variable, or an ordinary term.
-// TODO(Sam): come back to this one
-RestVar<T>: Value = {
-    "*" <Name> => Value::RestVariable(<>),
-    <Value> if T == "Term",
-    <Pattern> if T == "Pattern",
-};
-
-
 
 Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, end, value);
 
