@@ -1178,6 +1178,10 @@ fn test_matches() {
     // This doesn't fail because `y` is parsed as an unknown specializer
     // assert!(qnull(&mut polar, "x = 1 and y = 2 and x matches y"));
     assert!(qeval(&mut polar, "x = {foo: 1} and x matches {foo: 1}"));
+    assert!(qeval(
+        &mut polar,
+        "x = {foo: 1, bar: 2} and x matches {foo: 1}"
+    ));
     assert!(qnull(
         &mut polar,
         "x = {foo: 1} and x matches {foo: 1, bar: 2}"
@@ -1638,11 +1642,23 @@ fn test_list_matches() {
     );
     assert!(qnull(&mut polar, "[1, 2, 3] matches [1, x]"));
 
-    assert!(qeval(&mut polar, "[] matches [*ys]"));
-    assert!(qeval(&mut polar, "[*xs] matches []"));
-    assert!(qeval(&mut polar, "[*xs] matches [1]"));
-    assert!(qeval(&mut polar, "[1] matches [*ys]"));
+    assert_eq!(qvar(&mut polar, "[] matches [*ys]", "ys"), vec![value!([])]);
+    assert_eq!(qvar(&mut polar, "[*xs] matches []", "xs"), vec![value!([])]);
+    assert_eq!(
+        qvar(&mut polar, "[*xs] matches [1]", "xs"),
+        vec![value!([1])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "[1] matches [*ys]", "ys"),
+        vec![value!([1])]
+    );
     assert!(qeval(&mut polar, "[*xs] matches [*ys]"));
-    assert!(qeval(&mut polar, "[1, 2, 3] matches [1, 2, *rest]"));
-    assert!(qeval(&mut polar, "[1, 2, *xs] matches [1, 2, 3, *ys]"));
+    assert_eq!(
+        qvar(&mut polar, "[1, 2, 3] matches [1, 2, *rest]", "rest"),
+        vec![value!([3])]
+    );
+    assert_eq!(
+        qvar(&mut polar, "[1, 2, *xs] matches [1, 2, 3, *ys]", "xs"),
+        vec![value!([3, Value::RestVariable(Symbol::new("ys"))])]
+    );
 }
