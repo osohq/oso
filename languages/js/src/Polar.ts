@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import { extname } from 'path';
 import { createInterface } from 'readline';
 
