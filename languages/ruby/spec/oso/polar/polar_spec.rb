@@ -171,7 +171,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           end
         end)
         subject.register_class(Foo)
-        id = subject.host.make_instance('Foo', initargs: { bar: 1, baz: 2 }, id: 1)
+        id = subject.host.make_instance('Foo', args: [], kwargs: { bar: 1, baz: 2 }, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
@@ -183,7 +183,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           def initialize; end
         end)
         subject.register_class(Foo)
-        id = subject.host.make_instance('Foo', initargs: {}, id: 1)
+        id = subject.host.make_instance('Foo', args: [], kwargs: {}, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
@@ -206,7 +206,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end)
         constructor = ->(**args) { Foo.new(**args) }
         subject.register_class(Foo, from_polar: constructor)
-        id = subject.host.make_instance('Foo', initargs: { bar: 1, baz: 2 }, id: 1)
+        id = subject.host.make_instance('Foo', args: [], kwargs: { bar: 1, baz: 2 }, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
@@ -216,7 +216,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       it 'handles no args' do
         stub_const('Foo', Class.new)
         subject.register_class(Foo, from_polar: -> { Foo.new })
-        id = subject.host.make_instance('Foo', initargs: {}, id: 1)
+        id = subject.host.make_instance('Foo', args: [], kwargs: {}, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end

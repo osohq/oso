@@ -118,24 +118,28 @@ module Oso
       # @param initargs [Hash<String, Hash>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
-      def make_instance(cls_name, initargs:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
+      def make_instance(cls_name, args:, kwargs:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
         constructor = get_constructor(cls_name)
         instance = if constructor == :new
-                     if initargs.empty?
+                     if args.empty? and kwargs.empty?
                        get_class(cls_name).__send__(:new)
-                     elsif initargs.is_a? Array
-                       get_class(cls_name).__send__(:new, *initargs)
-                     elsif initargs.is_a? Hash
-                       get_class(cls_name).__send__(:new, **initargs)
+                     elsif args.empty? and kwargs.is_a? Hash
+                       get_class(cls_name).__send__(:new, **kwargs)
+                     elsif kwargs.empty? and args.is_a? Array
+                       get_class(cls_name).__send__(:new, *args)
+                     elsif args.is_a? Array and kwargs.is_a? Hash
+                        get_class(cls_name).__send(:new, *args, **kwargs)
                      else
                        raise PolarRuntimeError, "Bad initargs: #{initargs}"
                      end
-                   elsif initargs.empty?
+                   elsif args.empty? and kwargs.empty?
                      constructor.call
-                   elsif initargs.is_a? Array
-                     constructor.call(*initargs)
-                   elsif initargs.is_a? Hash
-                     constructor.call(**initargs)
+                   elsif args.empty? and kwargs.is_a? Hash
+                     constructor.call(**kwargs)
+                   elsif kwargs.empty? and args.is_a? Array
+                     constructor.call(*args)
+                   elsif args.is_a? Array and kwargs.is_a? Hash
+                     constructor.call(*args, **kwargs)
                    else
                      raise PolarRuntimeError, "Bad initargs: #{initargs}"
                    end
