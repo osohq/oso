@@ -37,4 +37,7 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- When an inline query fails, the query that failed is printed in the error message.
+- When an inline query fails, the query that failed is printed in the error
+  message.
+- Fixed a bug whereby running the oso REPL from within a Node.js REPL session
+  would result in duplicated STDIN and overlapping STDOUT streams.

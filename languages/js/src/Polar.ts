@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import { extname } from 'path';
 import { createInterface } from 'readline';
-import { stdout, stderr } from 'process';
 
 import {
   InlineQueryFailedError,
@@ -17,22 +16,7 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
-import { readFile, repr } from './helpers';
-
-// Optional ANSI escape sequences for the REPL.
-let RESET = '';
-let FG_BLUE = '';
-let FG_RED = '';
-if (
-  typeof stdout.hasColors === 'function' &&
-  stdout.hasColors() &&
-  typeof stderr.hasColors === 'function' &&
-  stderr.hasColors()
-) {
-  RESET = '\x1b[0m';
-  FG_BLUE = '\x1b[34m';
-  FG_RED = '\x1b[31m';
-}
+import { printError, PROMPT, readFile, repr } from './helpers';
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -183,65 +167,6 @@ export class Polar {
   }
 
   /**
-   * Start a REPL session.
-   */
-  async repl(files?: string[]): Promise<void> {
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      prompt: FG_BLUE + 'query> ' + RESET,
-      tabSize: 4,
-    });
-
-    let loadError;
-    try {
-      if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
-    } catch (e) {
-      loadError = e;
-    }
-    if (loadError !== undefined) {
-      console.error(FG_RED + 'One or more files failed to load.' + RESET);
-      console.error(loadError.message);
-    }
-
-    rl.prompt();
-    rl.on('line', async line => {
-      const input = line.trim().replace(/;+$/, '');
-      try {
-        if (input === '') return;
-        const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
-        const query = new Query(ffiQuery, this.#host);
-        const results = [];
-        for await (const result of query.results) {
-          results.push(result);
-        }
-        if (results.length === 0) {
-          console.log(false);
-        } else {
-          for (const result of results) {
-            if (result.size === 0) {
-              console.log(true);
-            } else {
-              for (const [variable, value] of result) {
-                console.log(variable + ' => ' + repr(value));
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error(FG_RED + e.name + RESET);
-        console.error(e.message);
-      } finally {
-        rl.prompt();
-      }
-    });
-
-    return new Promise((resolve, _) => {
-      rl.on('close', () => resolve());
-    });
-  }
-
-  /**
    * Register a JavaScript class for use in Polar policies.
    */
   registerClass<T>(cls: Class<T>, alias?: string): void {
@@ -255,5 +180,74 @@ export class Polar {
   registerConstant(name: string, value: any): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
+  }
+
+  /** Start a REPL session. */
+  async repl(files?: string[]): Promise<void> {
+    try {
+      if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
+    } catch (e) {
+      printError(e);
+    }
+
+    // @ts-ignore
+    const repl = global.repl?.repl;
+
+    if (repl) {
+      repl.setPrompt(PROMPT);
+      const evalQuery = this.evalReplInput.bind(this);
+      repl.eval = async (cmd: string, _ctx: any, _file: string, cb: Function) =>
+        cb(null, await evalQuery(cmd));
+      const listeners: Function[] = repl.listeners('exit');
+      repl.removeAllListeners('exit');
+      repl.prependOnceListener('exit', () => {
+        listeners.forEach(l => repl.addListener('exit', l));
+        require('repl').start({ useGlobal: true });
+      });
+    } else {
+      const rl = createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: PROMPT,
+        tabSize: 4,
+      });
+      rl.prompt();
+      rl.on('line', async line => {
+        const result = await this.evalReplInput(line);
+        if (result !== undefined) console.log(result);
+        rl.prompt();
+      });
+    }
+  }
+
+  /**
+   * Evaluate REPL input.
+   *
+   * @internal
+   */
+  private async evalReplInput(query: string): Promise<boolean | void> {
+    const input = query.trim().replace(/;+$/, '');
+    try {
+      if (input !== '') {
+        const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
+        const query = new Query(ffiQuery, this.#host);
+        const results = [];
+        for await (const result of query.results) {
+          results.push(result);
+        }
+        if (results.length === 0) {
+          return false;
+        } else {
+          for (const result of results) {
+            for (const [variable, value] of result) {
+              console.log(variable + ' => ' + repr(value));
+            }
+          }
+          return true;
+        }
+      }
+    } catch (e) {
+      printError(e);
+    }
   }
 }

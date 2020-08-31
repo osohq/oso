@@ -13,10 +13,10 @@ clean: install
 	yarn clean
 
 dev: wasm
-	yarn tsc --project tsconfig.build.json --watch
+	yarn build --watch
 
 build: wasm
-	yarn tsc --project tsconfig.build.json
+	yarn build
 
 fmt: clean
 	yarn fmt
