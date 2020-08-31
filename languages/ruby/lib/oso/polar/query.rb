@@ -104,23 +104,21 @@ module Oso
         call_result(nil, call_id: call_id)
       end
 
-      def handle_make_external(data)
+      def handle_make_external(data) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         id = data['instance_id']
         raise DuplicateInstanceRegistrationError, id if host.instance? id
 
         constructor = data['constructor']['value']
-        if constructor.key? 'Call'
-          cls_name = constructor['Call']['name']
-          args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
-          kwargs = constructor['Call']['kwargs']
-          if kwargs.nil?
-            kwargs = {}
-          else
-            kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-          end
-        else
-          raise InvalidConstructorError
-        end
+        raise InvalidConstructorError unless constructor.key? 'Call'
+
+        cls_name = constructor['Call']['name']
+        args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
+        kwargs = constructor['Call']['kwargs']
+        kwargs = if kwargs.nil?
+                   {}
+                 else
+                   Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+                 end
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
@@ -129,7 +127,7 @@ module Oso
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
         Enumerator.new do |yielder| # rubocop:disable Metrics/BlockLength
           loop do # rubocop:disable Metrics/BlockLength
             event = ffi_query.next_event

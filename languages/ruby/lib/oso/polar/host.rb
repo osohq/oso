@@ -121,24 +121,24 @@ module Oso
       def make_instance(cls_name, args:, kwargs:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
         constructor = get_constructor(cls_name)
         instance = if constructor == :new
-                     if args.empty? and kwargs.empty?
+                     if args.empty? && kwargs.empty?
                        get_class(cls_name).__send__(:new)
-                     elsif args.empty? and kwargs.is_a? Hash
+                     elsif args.empty? && kwargs.is_a?(Hash)
                        get_class(cls_name).__send__(:new, **kwargs)
-                     elsif kwargs.empty? and args.is_a? Array
+                     elsif kwargs.empty? && args.is_a?(Array)
                        get_class(cls_name).__send__(:new, *args)
-                     elsif args.is_a? Array and kwargs.is_a? Hash
-                        get_class(cls_name).__send(:new, *args, **kwargs)
+                     elsif args.is_a?(Array) && kwargs.is_a?(Hash)
+                       get_class(cls_name).__send(:new, *args, **kwargs)
                      else
                        raise PolarRuntimeError, "Bad initargs: #{initargs}"
                      end
-                   elsif args.empty? and kwargs.empty?
+                   elsif args.empty? && kwargs.empty?
                      constructor.call
-                   elsif args.empty? and kwargs.is_a? Hash
+                   elsif args.empty? && kwargs.is_a?(Hash)
                      constructor.call(**kwargs)
-                   elsif kwargs.empty? and args.is_a? Array
+                   elsif kwargs.empty? && args.is_a?(Array)
                      constructor.call(*args)
-                   elsif args.is_a? Array and kwargs.is_a? Hash
+                   elsif args.is_a?(Array) && kwargs.is_a?(Hash)
                      constructor.call(*args, **kwargs)
                    else
                      raise PolarRuntimeError, "Bad initargs: #{initargs}"
