@@ -230,4 +230,4 @@ plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
             const oso = new Oso();
             oso.registerClass(Expense);
             oso.registerClass(User);
-            oso.repl();
+            await oso.repl();
