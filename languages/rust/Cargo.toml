@@ -1,6 +1,6 @@
 [package]
 name = "oso"
-version = "0.1.0"
+version = "0.4.1-rc4"
 authors = ["Sam Scott <sam@osohq.com>"]
 edition = "2018"
 

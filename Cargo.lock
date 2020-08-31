@@ -738,7 +738,7 @@ checksum = "a86ed3f5f244b372d6b1a00b72ef7f8876d0bc6a78a4c9985c53614041512063"
 
 [[package]]
 name = "oso"
-version = "0.1.0"
+version = "0.4.1-rc4"
 dependencies = [
  "anyhow",
  "maplit",
@@ -826,7 +826,7 @@ dependencies = [
 
 [[package]]
 name = "polar-core"
-version = "0.1.0"
+version = "0.4.1-rc4"
 dependencies = [
  "anyhow",
  "criterion",
