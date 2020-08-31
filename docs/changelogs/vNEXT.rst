@@ -37,9 +37,7 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- Fixed parsing of list match statements: ``[1, 2, 3] matches [1, 2, 3]``.
-- When an inline query fails, the query that failed is printed in the error
-  message.
-- Fixed a bug whereby running the oso REPL from within a Node.js REPL session
-  would result in duplicated STDIN and overlapping STDOUT streams.
-- Make it possible to use expressions inside lists.
+- bulleted list
+- improvements
+- of smaller
+- potentially with doc links
