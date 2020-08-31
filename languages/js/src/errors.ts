@@ -48,6 +48,13 @@ export class InvalidCallError extends PolarError {
   }
 }
 
+export class InvalidConstructorError extends PolarError {
+  constructor(ctor: any) {
+    super(`${repr(ctor)} is not a constructor`);
+    Object.setPrototypeOf(this, InvalidConstructorError.prototype);
+  }
+}
+
 export class InvalidQueryEventError extends PolarError {
   constructor(event: string) {
     super(`Invalid query event: ${event}`);
