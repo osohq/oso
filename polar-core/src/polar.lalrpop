@@ -279,7 +279,7 @@ Matches = {"matches"};
 // matches
 MatchExp<T>: Value = {
     // Symbols on the RHS are treated as class names, just like in a specializers
-    <left:Exp8<T>> Matches <right:Spanned<Pattern>> => {
+    <left:Exp8<T>> Matches <right:PatternExp> => {
         let right = if let Value::Variable(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),

@@ -13,6 +13,10 @@ use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, valu
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
+fn print_messages(msg: &Message) {
+    eprintln!("[{:?}] {}", msg.kind, msg.msg);
+}
+
 fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Option<Vec<Term>>) -> Option<Term> {
     None
 }
@@ -31,13 +35,14 @@ fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
     false
 }
 
-fn query_results<F, G, H, I, J>(
+fn query_results<F, G, H, I, J, K>(
     mut query: Query,
     mut external_call_handler: F,
     mut make_external_handler: H,
     mut external_isa_handler: I,
     mut external_is_subspecializer_handler: J,
     mut debug_handler: G,
+    mut message_handler: K,
 ) -> QueryResults
 where
     F: FnMut(u64, Option<Term>, Symbol, Option<Vec<Term>>) -> Option<Term>,
@@ -45,12 +50,13 @@ where
     H: FnMut(u64, Term),
     I: FnMut(Term, Symbol) -> bool,
     J: FnMut(u64, Symbol, Symbol) -> bool,
+    K: FnMut(&Message),
 {
     let mut results = vec![];
     loop {
         let event = query.next_event().unwrap();
         while let Some(msg) = query.next_message() {
-            eprintln!("{}", msg.msg);
+            message_handler(&msg)
         }
         match event {
             QueryEvent::Done => break,
@@ -112,6 +118,7 @@ macro_rules! query_results {
             no_isa,
             no_is_subspecializer,
             no_debug,
+            print_messages,
         )
     };
     ($query:expr, $external_call_handler:expr, $make_external_handler:expr, $debug_handler:expr) => {
@@ -122,6 +129,7 @@ macro_rules! query_results {
             no_isa,
             no_is_subspecializer,
             $debug_handler,
+            print_messages,
         )
     };
     ($query:expr, $external_call_handler:expr) => {
@@ -132,6 +140,18 @@ macro_rules! query_results {
             no_isa,
             no_is_subspecializer,
             no_debug,
+            print_messages,
+        )
+    };
+    ($query:expr, @msgs $message_handler:expr) => {
+        query_results(
+            $query,
+            no_results,
+            no_externals,
+            no_isa,
+            no_is_subspecializer,
+            no_debug,
+            $message_handler,
         )
     };
 }
@@ -146,24 +166,28 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
             |a, b| mock.borrow_mut().external_isa(a, b),
             |a, b, c| mock.borrow_mut().external_is_subspecializer(a, b, c),
             no_debug,
+            print_messages,
         ),
         mock.into_inner(),
     )
 }
 
 #[track_caller]
+#[must_use = "test results need to be asserted"]
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str, false).unwrap();
     !query_results!(query).is_empty()
 }
 
 #[track_caller]
+#[must_use = "test results need to be asserted"]
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str, false).unwrap();
     query_results!(query).is_empty()
 }
 
 #[track_caller]
+#[must_use = "test results need to be asserted"]
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
     let mut external_results: Vec<Term> = external_results
         .into_iter()
@@ -175,6 +199,7 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
 }
 
 #[track_caller]
+#[must_use = "test results need to be asserted"]
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
     let query = polar
         .new_query(query_str, false)
@@ -186,6 +211,7 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
 }
 
 #[track_caller]
+#[must_use = "test results need to be asserted"]
 fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
     let query = polar.new_query(query_str, false).unwrap();
 
@@ -750,7 +776,7 @@ fn test_externals_instantiated() {
 fn test_infinite_loop() {
     let mut polar = Polar::new();
     polar.load_str("f(x) if f(x);").unwrap();
-    qeval(&mut polar, "f(1)");
+    assert!(qeval(&mut polar, "f(1)"));
 }
 
 #[test]
@@ -1025,12 +1051,14 @@ fn test_singleton_vars() {
 
 #[test]
 fn test_print() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar.load_str("f(x,y,z) if print(x, y, z);").unwrap();
-    assert!(qeval(&mut polar, "f(1, 2, 3)"));
-    let output = polar.next_message().unwrap();
-    assert!(matches!(&output.kind, MessageKind::Print));
-    assert_eq!(&output.msg, "1, 2, 3");
+    let message_handler = |output: &Message| {
+        assert!(matches!(&output.kind, MessageKind::Print));
+        assert_eq!(&output.msg, "1, 2, 3");
+    };
+    let query = polar.new_query("f(1, 2, 3)", false).unwrap();
+    let _results = query_results!(query, @msgs message_handler);
 }
 
 #[test]
@@ -1145,12 +1173,16 @@ fn test_in_op() {
 #[test]
 fn test_matches() {
     let mut polar = Polar::new();
-    qnull(&mut polar, "x = 1 and y = 2 and x matches y");
-    qeval(&mut polar, "x = 1 and y = 1 and x matches y");
-
-    qeval(&mut polar, "x = {foo: 1} and x matches {foo: 1}");
-    qnull(&mut polar, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
-    qnull(&mut polar, "x = {foo: 1} and x matches {foo: 2}");
+    assert!(qnull(&mut polar, "1 matches 2"));
+    assert!(qeval(&mut polar, "1 matches 1"));
+    // This doesn't fail because `y` is parsed as an unknown specializer
+    // assert!(qnull(&mut polar, "x = 1 and y = 2 and x matches y"));
+    assert!(qeval(&mut polar, "x = {foo: 1} and x matches {foo: 1}"));
+    assert!(qnull(
+        &mut polar,
+        "x = {foo: 1} and x matches {foo: 1, bar: 2}"
+    ));
+    assert!(qnull(&mut polar, "x = {foo: 1} and x matches {foo: 2}"));
 }
 
 #[test]
@@ -1556,21 +1588,21 @@ fn test_list_results() {
 fn test_expressions_in_lists() {
     let mut polar = Polar::new();
     let policy = r#"
-    resource_scope(actor: Dictionary, "read", "Person", filters) if
+    scope(actor: Dictionary, "read", "Person", filters) if
         filters = ["id", "=", actor.id];
     "#;
-    polar.load(policy).unwrap();
+    polar.load_str(policy).unwrap();
     assert!(qeval(
         &mut polar,
-        r#"resource_scope({id: 1}, "read", "Person", ["id", "=", 1])"#
+        r#"scope({id: 1}, "read", "Person", ["id", "=", 1])"#
     ));
     assert!(qnull(
         &mut polar,
-        r#"resource_scope({id: 2}, "read", "Person", ["id", "=", 1])"#
+        r#"scope({id: 2}, "read", "Person", ["id", "=", 1])"#
     ));
     assert!(qnull(
         &mut polar,
-        r#"resource_scope({id: 1}, "read", "Person", ["not_id", "=", 1])"#
+        r#"scope({id: 1}, "read", "Person", ["not_id", "=", 1])"#
     ));
     assert!(qeval(&mut polar, r#"d = {x: 1} and [d.x, 1+1] = [1, 2]"#));
     assert_eq!(
@@ -1581,4 +1613,36 @@ fn test_expressions_in_lists() {
         ),
         vec![value!([value!(2)])]
     );
+}
+
+#[test]
+fn test_list_matches() {
+    let mut polar = Polar::new();
+
+    assert!(qeval(&mut polar, "[] matches []"));
+    assert!(qnull(&mut polar, "[1] matches []"));
+    assert!(qnull(&mut polar, "[] matches [1]"));
+    assert!(qnull(&mut polar, "[1, 2] matches [1, 2, 3]"));
+    assert!(qnull(&mut polar, "[2, 1] matches [1, 2]"));
+    assert!(qeval(&mut polar, "[1, 2, 3] matches [1, 2, 3]"));
+    assert!(qnull(&mut polar, "[1, 2, 3] matches [1, 2]"));
+
+    assert!(qnull(&mut polar, "[x] matches []"));
+    assert!(qnull(&mut polar, "[] matches [x]"));
+    assert!(qnull(&mut polar, "[1, 2, x] matches [1, 2]"));
+    assert!(qnull(&mut polar, "[1, x] matches [1, 2, 3]"));
+    assert!(qnull(&mut polar, "[2, x] matches [1, 2]"));
+    assert_eq!(
+        qvar(&mut polar, "[1, 2, x] matches [1, 2, 3]", "x"),
+        vec![value!(3)]
+    );
+    assert!(qnull(&mut polar, "[1, 2, 3] matches [1, x]"));
+
+    assert!(qeval(&mut polar, "[] matches [*ys]"));
+    assert!(qeval(&mut polar, "[*xs] matches []"));
+    assert!(qeval(&mut polar, "[*xs] matches [1]"));
+    assert!(qeval(&mut polar, "[1] matches [*ys]"));
+    assert!(qeval(&mut polar, "[*xs] matches [*ys]"));
+    assert!(qeval(&mut polar, "[1, 2, 3] matches [1, 2, *rest]"));
+    assert!(qeval(&mut polar, "[1, 2, *xs] matches [1, 2, 3, *ys]"));
 }
