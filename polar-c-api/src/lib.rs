@@ -92,7 +92,7 @@ pub extern "C" fn polar_load(
                 .map(|ptr| CStr::from_ptr(ptr).to_string_lossy().to_string())
         };
 
-        match polar.load_file(&src, filename) {
+        match polar.load(&src, filename) {
             Err(err) => {
                 set_error(err);
                 POLAR_FAILURE
@@ -331,6 +331,16 @@ pub extern "C" fn polar_next_query_message(query_ptr: *mut Query) -> *const c_ch
         } else {
             null()
         }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_query_source_info(query_ptr: *mut Query) -> *const c_char {
+    ffi_try!({
+        let query = unsafe { ffi_ref!(query_ptr) };
+        CString::new(query.source_info())
+            .expect("No null bytes")
+            .into_raw()
     })
 }
 

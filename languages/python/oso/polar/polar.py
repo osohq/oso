@@ -4,8 +4,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from pprint import pprint
 import sys
-import hashlib
-import os
 
 try:
     import readline
@@ -17,10 +15,8 @@ from _polar_lib import lib
 from .exceptions import (
     PolarApiException,
     PolarRuntimeException,
+    InlineQueryFailedError,
     ParserException,
-    PolarFileAlreadyLoadedError,
-    PolarFileContentsChangedError,
-    PolarFileNameChangedError,
 )
 from .ffi import Polar as FfiPolar, Query as FfiQuery
 from .host import Host
@@ -62,8 +58,6 @@ class Polar:
     def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
-        self.loaded_names = {}
-        self.loaded_contents = {}
 
         # Register built-in classes.
         self.register_class(bool, name="Boolean")
@@ -84,8 +78,6 @@ class Polar:
         del self.ffi_polar
 
     def clear(self):
-        self.loaded_names = {}
-        self.loaded_contents = {}
         del self.ffi_polar
         self.ffi_polar = FfiPolar()
 
@@ -105,31 +97,14 @@ class Polar:
         try:
             with open(fname, "rb") as f:
                 file_data = f.read()
-            fhash = hashlib.md5(file_data).hexdigest()
         except FileNotFoundError:
             raise PolarApiException(f"Could not find file: {policy_file}")
 
-        if fname in self.loaded_names.keys():
-            if self.loaded_names.get(fname) == fhash:
-                raise PolarFileAlreadyLoadedError(
-                    f"File {fname} has already been loaded."
-                )
-            else:
-                raise PolarFileContentsChangedError(
-                    f"A file with the name {fname}, but different contents, has already been loaded."
-                )
-        elif fhash in self.loaded_contents.keys():
-            raise PolarFileNameChangedError(
-                f"A file with the same contents as {fname} named {self.loaded_contents.get(fhash)} has already been loaded."
-            )
-        else:
-            self.load_str(file_data.decode("utf-8"), policy_file)
-            self.loaded_names[fname] = fhash
-            self.loaded_contents[fhash] = fname
+        self.load_str(file_data.decode("utf-8"), policy_file)
 
     def load_str(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
-        self.ffi_polar.load_str(string, filename)
+        self.ffi_polar.load(string, filename)
 
         # check inline queries
         while True:
@@ -140,7 +115,8 @@ class Polar:
                 try:
                     next(Query(query, host=self.host.copy()).run())
                 except StopIteration:
-                    raise PolarRuntimeException("Inline query in file failed.")
+                    source = query.source()
+                    raise InlineQueryFailedError(f"Inline query failed: {source.get()}")
 
     def query(self, query):
         """Query for a predicate, parsing it if necessary.

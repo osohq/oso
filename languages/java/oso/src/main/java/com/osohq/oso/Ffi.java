@@ -33,7 +33,7 @@ public class Ffi {
             return checkResult(polarLib.polar_get_external_id(ptr));
         }
 
-        protected int loadStr(String src, String filename) throws Exceptions.OsoException {
+        protected int load(String src, String filename) throws Exceptions.OsoException {
             int result = polarLib.polar_load(ptr, src, filename);
             processMessages();
             return checkResult(result);
@@ -136,6 +136,14 @@ public class Ffi {
             }
         }
 
+        protected String source() throws Exceptions.OsoException {
+            Pointer sourcePtr = polarLib.polar_query_source_info(ptr);
+            sourcePtr = checkResult(sourcePtr);
+            String source = sourcePtr.getString(0);
+            polarLib.string_free(sourcePtr);
+            return source;
+        }
+
         @Override
         protected void finalize() {
             polarLib.query_free(ptr);
@@ -217,6 +225,8 @@ public class Ffi {
         Pointer polar_next_polar_message(Pointer polar_ptr);
 
         Pointer polar_next_query_message(Pointer query_ptr);
+
+        Pointer polar_query_source_info(Pointer query_ptr);
 
     }
 

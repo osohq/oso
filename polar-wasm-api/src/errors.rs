@@ -34,6 +34,7 @@ fn kind(err: &PolarError) -> String {
         Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
+        Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
         Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
         Runtime(Serialization { .. }) => "RuntimeError::Serialization",
         Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",

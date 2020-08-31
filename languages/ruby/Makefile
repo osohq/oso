@@ -3,17 +3,17 @@
 rust:
 	$(MAKE) -C ../.. rust-build
 
-install: rust
+install:
 	bundle install
 
-test: install
+test: install rust
 	bundle exec rake spec
 
-lint:
+lint: install
 	bundle exec rubocop
 
-typecheck:
+typecheck: install
 	bundle exec solargraph typecheck
 
-repl: install
+repl: install rust
 	bundle exec oso

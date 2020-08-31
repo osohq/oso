@@ -35,12 +35,8 @@ export class DuplicateInstanceRegistrationError extends PolarError {
 }
 
 export class InlineQueryFailedError extends PolarError {
-  constructor(file?: string) {
-    if (file !== undefined) {
-      super(`Inline query failed while loading '${file}'.`);
-    } else {
-      super('Inline query failed.');
-    }
+  constructor(source: string) {
+    super(`Inline query failed: ${source}`);
     Object.setPrototypeOf(this, InlineQueryFailedError.prototype);
   }
 }
@@ -65,27 +61,6 @@ export class InvalidQueryEventError extends PolarError {
   constructor(event: string) {
     super(`Invalid query event: ${event}`);
     Object.setPrototypeOf(this, InvalidQueryEventError.prototype);
-  }
-}
-
-export class PolarFileAlreadyLoadedError extends PolarError {
-  constructor(file: string) {
-    super(`File '${file}' already loaded.`);
-    Object.setPrototypeOf(this, PolarFileAlreadyLoadedError.prototype);
-  }
-}
-
-export class PolarFileContentsChangedError extends PolarError {
-  constructor(file: string) {
-    super(`File '${file}' already loaded, but contents have changed.`);
-    Object.setPrototypeOf(this, PolarFileContentsChangedError.prototype);
-  }
-}
-
-export class PolarFileDuplicateContentError extends PolarError {
-  constructor(file: string, existing: string) {
-    super(`Content of '${file}' matches the already loaded '${existing}'.`);
-    Object.setPrototypeOf(this, PolarFileDuplicateContentError.prototype);
   }
 }
 

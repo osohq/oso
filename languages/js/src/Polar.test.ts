@@ -30,11 +30,8 @@ import {
 import {
   DuplicateClassAliasError,
   InlineQueryFailedError,
-  PolarFileContentsChangedError,
-  PolarFileDuplicateContentError,
-  PolarFileExtensionError,
-  PolarFileAlreadyLoadedError,
   PolarFileNotFoundError,
+  PolarFileExtensionError,
 } from './errors';
 
 test('it works', async () => {
@@ -361,7 +358,7 @@ describe('#loadFile', () => {
       p.loadFile(await tempFile('', 'a.polar'))
     ).resolves.not.toThrow();
     expect(p.loadFile(await tempFile('', 'b.polar'))).rejects.toThrow(
-      PolarFileDuplicateContentError
+      /Problem loading file: A file with the same contents as .*b.polar named .*a.polar has already been loaded./
     );
   });
 
@@ -371,7 +368,7 @@ describe('#loadFile', () => {
     await expect(p.loadFile(file)).resolves.not.toThrow();
     await truncate(file);
     await expect(p.loadFile(file)).rejects.toThrow(
-      PolarFileContentsChangedError
+      /Problem loading file: A file with the name .*a.polar, but different contents has already been loaded./
     );
   });
 
@@ -379,7 +376,9 @@ describe('#loadFile', () => {
     const p = new Polar();
     const file = await tempFileFx();
     await expect(p.loadFile(file)).resolves.not.toThrow();
-    await expect(p.loadFile(file)).rejects.toThrow(PolarFileAlreadyLoadedError);
+    await expect(p.loadFile(file)).rejects.toThrow(
+      /Problem loading file: File .*f.polar has already been loaded./
+    );
   });
 
   test('can load multiple files', async () => {

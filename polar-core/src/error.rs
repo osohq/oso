@@ -221,6 +221,9 @@ pub enum RuntimeError {
         msg: String,
         stack_trace: Option<String>,
     },
+    FileLoading {
+        msg: String,
+    },
 }
 
 impl RuntimeError {
@@ -255,6 +258,7 @@ impl fmt::Display for RuntimeError {
                 }
                 write!(f, "Application error: {}", msg)
             }
+            Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
         }
     }
 }

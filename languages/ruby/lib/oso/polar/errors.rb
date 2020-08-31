@@ -27,6 +27,7 @@ module Oso
     class UnsupportedError < PolarRuntimeError; end
     class PolarTypeError < PolarRuntimeError; end
     class StackOverflowError < PolarRuntimeError; end
+    class FileLoadingError < PolarRuntimeError; end
 
     # Errors originating from this side of the FFI boundary.
 
@@ -37,26 +38,12 @@ module Oso
     class InvalidCallError < PolarRuntimeError; end
     class InvalidConstructorError < PolarRuntimeError; end
     class InvalidQueryTypeError < PolarRuntimeError; end
-    class InlineQueryFailedError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end
-    class PolarFileAlreadyLoadedError < PolarRuntimeError # rubocop:disable Style/Documentation
-      # @param file [String]
-      def initialize(file)
-        super("File #{file} has already been loaded.")
-      end
-    end
-    class PolarFileContentsChangedError < PolarRuntimeError # rubocop:disable Style/Documentation
-      # @param file [String]
-      def initialize(file)
-        super("A file with the name #{file}, but different contents, has already been loaded.")
-      end
-    end
-    class PolarFileNameChangedError < PolarRuntimeError # rubocop:disable Style/Documentation
-      # @param file [String]
-      # @param existing [String]
-      def initialize(file, existing)
-        super("A file with the same contents as #{file} named #{existing} has already been loaded.")
+    class InlineQueryFailedError < PolarRuntimeError; # rubocop:disable Style/Documentation
+      # @param source [String]
+      def initialize(source)
+        super("Inline query failed: #{source}")
       end
     end
     class PolarFileExtensionError < PolarRuntimeError # rubocop:disable Style/Documentation

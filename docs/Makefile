@@ -75,9 +75,6 @@ java-test: $(JAVA_PACKAGE_JAR_PATH)
 	cd examples/context/java && (ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
 	@echo "Ignore that failure it actually worked!"
 
-test-env:
-	ENV="development" echo && ENV="development" java Test.java -- ENV
-
 python-test:
 	cd examples/inheritance/python && pytest .
 	cd examples/abac/python && pytest .

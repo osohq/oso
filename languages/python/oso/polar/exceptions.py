@@ -33,15 +33,7 @@ class PolarRuntimeException(PolarException):
         return super(PolarException, self).__str__()
 
 
-class PolarFileAlreadyLoadedError(PolarRuntimeException):
-    pass
-
-
-class PolarFileContentsChangedError(PolarRuntimeException):
-    pass
-
-
-class PolarFileNameChangedError(PolarRuntimeException):
+class InlineQueryFailedError(PolarRuntimeException):
     pass
 
 

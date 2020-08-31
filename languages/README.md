@@ -24,8 +24,6 @@ Top-level Polar language API: load and query Polar.
 | ----------------- | ------ | ---- | ---- | ------- |
 | `ffi_polar`       | x      | x    | x    | x       |
 | `host`            | x      | x    | x    | x       |
-| `loaded_files`    | x      | x    | x    | x       |
-| `loaded_contents` | x      | x    | x    | x       |
 
 | Method              | Python | Ruby | Java | Node.js |
 | ------------------- | ------ | ---- | ---- | ------- |

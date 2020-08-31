@@ -19,7 +19,7 @@ class Polar:
         """Request a unique ID from the canonical external ID tracker."""
         return check_result(lib.polar_get_external_id(self.ptr))
 
-    def load_str(self, string, filename):
+    def load(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
         string = to_c_str(string)
         filename = to_c_str(str(filename)) if filename else ffi.NULL
@@ -97,6 +97,11 @@ class Query:
     def next_message(self):
         return lib.polar_next_query_message(self.ptr)
 
+    def source(self):
+        source = lib.polar_query_source_info(self.ptr)
+        source = check_result(source)
+        return Source(source)
+
 
 class QueryEvent:
     def __init__(self, ptr):
@@ -115,6 +120,17 @@ class Error:
 
     def get(self):
         return get_python_error(ffi.string(self.ptr).decode())
+
+    def __del__(self):
+        lib.string_free(self.ptr)
+
+
+class Source:
+    def __init__(self, ptr):
+        self.ptr = ptr
+
+    def get(self):
+        return ffi.string(self.ptr).decode()
 
     def __del__(self):
         lib.string_free(self.ptr)

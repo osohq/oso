@@ -56,7 +56,7 @@ pub fn fib(c: &mut Criterion) {
             b.iter_batched(
                 || {
                     let mut runner = runner_from_query(&format!("fib({}, result)", n));
-                    runner.load(policy).unwrap();
+                    runner.load_str(policy).unwrap();
                     runner.expected_result(maplit::hashmap!(
                         sym!("result") => term!(fib(*n))
                     ));
@@ -94,7 +94,7 @@ pub fn prime(c: &mut Criterion) {
             b.iter_batched(
                 || {
                     let mut runner = runner_from_query(&format!("prime({})", n));
-                    runner.load(policy).unwrap();
+                    runner.load_str(policy).unwrap();
                     if prime(n) {
                         runner.expected_result(maplit::hashmap!())
                     }
@@ -118,9 +118,11 @@ pub fn many_rules(c: &mut Criterion) {
     const TARGET: usize = 10;
     fn make_runner() -> Runner {
         let mut runner = runner_from_query(&format!("f({})", TARGET));
-        runner.load("f(0);").unwrap();
+        runner.load_str("f(0);").unwrap();
         for i in 1..=TARGET {
-            runner.load(&format!("f({}) if f({});", i, i - 1)).unwrap();
+            runner
+                .load_str(&format!("f({}) if f({});", i, i - 1))
+                .unwrap();
         }
         runner.expected_result(Bindings::new());
         runner
@@ -196,7 +198,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                             let mut runner =
                                 runner_from_query("has_grandchild_called(new Person{}, \"bert\")");
                             runner.register_pseudo_class("Person");
-                            runner.load(policy).unwrap();
+                            runner.load_str(policy).unwrap();
                             n_results(&mut runner, *n);
                             runner.external_cost = Some(std::time::Duration::new(0, *delay));
                             runner
