@@ -49,6 +49,9 @@ where
     let mut results = vec![];
     loop {
         let event = query.next_event().unwrap();
+        while let Some(msg) = query.next_message() {
+            eprintln!("{}", msg.msg);
+        }
         match event {
             QueryEvent::Done => break,
             QueryEvent::Result { bindings, trace } => {
@@ -148,16 +151,19 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
     )
 }
 
+#[track_caller]
 fn qeval(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str, false).unwrap();
     !query_results!(query).is_empty()
 }
 
+#[track_caller]
 fn qnull(polar: &mut Polar, query_str: &str) -> bool {
     let query = polar.new_query(query_str, false).unwrap();
     query_results!(query).is_empty()
 }
 
+#[track_caller]
 fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
     let mut external_results: Vec<Term> = external_results
         .into_iter()
@@ -168,6 +174,7 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
     query_results!(query, |_, _, _, _| external_results.pop())
 }
 
+#[track_caller]
 fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
     let query = polar
         .new_query(query_str, false)
@@ -178,6 +185,7 @@ fn qvar(polar: &mut Polar, query_str: &str, var: &str) -> Vec<Value> {
         .collect()
 }
 
+#[track_caller]
 fn qvars(polar: &mut Polar, query_str: &str, vars: &[&str]) -> Vec<Vec<Value>> {
     let query = polar.new_query(query_str, false).unwrap();
 
@@ -1542,4 +1550,35 @@ fn test_list_results() {
     );
     assert!(qeval(&mut polar, "xs = [2] and [1,2] = [1, *xs]"));
     assert!(qnull(&mut polar, "[1, 2] = [2, *ys]"));
+}
+
+#[test]
+fn test_expressions_in_lists() {
+    let mut polar = Polar::new();
+    let policy = r#"
+    resource_scope(actor: Dictionary, "read", "Person", filters) if
+        filters = ["id", "=", actor.id];
+    "#;
+    polar.load(policy).unwrap();
+    assert!(qeval(
+        &mut polar,
+        r#"resource_scope({id: 1}, "read", "Person", ["id", "=", 1])"#
+    ));
+    assert!(qnull(
+        &mut polar,
+        r#"resource_scope({id: 2}, "read", "Person", ["id", "=", 1])"#
+    ));
+    assert!(qnull(
+        &mut polar,
+        r#"resource_scope({id: 1}, "read", "Person", ["not_id", "=", 1])"#
+    ));
+    assert!(qeval(&mut polar, r#"d = {x: 1} and [d.x, 1+1] = [1, 2]"#));
+    assert_eq!(
+        qvar(
+            &mut polar,
+            r#"d = {x: 1} and [d.x, 1+1] = [1, *rest]"#,
+            "rest"
+        ),
+        vec![value!([value!(2)])]
+    );
 }

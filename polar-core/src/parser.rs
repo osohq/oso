@@ -80,18 +80,22 @@ mod tests {
     use crate::formatting::ToPolarString;
     use pretty_assertions::assert_eq;
 
+    #[track_caller]
     fn parse_term(src: &str) -> Term {
         super::parse_term(src).unwrap()
     }
 
+    #[track_caller]
     fn parse_query(src: &str) -> Term {
         super::parse_query(0, src).unwrap()
     }
 
+    #[track_caller]
     fn parse_rule(src: &str) -> Rule {
         super::parse_rules(0, src).unwrap().pop().unwrap()
     }
 
+    #[track_caller]
     fn parse_lines(src: &str) -> Vec<Line> {
         super::parse_lines(0, src).unwrap()
     }

@@ -99,6 +99,10 @@ Variable: Value  = <n:Name> => {
     Value::Variable(n)
 };
 
+RestVar: Value  = "*" <n:Name> => {
+    Value::RestVariable(n)
+};
+
 Predicate: Value = {
     <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
         match arg {
@@ -438,6 +442,24 @@ Exp1<T>: Term = {
     <Exp2<T>>,
 }
 
+ListTerms<T>: Vec<Term> = {
+    <Exp6<T>> => vec![<>],
+    <mut list:ListTerms<T>> "," <tail:Exp6<T>> => {
+        list.push(tail);
+        list
+    },
+}
+
+List<T>: Value = {
+    "[" "]" => Value::List(vec![]),
+    "[" <Spanned<RestVar>> "]" => Value::List(vec![<>]),
+    "[" <ListTerms<T>> "]" => Value::List(<>),
+    "[" <mut terms:ListTerms<T>> "," <rest:Spanned<RestVar>> "]" => {
+        terms.push(rest);
+        Value::List(terms)
+    }
+}
+
 
 pub Pattern: Value = {
     <Number>,
@@ -446,12 +468,7 @@ pub Pattern: Value = {
     <Variable>,
     <DictionaryPattern>,
     <InstanceLiteralPattern>,
-    "[" <terms:(<Spanned<Pattern>> ",")*> <term:Spanned<RestVar<"Pattern">>?> "]" => {
-        match term {
-            Some(term) => Value::List(vec![term]),
-            None => Value::List(terms)
-        }
-    },
+    <List<"Pattern">>,
 };
 
 pub Value: Value = {
@@ -463,30 +480,12 @@ pub Value: Value = {
     <BuiltinOperation>,
     <RewrittenOperation>,
     <Predicate>,
-    "[" <mut terms:(<Term> ",")*> <term:Spanned<RestVar<"Term">>?> "]" => {
-        match term {
-            Some(term) => {
-                terms.push(term);
-                Value::List(terms)
-            },
-            None => Value::List(terms)
-        }
-    },
+    <List<"Term">>,
 }
 
 
 
 // ****** Terms + Patterns ******* //
-
-// Either a *rest variable, or an ordinary term.
-// TODO(Sam): come back to this one
-RestVar<T>: Value = {
-    "*" <Name> => Value::RestVariable(<>),
-    <Value> if T == "Term",
-    <Pattern> if T == "Pattern",
-};
-
-
 
 Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, end, value);
 
