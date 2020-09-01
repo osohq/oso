@@ -61,7 +61,7 @@ clean:
 	rm -r _api_docs
 
 livehtml: deps _api_docs
-	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -i *.tmp
+	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C ../languages/java package

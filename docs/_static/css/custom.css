@@ -72,8 +72,8 @@
         display: none;
     }
     .md-header-nav__source {
-        width: 12rem !important;
-        max-width: 12rem !important;
+        width: 14rem !important;
+        max-width: 14rem !important;
     }
 
     .md-header-nav__title {
@@ -143,8 +143,8 @@
 }
 
 .md-header-nav__source {
-	width: 20rem;
-    max-width: 20rem;
+	width: 24rem;
+    max-width: 24rem;
     padding-top: 8px;
     display: block !important; 
 }
@@ -258,7 +258,7 @@ button {
     font-size: 12pt;
 }
 
-button.github,button.slack {
+button.github,button.slack,button.blog {
     background-color: transparent;
 }
 
