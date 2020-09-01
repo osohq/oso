@@ -348,10 +348,10 @@ jobs:
       matrix:
         python-version: [3.6, 3.7, 3.8]
     steps:
+      - uses: actions/checkout@v2
       - name: Set version env
         id: version
         run: echo "::set-env name=oso_version::$(cat VERSION)"
-      - uses: actions/checkout@v2
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
@@ -369,10 +369,10 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         ruby-version: [2.4, 2.5, 2.6, 2.7]
     steps:
+      - uses: actions/checkout@v2
       - name: Set version env
         id: version
         run: echo "::set-env name=oso_version::$(cat VERSION)"
-      - uses: actions/checkout@v2
       - name: Set up ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
         with:
