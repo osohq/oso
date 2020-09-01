@@ -79,11 +79,9 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: "10"
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
@@ -309,15 +307,8 @@ jobs:
         with:
           name: wheel
       - name: "test"
-        if: runner.os != 'Windows'
         run: |
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
-          python test.py
-        working-directory: test
-      - name: "test"
-        if: runner.os == 'Windows'
-        run: |
-          pip install oso==$($env:github_ref.Substring(11)) -f ../wheel
           python test.py
         working-directory: test
 
@@ -405,8 +396,8 @@ jobs:
         env:
           github_ref: ${{ github.ref }}
         run: |
-          javac -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test.java
-          java -cp "..\jar\oso-$($env:github_ref.Substring(11)).jar;." Test
+          javac -cp "..\jar\oso-${{ steps.version.outputs.oso_version }}.jar;." Test.java
+          java -cp "..\jar\oso-${{ steps.version.outputs.oso_version }}.jar;." Test
         working-directory: test
 
   validate_js:
