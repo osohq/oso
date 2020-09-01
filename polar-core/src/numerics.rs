@@ -5,7 +5,6 @@ use std::mem::discriminant;
 use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Sub};
 
-/// A number. See the [`numerics`] module for implementations.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum Numeric {
     Integer(i64),

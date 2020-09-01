@@ -8,11 +8,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryEvent {
     None,
+
+    Done,
+
     Debug {
         message: String,
     },
-
-    Done,
 
     MakeExternal {
         instance_id: u64,
