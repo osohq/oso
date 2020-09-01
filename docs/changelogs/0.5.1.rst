@@ -1,0 +1,22 @@
+=====
+0.5.1
+=====
+
+**Release date:** 2020-09-01
+
+
+Other bugs & improvements
+=========================
+
+- Fixed parsing of list match statements: ``[1, 2, 3] matches [1, 2, 3]``.
+- When an inline query fails, the query that failed is printed in the error
+  message.
+- Fixed a bug whereby running the oso REPL from within a Node.js REPL session
+  would result in duplicated STDIN and overlapping STDOUT streams.
+- Make it possible to use expressions inside lists, e.g. ``d = {x: 1} and [d.x] = [1]``.
+
+Community
+=========
+
+Thank you to `Terry Appleby <https://github.com/tappleby>`_ for finding the
+above issue with expressions in lists.
