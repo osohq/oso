@@ -64,27 +64,6 @@ export class InvalidQueryEventError extends PolarError {
   }
 }
 
-export class PolarFileAlreadyLoadedError extends PolarError {
-  constructor(file: string) {
-    super(`File '${file}' already loaded.`);
-    Object.setPrototypeOf(this, PolarFileAlreadyLoadedError.prototype);
-  }
-}
-
-export class PolarFileContentsChangedError extends PolarError {
-  constructor(file: string) {
-    super(`File '${file}' already loaded, but contents have changed.`);
-    Object.setPrototypeOf(this, PolarFileContentsChangedError.prototype);
-  }
-}
-
-export class PolarFileDuplicateContentError extends PolarError {
-  constructor(file: string, existing: string) {
-    super(`Content of '${file}' matches the already loaded '${existing}'.`);
-    Object.setPrototypeOf(this, PolarFileDuplicateContentError.prototype);
-  }
-}
-
 export class PolarFileExtensionError extends PolarError {
   constructor(file: string) {
     super(`Polar files must have .polar extension. Offending file: ${file}`);

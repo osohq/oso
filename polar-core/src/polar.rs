@@ -10,6 +10,7 @@ use super::terms::*;
 use super::vm::*;
 use super::warnings::check_singletons;
 
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -67,6 +68,10 @@ impl Iterator for Query {
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
+    /// Set of filenames already loaded
+    loaded_files: Arc<RwLock<HashSet<String>>>,
+    /// Map from source code loaded to the filename it was loaded as
+    loaded_content: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl Default for Polar {
@@ -80,10 +85,58 @@ impl Polar {
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
+            loaded_content: Arc::new(RwLock::new(HashMap::new())), // file content -> file name
+            loaded_files: Arc::new(RwLock::new(HashSet::new())),   // set of file names
         }
     }
 
-    pub fn load_file(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
+    fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
+        match (
+            self.loaded_content.read().unwrap().get(src),
+            self.loaded_files.read().unwrap().contains(filename),
+        ) {
+            (Some(other_file), true) if other_file == filename => {
+                return Err(error::RuntimeError::FileLoading {
+                    msg: format!("File {} has already been loaded.", filename),
+                }
+                .into())
+            }
+            (_, true) => {
+                return Err(error::RuntimeError::FileLoading {
+                    msg: format!(
+                        "A file with the name {}, but different contents has already been loaded.",
+                        filename
+                    ),
+                }
+                .into());
+            }
+            (Some(other_file), _) => {
+                return Err(error::RuntimeError::FileLoading {
+                    msg: format!(
+                        "A file with the same contents as {} named {} has already been loaded.",
+                        filename, other_file
+                    ),
+                }
+                .into());
+            }
+            _ => {}
+        }
+        self.loaded_content
+            .write()
+            .unwrap()
+            .insert(src.to_string(), filename.to_string());
+        self.loaded_files
+            .write()
+            .unwrap()
+            .insert(filename.to_string());
+
+        Ok(())
+    }
+
+    pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
+        if let Some(ref filename) = filename {
+            self.check_file(src, filename)?;
+        }
         let source = Source {
             filename,
             src: src.to_owned(),
@@ -123,8 +176,8 @@ impl Polar {
     }
 
     // Used in integration tests
-    pub fn load(&self, src: &str) -> PolarResult<()> {
-        self.load_file(src, None)
+    pub fn load_str(&self, src: &str) -> PolarResult<()> {
+        self.load(src, None)
     }
 
     pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
@@ -194,6 +247,6 @@ mod tests {
     fn can_load_and_query() {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
-        let _ = polar.load("f(_);");
+        let _ = polar.load_str("f(_);");
     }
 }

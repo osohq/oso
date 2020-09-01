@@ -33,7 +33,7 @@ public class Ffi {
             return checkResult(polarLib.polar_get_external_id(ptr));
         }
 
-        protected int loadStr(String src, String filename) throws Exceptions.OsoException {
+        protected int load(String src, String filename) throws Exceptions.OsoException {
             int result = polarLib.polar_load(ptr, src, filename);
             processMessages();
             return checkResult(result);

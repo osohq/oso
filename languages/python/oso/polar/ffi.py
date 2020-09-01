@@ -19,7 +19,7 @@ class Polar:
         """Request a unique ID from the canonical external ID tracker."""
         return check_result(lib.polar_get_external_id(self.ptr))
 
-    def load_str(self, string, filename):
+    def load(self, string, filename=None):
         """Load a Polar string, checking that all inline queries succeed."""
         string = to_c_str(string)
         filename = to_c_str(str(filename)) if filename else ffi.NULL

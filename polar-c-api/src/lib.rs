@@ -92,7 +92,7 @@ pub extern "C" fn polar_load(
                 .map(|ptr| CStr::from_ptr(ptr).to_string_lossy().to_string())
         };
 
-        match polar.load_file(&src, filename) {
+        match polar.load(&src, filename) {
             Err(err) => {
                 set_error(err);
                 POLAR_FAILURE

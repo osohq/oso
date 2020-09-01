@@ -54,9 +54,13 @@ variables.
            :caption: :fab:`java` Env.java
            :language: java
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
-       Coming soon
+        .. literalinclude:: /examples/context/nodejs/02-context.js
+           :caption: :fab:`node-js` context.js
+           :language: javascript
+           :start-after: context-start
+           :end-before: context-end
 
 The above class exposes a `var` method that reads the application's environment
 variables and returns the value asked for.  We can then register the class with
