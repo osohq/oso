@@ -45,20 +45,48 @@ policy to express this logic.
 
         Java example coming soon.
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
-        Node example coming soon.
+        Let's start by defining JavaScript classes to represent customers and
+        internal users:
 
-Note that if we already had classes in our application that represented customers and internal users,
-we could have simply decorated them with :py:func:`oso.polar_class`.
+        .. literalinclude:: /examples/user_types/nodejs/01-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: classes-start
+            :end-before: classes-end
 
 We can now write a simple policy over these Actor types:
 
-.. literalinclude:: /examples/user_types/user_policy.polar
-    :caption: :fa:`oso` user_types.polar
-    :language: polar
-    :start-after: simple-start
-    :end-before: simple-end
+.. tabs::
+  .. group-tab:: Python
+
+    .. literalinclude:: /examples/user_types/python/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
+
+  .. group-tab:: Ruby
+
+    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
+
+  .. group-tab:: Java
+
+      Java example coming soon.
+
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
+
 
 This policy uses :ref:`specialized rules <specializer>` to control rules execution based on
 the Actor types that is passed into the authorization request.
@@ -91,9 +119,14 @@ For our example, making a request might look like this:
 
         Java example coming soon.
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
-        Node example coming soon.
+        .. literalinclude:: /examples/user_types/nodejs/01-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: app-start
+            :end-before: app-end
+
 
 Hooray, our customer and internal dashboards are now secure!
 
@@ -128,18 +161,46 @@ We can add a ``role`` attribute to our ``InternalUser`` class:
 
         Java example coming soon.
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
-        Node example coming soon.
+        .. literalinclude:: /examples/user_types/nodejs/02-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: internal-start
+            :end-before: internal-end
+
 
 
 Then add the following rule to our policy:
 
-.. literalinclude:: /examples/user_types/user_policy.polar
-    :caption: :fa:`oso` user_types.polar
-    :language: polar
-    :start-after: rbac-start
-    :end-before: rbac-end
+.. tabs::
+  .. group-tab:: Python
+
+    .. literalinclude:: /examples/user_types/python/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: rbac-start
+        :end-before: rbac-end
+
+  .. group-tab:: Ruby
+
+    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: rbac-start
+        :end-before: rbac-end
+
+  .. group-tab:: Java
+
+      Java example coming soon.
+
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: rbac-start
+        :end-before: rbac-end
 
 This example shows a clear benefit of using different classes to represent different Actor types: the ability
 to add custom attributes. We can add attributes specific to internal users, like roles, to the ``InternalUser`` class
@@ -173,31 +234,59 @@ attributes:
 
         Java example coming soon.
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
-        Node example coming soon.
+        .. literalinclude:: /examples/user_types/nodejs/02-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: account-start
+            :end-before: account-end
+
 
 Since account managers are also internal users, we've made the ``AccountManager`` type extend ``InternalUser``.
 This means that our rules that specialize on ``InternalUser`` will still execute for account managers (see :doc:`inheritance`).
 
 Let's add the following lines to our policy:
 
-.. literalinclude:: /examples/user_types/user_policy.polar
-    :caption: :fa:`oso` user_types.polar
-    :language: polar
-    :start-after: manager-start
-    :end-before: manager-end
+.. tabs::
+  .. group-tab:: Python
 
+    .. literalinclude:: /examples/user_types/python/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: manager-start
+        :end-before: manager-end
 
+  .. group-tab:: Ruby
 
-The first rule replaces the RBAC rule we previously used to control access to the accounts dashboard.
-The second rule controls access to account data. For the purposes of this example, let's assume that ``AccountData`` is a resource that has an ``account_id``
-attribute.
+    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: manager-start
+        :end-before: manager-end
 
-We can update our application code slightly to generate ``AccountManager`` users:
+  .. group-tab:: Java
+
+      Java example coming soon.
+
+  .. group-tab:: Node.js
+
+    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: manager-start
+        :end-before: manager-end
+
+The first rule replaces the RBAC rule we previously used to control access to
+the accounts dashboard. The second rule controls access to account data.
 
 .. tabs::
     .. group-tab:: Python
+
+        For the purposes of this example, let's assume that ``AccountData`` is a
+        resource that has an ``account_id`` attribute.
+
+        We can update our application code slightly to generate ``AccountManager`` users:
 
         .. literalinclude:: /examples/user_types/python/02-user_classes.py
             :caption: :fab:`python` user_types.py
@@ -205,6 +294,11 @@ We can update our application code slightly to generate ``AccountManager`` users
             :emphasize-lines: 5-6
 
     .. group-tab:: Ruby
+
+        For the purposes of this example, let's assume that ``AccountData`` is a
+        resource that has an ``account_id`` attribute.
+
+        We can update our application code slightly to generate ``AccountManager`` users:
 
         .. literalinclude:: /examples/user_types/ruby/02-user_classes.rb
             :caption: :fas:`gem` user_types.rb
@@ -216,9 +310,19 @@ We can update our application code slightly to generate ``AccountManager`` users
 
         Java example coming soon.
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
-        Node example coming soon.
+        For the purposes of this example, let's assume that ``AccountData`` is a
+        resource that has an ``accountId`` attribute.
+
+        We can update our application code slightly to generate ``AccountManager`` users:
+
+        .. literalinclude:: /examples/user_types/nodejs/02-userClasses.js
+            :caption: :fab:`node-js` userTypes.js
+            :language: javascript
+            :start-after: account-end
+            :emphasize-lines: 5-7
+
 
 We've now successfully secured all three dashboards and customer account data.
 

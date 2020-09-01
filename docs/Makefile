@@ -92,6 +92,7 @@ nodejs-test:
 	cd examples/rbac/nodejs && yarn && yarn jest
 	cd examples/abac/nodejs && yarn && yarn jest
 	cd examples/context/nodejs && yarn && yarn jest
+	cd examples/inheritance/nodejs && yarn && yarn jest
 
 test: doctest
 	$(MAKE) python-test
