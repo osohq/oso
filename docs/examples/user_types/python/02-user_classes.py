@@ -32,4 +32,4 @@ def user_from_id(id):
         else:
             return actor
     elif user_type == "customer":
-        return CustomerUser(request.id)
+        return Customer(request.id)

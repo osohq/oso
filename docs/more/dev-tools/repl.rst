@@ -39,19 +39,49 @@ Once oso is installed, launch the REPL from the terminal:
 
     .. group-tab:: Node.js
 
+        There are three ways to start the REPL depending on how you installed
+        oso.
+
+        If you installed oso globally (with ``npm install -g oso``), you should
+        have an ``oso`` executable on your PATH:
+
         .. code-block:: console
             :caption: :fab:`node-js` Launch the REPL
 
-            $ ./node_modules/.bin/oso
+            $ oso
             query>
 
-        .. tip::
+        If you installed oso into a project and are using `Yarn
+        <https://yarnpkg.com/>`_, you can run ``yarn oso`` to start the REPL:
 
-           Install oso globally with ``npm install -g`` if you'd like to have
-           the ``oso`` command on your path instead of in your project's
-           ``node_modules`` directory.
+        .. code-block:: console
+            :caption: :fab:`node-js` Launch the REPL
 
-           If you are using ``yarn``, ``yarn oso`` will launch the repl.
+            $ yarn oso
+            query>
+
+        .. |package_json_scripts| replace:: the ``scripts`` property of your project's package.json
+        .. _package_json_scripts: https://docs.npmjs.com/files/package.json#scripts
+
+        If you installed oso into a project and are using NPM, you can add a
+        script to |package_json_scripts|_:
+
+        .. code-block:: json
+            :caption: :fab:`json` package.json
+
+            {
+              "scripts": {
+                "oso": "oso"
+              }
+            }
+
+        With that new script in place, ``npm run oso`` will start the REPL:
+
+        .. code-block:: console
+            :caption: :fab:`node-js` Launch the REPL
+
+            $ npm run oso
+            query>
 
 .. todo:: test above
 
@@ -61,18 +91,18 @@ again, allowing an interactive dialog:
 
 .. code-block:: oso
 
-    query> 1 = 1
-    True
-    query> 1 = 2
-    False
-    query> x = 1 and y = 2
-    {x=1, y=2}
-    query> x = 1 or x = 2
-    {x=1}
-    {x=2}
-    query> x = 1 and x = 2
-    false
-    query>
+  query> 1 = 1
+  true
+  query> 1 = 2
+  false
+  query> x = 1 and y = 2
+  y => 2
+  x => 1
+  query> x = 1 or x = 2
+  x => 1
+  x => 2
+  query> x = 1 and x = 2
+  false
 
 If the query can not be satisfied with the current knowledge base,
 the response is ``false``. If the query is unconditionally true, then
@@ -118,14 +148,17 @@ on the command line:
 
             $ mvn exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="alice.polar"
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
         .. code-block:: console
             :caption: :fab:`node-js` Load files and launch the REPL
 
-            $ ./node_modules/.bin/oso -- alice.polar
+            $ oso alice.polar
 
 And now we can use the rule that was loaded:
+
+.. TODO(gj): it's a little unfortunate that we pass in a string here instead of
+   an Expense, which is the specializer in the above-loaded rule.
 
 .. code-block:: oso
 
@@ -186,13 +219,13 @@ plus ``oso``, and then use the ``Oso.repl()`` API method to start the REPL:
                 }
             }
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
         .. code-block:: javascript
             :caption: :fab:`node-js` app_repl.js
 
-            const { Expense, User } = require("./models");
-            const { Oso } = require("oso");
+            const { Expense, User } = require('./models');
+            const { Oso } = require('oso');
 
             const oso = new Oso();
             oso.registerClass(Expense);
