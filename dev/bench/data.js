@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1598990671972,
+  "lastUpdate": 1598992217051,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -2495,6 +2495,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 28951,
             "range": "± 2414",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "53d86e75db7f014b4bbca375c8ef5f87cd7c797c",
+          "message": "Run release tests on main (and add cacheing) (#396)\n\n* try this\r\n\r\n* pull version from a file\r\n\r\n* pull version from a file correctly\r\n\r\n* not on main\r\n\r\n* version from file\r\n\r\n* windows use version file\r\n\r\n* no file in last step\r\n\r\n* cache and more fixes?\r\n\r\n* do better\r\n\r\n* what's wrong with this jar build\r\n\r\n* checkout before cache\r\n\r\n* output not env\r\n\r\n* main\r\n\r\n* 0.5.1",
+          "timestamp": "2020-09-01T16:20:46-04:00",
+          "tree_id": "f5cecde83554f2d3e3afdeabd58710393c034f34",
+          "url": "https://github.com/osohq/oso/commit/53d86e75db7f014b4bbca375c8ef5f87cd7c797c"
+        },
+        "date": 1598992216050,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1389,
+            "range": "± 317",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4187,
+            "range": "± 233",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 112661,
+            "range": "± 4510",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 598788,
+            "range": "± 30550",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 25023,
+            "range": "± 2002",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 24797,
+            "range": "± 1553",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 24907,
+            "range": "± 1738",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 24544,
+            "range": "± 1391",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 23274,
+            "range": "± 1061",
             "unit": "ns/iter"
           }
         ]
