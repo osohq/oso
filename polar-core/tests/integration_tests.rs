@@ -13,7 +13,6 @@ use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, valu
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
-
 fn no_results(_: u64, _: Term, _: Symbol, _: Option<Vec<Term>>) -> Option<Term> {
     None
 }
