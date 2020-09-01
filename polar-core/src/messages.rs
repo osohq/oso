@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MessageKind {
     Print,

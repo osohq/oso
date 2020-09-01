@@ -762,11 +762,7 @@ impl PolarVirtualMachine {
                     }
                     let _ = write!(st, "\n  ");
 
-                    let source = {
-                        t.get_source_id()
-                            .and_then(|src_id| self.kb.read().unwrap().sources.get_source(src_id))
-                    };
-                    if let Some(source) = source {
+                    if let Some(source) = self.source(t) {
                         if let Some(rule) = &rule {
                             let _ = write!(st, "in rule {} ", rule.name.to_polar());
                         } else {
