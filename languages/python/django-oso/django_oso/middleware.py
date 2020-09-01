@@ -15,7 +15,10 @@ WHITELIST_STATUSES_DEFAULT = {
 }
 
 def RequireAuthorization(get_response):
-    """Check that ``authorize`` was called during the request."""
+    """Check that ``authorize`` was called during the request.
+
+    .. todo:: Note about rollbacks.
+    """
     def middleware(request):
         response = get_response(request)
         if response.status_code in WHITELIST_STATUSES_DEFAULT:
@@ -30,7 +33,10 @@ def RequireAuthorization(get_response):
     return middleware
 
 def RouteAuthorization(get_response):
-    """Authorize route."""
+    """Authorize route.
+
+    .. todo:: Note about 404 and other errors.
+    """
     def middleware(request):
         authorize(request, resource=request)
         return get_response(request)
