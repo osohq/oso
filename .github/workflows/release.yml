@@ -121,11 +121,9 @@ jobs:
           bundler-cache: true
           ruby-version: 2.4
           working-directory: "languages/ruby"
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
@@ -298,11 +296,9 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8]
     steps:
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
@@ -333,11 +329,9 @@ jobs:
       matrix:
         python-version: [3.6, 3.7, 3.8]
     steps:
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - uses: actions/checkout@v2
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
@@ -356,11 +350,9 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         ruby-version: [2.4, 2.5, 2.6, 2.7]
     steps:
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - uses: actions/checkout@v2
       - name: Set up ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
@@ -391,11 +383,9 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         java-version: [10, 11, 12, 13, 14] # @TODO: 8 and 9 not working.
     steps:
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - uses: actions/checkout@v2
       - uses: actions/setup-java@v1
         with:
@@ -428,11 +418,9 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         node-version: [10, 11, 12, 13, 14]
     steps:
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - uses: actions/checkout@v2
       - name: Use Node.js
         uses: actions/setup-node@v1
@@ -466,11 +454,9 @@ jobs:
         validate_js,
       ]
     steps:
-      - name: Set version output
+      - name: Set version env
         id: version
-        env:
-          github_ref: ${{ github.ref }}
-        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: echo "::set-env name=oso_version::$(cat VERSION)"
       - name: Download oso dylibs
         uses: actions/download-artifact@v1
         with:
