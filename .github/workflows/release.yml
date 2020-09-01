@@ -3,6 +3,9 @@ on:
   push:
     tags:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+    branches:
+      - main
+      - steve/test-main
 
 jobs:
   version:
@@ -11,9 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
+        run: echo "::set-env name=oso_version::${cat VERSION}"
+      - name: Check github ref matches
         env:
           github_ref: ${{ github.ref }}
-        run: echo "::set-env name=oso_version::${github_ref/refs\/tags\/v/}"
+        run: grep "${github_ref/refs\/tags\/v/}" VERSION
       - name: Check python version matches
         run: grep "__version__ = \"$oso_version\"" oso/oso.py
         working-directory: languages/python/oso
