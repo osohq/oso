@@ -45,6 +45,7 @@ jobs:
       matrix:
         os: [ubuntu-18.04, macos-latest, windows-latest]
     steps:
+      - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
           path: |
@@ -52,7 +53,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/checkout@v2
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -170,6 +170,7 @@ jobs:
       CIBW_ENVIRONMENT: OSO_ENV=CI
 
     steps:
+      - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
           path: |
@@ -177,7 +178,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         name: Install Python
         with:
@@ -230,6 +230,7 @@ jobs:
       OSO_ENV: CI
       RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
     steps:
+      - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
           path: |
@@ -237,7 +238,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/checkout@v2
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -261,6 +261,7 @@ jobs:
     name: Build js.
     runs-on: ubuntu-18.04
     steps:
+      - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
           path: |
@@ -268,7 +269,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/checkout@v2
       - name: Use Node.js 10.14.2
         uses: actions/setup-node@v1
         with:
