@@ -409,10 +409,10 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         node-version: [10, 11, 12, 13, 14]
     steps:
+      - uses: actions/checkout@v2
       - name: Set version env
         id: version
         run: echo "::set-env name=oso_version::$(cat VERSION)"
-      - uses: actions/checkout@v2
       - name: Use Node.js
         uses: actions/setup-node@v1
         with:
@@ -447,7 +447,9 @@ jobs:
     steps:
       - name: Set version env
         id: version
-        run: echo "::set-env name=oso_version::$(cat VERSION)"
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
       - name: Download oso dylibs
         uses: actions/download-artifact@v1
         with:
