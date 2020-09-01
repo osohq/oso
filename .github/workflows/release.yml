@@ -45,6 +45,13 @@ jobs:
       matrix:
         os: [ubuntu-18.04, macos-latest, windows-latest]
     steps:
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v2
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
@@ -76,12 +83,12 @@ jobs:
     needs: build_dylib
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
-        with:
-          java-version: "10"
       - name: Set version env
         id: version
         run: echo "::set-env name=oso_version::$(cat VERSION)"
+      - uses: actions/setup-java@v1
+        with:
+          java-version: "10"
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
@@ -163,6 +170,13 @@ jobs:
       CIBW_ENVIRONMENT: OSO_ENV=CI
 
     steps:
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         name: Install Python
@@ -216,6 +230,13 @@ jobs:
       OSO_ENV: CI
       RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
     steps:
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v2
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
@@ -240,6 +261,13 @@ jobs:
     name: Build js.
     runs-on: ubuntu-18.04
     steps:
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v2
       - name: Use Node.js 10.14.2
         uses: actions/setup-node@v1
@@ -294,10 +322,10 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8]
     steps:
+      - uses: actions/checkout@v2
       - name: Set version env
         id: version
         run: echo "::set-env name=oso_version::$(cat VERSION)"
-      - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
         with:
@@ -374,10 +402,10 @@ jobs:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         java-version: [10, 11, 12, 13, 14] # @TODO: 8 and 9 not working.
     steps:
+      - uses: actions/checkout@v2
       - name: Set version env
         id: version
         run: echo "::set-env name=oso_version::$(cat VERSION)"
-      - uses: actions/checkout@v2
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java-version }}
