@@ -1,6 +1,7 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
 from datetime import datetime, timedelta
+import os
 from pathlib import Path
 from pprint import pprint
 import sys
