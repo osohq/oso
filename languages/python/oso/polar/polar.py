@@ -39,9 +39,12 @@ FG_RED = ""
 
 
 if supports_color():
-    RESET = "\x1b[0m"
-    FG_BLUE = "\x1b[34m"
-    FG_RED = "\x1b[31m"
+    # \001 and \002 signal these should be
+    # ignored by readline
+    # https://stackoverflow.com/a/9468954/390293
+    RESET =   "\001\x1b[0m\002"
+    FG_BLUE = "\001\x1b[34m\002"
+    FG_RED =  "\001\x1b[31m\002"
 
 
 def print_error(error):
