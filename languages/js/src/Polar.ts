@@ -208,7 +208,7 @@ export class Polar {
         } else {
           for (const result of results) {
             for (const [variable, value] of result) {
-              console.log(variable + ' => ' + repr(value));
+              console.log(variable + ' = ' + repr(value));
             }
           }
           return true;
