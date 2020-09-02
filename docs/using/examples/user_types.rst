@@ -61,7 +61,7 @@ We can now write a simple policy over these Actor types:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/user_types/python/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: simple-start
@@ -69,7 +69,7 @@ We can now write a simple policy over these Actor types:
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: simple-start
@@ -81,7 +81,7 @@ We can now write a simple policy over these Actor types:
 
   .. group-tab:: Node.js
 
-    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: simple-start
@@ -176,7 +176,7 @@ Then add the following rule to our policy:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/user_types/python/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: rbac-start
@@ -184,7 +184,7 @@ Then add the following rule to our policy:
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: rbac-start
@@ -196,7 +196,7 @@ Then add the following rule to our policy:
 
   .. group-tab:: Node.js
 
-    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: rbac-start

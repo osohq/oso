@@ -80,12 +80,14 @@ python-test:
 	cd examples/abac/python && pytest .
 	cd examples/rbac/python && pytest .
 	cd examples/context/python && pytest .
+	cd examples/user_types/python && pytest .
 
 ruby-test:
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb
 	cd examples/rbac/ruby && bundle exec rspec test_spec.rb
 	cd examples/context/ruby && bundle exec rspec test_spec.rb
 	cd examples/inheritance/ruby && bundle exec rspec test_spec.rb
+	cd examples/user_types/ruby && bundle exec rspec test_spec.rb
 
 nodejs-test:
 	$(MAKE) -C ../languages/js build
@@ -93,6 +95,7 @@ nodejs-test:
 	cd examples/abac/nodejs && yarn && yarn jest
 	cd examples/context/nodejs && yarn && yarn jest
 	cd examples/inheritance/nodejs && yarn && yarn jest
+	cd examples/user_types/nodejs && yarn && yarn jest
 
 test: doctest
 	$(MAKE) python-test
