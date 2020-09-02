@@ -1,14 +1,72 @@
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+
 use std::cmp::Ordering;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem::discriminant;
 use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub enum Numeric {
     Integer(i64),
+
+    #[serde(
+        serialize_with = "serialize_float",
+        deserialize_with = "deserialize_float"
+    )]
     Float(f64),
+}
+
+/// Since JSON does not support ±∞ or NaN (RFC 8259 §6),
+/// we encode them as magic strings.
+fn serialize_float<S>(f: &f64, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match f.classify() {
+        FpCategory::Zero => s.serialize_f64(*f),
+        FpCategory::Nan => s.serialize_str("NaN"),
+        FpCategory::Infinite => s.serialize_str(if *f > 0.0 { "Infinity" } else { "-Infinity" }),
+        FpCategory::Subnormal | FpCategory::Normal => s.serialize_f64(*f),
+    }
+}
+
+/// Decode a magic ±∞ or NaN value.
+fn deserialize_float<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct FloatVisitor;
+
+    impl<'de> de::Visitor<'de> for FloatVisitor {
+        type Value = f64;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("JSON encoded data")
+        }
+
+        fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(v)
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match v {
+                "Infinity" => Ok(f64::INFINITY),
+                "-Infinity" => Ok(f64::NEG_INFINITY),
+                "NaN" => Ok(f64::NAN),
+                _ => Err(de::Error::custom("invalid float")),
+            }
+        }
+    }
+
+    deserializer.deserialize_any(FloatVisitor)
 }
 
 impl Add for Numeric {
@@ -169,6 +227,8 @@ impl From<f64> for Numeric {
 mod tests {
     use super::*;
 
+    use serde_json::{from_str as from_json, to_string as to_json};
+
     use std::collections::hash_map::DefaultHasher;
 
     fn hash<T: Hash>(t: &T) -> u64 {
@@ -180,7 +240,7 @@ mod tests {
     #[test]
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     /// Test mixed comparison of longs & doubles.
-    fn test_mixed_comparison() {
+    fn mixed_comparison() {
         // Nothing compares equal to NaN.
         assert!(Numeric::Integer(1) != Numeric::Float(f64::NAN));
         assert!(Numeric::Integer(-1) != Numeric::Float(f64::NAN));
@@ -260,7 +320,7 @@ mod tests {
     }
 
     #[test]
-    fn test_numeric_hash() {
+    fn numeric_hash() {
         let nan1 = f64::NAN;
         let nan2 = f64::from_bits(f64::NAN.to_bits() | 0xDEADBEEF); // frob the payload
         assert!(nan1.is_nan() && nan2.is_nan());
@@ -332,5 +392,100 @@ mod tests {
             hash(&Numeric::Integer(min)),
             hash(&Numeric::Float(fmin - 2048.0)) // next representationally distinct float down
         );
+    }
+
+    #[test]
+    fn json_serialization() {
+        assert_eq!(to_json(&Numeric::Integer(0)).unwrap(), r#"{"Integer":0}"#);
+        assert_eq!(to_json(&Numeric::Integer(1)).unwrap(), r#"{"Integer":1}"#);
+        assert_eq!(to_json(&Numeric::Integer(-1)).unwrap(), r#"{"Integer":-1}"#);
+        assert_eq!(
+            to_json(&Numeric::Integer(i64::MAX)).unwrap(),
+            r#"{"Integer":9223372036854775807}"#
+        );
+
+        assert_eq!(
+            to_json(&Numeric::Float(MOST_POSITIVE_EXACT_FLOAT as f64)).unwrap(),
+            r#"{"Float":9007199254740992.0}"#
+        );
+        assert_eq!(to_json(&Numeric::Float(1.0)).unwrap(), r#"{"Float":1.0}"#);
+        assert_eq!(
+            to_json(&Numeric::Float(f64::EPSILON)).unwrap(),
+            r#"{"Float":2.220446049250313e-16}"#
+        );
+        assert_eq!(to_json(&Numeric::Float(0.0)).unwrap(), r#"{"Float":0.0}"#);
+        assert_eq!(to_json(&Numeric::Float(-0.0)).unwrap(), r#"{"Float":-0.0}"#);
+        assert_eq!(to_json(&Numeric::Float(-1.0)).unwrap(), r#"{"Float":-1.0}"#);
+        assert_eq!(
+            to_json(&Numeric::Float(f64::NEG_INFINITY)).unwrap(),
+            r#"{"Float":"-Infinity"}"#
+        );
+        assert_eq!(
+            to_json(&Numeric::Float(f64::INFINITY)).unwrap(),
+            r#"{"Float":"Infinity"}"#
+        );
+        assert_eq!(
+            to_json(&Numeric::Float(f64::NAN)).unwrap(),
+            r#"{"Float":"NaN"}"#
+        );
+    }
+
+    #[test]
+    fn json_deserialization() {
+        // Integers.
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Integer":0}"#).unwrap(),
+            Numeric::Integer(0)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Integer":1}"#).unwrap(),
+            Numeric::Integer(1)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Integer":-1}"#).unwrap(),
+            Numeric::Integer(-1)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Integer":9223372036854775807}"#).unwrap(),
+            Numeric::Integer(i64::MAX)
+        );
+
+        // Floats.
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":9007199254740992.0}"#).unwrap(),
+            Numeric::Float(MOST_POSITIVE_EXACT_FLOAT as f64)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":1.0}"#).unwrap(),
+            Numeric::Float(1.0)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":2.220446049250313e-16}"#).unwrap(),
+            Numeric::Float(f64::EPSILON)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":0.0}"#).unwrap(),
+            Numeric::Float(0.0)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":-0.0}"#).unwrap(),
+            Numeric::Float(-0.0)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":-1.0}"#).unwrap(),
+            Numeric::Float(-1.0)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":"-Infinity"}"#).unwrap(),
+            Numeric::Float(f64::NEG_INFINITY)
+        );
+        assert_eq!(
+            from_json::<Numeric>(r#"{"Float":"Infinity"}"#).unwrap(),
+            Numeric::Float(f64::INFINITY)
+        );
+        assert!(match from_json::<Numeric>(r#"{"Float":"NaN"}"#).unwrap() {
+            Numeric::Float(f) => f.is_nan(),
+            _ => panic!("expected a float"),
+        });
     }
 }
