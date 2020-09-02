@@ -83,9 +83,6 @@ pub struct ExternalInstance {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Context {
     pub file: String,
-    // TODO: more things
-
-    // maybe for ffi, you say the method on what python class you called or whatever.
 }
 
 pub type TermList = Vec<Term>;
