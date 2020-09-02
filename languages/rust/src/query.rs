@@ -251,8 +251,8 @@ impl Query {
 
 #[derive(Clone)]
 pub struct ResultSet {
-    bindings: polar_core::types::Bindings,
-    host: Arc<Mutex<crate::host::Host>>,
+    pub bindings: polar_core::types::Bindings,
+    pub host: Arc<Mutex<crate::host::Host>>,
 }
 
 impl ResultSet {

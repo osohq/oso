@@ -6,6 +6,7 @@ use rustyline::Editor;
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
 use oso::Oso;
+use polar_core::formatting::to_polar::ToPolarString;
 
 use std::env;
 use std::fs::OpenOptions;
@@ -112,7 +113,7 @@ pub fn main() -> anyhow::Result<()> {
     load_files(&mut oso, &mut args)?;
     loop {
         // get input
-        let input: String = match repl.oso_input(">> ") {
+        let input: String = match repl.oso_input("query> ") {
             Ok(input) => input,
             Err(e) => {
                 eprintln!("Readline error: {}", e);
@@ -129,10 +130,20 @@ pub fn main() -> anyhow::Result<()> {
         let mut has_result = false;
         while let Some(res) = query.next() {
             has_result = true;
-            println!("{:?}", res)
+            if let Ok(res) = res {
+                if res.bindings.is_empty() {
+                    println!("true");
+                } else {
+                    for (var, value) in res.bindings {
+                        println!("{} => {}", var, value.to_polar());
+                    }
+                }
+            } else {
+                println!("{:?}", res.expect_err("error"))
+            }
         }
         if !has_result {
-            println!("False")
+            println!("false")
         }
     }
     Ok(())
