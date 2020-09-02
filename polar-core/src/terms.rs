@@ -201,7 +201,7 @@ pub enum Value {
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Pattern(Pattern),
-    Call(Predicate), // @TODO: Do we just want a type for this instead?
+    Call(Predicate),
     List(TermList),
     Variable(Symbol),
     RestVariable(Symbol),
