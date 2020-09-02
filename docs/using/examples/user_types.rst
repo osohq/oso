@@ -251,7 +251,7 @@ Let's add the following lines to our policy:
 .. tabs::
   .. group-tab:: Python
 
-    .. literalinclude:: /examples/user_types/python/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: manager-start
@@ -259,7 +259,7 @@ Let's add the following lines to our policy:
 
   .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: manager-start
@@ -271,7 +271,7 @@ Let's add the following lines to our policy:
 
   .. group-tab:: Node.js
 
-    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+    .. literalinclude:: /examples/user_types/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar
         :start-after: manager-start
