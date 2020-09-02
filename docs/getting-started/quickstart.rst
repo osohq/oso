@@ -181,6 +181,7 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
+      >>> oso.register_class(Expense)
       >>> oso.load_file("expenses.polar")
 
     ...and now Alice has the power...

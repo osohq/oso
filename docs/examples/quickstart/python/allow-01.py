@@ -1,4 +1,5 @@
 from oso import Oso
+from expense import EXPENSES
 
 
 def setup_oso():
