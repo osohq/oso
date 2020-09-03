@@ -135,7 +135,7 @@ pub fn main() -> anyhow::Result<()> {
                     println!("true");
                 } else {
                     for (var, value) in res.bindings {
-                        println!("{} => {}", var, value.to_polar());
+                        println!("{} = {}", var, value.to_polar());
                     }
                 }
             } else {
