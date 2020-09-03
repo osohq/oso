@@ -9,7 +9,10 @@
 //! In addition, there are special cases like traces and sources that have their own
 //! formatting requirements.
 
-use crate::types::*;
+use crate::rules::*;
+use crate::sources::*;
+use crate::terms::*;
+use crate::traces::*;
 pub use display::*;
 pub use to_polar::*;
 
@@ -139,7 +142,9 @@ pub mod display {
     use std::sync::Arc;
 
     use super::ToPolarString;
-    use crate::types::{Numeric, Operation, Operator, Rule, Symbol, Term, Value};
+    use crate::numerics::Numeric;
+    use crate::rules::Rule;
+    use crate::terms::{Operation, Operator, Symbol, Term, Value};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -310,7 +315,8 @@ pub mod display {
 
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
-    use crate::types::*;
+    use crate::rules::*;
+    use crate::terms::*;
 
     /// Effectively works as a reverse-parser. Allows types to be turned
     /// back into polar-parseable strings.

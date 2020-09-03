@@ -2,7 +2,9 @@ use std::rc::Rc;
 
 use super::error::PolarResult;
 use super::formatting::{source_lines, ToPolarString};
-use super::types::*;
+use super::sources::*;
+use super::terms::*;
+
 use super::vm::*;
 
 impl PolarVirtualMachine {
@@ -146,10 +148,13 @@ impl Debugger {
     /// Retrieve the original source line (and, optionally, additional lines of context) for the
     /// current query.
     fn query_source(&self, query: &Term, sources: &Sources, num_lines: usize) -> String {
-        sources.get_source(query).map_or_else(
-            || "".to_string(),
-            |source| source_lines(&source, query.offset(), num_lines),
-        )
+        query
+            .get_source_id()
+            .and_then(|id| sources.get_source(id))
+            .map_or_else(
+                || "".to_string(),
+                |source| source_lines(&source, query.offset(), num_lines),
+            )
     }
 
     /// When the [`VM`](../vm/struct.PolarVirtualMachine.html) hits a breakpoint, check if

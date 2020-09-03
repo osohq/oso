@@ -1,7 +1,12 @@
 use super::error::PolarResult;
+use super::events::*;
+use super::kb::*;
+use super::messages::*;
 use super::parser;
 use super::rewrites::*;
-use super::types::*;
+use super::rules::*;
+use super::sources::*;
+use super::terms::*;
 use super::vm::*;
 use super::warnings::check_singletons;
 
