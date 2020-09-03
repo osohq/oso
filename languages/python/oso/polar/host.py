@@ -1,5 +1,7 @@
 """Translate between Polar and the host language (Python)."""
 
+from math import inf, isinf, isnan, nan
+
 from .exceptions import PolarApiException, PolarRuntimeException
 from .variable import Variable
 from .predicate import Predicate
@@ -133,6 +135,10 @@ class Host:
         elif type(v) == int:
             val = {"Number": {"Integer": v}}
         elif type(v) == float:
+            if isinf(v):
+                v = "Infinity" if v > 0 else "-Infinity"
+            elif isnan(v):
+                v = "NaN"
             val = {"Number": {"Float": v}}
         elif type(v) == str:
             val = {"String": v}
@@ -170,7 +176,15 @@ class Host:
         if tag in ["String", "Boolean"]:
             return value[tag]
         elif tag == "Number":
-            return [*value[tag].values()][0]
+            number = [*value[tag].values()][0]
+            if "Float" in value[tag]:
+                if number == "Infinity":
+                    return inf
+                elif number == "-Infinity":
+                    return -inf
+                elif number == "NaN":
+                    return nan
+            return number
         elif tag == "List":
             return [self.to_python(e) for e in value[tag]]
         elif tag == "Dictionary":
