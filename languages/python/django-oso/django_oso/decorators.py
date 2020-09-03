@@ -17,7 +17,12 @@ def skip_authorization(view_func):
     return wrap_view
 
 def authorize(view_func=None, resource=None, actor=None, action=None):
-    """Authorize view."""
+    """Authorize view for ``resource``, ``actor``, and ``action``.
+
+    All three parameters must be constant for this decorator to be used. If
+    actor or action are omitted, the defaults from
+    :py:func:`django_oso.auth.authorize`. are used.
+    """
     if view_func is not None:
         @functools.wraps(view_func)
         def wrap_view(request, *args, **kwargs):
@@ -29,7 +34,11 @@ def authorize(view_func=None, resource=None, actor=None, action=None):
     return functools.partial(authorize, actor=actor, action=action, resource=resource)
 
 def authorize_request(view_func=None, actor=None, action=None):
-    """Authorize the view function, using the request as the resource."""
+    """Authorize the view function, using the request as the resource.
+
+    This performs route authorization, similarly to
+    :py:class:`~django_oso.middleware.RouteAuthorization`, but on a single view.
+    """
     if view_func is not None:
         @functools.wraps(view_func)
         def wrap_view(request, *args, **kwargs):

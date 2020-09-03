@@ -7,8 +7,17 @@ from django.utils.autoreload import autoreload_started
 from oso import Oso as _Oso
 
 Oso = _Oso()
+"""Singleton :py:class:`oso.Oso` instance.
+
+Use for loading policy files and registering classes.
+"""
 
 def reset_oso():
+    """Reset the state of :py:data:`~django_oso.oso.Oso`.
+
+    Useful as a test helper to clean state between tests, but generally should
+    not be used otherwise.
+    """
     Oso.clear()
     init_oso()
 

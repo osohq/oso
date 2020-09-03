@@ -17,7 +17,18 @@ WHITELIST_STATUSES_DEFAULT = {
 def RequireAuthorization(get_response):
     """Check that ``authorize`` was called during the request.
 
-    .. todo:: Note about rollbacks.
+    :raises oso.OsoException: If ``authorize`` was not called during request
+                              processing.
+
+    .. warning::
+
+        This check is performed at the end of request processing before
+        returning a response.  If any database modifications are committed
+        during the request, but it was not authorized, an OsoException will be
+        raised, but the database modifications will not be rolled back.
+
+        .. todo:: Would be good to have a solution to this ^, maybe a on
+                  precommit hook.
     """
     def middleware(request):
         response = get_response(request)
@@ -33,9 +44,28 @@ def RequireAuthorization(get_response):
     return middleware
 
 def RouteAuthorization(get_response):
-    """Authorize route.
+    """Perform route authorization on every request.
 
-    .. todo:: Note about 404 and other errors.
+    A call to
+    :py:meth:`~django_oso.auth.authorize`
+    will be made before view functions are called with the parameters
+    ``actor=request.user, action=request.method, resource=request``.
+
+    Rules in oso policies can be written over requests using the ``HttpRequest``
+    specializer:
+
+    .. code-block:: polar
+
+        allow(actor, action, resource: HttpRequest) if
+            # Access request properties to perform authorization
+            request.path = "/";
+
+    .. note::
+
+        If the view returns a 4**, or 5** HTTP status, this will be returned to
+        the end user even if authorization was not performed.
+
+        .. todo:: Customize this ^
     """
     def middleware(request):
         authorize(request, resource=request)
