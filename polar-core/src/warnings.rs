@@ -8,6 +8,7 @@ use std::collections::{hash_map::Entry, HashMap};
 pub fn common_misspellings(t: &str) -> Option<String> {
     let misspelled_type = match t {
         "int" => Some("Number"),
+        "Integer" => Some("Number"),
         "i32" => Some("Number"),
         "i64" => Some("Number"),
         "u32" => Some("Number"),
@@ -15,6 +16,7 @@ pub fn common_misspellings(t: &str) -> Option<String> {
         "size_t" => Some("Number"),
         "usize" => Some("Number"),
         "float" => Some("Number"),
+        "Float" => Some("Number"),
         "f32" => Some("Number"),
         "double" => Some("Number"),
         "f64" => Some("Number"),
@@ -25,6 +27,7 @@ pub fn common_misspellings(t: &str) -> Option<String> {
         "array" => Some("List"),
         "Array" => Some("List"),
         "dict" => Some("Dictionary"),
+        "Dict" => Some("Dictionary"),
         "dictionary" => Some("Dictionary"),
         "hash" => Some("Dictionary"),
         "Hash" => Some("Dictionary"),
