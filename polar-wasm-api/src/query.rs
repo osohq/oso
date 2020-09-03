@@ -1,4 +1,4 @@
-use polar_core::{polar, types::Term};
+use polar_core::{polar, terms::Term};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serde_serialization_error, serialization_error, Error};

@@ -8,7 +8,16 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use polar_core::{error::*, polar::Polar, polar::Query, sym, term, types::*, value};
+use polar_core::{
+    error::*,
+    events::*,
+    messages::*,
+    polar::{Polar, Query},
+    sym, term,
+    terms::*,
+    traces::*,
+    value,
+};
 
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
