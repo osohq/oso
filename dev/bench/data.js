@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599091291026,
+  "lastUpdate": 1599146832469,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -2729,6 +2729,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 26395,
             "range": "± 1403",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "149c2a53f3383ff520bc8f339221c27e55137057",
+          "message": "Refactor types (#388)\n\nThe types module is gone. The new modules that replace it are:\r\n- events\r\n- kb\r\n- messages\r\n- rules\r\n- sources\r\n- terms\r\n- traces\r\n\r\nCo-authored-by: steve olsen <dev@steve.computer>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-03T09:22:38-06:00",
+          "tree_id": "6afaae2b109eab450a94376f4d74759158e69994",
+          "url": "https://github.com/osohq/oso/commit/149c2a53f3383ff520bc8f339221c27e55137057"
+        },
+        "date": 1599146831650,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1783,
+            "range": "± 111",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 5390,
+            "range": "± 343",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 145003,
+            "range": "± 8517",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 776696,
+            "range": "± 21718",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 32774,
+            "range": "± 1522",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 32881,
+            "range": "± 1671",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 32047,
+            "range": "± 924",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 32070,
+            "range": "± 930",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 30906,
+            "range": "± 2057",
             "unit": "ns/iter"
           }
         ]
