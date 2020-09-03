@@ -77,9 +77,9 @@ pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
     for (sym, singleton) in singletons {
         if let Some(term) = singleton {
             let mut msg = if let Value::Pattern(..) = term.value() {
-                let mut msg = format!("Unknown specializer '{}'", sym);
+                let mut msg = format!("Unknown specializer {}", sym);
                 if let Some(t) = common_misspellings(&sym.0) {
-                    msg.push_str(&format!(", did you mean '{}'?", t));
+                    msg.push_str(&format!(", did you mean {}?", t));
                 }
                 msg
             } else {
