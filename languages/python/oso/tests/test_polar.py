@@ -461,53 +461,44 @@ def test_query(load_file, polar, query):
 def test_constructor(polar, qvar):
     """Test that class constructor is called correctly with constructor syntax."""
 
-    class TestConstructor:
-        def __init__(self, x):
-            self.x = x
+    class Foo:
+        def __init__(self, a, b, bar, baz):
+            self.a = a
+            self.b = b
+            self.bar = bar
+            self.baz = baz
 
-    polar.register_class(TestConstructor)
+    polar.register_class(Foo)
 
-    assert (
-        qvar("instance = new TestConstructor(x: 1) and y = instance.x", "y", one=True)
-        == 1
+    instance = qvar(
+        "instance = new Foo(1,2,3,4)",
+        "instance",
+        one=True,
     )
-    assert (
-        qvar("instance = new TestConstructor(x: 2) and y = instance.x", "y", one=True)
-        == 2
-    )
-    assert (
-        qvar(
-            "instance = new TestConstructor(x: new TestConstructor(x: 3)) and y = instance.x.x",
-            "y",
-            one=True,
-        )
-        == 3
-    )
+    assert instance.a == 1
+    assert instance.b == 2
+    assert instance.bar == 3
+    assert instance.baz == 4
 
-    class TestConstructorTwo:
-        def __init__(self, x, y):
-            self.x = x
-            self.y = y
-
-    polar.register_class(TestConstructorTwo)
-
-    assert (
-        qvar(
-            "instance = new TestConstructorTwo(x: 1, y: 2) and x = instance.x and y = instance.y",
-            "y",
-            one=True,
-        )
-        == 2
+    instance = qvar(
+        "instance = new Foo(1, 2, bar: 3, baz: 4)",
+        "instance",
+        one=True,
     )
+    assert instance.a == 1
+    assert instance.b == 2
+    assert instance.bar == 3
+    assert instance.baz == 4
 
-    assert (
-        qvar(
-            "instance = new TestConstructorTwo(1, y: 2) and x = instance.x and y = instance.y",
-            "y",
-            one=True,
-        )
-        == 2
+    instance = qvar(
+        "instance = new Foo(a: 1, b: 2, bar: 3, baz: 4)",
+        "instance",
+        one=True,
     )
+    assert instance.a == 1
+    assert instance.b == 2
+    assert instance.bar == 3
+    assert instance.baz == 4
 
 
 def test_instance_cache(polar, qeval, query):
