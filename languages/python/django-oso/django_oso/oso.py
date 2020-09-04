@@ -43,11 +43,11 @@ def init_oso():
         policy_dir = os.path.join(app.path, 'policy')
         for path, _, filenames in os.walk(policy_dir):
             for file in filenames:
-                path = os.path.join(path, file)
+                file_path = os.path.join(path, file)
                 if os.path.splitext(file)[1] == '.polar':
                     print(f"load file {path}")
-                    Oso.load_file(path)
-                    loaded_files.append(path)
+                    Oso.load_file(file_path)
+                    loaded_files.append(file_path)
 
     return loaded_files
 
