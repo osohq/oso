@@ -7,6 +7,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 pub fn common_misspellings(t: &str) -> Option<String> {
     let misspelled_type = match t {
+        "integer" => "Integer",
         "int" => "Integer",
         "i32" => "Integer",
         "i64" => "Integer",
