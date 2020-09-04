@@ -18,6 +18,9 @@ from .exceptions import (
     PolarRuntimeError,
     InlineQueryFailedError,
     ParserError,
+    PolarFileExtensionError,
+    PolarFileNotFoundError,
+    InvalidQueryTypeError,
 )
 from .ffi import Polar as FfiPolar, Query as FfiQuery
 from .host import Host
@@ -92,19 +95,15 @@ class Polar:
         until a query is made."""
         policy_file = Path(policy_file)
         extension = policy_file.suffix
-        if not extension == ".polar":
-            raise PolarApiError(
-                f"Polar files must have .polar extension. Offending file: {policy_file}"
-            )
-
         fname = str(policy_file)
+        if not extension == ".polar":
+            raise PolarFileExtensionError(fname)
 
-        # Checksum file contents
         try:
             with open(fname, "rb") as f:
                 file_data = f.read()
         except FileNotFoundError:
-            raise PolarApiError(f"Could not find file: {policy_file}")
+            raise PolarFileNotFoundError(fname)
 
         self.load_str(file_data.decode("utf-8"), policy_file)
 
@@ -122,7 +121,7 @@ class Polar:
                     next(Query(query, host=self.host.copy()).run())
                 except StopIteration:
                     source = query.source()
-                    raise InlineQueryFailedError(f"Inline query failed: {source.get()}")
+                    raise InlineQueryFailedError(source.get())
 
     def query(self, query):
         """Query for a predicate, parsing it if necessary.
@@ -137,7 +136,7 @@ class Polar:
         elif isinstance(query, Predicate):
             query = self.ffi_polar.new_query_from_term(host.to_polar(query))
         else:
-            raise PolarApiError(f"Can not query for {query}")
+            raise InvalidQueryTypeError()
 
         for res in Query(query, host=host).run():
             yield res

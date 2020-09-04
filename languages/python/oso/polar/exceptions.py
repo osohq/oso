@@ -59,6 +59,18 @@ class DuplicateInstanceRegistrationError(PolarRuntimeError):
     pass
 
 
+class PolarFileExtensionError(PolarRuntimeError):
+    def __init__(self, file):
+        super().__init__(
+            f"Polar files must have .polar extension. Offending file: {file}"
+        )
+
+
+class PolarFileNotFoundError(PolarRuntimeError):
+    def __init__(self, file):
+        super().__init__(f"Could not find file: {file}")
+
+
 class MissingConstructorError(PolarRuntimeError):
     pass
 
@@ -68,10 +80,23 @@ class UnregisteredInstanceError(PolarRuntimeError):
 
 
 class InlineQueryFailedError(PolarRuntimeError):
-    pass
+    def __init__(self, source):
+        super().__init__(f"Inline query failed: {source}")
 
 
 class UnexpectedPolarTypeError(PolarRuntimeError):
+    pass
+
+
+class InvalidQueryTypeError(PolarRuntimeError):
+    pass
+
+
+class InvalidCallError(PolarRuntimeError):
+    pass
+
+
+class InvalidConstructorError(PolarRuntimeError):
     pass
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from polar import polar_class
 from polar import exceptions, Polar, Predicate, Query, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
-from polar.exceptions import ParserError, PolarRuntimeError
+from polar.exceptions import ParserError, PolarRuntimeError, InvalidCallError
 
 import pytest
 
@@ -104,8 +104,9 @@ def test_external(polar, qvar, qeval):
 
     polar.register_class(Foo, from_polar=capital_foo)
     assert qvar("new Foo().a = x", "x", one=True) == "A"
-    with pytest.raises(RuntimeError, match="tried to call 'a' but it is not callable"):
-        assert not qeval("new Foo().a() = x")
+    with pytest.raises(
+        InvalidCallError, match="tried to call 'a' but it is not callable"
+    ):        assert not qeval("new Foo().a() = x")
     assert not qvar("new Foo().b = x", "x", one=True) == "b"
     assert qvar("new Foo().b() = x", "x", one=True) == "b"
     assert not qvar("Foo.c = x", "x", one=True) == "c"

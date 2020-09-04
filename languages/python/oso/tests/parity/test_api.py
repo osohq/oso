@@ -5,7 +5,12 @@ import pytest
 from pathlib import Path
 
 from polar import Polar, Predicate
-from polar.exceptions import PolarRuntimeError, PolarApiError
+from polar.exceptions import (
+    PolarRuntimeError,
+    PolarApiError,
+    PolarFileExtensionError,
+    PolarFileNotFoundError,
+)
 from oso import Http, PathMapper
 
 from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
@@ -206,13 +211,13 @@ def test_instance_from_external_call(polar, load_policy, query):
 
 
 def test_load_input_checking(polar, query):
-    with pytest.raises(PolarApiError):
+    with pytest.raises(PolarFileExtensionError):
         polar.load_file("unreal.py")
-    with pytest.raises(PolarApiError):
+    with pytest.raises(PolarFileExtensionError):
         polar.load_file(Path(__file__).parent / "unreal.py")
-    with pytest.raises(PolarApiError):
+    with pytest.raises(PolarFileNotFoundError):
         polar.load_file(Path(__file__).parent / "unreal.polar")
-    with pytest.raises(PolarApiError):
+    with pytest.raises(PolarFileExtensionError):
         polar.load_file(Path(__file__).parent / "unreal.pol")
 
     polar.load_file(Path(__file__).parent / "policies" / "test_api.polar")

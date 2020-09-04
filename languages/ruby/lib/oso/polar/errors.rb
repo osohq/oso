@@ -35,6 +35,8 @@ module Oso
     class MissingConstructorError < PolarRuntimeError; end
     class UnregisteredInstanceError < PolarRuntimeError; end
     class DuplicateInstanceRegistrationError < PolarRuntimeError; end
+
+    # TODO: I think this should probably have some arguments to say what the call is
     class InvalidCallError < PolarRuntimeError; end
     class InvalidConstructorError < PolarRuntimeError; end
     class InvalidQueryTypeError < PolarRuntimeError; end
