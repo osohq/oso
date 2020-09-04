@@ -6,9 +6,16 @@ use std::sync::{Arc, RwLock};
 
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
+use super::events::*;
 use super::formatting::ToPolarString;
+use super::kb::*;
 use super::lexer::loc_to_pos;
-use super::types::*;
+use super::messages::*;
+use super::numerics::*;
+use super::rules::*;
+use super::sources::*;
+use super::terms::*;
+use super::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]
@@ -717,7 +724,8 @@ impl PolarVirtualMachine {
     }
 
     pub fn source(&self, term: &Term) -> Option<Source> {
-        self.kb.read().unwrap().sources.get_source(&term)
+        term.get_source_id()
+            .and_then(|id| self.kb.read().unwrap().sources.get_source(id))
     }
 
     /// Get the query stack as a string for printing in error messages.
@@ -753,8 +761,8 @@ impl PolarVirtualMachine {
                         continue;
                     }
                     let _ = write!(st, "\n  ");
-                    let source = { self.kb.read().unwrap().sources.get_source(&t) };
-                    if let Some(source) = source {
+
+                    if let Some(source) = self.source(t) {
                         if let Some(rule) = &rule {
                             let _ = write!(st, "in rule {} ", rule.name.to_polar());
                         } else {
@@ -2434,8 +2442,10 @@ impl PolarVirtualMachine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use permute::permute;
+
+    use super::*;
+    use crate::rewrites::unwrap_and;
 
     /// Shorthand for constructing Goal::Query.
     ///

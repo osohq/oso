@@ -12,7 +12,7 @@ fn call_result_succeeds() {
             r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
         )
         .unwrap();
-    polar.wasm_load_file("x() if y.z;", None).unwrap();
+    polar.wasm_load("x() if y.z;", None).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     let event_kind: JsValue = "ExternalCall".into();
@@ -48,7 +48,7 @@ fn app_error_succeeds() {
             r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
         )
         .unwrap();
-    polar.wasm_load_file("x() if y.z;", None).unwrap();
+    polar.wasm_load("x() if y.z;", None).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     let event_kind: JsValue = "ExternalCall".into();

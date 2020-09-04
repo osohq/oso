@@ -125,8 +125,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     it 'is idempotent' do
       expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
-        expect(e).to be_an Oso::Polar::PolarFileAlreadyLoadedError
-        expect(e.message).to eq("File #{test_file} has already been loaded.")
+        expect(e).to be_an Oso::Polar::FileLoadingError
+        expect(e.message).to eq("Problem loading file: File #{test_file} has already been loaded.")
       end
     end
 
@@ -235,7 +235,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
       it 'handles mixed args' do
         stub_const('Foo', Class.new do
-          attr_reader :a, :b, :bar, :baz
+          attr_reader :one, :two, :bar, :baz
 
           def initialize(one, two, bar:, baz:)
             @one = one
@@ -250,8 +250,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         id = subject.host.make_instance('Foo', args: [1, 2], kwargs: { bar: 3, baz: 4 }, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
-        expect(instance.a).to eq(1)
-        expect(instance.b).to eq(2)
+        expect(instance.one).to eq(1)
+        expect(instance.two).to eq(2)
         expect(instance.bar).to eq(3)
         expect(instance.baz).to eq(4)
       end

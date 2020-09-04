@@ -1,4 +1,4 @@
-use polar_core::{polar, types::Symbol};
+use polar_core::{polar, terms::Symbol};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serde_serialization_error, serialization_error, Error};
@@ -16,10 +16,10 @@ impl Polar {
         Self(polar::Polar::new())
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = loadFile)]
-    pub fn wasm_load_file(&self, src: &str, filename: Option<String>) -> JsResult<()> {
+    #[wasm_bindgen(js_class = Polar, js_name = load)]
+    pub fn wasm_load(&self, src: &str, filename: Option<String>) -> JsResult<()> {
         self.0
-            .load_file(src, filename)
+            .load(src, filename)
             .map_err(Error::from)
             .map_err(Error::into)
     }

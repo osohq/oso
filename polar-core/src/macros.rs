@@ -8,7 +8,8 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::types::*;
+use crate::rules::*;
+use crate::terms::*;
 
 pub const ORD: Ordering = Ordering::SeqCst;
 pub static NEXT_ID: AtomicU64 = AtomicU64::new(0);
@@ -197,7 +198,7 @@ impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
 #[macro_export]
 macro_rules! value {
     ([$($args:expr),*]) => {
-        $crate::types::Value::List(vec![
+        $crate::terms::Value::List(vec![
             $(term!(value!($args))),*
         ])
     };

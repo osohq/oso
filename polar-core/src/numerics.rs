@@ -1,10 +1,15 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::mem::discriminant;
 use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Sub};
 
-use super::types::*;
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum Numeric {
+    Integer(i64),
+    Float(f64),
+}
 
 impl Add for Numeric {
     type Output = Option<Self>;
@@ -67,7 +72,7 @@ impl PartialEq for Numeric {
 impl Eq for Numeric {}
 
 /// There are 53 bits of mantissa in an IEEE 754 double precision float.
-const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
+pub const MOST_POSITIVE_EXACT_FLOAT: i64 = 1 << 53;
 
 /// -i64::MIN is 2**63. The maximum positive i64 is 2**63 - 1, but this
 /// isn't representable as a double. So, we first cast i64::MIN to f64

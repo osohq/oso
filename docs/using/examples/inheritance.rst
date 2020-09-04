@@ -107,10 +107,13 @@ We haven't talked about the application side of this yet.  So far, we've assumed
 
         Java example coming soon.
 
-    .. group-tab:: Node
+    .. group-tab:: Node.js
 
-        Node example coming soon.
-
+        .. literalinclude:: /examples/inheritance/nodejs/inheritanceExternal.js
+           :language: javascript
+           :caption: :fab:`node-js` inheritance.js
+           :start-after: start-patient-data
+           :end-before: end-patient-data
 
 We used inheritance to capture some of the common
 functionality needed (storing the patient).  In a real application these

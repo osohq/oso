@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use std::fmt;
 
-use crate::types::*;
+use crate::sources::*;
+use crate::terms::*;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -221,6 +222,9 @@ pub enum RuntimeError {
         msg: String,
         stack_trace: Option<String>,
     },
+    FileLoading {
+        msg: String,
+    },
 }
 
 impl RuntimeError {
@@ -255,6 +259,7 @@ impl fmt::Display for RuntimeError {
                 }
                 write!(f, "Application error: {}", msg)
             }
+            Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
         }
     }
 }

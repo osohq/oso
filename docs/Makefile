@@ -16,7 +16,7 @@ export JS_DIR := $(abspath ../languages/js)
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.5.0.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.5.1.jar
 
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
@@ -61,7 +61,7 @@ clean:
 	rm -r _api_docs
 
 livehtml: deps _api_docs
-	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -i *.tmp
+	@sphinx-autobuild -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C ../languages/java package
@@ -92,6 +92,7 @@ nodejs-test:
 	cd examples/rbac/nodejs && yarn && yarn jest
 	cd examples/abac/nodejs && yarn && yarn jest
 	cd examples/context/nodejs && yarn && yarn jest
+	cd examples/inheritance/nodejs && yarn && yarn jest
 
 test: doctest
 	$(MAKE) python-test

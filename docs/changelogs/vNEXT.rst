@@ -37,4 +37,7 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- When an inline query fails, the query that failed is printed in the error message.
+- bulleted list
+- improvements
+- of smaller
+- potentially with doc links

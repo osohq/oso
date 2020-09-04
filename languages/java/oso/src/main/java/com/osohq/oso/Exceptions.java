@@ -158,6 +158,12 @@ public class Exceptions {
         }
     }
 
+    public static class FileLoadingError extends PolarRuntimeException {
+        public FileLoadingError(String msg, Map<String, Object> details) {
+            super(msg, details);
+        }
+    }
+
     // Errors originating from this side of the FFI boundary.
 
     public static class UnregisteredClassError extends PolarRuntimeException {
@@ -186,7 +192,8 @@ public class Exceptions {
 
     public static class InvalidCallError extends PolarRuntimeException {
         public InvalidCallError(String className, String callName, Class<?>... argTypes) {
-            super("Invalid call `" + callName + "` on class " + className + ", with argument types " + "`" + argTypes + "`");
+            super("Invalid call `" + callName + "` on class " + className + ", with argument types " + "`" + argTypes
+                    + "`");
         }
 
         public InvalidCallError(String msg) {
@@ -240,31 +247,6 @@ public class Exceptions {
         public UnexpectedPolarTypeError(String type) {
             super(type);
         }
-    }
-
-    public static class PolarFileAlreadyLoadedError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
-        public PolarFileAlreadyLoadedError(String type) {
-            super(type);
-        }
-    }
-
-    public static class PolarFileContentsChangedError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
-        public PolarFileContentsChangedError(String type) {
-            super(type);
-        }
-    }
-
-    public static class PolarFileNameChangedError extends PolarRuntimeException {
-        private static final long serialVersionUID = 1L;
-
-        public PolarFileNameChangedError(String type) {
-            super(type);
-        }
-
     }
 
     public static class PolarFileExtensionError extends PolarRuntimeException {
