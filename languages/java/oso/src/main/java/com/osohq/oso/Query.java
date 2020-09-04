@@ -121,7 +121,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     } else if (constructor.has("Call")) {
                         className = constructor.getJSONObject("Call").getString("name");
                         initargs = constructor.getJSONObject("Call").getJSONArray("args");
-                        if (!(constructor.getJSONObject("Call").get("kwargs") == JSONObject.NULL)) {
+                        if (constructor.getJSONObject("Call").get("kwargs") != JSONObject.NULL) {
                             throw new Exceptions.InstantiationError(className);
                         }
                     } else {
