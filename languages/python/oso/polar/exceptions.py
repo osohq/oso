@@ -3,114 +3,130 @@
 # @TODO: Should we just generate these from the rust code?
 
 
-class OsoException(Exception):
+class OsoError(Exception):
     def __init__(self, message=None, details=None):
+        self.message = message
         self.details = details
-        self.stack_trace = details.stack_trace
-        super(message)
+        self.stack_trace = details.get("stack_trace") if details else None
+        super().__init__(self.message)
 
 
-class FFIErrorNotFound(OsoException):
+class FFIErrorNotFound(OsoError):
     pass
 
 
-class PolarRuntimeException(OsoException):
+# ==================
+# RUNTIME EXCEPTIONS
+# ==================
+
+
+class PolarRuntimeError(OsoError):
     pass
 
 
-class SerializationError(PolarRuntimeException):
+class SerializationError(PolarRuntimeError):
     pass
 
 
-class UnsupportedError(PolarRuntimeException):
+class UnsupportedError(PolarRuntimeError):
     pass
 
 
-class PolarTypeError(PolarRuntimeException):
+class PolarTypeError(PolarRuntimeError):
     pass
 
 
-class StackOverflowError(PolarRuntimeException):
+class StackOverflowError(PolarRuntimeError):
     pass
 
 
-class UnregisteredClassError(PolarRuntimeException):
+class FileLoadingError(PolarRuntimeError):
     pass
 
 
-class MissingConstructorError(PolarRuntimeException):
+class UnregisteredClassError(PolarRuntimeError):
     pass
 
 
-class UnregisteredInstanceError(PolarRuntimeException):
+class DuplicateClassAliasError(PolarRuntimeError):
+    def __init__(self, name, old, new):
+        super().__init__(
+            f"Attempted to alias {new} as '{name}', but {old} already has that alias."
+        )
+
+
+class MissingConstructorError(PolarRuntimeError):
     pass
 
 
-class PolarException(Exception):
-    """Base class for all exceptions from within polar."""
-
-    def __init__(self, message, error=None):
-        super(PolarException, self).__init__(message)
-        self._inner = error
+class UnregisteredInstanceError(PolarRuntimeError):
+    pass
 
 
-class ParserException(PolarException):
+class InlineQueryFailedError(PolarRuntimeError):
+    pass
+
+
+# =================
+# PARSER EXCEPTIONS
+# =================
+
+
+class ParserError(OsoError):
     """Parse time errors."""
 
     pass
 
 
-class PolarRuntimeException(PolarException):
-    """Exception occurring at runtime (during query tell or evaluation)."""
-
-    def __init__(self, message, error=None):
-        super().__init__(message, error)
-        self.stack_trace = None
-        if error:
-            self.kind = [*error][0]
-            data = error[self.kind]
-            if "stack_trace" in data:
-                self.stack_trace = data["stack_trace"]
-
-    def __str__(self):
-        return super(PolarException, self).__str__()
-
-
-class InlineQueryFailedError(PolarRuntimeException):
+class IntegerOverflow(ParserError):
     pass
 
 
-class PolarOperationalException(PolarException):
-    """Exceptions from polar that are not necessarily the user's fault. OOM etc..."""
+class InvalidTokenCharacter(ParserError):
+    pass
+
+
+class InvalidToken(ParserError):
+    pass
+
+
+class UnrecognizedEOF(ParserError):
+    pass
+
+
+class UnrecognizedToken(ParserError):
+    pass
+
+
+class ExtraToken(ParserError):
+    pass
+
+
+# ======================
+# OPERATIONAL EXCEPTIONS
+# ======================
+
+
+class OperationalError(OsoError):
+    """Errors from polar that are not necessarily the user's fault. OOM etc..."""
 
     pass
 
 
-class PolarApiException(PolarException):
-    """ Exceptions coming from the python bindings to polar, not the engine itself. """
+class UnknownError(OperationalError):
+    pass
+
+
+# ==============
+# API EXCEPTIONS
+# ==============
+
+
+class PolarApiError(OsoError):
+    """ Errors coming from the python bindings to polar, not the engine itself. """
 
     pass
 
 
-class IntegerOverflow(ParserException):
-    pass
-
-
-class InvalidTokenCharacter(ParserException):
-    pass
-
-
-class InvalidToken(ParserException):
-    pass
-
-
-class UnrecognizedEOF(ParserException):
-    pass
-
-
-class UnrecognizedToken(ParserException):
-    pass
-
-
-class ExtraToken(ParserException):
+class ParameterError(PolarApiError):
     pass

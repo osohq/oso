@@ -5,7 +5,7 @@ from pathlib import Path
 from polar import polar_class
 from polar import exceptions, Polar, Predicate, Query, Variable
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
-from polar.exceptions import ParserException, PolarRuntimeException
+from polar.exceptions import ParserError, PolarRuntimeError
 
 import pytest
 
@@ -40,13 +40,13 @@ def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
     # Loading the same file twice doesn't mess stuff up.
     polar.load_file(Path(__file__).parent / "test_file.polar")
-    with pytest.raises(exceptions.PolarRuntimeException) as e:
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
         polar.load_file(Path(__file__).parent / "test_file.polar")
     assert (
         str(e.value)
         == f"Problem loading file: File {Path(__file__).parent}/test_file.polar has already been loaded."
     )
-    with pytest.raises(exceptions.PolarRuntimeException) as e:
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
         polar.load_file(Path(__file__).parent / "test_file_renamed.polar")
     assert (
         str(e.value)
@@ -329,7 +329,7 @@ def test_load_and_query():
     p = Polar()
     p.load_str("f(1); f(2); ?= f(1); ?= not f(3);")
 
-    with pytest.raises(exceptions.PolarException):
+    with pytest.raises(exceptions.OsoError):
         p.load_str("g(1); ?= g(2);")
 
 
@@ -397,7 +397,7 @@ def test_runtime_errors(polar, query):
     foo(a,b) if a in b;
     """
     polar.load_str(rules)
-    with pytest.raises(exceptions.PolarRuntimeException) as e:
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
         query("foo(1,2)")
     assert (
         str(e.value)
@@ -420,7 +420,7 @@ def test_lookup_errors(polar, query):
     # Unify with an invalid field doesn't error.
     assert query('new Foo() = {bar: "bar"}') == []
     # Dot op with an invalid field does error.
-    with pytest.raises(exceptions.PolarRuntimeException) as e:
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
         query('new Foo().bar = "bar"') == []
     assert "Application error: 'Foo' object has no attribute 'bar'" in str(e.value)
 
@@ -434,18 +434,16 @@ def test_predicate(polar, qvar, query):
 
 
 def test_return_list(polar, query):
-    class Actor:
+    class User:
         def groups(self):
             return ["engineering", "social", "admin"]
 
-    polar.register_class(Actor)
+    polar.register_class(User)
 
     # for testing lists
-    polar.load_str(
-        'allow(actor: Actor, "join", "party") if "social" in actor.groups();'
-    )
+    polar.load_str('allow(actor: User, "join", "party") if "social" in actor.groups();')
 
-    assert query(Predicate(name="allow", args=[Actor(), "join", "party"]))
+    assert query(Predicate(name="allow", args=[User(), "join", "party"]))
 
 
 def test_query(load_file, polar, query):
@@ -681,7 +679,7 @@ def test_return_none(polar, qeval):
 
     polar.load_str("f(x) if x.this_is_none.bad_call = 1;")
 
-    with pytest.raises(exceptions.PolarRuntimeException) as e:
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
         list(polar.query_rule("f", Foo()))
     assert str(e.value).find(
         "Application error: 'NoneType' object has no attribute 'bad_call'"

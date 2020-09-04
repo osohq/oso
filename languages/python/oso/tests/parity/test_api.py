@@ -5,7 +5,7 @@ import pytest
 from pathlib import Path
 
 from polar import Polar, Predicate
-from polar.exceptions import PolarRuntimeException, PolarApiException
+from polar.exceptions import PolarRuntimeError, PolarApiError
 from oso import Http, PathMapper
 
 from test_api_externals import Widget, DooDad, Actor, Company, get_frobbed, set_frobbed
@@ -206,13 +206,13 @@ def test_instance_from_external_call(polar, load_policy, query):
 
 
 def test_load_input_checking(polar, query):
-    with pytest.raises(PolarApiException):
+    with pytest.raises(PolarApiError):
         polar.load_file("unreal.py")
-    with pytest.raises(PolarApiException):
+    with pytest.raises(PolarApiError):
         polar.load_file(Path(__file__).parent / "unreal.py")
-    with pytest.raises(PolarApiException):
+    with pytest.raises(PolarApiError):
         polar.load_file(Path(__file__).parent / "unreal.polar")
-    with pytest.raises(PolarApiException):
+    with pytest.raises(PolarApiError):
         polar.load_file(Path(__file__).parent / "unreal.pol")
 
     polar.load_file(Path(__file__).parent / "policies" / "test_api.polar")
@@ -260,7 +260,7 @@ def test_clear(polar, load_policy, query):
     # raises exception because new policy file specifies on a class defined in the old file,
     # but not in the new file
     polar.clear()
-    with pytest.raises(PolarRuntimeException):
+    with pytest.raises(PolarRuntimeError):
         polar.load_file(fails)
 
     polar.clear()
