@@ -9,9 +9,7 @@ from django.utils.autoreload import autoreload_started
 from .oso import init_oso
 
 def watch_files(files, sender, **kwargs):
-    print("watch")
     for file in files:
-        print(f"watch {file}")
         sender.extra_files.add(Path(file))
 
 class DjangoOsoConfig(AppConfig):

@@ -25,7 +25,6 @@ def init_oso():
     # Register all models.
     for app in apps.get_app_configs():
         for model in app.get_models():
-            print(f"Register {model}")
             Oso.register_class(model)
 
     # Custom registration for auth (AnonymousUser)
@@ -45,7 +44,6 @@ def init_oso():
             for file in filenames:
                 file_path = os.path.join(path, file)
                 if os.path.splitext(file)[1] == '.polar':
-                    print(f"load file {path}")
                     Oso.load_file(file_path)
                     loaded_files.append(file_path)
 
