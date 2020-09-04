@@ -64,7 +64,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
             throws Exceptions.OsoException {
         Optional<List<Object>> args = Optional.empty();
         if (jArgs.isPresent()) {
-            args =  Optional.of(host.polarListToJava(jArgs.get()));
+            args = Optional.of(host.polarListToJava(jArgs.get()));
         }
         try {
             registerCall(attrName, args, callId, polarInstance);
@@ -121,6 +121,9 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                     } else if (constructor.has("Call")) {
                         className = constructor.getJSONObject("Call").getString("name");
                         initargs = constructor.getJSONObject("Call").getJSONArray("args");
+                        if (!(constructor.getJSONObject("Call").get("kwargs") == JSONObject.NULL)) {
+                            throw new Exceptions.InstantiationError(className);
+                        }
                     } else {
                         throw new Exceptions.InvalidConstructorError("Bad constructor");
                     }
@@ -186,10 +189,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      *                      instance of a built-in type.
      */
     public void registerCall(String attrName, Optional<List<Object>> args, long callId, JSONObject polarInstance)
-            throws Exceptions.InvalidAttributeError,
-                   Exceptions.InvalidCallError,
-                   Exceptions.UnregisteredInstanceError,
-                   Exceptions.UnexpectedPolarTypeError {
+            throws Exceptions.InvalidAttributeError, Exceptions.InvalidCallError, Exceptions.UnregisteredInstanceError,
+            Exceptions.UnexpectedPolarTypeError {
         if (calls.containsKey(callId)) {
             return;
         }
@@ -205,10 +206,9 @@ public class Query implements Enumeration<HashMap<String, Object>> {
         Object result = null;
         try {
             Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
-            if(args.isPresent()) {
+            if (args.isPresent()) {
                 Class<?>[] argTypes = args.get().stream().map(a -> a.getClass())
-                    .collect(Collectors.toUnmodifiableList())
-                    .toArray(new Class[0]);
+                        .collect(Collectors.toUnmodifiableList()).toArray(new Class[0]);
                 Method method = MethodUtils.getMatchingAccessibleMethod(cls, attrName, argTypes);
                 if (method == null) {
                     throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
