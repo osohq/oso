@@ -128,7 +128,7 @@ module Oso
                      elsif kwargs.empty? && args.is_a?(Array)
                        get_class(cls_name).__send__(:new, *args)
                      elsif args.is_a?(Array) && kwargs.is_a?(Hash)
-                       get_class(cls_name).__send(:new, *args, **kwargs)
+                       get_class(cls_name).__send__(:new, *args, **kwargs)
                      else
                        raise PolarRuntimeError, "Bad initargs: #{initargs}"
                      end
