@@ -171,7 +171,7 @@ class Polar:
                     bindings = res["bindings"]
                     if bindings:
                         for variable, value in bindings.items():
-                            print(variable + " => " + repr(value))
+                            print(variable + " = " + repr(value))
                     else:
                         print(True)
             except PolarRuntimeException as e:

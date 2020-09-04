@@ -220,7 +220,7 @@ module Oso
               puts true
             else
               result.each do |variable, value|
-                puts "#{variable} => #{value.inspect}"
+                puts "#{variable} = #{value.inspect}"
               end
             end
           end
