@@ -27,7 +27,11 @@ where
     match f.classify() {
         FpCategory::Zero => s.serialize_f64(*f),
         FpCategory::Nan => s.serialize_str("NaN"),
-        FpCategory::Infinite => s.serialize_str(if *f > 0.0 { "Infinity" } else { "-Infinity" }),
+        FpCategory::Infinite => s.serialize_str(if *f == f64::INFINITY {
+            "Infinity"
+        } else {
+            "-Infinity"
+        }),
         FpCategory::Subnormal | FpCategory::Normal => s.serialize_f64(*f),
     }
 }

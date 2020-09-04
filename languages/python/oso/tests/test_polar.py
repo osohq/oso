@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from math import inf, isinf, isnan, nan, pi
+from math import inf, isnan, nan, pi
 from pathlib import Path
 
 from polar import polar_class
@@ -615,15 +615,17 @@ def test_inf_nan(polar, qeval, query):
     assert isnan(query("x = nan")[0]["x"])
     assert not query("nan = nan")
 
-    assert isinf(query("x = inf")[0]["x"])
+    x = query("x = inf")[0]["x"]
+    assert x == inf
     assert qeval("inf = inf")
 
     x = query("x = neg_inf")[0]["x"]
-    assert isinf(x) and x < 0
+    assert x == -inf
+    assert qeval("neg_inf = neg_inf")
+
     assert not query("inf = neg_inf")
     assert not query("inf < neg_inf")
     assert qeval("neg_inf < inf")
-    assert qeval("neg_inf = neg_inf")
 
 
 def test_register_constants_with_decorator():

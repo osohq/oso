@@ -135,8 +135,10 @@ class Host:
         elif type(v) == int:
             val = {"Number": {"Integer": v}}
         elif type(v) == float:
-            if isinf(v):
-                v = "Infinity" if v > 0 else "-Infinity"
+            if v == inf:
+                v = "Infinity"
+            elif v == -inf:
+                v = "-Infinity"
             elif isnan(v):
                 v = "NaN"
             val = {"Number": {"Float": v}}
