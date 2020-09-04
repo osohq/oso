@@ -238,15 +238,19 @@ mod tests {
         let f = r#"a(x) if x = new Foo(1, 2);"#;
         let results = parse_rules(0, f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(1, 2);"#);
+
+        // test trailing comma
+        let f = r#"a(x) if x = new Foo(1,);"#;
+        parse_rules(0, f).expect_err("parse error");
     }
 
     #[test]
     fn test_parse_new_mixed_args() {
-        let f = r#"a(x) if x = new Foo(1, 2, bar: 3);"#;
+        let f = r#"a(x) if x = new Foo(1, 2, bar: 3, baz:4);"#;
         let results = parse_rules(0, f).unwrap();
         assert_eq!(
             results[0].to_polar(),
-            r#"a(x) if x = new Foo(1, 2, bar: 3);"#
+            r#"a(x) if x = new Foo(1, 2, bar: 3, baz: 4);"#
         );
         let f = r#"a(x) if x = new Foo(bar: 3, baz: 4);"#;
         let results = parse_rules(0, f).unwrap();
@@ -254,6 +258,9 @@ mod tests {
             results[0].to_polar(),
             r#"a(x) if x = new Foo(bar: 3, baz: 4);"#
         );
+
+        let f = r#"a(x) if x = new Foo(bar: 3, baz: 4, 1, 2);"#;
+        parse_rules(0, f).expect_err("parse error");
     }
 
     #[test]
