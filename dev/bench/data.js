@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599165408326,
+  "lastUpdate": 1599235104259,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -2885,6 +2885,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 30670,
             "range": "± 2698",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0fa98dc18b708905ccf0534ac8ef52df1e418df1",
+          "message": "More consistent printing in REPL (#400)",
+          "timestamp": "2020-09-04T11:46:45-04:00",
+          "tree_id": "6eb4fde6da5d5bae494b6429c4c1a928da799857",
+          "url": "https://github.com/osohq/oso/commit/0fa98dc18b708905ccf0534ac8ef52df1e418df1"
+        },
+        "date": 1599235103244,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1716,
+            "range": "± 140",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 5685,
+            "range": "± 327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 144985,
+            "range": "± 7004",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 772686,
+            "range": "± 33933",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 33916,
+            "range": "± 1660",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 33053,
+            "range": "± 1814",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 33123,
+            "range": "± 1670",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 33724,
+            "range": "± 2080",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 31224,
+            "range": "± 1101",
             "unit": "ns/iter"
           }
         ]
