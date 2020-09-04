@@ -727,4 +727,24 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(first['x']).to be_instance_of(Oso::Polar::Variable)
     end
   end
+
+  it 'handles ±∞ and NaN' do
+    subject.register_constant('inf', value: Float::INFINITY)
+    subject.register_constant('neg_inf', value: -Float::INFINITY)
+    subject.register_constant('nan', value: Float::NAN)
+
+    x = qvar(subject, 'x = nan', 'x', one: true)
+    expect(x.nan?).to be true
+    expect(query(subject, 'nan = nan')).to eq([])
+
+    expect(qvar(subject, 'x = inf', 'x', one: true)).to eq(Float::INFINITY)
+    expect(query(subject, 'inf = inf')).to eq([{}])
+
+    expect(qvar(subject, 'x = neg_inf', 'x', one: true)).to eq(-Float::INFINITY)
+    expect(query(subject, 'neg_inf = neg_inf')).to eq([{}])
+
+    expect(query(subject, 'inf = neg_inf')).to eq([])
+    expect(query(subject, 'inf < neg_inf')).to eq([])
+    expect(query(subject, 'neg_inf < inf')).to eq([{}])
+  end
 end
