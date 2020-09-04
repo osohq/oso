@@ -189,8 +189,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      *                      instance of a built-in type.
      */
     public void registerCall(String attrName, Optional<List<Object>> args, long callId, JSONObject polarInstance)
-            throws Exceptions.InvalidAttributeError, Exceptions.InvalidCallError, Exceptions.UnregisteredInstanceError,
-            Exceptions.UnexpectedPolarTypeError {
+            throws Exceptions.InvalidAttributeError,
+                Exceptions.InvalidCallError,
+                Exceptions.OsoException,
+                Exceptions.UnregisteredInstanceError,
+                Exceptions.UnexpectedPolarTypeError {
         if (calls.containsKey(callId)) {
             return;
         }

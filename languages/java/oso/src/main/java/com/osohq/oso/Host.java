@@ -154,7 +154,7 @@ public class Host implements Cloneable {
      * Check if a Java instance is an instance of a class.
      */
     public boolean isa(JSONObject instance, String classTag) throws Exceptions.UnregisteredClassError,
-            Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+            Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError, Exceptions.OsoException {
         Class<?> cls = getClass(classTag);
         return cls.isInstance(toJava(instance));
     }
@@ -170,7 +170,15 @@ public class Host implements Cloneable {
         } else if (value != null && value.getClass() == Integer.class) {
             jVal.put("Number", Map.of("Integer", value));
         } else if (value != null && (value.getClass() == Float.class || value.getClass() == Double.class)) {
+          if ((Double) value == Double.POSITIVE_INFINITY) {
+            jVal.put("Number", Map.of("Float", "Infinity"));
+          } else if ((Double) value == Double.NEGATIVE_INFINITY) {
+            jVal.put("Number", Map.of("Float", "-Infinity"));
+          } else if (Double.isNaN((Double) value)) {
+            jVal.put("Number", Map.of("Float", "NaN"));
+          } else {
             jVal.put("Number", Map.of("Float", value));
+          }
         } else if (value != null && value.getClass() == String.class) {
             jVal.put("String", value);
         } else if (value != null && value.getClass().isArray()) {
@@ -254,7 +262,7 @@ public class Host implements Cloneable {
      * Turn a Polar term passed across the FFI boundary into a Java Object.
      */
     public Object toJava(JSONObject term)
-            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError, Exceptions.OsoException {
         JSONObject value = term.getJSONObject("value");
         String tag = value.keys().next();
         switch (tag) {
@@ -268,7 +276,21 @@ public class Host implements Cloneable {
                     case "Integer":
                         return num.getInt("Integer");
                     case "Float":
-                        return num.getDouble("Float");
+                        Object f = num.get("Float");
+                        if (f instanceof String) {
+                            switch ((String) f) {
+                                case "Infinity":
+                                    return Double.POSITIVE_INFINITY;
+                                case "-Infinity":
+                                    return Double.NEGATIVE_INFINITY;
+                                case "NaN":
+                                    return Double.NaN;
+                                default:
+                                    throw new Exceptions.OsoException(
+                                        "Expected a Float; received the string \"" + f + "\"");
+                            }
+                        }
+                        return (Double) f;
                 }
             case "List":
                 return polarListToJava(value.getJSONArray(tag));
@@ -290,7 +312,7 @@ public class Host implements Cloneable {
      * Convert a JSONified Polar dictionary to a Java Map
      */
     public HashMap<String, Object> polarDictToJava(JSONObject dict)
-            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError, Exceptions.OsoException {
         HashMap<String, Object> resMap = new HashMap<String, Object>();
         for (String key : dict.keySet()) {
             resMap.put(key, toJava(dict.getJSONObject(key)));
@@ -302,7 +324,7 @@ public class Host implements Cloneable {
      * Convert a JSONified Polar List to a Java List
      */
     public List<Object> polarListToJava(JSONArray list)
-            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
+            throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError, Exceptions.OsoException {
         ArrayList<Object> resArray = new ArrayList<Object>();
         for (int i = 0; i < list.length(); i++) {
             resArray.add(toJava(list.getJSONObject(i)));
