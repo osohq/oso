@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599235104259,
+  "lastUpdate": 1599258463803,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -2963,6 +2963,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 31224,
             "range": "± 1101",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "93e45f0a982ec0dcfb46c2f4e3a09a4866159503",
+          "message": "typos in flask oso docs. (#404)",
+          "timestamp": "2020-09-04T18:17:10-04:00",
+          "tree_id": "f55fe042d2c0d1c65b5fbe1e2477b33446c3040b",
+          "url": "https://github.com/osohq/oso/commit/93e45f0a982ec0dcfb46c2f4e3a09a4866159503"
+        },
+        "date": 1599258462946,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1708,
+            "range": "± 282",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 5121,
+            "range": "± 144",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 136989,
+            "range": "± 1191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 717971,
+            "range": "± 16975",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 30188,
+            "range": "± 878",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 30249,
+            "range": "± 1225",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 30277,
+            "range": "± 839",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 30189,
+            "range": "± 2644",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 28149,
+            "range": "± 833",
             "unit": "ns/iter"
           }
         ]
