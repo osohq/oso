@@ -100,11 +100,13 @@ Variable: Value  = <n:Name> => {
 };
 
 Call: Value = {
-    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
-        match arg {
-            Some(arg) => args.push(arg),
-            None => ()
-        };
+    <name:Name> "("  ")" => {
+        let args = vec![];
+        let kwargs = None;
+        Value::Call(Call{name, args, kwargs})
+    },
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp> ")" => {
+        args.push(arg);
         let kwargs = None;
         Value::Call(Call{name, args, kwargs})
     },
