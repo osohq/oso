@@ -55,6 +55,10 @@ class DuplicateClassAliasError(PolarRuntimeError):
         )
 
 
+class DuplicateInstanceRegistrationError(PolarRuntimeError):
+    pass
+
+
 class MissingConstructorError(PolarRuntimeError):
     pass
 
@@ -64,6 +68,10 @@ class UnregisteredInstanceError(PolarRuntimeError):
 
 
 class InlineQueryFailedError(PolarRuntimeError):
+    pass
+
+
+class UnexpectedPolarTypeError(PolarRuntimeError):
     pass
 
 
