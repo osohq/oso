@@ -1,4 +1,6 @@
-use super::types::*;
+use super::kb::*;
+use super::rules::*;
+use super::terms::*;
 
 /// Replace the left value by the AND of the right and the left.
 fn and_wrap(a: &mut Term, b: Term) {
@@ -8,6 +10,17 @@ fn and_wrap(a: &mut Term, b: Term) {
     });
 
     a.replace_value(new_value);
+}
+
+#[cfg(test)]
+pub fn unwrap_and(term: Term) -> TermList {
+    match term.value() {
+        Value::Expression(Operation {
+            operator: Operator::And,
+            args,
+        }) => args.clone(),
+        _ => vec![term.clone()],
+    }
 }
 
 /// Checks if the expression needs to be rewritten. If so,

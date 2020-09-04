@@ -162,7 +162,11 @@ public class Polar {
             } else {
                 do {
                     HashMap<String, Object> result = query.nextElement();
-                    System.out.println(result.size() > 0 ? result.toString() : "true");
+                    if (result.size() == 0) {
+                        System.out.println("true");
+                    } else {
+                        result.forEach((variable, value) -> System.out.println(variable + " = " + value.toString()));
+                    }
                 } while (query.hasMoreElements());
             }
         }

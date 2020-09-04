@@ -1,5 +1,5 @@
 use super::error::ParseError;
-use super::types::Symbol;
+use super::terms::Symbol;
 use std::iter::Peekable;
 use std::str::{CharIndices, FromStr};
 

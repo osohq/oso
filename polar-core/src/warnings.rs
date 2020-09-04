@@ -1,5 +1,7 @@
 use super::formatting::source_lines;
-use super::types::*;
+use super::kb::*;
+use super::rules::*;
+use super::terms::*;
 
 use std::collections::{hash_map::Entry, HashMap};
 
@@ -46,7 +48,10 @@ pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
             } else {
                 format!("Singleton variable {} is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>", sym)
             };
-            if let Some(ref source) = kb.sources.get_source(&term) {
+            if let Some(ref source) = term
+                .get_source_id()
+                .and_then(|id| kb.sources.get_source(id))
+            {
                 msg = format!("{}\n{}", msg, source_lines(source, term.offset(), 0));
             }
             warnings.push(msg)

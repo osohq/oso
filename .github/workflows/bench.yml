@@ -15,7 +15,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - name: Run benchmark
         run: cargo bench -- --output-format bencher | tee output.txt
       - name: Store benchmark result
