@@ -674,3 +674,28 @@ describe('unbound variables', () => {
     expect(result.get('x')).toBeInstanceOf(Variable);
   });
 });
+
+describe('±∞ and NaN', () => {
+  test('are handled properly', async () => {
+    const p = new Polar();
+    p.registerConstant('nan', NaN);
+    p.registerConstant('inf', Infinity);
+    p.registerConstant('neg_inf', -Infinity);
+
+    const nan = (await query(p, 'x = nan'))[0];
+    expect(Number.isNaN(nan.get('x'))).toBe(true);
+    expect(await query(p, 'nan = nan')).toStrictEqual([]);
+
+    const inf = (await query(p, 'x = inf'))[0];
+    expect(inf.get('x')).toEqual(Infinity);
+    expect(await query(p, 'inf = inf')).toStrictEqual([map()]);
+
+    const negInf = (await query(p, 'x = neg_inf'))[0];
+    expect(negInf.get('x')).toEqual(-Infinity);
+    expect(await query(p, 'neg_inf = neg_inf')).toStrictEqual([map()]);
+
+    expect(await query(p, 'inf = neg_inf')).toStrictEqual([]);
+    expect(await query(p, 'inf < neg_inf')).toStrictEqual([]);
+    expect(await query(p, 'neg_inf < inf')).toStrictEqual([map()]);
+  });
+});
