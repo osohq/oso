@@ -615,12 +615,10 @@ def test_inf_nan(polar, qeval, query):
     assert isnan(query("x = nan")[0]["x"])
     assert not query("nan = nan")
 
-    x = query("x = inf")[0]["x"]
-    assert x == inf
+    assert query("x = inf")[0]["x"] == inf
     assert qeval("inf = inf")
 
-    x = query("x = neg_inf")[0]["x"]
-    assert x == -inf
+    assert query("x = neg_inf")[0]["x"] == -inf
     assert qeval("neg_inf = neg_inf")
 
     assert not query("inf = neg_inf")
