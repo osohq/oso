@@ -430,13 +430,13 @@ public class PolarTest {
         assertEquals(result.get("y"), 1);
     }
 
+    /** TODO(gj): Test this when NULL is handled. */
     public void testReturnNull() throws Exception {
-        p.loadStr("f(x) if x.myReturnNull = 1;");
+        p.loadStr("f(x) if x.myReturnNull() = 1;");
         assertTrue(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
 
-        p.loadStr("f(x) if x.myReturnNull.badCall = 1;");
+        p.loadStr("f(x) if x.myReturnNull().badCall = 1;");
         assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryRule("f", new MyClass("test", 1)).results());
-
     }
 
     /*** TEST OSO ***/
