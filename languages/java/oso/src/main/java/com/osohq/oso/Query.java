@@ -97,7 +97,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                 kind = event.keys().next();
                 data = event.getJSONObject(kind);
             } catch (JSONException e) {
-                // TODO: this sucks, we should have a consistent serialization format
+                // TODO: we should have a consistent serialization format
                 kind = eventStr.replace("\"", "");
                 data = null;
             }
