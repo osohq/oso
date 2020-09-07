@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -25,12 +26,18 @@ def simple_policy():
 
 def test_policy_autoload():
     """Test that policies are loaded from policy directory."""
-    pass
+    # These rules are added by the policies in the test app.
+    assert next(Oso.query_rule("policy_load_test", 1))
+    assert next(Oso.query_rule("policy_load_test", 2))
 
 
 def test_model_registration():
     """Test that models are automatically registered with the policy."""
-    pass
+    from test_app import models
+    from oso import Variable
+
+    assert next(Oso.query_rule('models', models.TestRegistration(), Variable('x')))['bindings']['x'] == 1
+    assert next(Oso.query_rule('models', models.TestRegistration2(), Variable('x')))['bindings']['x'] == 2
 
 
 def test_authorize(rf, simple_policy):

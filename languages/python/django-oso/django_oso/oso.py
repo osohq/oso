@@ -48,6 +48,7 @@ def init_oso():
                 file_path = os.path.join(path, file)
                 if os.path.splitext(file)[1] == ".polar":
                     Oso.load_file(file_path)
+                    print(f"load {file_path}")
                     loaded_files.append(file_path)
 
     return loaded_files
