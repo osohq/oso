@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::host::{FromPolar, Instance, ToPolar};
-use polar_core::types::Symbol as Name;
-use polar_core::types::*;
+use crate::host::Instance;
+use crate::{FromPolar, ToPolar};
+
+use polar_core::events::*;
+use polar_core::terms::*;
 
 impl Iterator for Query {
-    type Item = anyhow::Result<ResultSet>;
+    type Item = crate::Result<ResultSet>;
     fn next(&mut self) -> Option<Self::Item> {
         Query::next_result(self)
     }
@@ -27,7 +29,7 @@ impl Query {
         }
     }
 
-    pub fn next_result(&mut self) -> Option<anyhow::Result<ResultSet>> {
+    pub fn next_result(&mut self) -> Option<crate::Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
             self.check_messages();
@@ -92,8 +94,8 @@ impl Query {
     fn check_messages(&mut self) {
         while let Some(msg) = self.inner.next_message() {
             match msg.kind {
-                polar_core::types::MessageKind::Print => tracing::trace!("{}", msg.msg),
-                polar_core::types::MessageKind::Warning => tracing::warn!("{}", msg.msg),
+                polar_core::messages::MessageKind::Print => tracing::trace!("{}", msg.msg),
+                polar_core::messages::MessageKind::Warning => tracing::warn!("{}", msg.msg),
             }
         }
     }
@@ -102,21 +104,21 @@ impl Query {
         self.inner.question_result(call_id, result);
     }
 
-    fn call_result(&mut self, call_id: u64, result: Arc<dyn ToPolar>) -> anyhow::Result<()> {
+    fn call_result(&mut self, call_id: u64, result: Arc<dyn ToPolar>) -> crate::Result<()> {
         let mut host = self.host.lock().unwrap();
         let value = host.value_to_polar(result.as_ref());
         Ok(self.inner.call_result(call_id, Some(value))?)
     }
 
-    fn call_result_none(&mut self, call_id: u64) -> anyhow::Result<()> {
+    fn call_result_none(&mut self, call_id: u64) -> crate::Result<()> {
         Ok(self.inner.call_result(call_id, None)?)
     }
 
-    fn application_error(&mut self, error: anyhow::Error) {
+    fn application_error(&mut self, error: crate::OsoError) {
         self.inner.application_error(error.to_string())
     }
 
-    fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> anyhow::Result<()> {
+    fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
         let mut host = self.host.lock().unwrap();
         match constructor.value() {
             Value::InstanceLiteral(InstanceLiteral { .. }) => todo!("instantiate from literal"),
@@ -132,20 +134,20 @@ impl Query {
         &mut self,
         call_id: u64,
         instance: Instance,
-        name: Name,
+        name: Symbol,
         args: Option<Vec<Term>>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         if self.calls.get(&call_id).is_none() {
             let (f, args) = if let Some(args) = args {
                 if let Some(m) = instance.methods.get(&name) {
                     (m, args)
                 } else {
-                    return Err(anyhow::anyhow!("instance method not found"));
+                    return lazy_error!("instance method not found");
                 }
             } else if let Some(attr) = instance.attributes.get(&name) {
                 (attr, vec![])
             } else {
-                return Err(anyhow::anyhow!("attribute lookup not found"));
+                return lazy_error!("attribute lookup not found");
             };
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
             let host = &mut self.host.lock().unwrap();
@@ -164,9 +166,9 @@ impl Query {
         &mut self,
         call_id: u64,
         instance: Term,
-        name: Name,
+        name: Symbol,
         args: Option<Vec<Term>>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let instance = Instance::from_polar(&instance, &mut self.host.lock().unwrap()).unwrap();
         if let Err(e) = self.register_call(call_id, instance, name, args) {
             self.application_error(e);
@@ -185,7 +187,7 @@ impl Query {
         call_id: u64,
         operator: Operator,
         args: Vec<Term>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         assert_eq!(args.len(), 2);
         let res = {
             let mut host = self.host.lock().unwrap();
@@ -203,8 +205,8 @@ impl Query {
         &mut self,
         call_id: u64,
         instance: Term,
-        class_tag: Name,
-    ) -> anyhow::Result<()> {
+        class_tag: Symbol,
+    ) -> crate::Result<()> {
         tracing::debug!(instance = ?instance, class = %class_tag, "isa");
         let res = self.host.lock().unwrap().isa(instance, &class_tag);
         self.question_result(call_id, res);
@@ -216,7 +218,7 @@ impl Query {
         call_id: u64,
         left_instance_id: u64,
         right_instance_id: u64,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let res = self
             .host
             .lock()
@@ -230,9 +232,9 @@ impl Query {
         &mut self,
         call_id: u64,
         instance_id: u64,
-        left_class_tag: Name,
-        right_class_tag: Name,
-    ) -> anyhow::Result<()> {
+        left_class_tag: Symbol,
+        right_class_tag: Symbol,
+    ) -> crate::Result<()> {
         let res = self.host.lock().unwrap().is_subspecializer(
             instance_id,
             &left_class_tag,
@@ -242,7 +244,7 @@ impl Query {
         Ok(())
     }
 
-    fn handle_debug(&mut self, message: String) -> anyhow::Result<()> {
+    fn handle_debug(&mut self, message: String) -> crate::Result<()> {
         eprintln!("TODO: {}", message);
         self.check_messages();
         Ok(())
@@ -251,14 +253,15 @@ impl Query {
 
 #[derive(Clone)]
 pub struct ResultSet {
-    pub bindings: polar_core::types::Bindings,
+    pub bindings: polar_core::kb::Bindings,
     pub host: Arc<Mutex<crate::host::Host>>,
 }
 
 impl ResultSet {
-    pub fn get<T: crate::host::FromPolar>(&self, name: &str) -> Option<T> {
+    pub fn get<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
         self.bindings
-            .get(&Name(name.to_string()))
+            .get(&Symbol(name.to_string()))
+            .ok_or_else(|| crate::OsoError::FromPolar)
             .and_then(|term| T::from_polar(term, &mut self.host.lock().unwrap()))
     }
 }

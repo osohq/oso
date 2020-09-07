@@ -1,92 +1,13 @@
-#![allow(clippy::type_complexity)]
+use polar_core::terms::{Symbol, Term};
 
-use super::*;
+use std::any::Any;
+use std::sync::Arc;
 
-pub type ClassMethods = HashMap<Name, ClassMethod>;
-pub type InstanceMethods = HashMap<Name, InstanceMethod>;
+use crate::{FromPolar, ToPolar};
 
-/// An alternate version of the `Fn` trait
-/// which encodes the types of the arguments
-/// in a single type - a tuple.
-pub trait Function<Args = ()> {
-    type Result;
-
-    fn invoke(&self, args: Args) -> Self::Result;
-}
-
-impl<F, R> Function<()> for F
-where
-    F: Fn() -> R,
-{
-    type Result = R;
-
-    fn invoke(&self, _: ()) -> Self::Result {
-        (self)()
-    }
-}
-
-impl<A, F, R> Function<(A,)> for F
-where
-    F: Fn(A) -> R,
-{
-    type Result = R;
-
-    fn invoke(&self, arg: (A,)) -> Self::Result {
-        (self)(arg.0)
-    }
-}
-
-impl<A, B, F, R> Function<(A, B)> for F
-where
-    F: Fn(A, B) -> R,
-{
-    type Result = R;
-
-    fn invoke(&self, args: (A, B)) -> Self::Result {
-        (self)(args.0, args.1)
-    }
-}
-
-/// Similar to a `Function` but also takes an explicit `receiver`
-/// parameter than is the first argument of the call (i.e. the `self` param);
-pub trait Method<Receiver, Args = ()> {
-    type Result;
-
-    fn invoke(&self, receiver: &Receiver, args: Args) -> Self::Result;
-}
-
-impl<F, R, Receiver> Method<Receiver, ()> for F
-where
-    F: Fn(&Receiver) -> R,
-{
-    type Result = R;
-
-    fn invoke(&self, receiver: &Receiver, _: ()) -> Self::Result {
-        (self)(receiver)
-    }
-}
-
-impl<A, F, R, Receiver> Method<Receiver, (A,)> for F
-where
-    F: Fn(&Receiver, A) -> R,
-{
-    type Result = R;
-
-    fn invoke(&self, receiver: &Receiver, arg: (A,)) -> Self::Result {
-        (self)(receiver, arg.0)
-    }
-}
-
-impl<A, B, F, R, Receiver> Method<Receiver, (A, B)> for F
-where
-    F: Fn(&Receiver, A, B) -> R,
-{
-    type Result = R;
-
-    fn invoke(&self, receiver: &Receiver, args: (A, B)) -> Self::Result {
-        (self)(receiver, args.0, args.1)
-    }
-}
+use super::class::Class;
+use super::method::{Function, Method};
+use super::Host;
 
 #[derive(Clone)]
 pub struct Constructor(Arc<dyn Fn(Vec<Term>, &mut Host) -> Arc<dyn Any>>);
@@ -135,7 +56,7 @@ impl InstanceMethod {
         self.0(receiver, args, host)
     }
 
-    pub fn from_class_method(name: Name) -> Self {
+    pub fn from_class_method(name: Symbol) -> Self {
         Self(Arc::new(
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
                 let class: &Class = receiver.downcast_ref().unwrap();

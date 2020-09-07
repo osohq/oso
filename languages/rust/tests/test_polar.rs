@@ -1,19 +1,17 @@
 use maplit::hashmap;
-use oso::polar::Polar;
+use oso::Oso;
 
-struct PolarTest {
-    polar: Polar,
+struct OsoTest {
+    oso: Oso,
 }
 
-impl PolarTest {
+impl OsoTest {
     fn new() -> Self {
-        Self {
-            polar: Polar::new(),
-        }
+        Self { oso: Oso::new() }
     }
 
     fn load_str(&mut self, policy: &str) {
-        self.polar.load_str(policy).unwrap();
+        self.oso.load_str(policy).unwrap();
     }
 
     fn load_file(&mut self, here: &str, name: &str) {
@@ -23,11 +21,11 @@ impl PolarTest {
         let mut file = folder.parent().unwrap().to_path_buf();
         file.push(name);
         println!("{:?}", file);
-        self.polar.load_file(file.to_str().unwrap()).unwrap();
+        self.oso.load_file(file.to_str().unwrap()).unwrap();
     }
 
     fn query(&mut self, q: &str) -> Vec<oso::query::ResultSet> {
-        let results = self.polar.query(q).unwrap();
+        let results = self.oso.query(q).unwrap();
         let mut result_vec = vec![];
         for r in results {
             result_vec.push(r.expect("result is an error"))
@@ -36,7 +34,7 @@ impl PolarTest {
     }
 
     fn query_err(&mut self, q: &str) -> String {
-        let mut results = self.polar.query(q).unwrap();
+        let mut results = self.oso.query(q).unwrap();
         let err = results
             .next()
             .unwrap()
@@ -44,19 +42,19 @@ impl PolarTest {
         err.to_string()
     }
 
-    fn qvar<T: oso::host::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
+    fn qvar<T: oso::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
         let res = self.query(q);
         res.into_iter()
             .map(|set| {
                 set.get(var)
-                    .unwrap_or_else(|| panic!("query: '{}', binding for '{}'", q, var))
+                    .unwrap_or_else(|_| panic!("query: '{}', binding for '{}'", q, var))
             })
             .collect()
     }
 
     fn qvar_one<T>(&mut self, q: &str, var: &str, expected: T)
     where
-        T: oso::host::FromPolar + PartialEq<T> + std::fmt::Debug,
+        T: oso::FromPolar + PartialEq<T> + std::fmt::Debug,
     {
         let mut res = self.qvar::<T>(q, var);
         assert_eq!(res.len(), 1, "expected exactly one result");
@@ -68,19 +66,19 @@ impl PolarTest {
 fn test_anything_works() {
     let _ = tracing_subscriber::fmt::try_init();
 
-    let mut test = PolarTest::new();
+    let mut test = OsoTest::new();
     test.load_str("f(1);");
     let results = test.query("f(x)");
-    assert_eq!(results[0].get::<u32>("x"), Some(1));
+    assert_eq!(results[0].get::<u32>("x"), Ok(1));
     let results = test.query("f(y)");
-    assert_eq!(results[0].get::<u32>("y"), Some(1));
+    assert_eq!(results[0].get::<u32>("y"), Ok(1));
 }
 
 #[test]
 fn test_helpers() {
     let _ = tracing_subscriber::fmt::try_init();
 
-    let mut test = PolarTest::new();
+    let mut test = OsoTest::new();
     test.load_file(file!(), "test_file.polar");
     assert_eq!(
         test.query("f(x)"),
@@ -97,7 +95,7 @@ fn test_helpers() {
 fn test_data_conversions() {
     let _ = tracing_subscriber::fmt::try_init();
 
-    let mut test = PolarTest::new();
+    let mut test = OsoTest::new();
     test.load_str(
         r#"
         a(1);
@@ -128,7 +126,7 @@ fn test_data_conversions() {
 fn test_load_function() {
     let _ = tracing_subscriber::fmt::try_init();
 
-    let mut test = PolarTest::new();
+    let mut test = OsoTest::new();
     test.load_file(file!(), "test_file.polar");
     test.load_file(file!(), "test_file.polar");
     assert_eq!(
@@ -207,10 +205,10 @@ fn test_external() {
     }
 
     fn capital_foo() -> Foo {
-        Foo::new(Some("A"))
+        Foo::new(Ok("A"))
     }
 
-    let mut test = PolarTest::new();
+    let mut test = OsoTest::new();
 
     oso::host::Class::with_constructor(capital_foo)
         .name("Foo")

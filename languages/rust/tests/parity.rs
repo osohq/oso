@@ -1,6 +1,4 @@
-use oso::host::ToPolar;
-use oso::host::{Class, HostClass};
-use oso::Oso;
+use oso::{Class, HostClass, Oso, ToPolar};
 
 macro_rules! res {
     ($res:expr) => {
@@ -55,7 +53,7 @@ pub mod b {
         }
     }
 
-    impl oso::host::HostClass for C {}
+    impl oso::HostClass for C {}
 }
 
 pub fn custom_c_constructor(y: String) -> b::C {

@@ -1,10 +1,20 @@
+//! Support for dynamic class objects in Rust
+
+use polar_core::terms::{Symbol, Term};
+
+use std::any::{Any, TypeId};
+use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
 
-use super::*;
+use crate::{FromPolar, ToPolar};
 
-pub mod builtins;
-mod method;
-pub use method::*;
+use super::class_method::{ClassMethod, Constructor, InstanceMethod};
+use super::method::{Function, Method};
+use super::Host;
+
+type ClassMethods = HashMap<Symbol, ClassMethod>;
+type InstanceMethods = HashMap<Symbol, InstanceMethod>;
 
 #[derive(Clone)]
 pub struct Class<T = ()> {
@@ -13,9 +23,9 @@ pub struct Class<T = ()> {
     pub attributes: InstanceMethods,
     pub instance_methods: InstanceMethods,
     pub class_methods: ClassMethods,
-    pub type_id: std::any::TypeId,
+    pub type_id: TypeId,
     instance_check: Arc<dyn Fn(&dyn Any) -> bool>,
-    class_check: Arc<dyn Fn(std::any::TypeId) -> bool>,
+    class_check: Arc<dyn Fn(TypeId) -> bool>,
     ty: std::marker::PhantomData<T>,
 }
 
@@ -49,9 +59,9 @@ impl<T> Class<T> {
             instance_methods: InstanceMethods::new(),
             class_methods: ClassMethods::new(),
             instance_check: Arc::new(|any| any.is::<T>()),
-            class_check: Arc::new(|type_id| std::any::TypeId::of::<T>() == type_id),
+            class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
             ty: std::marker::PhantomData,
-            type_id: std::any::TypeId::of::<T>(),
+            type_id: TypeId::of::<T>(),
         }
     }
 
@@ -62,7 +72,7 @@ impl<T> Class<T> {
         T: 'static,
     {
         self.attributes
-            .insert(Name(name.to_string()), InstanceMethod::new(f));
+            .insert(Symbol(name.to_string()), InstanceMethod::new(f));
         self
     }
 
@@ -79,7 +89,7 @@ impl<T> Class<T> {
         T: 'static,
     {
         self.instance_methods
-            .insert(Name(name.to_string()), InstanceMethod::new(f));
+            .insert(Symbol(name.to_string()), InstanceMethod::new(f));
         self
     }
 
@@ -90,7 +100,7 @@ impl<T> Class<T> {
         R: ToPolar + 'static,
     {
         self.class_methods
-            .insert(Name(name.to_string()), ClassMethod::new(f));
+            .insert(Symbol(name.to_string()), ClassMethod::new(f));
         self
     }
 
@@ -113,9 +123,9 @@ impl<T> Class<T> {
         }
     }
 
-    pub fn register(self, polar: &mut crate::polar::Polar) -> anyhow::Result<()> {
+    pub fn register(self, oso: &mut crate::Oso) -> crate::Result<()> {
         // erase the type before registering
-        polar.register_class(self.erase_type())?;
+        oso.register_class(self.erase_type())?;
         Ok(())
     }
 
@@ -125,7 +135,7 @@ impl<T> Class<T> {
             class = %self.name,
             "is_class"
         );
-        (self.class_check)(std::any::TypeId::of::<C>())
+        (self.class_check)(TypeId::of::<C>())
     }
 
     pub fn is_instance(&self, instance: &Instance) -> bool {

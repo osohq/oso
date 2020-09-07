@@ -1,46 +1,17 @@
-pub mod host;
-pub mod polar;
-pub mod query;
+//! # oso policy engine for authorization
+//!
+//! TODO: API documentation
 
-pub use polar_core::polar::Polar as PolarCore;
+#[macro_use]
+pub mod errors;
 
-use host::ToPolar;
+mod host;
+mod oso;
+mod query;
 
-#[derive(Clone, Default)]
-pub struct Oso(polar::Polar);
+pub use errors::OsoError;
+pub use host::{Class, FromPolar, HostClass, ToPolar};
+pub use oso::Oso;
+pub use polar_core::polar::Polar;
 
-impl std::ops::Deref for Oso {
-    type Target = polar::Polar;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for Oso {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Oso {
-    pub fn new() -> Self {
-        Self(polar::Polar::new())
-    }
-
-    pub fn is_allowed<Actor, Action, Resource>(
-        &mut self,
-        actor: Actor,
-        action: Action,
-        resource: Resource,
-    ) -> bool
-    where
-        Actor: ToPolar,
-        Action: ToPolar,
-        Resource: ToPolar,
-    {
-        let args: Vec<&dyn ToPolar> = vec![&actor, &action, &resource];
-        let mut query = self.0.query_rule("allow", args).unwrap();
-        query.next().is_some()
-    }
-}
+pub type Result<T> = std::result::Result<T, OsoError>;
