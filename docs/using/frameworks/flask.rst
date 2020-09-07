@@ -91,13 +91,13 @@ Here's a basic example in a route:
 .. code-block:: python
     :emphasize-lines: 7
 
-    @bp.route("/<int:id>", methods=["GET"])
+    @app.route("/<int:id>", methods=["GET"])
     def get_expense(id):
         expense = Expense.query.get(id)
         if expense is None:
             raise NotFound()
 
-        oso.authorize(action="read", resource=expense)
+        flask_oso.authorize(action="read", resource=expense)
         return expense.json()
 
 Notice we didn't need to check the return value of ``authorize``.  **By default,
