@@ -691,11 +691,6 @@ impl PolarVirtualMachine {
         rule
     }
 
-    /// Get a generic rule by name.
-    fn get_generic_rule(&self, name: &Symbol) -> Option<GenericRule> {
-        self.kb.read().unwrap().rules.get(name).cloned()
-    }
-
     /// Print a message to the output stream.
     fn print(&self, message: &str) {
         self.messages.push(MessageKind::Print, message.to_owned());
@@ -1286,8 +1281,8 @@ impl PolarVirtualMachine {
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Predicate) -> PolarResult<()> {
-        match self.get_generic_rule(&predicate.name) {
-            None => self.push_goal(Goal::Backtrack)?,
+        let goals = match self.kb.read().unwrap().rules.get(&predicate.name) {
+            None => vec![Goal::Backtrack],
             Some(generic_rule) => {
                 assert_eq!(generic_rule.name, predicate.name);
 
@@ -1298,7 +1293,7 @@ impl PolarVirtualMachine {
                 self.polar_log_mute = true;
 
                 // Filter rules by applicability.
-                self.append_goals(vec![
+                vec![
                     Goal::TracePush,
                     Goal::FilterRules {
                         applicable_rules: vec![],
@@ -1306,11 +1301,10 @@ impl PolarVirtualMachine {
                         args: predicate.args,
                     },
                     Goal::TracePop,
-                ])?;
+                ]
             }
-        }
-
-        Ok(())
+        };
+        self.append_goals(goals)
     }
 
     fn query_for_operation(
