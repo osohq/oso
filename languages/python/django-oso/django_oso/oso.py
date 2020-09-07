@@ -27,13 +27,14 @@ def init_oso():
     # Register all models.
     for app in apps.get_app_configs():
         for model in app.get_models():
-            Oso.register_class(model)
+            name = f"{app.name}::{model.__name__}"
+            Oso.register_class(model, name=name)
 
     # Custom registration for auth (AnonymousUser)
     if apps.is_installed("django.contrib.auth"):
         from django.contrib.auth.models import AnonymousUser
 
-        Oso.register_class(AnonymousUser)
+    Oso.register_class(AnonymousUser, name=f"django.contrib.auth::AnonymousUser")
 
     # Register request
     Oso.register_class(HttpRequest)
@@ -52,12 +53,3 @@ def init_oso():
                     loaded_files.append(file_path)
 
     return loaded_files
-
-    # TODO (dhatch): Provide setting to disable auto loading
-    # customize file directory
-    # customize policy files
-    # document how to do manual load.
-
-    # ?? NAMESPACING ??
-
-    # TODO (dhatch): Provide setting to disable model registration.
