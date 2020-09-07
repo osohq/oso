@@ -16,16 +16,16 @@ fn runner_from_query(q: &str) -> Runner {
 
 pub fn simple_queries(c: &mut Criterion) {
     c.bench_function("unify_once", |b| {
-        b.iter_batched(
+        b.iter_batched_ref(
             || runner_from_query("1=1"),
-            |mut runner| runner.run(),
+            |runner| runner.run(),
             criterion::BatchSize::SmallInput,
         )
     });
     c.bench_function("unify_twice", |b| {
-        b.iter_batched(
+        b.iter_batched_ref(
             || runner_from_query("1=1 and 2=2"),
-            |mut runner| runner.run(),
+            |runner| runner.run(),
             criterion::BatchSize::SmallInput,
         )
     });
@@ -53,7 +53,7 @@ pub fn fib(c: &mut Criterion) {
     let mut group = c.benchmark_group("fib");
     for n in &n_array {
         group.bench_function(BenchmarkId::from_parameter(format!("{}", n)), |b| {
-            b.iter_batched(
+            b.iter_batched_ref(
                 || {
                     let mut runner = runner_from_query(&format!("fib({}, result)", n));
                     runner.load_str(policy).unwrap();
@@ -62,7 +62,7 @@ pub fn fib(c: &mut Criterion) {
                     ));
                     runner
                 },
-                |mut runner| {
+                |runner| {
                     runner.run();
                 },
                 criterion::BatchSize::SmallInput,
@@ -91,7 +91,7 @@ pub fn prime(c: &mut Criterion) {
     let mut group = c.benchmark_group("prime");
     for n in &[3, 23, 43, 83, 255] {
         group.bench_function(BenchmarkId::from_parameter(format!("{}", n)), |b| {
-            b.iter_batched(
+            b.iter_batched_ref(
                 || {
                     let mut runner = runner_from_query(&format!("prime({})", n));
                     runner.load_str(policy).unwrap();
@@ -100,7 +100,7 @@ pub fn prime(c: &mut Criterion) {
                     }
                     runner
                 },
-                |mut runner| {
+                |runner| {
                     runner.run();
                 },
                 criterion::BatchSize::SmallInput,
@@ -130,9 +130,9 @@ pub fn indexed_rules(c: &mut Criterion) {
     let mut group = c.benchmark_group("indexed");
     for n in &n_array {
         group.bench_function(BenchmarkId::from_parameter(format!("{}", n)), |b| {
-            b.iter_batched(
+            b.iter_batched_ref(
                 || make_runner(*n),
-                |mut runner| {
+                |runner| {
                     runner.run();
                 },
                 criterion::BatchSize::SmallInput,
@@ -161,9 +161,9 @@ pub fn many_rules(c: &mut Criterion) {
     }
 
     c.bench_function("many_rules", |b| {
-        b.iter_batched(
+        b.iter_batched_ref(
             make_runner,
-            |mut runner| runner.run(),
+            |runner| runner.run(),
             criterion::BatchSize::SmallInput,
         )
     });
@@ -225,7 +225,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
             group.bench_function(
                 BenchmarkId::from_parameter(format!("{}, cost={}ns", n, delay)),
                 |b| {
-                    b.iter_batched(
+                    b.iter_batched_ref(
                         || {
                             let mut runner =
                                 runner_from_query("has_grandchild_called(new Person{}, \"bert\")");
@@ -235,7 +235,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                             runner.external_cost = Some(std::time::Duration::new(0, *delay));
                             runner
                         },
-                        |mut runner| {
+                        |runner| {
                             runner.run();
                             // check: we do actually run N+1 queries
                             assert_eq!(runner.calls_count, 1 + *n);
