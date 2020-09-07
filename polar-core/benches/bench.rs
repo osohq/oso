@@ -111,6 +111,38 @@ pub fn prime(c: &mut Criterion) {
     group.finish();
 }
 
+/// Bench: create `TARGET` rules of the form `f(i)`
+/// and measure the time to compute `f(i / 2)`
+/// This basically measures the performance of the rule indexing
+pub fn indexed_rules(c: &mut Criterion) {
+    fn make_runner(n: usize) -> Runner {
+        let mut runner = runner_from_query(&format!("f({})", n / 2));
+        runner.load_str("f(0);").unwrap();
+        for i in 1..=n {
+            runner.load_str(&format!("f({});", i)).unwrap();
+        }
+        runner.expected_result(Bindings::new());
+        runner
+    }
+
+    let n_array = [1, 10, 100];
+
+    let mut group = c.benchmark_group("indexed");
+    for n in &n_array {
+        group.bench_function(BenchmarkId::from_parameter(format!("{}", n)), |b| {
+            b.iter_batched(
+                || make_runner(*n),
+                |mut runner| {
+                    runner.run();
+                },
+                criterion::BatchSize::SmallInput,
+            )
+        });
+    }
+
+    group.finish();
+}
+
 /// Bench: create `TARGET` rules of the form `f(i) if f(i-1)`
 /// and measure the time to compute `f(TARGET)`
 /// This basically measures the performance of the rule sorting
@@ -223,7 +255,8 @@ criterion_group!(
     many_rules,
     n_plus_one_queries,
     fib,
-    prime
+    prime,
+    indexed_rules,
 );
 criterion_main!(benches);
 
