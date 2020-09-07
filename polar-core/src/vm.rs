@@ -352,8 +352,13 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
-                    let source_str = self.rule_source(&rule);
-                    self.log(&format!("RULE:\n{}", source_str), &[]);
+                    self.log_with(
+                        || {
+                            let source_str = self.rule_source(&rule);
+                            format!("RULE:\n{}", source_str)
+                        },
+                        &[],
+                    );
                 }
                 self.trace.push(trace.clone());
             }
@@ -697,12 +702,21 @@ impl PolarVirtualMachine {
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {
+        self.log_with(|| message, terms)
+    }
+
+    fn log_with<F, R>(&self, message_fn: F, terms: &[&Term])
+    where
+        F: FnOnce() -> R,
+        R: AsRef<str>,
+    {
         if self.polar_log && !self.polar_log_mute {
             let mut indent = String::new();
             for _ in 0..=self.queries.len() {
                 indent.push_str("  ");
             }
-            let lines = message.split('\n').collect::<Vec<&str>>();
+            let message = message_fn();
+            let lines = message.as_ref().split('\n').collect::<Vec<&str>>();
             if let Some(line) = lines.first() {
                 let mut msg = format!("[debug] {}{}", &indent, line);
                 if !terms.is_empty() {
@@ -915,8 +929,8 @@ impl PolarVirtualMachine {
             "Called isa with bare dictionary!"
         );
 
-        self.log(
-            &format!("MATCHES :{} matches {}", left.to_polar(), right.to_polar(),),
+        self.log_with(
+            || format!("MATCHES :{} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
         );
 
@@ -1144,19 +1158,24 @@ impl PolarVirtualMachine {
             self.push_goal(Goal::CheckError)?;
         }
 
-        let mut msg = format!("LOOKUP: {}.{}", instance.to_string(), field_name);
-        if let Some(arguments) = &args {
-            msg.push('(');
-            msg.push_str(
-                &arguments
-                    .iter()
-                    .map(|a| a.to_polar())
-                    .collect::<Vec<String>>()
-                    .join(", "),
-            );
-            msg.push(')');
-        }
-        self.log(&msg, &[]);
+        self.log_with(
+            || {
+                let mut msg = format!("LOOKUP: {}.{}", instance.to_string(), field_name);
+                if let Some(arguments) = &args {
+                    msg.push('(');
+                    msg.push_str(
+                        &arguments
+                            .iter()
+                            .map(|a| a.to_polar())
+                            .collect::<Vec<String>>()
+                            .join(", "),
+                    );
+                    msg.push(')');
+                }
+                msg
+            },
+            &[],
+        );
 
         Ok(QueryEvent::ExternalCall {
             call_id,
@@ -1251,7 +1270,7 @@ impl PolarVirtualMachine {
                 args,
             }) if args.len() == 1 => (),
             _ => {
-                self.log(&format!("QUERY: {}", term.to_polar(),), &[term]);
+                self.log_with(|| format!("QUERY: {}", term.to_polar()), &[term]);
             }
         };
 
@@ -1600,14 +1619,16 @@ impl PolarVirtualMachine {
         let result = &args[2];
         assert!(matches!(result.value(), Value::Variable(_)));
 
-        self.log(
-            &format!(
-                "MATH: {} {} {} = {}",
-                left_term.to_polar(),
-                op.to_polar(),
-                right_term.to_polar(),
-                result.to_polar()
-            ),
+        self.log_with(
+            || {
+                format!(
+                    "MATH: {} {} {} = {}",
+                    left_term.to_polar(),
+                    op.to_polar(),
+                    right_term.to_polar(),
+                    result.to_polar()
+                )
+            },
             &[&left_term, &right_term, result],
         );
 
@@ -1656,13 +1677,15 @@ impl PolarVirtualMachine {
         let mut left_term = self.deref(&args[0]);
         let mut right_term = self.deref(&args[1]);
 
-        self.log(
-            &format!(
-                "CMP: {} {} {}",
-                left_term.to_polar(),
-                op.to_polar(),
-                right_term.to_polar(),
-            ),
+        self.log_with(
+            || {
+                format!(
+                    "CMP: {} {} {}",
+                    left_term.to_polar(),
+                    op.to_polar(),
+                    right_term.to_polar(),
+                )
+            },
             &[&left_term, &right_term],
         );
 
@@ -1751,7 +1774,7 @@ impl PolarVirtualMachine {
         // For example what happens if the call asked for a field that doesn't exist?
 
         if let Some(value) = term {
-            self.log(&format!("=> {}", value.to_string()), &[]);
+            self.log_with(|| format!("=> {}", value.to_string()), &[]);
 
             self.bind(
                 &self
@@ -2201,13 +2224,18 @@ impl PolarVirtualMachine {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
 
-            let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
-            for rule in rules {
-                rule_strs.push_str(&format!("  {}\n", rule.to_string()))
-            }
-            rule_strs.push_str("]");
+            self.log_with(
+                || {
+                    let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
+                    for rule in rules {
+                        rule_strs.push_str(&format!("  {}\n", rule.to_string()))
+                    }
+                    rule_strs.push_str("]");
+                    rule_strs
+                },
+                &[],
+            );
             self.polar_log_mute = false;
-            self.log(&rule_strs, &[]);
 
             let mut alternatives = Vec::with_capacity(rules.len());
             for rule in rules.iter() {
