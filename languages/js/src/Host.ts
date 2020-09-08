@@ -203,9 +203,9 @@ export class Host {
       case Number.isInteger(v):
         return { value: { Number: { Integer: v } } };
       case typeof v === 'number':
-        if (v == Infinity) {
+        if (v === Infinity) {
           v = 'Infinity';
-        } else if (v == -Infinity) {
+        } else if (v === -Infinity) {
           v = '-Infinity';
         } else if (Number.isNaN(v)) {
           v = 'NaN';
@@ -255,7 +255,9 @@ export class Host {
             return NaN;
           default:
             if (typeof f !== 'number')
-              throw new PolarError('Expected a floating point number.');
+              throw new PolarError(
+                'Expected a floating point number, got "' + f + '"'
+              );
             return f;
         }
       } else {

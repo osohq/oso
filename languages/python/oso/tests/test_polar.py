@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from math import inf, isnan, nan, pi
+from math import inf, isnan, nan
 from pathlib import Path
 
 from polar import polar_class

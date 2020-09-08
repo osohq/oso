@@ -287,7 +287,7 @@ public class Host implements Cloneable {
                                     return Double.NaN;
                                 default:
                                     throw new Exceptions.OsoException(
-                                        "Expected a Float; received the string \"" + f + "\"");
+                                        "Expected a floating point number, got \"" + f + "\"");
                             }
                         }
                         return (Double) f;

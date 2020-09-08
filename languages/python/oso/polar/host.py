@@ -1,6 +1,6 @@
 """Translate between Polar and the host language (Python)."""
 
-from math import inf, isinf, isnan, nan
+from math import inf, isnan, nan
 
 from .exceptions import PolarApiException, PolarRuntimeException
 from .variable import Variable
