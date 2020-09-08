@@ -1,4 +1,4 @@
-const { Oso } = require("oso");
+const { Oso } = require('oso');
 
 const oso = new Oso();
 
