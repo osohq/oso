@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599258463803,
+  "lastUpdate": 1599572462651,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3041,6 +3041,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 28149,
             "range": "± 833",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e709eab642575e2f476ed13c4e62c5e09017432",
+          "message": "Spring boot example app + docs (#342)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-08T09:35:15-04:00",
+          "tree_id": "12c3163b30442e483771f308c4b1ce77f4d92228",
+          "url": "https://github.com/osohq/oso/commit/1e709eab642575e2f476ed13c4e62c5e09017432"
+        },
+        "date": 1599572461854,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1491,
+            "range": "± 194",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 4845,
+            "range": "± 543",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 130726,
+            "range": "± 13750",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 658980,
+            "range": "± 49314",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 28876,
+            "range": "± 2434",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 27795,
+            "range": "± 2142",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 29496,
+            "range": "± 2910",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 27473,
+            "range": "± 1942",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 24539,
+            "range": "± 1248",
             "unit": "ns/iter"
           }
         ]
