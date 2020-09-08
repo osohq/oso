@@ -23,8 +23,8 @@ pub enum QueryEvent {
     ExternalCall {
         /// Persistent id across all requests for results from the same external call.
         call_id: u64,
-        /// The external instance to make this call on. None for functions or constructors.
-        instance: Option<Term>,
+        /// The external instance to make this call on.
+        instance: Term,
         /// Field name to lookup or method name to call. A class name indicates a constructor
         /// should be called.
         attribute: Symbol,

@@ -17,7 +17,8 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - name: Run benchmark
-        run: cargo bench -- --output-format bencher | tee output.txt
+        run: cargo bench -- --output-format bencher | tee ../output.txt
+        working-directory: polar-core
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:

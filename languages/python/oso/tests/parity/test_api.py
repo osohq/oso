@@ -177,7 +177,7 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
 def test_instance_round_trip(polar, query, qvar):
     # direct round trip
     user = Actor("sam")
-    assert polar.host.to_python(polar.host.to_polar_term(user)) is user
+    assert polar.host.to_python(polar.host.to_polar(user)) is user
 
 
 @pytest.mark.xfail(

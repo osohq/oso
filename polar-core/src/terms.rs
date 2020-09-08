@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use super::numerics::Numeric;
+pub use super::numerics::Numeric;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -302,6 +302,14 @@ impl Term {
     pub fn new_temporary(value: Value) -> Self {
         Self {
             source_info: SourceInfo::TemporaryVariable,
+            value: Arc::new(value),
+        }
+    }
+
+    /// Creates a new term from the parser
+    pub fn new_from_ffi(value: Value) -> Self {
+        Self {
+            source_info: SourceInfo::Ffi,
             value: Arc::new(value),
         }
     }
