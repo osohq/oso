@@ -11,6 +11,7 @@ streamline the process of adding oso to your application.
    :maxdepth: 1
 
    flask
+   django
 
 What do you think?
 ==================
