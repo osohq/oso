@@ -119,13 +119,13 @@ module Oso
       # @param kwargs [Hash<String, Object>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
-      def make_instance(cls_name, args:, kwargs:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
+      def make_instance(cls_name, args:, kwargs:, id:)
         constructor = get_constructor(cls_name)
         instance = if constructor == :new
-                        get_class(cls_name).__send__(:new, *args, **kwargs)
-                    else
-                        constructor.call(*args, **kwargs)
-                    end
+                     get_class(cls_name).__send__(:new, *args, **kwargs)
+                   else
+                     constructor.call(*args, **kwargs)
+                   end
         cache_instance(instance, id: id)
       rescue StandardError => e
         raise PolarRuntimeError, "Error constructing instance of #{cls_name}: #{e}"
