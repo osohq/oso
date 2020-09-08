@@ -3,9 +3,10 @@
 //! TODO: API documentation
 
 #[macro_use]
-pub mod errors;
+pub mod macros;
 
 pub(crate) mod builtins;
+mod errors;
 mod host;
 mod oso;
 mod query;

@@ -60,15 +60,6 @@ impl Oso {
         *self = Self::new();
     }
 
-    fn check_messages(&mut self) {
-        while let Some(msg) = self.inner.next_message() {
-            match msg.kind {
-                polar_core::messages::MessageKind::Print => tracing::trace!("{}", msg.msg),
-                polar_core::messages::MessageKind::Warning => tracing::warn!("{}", msg.msg),
-            }
-        }
-    }
-
     fn check_inline_queries(&mut self) -> crate::Result<()> {
         while let Some(q) = self.inner.next_inline_query(false) {
             let query = Query::new(q, self.host.clone());
@@ -78,7 +69,7 @@ impl Oso {
                 Err(e) => return lazy_error!("error in inline query: {}", e),
             }
         }
-        self.check_messages();
+        check_messages!(self.inner);
         Ok(())
     }
 
@@ -97,7 +88,7 @@ impl Oso {
 
     pub fn query(&mut self, s: &str) -> crate::Result<Query> {
         let query = self.inner.new_query(s, false)?;
-        self.check_messages();
+        check_messages!(self.inner);
         let query = Query::new(query, self.host.clone());
         Ok(query)
     }
@@ -117,7 +108,7 @@ impl Oso {
         });
         let query_term = Term::new_from_ffi(query_value);
         let query = self.inner.new_query_from_term(query_term, false);
-        self.check_messages();
+        check_messages!(self.inner);
         let query = Query::new(query, self.host.clone());
         Ok(query)
     }

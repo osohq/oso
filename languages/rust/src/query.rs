@@ -32,7 +32,7 @@ impl Query {
     pub fn next_result(&mut self) -> Option<crate::Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
-            self.check_messages();
+            check_messages!(self.inner);
             if let Err(e) = event {
                 return Some(Err(e.into()));
             }
@@ -87,15 +87,6 @@ impl Query {
             };
             if let Err(e) = result {
                 self.application_error(e);
-            }
-        }
-    }
-
-    fn check_messages(&mut self) {
-        while let Some(msg) = self.inner.next_message() {
-            match msg.kind {
-                polar_core::messages::MessageKind::Print => tracing::trace!("{}", msg.msg),
-                polar_core::messages::MessageKind::Warning => tracing::warn!("{}", msg.msg),
             }
         }
     }
@@ -246,7 +237,7 @@ impl Query {
 
     fn handle_debug(&mut self, message: String) -> crate::Result<()> {
         eprintln!("TODO: {}", message);
-        self.check_messages();
+        check_messages!(self.inner);
         Ok(())
     }
 }
