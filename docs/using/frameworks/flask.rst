@@ -9,7 +9,7 @@ usage with Flask_.
 Installation
 ------------
 
-The oso flask integration is available on `PyPI`_ and can be installed using
+The oso Flask integration is available on `PyPI`_ and can be installed using
 ``pip``::
 
     $ pip install flask-oso
