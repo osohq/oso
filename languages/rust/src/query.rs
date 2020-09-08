@@ -249,7 +249,13 @@ pub struct ResultSet {
 }
 
 impl ResultSet {
-    pub fn get<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
+    pub fn get(&self, name: &str) -> Option<crate::Value> {
+        self.bindings
+            .get(&Symbol(name.to_string()))
+            .map(|t| t.value().clone())
+    }
+
+    pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
         self.bindings
             .get(&Symbol(name.to_string()))
             .ok_or_else(|| crate::OsoError::FromPolar)
@@ -268,7 +274,7 @@ impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<
 {
     fn eq(&self, other: &HashMap<S, T>) -> bool {
         other.iter().all(|(k, v)| {
-            self.get::<T>(k.as_ref())
+            self.get_typed::<T>(k.as_ref())
                 .map(|binding| &binding == v)
                 .unwrap_or(false)
         })

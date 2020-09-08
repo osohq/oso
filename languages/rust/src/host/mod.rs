@@ -67,27 +67,10 @@ impl Host {
     /// Add the class to the host classes
     ///
     /// Returns an instance of `Type` for this class.
-    pub fn cache_class(&mut self, class: Class, name: Symbol) -> Term {
+    pub fn cache_class(&mut self, class: Class, name: Symbol) -> String {
         self.class_names.insert(class.type_id, name.clone());
-        self.classes.insert(name, class.clone());
-
-        let type_class = self.type_class();
-        for method_name in class.class_methods.keys() {
-            type_class
-                .instance_methods
-                .entry(method_name.clone())
-                .or_insert_with(|| {
-                    class_method::InstanceMethod::from_class_method(method_name.clone())
-                });
-        }
-        let repr = format!("type<{}>", class.name);
-        let instance = type_class.cast_to_instance(class);
-        let instance = self.cache_instance(instance, None);
-        Term::new_from_ffi(Value::ExternalInstance(ExternalInstance {
-            constructor: None,
-            repr: Some(repr),
-            instance_id: instance,
-        }))
+        self.classes.insert(name.clone(), class.clone());
+        name.0
     }
 
     pub fn get_instance(&self, id: u64) -> Option<&class::Instance> {

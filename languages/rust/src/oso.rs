@@ -114,12 +114,14 @@ impl Oso {
     }
 
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
-        let mut host = self.host.lock().unwrap();
         let name = class.name.clone();
         let name = Symbol(name);
-        let class_term = host.cache_class(class, name.clone());
-        self.inner.register_constant(name, class_term);
-        Ok(())
+        let class_name = self
+            .host
+            .lock()
+            .unwrap()
+            .cache_class(class.clone(), name.clone());
+        self.register_constant(&class_name, &class)
     }
 
     pub fn register_constant<V: crate::host::ToPolar>(

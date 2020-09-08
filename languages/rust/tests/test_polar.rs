@@ -46,7 +46,7 @@ impl OsoTest {
         let res = self.query(q);
         res.into_iter()
             .map(|set| {
-                set.get(var)
+                set.get_typed(var)
                     .unwrap_or_else(|_| panic!("query: '{}', binding for '{}'", q, var))
             })
             .collect()
@@ -69,9 +69,9 @@ fn test_anything_works() {
     let mut test = OsoTest::new();
     test.load_str("f(1);");
     let results = test.query("f(x)");
-    assert_eq!(results[0].get::<u32>("x").unwrap(), 1);
+    assert_eq!(results[0].get_typed::<u32>("x").unwrap(), 1);
     let results = test.query("f(y)");
-    assert_eq!(results[0].get::<u32>("y").unwrap(), 1);
+    assert_eq!(results[0].get_typed::<u32>("y").unwrap(), 1);
 }
 
 #[test]

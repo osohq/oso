@@ -107,6 +107,28 @@ impl ToPolar for Box<dyn ToPolar> {
     }
 }
 
+impl ToPolar for crate::Class {
+    fn to_polar_value(&self, host: &mut Host) -> Value {
+        let type_class = host.type_class();
+        for method_name in self.class_methods.keys() {
+            type_class
+                .instance_methods
+                .entry(method_name.clone())
+                .or_insert_with(|| {
+                    super::class_method::InstanceMethod::from_class_method(method_name.clone())
+                });
+        }
+        let repr = format!("type<{}>", self.name);
+        let instance = type_class.cast_to_instance(self.clone());
+        let instance = host.cache_instance(instance, None);
+        Value::ExternalInstance(ExternalInstance {
+            constructor: None,
+            repr: Some(repr),
+            instance_id: instance,
+        })
+    }
+}
+
 impl<C: 'static + Clone + super::HostClass> ToPolar for C {
     fn to_polar_value(&self, host: &mut Host) -> Value {
         let class = host
