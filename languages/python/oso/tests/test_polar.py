@@ -491,7 +491,7 @@ def test_constructor(polar, qvar):
     assert instance.baz == 4
 
     instance = qvar(
-        "instance = new Foo(a: 1, b: 2, bar: 3, baz: 4)",
+        "instance = new Foo(bar: 3, a: 1, baz: 4, b: 2)",
         "instance",
         one=True,
     )
