@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599600656091,
+  "lastUpdate": 1599602421333,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3755,6 +3755,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5722,
             "range": "± 877",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f7f7f452a12f4057d8d1fb1c38e4e753ecd15f73",
+          "message": "Django integration (#395)",
+          "timestamp": "2020-09-08T17:49:26-04:00",
+          "tree_id": "e4d11f5164b25cdfb5a6385f26d5285fc272f5fe",
+          "url": "https://github.com/osohq/oso/commit/f7f7f452a12f4057d8d1fb1c38e4e753ecd15f73"
+        },
+        "date": 1599602420474,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 778,
+            "range": "± 59",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2492,
+            "range": "± 87",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 67578,
+            "range": "± 3668",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 504136,
+            "range": "± 21059",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17211,
+            "range": "± 1886",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17295,
+            "range": "± 1372",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17253,
+            "range": "± 6565",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17108,
+            "range": "± 1304",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15356,
+            "range": "± 1466",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5472,
+            "range": "± 458",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5679,
+            "range": "± 315",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6555,
+            "range": "± 1040",
             "unit": "ns/iter"
           }
         ]
