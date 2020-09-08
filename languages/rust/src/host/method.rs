@@ -1,3 +1,6 @@
+//! Traits to help with passing around methods of arbitrary arities
+//! and to help downcast+convert the arguments.
+
 /// An alternate version of the `Fn` trait
 /// which encodes the types of the arguments
 /// in a single type - a tuple.

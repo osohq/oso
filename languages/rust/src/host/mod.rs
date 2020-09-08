@@ -15,19 +15,29 @@ pub use class::{Class, Instance};
 pub use from_polar::FromPolar;
 pub use to_polar::ToPolar;
 
+/// The meta class - the class of all classess (except itself)
 #[derive(Clone, Default)]
 pub struct Type;
 
-pub fn type_class() -> Class {
+fn type_class() -> Class {
     let class = Class::<Type>::with_default();
     class.erase_type()
 }
 
 /// Maintain mappings and caches for Rust classes & instances
 pub struct Host {
+    /// Reference to the inner `Polar` instance
     polar: Rc<Polar>,
+
+    /// Map from names to `Class`s
     classes: HashMap<Symbol, Class>,
+
+    /// Map of cached instances
     instances: HashMap<u64, class::Instance>,
+
+    /// Map from type IDs, to class names
+    /// This helps us go from a generic type `T` to the
+    /// class name it is registered as
     class_names: HashMap<std::any::TypeId, Symbol>,
 }
 
@@ -41,8 +51,7 @@ impl Host {
         };
         let type_class = type_class();
         let name = Symbol("Type".to_string());
-        host.class_names.insert(type_class.type_id, name.clone());
-        host.classes.insert(name, type_class);
+        host.cache_class(type_class, name);
         host
     }
 

@@ -18,14 +18,26 @@ type InstanceMethods = HashMap<Symbol, InstanceMethod>;
 
 #[derive(Clone)]
 pub struct Class<T = ()> {
+    /// The class name. Defaults to the `std::any::type_name`
     pub name: String,
+    /// A wrapped method that constructs an instance of `T` from Polar terms
     pub constructor: Constructor,
+    /// Methods that return simple attribute lookups on an instance of `T`
     pub attributes: InstanceMethods,
+    /// Instance methods on `T` that expect Polar terms, and an instance of `&T`
     pub instance_methods: InstanceMethods,
+    /// Class methods on `T`
     pub class_methods: ClassMethods,
     pub type_id: TypeId,
+    /// A method to check whether the supplied argument is in instance of `T`
     instance_check: Arc<dyn Fn(&dyn Any) -> bool>,
+    /// A method to check whether the supplied `TypeId` matches this class
+    /// (This isn't using `type_id` because we might want to register other types here
+    /// in order to check inheritance)
     class_check: Arc<dyn Fn(TypeId) -> bool>,
+
+    /// A type marker. This is erased when the class is ready to be constructed with
+    /// `erase_type`
     ty: std::marker::PhantomData<T>,
 }
 

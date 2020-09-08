@@ -1,3 +1,5 @@
+//! Wrapper structs for the generic `Function` and `Method` traits
+
 use polar_core::terms::{Symbol, Term};
 
 use std::any::Any;
