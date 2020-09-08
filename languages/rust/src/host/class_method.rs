@@ -1,6 +1,4 @@
 //! Wrapper structs for the generic `Function` and `Method` traits
-#![allow(clippy::type_complexity)]
-
 use polar_core::terms::{Symbol, Term};
 
 use std::any::Any;
@@ -16,8 +14,11 @@ fn join<A, B>(left: crate::Result<A>, right: crate::Result<B>) -> crate::Result<
     left.and_then(|l| right.map(|r| (l, r)))
 }
 
+type TypeErasedFunction<R> = Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<Arc<R>>>;
+type TypeErasedMethod<R> = Arc<dyn Fn(&dyn Any, Vec<Term>, &mut Host) -> crate::Result<Arc<R>>>;
+
 #[derive(Clone)]
-pub struct Constructor(Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<Arc<dyn Any>>>);
+pub struct Constructor(TypeErasedFunction<dyn Any>);
 
 impl Constructor {
     pub fn new<Args, F>(f: F) -> Self
@@ -37,9 +38,7 @@ impl Constructor {
 }
 
 #[derive(Clone)]
-pub struct InstanceMethod(
-    Arc<dyn Fn(&dyn Any, Vec<Term>, &mut Host) -> crate::Result<Arc<dyn ToPolar>>>,
-);
+pub struct InstanceMethod(TypeErasedMethod<dyn ToPolar>);
 
 impl InstanceMethod {
     pub fn new<T, F, Args>(f: F) -> Self
@@ -92,7 +91,7 @@ impl InstanceMethod {
 }
 
 #[derive(Clone)]
-pub struct ClassMethod(Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<Arc<dyn ToPolar>>>);
+pub struct ClassMethod(TypeErasedFunction<dyn ToPolar>);
 
 impl ClassMethod {
     pub fn new<F, Args>(f: F) -> Self
