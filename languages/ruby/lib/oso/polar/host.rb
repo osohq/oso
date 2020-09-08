@@ -222,7 +222,7 @@ module Oso
       # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         tag, value = data['value'].first
         case tag
         when 'String', 'Boolean'
@@ -237,6 +237,8 @@ module Oso
               return -Float::INFINITY
             when 'NaN'
               return Float::NAN
+            else
+              raise PolarRuntimeError, "Expected a floating point number, got \"#{value}\"" unless value.is_a? Float # rubocop:disable Metrics/BlockNesting
             end
           end
           num
