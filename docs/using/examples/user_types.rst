@@ -201,34 +201,11 @@ This means that our rules that specialize on ``InternalUser`` will still execute
 
 Let's add the following lines to our policy:
 
-.. tabs::
-  .. group-tab:: Python
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: manager-start
-        :end-before: manager-end
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: manager-start
-        :end-before: manager-end
-
-  .. group-tab:: Java
-
-      Java example coming soon.
-
-  .. group-tab:: Node.js
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: manager-start
-        :end-before: manager-end
+.. literalinclude:: /examples/user_types/user_policy.polar
+    :caption: :fa:`oso` user_types.polar
+    :language: polar
+    :start-after: manager-start
+    :end-before: manager-end
 
 The first rule replaces the RBAC rule we previously used to control access to
 the accounts dashboard. The second rule controls access to account data.
