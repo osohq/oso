@@ -39,9 +39,14 @@ FG_RED = ""
 
 
 if supports_color():
-    RESET = "\x1b[0m"
-    FG_BLUE = "\x1b[34m"
-    FG_RED = "\x1b[31m"
+    # \001 and \002 signal these should be ignored by readline. Explanation of
+    # the issue: https://stackoverflow.com/a/9468954/390293. Issue has been
+    # observed in the Python REPL on Linux by @samscott89 and @plotnick, but
+    # not on macOS or Windows (with readline installed) or in the Ruby or
+    # Node.js REPLs, both of which also use readline.
+    RESET = "\001\x1b[0m\002"
+    FG_BLUE = "\001\x1b[34m\002"
+    FG_RED = "\001\x1b[31m\002"
 
 
 def print_error(error):
@@ -130,7 +135,7 @@ class Polar:
         if isinstance(query, str):
             query = self.ffi_polar.new_query_from_str(query)
         elif isinstance(query, Predicate):
-            query = self.ffi_polar.new_query_from_term(host.to_polar_term(query))
+            query = self.ffi_polar.new_query_from_term(host.to_polar(query))
         else:
             raise PolarApiException(f"Can not query for {query}")
 
@@ -189,7 +194,7 @@ class Polar:
 
     def register_constant(self, name, value):
         """Register `value` as a Polar constant variable called `name`."""
-        self.ffi_polar.register_constant(name, self.host.to_polar_term(value))
+        self.ffi_polar.register_constant(name, self.host.to_polar(value))
 
 
 def polar_class(_cls=None, *, name=None, from_polar=None):

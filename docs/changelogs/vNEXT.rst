@@ -1,6 +1,6 @@
-=====
+====
 NEXT
-=====
+====
 
 **Release date:** XXXX-XX-XX
 
@@ -22,10 +22,10 @@ Link to migration guide
 
 
 New features
-==============
+============
 
 Feature 1
-=========
+---------
 
 - summary
 - of

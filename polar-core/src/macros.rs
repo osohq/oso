@@ -102,14 +102,16 @@ macro_rules! sym {
     };
 }
 
+// TODO: support kwargs
 #[macro_export]
 macro_rules! call {
     ($name:expr, [$($args:expr),*]) => {
-        Predicate {
+        Call {
             name: sym!($name),
             args: vec![
                 $(term!($args)),*
-            ]
+            ],
+            kwargs: None
         }
     };
     ($name:expr) => {
@@ -162,8 +164,8 @@ impl From<InstanceLiteral> for TestHelper<Value> {
         Self(Value::InstanceLiteral(other))
     }
 }
-impl From<Predicate> for TestHelper<Value> {
-    fn from(other: Predicate) -> Self {
+impl From<Call> for TestHelper<Value> {
+    fn from(other: Call) -> Self {
         Self(Value::Call(other))
     }
 }

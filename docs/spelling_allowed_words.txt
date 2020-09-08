@@ -57,6 +57,9 @@ musl
 glibc
 repl
 arity
+NaN
+constructable
+precommit
 
 ## Product names
 sqlite

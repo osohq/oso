@@ -71,13 +71,18 @@ class Query:
         if "InstanceLiteral" in constructor:
             cls_name = constructor["InstanceLiteral"]["tag"]
             fields = constructor["InstanceLiteral"]["fields"]["fields"]
-            initargs = {k: self.host.to_python(v) for k, v in fields.items()}
+            args = []
+            kwargs = {k: self.host.to_python(v) for k, v in fields.items()}
         elif "Call" in constructor:
             cls_name = constructor["Call"]["name"]
-            initargs = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
+            args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
+            kwargs = constructor["Call"]["kwargs"]
+            kwargs = (
+                {k: self.host.to_python(v) for k, v in kwargs.items()} if kwargs else {}
+            )
         else:
             raise PolarApiException("Bad constructor")
-        self.host.make_instance(cls_name, initargs, id)
+        self.host.make_instance(cls_name, args, kwargs, id)
 
     def handle_external_call(self, data):
         call_id = data["call_id"]
@@ -117,7 +122,7 @@ class Query:
         # Return the next result of the call.
         try:
             value = next(self.calls[call_id])
-            self.ffi_query.call_result(call_id, self.host.to_polar_term(value))
+            self.ffi_query.call_result(call_id, self.host.to_polar(value))
         except StopIteration:
             self.ffi_query.call_result(call_id, None)
 
@@ -153,4 +158,4 @@ class Query:
             command = input("debug> ").strip(";")
         except EOFError:
             command = "continue"
-        self.ffi_query.debug_command(self.host.to_polar_term(command))
+        self.ffi_query.debug_command(self.host.to_polar(command))

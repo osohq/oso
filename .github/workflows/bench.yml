@@ -17,7 +17,8 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - name: Run benchmark
-        run: cargo bench -- --output-format bencher | tee output.txt
+        run: cargo bench -- --output-format bencher | tee ../output.txt
+        working-directory: polar-core
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
@@ -31,5 +32,5 @@ jobs:
           alert-threshold: "150%"
           # Only push, save + comment on main
           auto-push: ${{ github.ref == 'refs/heads/main' }}
-          comment-always: ${{ github.ref == 'refs/heads/main' }}
+          comment-always: ${{ github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[bench]') }}
           save-data-file: ${{ github.ref == 'refs/heads/main' }}

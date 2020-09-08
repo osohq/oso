@@ -106,13 +106,27 @@ RestVar: Value  = "*" <n:Name> => {
     Value::RestVariable(n)
 };
 
-Predicate: Value = {
-    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
-        match arg {
-            Some(arg) => args.push(arg),
-            None => ()
-        };
-        Value::Call(Predicate{name, args})
+// Calls that don't support kwargs.
+// For now only constructors allow kwargs.
+// One day maybe external lookups and rules.
+SimpleCall: Value = {
+    <name:Name> "("  ")" => {
+        let args = vec![];
+        let kwargs = None;
+        Value::Call(Call{name, args, kwargs})
+    },
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp> ")" => {
+        args.push(arg);
+        let kwargs = None;
+        Value::Call(Call{name, args, kwargs})
+    },
+};
+
+Call: Value = {
+    <call:SimpleCall> => call,
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <fields:(<Fields<Exp5<"Term">>>)>")" => {
+        let kwargs = Some(fields);
+        Value::Call(Call{name, args, kwargs})
     }
 };
 
@@ -174,8 +188,8 @@ New: Value = {
         Value::Expression(op)
     },
 
-    // Positional argument constructor.
-    "new" <call:Spanned<Predicate>> => {
+    // Mixed argument constructor.
+    "new" <call:Spanned<Call>> => {
         let args = vec![call];
         let op = Operation{operator: Operator::New, args};
         Value::Expression(op)
@@ -250,7 +264,7 @@ Exp10<T>: Term = {
 }
 
 CallTerm: Value = {
-    <Predicate>,
+    <SimpleCall>,
     <s:"Symbol"> => Value::String(s.0),
     "(" <Value> ")",
 }
@@ -482,9 +496,9 @@ pub Value: Value = {
     <DictionaryTerm>,
     <BuiltinOperation>,
     <RewrittenOperation>,
-    <Predicate>,
+    <SimpleCall>,
     <List<"Term">>,
-}
+};
 
 
 

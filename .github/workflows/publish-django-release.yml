@@ -1,0 +1,28 @@
+name: Publish Django Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "django_oso version Number"
+        required: true
+jobs:
+  python:
+    name: Publish python package to pypi
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+      TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: "django-v${{ github.event.inputs.version }}"
+      - run: |
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/octet-stream" $(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s https://api.github.com/repos/osohq/oso/releases/tags/django-v${{ github.event.inputs.version }} | jq -r '.assets[] | select(.name == "django-oso-python-${{ github.event.inputs.version }}.zip") | .url') --output django-oso-python-${{ github.event.inputs.version }}.zip
+      - run: unzip django-oso-python-${{ github.event.inputs.version }}.zip -d django-oso-python-${{ github.event.inputs.version }}
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: "3.7"
+      - run: pip install twine
+      - run: twine upload django-oso-python-${{ github.event.inputs.version }}/*.whl --non-interactive

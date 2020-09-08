@@ -26,7 +26,7 @@ impl MockExternal {
     pub fn external_call(
         &mut self,
         call_id: u64,
-        instance: Option<Term>,
+        instance: Term,
         attribute: Symbol,
         args: Option<Vec<Term>>,
     ) -> Option<Term> {
@@ -38,7 +38,7 @@ impl MockExternal {
         }
 
         self.calls.insert(call_id);
-        let instance_id = match instance.unwrap().value() {
+        let instance_id = match instance.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => *instance_id,
             _ => panic!("expected external instance"),
         };

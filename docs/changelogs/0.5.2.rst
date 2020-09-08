@@ -1,0 +1,44 @@
+=====
+0.5.2
+=====
+
+**Release date:** 2020-09-08
+
+Breaking changes
+================
+
+None
+
+New features
+============
+
+Support for constructors with both positional and keyword arguments (`#405 <https://github.com/osohq/oso/pull/405>`_)
+---------------------------------------------------------------------------------------------------------------------
+
+- In languages that support both positional and keyword arguments (currently
+  Python and Ruby), oso now supports registering classes with constructors that
+  use both.
+- The syntax for calling a constructor with mixed arguments from an oso policy is:
+
+  .. code-block:: polar
+
+    new MyClass(1, 2, foo: 3)
+
+- As with Python and Ruby, positional arguments must come before keyword
+  arguments.
+- For more, see documentation for the :ref:`new operator <operator-new>`.
+
+Other bugs & improvements
+=========================
+
+- The Node.js library will now throw an ``InvalidConstructorError`` when
+  attempting to register a non-constructable object via ``registerClass``.
+  (`#392 <https://github.com/osohq/oso/pull/392>`_)
+- Rule indexing performance improvements. (`#409
+  <https://github.com/osohq/oso/pull/409>`_)
+- Standardize handling of ±∞ and NaN across all language libraries. (`#410
+  <https://github.com/osohq/oso/pull/410>`_)
+- Better warnings for unknown specializers that are similar to built-in types.
+  (`#403 <https://github.com/osohq/oso/pull/403>`_)
+- Fix an issue with readline's calculation of the cursor position in the Python
+  REPL on Linux. (`#397 <https://github.com/osohq/oso/pull/397>`_)

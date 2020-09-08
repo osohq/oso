@@ -1,5 +1,6 @@
 import {
   DuplicateClassAliasError,
+  PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
 } from './errors';
@@ -201,7 +202,14 @@ export class Host {
         return { value: { Boolean: v } };
       case Number.isInteger(v):
         return { value: { Number: { Integer: v } } };
-      case typeof v === 'number' && Number.isFinite(v):
+      case typeof v === 'number':
+        if (v === Infinity) {
+          v = 'Infinity';
+        } else if (v === -Infinity) {
+          v = '-Infinity';
+        } else if (Number.isNaN(v)) {
+          v = 'NaN';
+        }
         return { value: { Number: { Float: v } } };
       case typeof v === 'string':
         return { value: { String: v } };
@@ -237,7 +245,21 @@ export class Host {
       return t.String;
     } else if (isPolarNum(t)) {
       if ('Float' in t.Number) {
-        return t.Number.Float;
+        const f = t.Number.Float;
+        switch (f) {
+          case 'Infinity':
+            return Infinity;
+          case '-Infinity':
+            return -Infinity;
+          case 'NaN':
+            return NaN;
+          default:
+            if (typeof f !== 'number')
+              throw new PolarError(
+                'Expected a floating point number, got "' + f + '"'
+              );
+            return f;
+        }
       } else {
         return t.Number.Integer;
       }

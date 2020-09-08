@@ -6,17 +6,20 @@ mod tests {
 
     #[test]
     fn serialize_test() {
-        let pred = Predicate {
+        let mut kwargs = BTreeMap::new();
+        kwargs.insert(Symbol::new("bar"), term!(1));
+        let pred = Call {
             name: Symbol("foo".to_owned()),
             args: vec![Term::new_from_test(value!(0))],
+            kwargs: Some(kwargs),
         };
         assert_eq!(
             serde_json::to_string(&pred).unwrap(),
-            r#"{"name":"foo","args":[{"value":{"Number":{"Integer":0}}}]}"#
+            r#"{"name":"foo","args":[{"value":{"Number":{"Integer":0}}}],"kwargs":{"bar":{"value":{"Number":{"Integer":1}}}}}"#
         );
         let event = QueryEvent::ExternalCall {
             call_id: 2,
-            instance: None,
+            instance: Term::new_from_test(Value::String("abc".to_string())),
             attribute: Symbol::new("foo"),
             args: Some(vec![
                 Term::new_from_test(value!(0)),

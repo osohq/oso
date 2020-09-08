@@ -115,7 +115,8 @@ What languages and frameworks do you support?
 ---------------------------------------------
 
 We currently support Python, Ruby, Java and Node.js, and are actively working on supporting more languages.
-We are also in the process of writing documentation for native framework support.
+We have framework integrations for Flask & Django see :doc:`here
+</using/frameworks/index>`.
 
 Vote & track your favorite language and framework integrations at our 
 `Github repository <https://github.com/osohq/oso>`_,
