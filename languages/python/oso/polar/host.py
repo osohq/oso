@@ -189,7 +189,8 @@ class Host:
                 else:
                     if not isinstance(number, float):
                         raise PolarRuntimeException(
-                            f'Expected a floating point number, got "{number}"')
+                            f'Expected a floating point number, got "{number}"'
+                        )
             return number
         elif tag == "List":
             return [self.to_python(e) for e in value[tag]]
