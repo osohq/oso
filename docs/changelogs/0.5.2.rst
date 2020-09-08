@@ -1,0 +1,44 @@
+=====
+0.5.2
+=====
+
+**Release date:** 2020-09-08
+
+Breaking changes
+================
+
+.. TODO remove warning and replace with "None" if no breaking
+   changes.
+
+.. warning:: This release contains breaking changes. Be sure
+   to follow migration steps before upgrading.
+
+Breaking change 1
+-----------------
+
+- summary of breaking change
+
+Link to migration guide
+
+
+New features
+==============
+
+Support for constructors with both positional and keyword arguments
+===================================================================
+
+- In languages that support both positional and keyword args (currently Python and Ruby), oso now supports registering classes with constructors that use both.
+- The syntax for calling a constructor with mixed args from an oso policy is::
+
+    instance = new MyClass(1, 2, foo: 3)
+
+- As is the convention in Python and Ruby, positional arguments must come before keyword arguments.
+- See :ref:`operator-new`
+
+Other bugs & improvements
+=========================
+
+- bulleted list
+- improvements
+- of smaller
+- potentially with doc links

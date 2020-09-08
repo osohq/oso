@@ -359,12 +359,16 @@ that are passed to the class's constructor::
     new Person("yogi", "bear")
 
 In host languages that support keyword arguments (e.g., Python & Ruby, but
-not Java), you can pass initialization arguments as keywords by using an
-instance literal::
+not Java), you can pass initiaization arguments as keywords with the
+following syntax::
 
-    new Person{first_name: "yogi", last_name: "bear"}
+    new Person(first_name: "yogi", last_name: "bear")
 
-Mixed positional/keyword initialization arguments are not currently supported.
+If using a constructor with mixed positional and keyword arguments, positional
+arguments must come before keyword arguments::
+
+    new Person("yogi", last_name: "bear")
+
 
 .. _operator-in:
 
