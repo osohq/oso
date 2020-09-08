@@ -106,7 +106,10 @@ RestVar: Value  = "*" <n:Name> => {
     Value::RestVariable(n)
 };
 
-Call: Value = {
+// Calls that don't support kwargs.
+// For now only constructors allow kwargs.
+// One day maybe external lookups and rules.
+SimpleCall: Value = {
     <name:Name> "("  ")" => {
         let args = vec![];
         let kwargs = None;
@@ -117,12 +120,15 @@ Call: Value = {
         let kwargs = None;
         Value::Call(Call{name, args, kwargs})
     },
+};
+
+Call: Value = {
+    <call:SimpleCall> => call,
     <name:Name> "(" <mut args:(<TermExp> ",")*> <fields:(<Fields<Exp5<"Term">>>)>")" => {
         let kwargs = Some(fields);
         Value::Call(Call{name, args, kwargs})
     }
-
-}
+};
 
 Fields<T>: BTreeMap<Symbol, Term> = {
     <name:Name> ":" <value:T> => {
@@ -258,7 +264,7 @@ Exp10<T>: Term = {
 }
 
 CallTerm: Value = {
-    <Call>,
+    <SimpleCall>,
     <s:"Symbol"> => Value::String(s.0),
     "(" <Value> ")",
 }
@@ -490,9 +496,9 @@ pub Value: Value = {
     <DictionaryTerm>,
     <BuiltinOperation>,
     <RewrittenOperation>,
-    <Call>,
+    <SimpleCall>,
     <List<"Term">>,
-}
+};
 
 
 

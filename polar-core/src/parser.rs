@@ -266,6 +266,12 @@ mod tests {
 
         let f = r#"a(x) if x = new Foo(bar: 3, baz: 4, 1, 2);"#;
         parse_rules(0, f).expect_err("parse error");
+
+        // Don't allow kwargs in calls or dot ops.
+        let f = r#"a(x) if f(x: 1)"#;
+        parse_rules(0, f).expect_err("parse error");
+        let f = r#"a(x) if x.f(x: 1)"#;
+        parse_rules(0, f).expect_err("parse error");
     }
 
     #[test]
