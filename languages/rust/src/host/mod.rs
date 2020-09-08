@@ -78,7 +78,7 @@ impl Host {
     /// Returns an instance of `Type` for this class.
     pub fn cache_class(&mut self, class: Class, name: Symbol) -> String {
         self.class_names.insert(class.type_id, name.clone());
-        self.classes.insert(name.clone(), class.clone());
+        self.classes.insert(name.clone(), class);
         name.0
     }
 

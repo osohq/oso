@@ -1,4 +1,5 @@
 //! Wrapper structs for the generic `Function` and `Method` traits
+#![allow(clippy::type_complexity)]
 
 use polar_core::terms::{Symbol, Term};
 
