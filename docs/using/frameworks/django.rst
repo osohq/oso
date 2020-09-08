@@ -110,7 +110,7 @@ based on the request object. The
     def auth_route(request):
         pass
 
-A policy can then be written controlling authorization based on request
+Rules can then be written using request
 attributes, like the path:
 
 .. code-block:: polar
