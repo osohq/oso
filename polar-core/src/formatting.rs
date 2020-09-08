@@ -462,13 +462,25 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for Predicate {
+    impl ToPolarString for Call {
         fn to_polar(&self) -> String {
-            format!(
-                "{}({})",
-                self.name.to_polar(),
-                format_args(Operator::And, &self.args, ", ")
-            )
+            let args = format_args(Operator::And, &self.args, ", ");
+            let combined_args = match &self.kwargs {
+                Some(dict) => {
+                    let kwargs = dict
+                        .iter()
+                        .map(|(k, v)| format!("{}: {}", k.to_polar(), v.to_polar()))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    if args.is_empty() {
+                        kwargs
+                    } else {
+                        vec![args, kwargs].join(", ")
+                    }
+                }
+                None => args,
+            };
+            format!("{}({})", self.name.to_polar(), combined_args)
         }
     }
 

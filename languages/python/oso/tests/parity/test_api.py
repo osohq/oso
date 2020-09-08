@@ -188,10 +188,9 @@ def test_instance_initialization(polar, query, qvar):
     # test round trip through kb query
     user = Actor("sam")
     env = query('new Actor{name:"sam"} = returned_user')[0]
-    # Note this is not API compatible. It seems like
-    # _query_str on the python version will return uninstantiated
-    # external instances so another _to_python call is needed.
-    # Might need a fix in test_helpers or somewhere esle.
+    assert polar.host.to_python(env["returned_user"]) == user
+
+    env = query('new Actor(name:"sam") = returned_user')[0]
     assert polar.host.to_python(env["returned_user"]) == user
 
 

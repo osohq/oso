@@ -5,6 +5,41 @@ use super::terms::*;
 
 use std::collections::{hash_map::Entry, HashMap};
 
+fn common_misspellings(t: &str) -> Option<String> {
+    let misspelled_type = match t {
+        "integer" => "Integer",
+        "int" => "Integer",
+        "i32" => "Integer",
+        "i64" => "Integer",
+        "u32" => "Integer",
+        "u64" => "Integer",
+        "usize" => "Integer",
+        "size_t" => "Integer",
+        "float" => "Float",
+        "f32" => "Float",
+        "f64" => "Float",
+        "double" => "Float",
+        "char" => "String",
+        "str" => "String",
+        "string" => "String",
+        "list" => "List",
+        "array" => "List",
+        "Array" => "List",
+        "dict" => "Dictionary",
+        "Dict" => "Dictionary",
+        "dictionary" => "Dictionary",
+        "hash" => "Dictionary",
+        "Hash" => "Dictionary",
+        "map" => "Dictionary",
+        "Map" => "Dictionary",
+        "HashMap" => "Dictionary",
+        "hashmap" => "Dictionary",
+        "hash_map" => "Dictionary",
+        _ => return None,
+    };
+    Some(misspelled_type.to_owned())
+}
+
 /// Warn about singleton variables and unknown specializers in a rule,
 /// except those whose names start with `_`.
 pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
@@ -44,7 +79,11 @@ pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
     for (sym, singleton) in singletons {
         if let Some(term) = singleton {
             let mut msg = if let Value::Pattern(..) = term.value() {
-                format!("Unknown specializer {}", sym)
+                let mut msg = format!("Unknown specializer {}", sym);
+                if let Some(t) = common_misspellings(&sym.0) {
+                    msg.push_str(&format!(", did you mean {}?", t));
+                }
+                msg
             } else {
                 format!("Singleton variable {} is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>", sym)
             };

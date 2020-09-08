@@ -1071,6 +1071,18 @@ fn test_print() {
 }
 
 #[test]
+fn test_unknown_specializer_suggestions() {
+    let polar = Polar::new();
+    polar.load_str("f(s: string) if s;").unwrap();
+    let msg = polar.next_message().unwrap();
+    assert!(matches!(&msg.kind, MessageKind::Warning));
+    assert_eq!(
+        &msg.msg,
+        "Unknown specializer string, did you mean String?\n001: f(s: string) if s;\n          ^"
+    );
+}
+
+#[test]
 fn test_rest_vars() {
     let mut polar = Polar::new();
 

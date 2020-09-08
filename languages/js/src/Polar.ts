@@ -1,9 +1,9 @@
-import { createHash } from 'crypto';
 import { extname } from 'path';
 import { createInterface } from 'readline';
 
 import {
   InlineQueryFailedError,
+  InvalidConstructorError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
 } from './errors';
@@ -13,7 +13,7 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import type { Class, Options, QueryResult } from './types';
-import { printError, PROMPT, readFile, repr } from './helpers';
+import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -138,6 +138,7 @@ export class Polar {
    * Register a JavaScript class for use in Polar policies.
    */
   registerClass<T>(cls: Class<T>, alias?: string): void {
+    if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const name = this.#host.cacheClass(cls, alias);
     this.registerConstant(name, cls);
   }

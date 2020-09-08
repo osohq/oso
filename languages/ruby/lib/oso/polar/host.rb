@@ -115,29 +115,22 @@ module Oso
       # Construct and cache a Ruby instance.
       #
       # @param cls_name [String]
-      # @param initargs [Hash<String, Hash>]
+      # @param args [Array<Object>]
+      # @param kwargs [Hash<String, Object>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
-      def make_instance(cls_name, initargs:, id:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
+      def make_instance(cls_name, args:, kwargs:, id:) # rubocop:disable Metrics/MethodLength
         constructor = get_constructor(cls_name)
         instance = if constructor == :new
-                     if initargs.empty?
-                       get_class(cls_name).__send__(:new)
-                     elsif initargs.is_a? Array
-                       get_class(cls_name).__send__(:new, *initargs)
-                     elsif initargs.is_a? Hash
-                       get_class(cls_name).__send__(:new, **initargs)
+                     if kwargs.empty?
+                       get_class(cls_name).__send__(:new, *args)
                      else
-                       raise PolarRuntimeError, "Bad initargs: #{initargs}"
+                       get_class(cls_name).__send__(:new, *args, **kwargs)
                      end
-                   elsif initargs.empty?
-                     constructor.call
-                   elsif initargs.is_a? Array
-                     constructor.call(*initargs)
-                   elsif initargs.is_a? Hash
-                     constructor.call(**initargs)
+                   elsif kwargs.empty?
+                     constructor.call(*args)
                    else
-                     raise PolarRuntimeError, "Bad initargs: #{initargs}"
+                     constructor.call(*args, **kwargs)
                    end
         cache_instance(instance, id: id)
       rescue StandardError => e
@@ -196,6 +189,13 @@ module Oso
                 when value.instance_of?(Integer)
                   { 'Number' => { 'Integer' => value } }
                 when value.instance_of?(Float)
+                  if value == Float::INFINITY
+                    value = 'Infinity'
+                  elsif value == -Float::INFINITY
+                    value = '-Infinity'
+                  elsif value.nan?
+                    value = 'NaN'
+                  end
                   { 'Number' => { 'Float' => value } }
                 when value.instance_of?(String)
                   { 'String' => value }
@@ -222,13 +222,28 @@ module Oso
       # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         tag, value = data['value'].first
         case tag
         when 'String', 'Boolean'
           value
         when 'Number'
-          value.values.first
+          num = value.values.first
+          if value.key? 'Float'
+            case num
+            when 'Infinity'
+              return Float::INFINITY
+            when '-Infinity'
+              return -Float::INFINITY
+            when 'NaN'
+              return Float::NAN
+            else
+              unless value['Float'].is_a? Float # rubocop:disable Metrics/BlockNesting
+                raise PolarRuntimeError, "Expected a floating point number, got \"#{value['Float']}\""
+              end
+            end
+          end
+          num
         when 'List'
           value.map { |el| to_ruby(el) }
         when 'Dictionary'

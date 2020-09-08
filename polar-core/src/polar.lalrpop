@@ -106,15 +106,23 @@ RestVar: Value  = "*" <n:Name> => {
     Value::RestVariable(n)
 };
 
-Predicate: Value = {
-    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
-        match arg {
-            Some(arg) => args.push(arg),
-            None => ()
-        };
-        Value::Call(Predicate{name, args})
+Call: Value = {
+    <name:Name> "("  ")" => {
+        let args = vec![];
+        let kwargs = None;
+        Value::Call(Call{name, args, kwargs})
+    },
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp> ")" => {
+        args.push(arg);
+        let kwargs = None;
+        Value::Call(Call{name, args, kwargs})
+    },
+    <name:Name> "(" <mut args:(<TermExp> ",")*> <fields:(<Fields<Exp5<"Term">>>)>")" => {
+        let kwargs = Some(fields);
+        Value::Call(Call{name, args, kwargs})
     }
-};
+
+}
 
 Fields<T>: BTreeMap<Symbol, Term> = {
     <name:Name> ":" <value:T> => {
@@ -174,8 +182,8 @@ New: Value = {
         Value::Expression(op)
     },
 
-    // Positional argument constructor.
-    "new" <call:Spanned<Predicate>> => {
+    // Mixed argument constructor.
+    "new" <call:Spanned<Call>> => {
         let args = vec![call];
         let op = Operation{operator: Operator::New, args};
         Value::Expression(op)
@@ -250,7 +258,7 @@ Exp10<T>: Term = {
 }
 
 CallTerm: Value = {
-    <Predicate>,
+    <Call>,
     <s:"Symbol"> => Value::String(s.0),
     "(" <Value> ")",
 }
@@ -482,7 +490,7 @@ pub Value: Value = {
     <DictionaryTerm>,
     <BuiltinOperation>,
     <RewrittenOperation>,
-    <Predicate>,
+    <Call>,
     <List<"Term">>,
 }
 

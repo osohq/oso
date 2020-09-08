@@ -103,9 +103,10 @@ impl Symbol {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct Predicate {
+pub struct Call {
     pub name: Symbol,
     pub args: TermList,
+    pub kwargs: Option<BTreeMap<Symbol, Term>>,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -201,7 +202,7 @@ pub enum Value {
     InstanceLiteral(InstanceLiteral),
     Dictionary(Dictionary),
     Pattern(Pattern),
-    Call(Predicate),
+    Call(Call),
     List(TermList),
     Variable(Symbol),
     RestVariable(Symbol),
@@ -240,7 +241,7 @@ impl Value {
         }
     }
 
-    pub fn call(self) -> Result<Predicate, error::RuntimeError> {
+    pub fn call(self) -> Result<Call, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
             _ => Err(error::RuntimeError::TypeError {
@@ -375,8 +376,15 @@ impl Term {
             | Value::Variable(_)
             | Value::RestVariable(_) => {}
             Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_replace(f)),
-            Value::Call(ref mut predicate) => {
-                predicate.args.iter_mut().for_each(|a| a.map_replace(f))
+            Value::Call(Call {
+                ref mut args,
+                ref mut kwargs,
+                ..
+            }) => {
+                args.iter_mut().for_each(|term| term.map_replace(f));
+                if let Some(ref mut fields) = kwargs {
+                    fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
+                }
             }
             Value::Expression(Operation { ref mut args, .. }) => {
                 args.iter_mut().for_each(|term| term.map_replace(f))

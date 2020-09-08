@@ -209,8 +209,7 @@ public class PolarTest {
 
     @Test
     public void testDuplicateRegistration() throws Exception {
-        assertThrows(Exceptions.DuplicateClassAliasError.class,
-                     () -> p.registerClass(MyClass.class, "MyClass"));
+        assertThrows(Exceptions.DuplicateClassAliasError.class, () -> p.registerClass(MyClass.class, "MyClass"));
     }
 
     @Test
@@ -220,6 +219,13 @@ public class PolarTest {
         MyClass ret = (MyClass) query.nextElement().get("x");
         assertEquals("test", ret.name);
         assertEquals(Integer.valueOf(1), ret.id);
+
+    }
+
+    @Test
+    public void testNoKeywordArgs() throws Exception {
+        p.loadStr("f(x) if x = new MyClass(\"test\", id: 1);");
+        assertThrows(Exceptions.InstantiationError.class, () -> p.query("f(x)"));
     }
 
     @Test
@@ -424,13 +430,13 @@ public class PolarTest {
         assertEquals(result.get("y"), 1);
     }
 
+    /** TODO(gj): Test this when NULL is handled. */
     public void testReturnNull() throws Exception {
-        p.loadStr("f(x) if x.myReturnNull = 1;");
+        p.loadStr("f(x) if x.myReturnNull() = 1;");
         assertTrue(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
 
-        p.loadStr("f(x) if x.myReturnNull.badCall = 1;");
+        p.loadStr("f(x) if x.myReturnNull().badCall = 1;");
         assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryRule("f", new MyClass("test", 1)).results());
-
     }
 
     /*** TEST OSO ***/
@@ -452,4 +458,42 @@ public class PolarTest {
         assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
     }
 
+    @Test
+    public void testNaN() throws Exception {
+      p.registerConstant("nan", Double.NaN);
+
+      List<HashMap<String, Object>> results = p.query("x = nan").results();
+      HashMap<String, Object> result = results.get(0);
+      Object x = result.get("x");
+      assertTrue(x instanceof Double);
+      Double y = (Double) x;
+      assertTrue(Double.isNaN(y));
+
+      assertTrue(p.query("nan = nan").results().isEmpty(), "NaN != NaN");
+    }
+
+    @Test
+    public void testInfinities() throws Exception {
+      p.registerConstant("inf", Double.POSITIVE_INFINITY);
+
+      List<HashMap<String, Object>> inf_results = p.query("x = inf").results();
+      HashMap<String, Object> inf_result = inf_results.get(0);
+      Object inf = inf_result.get("x");
+      assertTrue((Double) inf == Double.POSITIVE_INFINITY);
+
+      assertFalse(p.query("inf = inf").results().isEmpty(), "Infinity == Infinity");
+
+      p.registerConstant("neg_inf", Double.NEGATIVE_INFINITY);
+
+      List<HashMap<String, Object>> neg_inf_results = p.query("x = neg_inf").results();
+      HashMap<String, Object> neg_inf_result = neg_inf_results.get(0);
+      Object neg_inf = neg_inf_result.get("x");
+      assertTrue((Double) neg_inf == Double.NEGATIVE_INFINITY);
+
+      assertFalse(p.query("neg_inf = neg_inf").results().isEmpty(), "-Infinity == -Infinity");
+
+      assertTrue(p.query("inf = neg_inf").results().isEmpty(), "Infinity != -Infinity");
+      assertTrue(p.query("inf < neg_inf").results().isEmpty(), "Infinity > -Infinity");
+      assertFalse(p.query("neg_inf < inf").results().isEmpty(), "-Infinity < Infinity");
+    }
 }

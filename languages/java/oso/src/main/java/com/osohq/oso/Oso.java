@@ -3,7 +3,7 @@ package com.osohq.oso;
 import java.io.IOException;
 
 public class Oso extends Polar {
-    public Oso() throws Exceptions.OsoException {
+    public Oso() {
         super();
 
         // Register helper classes.

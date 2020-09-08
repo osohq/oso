@@ -38,11 +38,12 @@ export function isPolarNum(v: PolarValue): v is PolarNum {
 
 /**
  * Polar floating point type.
+ * The string variant is to support ±∞ and NaN.
  *
  * @internal
  */
 interface PolarFloat {
-  Float: number;
+  Float: number | string;
 }
 
 /**
