@@ -68,7 +68,7 @@ impl<T> Class<T> {
     pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
     where
         F: Method<T, Result = R> + 'static,
-        F::Result: ToPolar + 'static,
+        R: ToPolar + 'static,
         T: 'static,
     {
         self.attributes
@@ -85,7 +85,7 @@ impl<T> Class<T> {
     where
         Args: FromPolar,
         F: Method<T, Args, Result = R> + 'static,
-        F::Result: ToPolar + 'static,
+        R: ToPolar + 'static,
         T: 'static,
     {
         self.instance_methods
@@ -147,14 +147,14 @@ impl<T> Class<T> {
         (self.instance_check)(instance.instance.as_ref())
     }
 
-    pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> Instance {
-        let instance = self.constructor.invoke(fields, host);
-        Instance {
+    pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
+        let instance = self.constructor.invoke(fields, host)?;
+        Ok(Instance {
             name: self.name.clone(),
             instance,
             attributes: Arc::new(self.attributes.clone()),
             methods: Arc::new(self.instance_methods.clone()),
-        }
+        })
     }
 
     pub fn cast_to_instance(&self, instance: impl Any) -> Instance {

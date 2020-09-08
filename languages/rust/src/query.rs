@@ -151,7 +151,7 @@ impl Query {
             };
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
             let host = &mut self.host.lock().unwrap();
-            let result = f.invoke(instance.instance.as_ref(), args, host);
+            let result = f.invoke(instance.instance.as_ref(), args, host)?;
             self.calls
                 .insert(call_id, Box::new(std::iter::once(result)));
         }

@@ -11,6 +11,10 @@ pub enum OsoError {
     Polar(#[from] polar_core::error::PolarError),
     #[error("failed to convert type from Polar")]
     FromPolar,
+    #[error("invalid receiver - this is a bug")]
+    InvalidReceiver,
+    #[error("invalid receiver - this is a bug")]
+    MethodNotFound,
     #[error("failed to convert type to Polar")]
     ToPolar,
 

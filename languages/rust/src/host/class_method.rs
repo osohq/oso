@@ -9,8 +9,12 @@ use super::class::Class;
 use super::method::{Function, Method};
 use super::Host;
 
+fn join<A, B>(left: crate::Result<A>, right: crate::Result<B>) -> crate::Result<(A, B)> {
+    left.and_then(|l| right.map(|r| (l, r)))
+}
+
 #[derive(Clone)]
-pub struct Constructor(Arc<dyn Fn(Vec<Term>, &mut Host) -> Arc<dyn Any>>);
+pub struct Constructor(Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<Arc<dyn Any>>>);
 
 impl Constructor {
     pub fn new<Args, F>(f: F) -> Self
@@ -20,18 +24,19 @@ impl Constructor {
         F::Result: 'static,
     {
         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            let args = Args::from_polar_list(&args, host).unwrap();
-            Arc::new(f.invoke(args))
+            Args::from_polar_list(&args, host).map(|args| Arc::new(f.invoke(args)) as Arc<dyn Any>)
         }))
     }
 
-    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> Arc<dyn Any> {
+    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Arc<dyn Any>> {
         self.0(args, host)
     }
 }
 
 #[derive(Clone)]
-pub struct InstanceMethod(Arc<dyn Fn(&dyn Any, Vec<Term>, &mut Host) -> Arc<dyn ToPolar>>);
+pub struct InstanceMethod(
+    Arc<dyn Fn(&dyn Any, Vec<Term>, &mut Host) -> crate::Result<Arc<dyn ToPolar>>>,
+);
 
 impl InstanceMethod {
     pub fn new<T, F, Args>(f: F) -> Self
@@ -45,32 +50,46 @@ impl InstanceMethod {
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
                 let receiver = receiver
                     .downcast_ref()
-                    .expect("incorrect type for receiver");
-                let args = Args::from_polar_list(&args, host).unwrap();
-                Arc::new(f.invoke(receiver, args))
+                    .ok_or_else(|| crate::OsoError::InvalidReceiver);
+
+                let args = Args::from_polar_list(&args, host);
+
+                join(receiver, args)
+                    .map(|(receiver, args)| Arc::new(f.invoke(receiver, args)) as Arc<dyn ToPolar>)
             },
         ))
     }
 
-    pub fn invoke(&self, receiver: &dyn Any, args: Vec<Term>, host: &mut Host) -> Arc<dyn ToPolar> {
+    pub fn invoke(
+        &self,
+        receiver: &dyn Any,
+        args: Vec<Term>,
+        host: &mut Host,
+    ) -> crate::Result<Arc<dyn ToPolar>> {
         self.0(receiver, args, host)
     }
 
     pub fn from_class_method(name: Symbol) -> Self {
         Self(Arc::new(
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                let class: &Class = receiver.downcast_ref().unwrap();
-                tracing::trace!(class = %class.name, method=%name, "class_method");
-                let class_method: &ClassMethod =
-                    class.class_methods.get(&name).expect("get class method");
-                class_method.invoke(args, host)
+                receiver
+                    .downcast_ref::<Class>()
+                    .ok_or_else(|| crate::OsoError::InvalidReceiver)
+                    .and_then(|class| {
+                        tracing::trace!(class = %class.name, method=%name, "class_method");
+                        class
+                            .class_methods
+                            .get(&name)
+                            .ok_or_else(|| crate::OsoError::MethodNotFound)
+                    })
+                    .and_then(|class_method: &ClassMethod| class_method.invoke(args, host))
             },
         ))
     }
 }
 
 #[derive(Clone)]
-pub struct ClassMethod(Arc<dyn Fn(Vec<Term>, &mut Host) -> Arc<dyn ToPolar>>);
+pub struct ClassMethod(Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<Arc<dyn ToPolar>>>);
 
 impl ClassMethod {
     pub fn new<F, Args>(f: F) -> Self
@@ -80,12 +99,12 @@ impl ClassMethod {
         F::Result: ToPolar + 'static,
     {
         Self(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            let args = Args::from_polar_list(&args, host).unwrap();
-            Arc::new(f.invoke(args))
+            Args::from_polar_list(&args, host)
+                .map(|args| Arc::new(f.invoke(args)) as Arc<dyn ToPolar>)
         }))
     }
 
-    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> Arc<dyn ToPolar> {
+    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Arc<dyn ToPolar>> {
         self.0(args, host)
     }
 }

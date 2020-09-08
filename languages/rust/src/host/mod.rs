@@ -108,12 +108,18 @@ impl Host {
         id
     }
 
-    pub fn make_instance(&mut self, name: &Symbol, fields: Vec<Term>, id: u64) {
+    pub fn make_instance(
+        &mut self,
+        name: &Symbol,
+        fields: Vec<Term>,
+        id: u64,
+    ) -> crate::Result<()> {
         let class = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
         let fields = fields; // TODO: use
-        let instance = class.init(fields, self);
+        let instance = class.init(fields, self)?;
         self.cache_instance(instance, Some(id));
+        Ok(())
     }
 
     pub fn unify(&self, left: u64, right: u64) -> bool {
