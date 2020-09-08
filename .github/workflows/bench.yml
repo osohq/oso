@@ -31,5 +31,5 @@ jobs:
           alert-threshold: "150%"
           # Only push, save + comment on main
           auto-push: ${{ github.ref == 'refs/heads/main' }}
-          comment-always: ${{ github.ref == 'refs/heads/main' }}
+          comment-always: ${{ github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[bench]') }}
           save-data-file: ${{ github.ref == 'refs/heads/main' }}
