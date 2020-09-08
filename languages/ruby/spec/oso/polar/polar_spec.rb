@@ -160,7 +160,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context '#make_instance' do # rubocop:disable Metrics/BlockLength
-    context 'when using the default constructor' do
+    context 'when using the default constructor' do # rubocop:disable Metrics/BlockLength
       it 'handles positional args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
