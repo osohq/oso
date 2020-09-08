@@ -36,8 +36,18 @@ def test_model_registration():
     from test_app import models
     from oso import Variable
 
-    assert next(Oso.query_rule('models', models.TestRegistration(), Variable('x')))['bindings']['x'] == 1
-    assert next(Oso.query_rule('models', models.TestRegistration2(), Variable('x')))['bindings']['x'] == 2
+    assert (
+        next(Oso.query_rule("models", models.TestRegistration(), Variable("x")))[
+            "bindings"
+        ]["x"]
+        == 1
+    )
+    assert (
+        next(Oso.query_rule("models", models.TestRegistration2(), Variable("x")))[
+            "bindings"
+        ]["x"]
+        == 2
+    )
 
 
 def test_authorize(rf, simple_policy):
