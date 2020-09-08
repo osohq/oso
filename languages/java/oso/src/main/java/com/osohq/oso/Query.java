@@ -97,7 +97,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
                 kind = event.keys().next();
                 data = event.getJSONObject(kind);
             } catch (JSONException e) {
-                // TODO: this sucks, we should have a consistent serialization format
+                // TODO: we should have a consistent serialization format
                 kind = eventStr.replace("\"", "");
                 data = null;
             }
@@ -189,8 +189,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
      *                      instance of a built-in type.
      */
     public void registerCall(String attrName, Optional<List<Object>> args, long callId, JSONObject polarInstance)
-            throws Exceptions.InvalidAttributeError, Exceptions.InvalidCallError, Exceptions.UnregisteredInstanceError,
-            Exceptions.UnexpectedPolarTypeError {
+            throws Exceptions.InvalidAttributeError,
+                Exceptions.InvalidCallError,
+                Exceptions.OsoException,
+                Exceptions.UnregisteredInstanceError,
+                Exceptions.UnexpectedPolarTypeError {
         if (calls.containsKey(callId)) {
             return;
         }

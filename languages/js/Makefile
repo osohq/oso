@@ -1,5 +1,8 @@
 .PHONY: wasm install clean dev build fmtcheck typecheck lint parity test
 
+build: wasm
+	yarn build
+
 wasm: clean
 	rm -f src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.d.ts
 	$(MAKE) -C ../../polar-wasm-api build
@@ -15,9 +18,6 @@ clean: install
 dev: wasm
 	yarn build --watch
 
-build: wasm
-	yarn build
-
 fmt: clean
 	yarn fmt
 
@@ -29,10 +29,10 @@ typecheck: wasm
 
 lint: fmtcheck typecheck
 
-parity: wasm
+parity: build
 	yarn ts-node test/parity.ts
 
-test: wasm
+test: build
 	yarn test
 
 repl: build

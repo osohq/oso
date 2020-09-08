@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from math import pi
+from math import inf, isnan, nan
 from pathlib import Path
 
 from polar import polar_class
@@ -599,12 +599,31 @@ def test_other_constants(polar, qvar, query):
     assert qvar("x = d.a", "x") == [1]
 
 
-def test_host_methods(polar, qeval, query):
+def test_host_methods(qeval):
     assert qeval('x = "abc" and x.startswith("a") = true and x.find("bc") = 1')
     assert qeval("i = 4095 and i.bit_length() = 12")
     assert qeval('f = 3.14159 and f.hex() = "0x1.921f9f01b866ep+1"')
     assert qeval("l = [1, 2, 3] and l.index(3) = 2 and l.copy() = [1, 2, 3]")
     assert qeval('d = {a: 1} and d.get("a") = 1 and d.get("b", 2) = 2')
+
+
+def test_inf_nan(polar, qeval, query):
+    polar.register_constant("inf", inf)
+    polar.register_constant("neg_inf", -inf)
+    polar.register_constant("nan", nan)
+
+    assert isnan(query("x = nan")[0]["x"])
+    assert not query("nan = nan")
+
+    assert query("x = inf")[0]["x"] == inf
+    assert qeval("inf = inf")
+
+    assert query("x = neg_inf")[0]["x"] == -inf
+    assert qeval("neg_inf = neg_inf")
+
+    assert not query("inf = neg_inf")
+    assert not query("inf < neg_inf")
+    assert qeval("neg_inf < inf")
 
 
 def test_register_constants_with_decorator():

@@ -182,13 +182,20 @@ module Oso
       #
       # @param value [Object]
       # @return [Hash<String, Object>]
-      def to_polar_term(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def to_polar_term(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         value = case true # rubocop:disable Lint/LiteralAsCondition
                 when value.instance_of?(TrueClass) || value.instance_of?(FalseClass)
                   { 'Boolean' => value }
                 when value.instance_of?(Integer)
                   { 'Number' => { 'Integer' => value } }
                 when value.instance_of?(Float)
+                  if value == Float::INFINITY
+                    value = 'Infinity'
+                  elsif value == -Float::INFINITY
+                    value = '-Infinity'
+                  elsif value.nan?
+                    value = 'NaN'
+                  end
                   { 'Number' => { 'Float' => value } }
                 when value.instance_of?(String)
                   { 'String' => value }
@@ -215,13 +222,28 @@ module Oso
       # @option data [Hash<String, Object>] :value
       # @return [Object]
       # @raise [UnexpectedPolarTypeError] if type cannot be converted to Ruby.
-      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def to_ruby(data) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         tag, value = data['value'].first
         case tag
         when 'String', 'Boolean'
           value
         when 'Number'
-          value.values.first
+          num = value.values.first
+          if value.key? 'Float'
+            case num
+            when 'Infinity'
+              return Float::INFINITY
+            when '-Infinity'
+              return -Float::INFINITY
+            when 'NaN'
+              return Float::NAN
+            else
+              unless value['Float'].is_a? Float # rubocop:disable Metrics/BlockNesting
+                raise PolarRuntimeError, "Expected a floating point number, got \"#{value['Float']}\""
+              end
+            end
+          end
+          num
         when 'List'
           value.map { |el| to_ruby(el) }
         when 'Dictionary'
