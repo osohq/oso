@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599572462651,
+  "lastUpdate": 1599572995171,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3119,6 +3119,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 24539,
             "range": "± 1248",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c9ef944074b7bbea5b0dd0b3e003ead8f4060a9d",
+          "message": "Add some common aliases to unknown specializer message (#403)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-08T09:43:47-04:00",
+          "tree_id": "4f8df8ec685b63d8e3a7c087a32f54006c4fb014",
+          "url": "https://github.com/osohq/oso/commit/c9ef944074b7bbea5b0dd0b3e003ead8f4060a9d"
+        },
+        "date": 1599572994362,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1658,
+            "range": "± 148",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 5130,
+            "range": "± 194",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 138912,
+            "range": "± 4647",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 727592,
+            "range": "± 14572",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 31391,
+            "range": "± 2327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 31481,
+            "range": "± 1884",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 31454,
+            "range": "± 1472",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 31473,
+            "range": "± 1370",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 29611,
+            "range": "± 1831",
             "unit": "ns/iter"
           }
         ]
