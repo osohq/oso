@@ -4,10 +4,7 @@ from oso import Oso
 from expense import Expense, EXPENSES
 
 oso = Oso()
-
-
-def setup_oso():
-    oso.load_file("expenses.polar")
+oso.load_file("expenses.polar")
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -37,6 +34,5 @@ class RequestHandler(BaseHTTPRequestHandler):
 server_address = ("", 5050)
 httpd = HTTPServer(server_address, RequestHandler)
 if __name__ == "__main__":
-    setup_oso()
     print("running on port", httpd.server_port)
     httpd.serve_forever()

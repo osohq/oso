@@ -9,8 +9,6 @@ run_path("allow-01.py")
 from expense import *
 from oso import Oso
 
-import server
-
 
 def test_quickstart_policy_2():
     oso = Oso()
