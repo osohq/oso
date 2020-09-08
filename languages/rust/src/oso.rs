@@ -74,6 +74,9 @@ impl Oso {
     }
 
     pub fn load_file(&mut self, file: &str) -> crate::Result<()> {
+        if !file.ends_with(".polar") {
+            return Err(crate::OsoError::IncorrectFileType);
+        }
         let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
