@@ -272,3 +272,13 @@ export function printError(e: Error) {
   console.error(FG_RED + e.name + RESET);
   console.error(e.message);
 }
+
+// https://stackoverflow.com/a/46759625
+export function isConstructor(f: unknown): boolean {
+  try {
+    Reflect.construct(String, [], f);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
