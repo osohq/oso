@@ -5,6 +5,7 @@
 #[macro_use]
 pub mod errors;
 
+pub(crate) mod builtins;
 mod host;
 mod oso;
 mod query;

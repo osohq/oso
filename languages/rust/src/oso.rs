@@ -28,10 +28,16 @@ impl Oso {
         let inner = Rc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
-        Self {
+        let mut oso = Self {
             host: Arc::new(Mutex::new(host)),
             inner,
+        };
+
+        for class in crate::builtins::classes() {
+            oso.register_class(class)
+                .expect("failed to register builtin class");
         }
+        oso
     }
 
     pub fn is_allowed<Actor, Action, Resource>(

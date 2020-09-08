@@ -5,7 +5,6 @@ use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value
 
 use crate::Polar;
 
-mod builtins;
 mod class;
 mod class_method;
 mod from_polar;
@@ -44,13 +43,6 @@ impl Host {
         let name = Symbol("Type".to_string());
         host.class_names.insert(type_class.type_id, name.clone());
         host.classes.insert(name, type_class);
-
-        // register all builtin constants
-        for (name, class) in builtins::classes() {
-            let value = host.cache_class(class, name.clone());
-            host.polar.register_constant(name, value);
-        }
-
         host
     }
 

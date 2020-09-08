@@ -13,7 +13,7 @@ required-features = ["cli"]
 maplit = "1.0.2"
 polar-core = { path = "../../polar-core" }
 thiserror = "1.0.20"
-tracing = "0.1.19"
+tracing = { version = "0.1.19", features = ["log"] }
 tracing-subscriber = { version = "0.2.11", features = ["fmt"] }
 
 anyhow = { version = "1.0.32", optional = true }

@@ -4,7 +4,7 @@ use polar_core::terms::{Symbol, Value};
 
 use std::collections::HashMap;
 
-use super::Class;
+use crate::Class;
 
 fn boolean() -> Class<bool> {
     Class::<bool>::with_default().name("Boolean")
@@ -32,13 +32,13 @@ fn string() -> Class<String> {
 }
 
 /// Returns the builtin types, the name, class, and instance
-pub fn classes() -> Vec<(Symbol, Class)> {
+pub fn classes() -> Vec<Class> {
     vec![
-        (Symbol("Boolean".to_string()), boolean().erase_type()),
-        (Symbol("Integer".to_string()), integer().erase_type()),
-        (Symbol("Float".to_string()), float().erase_type()),
-        (Symbol("List".to_string()), list().erase_type()),
-        (Symbol("Dictionary".to_string()), dictionary().erase_type()),
-        (Symbol("String".to_string()), string().erase_type()),
+        boolean().erase_type(),
+        integer().erase_type(),
+        float().erase_type(),
+        list().erase_type(),
+        dictionary().erase_type(),
+        string().erase_type(),
     ]
 }
