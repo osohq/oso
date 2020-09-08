@@ -209,8 +209,7 @@ public class PolarTest {
 
     @Test
     public void testDuplicateRegistration() throws Exception {
-        assertThrows(Exceptions.DuplicateClassAliasError.class,
-                     () -> p.registerClass(MyClass.class, "MyClass"));
+        assertThrows(Exceptions.DuplicateClassAliasError.class, () -> p.registerClass(MyClass.class, "MyClass"));
     }
 
     @Test
@@ -220,6 +219,13 @@ public class PolarTest {
         MyClass ret = (MyClass) query.nextElement().get("x");
         assertEquals("test", ret.name);
         assertEquals(Integer.valueOf(1), ret.id);
+
+    }
+
+    @Test
+    public void testNoKeywordArgs() throws Exception {
+        p.loadStr("f(x) if x = new MyClass(\"test\", id: 1);");
+        assertThrows(Exceptions.InstantiationError.class, () -> p.query("f(x)"));
     }
 
     @Test

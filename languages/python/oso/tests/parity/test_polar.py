@@ -202,41 +202,41 @@ def test_dictionaries(tell, qeval, qvar):
 
 
 def test_external_classes(tell, qeval, qvar, externals):
-    assert qeval("new Bar{} matches Foo")
-    assert not qeval("new Qux{} matches Foo")
-    assert qeval('new Foo{}.foo() = "Foo!"')
-    assert qeval('new Bar{}.foo() = "Bar!"')
+    assert qeval("new Bar() matches Foo")
+    assert not qeval("new Qux() matches Foo")
+    assert qeval('new Foo().foo() = "Foo!"')
+    assert qeval('new Bar().foo() = "Bar!"')
 
 
 @pytest.mark.xfail(
     reason="Doesn't work right now since we don't implement external instance unification."
 )
 def test_unify_class_fields(tell, qeval, qvar, externals):
-    tell("check(name, new Foo{name: name})")
+    tell("check(name, new Foo(name: name))")
 
-    assert qeval('check("sam", new Foo{name: "sam"})')
-    assert not qeval('check("alex", new Foo{name: "sam"})')
+    assert qeval('check("sam", new Foo(name: "sam"))')
+    assert not qeval('check("alex", new Foo(name: "sam"))')
 
 
 def test_argument_patterns(tell, qeval, qvar, externals):
     tell("matchesFoo(name, foo: Foo) if name = foo.name")
 
-    assert qeval('matchesFoo(sam, new Foo{name: "sam"})')
-    assert qeval('matchesFoo(sam, new Bar{name: "sam"})')
-    assert not qeval('matchesFoo("alex", new Foo{name: "sam"})')
-    assert not qeval('matchesFoo("alex", new Bar{name: "sam"})')
-    assert not qeval('matchesFoo("alex", new Qux{})')
+    assert qeval('matchesFoo(sam, new Foo(name: "sam"))')
+    assert qeval('matchesFoo(sam, new Bar(name: "sam"))')
+    assert not qeval('matchesFoo("alex", new Foo(name: "sam"))')
+    assert not qeval('matchesFoo("alex", new Bar(name: "sam"))')
+    assert not qeval('matchesFoo("alex", new Qux())')
 
 
 @pytest.mark.skip(reason="No longer support external instance unification")
 # TODO: update to use internal classes (depends on instantiation bug fix)
 def test_keys_are_confusing(tell, qeval, qvar, externals):
-    assert qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2, x: 1}")
-    assert qeval("new MyClass{x: 1, y: 2} = new MyClass{x: 1, y: 2}")
-    assert not qeval("new MyClass{x: 1, y: 2} = new MyClass{x: 2, y: 1}")
-    assert not qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 1, x: 2}")
-    assert not qeval("new MyClass{x: 1} = new MyClass{x: 1, y: 2}")
-    assert not qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2}")
+    assert qeval("new MyClass(x: 1, y: 2) = new MyClass(y: 2, x: 1)")
+    assert qeval("new MyClass(x: 1, y: 2) = new MyClass(x: 1, y: 2)")
+    assert not qeval("new MyClass(x: 1, y: 2) = new MyClass(x: 2, y: 1)")
+    assert not qeval("new MyClass(x: 1, y: 2) = new MyClass(y: 1, x: 2)")
+    assert not qeval("new MyClass(x: 1) = new MyClass(x: 1, y: 2)")
+    assert not qeval("new MyClass(x: 1, y: 2) = new MyClass(y: 2)")
 
 
 def test_matches(qeval, qvar, externals):
@@ -252,27 +252,27 @@ def test_matches(qeval, qvar, externals):
     assert not qeval("{} matches {x: 1, y: 2}")
     assert not qeval("{} matches {x: 1}")
 
-    assert qeval("new MyClass{x: 1, y: 2} matches {}")
-    assert qeval("new MyClass{x: 1, y: 2} matches {x: 1, y: 2}")
+    assert qeval("new MyClass(x: 1, y: 2) matches {}")
+    assert qeval("new MyClass(x: 1, y: 2) matches {x: 1, y: 2}")
     assert not qeval("{x: 1, y: 2} matches MyClass{x: 1, y: 2}")
 
-    assert qeval("new MyClass{x: 1, y: 2} matches MyClass{x: 1}")
-    assert not qeval("new MyClass{y: 2} matches MyClass{x: 1, y: 2}")
+    assert qeval("new MyClass(x: 1, y: 2) matches MyClass{x: 1}")
+    assert not qeval("new MyClass(y: 2) matches MyClass{x: 1, y: 2}")
 
-    assert qeval("new OurClass{x: 1, y: 2} matches YourClass")
-    assert qeval("new OurClass{x: 1, y: 2} matches MyClass{x: 1}")
-    assert qeval("new OurClass{x: 1, y: 2} matches MyClass{x: 1, y: 2}")
-    assert not qeval("new MyClass{x: 1, y: 2} matches OurClass{x: 1}")
-    assert not qeval("new MyClass{x: 1, y: 2} matches YourClass")
-    assert not qeval("new MyClass{x: 1, y: 2} matches YourClass{}")
+    assert qeval("new OurClass(x: 1, y: 2) matches YourClass")
+    assert qeval("new OurClass(x: 1, y: 2) matches MyClass{x: 1}")
+    assert qeval("new OurClass(x: 1, y: 2) matches MyClass{x: 1, y: 2}")
+    assert not qeval("new MyClass(x: 1, y: 2) matches OurClass{x: 1}")
+    assert not qeval("new MyClass(x: 1, y: 2) matches YourClass")
+    assert not qeval("new MyClass(x: 1, y: 2) matches YourClass{}")
 
 
 def test_nested_matches(qeval, qvar, externals):
     assert qeval(
-        "new MyClass{x: new MyClass{x: 1, y: 2}, y: 2} matches MyClass{x: MyClass{x: 1}}"
+        "new MyClass(x: new MyClass(x: 1, y: 2), y: 2) matches MyClass{x: MyClass{x: 1}}"
     )
     assert not qeval(
-        "new MyClass{x: new MyClass{x: 1}, y: 2} matches MyClass{x: MyClass{y: 2}}"
+        "new MyClass(x: new MyClass(x: 1), y: 2) matches MyClass{x: MyClass{y: 2}}"
     )
 
 
@@ -288,9 +288,9 @@ def test_field_unification(qeval):
 
 def test_field_unification_external(qeval, externals):
     # test instance field unification
-    assert qeval("new MyClass{x: 1, y: 2} = new MyClass{y: 2, x: 1}")
-    assert not qeval("new MyClass{x: 1, y: 2} = {y: 2, x: 1}")
-    assert qeval("new MyClass{x: 1, y: 2} = new OurClass{y: 2, x: 1}")
+    assert qeval("new MyClass(x: 1, y: 2) = new MyClass(y: 2, x: 1)")
+    assert not qeval("new MyClass(x: 1, y: 2) = {y: 2, x: 1}")
+    assert qeval("new MyClass(x: 1, y: 2) = new OurClass(y: 2, x: 1)")
 
 
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Internal classes not implemented yet.")
@@ -371,8 +371,8 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
 
     polar.register_class(Booler)
 
-    result = qvar("new Booler{}.whats_up() = var", "var", one=True)
-    assert qeval("new Booler{}.whats_up()")
+    result = qvar("new Booler().whats_up() = var", "var", one=True)
+    assert qeval("new Booler().whats_up()")
 
 
 def test_numbers_from_external_call(polar, qeval, qvar, query):
@@ -385,13 +385,13 @@ def test_numbers_from_external_call(polar, qeval, qvar, query):
 
     polar.register_class(Numberer)
 
-    result = qvar("new Numberer{}.give_me_an_int() = var", "var", one=True)
+    result = qvar("new Numberer().give_me_an_int() = var", "var", one=True)
     assert result == 1
-    assert qeval("new Numberer{}.give_me_an_int() = 1")
+    assert qeval("new Numberer().give_me_an_int() = 1")
 
-    result = qvar("new Numberer{}.give_me_a_float() = var", "var", one=True)
+    result = qvar("new Numberer().give_me_a_float() = var", "var", one=True)
     assert result == 1.234
-    assert qeval("new Numberer{}.give_me_a_float() = 1.234")
+    assert qeval("new Numberer().give_me_a_float() = 1.234")
 
 
 def test_arities(tell, qeval):
@@ -406,7 +406,7 @@ def test_rule_ordering(tell, qeval, externals):
     tell("f(_: Foo{}) if cut and 1 = 2;")
     tell('f(_: Foo{name: "test"});')
 
-    assert qeval('f(new Foo{ name: "test" }) ')
-    assert qeval('x = new Foo{ name: "test" } and f(x) ')
-    assert not qeval('f(new Foo{ name: "nope" }) ')
-    assert not qeval('x = new Foo{ name: "nope" } and f(x) ')
+    assert qeval('f(new Foo( name: "test" )) ')
+    assert qeval('x = new Foo( name: "test" ) and f(x) ')
+    assert not qeval('f(new Foo( name: "nope" )) ')
+    assert not qeval('x = new Foo( name: "nope" ) and f(x) ')

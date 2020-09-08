@@ -160,7 +160,24 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context '#make_instance' do # rubocop:disable Metrics/BlockLength
-    context 'when using the default constructor' do
+    context 'when using the default constructor' do # rubocop:disable Metrics/BlockLength
+      it 'handles positional args' do
+        stub_const('Foo', Class.new do
+          attr_reader :bar, :baz
+
+          def initialize(bar, baz)
+            @bar = bar
+            @baz = baz
+          end
+        end)
+        subject.register_class(Foo)
+        id = subject.host.make_instance('Foo', args: [1, 2], kwargs: {}, id: 1)
+        instance = subject.host.get_instance(id)
+        expect(instance.class).to eq(Foo)
+        expect(instance.bar).to eq(1)
+        expect(instance.baz).to eq(2)
+      end
+
       it 'handles keyword args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
@@ -171,11 +188,32 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           end
         end)
         subject.register_class(Foo)
-        id = subject.host.make_instance('Foo', initargs: { bar: 1, baz: 2 }, id: 1)
+        id = subject.host.make_instance('Foo', args: [], kwargs: { bar: 1, baz: 2 }, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
         expect(instance.baz).to eq(2)
+      end
+
+      it 'handles mixed args' do
+        stub_const('Foo', Class.new do
+          attr_reader :one, :two, :bar, :baz
+
+          def initialize(one, two, bar:, baz:)
+            @one = one
+            @two = two
+            @bar = bar
+            @baz = baz
+          end
+        end)
+        subject.register_class(Foo)
+        id = subject.host.make_instance('Foo', args: [1, 2], kwargs: { bar: 3, baz: 4 }, id: 1)
+        instance = subject.host.get_instance(id)
+        expect(instance.class).to eq(Foo)
+        expect(instance.one).to eq(1)
+        expect(instance.two).to eq(2)
+        expect(instance.bar).to eq(3)
+        expect(instance.baz).to eq(4)
       end
 
       it 'handles no args' do
@@ -183,7 +221,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           def initialize; end
         end)
         subject.register_class(Foo)
-        id = subject.host.make_instance('Foo', initargs: {}, id: 1)
+        id = subject.host.make_instance('Foo', args: [], kwargs: {}, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
@@ -195,7 +233,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         expect { subject.register_class(Foo, from_polar: 5) }.to raise_error Oso::Polar::InvalidConstructorError
       end
 
-      it 'handles keyword args' do
+      it 'handles positional args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
 
@@ -204,19 +242,56 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             @baz = baz
           end
         end)
-        constructor = ->(**args) { Foo.new(**args) }
-        subject.register_class(Foo, from_polar: constructor)
-        id = subject.host.make_instance('Foo', initargs: { bar: 1, baz: 2 }, id: 1)
+        subject.register_class(Foo, from_polar: ->(bar, baz) { Foo.new(baz: baz, bar: bar) })
+        id = subject.host.make_instance('Foo', args: [1, 2], kwargs: {}, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
         expect(instance.bar).to eq(1)
         expect(instance.baz).to eq(2)
       end
 
+      it 'handles keyword args' do
+        stub_const('Foo', Class.new do
+          attr_reader :bar, :baz
+
+          def initialize(bar, baz)
+            @bar = bar
+            @baz = baz
+          end
+        end)
+        subject.register_class(Foo, from_polar: ->(baz:, bar:) { Foo.new(bar, baz) })
+        id = subject.host.make_instance('Foo', args: [], kwargs: { bar: 1, baz: 2 }, id: 1)
+        instance = subject.host.get_instance(id)
+        expect(instance.class).to eq(Foo)
+        expect(instance.bar).to eq(1)
+        expect(instance.baz).to eq(2)
+      end
+
+      it 'handles mixed args' do
+        stub_const('Foo', Class.new do
+          attr_reader :one, :two, :bar, :baz
+
+          def initialize(one, two, bar:, baz:)
+            @one = one
+            @two = two
+            @bar = bar
+            @baz = baz
+          end
+        end)
+        subject.register_class(Foo, from_polar: ->(bar, baz, one:, two:) { Foo.new(one, two, baz: baz, bar: bar) })
+        id = subject.host.make_instance('Foo', args: [3, 4], kwargs: { one: 1, two: 2 }, id: 1)
+        instance = subject.host.get_instance(id)
+        expect(instance.class).to eq(Foo)
+        expect(instance.one).to eq(1)
+        expect(instance.two).to eq(2)
+        expect(instance.bar).to eq(3)
+        expect(instance.baz).to eq(4)
+      end
+
       it 'handles no args' do
         stub_const('Foo', Class.new)
         subject.register_class(Foo, from_polar: -> { Foo.new })
-        id = subject.host.make_instance('Foo', initargs: {}, id: 1)
+        id = subject.host.make_instance('Foo', args: [], kwargs: {}, id: 1)
         instance = subject.host.get_instance(id)
         expect(instance.class).to eq(Foo)
       end
