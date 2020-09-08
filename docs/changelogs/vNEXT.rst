@@ -37,7 +37,5 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- The Node.js library will now throw an ``InvalidConstructorError`` when
+  attempting to register a non-constructable object via ``registerClass``.
