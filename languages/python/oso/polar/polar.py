@@ -39,9 +39,11 @@ FG_RED = ""
 
 
 if supports_color():
-    # \001 and \002 signal these should be
-    # ignored by readline
-    # https://stackoverflow.com/a/9468954/390293
+    # \001 and \002 signal these should be ignored by readline. Explanation of
+    # the issue: https://stackoverflow.com/a/9468954/390293. Issue has been
+    # observed in the Python REPL on Linux by @samscott89 and @plotnick, but
+    # not on macOS or Windows (with readline installed) or in the Ruby or
+    # Node.js REPLs, both of which also use readline.
     RESET = "\001\x1b[0m\002"
     FG_BLUE = "\001\x1b[34m\002"
     FG_RED = "\001\x1b[31m\002"
