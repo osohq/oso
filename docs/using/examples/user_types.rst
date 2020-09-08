@@ -58,35 +58,11 @@ policy to express this logic.
 
 We can now write a simple policy over these Actor types:
 
-.. tabs::
-  .. group-tab:: Python
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: simple-start
-        :end-before: simple-end
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: simple-start
-        :end-before: simple-end
-
-  .. group-tab:: Java
-
-      Java example coming soon.
-
-  .. group-tab:: Node.js
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: simple-start
-        :end-before: simple-end
-
+.. literalinclude:: /examples/user_types/user_policy.polar
+    :caption: :fa:`oso` user_types.polar
+    :language: polar
+    :start-after: simple-start
+    :end-before: simple-end
 
 This policy uses :ref:`specialized rules <specializer>` to control rules execution based on
 the Actor types that is passed into the authorization request.
@@ -173,34 +149,11 @@ We can add a ``role`` attribute to our ``InternalUser`` class:
 
 Then add the following rule to our policy:
 
-.. tabs::
-  .. group-tab:: Python
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: rbac-start
-        :end-before: rbac-end
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: rbac-start
-        :end-before: rbac-end
-
-  .. group-tab:: Java
-
-      Java example coming soon.
-
-  .. group-tab:: Node.js
-
-    .. literalinclude:: /examples/user_types/user_policy.polar
-        :caption: :fa:`oso` user_types.polar
-        :language: polar
-        :start-after: rbac-start
-        :end-before: rbac-end
+.. literalinclude:: /examples/user_types/user_policy.polar
+    :caption: :fa:`oso` user_types.polar
+    :language: polar
+    :start-after: rbac-start
+    :end-before: rbac-end
 
 This example shows a clear benefit of using different classes to represent different Actor types: the ability
 to add custom attributes. We can add attributes specific to internal users, like roles, to the ``InternalUser`` class
