@@ -1,5 +1,5 @@
 // classes-start
-const { Oso } = require("oso");
+const { Oso } = require('oso');
 
 const oso = new Oso();
 
@@ -18,7 +18,7 @@ class InternalUser {
   }
 
   role() {
-    return db.query("SELECT role FROM internal_roles WHERE id = ?", this.id);
+    return db.query('SELECT role FROM internal_roles WHERE id = ?', this.id);
   }
 }
 
@@ -29,7 +29,7 @@ oso.registerClass(InternalUser);
 class AccountManager extends InternalUser {
   customerAccounts() {
     return db.query(
-      "SELECT id FROM customer_accounts WHERE manager_id = ?",
+      'SELECT id FROM customer_accounts WHERE manager_id = ?',
       this.id
     );
   }
@@ -37,15 +37,15 @@ class AccountManager extends InternalUser {
 // account-end
 
 function userFromId(id) {
-  const userType = db.query("SELECT type FROM users WHERE id = ?", id);
-  if (userType === "internal") {
+  const userType = db.query('SELECT type FROM users WHERE id = ?', id);
+  if (userType === 'internal') {
     const actor = new InternalUser(id);
-    if (actor.role() === "account_manager") {
+    if (actor.role() === 'account_manager') {
       return new AccountManager(id);
     } else {
       return actor;
     }
-  } else if (userType === "customer") {
+  } else if (userType === 'customer') {
     return new Customer(id);
   }
 }
