@@ -38,7 +38,7 @@ public class Authorizer extends HandlerInterceptorAdapter {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "oso authorization: unauthorized");
             }
         } catch (SQLException e) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not found", e);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found", e);
         }
         return true;
     }
