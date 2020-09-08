@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599587946942,
+  "lastUpdate": 1599589541190,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3467,6 +3467,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6051,
             "range": "± 1146",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "93d3bfac1e10e5ed8ff5c7c7bddc2a5deda244a6",
+          "message": "Handle ±∞ and NaN across FFI (#410)\n\nCo-authored-by: Stephen Olsen <dev@steve.computer>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-08T14:19:04-04:00",
+          "tree_id": "aa5dde98f184a8344e2cf9580f11c83cdfb0d134",
+          "url": "https://github.com/osohq/oso/commit/93d3bfac1e10e5ed8ff5c7c7bddc2a5deda244a6"
+        },
+        "date": 1599589540299,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 727,
+            "range": "± 31",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2399,
+            "range": "± 90",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 57804,
+            "range": "± 6243",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 398070,
+            "range": "± 23294",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 14139,
+            "range": "± 930",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 14031,
+            "range": "± 1084",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17339,
+            "range": "± 888",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17289,
+            "range": "± 867",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15163,
+            "range": "± 851",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4770,
+            "range": "± 530",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5715,
+            "range": "± 328",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6169,
+            "range": "± 1124",
             "unit": "ns/iter"
           }
         ]
