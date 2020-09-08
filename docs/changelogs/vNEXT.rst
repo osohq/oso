@@ -24,3 +24,4 @@ Other bugs & improvements
 - The Node.js library will now throw an ``InvalidConstructorError`` when
   attempting to register a non-constructable object via ``registerClass``.
 - Rule indexing performance improvements.
+- Standardize handling of ±∞ and NaN across all language libraries.
