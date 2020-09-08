@@ -238,7 +238,9 @@ module Oso
             when 'NaN'
               return Float::NAN
             else
-              raise PolarRuntimeError, "Expected a floating point number, got \"#{value}\"" unless value.is_a? Float # rubocop:disable Metrics/BlockNesting
+              unless value['Float'].is_a? Float # rubocop:disable Metrics/BlockNesting
+                raise PolarRuntimeError, "Expected a floating point number, got \"#{value['Float']}\""
+              end
             end
           end
           num
