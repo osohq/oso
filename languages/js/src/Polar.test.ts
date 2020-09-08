@@ -30,6 +30,7 @@ import {
 import {
   DuplicateClassAliasError,
   InlineQueryFailedError,
+  InvalidConstructorError,
   PolarFileNotFoundError,
   PolarFileExtensionError,
 } from './errors';
@@ -286,6 +287,14 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
         'canine_dict',
       ]);
     });
+  });
+
+  test('errors when passed a non-constructable type', () => {
+    expect(() => {
+      const p = new Polar();
+      // @ts-ignore
+      p.registerClass(Math);
+    }).toThrow(InvalidConstructorError);
   });
 });
 
