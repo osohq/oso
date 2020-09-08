@@ -3,7 +3,7 @@ import pytest
 
 from oso import Oso
 
-# This example is sudocode mostly, queries a non existant database.
+# This example is pseudo-code mostly, queries a nonexistent database.
 # This test shims the classes and makes sure the polar parses.
 
 
