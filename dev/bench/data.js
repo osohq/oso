@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599585689850,
+  "lastUpdate": 1599587946942,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3371,6 +3371,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5811,
             "range": "± 757",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a88c19e9540703f3a5ca07f9ad4d94a2f8e82e8f",
+          "message": "Mixed positional + kwargs NON-BREAKING (#405)\n\n* add constructor type\r\n\r\n* replace Constructor and Predicate terms with Call\r\n\r\n* mixed args and kwarg support in python\r\n\r\n* remove new InstanceLiteral syntax from python tests\r\n\r\n* hack around clippy for now, added todo\r\n\r\n* formatting bug for calls\r\n\r\n* parsing tests for mixed args + formatting bug fix\r\n\r\n* add ruby support for mixed kwarg/positional args\r\n\r\n* make sure java throws error on mixed args\r\n\r\n* rubocop\r\n\r\n* Update languages/java/oso/src/main/java/com/osohq/oso/Query.java\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* update instance init test\r\n\r\n* fix call parsing\r\n\r\n* add more mixed args tests to parser.rs\r\n\r\n* update ruby tests for mixed args\r\n\r\n* update python tests for mixed args\r\n\r\n* rubocop\r\n\r\n* add kwargs to serialize test\r\n\r\n* clean up ruby make_instance\r\n\r\n* Update languages/ruby/spec/oso/polar/polar_spec.rb\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* Update languages/ruby/spec/oso/polar/polar_spec.rb\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* Update languages/ruby/spec/oso/polar/polar_spec.rb\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* clean up\r\n\r\n* RuboCop\r\n\r\n* List -> Array\r\n\r\n* Handle empty kwargs across Ruby 2.4 - 2.7\r\n\r\n* changelog\r\n\r\n* rubocop\r\n\r\n* spelling\r\n\r\n* spelling\r\n\r\n* small test change\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-08T13:47:42-04:00",
+          "tree_id": "900956f4ed4d7be4346a0793889290b43bf64fa2",
+          "url": "https://github.com/osohq/oso/commit/a88c19e9540703f3a5ca07f9ad4d94a2f8e82e8f"
+        },
+        "date": 1599587946177,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 705,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2422,
+            "range": "± 146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65225,
+            "range": "± 5263",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 460293,
+            "range": "± 20931",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15979,
+            "range": "± 987",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 15858,
+            "range": "± 1123",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16145,
+            "range": "± 1052",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16077,
+            "range": "± 1217",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14104,
+            "range": "± 837",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5126,
+            "range": "± 359",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5293,
+            "range": "± 353",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6051,
+            "range": "± 1146",
             "unit": "ns/iter"
           }
         ]
