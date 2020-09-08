@@ -28,6 +28,15 @@ Support for constructors with both positional and keyword arguments (`#405 <http
   arguments.
 - For more, see documentation for the :ref:`new operator <operator-new>`.
 
+Django integration (``django-oso``) (`#395 <https://github.com/osohq/oso/pull/395>`_)
+-------------------------------------------------------------------------------------
+
+The new django-oso_ package makes it easy to use oso with Django.  It includes
+middleware for using oso with Django, and authorization functions designed to
+work with Django views.
+
+.. _django-oso: https://pypi.org/project/django-oso/
+
 Other bugs & improvements
 =========================
 
