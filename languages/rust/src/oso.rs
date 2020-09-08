@@ -1,6 +1,6 @@
 //! Communicate with the Polar virtual machine: load rules, make queries, etc/
 
-use polar_core::terms::{Predicate, Symbol, Term, Value};
+use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::fs::File;
 use std::io::Read;
@@ -105,9 +105,10 @@ impl Oso {
             .into_iter()
             .map(|arg| arg.to_polar(&mut self.host.lock().unwrap()))
             .collect();
-        let query_value = Value::Call(Predicate {
+        let query_value = Value::Call(Call {
             name: Symbol(name.to_string()),
             args,
+            kwargs: None,
         });
         let query_term = Term::new_from_ffi(query_value);
         let query = self.inner.new_query_from_term(query_term, false);

@@ -113,7 +113,7 @@ impl Query {
         let mut host = self.host.lock().unwrap();
         match constructor.value() {
             Value::InstanceLiteral(InstanceLiteral { .. }) => todo!("instantiate from literal"),
-            Value::Call(Predicate { name, args }) => {
+            Value::Call(Call { name, args, .. }) => {
                 let _instance = host.make_instance(name, args.clone(), instance_id);
             }
             _ => panic!("not valid"),
