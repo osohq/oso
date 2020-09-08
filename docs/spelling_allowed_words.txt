@@ -59,7 +59,7 @@ repl
 arity
 NaN
 constructable
-pre-commit
+precommit
 
 ## Product names
 sqlite
