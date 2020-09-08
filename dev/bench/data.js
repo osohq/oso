@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599589541190,
+  "lastUpdate": 1599595653526,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3563,6 +3563,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6169,
             "range": "± 1124",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fd0d239706b6711968784c89804ed6e307546df5",
+          "message": "Fix Python readline prompt on Linux (#397)\n\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-08T16:00:48-04:00",
+          "tree_id": "d5076ecac10bd6286ae3a6c14652d3be3068b50d",
+          "url": "https://github.com/osohq/oso/commit/fd0d239706b6711968784c89804ed6e307546df5"
+        },
+        "date": 1599595652622,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 724,
+            "range": "± 23",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2412,
+            "range": "± 43",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65254,
+            "range": "± 1130",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 477777,
+            "range": "± 6656",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16377,
+            "range": "± 335",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16393,
+            "range": "± 352",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16374,
+            "range": "± 332",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16376,
+            "range": "± 342",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14468,
+            "range": "± 285",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5337,
+            "range": "± 116",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5416,
+            "range": "± 175",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5770,
+            "range": "± 572",
             "unit": "ns/iter"
           }
         ]
