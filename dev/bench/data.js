@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599572995171,
+  "lastUpdate": 1599582931225,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3197,6 +3197,84 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 29611,
             "range": "± 1831",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8921ec310c7ae9dd4ef0a7c6af91502f7f460754",
+          "message": "Error on invalid JS constructors (#392)",
+          "timestamp": "2020-09-08T12:29:13-04:00",
+          "tree_id": "520db30a6ab45b292ff2c23d3360ced56f76020d",
+          "url": "https://github.com/osohq/oso/commit/8921ec310c7ae9dd4ef0a7c6af91502f7f460754"
+        },
+        "date": 1599582930320,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 1748,
+            "range": "± 171",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 5239,
+            "range": "± 177",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 146697,
+            "range": "± 3608",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 750421,
+            "range": "± 2258",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 31734,
+            "range": "± 1059",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 31856,
+            "range": "± 902",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 33076,
+            "range": "± 1911",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 32002,
+            "range": "± 1454",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 29577,
+            "range": "± 867",
             "unit": "ns/iter"
           }
         ]
