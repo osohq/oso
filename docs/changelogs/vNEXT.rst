@@ -37,7 +37,4 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Better warnings for unknown specializers that are similar to builtin types.
