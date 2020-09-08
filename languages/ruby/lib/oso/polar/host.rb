@@ -182,7 +182,7 @@ module Oso
       #
       # @param value [Object]
       # @return [Hash<String, Object>]
-      def to_polar(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def to_polar(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         value = case true # rubocop:disable Lint/LiteralAsCondition
                 when value.instance_of?(TrueClass) || value.instance_of?(FalseClass)
                   { 'Boolean' => value }
