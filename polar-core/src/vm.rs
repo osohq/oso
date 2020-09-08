@@ -1304,6 +1304,7 @@ impl PolarVirtualMachine {
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Call) -> PolarResult<()> {
+        assert!(predicate.kwargs.is_none());
         let goals = match self.kb.read().unwrap().rules.get(&predicate.name) {
             None => vec![Goal::Backtrack],
             Some(generic_rule) => {
@@ -1897,6 +1898,9 @@ impl PolarVirtualMachine {
 
             // Unify predicates like unifying heads
             (Value::Call(left), Value::Call(right)) => {
+                // Handled in the parser.
+                assert!(left.kwargs.is_none());
+                assert!(right.kwargs.is_none());
                 if left.name == right.name && left.args.len() == right.args.len() {
                     self.append_goals(left.args.iter().zip(right.args.iter()).map(
                         |(left, right)| Goal::Unify {
