@@ -27,8 +27,8 @@ New features
 Support for constructors with both positional and keyword arguments
 ===================================================================
 
-- In languages that support both positional and keyword args (currently Python and Ruby), oso now supports registering classes with constructors that use both.
-- The syntax for calling a constructor with mixed args from an oso policy is::
+- In languages that support both positional and keyword arguments (currently Python and Ruby), oso now supports registering classes with constructors that use both.
+- The syntax for calling a constructor with mixed arguments from an oso policy is::
 
     instance = new MyClass(1, 2, foo: 3)
 

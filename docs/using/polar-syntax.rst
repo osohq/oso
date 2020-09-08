@@ -359,7 +359,7 @@ that are passed to the class's constructor::
     new Person("yogi", "bear")
 
 In host languages that support keyword arguments (e.g., Python & Ruby, but
-not Java), you can pass initiaization arguments as keywords with the
+not Java), you can pass initialization arguments as keywords with the
 following syntax::
 
     new Person(first_name: "yogi", last_name: "bear")
