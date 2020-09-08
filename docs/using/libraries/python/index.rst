@@ -15,8 +15,11 @@ To install, see :doc:`installation instructions </download>`.
 
 **Framework integrations**
 
-oso provides integrations for popular frameworks.  The :doc:`/using/frameworks/flask` integration
-is available now, with more coming soon.
+oso provides integrations for popular frameworks:
+
+* :doc:`/using/frameworks/flask`
+* :doc:`/using/frameworks/django`
+
 
 Working with Python Objects
 ===========================

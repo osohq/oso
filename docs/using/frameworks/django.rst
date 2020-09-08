@@ -46,30 +46,91 @@ Registering classes & models
 Often, authorization rules will be expressed over django models.  Therefore,
 ``django_oso`` will register every model for each installed app upon startup as
 a class with oso. The :py:class:`django.http.HttpRequest` is also registered
-under ``HttpRequest``.
+under ``HttpRequest``.  Django models are referenced in a Polar file using the
+syntax ``app_name::ModelName``. If an app name contains `.`, for example
+``django.contrib.auth``, it will be referenced in oso as
+``django::contrib::auth``.
 
 Additional classes can be registered as needed using
 :py:meth:`oso.Oso.register_class` on :py:data:`django_oso.oso.Oso`.
 
-.. warning::
-
-    Currently there are no namespaces for auto registered models.  If
-    applications have conflicting module names, an exception will be thrown
-    during startup.  This is a known issue, and is tracked in **THIS LINK**.
-
-    .. todo:: Fix this massive limitation.
-
 Performing authorization
 ------------------------
+
+To authorize a request, use the :py:func:`django_oso.auth.authorize` function.
+It accepts the same arguments as
+:py:meth:`~oso.Oso.is_allowed`, but provides sensible defaults for working with
+Django. The actor defaults to ``request.user``.  The ``action``
+defaults to the method of the request.
+``resource`` must be provided.
+
+.. tip::
+
+    If you aren't familiar with how oso uses actors, actions, and resources to
+    express authorization decisions, see :doc:`/more/glossary` or
+    :doc:`/getting-started/quickstart`.
+
+:py:meth:`django_oso.auth.authorize` can be used within route handlers, or in
+the data access layer, depending upon how you want to express authorization.
+
+Here's a basic example in a route:
+
+
+.. code-block:: python
+    :emphasize-lines: 7
+
+    def get_expense(request, id):
+        try:
+            expense = Expense.objects.get(pk=id)
+        except Expense.DoesNotExist:
+            return HttpResponseNotFound()
+
+        authorize(request, expense, action="read")
+        return HttpResponse(expense.json())
 
 Requiring authorization on every request
 ----------------------------------------
 
+Since :py:func:`~django_oso.auth.authorize` is just a function call, it can be
+forgotten.  To enforce authorization on every request, use the
+:py:func:`~django_oso.middleware.RequireAuthorization` middleware. Any view that
+does not call :py:func:`~django_oso.auth.authorize` or
+:py:func:`~django_oso.auth.skip_authorization` will raise an exception.
+
 Route authorization
 -------------------
 
+One common usage of :py:func:`django_oso.auth.authorize` is to perform authorization
+based on the request object. The
+:py:func:`~django_oso.decorators.authorize_request` decorator does this::
+
+    from django_oso.decorators import authorize_request
+
+    @authorize_request
+    def auth_route(request):
+        pass
+
+A policy can then be written controlling authorization based on request
+attributes, like the path:
+
+.. code-block:: polar
+    :caption: :fa:`oso`
+
+    # Allow any actor to make a GET request to "/".
+    allow(_user: User, "GET", http_request: HttpRequest) if
+        http_request.path = "/";
+
+To enforce route authorization on all requests (the equivalent of decorating
+every route as we did above), use the
+:py:meth:`~django_oso.middleware.RouteAuthorization` middleware during
+initialization.
+
 Example
 =======
+
+Check out the Django integration example app below on GitHub:
+
+:fab:`github` `osohq/oso-django-integration <https://github.com/osohq/oso-django-integration>`_
 
 API Reference
 =============

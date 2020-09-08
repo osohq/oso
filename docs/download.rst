@@ -23,6 +23,9 @@ oso is available as a library in several languages:
         To use or install the oso Flask integration, see
         :doc:`/using/frameworks/flask`.
 
+        To use or install the oso Django integration, see
+        :doc:`/using/frameworks/django`.
+
         .. admonition:: What's next
             :class: tip
 

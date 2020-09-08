@@ -27,14 +27,15 @@ def init_oso():
     # Register all models.
     for app in apps.get_app_configs():
         for model in app.get_models():
-            name = f"{app.name}::{model.__name__}"
+            app_namespace = app.name.replace(".", "::")
+            name = f"{app_namespace}::{model.__name__}"
             Oso.register_class(model, name=name)
 
     # Custom registration for auth (AnonymousUser)
     if apps.is_installed("django.contrib.auth"):
         from django.contrib.auth.models import AnonymousUser
 
-    Oso.register_class(AnonymousUser, name=f"django.contrib.auth::AnonymousUser")
+    Oso.register_class(AnonymousUser, name=f"django::contrib::auth::AnonymousUser")
 
     # Register request
     Oso.register_class(HttpRequest)
