@@ -57,7 +57,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
-      expect(subject.host.to_ruby(subject.host.to_polar_term(actor))).to eq(actor)
+      expect(subject.host.to_ruby(subject.host.to_polar(actor))).to eq(actor)
     end
 
     it 'returns Ruby instances from external calls' do

@@ -19,7 +19,7 @@ mod tests {
         );
         let event = QueryEvent::ExternalCall {
             call_id: 2,
-            instance: None,
+            instance: Term::new_from_test(Value::String("abc".to_string())),
             attribute: Symbol::new("foo"),
             args: Some(vec![
                 Term::new_from_test(value!(0)),

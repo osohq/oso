@@ -1,0 +1,25 @@
+[package]
+name = "oso"
+version = "0.6.0-rc0"
+authors = ["Oso Security, Inc. <support@osohq.com>"]
+edition = "2018"
+
+[[bin]]
+name = "oso"
+path = "src/repl.rs"
+required-features = ["cli"]
+
+[dependencies]
+maplit = "1.0.2"
+polar-core = { path = "../../polar-core" }
+thiserror = "1.0.20"
+tracing = { version = "0.1.19", features = ["log"] }
+tracing-subscriber = { version = "0.2.11", features = ["fmt"] }
+
+anyhow = { version = "1.0.32", optional = true }
+rustyline = { version = "6.2", optional = true }
+rustyline-derive = { version = "0.3.1", optional = true }
+
+[features]
+default = []
+cli = ["rustyline", "rustyline-derive", "anyhow"]

@@ -22,12 +22,12 @@ use polar_core::{
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
-fn print_messages(msg: &Message) {
-    eprintln!("[{:?}] {}", msg.kind, msg.msg);
+fn no_results(_: u64, _: Term, _: Symbol, _: Option<Vec<Term>>) -> Option<Term> {
+    None
 }
 
-fn no_results(_: u64, _: Option<Term>, _: Symbol, _: Option<Vec<Term>>) -> Option<Term> {
-    None
+fn print_messages(msg: &Message) {
+    eprintln!("[{:?}] {}", msg.kind, msg.msg);
 }
 
 fn no_externals(_: u64, _: Term) {}
@@ -54,7 +54,7 @@ fn query_results<F, G, H, I, J, K>(
     mut message_handler: K,
 ) -> QueryResults
 where
-    F: FnMut(u64, Option<Term>, Symbol, Option<Vec<Term>>) -> Option<Term>,
+    F: FnMut(u64, Term, Symbol, Option<Vec<Term>>) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, Term),
     I: FnMut(Term, Symbol) -> bool,
@@ -749,7 +749,7 @@ fn test_load_str_with_query() {
 
 #[test]
 fn test_externals_instantiated() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar.register_constant(sym!("Foo"), term!(true));
     polar
         .load_str("f(x, foo: Foo) if foo.bar(new Bar{x: x}) = 1;")
@@ -1034,7 +1034,7 @@ fn test_anonymous_vars() {
 
 #[test]
 fn test_singleton_vars() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     polar.register_constant(sym!("X"), term!(true));
     polar.register_constant(sym!("Y"), term!(true));
     polar.load_str("f(x:X,y:Y,z:Z) if z = z;").unwrap();
@@ -1241,7 +1241,7 @@ fn test_keyword_bug() {
 /// Test that rule heads work correctly when unification or specializers are used.
 #[test]
 fn test_unify_rule_head() {
-    let mut polar = Polar::new();
+    let polar = Polar::new();
     assert!(matches!(
         polar
             .load_str("f(Foo{a: 1});")

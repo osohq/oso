@@ -1,6 +1,6 @@
 .PHONY: test rust-test rust-build python-build python-test ruby-test java-test docs-test fmt clippy lint wasm-build wasm-test js-test
 
-test: rust-test python-test ruby-test java-test python-flask-test wasm-test js-test
+test: rust-test python-test ruby-test java-test python-flask-test wasm-test js-test rustoso-test
 
 rust-test:
 	cargo test
@@ -30,6 +30,9 @@ java-test:
 	cd test && \
 		javac -classpath "../languages/java/oso/target/*:." Test.java && \
 		java -classpath "../languages/java/oso/target/*:." -enableassertions Test
+
+rustoso-test:
+	$(MAKE) -C languages/rust test
 
 docs-test: python-build
 	$(MAKE) -C docs test

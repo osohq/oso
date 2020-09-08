@@ -182,7 +182,7 @@ module Oso
       #
       # @param value [Object]
       # @return [Hash<String, Object>]
-      def to_polar_term(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+      def to_polar(value) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         value = case true # rubocop:disable Lint/LiteralAsCondition
                 when value.instance_of?(TrueClass) || value.instance_of?(FalseClass)
                   { 'Boolean' => value }
@@ -200,11 +200,11 @@ module Oso
                 when value.instance_of?(String)
                   { 'String' => value }
                 when value.instance_of?(Array)
-                  { 'List' => value.map { |el| to_polar_term(el) } }
+                  { 'List' => value.map { |el| to_polar(el) } }
                 when value.instance_of?(Hash)
-                  { 'Dictionary' => { 'fields' => value.transform_values { |v| to_polar_term(v) } } }
+                  { 'Dictionary' => { 'fields' => value.transform_values { |v| to_polar(v) } } }
                 when value.instance_of?(Predicate)
-                  { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el| to_polar_term(el) } } }
+                  { 'Call' => { 'name' => value.name, 'args' => value.args.map { |el| to_polar(el) } } }
                 when value.instance_of?(Variable)
                   # This is supported so that we can query for unbound variables
                   { 'Variable' => value }
