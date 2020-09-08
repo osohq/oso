@@ -14,6 +14,7 @@ WHITELIST_STATUSES_DEFAULT = {
     500,
 }
 
+
 def RequireAuthorization(get_response):
     """Check that ``authorize`` was called during the request.
 
@@ -30,6 +31,7 @@ def RequireAuthorization(get_response):
         .. todo:: Would be good to have a solution to this ^, maybe a on
                   precommit hook.
     """
+
     def middleware(request):
         response = get_response(request)
         if response.status_code in WHITELIST_STATUSES_DEFAULT:
@@ -42,6 +44,7 @@ def RequireAuthorization(get_response):
         return response
 
     return middleware
+
 
 def RouteAuthorization(get_response):
     """Perform route authorization on every request.
@@ -67,6 +70,7 @@ def RouteAuthorization(get_response):
 
         .. todo:: Customize this ^
     """
+
     def middleware(request):
         authorize(request, resource=request)
         return get_response(request)

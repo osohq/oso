@@ -2,6 +2,7 @@ from django.core.exceptions import PermissionDenied
 
 from .oso import Oso
 
+
 def authorize(request, resource, *, actor=None, action=None):
     """Authorize ``request`` for ``resource``, ``actor`` and ``action``.
 
@@ -31,6 +32,7 @@ def authorize(request, resource, *, actor=None, action=None):
     if not authorized:
         raise PermissionDenied()
 
+
 def skip_authorization(request):
     """Mark ``request`` as not requiring authorization.
 
@@ -42,9 +44,11 @@ def skip_authorization(request):
     """
     _set_request_authorized(request)
 
+
 def request_authorized(request) -> bool:
     """Return ``true`` if ``request`` was authorized using :py:func:`authorize`."""
     return getattr(request, "_oso_authorized", False)
+
 
 def _set_request_authorized(request):
     """Mark request as being authorized."""

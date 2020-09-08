@@ -12,6 +12,7 @@ Oso = _Oso()
 Use for loading policy files and registering classes.
 """
 
+
 def reset_oso():
     """Reset the state of :py:data:`~django_oso.oso.Oso`.
 
@@ -21,6 +22,7 @@ def reset_oso():
     Oso.clear()
     init_oso()
 
+
 def init_oso():
     # Register all models.
     for app in apps.get_app_configs():
@@ -28,8 +30,9 @@ def init_oso():
             Oso.register_class(model)
 
     # Custom registration for auth (AnonymousUser)
-    if apps.is_installed('django.contrib.auth'):
+    if apps.is_installed("django.contrib.auth"):
         from django.contrib.auth.models import AnonymousUser
+
         Oso.register_class(AnonymousUser)
 
     # Register request
@@ -39,11 +42,11 @@ def init_oso():
 
     # Load all polar files in each app's "policy" directory.
     for app in apps.get_app_configs():
-        policy_dir = os.path.join(app.path, 'policy')
+        policy_dir = os.path.join(app.path, "policy")
         for path, _, filenames in os.walk(policy_dir):
             for file in filenames:
                 file_path = os.path.join(path, file)
-                if os.path.splitext(file)[1] == '.polar':
+                if os.path.splitext(file)[1] == ".polar":
                     Oso.load_file(file_path)
                     loaded_files.append(file_path)
 
@@ -57,4 +60,3 @@ def init_oso():
     # ?? NAMESPACING ??
 
     # TODO (dhatch): Provide setting to disable model registration.
-

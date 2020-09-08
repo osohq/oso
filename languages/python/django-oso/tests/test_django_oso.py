@@ -11,22 +11,27 @@ from django_oso.auth import authorize
 
 from oso import OsoException
 
+
 @pytest.fixture(autouse=True)
 def _reset_oso():
     reset_oso()
+
 
 @pytest.fixture
 def simple_policy():
     """Load simple authorization policy."""
     Oso.load_file(Path(__file__).parent / "simple.polar")
 
+
 def test_policy_autoload():
     """Test that policies are loaded from policy directory."""
     pass
 
+
 def test_model_registration():
     """Test that models are automatically registered with the policy."""
     pass
+
 
 def test_authorize(rf, simple_policy):
     """Test that authorize function works."""
@@ -46,9 +51,10 @@ def test_authorize(rf, simple_policy):
     with pytest.raises(PermissionDenied):
         authorize(request, "resource", actor="other", action="read")
 
+
 def test_require_authorization(client, settings, simple_policy):
     """Test that require authorization middleware works."""
-    settings.MIDDLEWARE.append('django_oso.middleware.RequireAuthorization')
+    settings.MIDDLEWARE.append("django_oso.middleware.RequireAuthorization")
 
     with pytest.raises(OsoException):
         response = client.get("/")
@@ -70,11 +76,14 @@ def test_require_authorization(client, settings, simple_policy):
     response = client.get("/error/")
     assert response.status_code == 500
 
+
 def test_route_authorization(client, settings, simple_policy):
     """Test route authorization middleware"""
-    settings.MIDDLEWARE.append('django.contrib.sessions.middleware.SessionMiddleware')
-    settings.MIDDLEWARE.append('django.contrib.auth.middleware.AuthenticationMiddleware')
-    settings.MIDDLEWARE.append('django_oso.middleware.RouteAuthorization')
+    settings.MIDDLEWARE.append("django.contrib.sessions.middleware.SessionMiddleware")
+    settings.MIDDLEWARE.append(
+        "django.contrib.auth.middleware.AuthenticationMiddleware"
+    )
+    settings.MIDDLEWARE.append("django_oso.middleware.RouteAuthorization")
 
     response = client.get("/a/")
     assert response.status_code == 403
