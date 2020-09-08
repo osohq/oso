@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599602421333,
+  "lastUpdate": 1599602971010,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3851,6 +3851,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6555,
             "range": "± 1040",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5fe2bde782dab7b0d1c39060dae3439c370d676c",
+          "message": "bug fix, parse kwargs only in constructor (#412)\n\n* kwargs only in constructor\r\n\r\n* Update polar-core/src/parser.rs\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-08T18:00:07-04:00",
+          "tree_id": "05e0d418297cba7e30fb2305bd6d6b92e6cf4c61",
+          "url": "https://github.com/osohq/oso/commit/5fe2bde782dab7b0d1c39060dae3439c370d676c"
+        },
+        "date": 1599602970247,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 621,
+            "range": "± 71",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2110,
+            "range": "± 172",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 55509,
+            "range": "± 8189",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 382907,
+            "range": "± 18786",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 13570,
+            "range": "± 722",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 13642,
+            "range": "± 1487",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 13565,
+            "range": "± 1477",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 13942,
+            "range": "± 1609",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 12002,
+            "range": "± 1089",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4340,
+            "range": "± 438",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 4451,
+            "range": "± 709",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 4844,
+            "range": "± 695",
             "unit": "ns/iter"
           }
         ]
