@@ -1,7 +1,7 @@
 from flask import g, current_app, request, Request
 from werkzeug.exceptions import Forbidden
 
-from oso import OsoError, Oso
+from oso import OsoException, Oso
 
 from .context import _app_context
 
@@ -106,7 +106,7 @@ class FlaskOso:
                     constructor.
 
         If :py:meth:`FlaskOso.authorize` is not called during the request processing,
-        raises an :py:class:`oso.OsoError`.
+        raises an :py:class:`oso.OsoException`.
 
         Call :py:meth:`FlaskOso.skip_authorization` to skip this check for a particular
         request.
@@ -165,7 +165,7 @@ class FlaskOso:
             try:
                 actor = self.current_actor
             except AttributeError as e:
-                raise OsoError(
+                raise OsoException(
                     "Getting the current actor failed. "
                     "You may need to override the current actor function with "
                     "FlaskOso#set_get_actor"
@@ -222,7 +222,7 @@ class FlaskOso:
             return response
 
         if not getattr(_app_context(), "oso_flask_authorize_called", False):
-            raise OsoError("Authorize not called.")
+            raise OsoException("Authorize not called.")
 
         return response
 
