@@ -11,7 +11,7 @@ use polar_core::formatting::to_polar::ToPolarString;
 use std::env;
 use std::fs::OpenOptions;
 
-pub fn load_files(oso: &mut Oso, files: &mut dyn Iterator<Item = String>) -> crate::Result<()> {
+pub fn load_files(oso: &mut Oso, files: &mut dyn Iterator<Item = String>) -> anyhow::Result<()> {
     for file in files {
         oso.load_file(&file)?;
     }
@@ -83,14 +83,14 @@ impl Repl {
         }
     }
 
-    pub fn oso_input(&mut self, prompt: &str) -> crate::Result<String> {
+    pub fn oso_input(&mut self, prompt: &str) -> anyhow::Result<String> {
         let mut input = self.editor.readline(prompt)?;
         self.editor.add_history_entry(input.as_str());
         input.pop(); // remove the trailing ';'
         Ok(input)
     }
 
-    pub fn plain_input(&mut self, prompt: &str) -> crate::Result<String> {
+    pub fn plain_input(&mut self, prompt: &str) -> anyhow::Result<String> {
         Ok(self.plain_editor.readline(prompt)?)
     }
 }
@@ -103,7 +103,7 @@ impl Drop for Repl {
     }
 }
 
-pub fn main() -> crate::Result<()> {
+pub fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let mut repl = Repl::new();
     let mut oso = Oso::new();
