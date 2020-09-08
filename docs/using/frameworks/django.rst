@@ -18,7 +18,7 @@ The oso Django integration is available on `PyPI`_ and can be installed using
 Usage
 =====
 
-The ``django_oso`` django plugin contains a resusable django app that makes
+The ``django_oso`` django plugin contains a reusable django app that makes
 authorization with oso and django easy.  To use, ensure ``django_oso`` is in
 ``INSTALLED_APPS``:
 
