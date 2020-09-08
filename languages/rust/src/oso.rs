@@ -138,7 +138,7 @@ impl Oso {
     ) -> crate::Result<()> {
         let mut host = self.host.lock().unwrap();
         self.inner
-            .register_constant(Symbol(name.to_string()), host.value_to_polar(value));
+            .register_constant(Symbol(name.to_string()), value.to_polar(&mut host));
         Ok(())
     }
 }

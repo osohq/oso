@@ -154,10 +154,6 @@ impl Host {
     pub fn operator(&self, _op: Operator, _args: [class::Instance; 2]) -> bool {
         todo!()
     }
-
-    pub fn value_to_polar(&mut self, value: &dyn ToPolar) -> Term {
-        value.to_polar(self)
-    }
 }
 
 /// Marker trait: implements "ToPolar" via a registered class

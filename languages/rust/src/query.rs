@@ -106,7 +106,7 @@ impl Query {
 
     fn call_result(&mut self, call_id: u64, result: Arc<dyn ToPolar>) -> crate::Result<()> {
         let mut host = self.host.lock().unwrap();
-        let value = host.value_to_polar(result.as_ref());
+        let value = result.to_polar(&mut host);
         Ok(self.inner.call_result(call_id, Some(value))?)
     }
 
