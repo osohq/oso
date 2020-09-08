@@ -115,7 +115,7 @@ module Oso
       # Construct and cache a Ruby instance.
       #
       # @param cls_name [String]
-      # @param args [List<Object>]
+      # @param args [Array<Object>]
       # @param kwargs [Hash<String, Object>]
       # @param id [Integer]
       # @raise [PolarRuntimeError] if instance construction fails.
