@@ -221,8 +221,6 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
             @baz = baz
           end
         end)
-        # constructor = ->(**args) { Foo.new(**args) }
-        # subject.register_class(Foo, from_polar: constructor)
         subject.register_class(Foo)
         id = subject.host.make_instance('Foo', args: [], kwargs: { bar: 1, baz: 2 }, id: 1)
         instance = subject.host.get_instance(id)
