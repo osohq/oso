@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599582931225,
+  "lastUpdate": 1599585689850,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -3275,6 +3275,102 @@ window.BENCHMARK_DATA = {
             "name": "prime/255",
             "value": 29577,
             "range": "± 867",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "66174e0217b8b604067429331314a58a8a342786",
+          "message": "Add benchmark for simple indexing + some simple optimisations  (#409)\n\n* Don't clone generic rules.\r\n\r\n* Make log printing a closure to avoid unnecessary formatting.\r\n\r\n* Show bench when commit contains [bench].",
+          "timestamp": "2020-09-08T13:14:45-04:00",
+          "tree_id": "2ea128cb2b17ce9e71bec9e5a26795fce92b27b0",
+          "url": "https://github.com/osohq/oso/commit/66174e0217b8b604067429331314a58a8a342786"
+        },
+        "date": 1599585688957,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 731,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2451,
+            "range": "± 54",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65494,
+            "range": "± 1220",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 482802,
+            "range": "± 6070",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16543,
+            "range": "± 400",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16543,
+            "range": "± 327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16587,
+            "range": "± 462",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16521,
+            "range": "± 312",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14587,
+            "range": "± 546",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5329,
+            "range": "± 111",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5400,
+            "range": "± 152",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5811,
+            "range": "± 757",
             "unit": "ns/iter"
           }
         ]
