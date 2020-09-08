@@ -47,7 +47,7 @@ Often, authorization rules will be expressed over django models.  Therefore,
 ``django_oso`` will register every model for each installed app upon startup as
 a class with oso. The :py:class:`django.http.HttpRequest` is also registered
 under ``HttpRequest``.  Django models are referenced in a Polar file using the
-syntax ``app_name::ModelName``. If an app name contains `.`, for example
+syntax ``app_name::ModelName``. If an app name contains ``.``, for example
 ``django.contrib.auth``, it will be referenced in oso as
 ``django::contrib::auth``.
 
