@@ -58,7 +58,7 @@ Performing authorization
 ------------------------
 
 To authorize a request, use the :py:func:`django_oso.auth.authorize` function.
-It accepts the same arguments as
+It calls
 :py:meth:`~oso.Oso.is_allowed`, but provides sensible defaults for working with
 Django. The actor defaults to ``request.user``.  The ``action``
 defaults to the method of the request.
