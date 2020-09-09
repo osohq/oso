@@ -2274,41 +2274,46 @@ impl PolarVirtualMachine {
     fn is_more_specific(&mut self, left: &Rule, right: &Rule, args: &TermList) -> PolarResult<()> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
-            // TODO: Handle the case where one of the params has a specializer and the other does
-            // not. The original logic in the python code was that a param with a specializer is
-            // always more specific than a param without.
-            if let (Some(left_spec), Some(right_spec)) =
-                (&left_param.specializer, &right_param.specializer)
-            {
-                // If you find two non-equal specializers, that comparison determines the relative
-                // specificity of the two rules completely. As soon as you have two specializers
-                // that aren't the same and you can compare them and ask which one is more specific
-                // to the relevant argument, you're done.
-                if left_spec != right_spec {
-                    let answer = self.kb.read().unwrap().gensym("is_subspecializer");
-                    // Bind answer to false as a starting point in case is subspecializer doesn't
-                    // bind any result.
-                    // This is done here for safety to avoid a bug where `answer` is unbound by
-                    // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
-                    // of checking that is is equal to `true`.
-                    self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
+            match (&left_param.specializer, &right_param.specializer) {
+                (Some(left_spec), Some(right_spec)) => {
+                    // If you find two non-equal specializers, that comparison determines the relative
+                    // specificity of the two rules completely. As soon as you have two specializers
+                    // that aren't the same and you can compare them and ask which one is more specific
+                    // to the relevant argument, you're done.
+                    if left_spec != right_spec {
+                        let answer = self.kb.read().unwrap().gensym("is_subspecializer");
+                        // Bind answer to false as a starting point in case is subspecializer doesn't
+                        // bind any result.
+                        // This is done here for safety to avoid a bug where `answer` is unbound by
+                        // `IsSubspecializer` and the `Unify` Goal just assigns it to `true` instead
+                        // of checking that is is equal to `true`.
+                        self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
 
-                    return self.append_goals(vec![
-                        Goal::IsSubspecializer {
-                            answer: answer.clone(),
-                            left: left_spec.clone(),
-                            right: right_spec.clone(),
-                            arg: arg.clone(),
-                        },
-                        Goal::Unify {
-                            left: Term::new_temporary(Value::Variable(answer)),
-                            right: Term::new_temporary(Value::Boolean(true)),
-                        },
-                    ]);
+                        return self.append_goals(vec![
+                            Goal::IsSubspecializer {
+                                answer: answer.clone(),
+                                left: left_spec.clone(),
+                                right: right_spec.clone(),
+                                arg: arg.clone(),
+                            },
+                            Goal::Unify {
+                                left: Term::new_temporary(Value::Variable(answer)),
+                                right: Term::new_temporary(Value::Boolean(true)),
+                            },
+                        ]);
+                    }
                 }
+                // If the left rule has no specializer and the right does, it is NOT more specific,
+                // so we fall through to Backtrack (fail)
+                (None, Some(_)) => (),
+                // If the left rule has a specializer and the right does not, the left IS more specific,
+                // so we return
+                (Some(_), None) => return Ok(()),
+                // If neither has a specializer, neither is more specific, so we fail
+                (None, None) => (),
             }
         }
-        // If neither rule is more specific, fail!
+        // Fail on any of the above branches that do not return
         self.push_goal(Goal::Backtrack)?;
         Ok(())
     }
