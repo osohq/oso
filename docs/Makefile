@@ -16,7 +16,7 @@ export JS_DIR := $(abspath ../languages/js)
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.5.1.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.5.2.jar
 
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
