@@ -1,6 +1,6 @@
 [package]
 name = "oso"
-version = "0.6.0-rc0"
+version = "0.5.2-alpha"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 edition = "2018"
 
