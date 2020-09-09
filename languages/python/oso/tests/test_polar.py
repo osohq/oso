@@ -697,3 +697,18 @@ def test_static_method(polar, qeval):
     polar.register_class(Foo)
     polar.load_str("f(x: Foo) if x.map(Foo.plus_one) = [2, 3, 4];")
     assert next(polar.query_rule("f", Foo([1, 2, 3])))
+
+
+def test_unspecialized_rule_ordering(polar, qvar):
+    polar.load_str("a(x, y) if y = 2;")
+    polar.load_str("a(x: String, y) if y = 1;")
+
+    assert qvar('a("foo", y)', "y") == [1, 2]
+
+    polar.load_str("b(x, y) if x = 2;")
+    polar.load_str("b(x, y: String) if x = 1;")
+    assert qvar('b(x, "foo")', "x") == [1, 2]
+
+    polar.load_str("c(x: String, y, z) if z = 2;")
+    polar.load_str("c(x, y: String, z) if z = 1;")
+    assert qvar('c("foo", "bar", z)', "z") == [1, 2]

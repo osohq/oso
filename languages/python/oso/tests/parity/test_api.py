@@ -75,6 +75,8 @@ def test_method_resolution_order(polar, load_policy, query):
     action = "get"
     assert query(Predicate(name="allow", args=[actor, action, resource]))
     assert get_frobbed() == ["Widget"]
+
+    # DooDad is a Widget
     set_frobbed([])
     resource = DooDad(id="2")
     assert query(Predicate(name="allow", args=[actor, action, resource]))
