@@ -33,7 +33,7 @@ practical examples in the context of a more realistic application.
 
         .. todo:: Insert little GitHub snippet box + actually have a real link
 
-        .. :fab:`github` `osohq/oso-flask-tutorial <https://github.com/osohq/oso-flask-tutorial>`_
+        :fab:`github` `osohq/oso-spring-tutorial <https://github.com/osohq/oso-spring-tutorial>`_
 
 Our expenses application reads from a sqlite database, and has a few simple endpoints for returning
 results. We encourage you to take a look around before continuing!
@@ -140,7 +140,7 @@ Add oso
         .. literalinclude:: /examples/application/expenses-flask/app/authorization.py
             :caption: :fab:`python` authorization.py
             :language: python
-            :lines: 24-
+            :lines: 26-
 
     .. group-tab:: Java
 
@@ -360,7 +360,7 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-flask/app/expense.py
             :caption: :fab:`python` expense.py
             :language: python
-            :lines: 49-52
+            :lines: 55-58
 
         Let's give it a try!
 
@@ -380,7 +380,7 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-flask/app/organization.py
             :caption: :fab:`python` organization.py
             :language: python
-            :lines: 29-32
+            :lines: 31-34
 
         .. code-block:: console
 
@@ -486,11 +486,6 @@ we want to make sure only authorized expenses are submitted.
 .. tabs::
     .. group-tab:: Python
 
-        .. literalinclude:: /examples/application/expenses-flask/app/expense.py
-            :caption: :fab:`python` expense.py
-            :language: python
-            :lines: 55-63
-
         Right now you can see that anyone can submit an expense:
 
         .. code-block:: console
@@ -508,7 +503,7 @@ we want to make sure only authorized expenses are submitted.
         .. literalinclude:: /examples/application/expenses-flask/app/expense.py
             :caption: :fab:`python` expense.py
             :language: python
-            :lines: 55-63
+            :lines: 61-70
             :emphasize-lines: 8-9
 
         We could change the first highlighted line to:
@@ -524,11 +519,6 @@ we want to make sure only authorized expenses are submitted.
         added any rules saying they can.
 
     .. group-tab:: Java
-
-        .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
-            :caption: :fab:`java` Controller.java
-            :language: java
-            :lines: 70-81
 
         Right now you can see that anyone can submit an expense:
 
