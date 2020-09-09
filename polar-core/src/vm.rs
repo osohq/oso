@@ -559,7 +559,7 @@ impl PolarVirtualMachine {
     }
 
     /// Returns bindings for all vars used by terms in terms.
-    pub fn relevant_bindings(&self, terms: &[&Term]) -> HashMap<String, String> {
+    pub fn relevant_bindings(&self, terms: &[&Term]) -> Bindings {
         let mut variables = HashSet::new();
 
         for t in terms {
@@ -569,7 +569,7 @@ impl PolarVirtualMachine {
         let mut relevant_bindings = HashMap::new();
         let bindings = self.variable_bindings(&variables);
         for (v, t) in &bindings {
-            relevant_bindings.insert(v.0.clone(), t.to_string());
+            relevant_bindings.insert(v.clone(), t.clone());
         }
         relevant_bindings
     }
@@ -721,7 +721,14 @@ impl PolarVirtualMachine {
                 let mut msg = format!("[debug] {}{}", &indent, line);
                 if !terms.is_empty() {
                     let relevant_bindings = self.relevant_bindings(terms);
-                    msg.push_str(&format!(", BINDINGS: {:?}", relevant_bindings));
+                    msg.push_str(&format!(
+                        ", BINDINGS: {{{}}}",
+                        relevant_bindings
+                            .iter()
+                            .map(|(var, val)| format!("{} = {}", var.0, val.to_polar()))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    ));
                 }
                 self.messages.push(MessageKind::Print, msg);
                 for line in &lines[1..] {
