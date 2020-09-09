@@ -10,7 +10,6 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import lexer
 import os
 import sys
 
@@ -21,6 +20,7 @@ from enchant.tokenize import Filter
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
+import lexer
 
 
 # -- Project information -----------------------------------------------------
@@ -116,7 +116,7 @@ copybutton_prompt_is_regexp = True
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "borland"
 
-# Show/hide TODOs
+### Show/hide TODOs
 
 todo_include_todos = False
 
@@ -188,7 +188,7 @@ lexers["jshell"] = lexer.JShellLexer()
 lexers["oso"] = lexer.OsoLexer()
 
 
-# Subsitutions
+#### Subsitutions
 
 extlinks = {
     "gh-oso": ("https://github.com/osohq/oso", None),
