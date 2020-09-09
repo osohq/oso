@@ -2232,18 +2232,18 @@ impl PolarVirtualMachine {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
 
+            self.polar_log_mute = false;
             self.log_with(
                 || {
                     let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
                     for rule in rules {
-                        rule_strs.push_str(&format!("  {}\n", rule.to_string()))
+                        rule_strs.push_str(&format!("  {}\n", self.rule_source(&rule)));
                     }
                     rule_strs.push_str("]");
                     rule_strs
                 },
                 &[],
             );
-            self.polar_log_mute = false;
 
             let mut alternatives = Vec::with_capacity(rules.len());
             for rule in rules.iter() {
@@ -2426,7 +2426,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn rule_source(&self, rule: &Rule) -> String {
-        let mut head = format!(
+        let head = format!(
             "{}({})",
             rule.name,
             rule.params.iter().fold(String::new(), |mut acc, p| {
@@ -2441,9 +2441,13 @@ impl PolarVirtualMachine {
                 acc
             })
         );
-        // head
-        head += " if\n  ";
-        head + &self.term_source(&rule.body, false)
+        match rule.body.value() {
+            Value::Expression(Operation {
+                operator: Operator::And,
+                args,
+            }) if !args.is_empty() => head + " if\n  " + &self.term_source(&rule.body, false) + ";",
+            _ => head + ";",
+        }
     }
 
     fn set_error_context(
