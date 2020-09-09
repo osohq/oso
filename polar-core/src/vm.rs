@@ -930,7 +930,7 @@ impl PolarVirtualMachine {
         );
 
         self.log_with(
-            || format!("MATCHES :{} matches {}", left.to_polar(), right.to_polar()),
+            || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
         );
 
