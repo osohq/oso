@@ -4,7 +4,8 @@ members = [
     "polar-core",
     "polar-c-api",
     "polar-wasm-api",
-    "languages/rust/",
+    "languages/rust/oso",
+    "languages/rust/oso-derive",
 ]
 
 [profile.release]

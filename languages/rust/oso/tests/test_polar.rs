@@ -1,5 +1,6 @@
 use maplit::hashmap;
 use oso::Oso;
+use oso_derive::*;
 
 struct OsoTest {
     oso: Oso,
@@ -17,7 +18,7 @@ impl OsoTest {
     fn load_file(&mut self, here: &str, name: &str) {
         // hack because `file!()` starts from workspace root
         // https://github.com/rust-lang/cargo/issues/3946
-        let folder = std::path::PathBuf::from(&here.replace("languages/rust/", ""));
+        let folder = std::path::PathBuf::from(&here.replace("languages/rust/oso/", ""));
         let mut file = folder.parent().unwrap().to_path_buf();
         file.push(name);
         println!("{:?}", file);
@@ -243,4 +244,26 @@ fn test_external() {
     // );
     test.qvar_one("new Foo().g().hello = x", "x", "world".to_string());
     test.qvar_one("new Foo().h() = x", "x", true);
+}
+
+#[test]
+fn test_macros() {
+    // stub
+
+    let _ = tracing_subscriber::fmt::try_init();
+
+    #[derive(PolarClass)]
+    struct Foo {
+        a: String,
+    }
+
+    impl Foo {
+        fn new(a: String) -> Self {
+            Self { a }
+        }
+    }
+
+    let mut test = OsoTest::new();
+    register_class(&mut test.oso).unwrap();
+    test.query(r#"new Foo("hello") = x"#);
 }

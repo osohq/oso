@@ -98,6 +98,7 @@ impl Host {
         fields: Vec<Term>,
         id: u64,
     ) -> crate::Result<()> {
+        // @TODO: Handle the error if the class doesn't exist.
         let class = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
         let fields = fields; // TODO: use

@@ -1,2 +1,3 @@
 test:
-	cargo test
+	cargo test oso
+	cargo test oso-derive
