@@ -131,17 +131,8 @@ pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
         _ => (), // tuple structs and unit structs
     }
 
-    // let attribute_getters = attributes.iter().map(|attr| {
-    //     let name = attr.to_string();
-    //     quote! {
-    //         .add_attribute_getter(#name, |recv: &Foo| recv.#attr.clone())
-    //     }
-    // });
-
-    // let attribute_getters = quote! {
-    //     .add_attribute_getter("a", |recv: &Foo| recv.a.clone())
-    // };
-
+    // @TODO: Make this a trait or something.
+    // Have a way to return a builder so people can chain more stuff onto it.
     let result = quote! {
         fn register_class(mut oso: &mut oso::Oso) -> Result<(), oso::OsoError> {
             oso::Class::with_constructor(<#type_name>::new)
