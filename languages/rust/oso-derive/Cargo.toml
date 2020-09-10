@@ -1,0 +1,12 @@
+[package]
+name = "oso-derive"
+version = "0.5.2-alpha"
+authors = ["Oso Security, Inc. <support@osohq.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "1.0.40"
+quote = "1.0.7"

@@ -79,7 +79,7 @@ fn test() {
         .register(&mut oso)
         .unwrap();
 
-    let polar_file = std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/../../test/test.polar";
+    let polar_file = std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/../../../test/test.polar";
     println!("Loading: {}", polar_file);
     oso.load_file(&polar_file).unwrap();
 
