@@ -355,7 +355,7 @@ impl PolarVirtualMachine {
                     self.log_with(
                         || {
                             let source_str = self.rule_source(&rule);
-                            format!("RULE:\n{}", source_str)
+                            format!("RULE: {}", source_str)
                         },
                         &[],
                     );
@@ -561,7 +561,6 @@ impl PolarVirtualMachine {
     /// Returns bindings for all vars used by terms in terms.
     pub fn relevant_bindings(&self, terms: &[&Term]) -> Bindings {
         let mut variables = HashSet::new();
-
         for t in terms {
             t.variables(&mut variables);
         }
@@ -1279,7 +1278,7 @@ impl PolarVirtualMachine {
             Value::Expression(Operation {
                 operator: Operator::And,
                 args,
-            }) if args.len() == 1 => (),
+            }) if args.len() < 2 => (),
             _ => {
                 self.log_with(|| format!("QUERY: {}", term.to_polar()), &[term]);
             }
