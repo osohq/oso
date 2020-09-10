@@ -4,11 +4,11 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Attribute, Lit, Meta, MetaNameValue, NestedMeta, Path};
+use syn::{Attribute, Fields, Ident, Lit, Meta, MetaNameValue, NestedMeta, Path};
 
 // @TODO: How would I get attributes on methods in an impl block from this derive macro?
 // Does that even make sense or do I need another kind of macro.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum OsoAttribute {
     ClassName { name: String },
     Attribute,
@@ -109,10 +109,44 @@ pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
         }
     }
 
+    let mut getters = vec![];
+
+    match input.fields {
+        // Named fields, a normal struct.
+        Fields::Named(fields) => {
+            for field in fields.named {
+                let mut oso_attrs = vec![];
+                for attr in field.attrs {
+                    get_oso_attrs(attr, &mut oso_attrs);
+                }
+                if oso_attrs.contains(&OsoAttribute::Attribute) {
+                    let attr = field.ident.unwrap();
+                    let name = attr.to_string();
+                    getters.push(quote! {
+                        .add_attribute_getter(#name, |recv: &Foo| recv.#attr.clone())
+                    })
+                }
+            }
+        }
+        _ => (), // tuple structs and unit structs
+    }
+
+    // let attribute_getters = attributes.iter().map(|attr| {
+    //     let name = attr.to_string();
+    //     quote! {
+    //         .add_attribute_getter(#name, |recv: &Foo| recv.#attr.clone())
+    //     }
+    // });
+
+    // let attribute_getters = quote! {
+    //     .add_attribute_getter("a", |recv: &Foo| recv.a.clone())
+    // };
+
     let result = quote! {
         fn register_class(mut oso: &mut oso::Oso) -> Result<(), oso::OsoError> {
             oso::Class::with_constructor(<#type_name>::new)
                 .name(#class_name)
+                #(#getters)*
                 .register(&mut oso)
         }
     };

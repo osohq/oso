@@ -268,4 +268,5 @@ fn test_macros() {
     let mut test = OsoTest::new();
     register_class(&mut test.oso).unwrap();
     test.query(r#"new Bar("hello") = x"#);
+    test.qvar_one(r#"new Bar("hello").a = x"#, "x", "hello".to_string());
 }
