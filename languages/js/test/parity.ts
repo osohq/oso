@@ -48,7 +48,8 @@ oso.registerClass(E);
   // In tests it's `languages/js/test/parity.ts`
   // In parity tests it's `js_package/dist/test/parity.js`
   // In both these cases the relative path to the test.polar file is the same.
-  await oso.loadFile('../../../test/test.polar');
+  const { join } = require('path');
+  await oso.loadFile(join(__dirname, '../../../test/test.polar'));
 
   if (!(await oso.isAllowed('a', 'b', 'c'))) throw new Error();
 
@@ -88,8 +89,8 @@ oso.registerClass(E);
           .next()
       ).done,
       (await oso.queryRule('testOr').next()).done,
-      (await oso.queryRule('testUnifyClass', E).next()).done,
-      // oso.queryRule('testHttpAndPathMapper').next().done,
+      (await oso.queryRule('testUnifyClass', A).next()).done,
+      (await oso.queryRule('testHttpAndPathMapper').next()).done,
     ].some(v => v)
   )
     throw new Error();
