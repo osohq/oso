@@ -253,7 +253,9 @@ fn test_macros() {
     let _ = tracing_subscriber::fmt::try_init();
 
     #[derive(PolarClass)]
+    #[polar(class_name = "Bar")]
     struct Foo {
+        #[polar(attribute)]
         a: String,
     }
 
@@ -265,5 +267,5 @@ fn test_macros() {
 
     let mut test = OsoTest::new();
     register_class(&mut test.oso).unwrap();
-    test.query(r#"new Foo("hello") = x"#);
+    test.query(r#"new Bar("hello") = x"#);
 }
