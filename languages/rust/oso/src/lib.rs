@@ -18,3 +18,10 @@ pub use polar_core::{polar::Polar, terms::Value};
 pub use query::{Query, ResultSet};
 
 pub type Result<T> = std::result::Result<T, OsoError>;
+
+pub trait PolarClass {
+    fn get_polar_class() -> Class<()>;
+    fn get_polar_class_builder() -> Class<Self>
+    where
+        Self: Sized;
+}

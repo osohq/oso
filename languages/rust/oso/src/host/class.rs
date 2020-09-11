@@ -135,10 +135,8 @@ impl<T> Class<T> {
         }
     }
 
-    pub fn register(self, oso: &mut crate::Oso) -> crate::Result<()> {
-        // erase the type before registering
-        oso.register_class(self.erase_type())?;
-        Ok(())
+    pub fn build(self) -> Class<()> {
+        self.erase_type()
     }
 
     pub fn is_class<C: 'static>(&self) -> bool {

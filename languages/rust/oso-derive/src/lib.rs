@@ -6,8 +6,6 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Attribute, Fields, Ident, Lit, Meta, MetaNameValue, NestedMeta, Path};
 
-// @TODO: How would I get attributes on methods in an impl block from this derive macro?
-// Does that even make sense or do I need another kind of macro.
 #[derive(Debug, PartialEq)]
 enum OsoAttribute {
     ClassName { name: String },
@@ -32,7 +30,8 @@ fn get_path(path: &Path) -> Vec<String> {
 fn get_nested_attr(nested: NestedMeta, oso_attrs: &mut Vec<OsoAttribute>) {
     match nested {
         NestedMeta::Lit(_) => {
-            // Dont have any of these.
+            // @TODO: Probably error.
+            unimplemented!("Hit a literal instead of a name.");
         }
         NestedMeta::Meta(meta) => {
             match meta {
@@ -45,9 +44,11 @@ fn get_nested_attr(nested: NestedMeta, oso_attrs: &mut Vec<OsoAttribute>) {
                     };
                 }
                 Meta::List(_) => {
-                    // I don't know why this would happen, seems like
+                    // I don't know why this case would happen, seems like
                     // polar(foo, bar) would each be two different attributes
                     // nested under polar, not a single nested list.
+                    // leaving here till we add all the attributes we need in case it pops up.
+                    unimplemented!("Hit the list case");
                     ()
                 }
                 Meta::NameValue(MetaNameValue { path, lit, .. }) => {
@@ -68,7 +69,6 @@ fn get_nested_attr(nested: NestedMeta, oso_attrs: &mut Vec<OsoAttribute>) {
 }
 
 fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
-    let style = attr.style;
     let meta = attr.parse_meta().unwrap();
     if let Meta::List(list) = meta {
         match get_single_segment(&list.path) {
@@ -84,35 +84,28 @@ fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
 
 #[proc_macro_derive(PolarClass, attributes(polar))]
 pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
-    eprintln!("Derive!");
-
     let input = syn::parse_macro_input!(ts as syn::ItemStruct);
-
-    eprintln!("{:?}", input);
 
     let type_name = input.ident;
     let mut class_name = type_name.to_string();
 
     let attrs = input.attrs;
-    eprintln!("Attrs");
     let mut oso_attrs = vec![];
     for attr in attrs {
         get_oso_attrs(attr, &mut oso_attrs);
     }
     for oso_attr in oso_attrs {
-        eprintln!("attribute {:?}", oso_attr);
         match oso_attr {
             OsoAttribute::ClassName { name } => {
                 class_name = name;
             }
-            _ => (), // @TODO: error on attribute on struct,
+            _ => (),
         }
     }
 
     let mut getters = vec![];
 
     match input.fields {
-        // Named fields, a normal struct.
         Fields::Named(fields) => {
             for field in fields.named {
                 let mut oso_attrs = vec![];
@@ -128,17 +121,21 @@ pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
                 }
             }
         }
-        _ => (), // tuple structs and unit structs
+        _ => (), // don't support tuple structs and unit structs for now
     }
 
-    // @TODO: Make this a trait or something.
-    // Have a way to return a builder so people can chain more stuff onto it.
     let result = quote! {
-        fn register_class(mut oso: &mut oso::Oso) -> Result<(), oso::OsoError> {
-            oso::Class::with_constructor(<#type_name>::new)
-                .name(#class_name)
-                #(#getters)*
-                .register(&mut oso)
+        impl oso::PolarClass for #type_name {
+            fn get_polar_class_builder() -> oso::Class<#type_name> {
+                oso::Class::with_constructor(<#type_name>::new)
+                    .name(#class_name)
+                    #(#getters)*
+            }
+
+            fn get_polar_class() -> oso::Class<()> {
+                let builder = #type_name::get_polar_class_builder();
+                builder.build()
+            }
         }
     };
     result.into()

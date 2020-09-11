@@ -1,5 +1,5 @@
 use maplit::hashmap;
-use oso::Oso;
+use oso::{Oso, PolarClass};
 use oso_derive::*;
 
 struct OsoTest {
@@ -213,7 +213,7 @@ fn test_external() {
 
     let mut test = OsoTest::new();
 
-    oso::Class::with_constructor(capital_foo)
+    let foo_class = oso::Class::with_constructor(capital_foo)
         .name("Foo")
         .add_attribute_getter("a", |receiver: &Foo| receiver.a)
         // .add_method("b", |receiver: &Foo| oso::host::PolarIter(receiver.b()))
@@ -223,8 +223,8 @@ fn test_external() {
         // .add_method("f", |receiver: &Foo| oso::host::PolarIter(receiver.f()))
         .add_method("g", Foo::g)
         .add_method("h", Foo::h)
-        .register(&mut test.oso)
-        .unwrap();
+        .build();
+    test.oso.register_class(foo_class).unwrap();
 
     test.qvar_one("new Foo().a = x", "x", "A".to_string());
     test.query_err("new Foo().a() = x");
@@ -266,7 +266,22 @@ fn test_macros() {
     }
 
     let mut test = OsoTest::new();
-    register_class(&mut test.oso).unwrap();
+    let class = Foo::get_polar_class();
+    test.oso.register_class(class).unwrap();
+
     test.query(r#"new Bar("hello") = x"#);
     test.qvar_one(r#"new Bar("hello").a = x"#, "x", "hello".to_string());
+
+    let class_builder = Foo::get_polar_class_builder();
+    let class = class_builder
+        .name("Baz")
+        .add_method("world", |receiver: &Foo| format!("{} world", receiver.a))
+        .build();
+    test.oso.register_class(class).unwrap();
+
+    test.qvar_one(
+        r#"new Baz("hello").world() = x"#,
+        "x",
+        "hello world".to_string(),
+    );
 }
