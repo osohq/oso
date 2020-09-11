@@ -3,8 +3,8 @@ extern crate quote;
 extern crate syn;
 
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
-use syn::{Attribute, Fields, Ident, Lit, Meta, MetaNameValue, NestedMeta, Path};
+use quote::quote;
+use syn::{Attribute, Fields, Lit, Meta, MetaNameValue, NestedMeta, Path};
 
 #[derive(Debug, PartialEq)]
 enum OsoAttribute {
@@ -18,13 +18,6 @@ fn get_single_segment(path: &Path) -> Option<String> {
     } else {
         None
     }
-}
-
-fn get_path(path: &Path) -> Vec<String> {
-    path.segments
-        .iter()
-        .map(|seg| seg.ident.to_string())
-        .collect()
 }
 
 fn get_nested_attr(nested: NestedMeta, oso_attrs: &mut Vec<OsoAttribute>) {
@@ -49,7 +42,6 @@ fn get_nested_attr(nested: NestedMeta, oso_attrs: &mut Vec<OsoAttribute>) {
                     // nested under polar, not a single nested list.
                     // leaving here till we add all the attributes we need in case it pops up.
                     unimplemented!("Hit the list case");
-                    ()
                 }
                 Meta::NameValue(MetaNameValue { path, lit, .. }) => {
                     if let Some(ref seg) = get_single_segment(&path) {
