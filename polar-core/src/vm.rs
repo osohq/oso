@@ -3065,6 +3065,44 @@ mod tests {
     }
 
     #[test]
+    fn test_filter_rules() {
+        let a_rule = Arc::new(rule!("bar", ["_"; instance!("a")]));
+        let b_rule = Arc::new(rule!("bar", ["_"; instance!("b")]));
+        let gen_rule = GenericRule::new(sym!("bar"), vec![a_rule, b_rule]);
+        let mut kb = KnowledgeBase::new();
+        kb.add_generic_rule(gen_rule);
+
+        let external_instance = Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        });
+        let query = query!(call!("bar", [sym!("x")]));
+        let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![query]);
+        vm.bind(&sym!("x"), Term::new_from_test(external_instance));
+
+        let mut external_isas = vec![];
+
+        loop {
+            match vm.run().unwrap() {
+                QueryEvent::Done => break,
+                QueryEvent::ExternalIsa {
+                    call_id, class_tag, ..
+                } => {
+                    external_isas.push(class_tag.clone());
+                    // Return `true` if the specified `class_tag` is `"a"`.
+                    vm.external_question_result(call_id, class_tag.0 == "a")
+                }
+                QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
+                _ => panic!("Unexpected event"),
+            }
+        }
+
+        let expected = vec![sym!("b"), sym!("a"), sym!("a")];
+        assert_eq!(external_isas, expected);
+    }
+
+    #[test]
     fn test_sort_rules() {
         // Test sort rule by mocking ExternalIsSubSpecializer and ExternalIsa.
         let bar_rule = GenericRule::new(
