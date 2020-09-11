@@ -553,7 +553,7 @@ impl PolarVirtualMachine {
             if !variables.contains(var) {
                 continue;
             }
-            bindings.insert(var.clone(), self.deref(value));
+            bindings.insert(var.clone(), self.deep_deref(value));
         }
         bindings
     }
