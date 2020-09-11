@@ -3108,10 +3108,10 @@ mod tests {
         let bar_rule = GenericRule::new(
             sym!("bar"),
             vec![
-                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)])),
-                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)])),
-                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)])),
-                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)])),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "_"; instance!("a"), value!(3)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "_"; instance!("a"), value!(1)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "_"; instance!("b"), value!(2)])),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "_"; instance!("b"), value!(4)])),
             ],
         );
 
