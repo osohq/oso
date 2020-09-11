@@ -617,12 +617,12 @@ fn test_or() {
 }
 
 #[test]
-fn test_dict_head() {
+fn test_dict_specializers() {
     let mut polar = Polar::new();
     polar.load_str("f({x: 1});").unwrap();
     polar.load_str("g(_: {x: 1});").unwrap();
 
-    // Test unifying dicts against our dict head.
+    // Test unifying dicts against our rules.
     assert!(qeval(&mut polar, "f({x: 1})"));
     assert!(qnull(&mut polar, "f({x: 1, y: 2})"));
     assert!(qnull(&mut polar, "f(1)"));
