@@ -288,8 +288,7 @@ fn test_trace() {
     let results = query_results!(query);
     let trace = results[0].1.as_ref().unwrap();
     let expected = r#"f(1) [
-  f(x) if
-    x = 1 and x = 1; [
+  f(x) if x = 1 and x = 1; [
       x = 1 []
       x = 1 []
   ]
@@ -298,8 +297,7 @@ fn test_trace() {
     assert_eq!(trace.formatted, expected);
     let trace = results[1].1.as_ref().unwrap();
     let expected = r#"f(1) [
-  f(y) if
-    y = 1; [
+  f(y) if y = 1; [
       y = 1 []
   ]
 ]

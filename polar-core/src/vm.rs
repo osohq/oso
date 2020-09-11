@@ -2226,11 +2226,10 @@ impl PolarVirtualMachine {
             self.polar_log_mute = false;
             self.log_with(
                 || {
-                    let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
+                    let mut rule_strs = "APPLICABLE_RULES: \n".to_owned();
                     for rule in rules {
                         rule_strs.push_str(&format!("  {}\n", self.rule_source(&rule)));
                     }
-                    rule_strs.push_str("]");
                     rule_strs
                 },
                 &[],
@@ -2436,7 +2435,7 @@ impl PolarVirtualMachine {
             Value::Expression(Operation {
                 operator: Operator::And,
                 args,
-            }) if !args.is_empty() => head + " if\n  " + &self.term_source(&rule.body, false) + ";",
+            }) if !args.is_empty() => head + " if " + &self.term_source(&rule.body, false) + ";",
             _ => head + ";",
         }
     }
