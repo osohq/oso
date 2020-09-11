@@ -3066,9 +3066,12 @@ mod tests {
 
     #[test]
     fn test_filter_rules() {
-        let a_rule = Arc::new(rule!("bar", ["_"; instance!("a")]));
-        let b_rule = Arc::new(rule!("bar", ["_"; instance!("b")]));
-        let gen_rule = GenericRule::new(sym!("bar"), vec![a_rule, b_rule]);
+        let rule_a = Arc::new(rule!("bar", ["_"; instance!("a")]));
+        let rule_b = Arc::new(rule!("bar", ["_"; instance!("b")]));
+        let rule_1a = Arc::new(rule!("bar", [value!(1)]));
+        let rule_1b = Arc::new(rule!("bar", ["_"; value!(1)]));
+
+        let gen_rule = GenericRule::new(sym!("bar"), vec![rule_a, rule_b, rule_1a, rule_1b]);
         let mut kb = KnowledgeBase::new();
         kb.add_generic_rule(gen_rule);
 
@@ -3100,6 +3103,30 @@ mod tests {
 
         let expected = vec![sym!("b"), sym!("a"), sym!("a")];
         assert_eq!(external_isas, expected);
+
+        vm.bind(&sym!("x"), Term::new_from_test(value!(1)));
+        let _ = vm
+            .query(&Term::new_from_test(Value::Call(call!("bar", [sym!("x")]))))
+            .unwrap();
+
+        let mut results = vec![];
+        loop {
+            match vm.run().unwrap() {
+                QueryEvent::Done => break,
+                QueryEvent::ExternalIsa { .. } => (),
+                QueryEvent::Result { bindings, .. } => results.push(bindings),
+                _ => panic!("Unexpected event"),
+            }
+        }
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results,
+            vec![
+                hashmap! {sym!("x") => term!(1)},
+                hashmap! {sym!("x") => term!(1)},
+            ]
+        );
     }
 
     #[test]
