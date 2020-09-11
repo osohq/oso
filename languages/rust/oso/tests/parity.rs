@@ -65,19 +65,23 @@ fn test() {
     let mut oso = Oso::new();
     tracing_subscriber::fmt::init();
 
-    Class::with_constructor(A::new)
-        .name("A")
-        .add_attribute_getter("x", |a_self: &A| a_self.x.clone())
-        .add_method("foo", A::foo)
-        .register(&mut oso)
-        .unwrap();
+    oso.register_class(
+        Class::with_constructor(A::new)
+            .name("A")
+            .add_attribute_getter("x", |a_self: &A| a_self.x.clone())
+            .add_method("foo", A::foo)
+            .build(),
+    )
+    .unwrap();
 
-    Class::with_constructor(b::C::new)
-        .name("C")
-        .add_attribute_getter("y", |c: &b::C| c.y.clone())
-        .add_method("foo", b::C::foo)
-        .register(&mut oso)
-        .unwrap();
+    oso.register_class(
+        Class::with_constructor(b::C::new)
+            .name("C")
+            .add_attribute_getter("y", |c: &b::C| c.y.clone())
+            .add_method("foo", b::C::foo)
+            .build(),
+    )
+    .unwrap();
 
     let polar_file = std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/../../../test/test.polar";
     println!("Loading: {}", polar_file);
