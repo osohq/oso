@@ -564,13 +564,7 @@ impl PolarVirtualMachine {
         for t in terms {
             t.variables(&mut variables);
         }
-
-        let mut relevant_bindings = HashMap::new();
-        let bindings = self.variable_bindings(&variables);
-        for (v, t) in &bindings {
-            relevant_bindings.insert(v.clone(), t.clone());
-        }
-        relevant_bindings
+        self.variable_bindings(&variables)
     }
 
     /// Return the current binding stack pointer.
