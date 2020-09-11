@@ -641,12 +641,20 @@ fn test_dict_head() {
 
     // Test unifying & isa-ing instances against our rules.
     assert!(qnull(&mut polar, "f(new a{x: 1})"));
-    assert_eq!(qext(&mut polar, "g(new a{x: 1})", vec![value!(1)]).len(), 1);
+    assert_eq!(
+        qext(&mut polar, "g(new a{x: 1})", vec![value!(1), value!(1)]).len(),
+        1
+    );
     assert!(qnull(&mut polar, "f(new a{})"));
     assert!(qnull(&mut polar, "f(new a{x: {}})"));
-    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2)]).is_empty());
+    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2), value!(2)]).is_empty());
     assert_eq!(
-        qext(&mut polar, "g(new a{y: 2, x: 1})", vec![value!(1)]).len(),
+        qext(
+            &mut polar,
+            "g(new a{y: 2, x: 1})",
+            vec![value!(1), value!(1)]
+        )
+        .len(),
         1
     );
 }

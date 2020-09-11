@@ -643,30 +643,6 @@ impl PolarVirtualMachine {
             .any(|binding| binding.0 == *name)
     }
 
-    /// Generate a fresh set of variables for an argument list.
-    fn rename_vars(&self, terms: TermList) -> TermList {
-        let mut renames = HashMap::<Symbol, Symbol>::new();
-        terms
-            .iter()
-            .map(|t| {
-                t.cloned_map_replace(&mut |t| match t.value() {
-                    Value::Variable(sym) | Value::RestVariable(sym)
-                        if !self.is_constant_var(sym) =>
-                    {
-                        if let Some(new) = renames.get(sym) {
-                            t.clone_with_value(Value::Variable(new.clone()))
-                        } else {
-                            let new = self.kb.read().unwrap().gensym(&sym.0);
-                            renames.insert(sym.clone(), new.clone());
-                            t.clone_with_value(Value::Variable(new))
-                        }
-                    }
-                    _ => t.clone(),
-                })
-            })
-            .collect()
-    }
-
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
         let mut renames = HashMap::<Symbol, Symbol>::new();
@@ -2143,11 +2119,15 @@ impl PolarVirtualMachine {
                 return self.push_goal(applicable);
             }
 
-            // Try to unify the arguments with renamed parameters.
-            // TODO: Think about using backtrack so that we don't
-            // leave temporary bindings around.
-            let args = self.rename_vars(args.clone());
+            // We need to check each argument for applicability,
+            // but unwind any bindings made during the check. So
+            // we will backtrack to this choice point on success.
+            self.push_choice(vec![vec![applicable]]);
+
+            // Rename the variables in the rule (but not the args).
+            // This avoids clashes between arg vars and rule vars.
             let Rule { params, .. } = self.rename_rule_vars(&rule);
+
             let mut check_applicability = vec![];
             for (arg, param) in args.iter().zip(params.iter()) {
                 check_applicability.push(Goal::Unify {
@@ -2164,8 +2144,19 @@ impl PolarVirtualMachine {
             check_applicability.push(Goal::Cut {
                 choice_index: self.choices.len(),
             });
-            check_applicability.push(applicable);
-            self.choose(vec![check_applicability, vec![inapplicable]])?;
+            check_applicability.push(Goal::Backtrack);
+
+            // If a check fails, we will backtrack to the inapplicable branch.
+            self.choose(vec![
+                check_applicability,
+                vec![
+                    // Cut the applicable alternative.
+                    Goal::Cut {
+                        choice_index: self.choices.len() - 1,
+                    },
+                    inapplicable,
+                ],
+            ])?;
             Ok(())
         }
     }
