@@ -2226,9 +2226,9 @@ impl PolarVirtualMachine {
             self.polar_log_mute = false;
             self.log_with(
                 || {
-                    let mut rule_strs = "APPLICABLE_RULES: \n".to_owned();
+                    let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        rule_strs.push_str(&format!("  {}\n", self.rule_source(&rule)));
+                        rule_strs.push_str(&format!("\n  {}", self.rule_source(&rule)));
                     }
                     rule_strs
                 },
