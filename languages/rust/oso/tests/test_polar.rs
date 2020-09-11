@@ -263,6 +263,12 @@ fn test_macros() {
         fn new(a: String) -> Self {
             Self { a }
         }
+
+        fn goodbye() -> Self {
+            Self {
+                a: "goodbye".to_owned(),
+            }
+        }
     }
 
     let mut test = OsoTest::new();
@@ -275,13 +281,10 @@ fn test_macros() {
     let class_builder = Foo::get_polar_class_builder();
     let class = class_builder
         .name("Baz")
+        .set_constructor(Foo::goodbye)
         .add_method("world", |receiver: &Foo| format!("{} world", receiver.a))
         .build();
     test.oso.register_class(class).unwrap();
 
-    test.qvar_one(
-        r#"new Baz("hello").world() = x"#,
-        "x",
-        "hello world".to_string(),
-    );
+    test.qvar_one(r#"new Baz().world() = x"#, "x", "goodbye world".to_string());
 }
