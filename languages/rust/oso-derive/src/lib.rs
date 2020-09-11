@@ -24,6 +24,7 @@ fn get_nested_attr(nested: NestedMeta, oso_attrs: &mut Vec<OsoAttribute>) {
     match nested {
         NestedMeta::Lit(_) => {
             // @TODO: Probably error.
+
             unimplemented!("Hit a literal instead of a name.");
         }
         NestedMeta::Meta(meta) => {
@@ -87,33 +88,27 @@ pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
         get_oso_attrs(attr, &mut oso_attrs);
     }
     for oso_attr in oso_attrs {
-        match oso_attr {
-            OsoAttribute::ClassName { name } => {
-                class_name = name;
-            }
-            _ => (),
+        if let OsoAttribute::ClassName { name } = oso_attr {
+            class_name = name;
         }
     }
 
     let mut getters = vec![];
 
-    match input.fields {
-        Fields::Named(fields) => {
-            for field in fields.named {
-                let mut oso_attrs = vec![];
-                for attr in field.attrs {
-                    get_oso_attrs(attr, &mut oso_attrs);
-                }
-                if oso_attrs.contains(&OsoAttribute::Attribute) {
-                    let attr = field.ident.unwrap();
-                    let name = attr.to_string();
-                    getters.push(quote! {
-                        .add_attribute_getter(#name, |recv: &Foo| recv.#attr.clone())
-                    })
-                }
+    if let Fields::Named(fields) = input.fields {
+        for field in fields.named {
+            let mut oso_attrs = vec![];
+            for attr in field.attrs {
+                get_oso_attrs(attr, &mut oso_attrs);
+            }
+            if oso_attrs.contains(&OsoAttribute::Attribute) {
+                let attr = field.ident.unwrap();
+                let name = attr.to_string();
+                getters.push(quote! {
+                    .add_attribute_getter(#name, |recv: &Foo| recv.#attr.clone())
+                })
             }
         }
-        _ => (), // don't support tuple structs and unit structs for now
     }
 
     let result = quote! {
