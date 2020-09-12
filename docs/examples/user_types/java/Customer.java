@@ -1,7 +1,7 @@
 public class Customer {
-    public Integer id;
+  public Integer id;
 
-    public Customer(Integer id) {
-        this.id = id;
-    }
+  public Customer(Integer id) {
+    this.id = id;
+  }
 }

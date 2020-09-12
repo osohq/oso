@@ -1,23 +1,23 @@
 public class Expense {
-    public int amount;
-    public String description;
-    public String submittedBy;
+  public int amount;
+  public String description;
+  public String submittedBy;
 
-    public static Expense[] EXPENSES = {
-        new Expense(500, "coffee", "alice@example.com"),
-        new Expense(5000, "software", "alice@example.com"),
-        new Expense(50000, "flight", "bhavik@example.com"),
-    };
+  public static Expense[] EXPENSES = {
+    new Expense(500, "coffee", "alice@example.com"),
+    new Expense(5000, "software", "alice@example.com"),
+    new Expense(50000, "flight", "bhavik@example.com"),
+  };
 
+  public Expense(int amount, String description, String submittedBy) {
+    this.amount = amount;
+    this.description = description;
+    this.submittedBy = submittedBy;
+  }
 
-    public Expense(int amount, String description, String submittedBy) {
-        this.amount = amount;
-        this.description = description;
-        this.submittedBy = submittedBy;
-    }
-
-    public String toString() {
-        return String.format("Expense(amount=%d, description=%s, submittedBy=%s)",
-            this.amount, this.description, this.submittedBy);
-    }
+  public String toString() {
+    return String.format(
+        "Expense(amount=%d, description=%s, submittedBy=%s)",
+        this.amount, this.description, this.submittedBy);
+  }
 }
