@@ -159,7 +159,7 @@ Add oso
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Application.java
             :caption: :fab:`java` Application.java
             :language: java
-            :lines: 26-34
+            :lines: 24-32
 
 We can now access this ``oso`` instance anywhere in our application, and specify
 which policy files are loaded in the application configuration.
@@ -190,7 +190,7 @@ to allow some users to only have access to certain routes if they are logged in.
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java
             :caption: :fab:`java` Authorizer.java
             :language: java
-            :lines: 21-44
+            :lines: 18-42
 
 Now that this is in place, we can write a simple policy to allow anyone
 to call our index route, and see the hello message:
@@ -239,7 +239,7 @@ The latter corresponds to users who have authenticated.
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/User.java
             :caption: :fab:`java` User.java
             :language: java
-            :lines: 9-20
+            :lines: 8-25
 
 We can use :ref:`specializer rules <specializer>` to only allow the request
 when the actor is an instance of a ``User``:
@@ -417,14 +417,14 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Authorizer.java
             :caption: :fab:`java` Authorizer.java
             :language: java
-            :lines: 66-78
+            :lines: 60-70
 
         ... so authorizing the GET request looks like:
 
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
             :caption: :fab:`java` Controller.java
             :language: java
-            :lines: 50-58
+            :lines: 55-63
 
         Let's give it a try!
 
@@ -441,7 +441,7 @@ Authorizing Access to Data
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
             :caption: :fab:`java` Controller.java
             :language: java
-            :lines: 60-68
+            :lines: 65-73
 
         .. code-block:: console
 
@@ -536,8 +536,8 @@ we want to make sure only authorized expenses are submitted.
         .. literalinclude:: /examples/application/expenses-spring-boot/src/main/java/com/example/springboot/Controller.java
             :caption: :fab:`java` Controller.java
             :language: java
-            :lines: 70-81
-            :emphasize-lines: 7
+            :lines: 75-85
+            :emphasize-lines: 6
 
         We could change the highlighted line to:
 
