@@ -105,7 +105,7 @@ pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
                 let attr = field.ident.unwrap();
                 let name = attr.to_string();
                 getters.push(quote! {
-                    .add_attribute_getter(#name, |recv: &Foo| recv.#attr.clone())
+                    .add_attribute_getter(#name, |recv: &#type_name| recv.#attr.clone())
                 })
             }
         }
@@ -114,7 +114,7 @@ pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
     let result = quote! {
         impl oso::PolarClass for #type_name {
             fn get_polar_class_builder() -> oso::Class<#type_name> {
-                oso::Class::with_constructor(<#type_name>::new)
+                oso::Class::new()
                     .name(#class_name)
                     #(#getters)*
             }
@@ -124,6 +124,8 @@ pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
                 builder.build()
             }
         }
+
+        impl oso::HostClass for #type_name {}
     };
     result.into()
 }
