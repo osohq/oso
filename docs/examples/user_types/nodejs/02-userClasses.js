@@ -49,3 +49,5 @@ function userFromId(id) {
     return new Customer(id);
   }
 }
+
+module.exports = { oso };

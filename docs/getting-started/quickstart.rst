@@ -181,6 +181,7 @@ start a REPL session and follow along:
 
     .. code-block:: pycon
 
+      >>> oso.register_class(Expense)
       >>> oso.load_file("expenses.polar")
 
     ...and now Alice has the power...
@@ -229,21 +230,23 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.load_file("expenses.polar")
-      => #<Set: {"expenses.polar"}>
+      irb(main):007:0> OSO.register_class(Expense)
+      => nil
+      irb(main):008:0> OSO.load_file("expenses.polar")
+      => nil
 
     ...and now Alice has the power...
 
     .. code-block:: irb
 
-      irb(main):005:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
+      irb(main):009:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
       => true
 
     ...and everyone else is still denied:
 
     .. code-block:: irb
 
-      irb(main):006:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: expense)
+      irb(main):010:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: expense)
       => false
 
   .. group-tab:: Java
@@ -316,6 +319,7 @@ start a REPL session and follow along:
 
             public static void main(String[] args) throws Exception {
                 Oso oso = new Oso();
+                oso.registerClass(Expense.class, "Expense");
                 oso.loadFile("expenses.polar");
                 String alice = "alice@example.com";
                 String bhavik = "bhavik@example.com";
