@@ -2304,7 +2304,7 @@ impl PolarVirtualMachine {
                     }
                 }
                 // If the left rule has no specializer and the right does, it is NOT more specific,
-                // so we fall through to Backtrack (fail)
+                // so we Backtrack (fail)
                 (None, Some(_)) => return self.push_goal(Goal::Backtrack),
                 // If the left rule has a specializer and the right does not, the left IS more specific,
                 // so we return
