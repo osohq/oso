@@ -50,6 +50,12 @@ impl fmt::Debug for Class {
     }
 }
 
+impl Default for Class {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Class<T> {
     pub fn new() -> Self
     where
