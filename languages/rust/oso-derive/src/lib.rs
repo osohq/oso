@@ -76,7 +76,7 @@ fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
 }
 
 #[proc_macro_derive(PolarClass, attributes(polar))]
-pub fn derive_testing_fn(ts: TokenStream) -> TokenStream {
+pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(ts as syn::ItemStruct);
 
     let type_name = input.ident;
