@@ -40,6 +40,9 @@ java-test:
 		javac -classpath "../languages/java/oso/target/*:." Test.java && \
 		java -classpath "../languages/java/oso/target/*:." -enableassertions Test
 
+# Ensure jq is installed.
+$(if $(shell command -v jq 2> /dev/null),,$(error Please install jq <https://stedolan.github.io/jq/>))
+
 fmt.jar:
 	$(eval URL := $(shell curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/google/google-java-format/releases/latest | jq '.assets[] | select(.name | test("all-deps.jar")) | .browser_download_url'))
 	curl -L $(URL) > fmt.jar
