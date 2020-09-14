@@ -233,7 +233,7 @@ start a REPL session and follow along:
       irb(main):007:0> OSO.register_class(Expense)
       => nil
       irb(main):008:0> OSO.load_file("expenses.polar")
-      => #<Set: {"expenses.polar"}>
+      => nil
 
     ...and now Alice has the power...
 
