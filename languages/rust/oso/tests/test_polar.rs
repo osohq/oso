@@ -314,16 +314,22 @@ fn test_macros() {
     struct Foo {
         #[polar(attribute)]
         a: String,
+        #[polar(attribute)]
+        b: String,
     }
 
     impl Foo {
         fn new(a: String) -> Self {
-            Self { a }
+            Self {
+                a,
+                b: "b".to_owned(),
+            }
         }
 
         fn goodbye() -> Self {
             Self {
                 a: "goodbye".to_owned(),
+                b: "b".to_owned(),
             }
         }
     }
@@ -339,6 +345,7 @@ fn test_macros() {
 
     test.query(r#"new Bar("hello") = x"#);
     test.qvar_one(r#"new Bar("hello").a = x"#, "x", "hello".to_string());
+    test.qvar_one(r#"new Bar("hello").b = x"#, "x", "b".to_string());
 
     let class_builder = Foo::get_polar_class_builder();
     let class = class_builder
