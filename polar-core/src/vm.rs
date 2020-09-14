@@ -2309,7 +2309,7 @@ impl PolarVirtualMachine {
                 // If the left rule has a specializer and the right does not, the left IS more specific,
                 // so we return
                 (Some(_), None) => return Ok(()),
-                // If neither has a specializer, neither is more specific, so we fail
+                // If neither has a specializer, neither is more specific, so we continue to the next argument.
                 (None, None) => (),
             }
         }
