@@ -6,5 +6,5 @@ async function loadFile(example) {
 }
 
 test("parses", () => {
-  expect(loadFile("../user_policy.polar")).resolves.not.toThrow();
+  expect(loadFile("user_policy.polar")).resolves.not.toThrow();
 });
