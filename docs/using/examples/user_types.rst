@@ -63,28 +63,28 @@ We can now write a simple policy over these Actor types:
 
     .. literalinclude:: /examples/user_types/python/user_policy.polar
         :caption: :fa:`oso` user_types.polar
-        :language: polar	
-        :start-after: simple-start	
-        :end-before: simple-end	
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
 
-  .. group-tab:: Ruby	
+  .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/user_types/ruby/user_policy.polar	
-        :caption: :fa:`oso` user_types.polar	
-        :language: polar	
-        :start-after: simple-start	
-        :end-before: simple-end	
+    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
+        :end-before: simple-end
 
-  .. group-tab:: Java	
+  .. group-tab:: Java
 
-      Java example coming soon.	
+      Java example coming soon.
 
-  .. group-tab:: Node.js	
+  .. group-tab:: Node.js
 
-    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar	
-        :caption: :fa:`oso` user_types.polar	
-        :language: polar	
-        :start-after: simple-start	
+    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: simple-start
         :end-before: simple-end
 
 This policy uses :ref:`specialized rules <specializer>` to control rules execution based on
@@ -178,27 +178,27 @@ Then add the following rule to our policy:
     .. literalinclude:: /examples/user_types/python/user_policy.polar
         :caption: :fa:`oso` user_types.polar
         :language: polar	
-        :start-after: rbac-start	
-        :end-before: rbac-end	
+        :start-after: rbac-start
+        :end-before: rbac-end
 
-  .. group-tab:: Ruby	
+  .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/user_types/ruby/user_policy.polar	
-        :caption: :fa:`oso` user_types.polar	
-        :language: polar	
-        :start-after: rbac-start	
-        :end-before: rbac-end	
+    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: rbac-start
+        :end-before: rbac-end
 
-  .. group-tab:: Java	
+  .. group-tab:: Java
 
-      Java example coming soon.	
+      Java example coming soon.
 
-  .. group-tab:: Node.js	
+  .. group-tab:: Node.js
 
-    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar	
-        :caption: :fa:`oso` user_types.polar	
-        :language: polar	
-        :start-after: rbac-start	
+    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: rbac-start
         :end-before: rbac-end
 
 This example shows a clear benefit of using different classes to represent different Actor types: the ability
@@ -252,28 +252,28 @@ Let's add the following lines to our policy:
 
     .. literalinclude:: /examples/user_types/python/user_policy.polar
         :caption: :fa:`oso` user_types.polar
-        :language: polar	
-        :start-after: manager-start	
-        :end-before: manager-end	
+        :language: polar
+        :start-after: manager-start
+        :end-before: manager-end
 
-  .. group-tab:: Ruby	
+  .. group-tab:: Ruby
 
-    .. literalinclude:: /examples/user_types/ruby/user_policy.polar	
-        :caption: :fa:`oso` user_types.polar	
-        :language: polar	
-        :start-after: manager-start	
-        :end-before: manager-end	
+    .. literalinclude:: /examples/user_types/ruby/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: manager-start
+        :end-before: manager-end
 
-  .. group-tab:: Java	
+  .. group-tab:: Java
 
-      Java example coming soon.	
+      Java example coming soon.
 
-  .. group-tab:: Node.js	
+  .. group-tab:: Node.js
 
-    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar	
-        :caption: :fa:`oso` user_types.polar	
-        :language: polar	
-        :start-after: manager-start	
+    .. literalinclude:: /examples/user_types/nodejs/user_policy.polar
+        :caption: :fa:`oso` user_types.polar
+        :language: polar
+        :start-after: manager-start
         :end-before: manager-end
 
 The first rule replaces the RBAC rule we previously used to control access to
