@@ -378,8 +378,8 @@ fn test_tuple_structs() {
         .register_class(
             Foo::get_polar_class_builder()
                 .set_constructor(Foo::new)
-                .add_attribute_getter("i0", |foo: &Foo| foo.0)
-                .add_attribute_getter("i1", |foo: &Foo| foo.1)
+                .add_attribute_getter("i0", |rcv: &Foo| rcv.0)
+                .add_attribute_getter("i1", |rcv: &Foo| rcv.1)
                 .build(),
         )
         .unwrap();
