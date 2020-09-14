@@ -146,9 +146,9 @@ module Oso
       # @return [Boolean]
       def subspecializer?(instance_id, left_tag:, right_tag:)
         mro = get_instance(instance_id).class.ancestors
-        mro.index(get_class(left_tag)) < mro.index(get_class(right_tag))
-      rescue StandardError
-        false
+        left_index = mro.index(get_class(left_tag))
+        right_index = mro.index(get_class(right_tag))
+        left_index && right_index && left_index < right_index
       end
 
       # Check if instance is an instance of class.
@@ -160,8 +160,6 @@ module Oso
         instance = to_ruby(instance)
         cls = get_class(class_tag)
         instance.is_a? cls
-      rescue PolarRuntimeError
-        false
       end
 
       # Check if two instances unify
@@ -173,8 +171,6 @@ module Oso
         left_instance = get_instance(left_instance_id)
         right_instance = get_instance(right_instance_id)
         left_instance == right_instance
-      rescue PolarRuntimeError
-        false
       end
 
       # Turn a Ruby value into a Polar term that's ready to be sent across the
