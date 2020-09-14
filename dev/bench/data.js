@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599685243833,
+  "lastUpdate": 1600105095993,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -4331,6 +4331,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6645,
             "range": "± 1161",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "db52d3cd2e78993d71925ebf2c995b33c81e3e89",
+          "message": "Proc macros (#419)\n\n* set up oso-derive crate\r\n\r\n* attribute classname\r\n\r\n* something is happening\r\n\r\n* clean up\r\n\r\n* working derive\r\n\r\n* parity tests use new api\r\n\r\n* clippy\r\n\r\n* clippy\r\n\r\n* add ability to set constructor\r\n\r\n* missing constructor error\r\n\r\n* default for clippy\r\n\r\n* No constructor, bugfix and impl hostclass too\r\n\r\n* tests for some method stuff\r\n\r\n* clippy\r\n\r\n* better name\r\n\r\n* multiple attributes",
+          "timestamp": "2020-09-14T13:26:07-04:00",
+          "tree_id": "b6acdff58e4ce037b8cf546146f3994ab47cbfb0",
+          "url": "https://github.com/osohq/oso/commit/db52d3cd2e78993d71925ebf2c995b33c81e3e89"
+        },
+        "date": 1600105095156,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 747,
+            "range": "± 76",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2629,
+            "range": "± 258",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65335,
+            "range": "± 6215",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 480620,
+            "range": "± 29420",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16248,
+            "range": "± 1354",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17442,
+            "range": "± 3219",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16569,
+            "range": "± 1314",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16485,
+            "range": "± 1640",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14406,
+            "range": "± 1748",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5220,
+            "range": "± 588",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5724,
+            "range": "± 577",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5752,
+            "range": "± 816",
             "unit": "ns/iter"
           }
         ]
