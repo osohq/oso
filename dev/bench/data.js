@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600105095993,
+  "lastUpdate": 1600106552296,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -4427,6 +4427,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5752,
             "range": "± 816",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a543f41afdd8971208f5188c6ce4c6344f9b4f5",
+          "message": "Format Java code and enforce formatting in CI (#422)\n\nCo-authored-by: steve olsen <dev@steve.computer>",
+          "timestamp": "2020-09-14T13:53:50-04:00",
+          "tree_id": "82ed8b7033b39740ae739a9066f52c78e103c0d1",
+          "url": "https://github.com/osohq/oso/commit/3a543f41afdd8971208f5188c6ce4c6344f9b4f5"
+        },
+        "date": 1600106551468,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 731,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2403,
+            "range": "± 54",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65456,
+            "range": "± 1217",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 483472,
+            "range": "± 7941",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16638,
+            "range": "± 631",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16552,
+            "range": "± 389",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16579,
+            "range": "± 384",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16553,
+            "range": "± 426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14987,
+            "range": "± 666",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5298,
+            "range": "± 138",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5404,
+            "range": "± 201",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5936,
+            "range": "± 598",
             "unit": "ns/iter"
           }
         ]
