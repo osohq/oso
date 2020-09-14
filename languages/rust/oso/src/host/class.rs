@@ -155,7 +155,6 @@ impl<T> Class<T> {
     }
 
     pub fn build(self) -> Class<()> {
-        // @TODO: Error if there's no constructor.
         self.erase_type()
     }
 
@@ -187,7 +186,9 @@ impl<T> Class<T> {
                 methods: Arc::new(self.instance_methods.clone()),
             })
         } else {
-            panic!("Invalid class, should already have a constructor")
+            Err(crate::OsoError::Custom {
+                message: format!("MissingConstructorError: {} has no constructor", self.name),
+            })
         }
     }
 
