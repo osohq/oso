@@ -474,6 +474,39 @@ impl PolarVirtualMachine {
         });
     }
 
+    /// Push a conditional choice onto the choice stack and immediately execute the conditional.
+    ///
+    /// Params:
+    ///
+    /// - `conditional`: an ordered list of goals.
+    /// - `consequent`: an ordered list of goals to execute if all of the `conditional` goals
+    /// succeed.
+    /// - `alternative`: an ordered list of goals to execute if any of the `conditional` goals
+    /// fail.
+    fn choose_conditional(
+        &mut self,
+        mut conditional: Goals,
+        consequent: Goals,
+        mut alternative: Goals,
+    ) -> PolarResult<()> {
+        // If the conditional fails, cut the consequent.
+        let cut_consequent = Goal::Cut {
+            choice_index: self.choices.len(),
+        };
+        alternative.insert(0, cut_consequent);
+
+        // If the conditional succeeds, cut the alternative and backtrack to this choice point.
+        self.push_choice(vec![consequent]);
+        let cut_alternative = Goal::Cut {
+            choice_index: self.choices.len(),
+        };
+        conditional.push(cut_alternative);
+        conditional.push(Goal::Backtrack);
+
+        self.choose(vec![conditional, alternative])?;
+        Ok(())
+    }
+
     /// Push a choice onto the choice stack, and execute immediately by
     /// pushing the first alternative onto the goals stack
     ///
@@ -2109,15 +2142,9 @@ impl PolarVirtualMachine {
                 return self.push_goal(applicable);
             }
 
-            // We need to check each argument for applicability,
-            // but unwind any bindings made during the check. So
-            // we will backtrack to this choice point on success.
-            self.push_choice(vec![vec![applicable]]);
-
             // Rename the variables in the rule (but not the args).
             // This avoids clashes between arg vars and rule vars.
             let Rule { params, .. } = self.rename_rule_vars(&rule);
-
             let mut check_applicability = vec![];
             for (arg, param) in args.iter().zip(params.iter()) {
                 check_applicability.push(Goal::Unify {
@@ -2131,22 +2158,7 @@ impl PolarVirtualMachine {
                     });
                 }
             }
-            check_applicability.push(Goal::Cut {
-                choice_index: self.choices.len(),
-            });
-            check_applicability.push(Goal::Backtrack);
-
-            // If a check fails, we will backtrack to the inapplicable branch.
-            self.choose(vec![
-                check_applicability,
-                vec![
-                    // Cut the applicable alternative.
-                    Goal::Cut {
-                        choice_index: self.choices.len() - 1,
-                    },
-                    inapplicable,
-                ],
-            ])?;
+            self.choose_conditional(check_applicability, vec![applicable], vec![inapplicable])?;
             Ok(())
         }
     }
@@ -2199,18 +2211,10 @@ impl PolarVirtualMachine {
                     inner: inner - 1,
                     args: args.clone(),
                 };
+
                 // If the comparison fails, break out of the inner loop.
                 // If the comparison succeeds, continue the inner loop with the swapped rules.
-                self.choose(vec![
-                    vec![
-                        compare,
-                        Goal::Cut {
-                            choice_index: self.choices.len(),
-                        },
-                        next_inner,
-                    ],
-                    vec![next_outer],
-                ])?;
+                self.choose_conditional(vec![compare], vec![next_inner], vec![next_outer])?;
             } else {
                 assert_eq!(inner, 0);
                 self.push_goal(next_outer)?;
