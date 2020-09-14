@@ -177,3 +177,6 @@ languages/java/oso/src/main/resources/*
 
 # Node modules
 node_modules/
+
+# Java formatting jar
+fmt.jar

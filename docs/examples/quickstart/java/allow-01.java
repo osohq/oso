@@ -1,10 +1,10 @@
 import com.osohq.oso.Oso;
 
 class Allow {
-    public static void main(String[] args) {
-        Oso oso = new Oso();
-        String actor = "alice@example.com";
-        Expense resource = Expense.EXPENSES[1];
-        boolean allowed = oso.isAllowed(actor, "GET", resource);
-    }
+  public static void main(String[] args) {
+    Oso oso = new Oso();
+    String actor = "alice@example.com";
+    Expense resource = Expense.EXPENSES[1];
+    boolean allowed = oso.isAllowed(actor, "GET", resource);
+  }
 }

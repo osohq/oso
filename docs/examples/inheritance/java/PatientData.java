@@ -1,3 +1,1 @@
-public class PatientData {
-
-}
+public class PatientData {}

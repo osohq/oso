@@ -50,7 +50,12 @@ jobs:
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "10"
+          java-version: "11"
+      - name: Check formatting of Java library
+        uses: axel-op/googlejavaformat-action@v3
+        with:
+          skipCommit: true
+          args: "--dry-run --set-exit-if-changed"
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1

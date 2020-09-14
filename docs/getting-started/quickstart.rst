@@ -133,7 +133,7 @@ arguments, **actor**, **action**, and **resource**:
     .. literalinclude:: /examples/quickstart/java/allow-01.java
       :language: java
       :lines: 6-8
-      :dedent: 8
+      :dedent: 4
 
   .. group-tab:: Node.js
 
@@ -456,7 +456,7 @@ oso:
       :class: copybutton
       :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/Server.java>`
       :language: java
-      :emphasize-lines: 4,7-12,34-38
+      :emphasize-lines: 1,7-12,34-38
 
   .. group-tab:: Node.js
 
