@@ -40,13 +40,21 @@ java-test:
 		javac -classpath "../languages/java/oso/target/*:." Test.java && \
 		java -classpath "../languages/java/oso/target/*:." -enableassertions Test
 
+fmt.jar:
+	$(eval URL := $(shell curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/google/google-java-format/releases/latest | jq '.assets[] | select(.name | test("all-deps.jar")) | .browser_download_url'))
+	curl -L $(URL) > fmt.jar
+
+java-fmt: fmt.jar
+	$(eval FILES := $(shell git ls-files '*.java'))
+	java -jar fmt.jar --replace $(FILES)
+
 rustoso-test:
 	$(MAKE) -C languages/rust test
 
 docs-test: python-build
 	$(MAKE) -C docs test
 
-fmt:
+fmt: java-fmt
 	cargo fmt
 	$(MAKE) -C languages/python/oso fmt
 	$(MAKE) -C languages/python/flask-oso fmt

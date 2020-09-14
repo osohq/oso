@@ -20,3 +20,6 @@ package: rust
 
 repl: rust
 	cd oso && mvn $(MVN_FLAGS) exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="$(ARGS)"
+
+fmt:
+	$(MAKE) -C ../.. java-fmt
