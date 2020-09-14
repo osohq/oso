@@ -120,3 +120,29 @@ def test_route_authorization(client, settings, simple_policy):
     # would be a 404 and not apply authorization.
     response = client.get("/notfound/")
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_scope(rf):
+    from test_app.models import TestScope
+    from django_oso.manager import OsoManager
+
+    # test data
+    TestScope.objects.create(public=False, user="alice")
+    TestScope.objects.create(public=True, user="alice")
+    TestScope.objects.create(public=False, user="bob")
+
+    request = rf.get("/")
+    request.user = "alice"
+    OsoManager.set_request(request)
+    assert len(TestScope.authorized_objects.all()) == 2
+
+    request = rf.get("/")
+    request.user = "bob"
+    OsoManager.set_request(request)
+    assert len(TestScope.authorized_objects.all()) == 2
+
+    request = rf.get("/")
+    request.user = "charlie"
+    OsoManager.set_request(request)
+    assert len(TestScope.authorized_objects.all()) == 1

@@ -10,6 +10,12 @@ def pytest_configure():
     sys.path.append(test_app.as_posix())
 
     settings.configure(
+        DATABASES={
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": "mydatabase",
+            }
+        },
         INSTALLED_APPS=[
             "test_app",
             "django_oso",

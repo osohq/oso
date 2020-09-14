@@ -1,6 +1,7 @@
 import os.path
 
 from django.apps import AppConfig, apps
+from django.db.models import Q
 from django.http import HttpRequest
 from django.utils.autoreload import autoreload_started
 
@@ -19,8 +20,8 @@ def reset_oso():
     Useful as a test helper to clean state between tests, but generally should
     not be used otherwise.
     """
-    Oso.clear()
-    init_oso()
+    # Oso.clear()
+    # init_oso()
 
 
 def init_oso():
@@ -39,6 +40,9 @@ def init_oso():
 
     # Register request
     Oso.register_class(HttpRequest)
+
+    # Register query object
+    Oso.register_class(Q)
 
     loaded_files = []
 
