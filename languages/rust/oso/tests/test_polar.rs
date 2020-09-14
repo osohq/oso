@@ -247,6 +247,7 @@ fn test_external() {
 }
 
 #[test]
+//#[allow(clippy::redundant-closure)]
 fn test_methods() {
     use std::default::Default;
 
@@ -283,6 +284,8 @@ fn test_methods() {
     }
     let mut test = OsoTest::new();
     test.oso.register_class(Foo::get_polar_class()).unwrap();
+    #[allow(clippy::redundant_closure)]
+    // @TODO: Not sure how to get the default call to typecheck without the closure wrapper.
     test.oso
         .register_class(
             Bar::get_polar_class_builder()
