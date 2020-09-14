@@ -79,20 +79,14 @@ class Host:
 
     def unify(self, left_instance_id, right_instance_id) -> bool:
         """Return true if the left instance is equal to the right."""
-        try:
-            left = self.get_instance(left_instance_id)
-            right = self.get_instance(right_instance_id)
-            return left == right
-        except PolarRuntimeException:
-            return False
+        left = self.get_instance(left_instance_id)
+        right = self.get_instance(right_instance_id)
+        return left == right
 
     def isa(self, instance, class_tag) -> bool:
-        try:
-            instance = self.to_python(instance)
-            cls = self.get_class(class_tag)
-            return isinstance(instance, cls)
-        except PolarRuntimeException:
-            return False
+        instance = self.to_python(instance)
+        cls = self.get_class(class_tag)
+        return isinstance(instance, cls)
 
     def is_subspecializer(self, instance_id, left_tag, right_tag) -> bool:
         """Return true if the left class is more specific than the right class
@@ -102,7 +96,7 @@ class Host:
             left = self.get_class(left_tag)
             right = self.get_class(right_tag)
             return mro.index(left) < mro.index(right)
-        except (ValueError, PolarRuntimeException):
+        except ValueError:
             return False
 
     def operator(self, op, args):

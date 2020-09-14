@@ -120,8 +120,8 @@ public class Host implements Cloneable {
 
   /** Check if a class specializer is more specific than another class specializer. */
   public boolean subspecializer(long instanceId, String leftTag, String rightTag)
-      throws Exceptions.UnregisteredClassError {
-    Object instance = instances.get(instanceId);
+      throws Exceptions.UnregisteredClassError, Exceptions.UnregisteredInstanceError {
+    Object instance = getInstance(instanceId);
     Class<?> cls, leftClass, rightClass;
     cls = instance.getClass();
     leftClass = getClass(leftTag);
