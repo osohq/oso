@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600108098663,
+  "lastUpdate": 1600109814865,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -4619,6 +4619,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5771,
             "range": "± 634",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c07c9a9331509e82e1cb972911e42c35d5b209a",
+          "message": "Increase test coverage of docs examples (#401)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-14T14:48:04-04:00",
+          "tree_id": "5a027cdcaa304e68c0dfd9499c5f9ec61881ae99",
+          "url": "https://github.com/osohq/oso/commit/8c07c9a9331509e82e1cb972911e42c35d5b209a"
+        },
+        "date": 1600109814070,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 655,
+            "range": "± 46",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2170,
+            "range": "± 1218",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 61378,
+            "range": "± 5011",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 423604,
+            "range": "± 48592",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 14062,
+            "range": "± 1260",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 14287,
+            "range": "± 1446",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 15828,
+            "range": "± 1315",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 15805,
+            "range": "± 1127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14359,
+            "range": "± 1139",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4963,
+            "range": "± 563",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5030,
+            "range": "± 458",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5176,
+            "range": "± 2867",
             "unit": "ns/iter"
           }
         ]
