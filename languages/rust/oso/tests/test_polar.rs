@@ -247,6 +247,60 @@ fn test_external() {
 }
 
 #[test]
+fn test_methods() {
+    use std::default::Default;
+
+    let _ = tracing_subscriber::fmt::try_init();
+
+    #[derive(PolarClass, Clone)]
+    struct Foo {
+        #[polar(attribute)]
+        a: String,
+    }
+
+    #[derive(PolarClass, Debug, Clone)]
+    struct Bar {
+        #[polar(attribute)]
+        b: String,
+    }
+
+    impl Default for Bar {
+        fn default() -> Self {
+            Self {
+                b: "default".to_owned(),
+            }
+        }
+    }
+
+    impl Bar {
+        pub fn bar(&self) -> Bar {
+            self.clone()
+        }
+
+        pub fn foo(&self) -> Foo {
+            Foo { a: self.b.clone() }
+        }
+    }
+    let mut test = OsoTest::new();
+    test.oso.register_class(Foo::get_polar_class()).unwrap();
+    test.oso
+        .register_class(
+            Bar::get_polar_class_builder()
+                .set_constructor(|| Bar::default())
+                .add_method("foo", |bar: &Bar| bar.foo())
+                .add_method("bar", |bar: &Bar| bar.bar())
+                .add_method("clone", Clone::clone)
+                .build(),
+        )
+        .unwrap();
+
+    // Test chaining
+    test.qvar_one(r#"new Bar().bar().foo().a = x"#, "x", "default".to_string());
+    // Test trait method.
+    test.qvar_one(r#"new Bar().clone().b = x"#, "x", "default".to_string());
+}
+
+#[test]
 fn test_macros() {
     // stub
 
@@ -272,8 +326,13 @@ fn test_macros() {
     }
 
     let mut test = OsoTest::new();
-    let class = Foo::get_polar_class();
-    test.oso.register_class(class).unwrap();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::new)
+                .build(),
+        )
+        .unwrap();
 
     test.query(r#"new Bar("hello") = x"#);
     test.qvar_one(r#"new Bar("hello").a = x"#, "x", "hello".to_string());
