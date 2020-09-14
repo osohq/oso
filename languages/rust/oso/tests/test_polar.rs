@@ -1,5 +1,6 @@
 use maplit::hashmap;
-use oso::Oso;
+use oso::{Oso, PolarClass};
+use oso_derive::*;
 
 struct OsoTest {
     oso: Oso,
@@ -17,7 +18,7 @@ impl OsoTest {
     fn load_file(&mut self, here: &str, name: &str) {
         // hack because `file!()` starts from workspace root
         // https://github.com/rust-lang/cargo/issues/3946
-        let folder = std::path::PathBuf::from(&here.replace("languages/rust/", ""));
+        let folder = std::path::PathBuf::from(&here.replace("languages/rust/oso/", ""));
         let mut file = folder.parent().unwrap().to_path_buf();
         file.push(name);
         println!("{:?}", file);
@@ -212,7 +213,7 @@ fn test_external() {
 
     let mut test = OsoTest::new();
 
-    oso::Class::with_constructor(capital_foo)
+    let foo_class = oso::Class::with_constructor(capital_foo)
         .name("Foo")
         .add_attribute_getter("a", |receiver: &Foo| receiver.a)
         // .add_method("b", |receiver: &Foo| oso::host::PolarIter(receiver.b()))
@@ -222,8 +223,8 @@ fn test_external() {
         // .add_method("f", |receiver: &Foo| oso::host::PolarIter(receiver.f()))
         .add_method("g", Foo::g)
         .add_method("h", Foo::h)
-        .register(&mut test.oso)
-        .unwrap();
+        .build();
+    test.oso.register_class(foo_class).unwrap();
 
     test.qvar_one("new Foo().a = x", "x", "A".to_string());
     test.query_err("new Foo().a() = x");
@@ -243,4 +244,116 @@ fn test_external() {
     // );
     test.qvar_one("new Foo().g().hello = x", "x", "world".to_string());
     test.qvar_one("new Foo().h() = x", "x", true);
+}
+
+#[test]
+//#[allow(clippy::redundant-closure)]
+fn test_methods() {
+    use std::default::Default;
+
+    let _ = tracing_subscriber::fmt::try_init();
+
+    #[derive(PolarClass, Clone)]
+    struct Foo {
+        #[polar(attribute)]
+        a: String,
+    }
+
+    #[derive(PolarClass, Debug, Clone)]
+    struct Bar {
+        #[polar(attribute)]
+        b: String,
+    }
+
+    impl Default for Bar {
+        fn default() -> Self {
+            Self {
+                b: "default".to_owned(),
+            }
+        }
+    }
+
+    impl Bar {
+        pub fn bar(&self) -> Bar {
+            self.clone()
+        }
+
+        pub fn foo(&self) -> Foo {
+            Foo { a: self.b.clone() }
+        }
+    }
+    let mut test = OsoTest::new();
+    test.oso.register_class(Foo::get_polar_class()).unwrap();
+    #[allow(clippy::redundant_closure)]
+    // @TODO: Not sure how to get the default call to typecheck without the closure wrapper.
+    test.oso
+        .register_class(
+            Bar::get_polar_class_builder()
+                .set_constructor(|| Bar::default())
+                .add_method("foo", |bar: &Bar| bar.foo())
+                .add_method("bar", |bar: &Bar| bar.bar())
+                .add_method("clone", Clone::clone)
+                .build(),
+        )
+        .unwrap();
+
+    // Test chaining
+    test.qvar_one(r#"new Bar().bar().foo().a = x"#, "x", "default".to_string());
+    // Test trait method.
+    test.qvar_one(r#"new Bar().clone().b = x"#, "x", "default".to_string());
+}
+
+#[test]
+fn test_macros() {
+    // stub
+
+    let _ = tracing_subscriber::fmt::try_init();
+
+    #[derive(PolarClass)]
+    #[polar(class_name = "Bar")]
+    struct Foo {
+        #[polar(attribute)]
+        a: String,
+        #[polar(attribute)]
+        b: String,
+    }
+
+    impl Foo {
+        fn new(a: String) -> Self {
+            Self {
+                a,
+                b: "b".to_owned(),
+            }
+        }
+
+        fn goodbye() -> Self {
+            Self {
+                a: "goodbye".to_owned(),
+                b: "b".to_owned(),
+            }
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::new)
+                .build(),
+        )
+        .unwrap();
+
+    test.query(r#"new Bar("hello") = x"#);
+    test.qvar_one(r#"new Bar("hello").a = x"#, "x", "hello".to_string());
+    test.qvar_one(r#"new Bar("hello").b = x"#, "x", "b".to_string());
+
+    let class_builder = Foo::get_polar_class_builder();
+    let class = class_builder
+        .name("Baz")
+        .set_constructor(Foo::goodbye)
+        .add_method("world", |receiver: &Foo| format!("{} world", receiver.a))
+        .build();
+    test.oso.register_class(class).unwrap();
+
+    test.qvar_one(r#"new Baz().world() = x"#, "x", "goodbye world".to_string());
 }

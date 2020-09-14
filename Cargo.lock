@@ -738,12 +738,21 @@ version = "0.5.2-alpha"
 dependencies = [
  "anyhow",
  "maplit",
+ "oso-derive",
  "polar-core",
  "rustyline",
  "rustyline-derive",
  "thiserror",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "oso-derive"
+version = "0.5.2-alpha"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

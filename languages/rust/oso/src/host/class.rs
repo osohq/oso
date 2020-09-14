@@ -21,7 +21,7 @@ pub struct Class<T = ()> {
     /// The class name. Defaults to the `std::any::type_name`
     pub name: String,
     /// A wrapped method that constructs an instance of `T` from Polar terms
-    pub constructor: Constructor,
+    pub constructor: Option<Constructor>,
     /// Methods that return simple attribute lookups on an instance of `T`
     pub attributes: InstanceMethods,
     /// Instance methods on `T` that expect Polar terms, and an instance of `&T`
@@ -50,7 +50,30 @@ impl fmt::Debug for Class {
     }
 }
 
+impl Default for Class {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Class<T> {
+    pub fn new() -> Self
+    where
+        T: 'static,
+    {
+        Self {
+            name: std::any::type_name::<Self>().to_string(),
+            constructor: None,
+            attributes: InstanceMethods::new(),
+            instance_methods: InstanceMethods::new(),
+            class_methods: ClassMethods::new(),
+            instance_check: Arc::new(|any| any.is::<T>()),
+            class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
+            ty: std::marker::PhantomData,
+            type_id: TypeId::of::<T>(),
+        }
+    }
+
     pub fn with_default() -> Self
     where
         T: std::default::Default + 'static,
@@ -64,17 +87,19 @@ impl<T> Class<T> {
         F: Function<Args, Result = T> + 'static,
         Args: FromPolar + 'static,
     {
-        Self {
-            name: std::any::type_name::<Self>().to_string(),
-            constructor: Constructor::new(f),
-            attributes: InstanceMethods::new(),
-            instance_methods: InstanceMethods::new(),
-            class_methods: ClassMethods::new(),
-            instance_check: Arc::new(|any| any.is::<T>()),
-            class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
-            ty: std::marker::PhantomData,
-            type_id: TypeId::of::<T>(),
-        }
+        let mut class: Class<T> = Class::new();
+        class = class.set_constructor(f);
+        class
+    }
+
+    pub fn set_constructor<F, Args>(mut self, f: F) -> Self
+    where
+        T: 'static,
+        F: Function<Args, Result = T> + 'static,
+        Args: FromPolar + 'static,
+    {
+        self.constructor = Some(Constructor::new(f));
+        self
     }
 
     pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
@@ -135,10 +160,8 @@ impl<T> Class<T> {
         }
     }
 
-    pub fn register(self, oso: &mut crate::Oso) -> crate::Result<()> {
-        // erase the type before registering
-        oso.register_class(self.erase_type())?;
-        Ok(())
+    pub fn build(self) -> Class<()> {
+        self.erase_type()
     }
 
     pub fn is_class<C: 'static>(&self) -> bool {
@@ -160,13 +183,19 @@ impl<T> Class<T> {
     }
 
     pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
-        let instance = self.constructor.invoke(fields, host)?;
-        Ok(Instance {
-            name: self.name.clone(),
-            instance,
-            attributes: Arc::new(self.attributes.clone()),
-            methods: Arc::new(self.instance_methods.clone()),
-        })
+        if let Some(constructor) = &self.constructor {
+            let instance = constructor.invoke(fields, host)?;
+            Ok(Instance {
+                name: self.name.clone(),
+                instance,
+                attributes: Arc::new(self.attributes.clone()),
+                methods: Arc::new(self.instance_methods.clone()),
+            })
+        } else {
+            Err(crate::OsoError::Custom {
+                message: format!("MissingConstructorError: {} has no constructor", self.name),
+            })
+        }
     }
 
     pub fn cast_to_instance(&self, instance: impl Any) -> Instance {
