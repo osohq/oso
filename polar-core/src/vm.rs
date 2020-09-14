@@ -474,15 +474,32 @@ impl PolarVirtualMachine {
         });
     }
 
-    /// Push a conditional choice onto the choice stack and immediately execute the conditional.
+    /// Push a choice onto the choice stack, and execute immediately by
+    /// pushing the first alternative onto the goals stack
     ///
     /// Params:
     ///
-    /// - `conditional`: an ordered list of goals.
-    /// - `consequent`: an ordered list of goals to execute if all of the `conditional` goals
-    /// succeed.
-    /// - `alternative`: an ordered list of goals to execute if any of the `conditional` goals
-    /// fail.
+    /// - `alternatives`: an ordered list of alternatives to try in the choice.
+    ///   The first element is the first alternative to try.
+    fn choose<I>(&mut self, alternatives: I) -> PolarResult<()>
+    where
+        I: IntoIterator<Item = Goals>,
+        I::IntoIter: std::iter::DoubleEndedIterator,
+    {
+        let mut alternatives_iter = alternatives.into_iter();
+        if let Some(alternative) = alternatives_iter.next() {
+            self.push_choice(alternatives_iter);
+            self.append_goals(alternative)?;
+            Ok(())
+        } else {
+            self.backtrack()
+        }
+    }
+
+    /// If each goal of `conditional` succeeds, execute `consequent`;
+    /// otherwise, execute `alternative`. The branches are entered only
+    /// by backtracking so that bindings established during the execution
+    /// of `conditional` are always unwound.
     fn choose_conditional(
         &mut self,
         mut conditional: Goals,
@@ -505,28 +522,6 @@ impl PolarVirtualMachine {
 
         self.choose(vec![conditional, alternative])?;
         Ok(())
-    }
-
-    /// Push a choice onto the choice stack, and execute immediately by
-    /// pushing the first alternative onto the goals stack
-    ///
-    /// Params:
-    ///
-    /// - `alternatives`: an ordered list of alternatives to try in the choice.
-    ///   The first element is the first alternative to try.
-    fn choose<I>(&mut self, alternatives: I) -> PolarResult<()>
-    where
-        I: IntoIterator<Item = Goals>,
-        I::IntoIter: std::iter::DoubleEndedIterator,
-    {
-        let mut alternatives_iter = alternatives.into_iter();
-        if let Some(alternative) = alternatives_iter.next() {
-            self.push_choice(alternatives_iter);
-            self.append_goals(alternative)?;
-            Ok(())
-        } else {
-            self.backtrack()
-        }
     }
 
     /// Push multiple goals onto the stack in reverse order.
