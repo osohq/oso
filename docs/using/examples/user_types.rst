@@ -87,6 +87,7 @@ We can now write a simple policy over these Actor types:
         :start-after: simple-start
         :end-before: simple-end
 
+
 This policy uses :ref:`specialized rules <specializer>` to control rules execution based on
 the Actor types that is passed into the authorization request.
 
@@ -177,7 +178,7 @@ Then add the following rule to our policy:
 
     .. literalinclude:: /examples/user_types/python/user_policy.polar
         :caption: :fa:`oso` user_types.polar
-        :language: polar	
+        :language: polar
         :start-after: rbac-start
         :end-before: rbac-end
 
