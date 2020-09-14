@@ -452,10 +452,6 @@ impl PolarVirtualMachine {
     /// Do not modify the goals stack.  This function defers execution of the
     /// choice until a backtrack occurs.  To immediately execute the choice on
     /// top of the current stack, use `choose`.
-    ///
-    /// ~~Do nothing if there are no alternatives; this saves every caller a
-    /// conditional, and maintains the invariant that only choice points with
-    /// alternatives are on the choice stack.~~ TODO: this comment is not true any more
     fn push_choice<I>(&mut self, alternatives: I)
     where
         I: IntoIterator<Item = Goals>,
