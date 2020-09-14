@@ -2,6 +2,7 @@
 use polar_core::terms::{Symbol, Term};
 
 use std::any::Any;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use crate::{FromPolar, ToPolar};
@@ -58,6 +59,32 @@ impl InstanceMethod {
 
                 join(receiver, args)
                     .map(|(receiver, args)| Arc::new(f.invoke(receiver, args)) as Arc<dyn ToPolar>)
+            },
+        ))
+    }
+
+    pub fn new_result<T, F, Args, R, E>(f: F) -> Self
+    where
+        Args: FromPolar,
+        F: Method<T, Args, Result = Result<R, E>> + 'static,
+        R: ToPolar + 'static,
+        E: Debug + 'static,
+        T: 'static,
+    {
+        Self(Arc::new(
+            move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
+                let receiver = receiver
+                    .downcast_ref()
+                    .ok_or_else(|| crate::OsoError::InvalidReceiver);
+
+                let args = Args::from_polar_list(&args, host);
+
+                join(receiver, args).and_then(|(receiver, args)| match f.invoke(receiver, args) {
+                    Ok(result) => Ok(Arc::new(result) as Arc<dyn ToPolar>),
+                    Err(e) => Err(crate::OsoError::Custom {
+                        message: format!("Error calling function: {:?}", e),
+                    }),
+                })
             },
         ))
     }

@@ -5,6 +5,7 @@ use polar_core::terms::{Symbol, Term};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use crate::{FromPolar, ToPolar};
@@ -127,6 +128,19 @@ impl<T> Class<T> {
     {
         self.instance_methods
             .insert(Symbol(name.to_string()), InstanceMethod::new(f));
+        self
+    }
+
+    pub fn add_result_method<F, Args, R, E>(mut self, name: &str, f: F) -> Self
+    where
+        Args: FromPolar,
+        F: Method<T, Args, Result = Result<R, E>> + 'static,
+        R: ToPolar + 'static,
+        E: Debug + 'static,
+        T: 'static,
+    {
+        self.instance_methods
+            .insert(Symbol(name.to_string()), InstanceMethod::new_result(f));
         self
     }
 
