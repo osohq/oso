@@ -230,6 +230,8 @@ start a REPL session and follow along:
 
     .. code-block:: irb
 
+      irb(main):005:0> OSO.register_class(Expense)
+      => nil
       irb(main):005:0> OSO.load_file("expenses.polar")
       => #<Set: {"expenses.polar"}>
 
@@ -317,6 +319,7 @@ start a REPL session and follow along:
 
             public static void main(String[] args) throws Exception {
                 Oso oso = new Oso();
+                oso.registerClass(Expense.class, "Expense");
                 oso.loadFile("expenses.polar");
                 String alice = "alice@example.com";
                 String bhavik = "bhavik@example.com";
