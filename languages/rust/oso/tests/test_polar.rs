@@ -305,8 +305,6 @@ fn test_methods() {
 
 #[test]
 fn test_macros() {
-    // stub
-
     let _ = tracing_subscriber::fmt::try_init();
 
     #[derive(PolarClass)]
@@ -356,4 +354,35 @@ fn test_macros() {
     test.oso.register_class(class).unwrap();
 
     test.qvar_one(r#"new Baz().world() = x"#, "x", "goodbye world".to_string());
+}
+
+#[test]
+fn test_tuple_structs() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(PolarClass)]
+    struct Foo(i32, i32);
+
+    impl Foo {
+        fn new(a: i32, b: i32) -> Self {
+            Self(a, b)
+        }
+    }
+
+    // @TODO: In the future when we can reason about which attributes are accessible types
+    // we can auto generate these accessors too. For now we have to rely on the attribute for
+    // fields and manually doing it for tuple structs.
+    // Also foo.0 isn't valid polar syntax so if we wanted something like that to work in general for "tuple like objects
+    // that requires a bigger change.
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::new)
+                .add_attribute_getter("i0", |rcv: &Foo| rcv.0)
+                .add_attribute_getter("i1", |rcv: &Foo| rcv.1)
+                .build(),
+        )
+        .unwrap();
+
+    test.qvar_one(r#"foo = new Foo(1,2) and foo.i0 + foo.i1 = x"#, "x", 3);
 }
