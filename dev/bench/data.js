@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600109814865,
+  "lastUpdate": 1600192221436,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -4715,6 +4715,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5176,
             "range": "± 2867",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d20a42c57f47bd4b1a8d5ee1848bf3eea7194af",
+          "message": "Fix rule filtering bug + update POLAR_LOG formatting (#420)\n\n* Fix MATCHES log typo\r\n* Improve rule source printing in debug messages\r\n* Improve printing of BINDINGS in debug messages\r\n* Print rules on same line and don't print empty bodies\r\n* Fix applicability bug\r\n* Remove unnecessary repackaging of HashMap\r\n* Update POLAR_LOG formatting\r\n* Rename test\r\n* deep_deref in variable_bindings() to match bindings() impl\r\n* No additional newline after APPLICABLE_RULES\r\n* Test rule filtering in the VM\r\n* No need to differentiate underscores any longer\r\n* Add result-checking case to filter_rules test\r\n* Fix test name so all tests run\r\n* Remove outdated comment\r\n* Add choose_conditional method to conditionally execute one of two choices\r\n* New docstring for choose_conditional\r\n* Add test for vm.choose_conditional()\r\n\r\nCo-authored-by: Alex Plotnick <alex@osohq.com>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-15T11:40:52-06:00",
+          "tree_id": "34d2df39d80093ad69b071576d751689ff1ca060",
+          "url": "https://github.com/osohq/oso/commit/1d20a42c57f47bd4b1a8d5ee1848bf3eea7194af"
+        },
+        "date": 1600192220547,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 746,
+            "range": "± 236",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2522,
+            "range": "± 222",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 70364,
+            "range": "± 4965",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 525902,
+            "range": "± 27647",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18817,
+            "range": "± 1141",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18665,
+            "range": "± 2222",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18549,
+            "range": "± 1395",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18867,
+            "range": "± 1050",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17275,
+            "range": "± 1207",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5378,
+            "range": "± 375",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5646,
+            "range": "± 321",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6405,
+            "range": "± 931",
             "unit": "ns/iter"
           }
         ]
