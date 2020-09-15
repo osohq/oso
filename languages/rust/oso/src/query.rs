@@ -16,7 +16,7 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<u64, Box<dyn Iterator<Item = Arc<dyn crate::host::ToPolar>>>>,
+    calls: HashMap<u64, Box<dyn Iterator<Item = Box<dyn crate::host::ToPolar>>>>,
     host: Arc<Mutex<crate::host::Host>>,
 }
 
@@ -95,7 +95,7 @@ impl Query {
         self.inner.question_result(call_id, result);
     }
 
-    fn call_result(&mut self, call_id: u64, result: Arc<dyn ToPolar>) -> crate::Result<()> {
+    fn call_result(&mut self, call_id: u64, result: Box<dyn ToPolar>) -> crate::Result<()> {
         let mut host = self.host.lock().unwrap();
         let value = result.to_polar(&mut host);
         Ok(self.inner.call_result(call_id, Some(value))?)
@@ -143,13 +143,12 @@ impl Query {
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
             let host = &mut self.host.lock().unwrap();
             let result = f.invoke(instance.instance.as_ref(), args, host)?;
-            self.calls
-                .insert(call_id, Box::new(std::iter::once(result)));
+            self.calls.insert(call_id, result.to_polar_iter());
         }
         Ok(())
     }
 
-    fn next_call_result(&mut self, call_id: u64) -> Option<Arc<dyn ToPolar>> {
+    fn next_call_result(&mut self, call_id: u64) -> Option<Box<dyn ToPolar>> {
         self.calls.get_mut(&call_id).and_then(|c| c.next())
     }
 

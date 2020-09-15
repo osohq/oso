@@ -143,3 +143,15 @@ impl<C: 'static + Clone + super::HostClass> ToPolar for C {
         })
     }
 }
+
+use std::iter;
+
+pub trait ToPolarIter {
+    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Box<dyn ToPolar>>>;
+}
+
+impl<C: 'static + Sized + Clone + ToPolar> ToPolarIter for C {
+    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Box<dyn ToPolar>>> {
+        Box::new(iter::once(Box::new(self.clone()) as Box<dyn ToPolar>))
+    }
+}
