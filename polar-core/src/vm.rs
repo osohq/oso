@@ -3289,4 +3289,61 @@ mod tests {
             goal_debug
         );
     }
+
+    #[test]
+    fn choose_conditional() {
+        let mut vm = PolarVirtualMachine::new_test(
+            Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
+            vec![],
+        );
+        let consequent = Goal::Debug {
+            message: "consequent".to_string(),
+        };
+        let alternative = Goal::Debug {
+            message: "alternative".to_string(),
+        };
+
+        // Check consequent path when conditional succeeds.
+        vm.choose_conditional(
+            vec![Goal::Noop],
+            vec![consequent.clone()],
+            vec![alternative.clone()],
+        )
+        .unwrap();
+        assert_query_events!(vm, [
+            QueryEvent::Debug { message } if &message[..] == "consequent" && vm.is_halted(),
+            QueryEvent::Done
+        ]);
+
+        // Check alternative path when conditional fails.
+        vm.choose_conditional(
+            vec![Goal::Backtrack],
+            vec![consequent.clone()],
+            vec![alternative.clone()],
+        )
+        .unwrap();
+        assert_query_events!(vm, [
+            QueryEvent::Debug { message } if &message[..] == "alternative" && vm.is_halted(),
+            QueryEvent::Done
+        ]);
+
+        // Ensure bindings are cleaned up after conditional.
+        vm.choose_conditional(
+            vec![
+                Goal::Unify {
+                    left: term!(sym!("x")),
+                    right: term!(true),
+                },
+                query!(sym!("x")),
+            ],
+            vec![consequent],
+            vec![alternative],
+        )
+        .unwrap();
+        assert_query_events!(vm, [
+            QueryEvent::Debug { message } if &message[..] == "consequent" && vm.bindings(true).is_empty() && vm.is_halted(),
+            QueryEvent::Done
+        ]);
+    }
 }
