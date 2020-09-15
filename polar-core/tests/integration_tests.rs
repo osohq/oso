@@ -288,8 +288,7 @@ fn test_trace() {
     let results = query_results!(query);
     let trace = results[0].1.as_ref().unwrap();
     let expected = r#"f(1) [
-  f(x) if
-    x = 1 and x = 1 [
+  f(x) if x = 1 and x = 1; [
       x = 1 []
       x = 1 []
   ]
@@ -298,8 +297,7 @@ fn test_trace() {
     assert_eq!(trace.formatted, expected);
     let trace = results[1].1.as_ref().unwrap();
     let expected = r#"f(1) [
-  f(y) if
-    y = 1 [
+  f(y) if y = 1; [
       y = 1 []
   ]
 ]
@@ -619,12 +617,12 @@ fn test_or() {
 }
 
 #[test]
-fn test_dict_head() {
+fn test_dict_specializers() {
     let mut polar = Polar::new();
     polar.load_str("f({x: 1});").unwrap();
     polar.load_str("g(_: {x: 1});").unwrap();
 
-    // Test unifying dicts against our dict head.
+    // Test unifying dicts against our rules.
     assert!(qeval(&mut polar, "f({x: 1})"));
     assert!(qnull(&mut polar, "f({x: 1, y: 2})"));
     assert!(qnull(&mut polar, "f(1)"));
@@ -641,12 +639,20 @@ fn test_dict_head() {
 
     // Test unifying & isa-ing instances against our rules.
     assert!(qnull(&mut polar, "f(new a{x: 1})"));
-    assert_eq!(qext(&mut polar, "g(new a{x: 1})", vec![value!(1)]).len(), 1);
+    assert_eq!(
+        qext(&mut polar, "g(new a{x: 1})", vec![value!(1), value!(1)]).len(),
+        1
+    );
     assert!(qnull(&mut polar, "f(new a{})"));
     assert!(qnull(&mut polar, "f(new a{x: {}})"));
-    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2)]).is_empty());
+    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2), value!(2)]).is_empty());
     assert_eq!(
-        qext(&mut polar, "g(new a{y: 2, x: 1})", vec![value!(1)]).len(),
+        qext(
+            &mut polar,
+            "g(new a{y: 2, x: 1})",
+            vec![value!(1), value!(1)]
+        )
+        .len(),
         1
     );
 }
