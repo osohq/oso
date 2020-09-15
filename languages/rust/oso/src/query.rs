@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::host::Instance;
+use crate::host::{Instance, PolarIter};
 use crate::{FromPolar, ToPolar};
 
 use polar_core::events::*;
@@ -16,10 +16,7 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<
-        u64,
-        Box<dyn Iterator<Item = Result<Box<dyn crate::host::ToPolar>, crate::OsoError>>>,
-    >,
+    calls: HashMap<u64, PolarIter>,
     host: Arc<Mutex<crate::host::Host>>,
 }
 
@@ -176,7 +173,7 @@ impl Query {
                 Ok(r) => self.call_result(call_id, r),
                 Err(e) => {
                     self.application_error(e);
-                    return self.call_result_none(call_id);
+                    self.call_result_none(call_id)
                 }
             }
         } else {

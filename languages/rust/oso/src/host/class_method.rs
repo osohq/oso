@@ -2,11 +2,10 @@
 use polar_core::terms::{Symbol, Term};
 
 use std::any::Any;
-use std::fmt::Debug;
 use std::sync::Arc;
 
 use super::to_polar::ToPolarIter;
-use crate::{FromPolar, ToPolar};
+use crate::FromPolar;
 
 use super::class::Class;
 use super::method::{Function, Method};

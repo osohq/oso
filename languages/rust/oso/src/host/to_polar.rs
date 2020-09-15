@@ -87,14 +87,6 @@ impl<T: ToPolar> ToPolar for HashMap<String, T> {
     }
 }
 
-pub struct PolarIter<I>(pub I);
-
-impl<I: Clone + Iterator<Item = T>, T: ToPolar> ToPolar for PolarIter<I> {
-    fn to_polar_value(&self, host: &mut Host) -> Value {
-        Value::List(self.0.clone().map(|v| v.to_polar(host)).collect())
-    }
-}
-
 impl ToPolar for Value {
     fn to_polar_value(&self, _host: &mut Host) -> Value {
         self.clone()
@@ -146,21 +138,23 @@ impl<C: 'static + Clone + super::HostClass> ToPolar for C {
 
 use std::iter;
 
+pub type PolarIter = Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>;
+
 // Trait for the return value of class methods.
 // This allows us to return polar values, as well as options and results of polar values.
 // Iterators and futures too once we get to them.
 pub trait ToPolarIter {
-    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>;
+    fn to_polar_iter(&self) -> PolarIter;
 }
 
 impl<C: 'static + Sized + Clone + ToPolar> ToPolarIter for C {
-    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>> {
+    fn to_polar_iter(&self) -> PolarIter {
         Box::new(iter::once(Ok(Box::new(self.clone()) as Box<dyn ToPolar>)))
     }
 }
 
 impl<C: ToPolarIter, E: ToString> ToPolarIter for Result<C, E> {
-    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>> {
+    fn to_polar_iter(&self) -> PolarIter {
         match self {
             Ok(result) => result.to_polar_iter(),
             Err(e) => Box::new(iter::once(Err(crate::OsoError::Custom {
@@ -171,12 +165,9 @@ impl<C: ToPolarIter, E: ToString> ToPolarIter for Result<C, E> {
 }
 
 impl<C: ToPolarIter> ToPolarIter for Option<C> {
-    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>> {
+    fn to_polar_iter(&self) -> PolarIter {
         self.as_ref().map_or_else(
-            || {
-                Box::new(std::iter::empty())
-                    as Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>
-            },
+            || Box::new(std::iter::empty()) as PolarIter,
             |e| e.to_polar_iter(),
         )
     }

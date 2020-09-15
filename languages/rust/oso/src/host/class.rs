@@ -5,10 +5,9 @@ use polar_core::terms::{Symbol, Term};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::fmt;
-use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::{FromPolar, ToPolar};
+use crate::FromPolar;
 
 use super::class_method::{ClassMethod, Constructor, InstanceMethod};
 use super::method::{Function, Method};
