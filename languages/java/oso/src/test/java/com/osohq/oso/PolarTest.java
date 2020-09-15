@@ -47,6 +47,16 @@ public class PolarTest {
     public String myReturnNull() {
       return null;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof MyClass && ((MyClass) obj).name.equals(this.name) && ((MyClass) obj).id.equals(this.id);
+    }
+
+    @Override
+    public int hashCode() {
+      return this.id;
+    }
   }
 
   public static class MySubClass extends MyClass {
@@ -362,6 +372,13 @@ public class PolarTest {
     result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
     assertTrue(
         result.equals(List.of(Map.of("x", 2))), "Failed to order rules based on specializers.");
+  }
+
+  @Test
+  public void testExternalUnify() throws Exception {
+    assertFalse(p.query("new MyClass(\"foo\", 1) = new MyClass(\"foo\", 1)").results().isEmpty());
+    assertTrue(p.query("new MyClass(\"foo\", 1) = new MyClass(\"foo\", 2)").results().isEmpty());
+    assertTrue(p.query("new MyClass(\"foo\", 1) = new MyClass(\"bar\", 1)").results().isEmpty());
   }
 
   @Test
