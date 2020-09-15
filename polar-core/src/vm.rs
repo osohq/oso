@@ -355,7 +355,7 @@ impl PolarVirtualMachine {
                     self.log_with(
                         || {
                             let source_str = self.rule_source(&rule);
-                            format!("RULE:\n{}", source_str)
+                            format!("RULE: {}", source_str)
                         },
                         &[],
                     );
@@ -452,10 +452,6 @@ impl PolarVirtualMachine {
     /// Do not modify the goals stack.  This function defers execution of the
     /// choice until a backtrack occurs.  To immediately execute the choice on
     /// top of the current stack, use `choose`.
-    ///
-    /// ~~Do nothing if there are no alternatives; this saves every caller a
-    /// conditional, and maintains the invariant that only choice points with
-    /// alternatives are on the choice stack.~~ TODO: this comment is not true any more
     fn push_choice<I>(&mut self, alternatives: I)
     where
         I: IntoIterator<Item = Goals>,
@@ -498,6 +494,34 @@ impl PolarVirtualMachine {
         } else {
             self.backtrack()
         }
+    }
+
+    /// If each goal of `conditional` succeeds, execute `consequent`;
+    /// otherwise, execute `alternative`. The branches are entered only
+    /// by backtracking so that bindings established during the execution
+    /// of `conditional` are always unwound.
+    fn choose_conditional(
+        &mut self,
+        mut conditional: Goals,
+        consequent: Goals,
+        mut alternative: Goals,
+    ) -> PolarResult<()> {
+        // If the conditional fails, cut the consequent.
+        let cut_consequent = Goal::Cut {
+            choice_index: self.choices.len(),
+        };
+        alternative.insert(0, cut_consequent);
+
+        // If the conditional succeeds, cut the alternative and backtrack to this choice point.
+        self.push_choice(vec![consequent]);
+        let cut_alternative = Goal::Cut {
+            choice_index: self.choices.len(),
+        };
+        conditional.push(cut_alternative);
+        conditional.push(Goal::Backtrack);
+
+        self.choose(vec![conditional, alternative])?;
+        Ok(())
     }
 
     /// Push multiple goals onto the stack in reverse order.
@@ -553,25 +577,18 @@ impl PolarVirtualMachine {
             if !variables.contains(var) {
                 continue;
             }
-            bindings.insert(var.clone(), self.deref(value));
+            bindings.insert(var.clone(), self.deep_deref(value));
         }
         bindings
     }
 
     /// Returns bindings for all vars used by terms in terms.
-    pub fn relevant_bindings(&self, terms: &[&Term]) -> HashMap<String, String> {
+    pub fn relevant_bindings(&self, terms: &[&Term]) -> Bindings {
         let mut variables = HashSet::new();
-
         for t in terms {
             t.variables(&mut variables);
         }
-
-        let mut relevant_bindings = HashMap::new();
-        let bindings = self.variable_bindings(&variables);
-        for (v, t) in &bindings {
-            relevant_bindings.insert(v.0.clone(), t.to_string());
-        }
-        relevant_bindings
+        self.variable_bindings(&variables)
     }
 
     /// Return the current binding stack pointer.
@@ -644,30 +661,6 @@ impl PolarVirtualMachine {
             .any(|binding| binding.0 == *name)
     }
 
-    /// Generate a fresh set of variables for an argument list.
-    fn rename_vars(&self, terms: TermList) -> TermList {
-        let mut renames = HashMap::<Symbol, Symbol>::new();
-        terms
-            .iter()
-            .map(|t| {
-                t.cloned_map_replace(&mut |t| match t.value() {
-                    Value::Variable(sym) | Value::RestVariable(sym)
-                        if !self.is_constant_var(sym) =>
-                    {
-                        if let Some(new) = renames.get(sym) {
-                            t.clone_with_value(Value::Variable(new.clone()))
-                        } else {
-                            let new = self.kb.read().unwrap().gensym(&sym.0);
-                            renames.insert(sym.clone(), new.clone());
-                            t.clone_with_value(Value::Variable(new))
-                        }
-                    }
-                    _ => t.clone(),
-                })
-            })
-            .collect()
-    }
-
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
         let mut renames = HashMap::<Symbol, Symbol>::new();
@@ -721,7 +714,14 @@ impl PolarVirtualMachine {
                 let mut msg = format!("[debug] {}{}", &indent, line);
                 if !terms.is_empty() {
                     let relevant_bindings = self.relevant_bindings(terms);
-                    msg.push_str(&format!(", BINDINGS: {:?}", relevant_bindings));
+                    msg.push_str(&format!(
+                        ", BINDINGS: {{{}}}",
+                        relevant_bindings
+                            .iter()
+                            .map(|(var, val)| format!("{} = {}", var.0, val.to_polar()))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    ));
                 }
                 self.messages.push(MessageKind::Print, msg);
                 for line in &lines[1..] {
@@ -930,7 +930,7 @@ impl PolarVirtualMachine {
         );
 
         self.log_with(
-            || format!("MATCHES :{} matches {}", left.to_polar(), right.to_polar()),
+            || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
         );
 
@@ -1272,7 +1272,7 @@ impl PolarVirtualMachine {
             Value::Expression(Operation {
                 operator: Operator::And,
                 args,
-            }) if args.len() == 1 => (),
+            }) if args.len() < 2 => (),
             _ => {
                 self.log_with(|| format!("QUERY: {}", term.to_polar()), &[term]);
             }
@@ -2137,10 +2137,8 @@ impl PolarVirtualMachine {
                 return self.push_goal(applicable);
             }
 
-            // Try to unify the arguments with renamed parameters.
-            // TODO: Think about using backtrack so that we don't
-            // leave temporary bindings around.
-            let args = self.rename_vars(args.clone());
+            // Rename the variables in the rule (but not the args).
+            // This avoids clashes between arg vars and rule vars.
             let Rule { params, .. } = self.rename_rule_vars(&rule);
             let mut check_applicability = vec![];
             for (arg, param) in args.iter().zip(params.iter()) {
@@ -2155,11 +2153,7 @@ impl PolarVirtualMachine {
                     });
                 }
             }
-            check_applicability.push(Goal::Cut {
-                choice_index: self.choices.len(),
-            });
-            check_applicability.push(applicable);
-            self.choose(vec![check_applicability, vec![inapplicable]])?;
+            self.choose_conditional(check_applicability, vec![applicable], vec![inapplicable])?;
             Ok(())
         }
     }
@@ -2212,18 +2206,10 @@ impl PolarVirtualMachine {
                     inner: inner - 1,
                     args: args.clone(),
                 };
+
                 // If the comparison fails, break out of the inner loop.
                 // If the comparison succeeds, continue the inner loop with the swapped rules.
-                self.choose(vec![
-                    vec![
-                        compare,
-                        Goal::Cut {
-                            choice_index: self.choices.len(),
-                        },
-                        next_inner,
-                    ],
-                    vec![next_outer],
-                ])?;
+                self.choose_conditional(vec![compare], vec![next_inner], vec![next_outer])?;
             } else {
                 assert_eq!(inner, 0);
                 self.push_goal(next_outer)?;
@@ -2232,18 +2218,17 @@ impl PolarVirtualMachine {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
 
+            self.polar_log_mute = false;
             self.log_with(
                 || {
-                    let mut rule_strs = "APPLICABLE_RULES: [\n".to_owned();
+                    let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        rule_strs.push_str(&format!("  {}\n", rule.to_string()))
+                        rule_strs.push_str(&format!("\n  {}", self.rule_source(&rule)));
                     }
-                    rule_strs.push_str("]");
                     rule_strs
                 },
                 &[],
             );
-            self.polar_log_mute = false;
 
             let mut alternatives = Vec::with_capacity(rules.len());
             for rule in rules.iter() {
@@ -2426,7 +2411,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn rule_source(&self, rule: &Rule) -> String {
-        let mut head = format!(
+        let head = format!(
             "{}({})",
             rule.name,
             rule.params.iter().fold(String::new(), |mut acc, p| {
@@ -2441,9 +2426,13 @@ impl PolarVirtualMachine {
                 acc
             })
         );
-        // head
-        head += " if\n  ";
-        head + &self.term_source(&rule.body, false)
+        match rule.body.value() {
+            Value::Expression(Operation {
+                operator: Operator::And,
+                args,
+            }) if !args.is_empty() => head + " if " + &self.term_source(&rule.body, false) + ";",
+            _ => head + ";",
+        }
     }
 
     fn set_error_context(
@@ -3071,15 +3060,80 @@ mod tests {
     }
 
     #[test]
+    fn test_filter_rules() {
+        let rule_a = Arc::new(rule!("bar", ["_"; instance!("a")]));
+        let rule_b = Arc::new(rule!("bar", ["_"; instance!("b")]));
+        let rule_1a = Arc::new(rule!("bar", [value!(1)]));
+        let rule_1b = Arc::new(rule!("bar", ["_"; value!(1)]));
+
+        let gen_rule = GenericRule::new(sym!("bar"), vec![rule_a, rule_b, rule_1a, rule_1b]);
+        let mut kb = KnowledgeBase::new();
+        kb.add_generic_rule(gen_rule);
+
+        let external_instance = Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        });
+        let query = query!(call!("bar", [sym!("x")]));
+        let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![query]);
+        vm.bind(&sym!("x"), Term::new_from_test(external_instance));
+
+        let mut external_isas = vec![];
+
+        loop {
+            match vm.run().unwrap() {
+                QueryEvent::Done => break,
+                QueryEvent::ExternalIsa {
+                    call_id, class_tag, ..
+                } => {
+                    external_isas.push(class_tag.clone());
+                    // Return `true` if the specified `class_tag` is `"a"`.
+                    vm.external_question_result(call_id, class_tag.0 == "a")
+                }
+                QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
+                _ => panic!("Unexpected event"),
+            }
+        }
+
+        let expected = vec![sym!("b"), sym!("a"), sym!("a")];
+        assert_eq!(external_isas, expected);
+
+        vm.bind(&sym!("x"), Term::new_from_test(value!(1)));
+        let _ = vm
+            .query(&Term::new_from_test(Value::Call(call!("bar", [sym!("x")]))))
+            .unwrap();
+
+        let mut results = vec![];
+        loop {
+            match vm.run().unwrap() {
+                QueryEvent::Done => break,
+                QueryEvent::ExternalIsa { .. } => (),
+                QueryEvent::Result { bindings, .. } => results.push(bindings),
+                _ => panic!("Unexpected event"),
+            }
+        }
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results,
+            vec![
+                hashmap! {sym!("x") => term!(1)},
+                hashmap! {sym!("x") => term!(1)},
+            ]
+        );
+    }
+
+    #[test]
     fn test_sort_rules() {
         // Test sort rule by mocking ExternalIsSubSpecializer and ExternalIsa.
         let bar_rule = GenericRule::new(
             sym!("bar"),
             vec![
-                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("a"), value!(3)])),
-                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("a"), value!(1)])),
-                Arc::new(rule!("bar", ["_"; instance!("a"), "__"; instance!("b"), value!(2)])),
-                Arc::new(rule!("bar", ["_"; instance!("b"), "__"; instance!("b"), value!(4)])),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "_"; instance!("a"), value!(3)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "_"; instance!("a"), value!(1)])),
+                Arc::new(rule!("bar", ["_"; instance!("a"), "_"; instance!("b"), value!(2)])),
+                Arc::new(rule!("bar", ["_"; instance!("b"), "_"; instance!("b"), value!(4)])),
             ],
         );
 
@@ -3234,5 +3288,62 @@ mod tests {
             "Goal should contain just one prefiltered rule: {}",
             goal_debug
         );
+    }
+
+    #[test]
+    fn choose_conditional() {
+        let mut vm = PolarVirtualMachine::new_test(
+            Arc::new(RwLock::new(KnowledgeBase::new())),
+            false,
+            vec![],
+        );
+        let consequent = Goal::Debug {
+            message: "consequent".to_string(),
+        };
+        let alternative = Goal::Debug {
+            message: "alternative".to_string(),
+        };
+
+        // Check consequent path when conditional succeeds.
+        vm.choose_conditional(
+            vec![Goal::Noop],
+            vec![consequent.clone()],
+            vec![alternative.clone()],
+        )
+        .unwrap();
+        assert_query_events!(vm, [
+            QueryEvent::Debug { message } if &message[..] == "consequent" && vm.is_halted(),
+            QueryEvent::Done
+        ]);
+
+        // Check alternative path when conditional fails.
+        vm.choose_conditional(
+            vec![Goal::Backtrack],
+            vec![consequent.clone()],
+            vec![alternative.clone()],
+        )
+        .unwrap();
+        assert_query_events!(vm, [
+            QueryEvent::Debug { message } if &message[..] == "alternative" && vm.is_halted(),
+            QueryEvent::Done
+        ]);
+
+        // Ensure bindings are cleaned up after conditional.
+        vm.choose_conditional(
+            vec![
+                Goal::Unify {
+                    left: term!(sym!("x")),
+                    right: term!(true),
+                },
+                query!(sym!("x")),
+            ],
+            vec![consequent],
+            vec![alternative],
+        )
+        .unwrap();
+        assert_query_events!(vm, [
+            QueryEvent::Debug { message } if &message[..] == "consequent" && vm.bindings(true).is_empty() && vm.is_halted(),
+            QueryEvent::Done
+        ]);
     }
 }

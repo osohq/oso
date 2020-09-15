@@ -685,7 +685,7 @@ def test_return_none(polar, qeval):
     )
 
 
-def test_return_none(polar, qeval):
+def test_static_method(polar, qeval):
     class Foo(list):
         @staticmethod
         def plus_one(x):
