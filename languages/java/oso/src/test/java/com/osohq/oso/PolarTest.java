@@ -50,7 +50,9 @@ public class PolarTest {
 
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof MyClass && ((MyClass) obj).name.equals(this.name) && ((MyClass) obj).id.equals(this.id);
+      return obj instanceof MyClass
+          && ((MyClass) obj).name.equals(this.name)
+          && ((MyClass) obj).id.equals(this.id);
     }
 
     @Override
