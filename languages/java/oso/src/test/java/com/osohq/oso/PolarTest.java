@@ -198,6 +198,45 @@ public class PolarTest {
     assertEquals(pred, java);
   }
 
+  @Test
+  public void testNaN() throws Exception {
+    p.registerConstant("nan", Double.NaN);
+
+    List<HashMap<String, Object>> results = p.query("x = nan").results();
+    HashMap<String, Object> result = results.get(0);
+    Object x = result.get("x");
+    assertTrue(x instanceof Double);
+    Double y = (Double) x;
+    assertTrue(Double.isNaN(y));
+
+    assertTrue(p.query("nan = nan").results().isEmpty(), "NaN != NaN");
+  }
+
+  @Test
+  public void testInfinities() throws Exception {
+    p.registerConstant("inf", Double.POSITIVE_INFINITY);
+
+    List<HashMap<String, Object>> inf_results = p.query("x = inf").results();
+    HashMap<String, Object> inf_result = inf_results.get(0);
+    Object inf = inf_result.get("x");
+    assertTrue((Double) inf == Double.POSITIVE_INFINITY);
+
+    assertFalse(p.query("inf = inf").results().isEmpty(), "Infinity == Infinity");
+
+    p.registerConstant("neg_inf", Double.NEGATIVE_INFINITY);
+
+    List<HashMap<String, Object>> neg_inf_results = p.query("x = neg_inf").results();
+    HashMap<String, Object> neg_inf_result = neg_inf_results.get(0);
+    Object neg_inf = neg_inf_result.get("x");
+    assertTrue((Double) neg_inf == Double.NEGATIVE_INFINITY);
+
+    assertFalse(p.query("neg_inf = neg_inf").results().isEmpty(), "-Infinity == -Infinity");
+
+    assertTrue(p.query("inf = neg_inf").results().isEmpty(), "Infinity != -Infinity");
+    assertTrue(p.query("inf < neg_inf").results().isEmpty(), "Infinity > -Infinity");
+    assertFalse(p.query("neg_inf < inf").results().isEmpty(), "-Infinity < Infinity");
+  }
+
   /*** TEST EXTERNALS ***/
 
   @Test
@@ -486,44 +525,5 @@ public class PolarTest {
     assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");
     Http http13 = new Http(null, "/myclass/13", null);
     assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
-  }
-
-  @Test
-  public void testNaN() throws Exception {
-    p.registerConstant("nan", Double.NaN);
-
-    List<HashMap<String, Object>> results = p.query("x = nan").results();
-    HashMap<String, Object> result = results.get(0);
-    Object x = result.get("x");
-    assertTrue(x instanceof Double);
-    Double y = (Double) x;
-    assertTrue(Double.isNaN(y));
-
-    assertTrue(p.query("nan = nan").results().isEmpty(), "NaN != NaN");
-  }
-
-  @Test
-  public void testInfinities() throws Exception {
-    p.registerConstant("inf", Double.POSITIVE_INFINITY);
-
-    List<HashMap<String, Object>> inf_results = p.query("x = inf").results();
-    HashMap<String, Object> inf_result = inf_results.get(0);
-    Object inf = inf_result.get("x");
-    assertTrue((Double) inf == Double.POSITIVE_INFINITY);
-
-    assertFalse(p.query("inf = inf").results().isEmpty(), "Infinity == Infinity");
-
-    p.registerConstant("neg_inf", Double.NEGATIVE_INFINITY);
-
-    List<HashMap<String, Object>> neg_inf_results = p.query("x = neg_inf").results();
-    HashMap<String, Object> neg_inf_result = neg_inf_results.get(0);
-    Object neg_inf = neg_inf_result.get("x");
-    assertTrue((Double) neg_inf == Double.NEGATIVE_INFINITY);
-
-    assertFalse(p.query("neg_inf = neg_inf").results().isEmpty(), "-Infinity == -Infinity");
-
-    assertTrue(p.query("inf = neg_inf").results().isEmpty(), "Infinity != -Infinity");
-    assertTrue(p.query("inf < neg_inf").results().isEmpty(), "Infinity > -Infinity");
-    assertFalse(p.query("neg_inf < inf").results().isEmpty(), "-Infinity < Infinity");
   }
 }
