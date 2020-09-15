@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::host::{Instance, PolarIter};
+use crate::errors::OsoResult;
 use crate::{FromPolar, ToPolar};
 
 use polar_core::events::*;
@@ -86,6 +87,8 @@ impl Query {
                 QueryEvent::Debug { message } => self.handle_debug(message),
             };
             if let Err(e) = result {
+                // TODO (dhatch): These seem to be getting swallowed
+                println!("application error {}", e);
                 self.application_error(e);
             }
         }
@@ -217,12 +220,12 @@ impl Query {
         call_id: u64,
         left_instance_id: u64,
         right_instance_id: u64,
-    ) -> crate::Result<()> {
+    ) -> OsoResult<()> {
         let res = self
             .host
             .lock()
             .unwrap()
-            .unify(left_instance_id, right_instance_id);
+            .unify(left_instance_id, right_instance_id)?;
         self.question_result(call_id, res);
         Ok(())
     }

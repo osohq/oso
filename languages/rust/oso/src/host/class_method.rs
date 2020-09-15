@@ -8,6 +8,7 @@ use super::to_polar::ToPolarIter;
 use crate::FromPolar;
 
 use super::class::Class;
+use super::downcast;
 use super::method::{Function, Method};
 use super::Host;
 
@@ -51,9 +52,7 @@ impl InstanceMethod {
     {
         Self(Arc::new(
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                let receiver = receiver
-                    .downcast_ref()
-                    .ok_or_else(|| crate::OsoError::InvalidReceiver);
+                let receiver = downcast(receiver);
 
                 let args = Args::from_polar_list(&args, host);
 
@@ -76,9 +75,7 @@ impl InstanceMethod {
     pub fn from_class_method(name: Symbol) -> Self {
         Self(Arc::new(
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                receiver
-                    .downcast_ref::<Class>()
-                    .ok_or_else(|| crate::OsoError::InvalidReceiver)
+                downcast::<Class>(receiver)
                     .and_then(|class| {
                         tracing::trace!(class = %class.name, method=%name, "class_method");
                         class

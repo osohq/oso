@@ -13,10 +13,18 @@ pub enum OsoError {
     FromPolar,
     #[error("policy files must end in .polar")]
     IncorrectFileType,
-    #[error("invalid receiver - this is a bug")]
-    InvalidReceiver,
+    // TODO: expected x, got y.  Impossible?
+    #[error("invalid receiver. expected: {expected}")]
+    InvalidReceiver {
+        expected: String
+    },
     #[error("invalid receiver - this is a bug")]
     MethodNotFound,
+    #[error("Unsupported operation `{operation}` for type `{type_name}`.")]
+    UnsupportedOperation {
+        operation: String,
+        type_name: String
+    },
     #[error("failed to convert type to Polar")]
     ToPolar,
 
@@ -24,3 +32,5 @@ pub enum OsoError {
     #[error("`{message}`")]
     Custom { message: String },
 }
+
+pub type OsoResult<T> = Result<T, OsoError>;

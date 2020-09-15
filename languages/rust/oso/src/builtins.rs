@@ -28,6 +28,7 @@ fn dictionary() -> Class<HashMap<Symbol, Value>> {
 
 fn string() -> Class<String> {
     Class::<String>::with_default()
+        .name("String")
         .add_method("ends_with", |s: &String, pat: String| s.ends_with(&pat))
 }
 

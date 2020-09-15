@@ -1,5 +1,5 @@
 use maplit::hashmap;
-use oso::{Oso, PolarClass};
+use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
 use oso_derive::*;
 
 struct OsoTest {
@@ -51,6 +51,19 @@ impl OsoTest {
                     .unwrap_or_else(|_| panic!("query: '{}', binding for '{}'", q, var))
             })
             .collect()
+    }
+
+    fn qeval(&mut self, q: &str) {
+        let mut results = self.oso.query(q).unwrap();
+        results
+            .next()
+            .expect("Query should have at least one result.")
+            .unwrap();
+    }
+
+    fn qnull(&mut self, q: &str) {
+        let mut results = self.oso.query(q).unwrap();
+        assert!(results.next().is_none(), "Query shouldn't have any results");
     }
 
     fn qvar_one<T>(&mut self, q: &str, var: &str, expected: T)
@@ -434,4 +447,48 @@ fn test_results_and_options() {
     test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
     let results = test.query("new Foo().none()");
     assert!(results.is_empty());
+}
+
+// TODO: dhatch see if there is a relevant test to port.
+#[test]
+fn test_unify_externals() {
+    let mut test = OsoTest::new();
+
+    #[derive(PartialEq, Clone, Debug)]
+    struct Foo {
+        x: i64,
+    }
+
+    impl HostClass for Foo {};
+    impl Foo {
+
+        fn new(x: i64) -> Self {
+            Self { x }
+        }
+    }
+
+    let foo_class = Class::with_constructor(Foo::new)
+        .name("Foo")
+        .add_attribute_getter("x", |this: &Foo| this.x)
+        .with_equality_check()
+        .build();
+
+    test.oso.register_class(foo_class).unwrap();
+
+    test.load_str("foos_equal(a, b) if a = b;");
+
+    // Test with instantiated in polar.
+    test.qeval("foos_equal(new Foo(1), new Foo(1))");
+    test.qnull("foos_equal(new Foo(1), new Foo(2))");
+
+    let a = Foo::new(1);
+    let b = Foo::new(1);
+    assert_eq!(a, b);
+
+    // TODO this interface is not convenient or easy to use due to all the casting. Maybe needs a macro?
+    let mut results = test
+        .oso
+        .query_rule("foos_equal", vec![&a as &dyn ToPolar, &b as &dyn ToPolar])
+        .unwrap();
+    results.next().expect("At least one result").unwrap();
 }

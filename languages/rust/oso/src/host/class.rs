@@ -7,8 +7,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
+use crate::errors::{OsoError, OsoResult};
 use crate::FromPolar;
 
+use super::downcast;
 use super::class_method::{ClassMethod, Constructor, InstanceMethod};
 use super::method::{Function, Method};
 use super::to_polar::ToPolarIter;
@@ -16,6 +18,17 @@ use super::Host;
 
 type ClassMethods = HashMap<Symbol, ClassMethod>;
 type InstanceMethods = HashMap<Symbol, InstanceMethod>;
+
+fn equality_not_supported(type_name: String) -> Box<dyn Fn(&dyn Any, &dyn Any) -> OsoResult<bool>> {
+    let eq = move |_: &dyn Any, _: &dyn Any| -> OsoResult<bool> {
+        Err(OsoError::UnsupportedOperation {
+            operation: String::from("equals"),
+            type_name: type_name.clone(),
+        })
+    };
+
+    Box::new(eq)
+}
 
 #[derive(Clone)]
 pub struct Class<T = ()> {
@@ -37,6 +50,10 @@ pub struct Class<T = ()> {
     /// in order to check inheritance)
     class_check: Arc<dyn Fn(TypeId) -> bool>,
 
+    /// A function that accepts arguments of this class and compares them for equality.
+    /// Limitation: Only works on comparisons of the same type.
+    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> OsoResult<bool>>,
+
     /// A type marker. This is erased when the class is ready to be constructed with
     /// `erase_type`
     ty: std::marker::PhantomData<T>,
@@ -57,19 +74,24 @@ impl Default for Class {
     }
 }
 
-impl<T> Class<T> {
+// TODO seems like the name is based on fully qualified name, so we may want to
+// require this to be specified.
+
+impl<T> Class<T>
+where T: 'static
+{
     pub fn new() -> Self
-    where
-        T: 'static,
     {
+        let name = std::any::type_name::<T>().to_string();
         Self {
-            name: std::any::type_name::<Self>().to_string(),
+            name: name.clone(),
             constructor: None,
             attributes: InstanceMethods::new(),
             instance_methods: InstanceMethods::new(),
             class_methods: ClassMethods::new(),
             instance_check: Arc::new(|any| any.is::<T>()),
             class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
+            equality_check: Arc::from(equality_not_supported(name)),
             ty: std::marker::PhantomData,
             type_id: TypeId::of::<T>(),
         }
@@ -77,14 +99,13 @@ impl<T> Class<T> {
 
     pub fn with_default() -> Self
     where
-        T: std::default::Default + 'static,
+        T: std::default::Default,
     {
         Self::with_constructor::<_, _>(T::default)
     }
 
     pub fn with_constructor<F, Args>(f: F) -> Self
     where
-        T: 'static,
         F: Function<Args, Result = T> + 'static,
         Args: FromPolar + 'static,
     {
@@ -95,12 +116,35 @@ impl<T> Class<T> {
 
     pub fn set_constructor<F, Args>(mut self, f: F) -> Self
     where
-        T: 'static,
         F: Function<Args, Result = T> + 'static,
         Args: FromPolar + 'static,
     {
         self.constructor = Some(Constructor::new(f));
         self
+    }
+
+    pub fn set_equality_check<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&T, &T) -> bool + 'static,
+        T: std::fmt::Debug
+    {
+        self.equality_check = Arc::new(move |a, b| {
+            println!("equality check");
+
+            let a = downcast(a)?;
+            let b = downcast(b)?;
+
+            println!("{:?} == {:?}", a, b);
+
+            Ok((f)(a, b))
+        });
+
+        self
+    }
+
+    pub fn with_equality_check(self) -> Self
+    where T: PartialEq<T> + std::fmt::Debug {
+        self.set_equality_check(|a, b| PartialEq::eq(a, b))
     }
 
     pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
@@ -124,7 +168,6 @@ impl<T> Class<T> {
         Args: FromPolar,
         F: Method<T, Args, Result = R> + 'static,
         R: ToPolarIter + 'static,
-        T: 'static,
     {
         self.instance_methods
             .insert(Symbol(name.to_string()), InstanceMethod::new(f));
@@ -157,6 +200,7 @@ impl<T> Class<T> {
             instance_check: self.instance_check,
             class_check: self.class_check,
             type_id: self.type_id,
+            equality_check: self.equality_check,
             ty: std::marker::PhantomData,
         }
     }
@@ -183,6 +227,23 @@ impl<T> Class<T> {
         (self.instance_check)(instance.instance.as_ref())
     }
 
+    pub fn equals(&self, instance: &Instance, other: &Instance) -> OsoResult<bool> {
+        (self.equality_check)(instance.instance.as_ref(), other.instance.as_ref())
+    }
+}
+
+impl Class {
+    pub fn cast_to_instance(&self, instance: impl Any) -> Instance
+    {
+        Instance {
+            name: self.name.clone(),
+            instance: Arc::new(instance),
+            attributes: Arc::new(self.attributes.clone()),
+            methods: Arc::new(self.instance_methods.clone()),
+            class: self.clone(),
+        }
+    }
+
     pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
         if let Some(constructor) = &self.constructor {
             let instance = constructor.invoke(fields, host)?;
@@ -191,20 +252,12 @@ impl<T> Class<T> {
                 instance,
                 attributes: Arc::new(self.attributes.clone()),
                 methods: Arc::new(self.instance_methods.clone()),
+                class: self.clone(),
             })
         } else {
             Err(crate::OsoError::Custom {
                 message: format!("MissingConstructorError: {} has no constructor", self.name),
             })
-        }
-    }
-
-    pub fn cast_to_instance(&self, instance: impl Any) -> Instance {
-        Instance {
-            name: self.name.clone(),
-            instance: Arc::new(instance),
-            attributes: Arc::new(self.attributes.clone()),
-            methods: Arc::new(self.instance_methods.clone()),
         }
     }
 }
@@ -215,4 +268,23 @@ pub struct Instance {
     pub instance: Arc<dyn Any>,
     pub attributes: Arc<InstanceMethods>,
     pub methods: Arc<InstanceMethods>,
+
+    // TODO this should likely not be held by value.
+    pub class: Class
+}
+
+impl std::fmt::Debug for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Instance<{}>", self.name)
+    }
+}
+
+impl Instance {
+    /// Return `true` if the `instance` of self equals the instance of `other`.
+    pub fn equals(&self, other: &Self) -> OsoResult<bool> {
+        println!("equals");
+        // TODO: LOL this &* below is tricky! Have a function to do this, and make instance not
+        // pub.
+        (self.class.equality_check)(&*self.instance, &*other.instance)
+    }
 }

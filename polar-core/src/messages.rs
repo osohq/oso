@@ -36,7 +36,12 @@ impl MessageQueue {
 
     pub fn push(&self, kind: MessageKind, msg: String) {
         let mut messages = self.messages.lock().unwrap();
-        messages.push_back(Message { kind, msg });
+        messages.push_back(Message { kind, msg: msg.clone() });
+
+        // TODO hack to actually get logs.
+        if std::env::var("RUST_LOG").is_ok() {
+            println!("{}", msg);
+        }
     }
 
     pub fn extend<T: IntoIterator<Item = Message>>(&self, iter: T) {
