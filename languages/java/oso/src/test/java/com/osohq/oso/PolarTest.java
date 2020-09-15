@@ -351,8 +351,8 @@ public class PolarTest {
 
   @Test
   public void testExternalIsSubSpecializer() throws Exception {
-    p.loadStr("f(a: MySubClass, x) if x = 1;");
-    p.loadStr("f(a: MyClass, x) if x = 2;");
+    p.loadStr("f(_: MySubClass, x) if x = 1;");
+    p.loadStr("f(_: MyClass, x) if x = 2;");
     List<HashMap<String, Object>> result =
         p.queryRule("f", new MySubClass("test", 1), new Variable("x")).results();
     assertTrue(
@@ -488,7 +488,7 @@ public class PolarTest {
 
   @Test
   public void testUnboundVariable() throws Exception {
-    p.loadStr("rule(x, y) if y = 1;");
+    p.loadStr("rule(_x, y) if y = 1;");
     List<HashMap<String, Object>> results = p.query("rule(x, y)").results();
     HashMap<String, Object> result = results.get(0);
     assertTrue(result.get("x") instanceof Variable);
@@ -520,7 +520,7 @@ public class PolarTest {
         "allow(actor, \"get\", _: Http{path: path}) if "
             + "new PathMapper(\"/myclass/{id}\").map(path) = {id: id} and "
             + "allow(actor, \"get\", new MyClass(\"test\", new Integer(id)));\n"
-            + "allow(actor, \"get\", myclass: MyClass) if myclass.id = 12;");
+            + "allow(_actor, \"get\", myclass: MyClass) if myclass.id = 12;");
     Http http12 = new Http(null, "/myclass/12", null);
     assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");
     Http http13 = new Http(null, "/myclass/13", null);
