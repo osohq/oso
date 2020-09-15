@@ -16,7 +16,10 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<u64, Box<dyn Iterator<Item = Box<dyn crate::host::ToPolar>>>>,
+    calls: HashMap<
+        u64,
+        Box<dyn Iterator<Item = Result<Box<dyn crate::host::ToPolar>, crate::OsoError>>>,
+    >,
     host: Arc<Mutex<crate::host::Host>>,
 }
 
@@ -148,7 +151,10 @@ impl Query {
         Ok(())
     }
 
-    fn next_call_result(&mut self, call_id: u64) -> Option<Box<dyn ToPolar>> {
+    fn next_call_result(
+        &mut self,
+        call_id: u64,
+    ) -> Option<Result<Box<dyn ToPolar>, crate::OsoError>> {
         self.calls.get_mut(&call_id).and_then(|c| c.next())
     }
 
@@ -166,7 +172,13 @@ impl Query {
         }
 
         if let Some(result) = self.next_call_result(call_id) {
-            self.call_result(call_id, result)
+            match result {
+                Ok(r) => self.call_result(call_id, r),
+                Err(e) => {
+                    self.application_error(e);
+                    return self.call_result_none(call_id);
+                }
+            }
         } else {
             self.call_result_none(call_id)
         }

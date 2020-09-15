@@ -421,10 +421,10 @@ fn test_results_and_options() {
         .register_class(
             Foo::get_polar_class_builder()
                 .set_constructor(Foo::new)
-                .add_result_method("ok", |recv: &Foo| recv.ok())
-                .add_result_method("err", |recv: &Foo| recv.err())
-                .add_option_method("some", |recv: &Foo| recv.some())
-                .add_option_method("none", |recv: &Foo| recv.none())
+                .add_method("ok", |recv: &Foo| recv.ok())
+                .add_method("err", |recv: &Foo| recv.err())
+                .add_method("some", |recv: &Foo| recv.some())
+                .add_method("none", |recv: &Foo| recv.none())
                 .build(),
         )
         .unwrap();
@@ -432,5 +432,6 @@ fn test_results_and_options() {
     test.qvar_one(r#"new Foo().ok() = x"#, "x", 1);
     test.query_err("new Foo().err()");
     test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
-    test.query_err("new Foo().none()");
+    let results = test.query("new Foo().none()");
+    assert!(results.is_empty());
 }

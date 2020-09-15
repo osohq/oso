@@ -132,31 +132,6 @@ impl<T> Class<T> {
         self
     }
 
-    // pub fn add_result_method<F, Args, R, E>(mut self, name: &str, f: F) -> Self
-    // where
-    //     Args: FromPolar,
-    //     F: Method<T, Args, Result = Result<R, E>> + 'static,
-    //     R: ToPolar + 'static,
-    //     E: Debug + 'static,
-    //     T: 'static,
-    // {
-    //     self.instance_methods
-    //         .insert(Symbol(name.to_string()), InstanceMethod::new_result(f));
-    //     self
-    // }
-
-    // pub fn add_option_method<F, Args, R>(mut self, name: &str, f: F) -> Self
-    // where
-    //     Args: FromPolar,
-    //     F: Method<T, Args, Result = Option<R>> + 'static,
-    //     R: ToPolar + 'static,
-    //     T: 'static,
-    // {
-    //     self.instance_methods
-    //         .insert(Symbol(name.to_string()), InstanceMethod::new_option(f));
-    //     self
-    // }
-
     pub fn add_class_method<F, Args, R>(mut self, name: &str, f: F) -> Self
     where
         F: Function<Args, Result = R> + 'static,

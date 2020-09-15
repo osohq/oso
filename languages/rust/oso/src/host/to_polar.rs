@@ -146,12 +146,38 @@ impl<C: 'static + Clone + super::HostClass> ToPolar for C {
 
 use std::iter;
 
+// Trait for the return value of class methods.
+// This allows us to return polar values, as well as options and results of polar values.
+// Iterators and futures too once we get to them.
 pub trait ToPolarIter {
-    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Box<dyn ToPolar>>>;
+    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>;
 }
 
 impl<C: 'static + Sized + Clone + ToPolar> ToPolarIter for C {
-    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Box<dyn ToPolar>>> {
-        Box::new(iter::once(Box::new(self.clone()) as Box<dyn ToPolar>))
+    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>> {
+        Box::new(iter::once(Ok(Box::new(self.clone()) as Box<dyn ToPolar>)))
+    }
+}
+
+impl<C: ToPolarIter, E: ToString> ToPolarIter for Result<C, E> {
+    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>> {
+        match self {
+            Ok(result) => result.to_polar_iter(),
+            Err(e) => Box::new(iter::once(Err(crate::OsoError::Custom {
+                message: e.to_string(),
+            }))),
+        }
+    }
+}
+
+impl<C: ToPolarIter> ToPolarIter for Option<C> {
+    fn to_polar_iter(&self) -> Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>> {
+        self.as_ref().map_or_else(
+            || {
+                Box::new(std::iter::empty())
+                    as Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>
+            },
+            |e| e.to_polar_iter(),
+        )
     }
 }
