@@ -65,60 +65,6 @@ impl InstanceMethod {
         ))
     }
 
-    // pub fn new_result<T, F, Args, R, E>(f: F) -> Self
-    // where
-    //     Args: FromPolar,
-    //     F: Method<T, Args, Result = Result<R, E>> + 'static,
-    //     R: ToPolarIter + 'static,
-    //     E: Debug + 'static,
-    //     T: 'static,
-    // {
-    //     Self(Arc::new(
-    //         move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-    //             let receiver = receiver
-    //                 .downcast_ref()
-    //                 .ok_or_else(|| crate::OsoError::InvalidReceiver);
-
-    //             let args = Args::from_polar_list(&args, host);
-
-    //             join(receiver, args).and_then(|(receiver, args)| match f.invoke(receiver, args) {
-    //                 Ok(result) => Ok(Arc::new(result) as Arc<dyn ToPolar>),
-    //                 Err(e) => Err(crate::OsoError::Custom {
-    //                     message: format!("Error calling function: {:?}", e),
-    //                 }),
-    //             })
-    //         },
-    //     ))
-    // }
-
-    // pub fn new_option<T, F, Args, R>(f: F) -> Self
-    // where
-    //     Args: FromPolar,
-    //     F: Method<T, Args, Result = Option<R>> + 'static,
-    //     R: ToPolarIter + 'static,
-    //     T: 'static,
-    // {
-    //     Self(Arc::new(
-    //         move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-    //             let receiver = receiver
-    //                 .downcast_ref()
-    //                 .ok_or_else(|| crate::OsoError::InvalidReceiver);
-
-    //             let args = Args::from_polar_list(&args, host);
-
-    //             join(receiver, args).and_then(|(receiver, args)| match f.invoke(receiver, args) {
-    //                 Some(result) => Ok(Arc::new(result) as Arc<dyn ToPolar>),
-    //                 // @TODO: We want to actually return 0 results.
-    //                 // I think returning an empty iterator would be the easiest way to accomplish that but
-    //                 // we haven't implemented those yet.
-    //                 None => Err(crate::OsoError::Custom {
-    //                     message: "Error calling function, got None".to_owned(),
-    //                 }),
-    //             })
-    //         },
-    //     ))
-    // }
-
     pub fn invoke(
         &self,
         receiver: &dyn Any,
