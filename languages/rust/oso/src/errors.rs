@@ -27,7 +27,7 @@ pub enum OsoError {
     #[error("Unsupported operation {operation} for type {type_name}.")]
     UnsupportedOperation {
         operation: String,
-        type_name: String
+        type_name: String,
     },
     #[error("failed to convert type to Polar")]
     ToPolar,
@@ -50,7 +50,7 @@ pub enum InvariantError {
 #[derive(Error, Debug)]
 #[error("Type error: expected `{expected}`")]
 pub struct TypeError {
-    pub expected: String
+    pub expected: String,
 }
 
 impl TypeError {

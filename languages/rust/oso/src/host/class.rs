@@ -10,8 +10,8 @@ use std::sync::Arc;
 use crate::errors::OsoError;
 use crate::{FromPolar, ToPolar};
 
-use super::downcast;
 use super::class_method::{ClassMethod, Constructor, InstanceMethod};
+use super::downcast;
 use super::method::{Function, Method};
 use super::to_polar::ToPolarIter;
 use super::Host;
@@ -19,7 +19,9 @@ use super::Host;
 type ClassMethods = HashMap<Symbol, ClassMethod>;
 type InstanceMethods = HashMap<Symbol, InstanceMethod>;
 
-fn equality_not_supported(type_name: String) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>> {
+fn equality_not_supported(
+    type_name: String,
+) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>> {
     let eq = move |_: &dyn Any, _: &dyn Any| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
@@ -78,10 +80,10 @@ impl Default for Class {
 // require this to be specified.
 
 impl<T> Class<T>
-where T: 'static
+where
+    T: 'static,
 {
-    pub fn new() -> Self
-    {
+    pub fn new() -> Self {
         let name = std::any::type_name::<T>().to_string();
         Self {
             name: name.clone(),
@@ -140,7 +142,9 @@ where T: 'static
     }
 
     pub fn with_equality_check(self) -> Self
-    where T: PartialEq<T> {
+    where
+        T: PartialEq<T>,
+    {
         self.set_equality_check(|a, b| PartialEq::eq(a, b))
     }
 
@@ -230,8 +234,7 @@ where T: 'static
 }
 
 impl Class {
-    pub fn cast_to_instance(&self, instance: impl Any) -> Instance
-    {
+    pub fn cast_to_instance(&self, instance: impl Any) -> Instance {
         Instance {
             name: self.name.clone(),
             instance: Arc::new(instance),
@@ -267,7 +270,7 @@ pub struct Instance {
     pub methods: Arc<InstanceMethods>,
 
     // TODO this should likely not be held by value.
-    pub class: Class
+    pub class: Class,
 }
 
 impl std::fmt::Debug for Instance {

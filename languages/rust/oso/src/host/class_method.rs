@@ -5,8 +5,8 @@ use std::any::Any;
 use std::sync::Arc;
 
 use super::to_polar::ToPolarIter;
-use crate::FromPolar;
 use crate::errors::InvariantError;
+use crate::FromPolar;
 
 use super::class::Class;
 use super::downcast;

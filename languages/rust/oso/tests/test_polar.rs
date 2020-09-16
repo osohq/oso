@@ -517,7 +517,6 @@ fn test_unify_externals() {
     // Instead, this should return UnsupportedOperation error.
     assert!(result.is_none());
 
-
     #[derive(PartialEq, Clone, Debug)]
     struct Baz {
         x: i64,

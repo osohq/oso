@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
-use crate::errors::{TypeError};
+use crate::errors::TypeError;
 use crate::Polar;
 
 mod class;
