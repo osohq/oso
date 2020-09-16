@@ -20,6 +20,7 @@ pub enum OsoError {
         source: InvariantError,
     },
 
+    /// A TypeError caused by user input.
     #[error(transparent)]
     TypeError(#[from] TypeError),
 
