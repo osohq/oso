@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
-use crate::errors::{OsoError, OsoResult};
+use crate::errors::{TypeError};
 use crate::Polar;
 
 mod class;
@@ -30,8 +30,8 @@ fn type_class() -> Class {
 ///
 /// # Arguments
 /// * `type_name` - used in error message. The target type name.
-fn downcast<T: Any>(any: &dyn Any) -> OsoResult<&T> {
-    any.downcast_ref().ok_or_else(|| OsoError::InvalidReceiver {
+fn downcast<T: Any>(any: &dyn Any) -> Result<&T, TypeError> {
+    any.downcast_ref().ok_or_else(|| TypeError {
         expected: String::from(std::any::type_name::<T>()),
     })
 }
@@ -124,7 +124,7 @@ impl Host {
         Ok(())
     }
 
-    pub fn unify(&self, left: u64, right: u64) -> OsoResult<bool> {
+    pub fn unify(&self, left: u64, right: u64) -> crate::Result<bool> {
         let left = self.get_instance(left).unwrap();
         let right = self.get_instance(right).unwrap();
         println!("unify {:?}, {:?}", left, right);

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::host::{Instance, PolarIter};
-use crate::errors::OsoResult;
 use crate::{FromPolar, ToPolar};
 
 use polar_core::events::*;
@@ -220,7 +219,7 @@ impl Query {
         call_id: u64,
         left_instance_id: u64,
         right_instance_id: u64,
-    ) -> OsoResult<()> {
+    ) -> crate::Result<()> {
         let res = self
             .host
             .lock()

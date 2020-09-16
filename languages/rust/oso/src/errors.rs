@@ -13,14 +13,17 @@ pub enum OsoError {
     FromPolar,
     #[error("policy files must end in .polar")]
     IncorrectFileType,
-    // TODO: expected x, got y.  Impossible?
-    #[error("invalid receiver. expected: {expected}")]
-    InvalidReceiver {
-        expected: String
+
+    #[error("Invariant error: {source}")]
+    InvariantError {
+        #[from]
+        source: InvariantError,
     },
-    #[error("invalid receiver - this is a bug")]
-    MethodNotFound,
-    #[error("Unsupported operation `{operation}` for type `{type_name}`.")]
+
+    #[error(transparent)]
+    TypeError(#[from] TypeError),
+
+    #[error("Unsupported operation {operation} for type {type_name}.")]
     UnsupportedOperation {
         operation: String,
         type_name: String
@@ -29,8 +32,38 @@ pub enum OsoError {
     ToPolar,
 
     /// TODO: replace all these with proper variants
-    #[error("`{message}`")]
+    #[error("{message}")]
     Custom { message: String },
 }
 
-pub type OsoResult<T> = Result<T, OsoError>;
+/// These are conditions that should never occur, and indicate a bug in oso.
+#[derive(Error, Debug)]
+pub enum InvariantError {
+    #[error("Invalid receiver for method. {0}")]
+    InvalidReceiver(#[from] TypeError),
+
+    #[error("invalid receiver - this is a bug")]
+    MethodNotFound,
+}
+
+#[derive(Error, Debug)]
+#[error("Type error: expected `{expected}`")]
+pub struct TypeError {
+    pub expected: String
+}
+
+impl TypeError {
+    /// Convert `self` into `InvariantError`,
+    /// indicating an invariant that should never occur.
+    pub fn invariant(self) -> InvariantError {
+        InvariantError::from(self)
+    }
+
+    /// Convert `self` into `OsoError`, indicating a user originating type error.
+    /// For example, calling a method with a paramter of an incorrect type from within Polar.
+    pub fn user(self) -> OsoError {
+        OsoError::from(self)
+    }
+}
+
+pub type Result<T> = std::result::Result<T, OsoError>;

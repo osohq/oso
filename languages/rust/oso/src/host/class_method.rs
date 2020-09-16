@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use super::to_polar::ToPolarIter;
 use crate::FromPolar;
+use crate::errors::InvariantError;
 
 use super::class::Class;
 use super::downcast;
@@ -52,7 +53,7 @@ impl InstanceMethod {
     {
         Self(Arc::new(
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                let receiver = downcast(receiver);
+                let receiver = downcast(receiver).map_err(|e| e.invariant().into());
 
                 let args = Args::from_polar_list(&args, host);
 
@@ -76,12 +77,13 @@ impl InstanceMethod {
         Self(Arc::new(
             move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
                 downcast::<Class>(receiver)
+                    .map_err(|e| e.invariant().into())
                     .and_then(|class| {
                         tracing::trace!(class = %class.name, method=%name, "class_method");
                         class
                             .class_methods
                             .get(&name)
-                            .ok_or_else(|| crate::OsoError::MethodNotFound)
+                            .ok_or_else(|| InvariantError::MethodNotFound.into())
                     })
                     .and_then(|class_method: &ClassMethod| class_method.invoke(args, host))
             },

@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::errors::{OsoError, OsoResult};
-use crate::FromPolar;
+use crate::errors::OsoError;
+use crate::{FromPolar, ToPolar};
 
 use super::downcast;
 use super::class_method::{ClassMethod, Constructor, InstanceMethod};
@@ -19,8 +19,8 @@ use super::Host;
 type ClassMethods = HashMap<Symbol, ClassMethod>;
 type InstanceMethods = HashMap<Symbol, InstanceMethod>;
 
-fn equality_not_supported(type_name: String) -> Box<dyn Fn(&dyn Any, &dyn Any) -> OsoResult<bool>> {
-    let eq = move |_: &dyn Any, _: &dyn Any| -> OsoResult<bool> {
+fn equality_not_supported(type_name: String) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>> {
+    let eq = move |_: &dyn Any, _: &dyn Any| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
             type_name: type_name.clone(),
@@ -52,7 +52,7 @@ pub struct Class<T = ()> {
 
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> OsoResult<bool>>,
+    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>>,
 
     /// A type marker. This is erased when the class is ready to be constructed with
     /// `erase_type`
@@ -131,8 +131,8 @@ where T: 'static
         self.equality_check = Arc::new(move |a, b| {
             println!("equality check");
 
-            let a = downcast(a)?;
-            let b = downcast(b)?;
+            let a = downcast(a).map_err(|e| e.user())?;
+            let b = downcast(b).map_err(|e| e.user())?;
 
             println!("{:?} == {:?}", a, b);
 
@@ -227,7 +227,7 @@ where T: 'static
         (self.instance_check)(instance.instance.as_ref())
     }
 
-    pub fn equals(&self, instance: &Instance, other: &Instance) -> OsoResult<bool> {
+    pub fn equals(&self, instance: &Instance, other: &Instance) -> crate::Result<bool> {
         (self.equality_check)(instance.instance.as_ref(), other.instance.as_ref())
     }
 }
@@ -281,7 +281,7 @@ impl std::fmt::Debug for Instance {
 
 impl Instance {
     /// Return `true` if the `instance` of self equals the instance of `other`.
-    pub fn equals(&self, other: &Self) -> OsoResult<bool> {
+    pub fn equals(&self, other: &Self) -> crate::Result<bool> {
         println!("equals");
         // TODO: LOL this &* below is tricky! Have a function to do this, and make instance not
         // pub.
