@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600207484155,
+  "lastUpdate": 1600270969880,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -4907,6 +4907,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5380,
             "range": "± 571",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "256c1f508be5b103af093da54020ccf3b918c2f2",
+          "message": "Any specializer is more specific than no specializer (#417)\n\n* add tests to python\r\n\r\n* order specialized rules before unspecialized rules\r\n\r\n* convert rule order test to generic test\r\n\r\n* fix for multiple args\r\n\r\n* remove redundant test\r\n\r\n* rubocop\r\n\r\n* Update polar-core/src/vm.rs\r\n\r\nCo-authored-by: David Hatch <david@osohq.com>\r\n\r\n* Update polar-core/src/vm.rs\r\n\r\nCo-authored-by: David Hatch <david@osohq.com>\r\n\r\nCo-authored-by: David Hatch <david@osohq.com>",
+          "timestamp": "2020-09-16T11:34:26-04:00",
+          "tree_id": "d876a8b51a9603f2f81805c980326d5e55e75ae1",
+          "url": "https://github.com/osohq/oso/commit/256c1f508be5b103af093da54020ccf3b918c2f2"
+        },
+        "date": 1600270969111,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 671,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2253,
+            "range": "± 83",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 64350,
+            "range": "± 1661",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 477841,
+            "range": "± 8620",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16812,
+            "range": "± 331",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16799,
+            "range": "± 557",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16675,
+            "range": "± 586",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16621,
+            "range": "± 649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15016,
+            "range": "± 583",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5033,
+            "range": "± 133",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5064,
+            "range": "± 169",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5463,
+            "range": "± 600",
             "unit": "ns/iter"
           }
         ]
