@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
@@ -27,7 +27,7 @@ fn type_class() -> Class {
 /// Maintain mappings and caches for Rust classes & instances
 pub struct Host {
     /// Reference to the inner `Polar` instance
-    polar: Rc<Polar>,
+    polar: Arc<Polar>,
 
     /// Map from names to `Class`s
     classes: HashMap<Symbol, Class>,
@@ -42,7 +42,7 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(polar: Rc<Polar>) -> Self {
+    pub fn new(polar: Arc<Polar>) -> Self {
         let mut host = Self {
             class_names: HashMap::new(),
             classes: HashMap::new(),

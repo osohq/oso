@@ -13,7 +13,7 @@ use crate::ToPolar;
 
 #[derive(Clone)]
 pub struct Oso {
-    inner: Rc<polar_core::polar::Polar>,
+    inner: Arc<polar_core::polar::Polar>,
     host: Arc<Mutex<Host>>,
 }
 
@@ -25,7 +25,7 @@ impl Default for Oso {
 
 impl Oso {
     pub fn new() -> Self {
-        let inner = Rc::new(polar_core::polar::Polar::new());
+        let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
         let mut oso = Self {
