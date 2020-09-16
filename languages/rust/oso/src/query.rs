@@ -87,7 +87,7 @@ impl Query {
             };
             if let Err(e) = result {
                 // TODO (dhatch): These seem to be getting swallowed
-                println!("application error {}", e);
+                tracing::error!("application error {}", e);
                 self.application_error(e);
             }
         }

@@ -111,11 +111,6 @@ impl Host {
         id: u64,
     ) -> crate::Result<()> {
         // @TODO: Handle the error if the class doesn't exist.
-        println!("name: {:?}", name);
-        for (k, _) in self.classes.iter() {
-            println!("registered: {:?}", k);
-        }
-
         let class = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
         let fields = fields; // TODO: use
@@ -125,9 +120,10 @@ impl Host {
     }
 
     pub fn unify(&self, left: u64, right: u64) -> crate::Result<bool> {
+        tracing::trace!("unify {:?}, {:?}", left, right);
+
         let left = self.get_instance(left).unwrap();
         let right = self.get_instance(right).unwrap();
-        println!("unify {:?}, {:?}", left, right);
         left.equals(right)
     }
 

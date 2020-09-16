@@ -126,15 +126,12 @@ where T: 'static
     pub fn set_equality_check<F>(mut self, f: F) -> Self
     where
         F: Fn(&T, &T) -> bool + 'static,
-        T: std::fmt::Debug
     {
         self.equality_check = Arc::new(move |a, b| {
-            println!("equality check");
+            tracing::trace!("equality check");
 
             let a = downcast(a).map_err(|e| e.user())?;
             let b = downcast(b).map_err(|e| e.user())?;
-
-            println!("{:?} == {:?}", a, b);
 
             Ok((f)(a, b))
         });
@@ -143,7 +140,7 @@ where T: 'static
     }
 
     pub fn with_equality_check(self) -> Self
-    where T: PartialEq<T> + std::fmt::Debug {
+    where T: PartialEq<T> {
         self.set_equality_check(|a, b| PartialEq::eq(a, b))
     }
 
@@ -282,7 +279,7 @@ impl std::fmt::Debug for Instance {
 impl Instance {
     /// Return `true` if the `instance` of self equals the instance of `other`.
     pub fn equals(&self, other: &Self) -> crate::Result<bool> {
-        println!("equals");
+        tracing::trace!("equals");
         // TODO: LOL this &* below is tricky! Have a function to do this, and make instance not
         // pub.
         (self.class.equality_check)(&*self.instance, &*other.instance)
