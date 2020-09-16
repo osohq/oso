@@ -4,6 +4,8 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
+use ::log::trace;
+
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
 use super::events::*;
@@ -690,8 +692,10 @@ impl PolarVirtualMachine {
     }
 
     /// Print a message to the output stream.
-    fn print(&self, message: &str) {
-        self.messages.push(MessageKind::Print, message.to_owned());
+    fn print<S: Into<String>>(&self, message: S) {
+        let message = message.into();
+        trace!("{}", &message);
+        self.messages.push(MessageKind::Print, message);
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {
@@ -723,10 +727,9 @@ impl PolarVirtualMachine {
                             .join(", ")
                     ));
                 }
-                self.messages.push(MessageKind::Print, msg);
+                self.print(msg);
                 for line in &lines[1..] {
-                    self.messages
-                        .push(MessageKind::Print, format!("[debug] {}{}", &indent, line));
+                    self.print(format!("[debug] {}{}", &indent, line));
                 }
             }
         }
