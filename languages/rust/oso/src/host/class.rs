@@ -30,11 +30,11 @@ pub struct Class<T = ()> {
     pub class_methods: ClassMethods,
     pub type_id: TypeId,
     /// A method to check whether the supplied argument is in instance of `T`
-    instance_check: Arc<dyn Fn(&dyn Any) -> bool>,
+    instance_check: Arc<dyn Fn(&dyn Any) -> bool + Send + Sync>,
     /// A method to check whether the supplied `TypeId` matches this class
     /// (This isn't using `type_id` because we might want to register other types here
     /// in order to check inheritance)
-    class_check: Arc<dyn Fn(TypeId) -> bool>,
+    class_check: Arc<dyn Fn(TypeId) -> bool + Send + Sync>,
 
     /// A type marker. This is erased when the class is ready to be constructed with
     /// `erase_type`
@@ -215,3 +215,5 @@ pub struct Instance {
     pub attributes: Arc<InstanceMethods>,
     pub methods: Arc<InstanceMethods>,
 }
+
+unsafe impl Send for Instance {}

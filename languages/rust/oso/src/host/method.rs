@@ -4,7 +4,7 @@
 /// An alternate version of the `Fn` trait
 /// which encodes the types of the arguments
 /// in a single type - a tuple.
-pub trait Function<Args = ()> {
+pub trait Function<Args = ()>: Send + Sync {
     type Result;
 
     fn invoke(&self, args: Args) -> Self::Result;
@@ -12,7 +12,7 @@ pub trait Function<Args = ()> {
 
 impl<F, R> Function<()> for F
 where
-    F: Fn() -> R,
+    F: Fn() -> R + Send + Sync,
 {
     type Result = R;
 
@@ -23,7 +23,7 @@ where
 
 impl<A, F, R> Function<(A,)> for F
 where
-    F: Fn(A) -> R,
+    F: Fn(A) -> R + Send + Sync,
 {
     type Result = R;
 
@@ -34,7 +34,7 @@ where
 
 impl<A, B, F, R> Function<(A, B)> for F
 where
-    F: Fn(A, B) -> R,
+    F: Fn(A, B) -> R + Send + Sync,
 {
     type Result = R;
 
@@ -45,7 +45,7 @@ where
 
 /// Similar to a `Function` but also takes an explicit `receiver`
 /// parameter than is the first argument of the call (i.e. the `self` param);
-pub trait Method<Receiver, Args = ()> {
+pub trait Method<Receiver, Args = ()>: Send + Sync {
     type Result;
 
     fn invoke(&self, receiver: &Receiver, args: Args) -> Self::Result;
@@ -53,7 +53,7 @@ pub trait Method<Receiver, Args = ()> {
 
 impl<F, R, Receiver> Method<Receiver, ()> for F
 where
-    F: Fn(&Receiver) -> R,
+    F: Fn(&Receiver) -> R + Send + Sync,
 {
     type Result = R;
 
@@ -64,7 +64,7 @@ where
 
 impl<A, F, R, Receiver> Method<Receiver, (A,)> for F
 where
-    F: Fn(&Receiver, A) -> R,
+    F: Fn(&Receiver, A) -> R + Send + Sync,
 {
     type Result = R;
 
@@ -75,7 +75,7 @@ where
 
 impl<A, B, F, R, Receiver> Method<Receiver, (A, B)> for F
 where
-    F: Fn(&Receiver, A, B) -> R,
+    F: Fn(&Receiver, A, B) -> R + Send + Sync,
 {
     type Result = R;
 

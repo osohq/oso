@@ -45,7 +45,7 @@ impl Oso {
         actor: Actor,
         action: Action,
         resource: Resource,
-    ) -> bool
+    ) -> crate::Result<bool>
     where
         Actor: ToPolar,
         Action: ToPolar,
@@ -53,7 +53,11 @@ impl Oso {
     {
         let args: Vec<&dyn ToPolar> = vec![&actor, &action, &resource];
         let mut query = self.query_rule("allow", args).unwrap();
-        query.next().is_some()
+        match query.next() {
+            Some(Ok(_)) => Ok(true),
+            Some(Err(e)) => Err(e),
+            None => Ok(false),
+        }
     }
 
     pub fn clear(&mut self) {

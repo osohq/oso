@@ -15,6 +15,7 @@ lazy_static! {
 pub struct Expense {
     pub amount: i32,
     pub description: String,
+    #[polar(attribute)]
     pub submitted_by: String,
 }
 

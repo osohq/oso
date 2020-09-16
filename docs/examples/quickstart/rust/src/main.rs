@@ -15,7 +15,7 @@ fn no_policy() -> bool {
 
     let actor = "alice@example.com";
     let resource = EXPENSES[1].clone();
-    let allowed = oso.is_allowed(actor, "GET", resource);
+    let allowed = oso.is_allowed(actor, "GET", resource).unwrap();
     println!("is_allowed => {}", allowed);
     allowed
 }
@@ -28,7 +28,7 @@ fn with_policy() -> bool {
     let resource = EXPENSES[1].clone();
     oso.load_str(r#"allow("alice@example.com", "GET", _expense: Expense);"#)
         .unwrap();
-    let allowed = oso.is_allowed(actor, "GET", resource.clone());
+    let allowed = oso.is_allowed(actor, "GET", resource.clone()).unwrap();
     println!("is_allowed => {}", allowed);
     allowed
 }
