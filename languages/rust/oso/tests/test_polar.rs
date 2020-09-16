@@ -461,7 +461,6 @@ fn test_unify_externals() {
 
     impl HostClass for Foo {};
     impl Foo {
-
         fn new(x: i64) -> Self {
             Self { x }
         }
@@ -491,4 +490,58 @@ fn test_unify_externals() {
         .query_rule("foos_equal", vec![&a as &dyn ToPolar, &b as &dyn ToPolar])
         .unwrap();
     results.next().expect("At least one result").unwrap();
+
+    // Ensure that equality on a type that doesn't support it fails.
+    struct Bar {
+        x: i64,
+    }
+
+    impl HostClass for Bar {};
+    impl Bar {
+        fn new(x: i64) -> Self {
+            Self { x }
+        }
+    }
+
+    let bar_class = Class::with_constructor(Bar::new)
+        .name("Bar")
+        .add_attribute_getter("x", |this: &Bar| this.x)
+        .build();
+
+    test.oso.register_class(bar_class).unwrap();
+
+    let mut query = test.oso.query("x = new Bar(1) = new Bar(2)").unwrap();
+    let result = query.next();
+
+    // TODO: (dhatch) Currently this query silently fails (no results).
+    // Instead, this should return UnsupportedOperation error.
+    assert!(result.is_none());
+
+
+    #[derive(PartialEq, Clone, Debug)]
+    struct Baz {
+        x: i64,
+    }
+
+    impl HostClass for Baz {};
+    impl Baz {
+        fn new(x: i64) -> Self {
+            Self { x }
+        }
+    }
+
+    let baz_class = Class::with_constructor(Baz::new)
+        .name("Baz")
+        .add_attribute_getter("x", |this: &Baz| this.x)
+        .with_equality_check()
+        .build();
+
+    test.oso.register_class(baz_class).unwrap();
+
+    let mut query = test.oso.query("x = new Foo(1) = new Baz(1)").unwrap();
+    let result = query.next();
+
+    // TODO: (dhatch) Currently this query silently fails (no results).
+    // Instead, this should return TypeError.
+    assert!(result.is_none());
 }
