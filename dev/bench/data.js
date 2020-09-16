@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600270969880,
+  "lastUpdate": 1600287810696,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -5003,6 +5003,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5463,
             "range": "± 600",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2ecaaced7b1b90b9a816a57140fa9e333ba5535b",
+          "message": "Fix Python quickstart line numbers (#430)",
+          "timestamp": "2020-09-16T16:14:49-04:00",
+          "tree_id": "33208d538d71d69c6cad1fda9ec14f1f57686e78",
+          "url": "https://github.com/osohq/oso/commit/2ecaaced7b1b90b9a816a57140fa9e333ba5535b"
+        },
+        "date": 1600287809765,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 688,
+            "range": "± 29",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2324,
+            "range": "± 46",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65566,
+            "range": "± 1530",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 498109,
+            "range": "± 11474",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17566,
+            "range": "± 538",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17503,
+            "range": "± 619",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17510,
+            "range": "± 423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17429,
+            "range": "± 447",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16297,
+            "range": "± 965",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5127,
+            "range": "± 161",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5233,
+            "range": "± 240",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5599,
+            "range": "± 602",
             "unit": "ns/iter"
           }
         ]
