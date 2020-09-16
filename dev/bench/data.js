@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600287810696,
+  "lastUpdate": 1600288325760,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -5099,6 +5099,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5599,
             "range": "± 602",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6c2516cc116ce18e2c2d9a3a12c8f609e20d3f23",
+          "message": "Change Python printing for variables. (#429)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-16T16:24:25-04:00",
+          "tree_id": "9b6a0f963ebc5b4109f108ea29819fdcf5919e00",
+          "url": "https://github.com/osohq/oso/commit/6c2516cc116ce18e2c2d9a3a12c8f609e20d3f23"
+        },
+        "date": 1600288325039,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 585,
+            "range": "± 22",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 1960,
+            "range": "± 41",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 54173,
+            "range": "± 1037",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 402930,
+            "range": "± 7653",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 14343,
+            "range": "± 360",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 14361,
+            "range": "± 335",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 14350,
+            "range": "± 337",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 14347,
+            "range": "± 359",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 12972,
+            "range": "± 272",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4344,
+            "range": "± 94",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 4409,
+            "range": "± 157",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 4686,
+            "range": "± 459",
             "unit": "ns/iter"
           }
         ]
