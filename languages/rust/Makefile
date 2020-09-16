@@ -3,4 +3,4 @@ test:
 	cargo test -p oso-derive
 
 fmt:
-	cargo fmt
+	cd ../.. && cargo fmt
