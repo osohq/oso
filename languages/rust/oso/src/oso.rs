@@ -4,7 +4,6 @@ use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::fs::File;
 use std::io::Read;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::host::Host;

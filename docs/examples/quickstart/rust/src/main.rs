@@ -28,13 +28,13 @@ fn with_policy() -> bool {
     let resource = EXPENSES[1].clone();
     oso.load_str(r#"allow("alice@example.com", "GET", _expense: Expense);"#)
         .unwrap();
-    let allowed = oso.is_allowed(actor, "GET", resource.clone()).unwrap();
+    let allowed = oso.is_allowed(actor, "GET", resource).unwrap();
     println!("is_allowed => {}", allowed);
     allowed
 }
 
 fn main() {
-    assert!(no_policy() == false);
-    assert!(with_policy() == true);
+    assert!(!no_policy());
+    assert!(with_policy());
     server::run();
 }
