@@ -2,7 +2,7 @@ import math
 import os
 
 from polar.exceptions import UnrecognizedEOF
-from oso import Oso, OsoException
+from oso import Oso, OsoException, Variable
 
 oso = Oso()
 
@@ -108,3 +108,14 @@ assert not list(oso.query('builtinSpecializers("bar", "String")'))
 
 # Test deref works
 oso.load_str("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;")
+
+# Test unspecialized rule ordering
+result = oso.query_rule("testUnspecializedRuleOrder", "foo", Variable("y"))
+assert next(result)["bindings"]["y"] == 1
+assert next(result)["bindings"]["y"] == 2
+result = oso.query_rule("testUnspecializedRuleOrder", "foo", Variable("x"))
+assert next(result)["bindings"]["x"] == 1
+assert next(result)["bindings"]["x"] == 2
+result = oso.query_rule("testUnspecializedRuleOrder", "foo", "bar", Variable("z"))
+assert next(result)["bindings"]["z"] == 1
+assert next(result)["bindings"]["z"] == 2
