@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use rocket::get;
 use rocket::http::Status;
-use rocket::request::{self, FromRequest, Request};
+use rocket::request::{self, FromRequest, Request, State};
 
 use oso::{Oso, PolarClass};
 
