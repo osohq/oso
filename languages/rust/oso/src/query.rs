@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::host::{Instance, PolarIter};
+use crate::host::{Instance, PolarResultIter};
 use crate::{FromPolar, ToPolar};
 
 use polar_core::events::*;
@@ -16,7 +16,7 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<u64, PolarIter>,
+    calls: HashMap<u64, PolarResultIter>,
     host: Arc<Mutex<crate::host::Host>>,
 }
 
@@ -145,7 +145,7 @@ impl Query {
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
             let host = &mut self.host.lock().unwrap();
             let result = f.invoke(instance.instance.as_ref(), args, host)?;
-            self.calls.insert(call_id, result.to_polar_iter());
+            self.calls.insert(call_id, result.to_polar_results());
         }
         Ok(())
     }

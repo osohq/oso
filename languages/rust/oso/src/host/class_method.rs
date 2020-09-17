@@ -67,7 +67,7 @@ impl InstanceMethod {
         ))
     }
 
-    pub fn new_values<T, F, Args, I>(f: F) -> Self
+    pub fn new_iterator<T, F, Args, I>(f: F) -> Self
     where
         Args: FromPolar,
         F: Method<T, Args> + 'static,

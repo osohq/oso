@@ -175,6 +175,8 @@ where
         self
     }
 
+    /// A method that returns multiple values. Every element in the iterator returned by the method will
+    /// be a separate polar return value.
     pub fn add_iterator_method<F, Args, I>(mut self, name: &str, f: F) -> Self
     where
         Args: FromPolar,
@@ -185,7 +187,7 @@ where
         T: 'static,
     {
         self.instance_methods
-            .insert(Symbol(name.to_string()), InstanceMethod::new_values(f));
+            .insert(Symbol(name.to_string()), InstanceMethod::new_iterator(f));
         self
     }
 
