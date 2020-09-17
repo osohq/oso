@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use std::fmt;
 use std::string::ToString;
 
 use oso_derive::*;
@@ -26,5 +27,15 @@ impl Expense {
             description: description.to_string(),
             submitted_by: submitted_by.to_string(),
         }
+    }
+}
+
+impl fmt::Display for Expense {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Expense(amount={}, description='{}', submitted_by='{}')",
+            self.amount, &self.description, &self.submitted_by
+        )
     }
 }
