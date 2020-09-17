@@ -8,7 +8,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::errors::OsoError;
-use crate::{FromPolar, ToPolar};
+use crate::FromPolar;
 
 use super::class_method::{ClassMethod, Constructor, InstanceMethod};
 use super::downcast;
