@@ -1,8 +1,10 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
+use crate::errors::TypeError;
 use crate::Polar;
 
 mod class;
@@ -22,6 +24,16 @@ pub struct Type;
 fn type_class() -> Class {
     let class = Class::<Type>::with_default();
     class.erase_type()
+}
+
+/// Downcast `any` with proper error handling.
+///
+/// # Arguments
+/// * `type_name` - used in error message. The target type name.
+fn downcast<T: Any>(any: &dyn Any) -> Result<&T, TypeError> {
+    any.downcast_ref().ok_or_else(|| TypeError {
+        expected: String::from(std::any::type_name::<T>()),
+    })
 }
 
 /// Maintain mappings and caches for Rust classes & instances
@@ -107,10 +119,12 @@ impl Host {
         Ok(())
     }
 
-    pub fn unify(&self, left: u64, right: u64) -> bool {
-        let _left = self.get_instance(left).unwrap();
-        let _right = self.get_instance(right).unwrap();
-        todo!("left == right")
+    pub fn unify(&self, left: u64, right: u64) -> crate::Result<bool> {
+        tracing::trace!("unify {:?}, {:?}", left, right);
+
+        let left = self.get_instance(left).unwrap();
+        let right = self.get_instance(right).unwrap();
+        left.equals(right)
     }
 
     pub fn isa(&self, term: Term, class_tag: &Symbol) -> bool {
