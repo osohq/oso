@@ -1,3 +1,6 @@
 test:
-	cargo test oso
-	cargo test oso-derive
+	cargo test -p oso
+	cargo test -p oso-derive
+
+fmt:
+	cd ../.. && cargo fmt

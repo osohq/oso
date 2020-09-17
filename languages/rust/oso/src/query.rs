@@ -86,6 +86,8 @@ impl Query {
                 QueryEvent::Debug { message } => self.handle_debug(message),
             };
             if let Err(e) = result {
+                // TODO (dhatch): These seem to be getting swallowed
+                tracing::error!("application error {}", e);
                 self.application_error(e);
             }
         }
@@ -222,7 +224,7 @@ impl Query {
             .host
             .lock()
             .unwrap()
-            .unify(left_instance_id, right_instance_id);
+            .unify(left_instance_id, right_instance_id)?;
         self.question_result(call_id, res);
         Ok(())
     }
