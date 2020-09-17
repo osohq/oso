@@ -1,86 +1,18 @@
+/// Tests that are unique to the Rust implementation of oso, testing things like
+/// rust class handling.
 #![allow(clippy::too_many_arguments)]
 
 use maplit::hashmap;
 
 use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
 
-struct OsoTest {
-    oso: Oso,
-}
+mod common;
 
-impl OsoTest {
-    fn new() -> Self {
-        Self { oso: Oso::new() }
-    }
-
-    fn load_str(&mut self, policy: &str) {
-        self.oso.load_str(policy).unwrap();
-    }
-
-    fn load_file(&mut self, here: &str, name: &str) {
-        // hack because `file!()` starts from workspace root
-        // https://github.com/rust-lang/cargo/issues/3946
-        let folder = std::path::PathBuf::from(&here.replace("languages/rust/oso/", ""));
-        let mut file = folder.parent().unwrap().to_path_buf();
-        file.push(name);
-        println!("{:?}", file);
-        self.oso.load_file(file.to_str().unwrap()).unwrap();
-    }
-
-    fn query(&mut self, q: &str) -> Vec<oso::ResultSet> {
-        let results = self.oso.query(q).unwrap();
-        let mut result_vec = vec![];
-        for r in results {
-            result_vec.push(r.expect("result is an error"))
-        }
-        result_vec
-    }
-
-    fn query_err(&mut self, q: &str) -> String {
-        let mut results = self.oso.query(q).unwrap();
-        let err = results
-            .next()
-            .unwrap()
-            .expect_err("query should return an error");
-        err.to_string()
-    }
-
-    fn qvar<T: oso::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
-        let res = self.query(q);
-        res.into_iter()
-            .map(|set| {
-                set.get_typed(var)
-                    .unwrap_or_else(|_| panic!("query: '{}', binding for '{}'", q, var))
-            })
-            .collect()
-    }
-
-    fn qeval(&mut self, q: &str) {
-        let mut results = self.oso.query(q).unwrap();
-        results
-            .next()
-            .expect("Query should have at least one result.")
-            .unwrap();
-    }
-
-    fn qnull(&mut self, q: &str) {
-        let mut results = self.oso.query(q).unwrap();
-        assert!(results.next().is_none(), "Query shouldn't have any results");
-    }
-
-    fn qvar_one<T>(&mut self, q: &str, var: &str, expected: T)
-    where
-        T: oso::FromPolar + PartialEq<T> + std::fmt::Debug,
-    {
-        let mut res = self.qvar::<T>(q, var);
-        assert_eq!(res.len(), 1, "expected exactly one result");
-        assert_eq!(res.pop().unwrap(), expected);
-    }
-}
+use common::OsoTest;
 
 #[test]
 fn test_anything_works() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     let mut test = OsoTest::new();
     test.load_str("f(1);");
@@ -92,7 +24,7 @@ fn test_anything_works() {
 
 #[test]
 fn test_helpers() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     let mut test = OsoTest::new();
     test.load_file(file!(), "test_file.polar");
@@ -109,7 +41,7 @@ fn test_helpers() {
 
 #[test]
 fn test_data_conversions() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     let mut test = OsoTest::new();
     test.load_str(
@@ -140,7 +72,7 @@ fn test_data_conversions() {
 #[ignore]
 #[test]
 fn test_load_function() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     let mut test = OsoTest::new();
     test.load_file(file!(), "test_file.polar");
@@ -178,7 +110,7 @@ fn test_load_function() {
 
 #[test]
 fn test_external() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     struct Foo {
         a: &'static str,
@@ -266,7 +198,7 @@ fn test_external() {
 fn test_methods() {
     use std::default::Default;
 
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     #[derive(PolarClass, Clone)]
     struct Foo {
@@ -320,7 +252,7 @@ fn test_methods() {
 
 #[test]
 fn test_macros() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     #[derive(PolarClass)]
     #[polar(class_name = "Bar")]
@@ -373,7 +305,8 @@ fn test_macros() {
 
 #[test]
 fn test_tuple_structs() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
+
     #[derive(PolarClass)]
     struct Foo(i32, i32);
 
@@ -404,7 +337,7 @@ fn test_tuple_structs() {
 
 #[test]
 fn test_results_and_options() {
-    let _ = tracing_subscriber::fmt::try_init();
+    common::setup();
 
     #[derive(PolarClass)]
     struct Foo;
