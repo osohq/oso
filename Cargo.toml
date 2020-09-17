@@ -8,6 +8,10 @@ members = [
     "languages/rust/oso-derive",
 ]
 
+exclude = [
+    "docs/examples/quickstart/rust"
+]
+
 [profile.release]
 debug = true
 

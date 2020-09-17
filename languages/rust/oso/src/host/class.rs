@@ -21,7 +21,7 @@ type InstanceMethods = HashMap<Symbol, InstanceMethod>;
 
 fn equality_not_supported(
     type_name: String,
-) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>> {
+) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync> {
     let eq = move |_: &dyn Any, _: &dyn Any| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
@@ -46,15 +46,15 @@ pub struct Class<T = ()> {
     pub class_methods: ClassMethods,
     pub type_id: TypeId,
     /// A method to check whether the supplied argument is in instance of `T`
-    instance_check: Arc<dyn Fn(&dyn Any) -> bool>,
+    instance_check: Arc<dyn Fn(&dyn Any) -> bool + Send + Sync>,
     /// A method to check whether the supplied `TypeId` matches this class
     /// (This isn't using `type_id` because we might want to register other types here
     /// in order to check inheritance)
-    class_check: Arc<dyn Fn(TypeId) -> bool>,
+    class_check: Arc<dyn Fn(TypeId) -> bool + Send + Sync>,
 
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>>,
+    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync>,
 
     /// A type marker. This is erased when the class is ready to be constructed with
     /// `erase_type`
@@ -127,7 +127,7 @@ where
 
     pub fn set_equality_check<F>(mut self, f: F) -> Self
     where
-        F: Fn(&T, &T) -> bool + 'static,
+        F: Fn(&T, &T) -> bool + Send + Sync + 'static,
     {
         self.equality_check = Arc::new(move |a, b| {
             tracing::trace!("equality check");
@@ -288,3 +288,10 @@ impl Instance {
         (self.class.equality_check)(&*self.instance, &*other.instance)
     }
 }
+
+// @TODO: This is very unsafe.
+// Temporary workaround. We need to differentiate between instances which
+// _do_ need to be `Send` (e.g. registered as constants on the base `Oso` objects)
+// and instances which don't need to be Send (e.g. created/accessed on a single thread for
+// just one query).
+unsafe impl Send for Instance {}
