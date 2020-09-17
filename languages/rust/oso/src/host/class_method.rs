@@ -4,7 +4,8 @@ use polar_core::terms::{Symbol, Term};
 use std::any::Any;
 use std::sync::Arc;
 
-use crate::{FromPolar, ToPolar};
+use super::to_polar::ToPolarIter;
+use crate::FromPolar;
 
 use super::class::Class;
 use super::method::{Function, Method};
@@ -40,14 +41,14 @@ impl Constructor {
 }
 
 #[derive(Clone)]
-pub struct InstanceMethod(TypeErasedMethod<dyn ToPolar>);
+pub struct InstanceMethod(TypeErasedMethod<dyn ToPolarIter>);
 
 impl InstanceMethod {
     pub fn new<T, F, Args>(f: F) -> Self
     where
         Args: FromPolar,
         F: Method<T, Args> + 'static,
-        F::Result: ToPolar + 'static,
+        F::Result: ToPolarIter + 'static,
         T: 'static,
     {
         Self(Arc::new(
@@ -58,8 +59,9 @@ impl InstanceMethod {
 
                 let args = Args::from_polar_list(&args, host);
 
-                join(receiver, args)
-                    .map(|(receiver, args)| Arc::new(f.invoke(receiver, args)) as Arc<dyn ToPolar>)
+                join(receiver, args).map(|(receiver, args)| {
+                    Arc::new(f.invoke(receiver, args)) as Arc<dyn ToPolarIter>
+                })
             },
         ))
     }
@@ -69,7 +71,7 @@ impl InstanceMethod {
         receiver: &dyn Any,
         args: Vec<Term>,
         host: &mut Host,
-    ) -> crate::Result<Arc<dyn ToPolar>> {
+    ) -> crate::Result<Arc<dyn ToPolarIter>> {
         self.0(receiver, args, host)
     }
 
@@ -93,22 +95,22 @@ impl InstanceMethod {
 }
 
 #[derive(Clone)]
-pub struct ClassMethod(TypeErasedFunction<dyn ToPolar>);
+pub struct ClassMethod(TypeErasedFunction<dyn ToPolarIter>);
 
 impl ClassMethod {
     pub fn new<F, Args>(f: F) -> Self
     where
         Args: FromPolar,
         F: Function<Args> + 'static,
-        F::Result: ToPolar + 'static,
+        F::Result: ToPolarIter + 'static,
     {
         Self(Arc::new(move |args: Vec<Term>, host: &mut Host| {
             Args::from_polar_list(&args, host)
-                .map(|args| Arc::new(f.invoke(args)) as Arc<dyn ToPolar>)
+                .map(|args| Arc::new(f.invoke(args)) as Arc<dyn ToPolarIter>)
         }))
     }
 
-    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Arc<dyn ToPolar>> {
+    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Arc<dyn ToPolarIter>> {
         self.0(args, host)
     }
 }

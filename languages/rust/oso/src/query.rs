@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::host::Instance;
+use crate::host::{Instance, PolarIter};
 use crate::{FromPolar, ToPolar};
 
 use polar_core::events::*;
@@ -16,7 +16,7 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<u64, Box<dyn Iterator<Item = Arc<dyn crate::host::ToPolar>>>>,
+    calls: HashMap<u64, PolarIter>,
     host: Arc<Mutex<crate::host::Host>>,
 }
 
@@ -95,7 +95,7 @@ impl Query {
         self.inner.question_result(call_id, result);
     }
 
-    fn call_result(&mut self, call_id: u64, result: Arc<dyn ToPolar>) -> crate::Result<()> {
+    fn call_result(&mut self, call_id: u64, result: Box<dyn ToPolar>) -> crate::Result<()> {
         let mut host = self.host.lock().unwrap();
         let value = result.to_polar(&mut host);
         Ok(self.inner.call_result(call_id, Some(value))?)
@@ -143,13 +143,15 @@ impl Query {
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
             let host = &mut self.host.lock().unwrap();
             let result = f.invoke(instance.instance.as_ref(), args, host)?;
-            self.calls
-                .insert(call_id, Box::new(std::iter::once(result)));
+            self.calls.insert(call_id, result.to_polar_iter());
         }
         Ok(())
     }
 
-    fn next_call_result(&mut self, call_id: u64) -> Option<Arc<dyn ToPolar>> {
+    fn next_call_result(
+        &mut self,
+        call_id: u64,
+    ) -> Option<Result<Box<dyn ToPolar>, crate::OsoError>> {
         self.calls.get_mut(&call_id).and_then(|c| c.next())
     }
 
@@ -167,7 +169,13 @@ impl Query {
         }
 
         if let Some(result) = self.next_call_result(call_id) {
-            self.call_result(call_id, result)
+            match result {
+                Ok(r) => self.call_result(call_id, r),
+                Err(e) => {
+                    self.application_error(e);
+                    self.call_result_none(call_id)
+                }
+            }
         } else {
             self.call_result_none(call_id)
         }
