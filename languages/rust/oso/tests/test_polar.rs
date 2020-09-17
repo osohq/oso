@@ -421,10 +421,10 @@ fn test_results_and_options() {
         .register_class(
             Foo::get_polar_class_builder()
                 .set_constructor(Foo::new)
-                .add_method("ok", |recv: &Foo| recv.ok())
-                .add_method("err", |recv: &Foo| recv.err())
-                .add_method("some", |recv: &Foo| recv.some())
-                .add_method("none", |recv: &Foo| recv.none())
+                .add_method("ok", Foo::ok)
+                .add_method("err", Foo::err)
+                .add_method("some", Foo::some)
+                .add_method("none", Foo::none)
                 .build(),
         )
         .unwrap();
