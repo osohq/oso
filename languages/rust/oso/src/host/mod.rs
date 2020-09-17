@@ -158,7 +158,9 @@ impl Host {
     pub fn operator(&self, _op: Operator, _args: [class::Instance; 2]) -> crate::Result<bool> {
         // Operators are not supported
         // TODO (dhatch): Implement.
-        Err(OsoError::UnimplementedOperation { operation: String::from("comparison operators") })
+        Err(OsoError::UnimplementedOperation {
+            operation: String::from("comparison operators"),
+        })
     }
 }
 
