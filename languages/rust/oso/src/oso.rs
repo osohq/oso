@@ -76,14 +76,15 @@ impl Oso {
         Ok(())
     }
 
-    pub fn load_file(&mut self, file: &str) -> crate::Result<()> {
-        if !file.ends_with(".polar") {
-            return Err(crate::OsoError::IncorrectFileType);
+    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
+        let file = file.as_ref();
+        if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
+            return Err(crate::OsoError::IncorrectFileType { filename: file.to_string_lossy().into_owned() });
         }
         let mut f = File::open(&file)?;
         let mut policy = String::new();
         f.read_to_string(&mut policy)?;
-        self.inner.load(&policy, Some(file.to_string()))?;
+        self.inner.load(&policy, Some(file.to_string_lossy().into_owned()))?;
         self.check_inline_queries()
     }
 
