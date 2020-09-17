@@ -21,7 +21,7 @@ type InstanceMethods = HashMap<Symbol, InstanceMethod>;
 
 fn equality_not_supported(
     type_name: String,
-) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>> {
+) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync> {
     let eq = move |_: &dyn Any, _: &dyn Any| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
@@ -54,7 +54,7 @@ pub struct Class<T = ()> {
 
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool>>,
+    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync>,
 
     /// A type marker. This is erased when the class is ready to be constructed with
     /// `erase_type`
@@ -127,7 +127,7 @@ where
 
     pub fn set_equality_check<F>(mut self, f: F) -> Self
     where
-        F: Fn(&T, &T) -> bool + 'static,
+        F: Fn(&T, &T) -> bool + Send + Sync + 'static,
     {
         self.equality_check = Arc::new(move |a, b| {
             tracing::trace!("equality check");
