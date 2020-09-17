@@ -7,10 +7,11 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::{FromPolar, ToPolar};
+use crate::FromPolar;
 
 use super::class_method::{ClassMethod, Constructor, InstanceMethod};
 use super::method::{Function, Method};
+use super::to_polar::ToPolarIter;
 use super::Host;
 
 type ClassMethods = HashMap<Symbol, ClassMethod>;
@@ -105,7 +106,7 @@ impl<T> Class<T> {
     pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
     where
         F: Method<T, Result = R> + 'static,
-        R: ToPolar + 'static,
+        R: ToPolarIter + 'static,
         T: 'static,
     {
         self.attributes
@@ -122,7 +123,7 @@ impl<T> Class<T> {
     where
         Args: FromPolar,
         F: Method<T, Args, Result = R> + 'static,
-        R: ToPolar + 'static,
+        R: ToPolarIter + 'static,
         T: 'static,
     {
         self.instance_methods
@@ -134,7 +135,7 @@ impl<T> Class<T> {
     where
         F: Function<Args, Result = R> + 'static,
         Args: FromPolar + 'static,
-        R: ToPolar + 'static,
+        R: ToPolarIter + 'static,
     {
         self.class_methods
             .insert(Symbol(name.to_string()), ClassMethod::new(f));

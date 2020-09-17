@@ -13,7 +13,7 @@ mod to_polar;
 
 pub use class::{Class, Instance};
 pub use from_polar::FromPolar;
-pub use to_polar::ToPolar;
+pub use to_polar::{PolarIter, ToPolar};
 
 /// The meta class - the class of all classess (except itself)
 #[derive(Clone, Default)]
