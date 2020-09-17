@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
@@ -1136,16 +1137,25 @@ impl PolarVirtualMachine {
         field: &Term,
         check_errors: bool,
     ) -> PolarResult<QueryEvent> {
-        let (field_name, args): (Symbol, Option<Vec<Term>>) = match self.deref(field).value() {
-            Value::Call(Call {
-                name,
-                args,
-                kwargs: None,
-            }) => (
+        let (field_name, args, kwargs): (
+            Symbol,
+            Option<Vec<Term>>,
+            Option<BTreeMap<Symbol, Term>>,
+        ) = match self.deref(field).value() {
+            Value::Call(Call { name, args, kwargs }) => (
                 name.clone(),
                 Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
+                match kwargs {
+                    Some(unwrapped) => Some(
+                        unwrapped
+                            .iter()
+                            .map(|(k, v)| (k.to_owned(), self.deep_deref(v)))
+                            .collect(),
+                    ),
+                    None => None,
+                },
             ),
-            Value::String(field) => (Symbol(field.clone()), None),
+            Value::String(field) => (Symbol(field.clone()), None, None),
             v => {
                 return Err(self.type_error(
                     &field,
@@ -1168,6 +1178,7 @@ impl PolarVirtualMachine {
         self.log_with(
             || {
                 let mut msg = format!("LOOKUP: {}.{}", instance.to_string(), field_name);
+                // TODO (leina): add kwargs to log
                 if let Some(arguments) = &args {
                     msg.push('(');
                     msg.push_str(
@@ -1189,6 +1200,7 @@ impl PolarVirtualMachine {
             instance: self.deep_deref(instance),
             attribute: field_name,
             args,
+            kwargs,
         })
     }
 

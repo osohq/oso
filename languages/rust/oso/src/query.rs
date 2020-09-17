@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -56,7 +57,8 @@ impl Query {
                     instance,
                     attribute,
                     args,
-                } => self.handle_external_call(call_id, instance, attribute, args),
+                    kwargs,
+                } => self.handle_external_call(call_id, instance, attribute, args, kwargs),
                 QueryEvent::ExternalOp {
                     call_id,
                     operator,
@@ -162,7 +164,11 @@ impl Query {
         instance: Term,
         name: Symbol,
         args: Option<Vec<Term>>,
+        kwargs: Option<BTreeMap<Symbol, Term>>,
     ) -> crate::Result<()> {
+        if kwargs.is_some() {
+            return lazy_error!("Invalid call error: kwargs not supported in Rust.");
+        }
         let instance = Instance::from_polar(&instance, &mut self.host.lock().unwrap()).unwrap();
         if let Err(e) = self.register_call(call_id, instance, name, args) {
             self.application_error(e);

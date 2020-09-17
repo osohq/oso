@@ -2,6 +2,7 @@ use super::kb::*;
 use super::terms::*;
 use super::traces::*;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
@@ -30,6 +31,7 @@ pub enum QueryEvent {
         attribute: Symbol,
         /// List of arguments to use if this is a method call.
         args: Option<Vec<Term>>,
+        kwargs: Option<BTreeMap<Symbol, Term>>,
     },
 
     /// Checks if the instance is an instance of (a subclass of) the class_tag.

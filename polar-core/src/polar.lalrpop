@@ -256,7 +256,7 @@ Exp10<T>: Term = {
 }
 
 CallTerm: Value = {
-    <SimpleCall>,
+    <Call>,
     <s:"Symbol"> => Value::String(s.0),
     "(" <Value> ")",
 }

@@ -98,7 +98,13 @@ class Query:
                 callable(attr) and not data["args"] is None
             ):  # If it's a function, call it with the args.
                 args = [self.host.to_python(arg) for arg in data["args"]]
-                result = attr(*args)
+                kwargs = data["kwargs"]
+                kwargs = (
+                    {k: self.host.to_python(v) for k, v in kwargs.items()}
+                    if kwargs
+                    else {}
+                )
+                result = attr(*args, **kwargs)
             elif not data["args"] is None:
                 raise RuntimeError(
                     f"tried to call '{attribute}' but it is not callable"
