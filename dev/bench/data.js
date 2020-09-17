@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600357000337,
+  "lastUpdate": 1600359528128,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -5483,6 +5483,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6032,
             "range": "± 957",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dfc613ca2ff38e7aacc8711fa4e6598f7b616bf7",
+          "message": "Rust quickstart example and trait bounds + hacks to make it work. (#428)\n\n\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\nCo-authored-by: David Hatch <david@osohq.com>",
+          "timestamp": "2020-09-17T12:07:50-04:00",
+          "tree_id": "f69bf9f1d762445106168c48cd24bf3dfc5e766f",
+          "url": "https://github.com/osohq/oso/commit/dfc613ca2ff38e7aacc8711fa4e6598f7b616bf7"
+        },
+        "date": 1600359527315,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 600,
+            "range": "± 71",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2181,
+            "range": "± 178",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 58740,
+            "range": "± 6423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 424113,
+            "range": "± 40864",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15700,
+            "range": "± 1865",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 15728,
+            "range": "± 2277",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16467,
+            "range": "± 2015",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16771,
+            "range": "± 1563",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14804,
+            "range": "± 972",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4954,
+            "range": "± 523",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5261,
+            "range": "± 879",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5455,
+            "range": "± 921",
             "unit": "ns/iter"
           }
         ]
