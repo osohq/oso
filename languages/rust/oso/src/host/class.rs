@@ -13,7 +13,7 @@ use crate::FromPolar;
 use super::class_method::{ClassMethod, Constructor, InstanceMethod};
 use super::downcast;
 use super::method::{Function, Method};
-use super::to_polar::ToPolarIter;
+use super::to_polar::ToPolarResults;
 use super::Host;
 
 type ClassMethods = HashMap<Symbol, ClassMethod>;
@@ -151,7 +151,7 @@ where
     pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
     where
         F: Method<T, Result = R> + 'static,
-        R: ToPolarIter + 'static,
+        R: ToPolarResults + 'static,
         T: 'static,
     {
         self.attributes
@@ -168,20 +168,20 @@ where
     where
         Args: FromPolar,
         F: Method<T, Args, Result = R> + 'static,
-        R: ToPolarIter + 'static,
+        R: ToPolarResults + 'static,
     {
         self.instance_methods
             .insert(Symbol(name.to_string()), InstanceMethod::new(f));
         self
     }
 
-    pub fn add_values_method<F, Args, I>(mut self, name: &str, f: F) -> Self
+    pub fn add_iterator_method<F, Args, I>(mut self, name: &str, f: F) -> Self
     where
         Args: FromPolar,
         F: Method<T, Args> + 'static,
         F::Result: IntoIterator<Item = I>,
         <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Sized + Clone + 'static,
-        I: ToPolarIter + 'static,
+        I: ToPolarResults + 'static,
         T: 'static,
     {
         self.instance_methods
@@ -193,7 +193,7 @@ where
     where
         F: Function<Args, Result = R> + 'static,
         Args: FromPolar + 'static,
-        R: ToPolarIter + 'static,
+        R: ToPolarResults + 'static,
     {
         self.class_methods
             .insert(Symbol(name.to_string()), ClassMethod::new(f));

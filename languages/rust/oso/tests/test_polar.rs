@@ -229,11 +229,11 @@ fn test_external() {
     let foo_class = oso::Class::with_constructor(capital_foo)
         .name("Foo")
         .add_attribute_getter("a", |receiver: &Foo| receiver.a)
-        // .add_method("b", |receiver: &Foo| oso::host::PolarIter(receiver.b()))
+        // .add_method("b", |receiver: &Foo| oso::host::PolarResultIter(receiver.b()))
         .add_class_method("c", Foo::c)
         .add_method::<_, _, u32>("d", Foo::d)
         .add_method("e", Foo::e)
-        // .add_method("f", |receiver: &Foo| oso::host::PolarIter(receiver.f()))
+        // .add_method("f", |receiver: &Foo| oso::host::PolarResultIter(receiver.f()))
         .add_method("g", Foo::g)
         .add_method("h", Foo::h)
         .build();
@@ -567,7 +567,7 @@ fn test_values() {
         .register_class(
             Foo::get_polar_class_builder()
                 .set_constructor(Foo::new)
-                .add_values_method("one_two_three", Foo::one_two_three)
+                .add_iterator_method("one_two_three", Foo::one_two_three)
                 .add_method("as_list", Foo::one_two_three)
                 .build(),
         )
