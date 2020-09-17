@@ -29,6 +29,12 @@ pub enum OsoError {
         operation: String,
         type_name: String,
     },
+
+    #[error("{operation} are unimplemented in oso-rust.")]
+    UnimplementedOperation {
+        operation: String
+    },
+
     #[error("failed to convert type to Polar")]
     ToPolar,
 

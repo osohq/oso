@@ -196,7 +196,7 @@ impl Query {
                 Instance::from_polar(&args[0], &mut host).unwrap(),
                 Instance::from_polar(&args[1], &mut host).unwrap(),
             ];
-            host.operator(operator, args)
+            host.operator(operator, args)?
         };
         self.question_result(call_id, res);
         Ok(())
