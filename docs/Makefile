@@ -98,11 +98,15 @@ nodejs-test:
 	cd examples/inheritance/nodejs && yarn && yarn jest
 	cd examples/user_types/nodejs && yarn && yarn jest
 
+rust-test:
+	cd examples/quickstart/rust && cargo test
+
 test: doctest
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
 	$(MAKE) nodejs-test
+	$(MAKE) rust-test
 
 deps:
 	pip3 install -r requirements-docs.txt
