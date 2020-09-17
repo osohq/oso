@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
-use crate::errors::TypeError;
+use crate::errors::{OsoError, TypeError};
 use crate::Polar;
 
 mod class;
@@ -150,16 +150,17 @@ impl Host {
         }
     }
 
-    pub fn is_subspecializer(&self, id: u64, left_tag: &Symbol, right_tag: &Symbol) -> bool {
-        let _instance = self.get_instance(id).unwrap();
-        let _left = self.get_class(left_tag).unwrap();
-        let _right = self.get_class(right_tag).unwrap();
-
-        todo!("????")
+    pub fn is_subspecializer(&self, _id: u64, _left_tag: &Symbol, _right_tag: &Symbol) -> bool {
+        // Rust has no notion of inheritance, so there are no subspecializers.
+        false
     }
 
-    pub fn operator(&self, _op: Operator, _args: [class::Instance; 2]) -> bool {
-        todo!()
+    pub fn operator(&self, _op: Operator, _args: [class::Instance; 2]) -> crate::Result<bool> {
+        // Operators are not supported
+        // TODO (dhatch): Implement.
+        Err(OsoError::UnimplementedOperation {
+            operation: String::from("comparison operators"),
+        })
     }
 }
 
