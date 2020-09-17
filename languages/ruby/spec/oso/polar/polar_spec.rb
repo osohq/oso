@@ -12,6 +12,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   let(:test_file) { File.join(__dir__, 'test_file.polar') }
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
 
+  # test_anything_works
   it 'works' do
     subject.load_str('f(1);')
     expect(query(subject, 'f(x)')).to eq([{ 'x' => 1 }])
@@ -55,6 +56,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(subject.query_rule('f', Oso::Polar::Predicate.new('pred', args: [1, 2])).to_a).to eq([{}])
     end
 
+    ## NOTE This is not an integration test - it uses the private API (host should be private).
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
       expect(subject.host.to_ruby(subject.host.to_polar(actor))).to eq(actor)
@@ -74,6 +76,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(result).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
 
+    # NOTE -- This is NOT an integration test. It is a unit test.
     it 'caches instances and does not leak them' do
       stub_const('Counter', Class.new do
         @count = 0

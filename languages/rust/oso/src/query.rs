@@ -250,15 +250,33 @@ impl Query {
         check_messages!(self.inner);
         Ok(())
     }
+
+    /// Covert `term` into type `T`.
+    pub fn from_polar<T: FromPolar>(&mut self, term: &Term) -> crate::Result<T> {
+        let mut host = self.host.lock().unwrap();
+        Ok(T::from_polar(term, &mut host)?)
+    }
+
+    // TODO (dhatch): Get rid of this when implementing value type for the library.
+    /// Convert `value` into type `T`.
+    pub fn from_polar_value<T: FromPolar>(&mut self, value: Value) -> crate::Result<T> {
+        let mut host = self.host.lock().unwrap();
+        Ok(T::from_polar(&Term::new_temporary(value), &mut host)?)
+    }
 }
 
 #[derive(Clone)]
 pub struct ResultSet {
-    pub bindings: polar_core::kb::Bindings,
-    pub host: Arc<Mutex<crate::host::Host>>,
+    bindings: polar_core::kb::Bindings,
+    host: Arc<Mutex<crate::host::Host>>,
 }
 
 impl ResultSet {
+    /// Return the keys in bindings.
+    pub fn keys(&self) -> Box<dyn std::iter::Iterator<Item = &str> + '_> {
+        Box::new(self.bindings.keys().map(|sym| sym.0.as_ref()))
+    }
+
     pub fn get(&self, name: &str) -> Option<crate::Value> {
         self.bindings
             .get(&Symbol(name.to_string()))
@@ -266,6 +284,7 @@ impl ResultSet {
     }
 
     pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
+        // TODO (dhatch): Type error
         self.bindings
             .get(&Symbol(name.to_string()))
             .ok_or_else(|| crate::OsoError::FromPolar)
