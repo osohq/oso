@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600354746203,
+  "lastUpdate": 1600357000337,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -5387,6 +5387,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 4783,
             "range": "± 503",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f0a2c6254fb3cf058d6112d238caf0e87f3a303d",
+          "message": "[Rust] Implement external unify. (#427)\n\n* Make test actually runs tests.\r\n\r\n* Implement external unify.\r\n\r\n* Improve error handling structure.\r\n\r\n* Add doc for error.\r\n\r\n* Tracing\r\n\r\n* Revert logging change.\r\n\r\n* Add additional tests, currently not behaving as we want.\r\n\r\n* Fmt.\r\n\r\n* Fmt in makefile.\r\n\r\n* Remove unused import.",
+          "timestamp": "2020-09-17T11:25:23-04:00",
+          "tree_id": "62676b892365a1c0656dbedb2352e611cfe8500a",
+          "url": "https://github.com/osohq/oso/commit/f0a2c6254fb3cf058d6112d238caf0e87f3a303d"
+        },
+        "date": 1600356998755,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 676,
+            "range": "± 65",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2299,
+            "range": "± 303",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66307,
+            "range": "± 18783",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 511979,
+            "range": "± 35533",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18209,
+            "range": "± 1704",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18421,
+            "range": "± 1350",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17913,
+            "range": "± 1702",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18232,
+            "range": "± 1740",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16414,
+            "range": "± 1365",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5239,
+            "range": "± 415",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5646,
+            "range": "± 483",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6032,
+            "range": "± 957",
             "unit": "ns/iter"
           }
         ]
