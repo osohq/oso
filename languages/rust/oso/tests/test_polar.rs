@@ -544,3 +544,39 @@ fn test_unify_externals() {
     // Instead, this should return TypeError.
     assert!(result.is_none());
 }
+
+#[test]
+fn test_values() {
+    let _ = tracing_subscriber::fmt::try_init();
+
+    #[derive(PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn new() -> Self {
+            Self
+        }
+
+        fn one_two_three(&self) -> Vec<i32> {
+            vec![1, 2, 3]
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::new)
+                .add_values_method("one_two_three", Foo::one_two_three)
+                .add_method("as_list", Foo::one_two_three)
+                .build(),
+        )
+        .unwrap();
+
+    let results: Vec<i32> = test.qvar("new Foo().one_two_three() = x", "x");
+    assert!(results == vec![1, 2, 3]);
+    println!("{:?}", results);
+    let result: Vec<Vec<i32>> = test.qvar("new Foo().as_list() = x", "x");
+    assert!(result == vec![vec![1, 2, 3]]);
+    println!("{:?}", result);
+}

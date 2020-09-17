@@ -175,6 +175,20 @@ where
         self
     }
 
+    pub fn add_values_method<F, Args, I>(mut self, name: &str, f: F) -> Self
+    where
+        Args: FromPolar,
+        F: Method<T, Args> + 'static,
+        F::Result: IntoIterator<Item = I>,
+        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Sized + Clone + 'static,
+        I: ToPolarIter + 'static,
+        T: 'static,
+    {
+        self.instance_methods
+            .insert(Symbol(name.to_string()), InstanceMethod::new_values(f));
+        self
+    }
+
     pub fn add_class_method<F, Args, R>(mut self, name: &str, f: F) -> Self
     where
         F: Function<Args, Result = R> + 'static,

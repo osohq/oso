@@ -172,3 +172,19 @@ impl<C: ToPolarIter> ToPolarIter for Option<C> {
         )
     }
 }
+
+pub struct PolarValues<I, Iter>
+where
+    I: ToPolarIter + 'static,
+    Iter: std::iter::Iterator<Item = I> + Sized + Clone + 'static,
+{
+    pub iter: Iter,
+}
+
+impl<I: ToPolarIter, Iter: std::iter::Iterator<Item = I> + Clone + Sized + 'static> ToPolarIter
+    for PolarValues<I, Iter>
+{
+    fn to_polar_iter(&self) -> PolarIter {
+        Box::new(self.iter.clone().flat_map(|e| e.to_polar_iter()))
+    }
+}

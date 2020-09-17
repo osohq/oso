@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use super::to_polar::ToPolarIter;
 use crate::errors::InvariantError;
+use crate::host::to_polar::PolarValues;
 use crate::FromPolar;
 
 use super::class::Class;
@@ -61,6 +62,31 @@ impl InstanceMethod {
 
                 join(receiver, args).map(|(receiver, args)| {
                     Arc::new(f.invoke(receiver, args)) as Arc<dyn ToPolarIter>
+                })
+            },
+        ))
+    }
+
+    pub fn new_values<T, F, Args, I>(f: F) -> Self
+    where
+        Args: FromPolar,
+        F: Method<T, Args> + 'static,
+        F::Result: IntoIterator<Item = I>,
+        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Sized + Clone + 'static,
+        I: ToPolarIter + 'static,
+        T: 'static,
+    {
+        Self(Arc::new(
+            move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
+                let receiver = downcast(receiver).map_err(|e| e.invariant().into());
+
+                let args = Args::from_polar_list(&args, host);
+
+                join(receiver, args).map(|(receiver, args)| {
+                    let polar_values = PolarValues {
+                        iter: f.invoke(receiver, args).into_iter(),
+                    };
+                    Arc::new(polar_values) as Arc<dyn ToPolarIter>
                 })
             },
         ))
