@@ -87,7 +87,7 @@ fn test() {
     println!("Loading: {}", polar_file);
     oso.load_file(&polar_file).unwrap();
 
-    assert!(oso.is_allowed("a", "b", "c"));
+    assert!(oso.is_allowed("a", "b", "c").unwrap());
 
     // Test that a built in string method can be called.
     oso.load_str(r#"?= x = "hello world!" and x.ends_with("world!");"#)

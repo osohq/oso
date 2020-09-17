@@ -17,8 +17,10 @@ fn join<A, B>(left: crate::Result<A>, right: crate::Result<B>) -> crate::Result<
     left.and_then(|l| right.map(|r| (l, r)))
 }
 
-type TypeErasedFunction<R> = Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<Arc<R>>>;
-type TypeErasedMethod<R> = Arc<dyn Fn(&dyn Any, Vec<Term>, &mut Host) -> crate::Result<Arc<R>>>;
+type TypeErasedFunction<R> =
+    Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<Arc<R>> + Send + Sync>;
+type TypeErasedMethod<R> =
+    Arc<dyn Fn(&dyn Any, Vec<Term>, &mut Host) -> crate::Result<Arc<R>> + Send + Sync>;
 
 #[derive(Clone)]
 pub struct Constructor(TypeErasedFunction<dyn Any>);
