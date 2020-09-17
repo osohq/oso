@@ -120,7 +120,7 @@ arguments, **actor**, **action**, and **resource**:
 
     .. literalinclude:: /examples/quickstart/python/allow-01.py
       :language: python
-      :lines: 11-13
+      :lines: 12-14
 
   .. group-tab:: Ruby
 
