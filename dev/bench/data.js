@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600362955262,
+  "lastUpdate": 1600376176455,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -5675,6 +5675,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 7025,
             "range": "± 1074",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "96543cd44ea2921ec6eb8e2d68e4e2fe2e5b7f8d",
+          "message": "Stub out operators, implement is_subspecializer. (#432)\n\n* Stub out operators, implement is_subspecializer.\r\n\r\n* fmt",
+          "timestamp": "2020-09-17T16:47:29-04:00",
+          "tree_id": "6bd01d78636df783c7de24c3b72e332b7ae8317a",
+          "url": "https://github.com/osohq/oso/commit/96543cd44ea2921ec6eb8e2d68e4e2fe2e5b7f8d"
+        },
+        "date": 1600376175650,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 596,
+            "range": "± 26",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2111,
+            "range": "± 1262",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 57576,
+            "range": "± 3497",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 432110,
+            "range": "± 41674",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15597,
+            "range": "± 1754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16091,
+            "range": "± 1218",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16088,
+            "range": "± 3678",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 15289,
+            "range": "± 887",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14124,
+            "range": "± 711",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4562,
+            "range": "± 259",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 4866,
+            "range": "± 323",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5020,
+            "range": "± 800",
             "unit": "ns/iter"
           }
         ]
