@@ -10,5 +10,6 @@ Libraries
     ruby/index
     java/index
     node/index
+    rust/index
 
     ../frameworks/index
