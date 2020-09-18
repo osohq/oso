@@ -138,25 +138,24 @@ impl<C: 'static + Clone + super::HostClass> ToPolar for C {
 
 use std::iter;
 
-pub type PolarIter = Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>;
+pub type PolarResultIter = Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>;
 
 // Trait for the return value of class methods.
 // This allows us to return polar values, as well as options and results of polar values.
-// Iterators and futures too once we get to them.
-pub trait ToPolarIter {
-    fn to_polar_iter(&self) -> PolarIter;
+pub trait ToPolarResults {
+    fn to_polar_results(&self) -> PolarResultIter;
 }
 
-impl<C: 'static + Sized + Clone + ToPolar> ToPolarIter for C {
-    fn to_polar_iter(&self) -> PolarIter {
+impl<C: 'static + Sized + Clone + ToPolar> ToPolarResults for C {
+    fn to_polar_results(&self) -> PolarResultIter {
         Box::new(iter::once(Ok(Box::new(self.clone()) as Box<dyn ToPolar>)))
     }
 }
 
-impl<C: ToPolarIter, E: ToString> ToPolarIter for Result<C, E> {
-    fn to_polar_iter(&self) -> PolarIter {
+impl<C: ToPolarResults, E: ToString> ToPolarResults for Result<C, E> {
+    fn to_polar_results(&self) -> PolarResultIter {
         match self {
-            Ok(result) => result.to_polar_iter(),
+            Ok(result) => result.to_polar_results(),
             Err(e) => Box::new(iter::once(Err(crate::OsoError::Custom {
                 message: e.to_string(),
             }))),
@@ -164,11 +163,27 @@ impl<C: ToPolarIter, E: ToString> ToPolarIter for Result<C, E> {
     }
 }
 
-impl<C: ToPolarIter> ToPolarIter for Option<C> {
-    fn to_polar_iter(&self) -> PolarIter {
+impl<C: ToPolarResults> ToPolarResults for Option<C> {
+    fn to_polar_results(&self) -> PolarResultIter {
         self.as_ref().map_or_else(
-            || Box::new(std::iter::empty()) as PolarIter,
-            |e| e.to_polar_iter(),
+            || Box::new(std::iter::empty()) as PolarResultIter,
+            |e| e.to_polar_results(),
         )
+    }
+}
+
+pub struct PolarIter<I, Iter>
+where
+    I: ToPolarResults + 'static,
+    Iter: std::iter::Iterator<Item = I> + Sized + Clone + 'static,
+{
+    pub iter: Iter,
+}
+
+impl<I: ToPolarResults, Iter: std::iter::Iterator<Item = I> + Clone + Sized + 'static>
+    ToPolarResults for PolarIter<I, Iter>
+{
+    fn to_polar_results(&self) -> PolarResultIter {
+        Box::new(self.iter.clone().flat_map(|e| e.to_polar_results()))
     }
 }
