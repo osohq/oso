@@ -118,6 +118,7 @@ impl FromPolar for Value {
 
 impl FromPolar for Instance {
     fn from_polar(term: &Term, host: &mut Host) -> crate::Result<Self> {
+        //  TODO (dhatch): Why do we have cases for anything besides external instance?
         let instance = match term.value().clone() {
             Value::Boolean(b) => host
                 .get_class_from_type::<bool>()

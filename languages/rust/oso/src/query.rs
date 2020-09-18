@@ -116,7 +116,7 @@ impl Query {
         match constructor.value() {
             Value::InstanceLiteral(InstanceLiteral { .. }) => todo!("instantiate from literal"),
             Value::Call(Call { name, args, .. }) => {
-                let _instance = host.make_instance(name, args.clone(), instance_id);
+                host.make_instance(name, args.clone(), instance_id)?;
             }
             _ => panic!("not valid"),
         }

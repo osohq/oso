@@ -27,7 +27,7 @@ fn test_helpers() {
     common::setup();
 
     let mut test = OsoTest::new();
-    test.load_file(file!(), "test_file.polar");
+    test.load_file(file!(), "test_file.polar").unwrap();
     assert_eq!(
         test.query("f(x)"),
         vec![
@@ -75,8 +75,8 @@ fn test_load_function() {
     common::setup();
 
     let mut test = OsoTest::new();
-    test.load_file(file!(), "test_file.polar");
-    test.load_file(file!(), "test_file.polar");
+    test.load_file(file!(), "test_file.polar").unwrap();
+    test.load_file(file!(), "test_file.polar").unwrap();
     assert_eq!(
         test.query("f(x)"),
         vec![
@@ -88,8 +88,8 @@ fn test_load_function() {
     assert_eq!(test.qvar::<u32>("f(x)", "x"), [1, 2, 3]);
 
     test.oso.clear();
-    test.load_file(file!(), "test_file.polar");
-    test.load_file(file!(), "test_file_gx.polar");
+    test.load_file(file!(), "test_file.polar").unwrap();
+    test.load_file(file!(), "test_file_gx.polar").unwrap();
     assert_eq!(
         test.query("f(x)"),
         vec![
@@ -380,6 +380,11 @@ fn test_results_and_options() {
     test.qvar_one(r#"new Foo().ok() = x"#, "x", 1);
     test.query_err("new Foo().err()");
     test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
+
+    test.qnull(r#"new Foo().none() = x and y = 1"#);
+    test.qvar_one(r#"not (new Foo().none()) and y = 1"#, "y", 1);
+
+
     let results = test.query("new Foo().none()");
     assert!(results.is_empty());
 }

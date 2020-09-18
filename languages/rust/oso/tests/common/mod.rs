@@ -4,6 +4,9 @@ pub struct OsoTest {
     pub oso: Oso,
 }
 
+// TODO: this shouldn't make assertions so that it is clear what tests are
+// checking from reading the tests.
+
 impl OsoTest {
     pub fn new() -> Self {
         Self { oso: Oso::new() }
@@ -13,14 +16,14 @@ impl OsoTest {
         self.oso.load_str(policy).unwrap();
     }
 
-    pub fn load_file(&mut self, here: &str, name: &str) {
+    pub fn load_file(&mut self, here: &str, name: &str) -> oso::Result<()> {
         // hack because `file!()` starts from workspace root
         // https://github.com/rust-lang/cargo/issues/3946
         let folder = std::path::PathBuf::from(&here.replace("languages/rust/oso/", ""));
         let mut file = folder.parent().unwrap().to_path_buf();
         file.push(name);
         println!("{:?}", file);
-        self.oso.load_file(file.to_str().unwrap()).unwrap();
+        self.oso.load_file(file.to_str().unwrap())
     }
 
     pub fn query(&mut self, q: &str) -> Vec<oso::ResultSet> {

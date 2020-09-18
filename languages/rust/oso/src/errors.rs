@@ -38,6 +38,9 @@ pub enum OsoError {
     #[error("failed to convert type to Polar")]
     ToPolar,
 
+    #[error("Class {name} already registered")]
+    DuplicateClassError { name: String },
+
     /// TODO: replace all these with proper variants
     #[error("{message}")]
     Custom { message: String },

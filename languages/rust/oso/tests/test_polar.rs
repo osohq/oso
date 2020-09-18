@@ -1,15 +1,29 @@
 /// Common tests for all integrations.
 use std::collections::HashMap;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
-use oso::{Class, FromPolar, HostClass, Oso, PolarClass, ToPolar, Value, OsoError};
+use oso::{Class, FromPolar, HostClass, Oso, OsoError, PolarClass, ToPolar, Value};
 use oso_derive::*;
+use polar_core::error as polar_error;
 
 use maplit::hashmap;
 
 mod common;
 
 use common::OsoTest;
+
+fn test_file_path() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let path = path.join(Path::new("tests/test_file.polar"));
+    path
+}
+
+fn test_file_gx_path() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let path = path.join(Path::new("tests/test_file_gx.polar"));
+    path
+}
 
 // EXTERNALS
 
@@ -205,3 +219,199 @@ fn test_load_file_error_contains_filename() {
         panic!("Unexpected error type {:?}", err);
     }
 }
+
+#[test]
+fn test_load_file_extension_check() {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    let err = oso.oso.load_file("not_polar_file.txt").unwrap_err();
+    assert!(
+        matches!(err, OsoError::IncorrectFileType { filename } if filename == "not_polar_file.txt")
+    );
+}
+
+#[test]
+fn test_load_file_nonexistent_file() {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    let err = oso.oso.load_file("not_a_file.polar").unwrap_err();
+    assert!(matches!(err, OsoError::Io(_)));
+}
+
+#[test]
+fn test_already_loaded_file_error() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    let path = test_file_path();
+
+    oso.oso.load_file(&path)?;
+    let err = oso.oso.load_file(&path).unwrap_err();
+
+    assert!(
+        matches!(&err,
+        OsoError::Polar(polar_error::PolarError {
+            kind:
+                polar_error::ErrorKind::Runtime(polar_error::RuntimeError::FileLoading { .. }),
+            ..
+        })
+    if &err.to_string() == &format!("Problem loading file: File {} has already been loaded.", path.to_string_lossy())),
+        "Error was {:?}",
+        &err
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_load_multiple_files() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    let path = test_file_path();
+    let path_gx = test_file_gx_path();
+
+    oso.oso.load_file(path)?;
+    oso.oso.load_file(path_gx)?;
+
+    assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
+    assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);
+
+    Ok(())
+}
+
+#[test]
+fn test_clear() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.oso.load_file(test_file_path())?;
+
+    assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
+    oso.oso.clear();
+
+    oso.qnull("f(x)");
+
+    Ok(())
+}
+
+#[test]
+fn test_basic_queries() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.load_str("f(1);");
+    let results = oso.query("f(1)");
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(
+        results
+            .get(0)
+            .map(|r| r.keys().next().is_none())
+            .unwrap_or_default(),
+        true
+    );
+
+    Ok(())
+}
+
+// TODO unit test
+//#[test]
+//fn test_constructor_positional() -> oso::Result<()> {
+//common::setup();
+
+//let mut oso = test_oso();
+
+//#[derive(PolarClass, Debug, Clone)]
+//struct Foo {
+//#[polar(attribute)]
+//bar: i64,
+//#[polar(attribute)]
+//baz: i64,
+//}
+
+//impl Foo {
+//pub fn new(bar: i64, baz: i64) -> Self {
+//Self { bar, baz }
+//}
+//}
+
+//let foo_class = Foo::get_polar_class_builder()
+//.set_constructor(Foo::new)
+//.name("Foo")
+//.build();
+
+//oso.oso.register_class(foo_class)?;
+
+//Ok(());
+//}
+
+#[test]
+fn test_register_constant() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    let d = hashmap! {String::from("a") => 1};
+    oso.oso.register_constant("d", &d)?;
+
+    assert_eq!(oso.qvar::<i64>("d.a = x", "x"), vec![1]);
+
+    Ok(())
+}
+
+#[ignore]
+#[test]
+fn test_host_method_string() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_integer() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_float() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_list() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_dict() {
+    todo!();
+}
+
+// test_host_method_nil skipped. Covered by option tests.
+
+#[test]
+fn test_duplicate_register_class() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    #[derive(PolarClass, Default, Debug, Clone)]
+    struct Foo {};
+
+    let foo_class = Foo::get_polar_class_builder().name("Foo").build();
+
+    oso.oso.register_class(foo_class.clone())?;
+    let err = oso.oso.register_class(foo_class).unwrap_err();
+    assert!(matches!(err, OsoError::DuplicateClassError { name } if &name == "Foo"));
+
+    Ok(())
+}
+
+// test_duplicate_register_class_alias skipped. Functionality covered above.

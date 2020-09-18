@@ -124,7 +124,7 @@ impl Oso {
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let name = Symbol(name);
-        let class_name = self.host.lock().unwrap().cache_class(class.clone(), name);
+        let class_name = self.host.lock().unwrap().cache_class(class.clone(), name)?;
         self.register_constant(&class_name, &class)
     }
 

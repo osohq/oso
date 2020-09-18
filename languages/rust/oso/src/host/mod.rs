@@ -63,7 +63,7 @@ impl Host {
         };
         let type_class = type_class();
         let name = Symbol("Type".to_string());
-        host.cache_class(type_class, name);
+        host.cache_class(type_class, name).unwrap();
         host
     }
 
@@ -88,18 +88,24 @@ impl Host {
     /// Add the class to the host classes
     ///
     /// Returns an instance of `Type` for this class.
-    pub fn cache_class(&mut self, class: Class, name: Symbol) -> String {
+    pub fn cache_class(&mut self, class: Class, name: Symbol) -> crate::Result<String> {
+        if self.classes.contains_key(&name) {
+            return Err(OsoError::DuplicateClassError { name: name.0.to_owned() });
+        }
+
         self.class_names.insert(class.type_id, name.clone());
         self.classes.insert(name.clone(), class);
-        name.0
+        Ok(name.0)
     }
 
     pub fn get_instance(&self, id: u64) -> Option<&class::Instance> {
+        tracing::trace!("instances: {:?}", self.instances.keys().collect::<Vec<_>>());
         self.instances.get(&id)
     }
 
     pub fn cache_instance(&mut self, instance: class::Instance, id: Option<u64>) -> u64 {
         let id = id.unwrap_or_else(|| self.polar.get_external_id());
+        tracing::trace!("insert instance {:?} {:?}, instances: {:?}", id, instance, self.instances.keys().collect::<Vec<_>>());
         self.instances.insert(id, instance);
         id
     }
