@@ -480,6 +480,7 @@ where
 mod tests {
     // This would be great if it was a proc macro but I don't wanna set up another crate.
     // @WOW Hack, run this test and paste in the input.
+    #[ignore]
     #[test]
     fn gen_impls() {
         fn tuple_type(i: usize) -> (String, String, String) {
