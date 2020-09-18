@@ -439,7 +439,7 @@ fn test_register_class() -> oso::Result<()> {
     #[derive(PolarClass, Debug, Clone)]
     struct Foo {
         #[polar(attribute)]
-        a: String
+        a: String,
     }
 
     impl Foo {
@@ -471,14 +471,11 @@ fn test_register_class() -> oso::Result<()> {
             // NOTE: Slight different with ruby test.
             // Ruby tests with yielding multiple types, we
             // only yield one.
-            vec![
-                vec![1, 2, 3],
-                vec![4, 5, 6]
-            ]
+            vec![vec![1, 2, 3], vec![4, 5, 6]]
         }
 
         pub fn g(&self) -> HashMap<String, String> {
-            hashmap!{"hello".to_owned() => "world".to_owned()}
+            hashmap! {"hello".to_owned() => "world".to_owned()}
         }
 
         pub fn h(&self) -> bool {
@@ -529,15 +526,19 @@ fn test_animals() -> oso::Result<()> {
     struct Animal {
         #[polar(attribute)]
         family: String,
-        #[polar(animal)]
+        #[polar(attribute)]
         genus: String,
-        #[polar(animal)]
-        species: String
+        #[polar(attribute)]
+        species: String,
     }
 
     impl Animal {
         pub fn new(family: String, genus: String, species: String) -> Self {
-            Self { family, genus, species }
+            Self {
+                family,
+                genus,
+                species,
+            }
         }
     }
 
@@ -548,6 +549,124 @@ fn test_animals() -> oso::Result<()> {
         .build();
 
     oso.oso.register_class(animal_class)?;
+
+    let wolf = r#"new Animal("canidae", "canis", "canis lupus")"#;
+    let dog = r#"new Animal("canidae", "canis", "canis familiaris")"#;
+    let canine = r#"new Animal("canidae", "canis", "")"#;
+    let canid = r#"new Animal("canidae", "", "")"#;
+    let animal = r#"new Animal("", "", "")"#;
+
+    oso.load_str(
+        r#"
+      yup() if new Animal("steve", "", "") = new Animal("steve", "", "");
+      nope() if new Animal("steve", "", "") = new Animal("gabe", "", "");
+    "#,
+    );
+
+    oso.qeval("yup()");
+    oso.qnull("nope()");
+
+    oso.load_str(
+        r#"
+      what_is(_: {genus: "canis"}, r) if r = "canine";
+      what_is(_: {species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+      what_is(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog";
+    "#,
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is({}, r)", wolf), "r"),
+        vec!["wolf".to_owned(), "canine".to_owned()]
+    );
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is({}, r)", dog), "r"),
+        vec!["dog".to_owned(), "canine".to_owned()]
+    );
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is({}, r)", canine), "r"),
+        vec!["canine".to_owned()]
+    );
+
+    oso.load_str(
+        r#"
+          what_is_class(_: Animal{}, r) if r = "animal";
+          what_is_class(_: Animal{genus: "canis"}, r) if r = "canine";
+          what_is_class(_: Animal{family: "canidae"}, r) if r = "canid";
+          what_is_class(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+          what_is_class(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog";
+          what_is_class(_: Animal{species: s, genus: "canis"}, r) if r = s;
+    "#);
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", wolf), "r"),
+        vec!["wolf".to_owned(), "canis lupus".to_owned(), "canine".to_owned(), "canid".to_owned(), "animal".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", dog), "r"),
+        vec!["dog".to_owned(), "canis familiaris".to_owned(), "canine".to_owned(), "canid".to_owned(), "animal".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", canine), "r"),
+        vec!["".to_owned(), "canine".to_owned(), "canid".to_owned(), "animal".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", canid), "r"),
+        vec!["canid".to_owned(), "animal".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", animal), "r"),
+        vec!["animal".to_owned()]
+    );
+
+    oso.load_str(
+        r#"
+      what_is_mix(_: Animal{}, r) if r = "animal_class";
+      what_is_mix(_: Animal{genus: "canis"}, r) if r = "canine_class";
+      what_is_mix(_: {genus: "canis"}, r) if r = "canine_dict";
+      what_is_mix(_: Animal{family: "canidae"}, r) if r = "canid_class";
+      what_is_mix(_: {species: "canis lupus", genus: "canis"}, r) if r = "wolf_dict";
+      what_is_mix(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog_dict";
+      what_is_mix(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf_class";
+      what_is_mix(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog_class";
+    "#);
+
+    let wolf_dict = r#"{species: "canis lupus", genus: "canis", family: "canidae"}"#;
+    let dog_dict = r#"{species: "canis familiaris", genus: "canis", family: "canidae"}"#;
+    let canine_dict = r#"{genus: "canis", family: "canidae"}"#;
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", wolf), "r"),
+        vec!["wolf_class".to_owned(), "canine_class".to_owned(), "canid_class".to_owned(), "animal_class".to_owned(), "wolf_dict".to_owned(), "canine_dict".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", dog), "r"),
+        vec!["dog_class".to_owned(), "canine_class".to_owned(), "canid_class".to_owned(), "animal_class".to_owned(), "dog_dict".to_owned(), "canine_dict".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", canine), "r"),
+        vec!["canine_class".to_owned(), "canid_class".to_owned(), "animal_class".to_owned(), "canine_dict".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", wolf_dict), "r"),
+        vec!["wolf_dict".to_owned(), "canine_dict".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", dog_dict), "r"),
+        vec!["dog_dict".to_owned(), "canine_dict".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", canine_dict), "r"),
+        vec!["canine_dict".to_owned()]
+    );
 
     Ok(())
 }

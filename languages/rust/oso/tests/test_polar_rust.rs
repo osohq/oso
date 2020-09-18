@@ -1,6 +1,6 @@
+#![allow(clippy::too_many_arguments)]
 /// Tests that are unique to the Rust implementation of oso, testing things like
 /// rust class handling.
-#![allow(clippy::too_many_arguments)]
 
 use maplit::hashmap;
 

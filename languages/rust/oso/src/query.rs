@@ -140,6 +140,11 @@ impl Query {
             } else if let Some(attr) = instance.attributes.get(&name) {
                 (attr, vec![])
             } else {
+                tracing::trace!(
+                    "attribute {:?} not found in attributes {:?}",
+                    &name,
+                    instance.attributes.keys().collect::<Vec<_>>()
+                );
                 return lazy_error!("attribute lookup not found");
             };
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
