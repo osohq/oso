@@ -537,7 +537,7 @@ fn test_instance_lookup() {
     // Q: Not sure if this should be allowed? I can't get (new a{x: 1}).x to parse, but that might
     // be the only thing we should permit
     assert_eq!(
-        qext(&mut polar, "new a{x: 1}.x = 1", vec![value!(1)]).len(),
+        qext(&mut polar, "new a(x: 1).x = 1", vec![value!(1)]).len(),
         1
     );
 }
@@ -638,18 +638,18 @@ fn test_dict_specializers() {
     assert!(qnull(&mut polar, "g({y: 1})"));
 
     // Test unifying & isa-ing instances against our rules.
-    assert!(qnull(&mut polar, "f(new a{x: 1})"));
+    assert!(qnull(&mut polar, "f(new a(x: 1))"));
     assert_eq!(
-        qext(&mut polar, "g(new a{x: 1})", vec![value!(1), value!(1)]).len(),
+        qext(&mut polar, "g(new a(x: 1))", vec![value!(1), value!(1)]).len(),
         1
     );
-    assert!(qnull(&mut polar, "f(new a{})"));
-    assert!(qnull(&mut polar, "f(new a{x: {}})"));
-    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2), value!(2)]).is_empty());
+    assert!(qnull(&mut polar, "f(new a())"));
+    assert!(qnull(&mut polar, "f(new a(x: {}))"));
+    assert!(qext(&mut polar, "g(new a(x: 2))", vec![value!(2), value!(2)]).is_empty());
     assert_eq!(
         qext(
             &mut polar,
-            "g(new a{y: 2, x: 1})",
+            "g(new a(y: 2, x: 1))",
             vec![value!(1), value!(1)]
         )
         .len(),
@@ -693,7 +693,7 @@ fn test_bindings() {
 fn test_lookup_derefs() {
     let polar = Polar::new();
     polar
-        .load_str("f(x) if x = y and g(y); g(y) if new Foo{}.get(y) = y;")
+        .load_str("f(x) if x = y and g(y); g(y) if new Foo().get(y) = y;")
         .unwrap();
     let query = polar.new_query("f(1)", false).unwrap();
     let mut foo_lookups = vec![term!(1)];
@@ -758,7 +758,7 @@ fn test_externals_instantiated() {
     let polar = Polar::new();
     polar.register_constant(sym!("Foo"), term!(true));
     polar
-        .load_str("f(x, foo: Foo) if foo.bar(new Bar{x: x}) = 1;")
+        .load_str("f(x, foo: Foo) if foo.bar(new Bar(x: x)) = 1;")
         .unwrap();
 
     let mut foo_lookups = vec![term!(1)];
@@ -770,9 +770,9 @@ fn test_externals_instantiated() {
                 constructor: Some(ref term),
                 ..
             }) => assert!(
-                matches!(term.value(), Value::InstanceLiteral(InstanceLiteral {
-                ref tag, ref fields
-            }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
+                matches!(term.value(), Value::Call(Call {
+                    ref name, args: _, ref kwargs
+                }) if name.0 == "Bar" && kwargs.clone().unwrap() == btreemap!{sym!("x") => term!(1)}),
                 "expected external instance Bar {{ x: 1 }}, found: {}",
                 args.unwrap()[0].value().to_polar()
             ),
@@ -780,7 +780,7 @@ fn test_externals_instantiated() {
         }
         foo_lookups.pop()
     };
-    let query = polar.new_query("f(1, new Foo{})", false).unwrap();
+    let query = polar.new_query("f(1, new Foo())", false).unwrap();
     let results = query_results!(query, mock_foo);
     assert_eq!(results.len(), 1);
 }
@@ -1257,21 +1257,21 @@ fn test_unify_rule_head() {
 
     assert!(matches!(
         polar
-            .load_str("f(new Foo{a: Foo{a: 1}});")
+            .load_str("f(new Foo(a: Foo{a: 1}));")
             .expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
         polar
-            .load_str("f(x: new Foo{a: 1});")
+            .load_str("f(x: new Foo(a: 1));")
             .expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
         polar
-            .load_str("f(x: Foo{a: new Foo{a: 1}});")
+            .load_str("f(x: Foo{a: new Foo(a: 1)});")
             .expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
@@ -1282,12 +1282,12 @@ fn test_unify_rule_head() {
         .load_str("g(_: Foo{a: Foo{a: 1}}, x) if x = 1;")
         .unwrap();
 
-    let query = polar.new_query("f(new Foo{a: 1}, x)", false).unwrap();
+    let query = polar.new_query("f(new Foo(a: 1), x)", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
 
     let query = polar
-        .new_query("g(new Foo{a: new Foo{a: 1}}, x)", false)
+        .new_query("g(new Foo(a: new Foo(a: 1)), x)", false)
         .unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
@@ -1557,11 +1557,11 @@ fn test_external_unify() {
     let polar = Polar::new();
     polar.load_str("selfEq(x) if eq(x, x); eq(x, x);").unwrap();
 
-    let query = polar.new_query("selfEq(new Foo{})", false).unwrap();
+    let query = polar.new_query("selfEq(new Foo())", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results.len(), 1);
 
-    let query = polar.new_query("eq(new Foo{}, new Foo{})", false).unwrap();
+    let query = polar.new_query("eq(new Foo(), new Foo())", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert!(results.is_empty());
 }
