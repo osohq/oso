@@ -43,16 +43,21 @@ module Oso
       # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
-      def register_call(attribute, call_id:, instance:, args:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def register_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         return if calls.key?(call_id)
 
         instance = host.to_ruby(instance)
-        if args.nil?
-          result = instance.__send__(attribute)
-        else
-          args = args.map { |a| host.to_ruby(a) }
-          result = instance.__send__(attribute, *args)
-        end
+        args = if args.nil?
+                    []
+                else
+                    args.map { |a| host.to_ruby(a) }
+                end
+        kwargs = if kwargs.nil?
+                    {}
+                else
+                    Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+                end
+        result = instance.__send__(attribute, *args, **kwargs)
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
       rescue ArgumentError, NoMethodError
@@ -93,8 +98,8 @@ module Oso
       # @param call_id [Integer]
       # @param instance [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
-      def handle_call(attribute, call_id:, instance:, args:)
-        register_call(attribute, call_id: call_id, instance: instance, args: args)
+      def handle_call(attribute, call_id:, instance:, args:, kwargs:)
+        register_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
         result = JSON.dump(next_call_result(call_id))
         call_result(result, call_id: call_id)
       rescue InvalidCallError => e
@@ -145,7 +150,8 @@ module Oso
               instance = event.data['instance']
               attribute = event.data['attribute']
               args = event.data['args']
-              handle_call(attribute, call_id: call_id, instance: instance, args: args)
+              kwargs = event.data['kwargs']
+              handle_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
             when 'ExternalIsSubSpecializer'
               instance_id = event.data['instance_id']
               left_tag = event.data['left_class_tag']
