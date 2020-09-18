@@ -381,6 +381,7 @@ public class PolarTest {
     assertFalse(p.query("new MyClass(\"foo\", 1) = new MyClass(\"foo\", 1)").results().isEmpty());
     assertTrue(p.query("new MyClass(\"foo\", 1) = new MyClass(\"foo\", 2)").results().isEmpty());
     assertTrue(p.query("new MyClass(\"foo\", 1) = new MyClass(\"bar\", 1)").results().isEmpty());
+    assertTrue(p.query("new MyClass(\"foo\", 1) = {foo: 1}").results().isEmpty());
   }
 
   @Test
