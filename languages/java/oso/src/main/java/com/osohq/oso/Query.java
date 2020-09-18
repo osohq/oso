@@ -109,23 +109,21 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           if (host.hasInstance(id)) {
             throw new Exceptions.DuplicateInstanceRegistrationError(id);
           }
+
           JSONObject constructor = data.getJSONObject("constructor").getJSONObject("value");
-          JSONArray initargs;
-          if (constructor.has("InstanceLiteral")) {
-            // Keyword initargs are not supported in Java.
-            className = constructor.getJSONObject("InstanceLiteral").getString("tag");
-            throw new Exceptions.InstantiationError(className);
-          } else if (constructor.has("Call")) {
+          if (constructor.has("Call")) {
             className = constructor.getJSONObject("Call").getString("name");
-            initargs = constructor.getJSONObject("Call").getJSONArray("args");
+            JSONArray initargs = constructor.getJSONObject("Call").getJSONArray("args");
+
+            // kwargs should always be null in Java
             if (constructor.getJSONObject("Call").get("kwargs") != JSONObject.NULL) {
               throw new Exceptions.InstantiationError(className);
             }
+            host.makeInstance(className, host.polarListToJava(initargs), id);
+            break;
           } else {
             throw new Exceptions.InvalidConstructorError("Bad constructor");
           }
-          host.makeInstance(className, host.polarListToJava(initargs), id);
-          break;
         case "ExternalCall":
           instance = data.getJSONObject("instance");
           callId = data.getLong("call_id");

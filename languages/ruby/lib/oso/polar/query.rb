@@ -109,12 +109,7 @@ module Oso
         raise DuplicateInstanceRegistrationError, id if host.instance? id
 
         constructor = data['constructor']['value']
-        if constructor.key? 'InstanceLiteral'
-          cls_name = constructor['InstanceLiteral']['tag']
-          fields = constructor['InstanceLiteral']['fields']['fields']
-          kwargs = Hash[fields.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-          args = []
-        elsif constructor.key? 'Call'
+        if constructor.key? 'Call'
           cls_name = constructor['Call']['name']
           args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
           kwargs = constructor['Call']['kwargs']

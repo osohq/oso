@@ -114,7 +114,6 @@ impl Query {
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
         let mut host = self.host.lock().unwrap();
         match constructor.value() {
-            Value::InstanceLiteral(InstanceLiteral { .. }) => todo!("instantiate from literal"),
             Value::Call(Call { name, args, .. }) => {
                 let _instance = host.make_instance(name, args.clone(), instance_id);
             }

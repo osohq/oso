@@ -181,14 +181,6 @@ BuiltinOperator: Operator = {
 };
 
 New: Value = {
-    // Keyword argument constructor.
-    "new" <literal:Spanned<InstanceLiteralTerm>> => {
-        let args = vec![literal];
-        let op = Operation{operator: Operator::New, args};
-        Value::Expression(op)
-    },
-
-    // Mixed argument constructor.
     "new" <call:Spanned<Call>> => {
         let args = vec![call];
         let op = Operation{operator: Operator::New, args};

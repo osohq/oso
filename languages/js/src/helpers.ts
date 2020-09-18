@@ -103,10 +103,10 @@ function parseResult({ bindings }: obj): QueryEvent {
 function parseMakeExternal(d: obj): QueryEvent {
   const instanceId = d.instance_id;
   const ctor = d['constructor']?.value;
-  if (ctor?.InstanceLiteral !== undefined)
-    throw new KwargsConstructorError(ctor?.InstanceLiteral?.tag);
   const tag = ctor?.Call?.name;
   const fields = ctor?.Call?.args;
+  if (ctor?.Call?.kwargs !== undefined)
+    throw new KwargsConstructorError(ctor?.Call?.name);
   if (
     !Number.isSafeInteger(instanceId) ||
     typeof tag !== 'string' ||

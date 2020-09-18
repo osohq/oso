@@ -68,12 +68,7 @@ class Query:
     def handle_make_external(self, data):
         id = data["instance_id"]
         constructor = data["constructor"]["value"]
-        if "InstanceLiteral" in constructor:
-            cls_name = constructor["InstanceLiteral"]["tag"]
-            fields = constructor["InstanceLiteral"]["fields"]["fields"]
-            args = []
-            kwargs = {k: self.host.to_python(v) for k, v in fields.items()}
-        elif "Call" in constructor:
+        if "Call" in constructor:
             cls_name = constructor["Call"]["name"]
             args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
             kwargs = constructor["Call"]["kwargs"]
