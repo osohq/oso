@@ -415,3 +415,139 @@ fn test_duplicate_register_class() -> oso::Result<()> {
 }
 
 // test_duplicate_register_class_alias skipped. Functionality covered above.
+
+#[test]
+fn test_register_class() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    #[derive(PolarClass, Default, Debug, Clone)]
+    struct Bar;
+
+    impl Bar {
+        pub fn y(&self) -> String {
+            "y".to_owned()
+        }
+    }
+
+    let bar_class = Bar::get_polar_class_builder()
+        .name("Bar")
+        .add_method("y", Bar::y)
+        .build();
+
+    #[derive(PolarClass, Debug, Clone)]
+    struct Foo {
+        #[polar(attribute)]
+        a: String
+    }
+
+    impl Foo {
+        pub fn new(a: String) -> Self {
+            Self { a }
+        }
+
+        pub fn b(&self) -> Vec<String> {
+            vec!["b".to_owned()]
+        }
+
+        pub fn c(&self) -> String {
+            "c".to_owned()
+        }
+
+        pub fn d(&self, x: String) -> String {
+            x
+        }
+
+        pub fn bar(&self) -> Bar {
+            Bar::default()
+        }
+
+        pub fn e(&self) -> Vec<i64> {
+            vec![1, 2, 3]
+        }
+
+        pub fn f(&self) -> Vec<Vec<i64>> {
+            // NOTE: Slight different with ruby test.
+            // Ruby tests with yielding multiple types, we
+            // only yield one.
+            vec![
+                vec![1, 2, 3],
+                vec![4, 5, 6]
+            ]
+        }
+
+        pub fn g(&self) -> HashMap<String, String> {
+            hashmap!{"hello".to_owned() => "world".to_owned()}
+        }
+
+        pub fn h(&self) -> bool {
+            true
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .name("Foo")
+        .set_constructor(|| Foo::new("A".to_owned()))
+        .add_method("b", Foo::b)
+        .add_method("c", Foo::c)
+        .add_method("d", Foo::d)
+        .add_method("bar", Foo::bar)
+        .add_method("e", Foo::e)
+        // TODO make this an iterator
+        .add_method("f", Foo::f)
+        .add_method("g", Foo::g)
+        .add_method("h", Foo::h)
+        .build();
+
+    oso.oso.register_class(bar_class)?;
+    oso.oso.register_class(foo_class)?;
+
+    oso.qvar_one("new Foo().a = x", "x", String::from("A"));
+    oso.query_err("new Foo().b = x");
+    oso.qvar_one("new Foo().b() = x", "x", vec!["b".to_owned()]);
+    oso.qvar_one("new Foo().c() = x", "x", "c".to_owned());
+    oso.qvar_one("new Foo() = f and f.a = x", "x", "A".to_owned());
+    oso.qvar_one("new Foo().bar().y() = x", "x", "y".to_owned());
+    oso.qvar_one("new Foo().e() = x", "x", vec![1, 2, 3]);
+    // TODO oso.qvar_one("new Foo().f() = x", "x", vec![1, 2, 3]);
+    oso.qvar_one("new Foo().g().hello = x", "x", "world".to_owned());
+    oso.qvar_one("new Foo().h() = x", "x", true);
+
+    Ok(())
+}
+
+// test_class_inheritance skipped, no inheritance.
+
+#[test]
+fn test_animals() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    #[derive(PolarClass, Debug, Clone, PartialEq)]
+    struct Animal {
+        #[polar(attribute)]
+        family: String,
+        #[polar(animal)]
+        genus: String,
+        #[polar(animal)]
+        species: String
+    }
+
+    impl Animal {
+        pub fn new(family: String, genus: String, species: String) -> Self {
+            Self { family, genus, species }
+        }
+    }
+
+    let animal_class = Animal::get_polar_class_builder()
+        .name("Animal")
+        .set_constructor(Animal::new)
+        .with_equality_check()
+        .build();
+
+    oso.oso.register_class(animal_class)?;
+
+    Ok(())
+}

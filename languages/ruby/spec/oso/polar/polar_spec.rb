@@ -456,6 +456,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'new Foo{}.h = x', 'x', one: true)).to be true
     end
 
+    # test_class_inheritance
     it 'respects the Ruby inheritance hierarchy for class specialization' do # rubocop:disable Metrics/BlockLength
       stub_const('A', Class.new do
         def a
@@ -527,6 +528,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'try(new X{}, x)', 'x')).to eq([])
     end
 
+    # test_animals
     context 'animal tests' do # rubocop:disable Metrics/BlockLength
       before do
         stub_const('Animal', Class.new do
