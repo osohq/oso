@@ -9,12 +9,25 @@ version = "0.6.0-alpha"
 
 edition = "2018"
 
+[lib]
+bench = false
+
+[[bench]]
+name = "blog"
+harness = false
+
 [[bin]]
 name = "oso"
 path = "src/repl.rs"
 required-features = ["cli"]
 
+[[example]]
+name = "blog"
+path = "examples/blog.rs"
+required-features = ["anyhow"]
+
 [dependencies]
+impl-trait-for-tuples = { git = "https://github.com/bkchr/impl-trait-for-tuples", rev = "c6781ff" }
 maplit = "1.0.2"
 polar-core = { path = "../../../polar-core", version = "=0.6.0" }
 oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha", optional = true }
@@ -28,6 +41,7 @@ rustyline-derive = { version = "0.3.1", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0"
+criterion = "0.3"
 oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha" }
 tempfile = "3.1.0"
 

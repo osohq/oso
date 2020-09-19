@@ -140,7 +140,7 @@ fn enums() -> anyhow::Result<()> {
     impl oso::PolarClass for UserType {}
 
     oso.register_class(
-        oso::Class::<UserType>::new()
+        oso::Class::builder::<UserType>()
             .add_method("is_admin", |u: &UserType| matches!(u, UserType::Admin))
             .build(),
     )?;

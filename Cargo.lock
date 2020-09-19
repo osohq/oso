@@ -520,6 +520,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "impl-trait-for-tuples"
+version = "0.1.2"
+source = "git+https://github.com/bkchr/impl-trait-for-tuples?rev=c6781ff#c6781ff4c1ac963c60eefea921597243c1b59ce2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "indoc"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -737,6 +747,8 @@ name = "oso"
 version = "0.6.0-alpha"
 dependencies = [
  "anyhow",
+ "criterion",
+ "impl-trait-for-tuples",
  "maplit",
  "oso-derive",
  "polar-core",
@@ -842,7 +854,6 @@ dependencies = [
  "lalrpop",
  "lalrpop-util",
  "lazy_static",
- "log",
  "maplit",
  "permute",
  "pipe",

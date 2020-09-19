@@ -4,18 +4,18 @@ use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::fs::File;
 use std::io::Read;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::ToPolar;
+use crate::{ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
 #[derive(Clone)]
 pub struct Oso {
     inner: Arc<polar_core::polar::Polar>,
-    host: Arc<Mutex<Host>>,
+    host: Host,
 }
 
 impl Default for Oso {
@@ -30,10 +30,7 @@ impl Oso {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
-        let mut oso = Self {
-            host: Arc::new(Mutex::new(host)),
-            inner,
-        };
+        let mut oso = Self { host, inner };
 
         for class in crate::builtins::classes() {
             oso.register_class(class)
@@ -54,8 +51,7 @@ impl Oso {
         Action: ToPolar,
         Resource: ToPolar,
     {
-        let args: Vec<&dyn ToPolar> = vec![&actor, &action, &resource];
-        let mut query = self.query_rule("allow", args).unwrap();
+        let mut query = self.query_rule("allow", (actor, action, resource)).unwrap();
         match query.next() {
             Some(Ok(_)) => Ok(true),
             Some(Err(e)) => Err(e),
@@ -125,15 +121,8 @@ impl Oso {
     /// ```ignore
     /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
     /// ```
-    pub fn query_rule<'a>(
-        &mut self,
-        name: &str,
-        args: impl IntoIterator<Item = &'a dyn crate::host::ToPolar>,
-    ) -> crate::Result<Query> {
-        let args = args
-            .into_iter()
-            .map(|arg| arg.to_polar(&mut self.host.lock().unwrap()))
-            .collect();
+    pub fn query_rule(&mut self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
+        let args = args.to_polar_list(&mut self.host);
         let query_value = Value::Call(Call {
             name: Symbol(name.to_string()),
             args,
@@ -151,8 +140,8 @@ impl Oso {
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let name = Symbol(name);
-        let class_name = self.host.lock().unwrap().cache_class(class.clone(), name)?;
-        self.register_constant(&class_name, &class)
+        let class_name = self.host.cache_class(class.clone(), name)?;
+        self.register_constant(&class_name, class)
     }
 
     /// Register a rust type as a Polar constant.
@@ -160,11 +149,10 @@ impl Oso {
     pub fn register_constant<V: crate::host::ToPolar>(
         &mut self,
         name: &str,
-        value: &V,
+        value: V,
     ) -> crate::Result<()> {
-        let mut host = self.host.lock().unwrap();
         self.inner
-            .register_constant(Symbol(name.to_string()), value.to_polar(&mut host));
+            .register_constant(Symbol(name.to_string()), value.to_polar(&mut self.host));
         Ok(())
     }
 }

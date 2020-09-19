@@ -5,25 +5,25 @@
 /// An alternate version of the `Fn` trait
 /// which encodes the types of the arguments
 /// in a single type - a tuple.
-pub trait Function<Args = ()>: Send + Sync {
-    type Result;
+pub trait Function<Args = ()>: Send + Sync + 'static {
+    type Result: 'static;
 
     fn invoke(&self, args: Args) -> Self::Result;
 }
 
 /// Similar to a `Function` but also takes an explicit `receiver`
 /// parameter than is the first argument of the call (i.e. the `self` param);
-pub trait Method<Receiver, Args = ()>: Send + Sync {
-    type Result;
+pub trait Method<Receiver, Args = ()>: Send + Sync + 'static {
+    type Result: 'static;
 
     fn invoke(&self, receiver: &Receiver, args: Args) -> Self::Result;
 }
 
 // Generated Impls (see test)
 
-impl<F, R> Function<()> for F
+impl<F, R: 'static> Function<()> for F
 where
-    F: Fn() -> R + Send + Sync,
+    F: Fn() -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -32,9 +32,9 @@ where
     }
 }
 
-impl<A, F, R> Function<(A,)> for F
+impl<A, F, R: 'static> Function<(A,)> for F
 where
-    F: Fn(A) -> R + Send + Sync,
+    F: Fn(A) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -43,9 +43,9 @@ where
     }
 }
 
-impl<A, B, F, R> Function<(A, B)> for F
+impl<A, B, F, R: 'static> Function<(A, B)> for F
 where
-    F: Fn(A, B) -> R + Send + Sync,
+    F: Fn(A, B) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -54,9 +54,9 @@ where
     }
 }
 
-impl<A, B, C, F, R> Function<(A, B, C)> for F
+impl<A, B, C, F, R: 'static> Function<(A, B, C)> for F
 where
-    F: Fn(A, B, C) -> R + Send + Sync,
+    F: Fn(A, B, C) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -65,9 +65,9 @@ where
     }
 }
 
-impl<A, B, C, D, F, R> Function<(A, B, C, D)> for F
+impl<A, B, C, D, F, R: 'static> Function<(A, B, C, D)> for F
 where
-    F: Fn(A, B, C, D) -> R + Send + Sync,
+    F: Fn(A, B, C, D) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -76,9 +76,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, F, R> Function<(A, B, C, D, E)> for F
+impl<A, B, C, D, E, F, R: 'static> Function<(A, B, C, D, E)> for F
 where
-    F: Fn(A, B, C, D, E) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -87,9 +87,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, F, R> Function<(A, B, C, D, E, G)> for F
+impl<A, B, C, D, E, G, F, R: 'static> Function<(A, B, C, D, E, G)> for F
 where
-    F: Fn(A, B, C, D, E, G) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -98,9 +98,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, F, R> Function<(A, B, C, D, E, G, H)> for F
+impl<A, B, C, D, E, G, H, F, R: 'static> Function<(A, B, C, D, E, G, H)> for F
 where
-    F: Fn(A, B, C, D, E, G, H) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -109,9 +109,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, F, R> Function<(A, B, C, D, E, G, H, I)> for F
+impl<A, B, C, D, E, G, H, I, F, R: 'static> Function<(A, B, C, D, E, G, H, I)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -122,9 +122,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, F, R> Function<(A, B, C, D, E, G, H, I, J)> for F
+impl<A, B, C, D, E, G, H, I, J, F, R: 'static> Function<(A, B, C, D, E, G, H, I, J)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -135,9 +135,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, F, R> Function<(A, B, C, D, E, G, H, I, J, K)> for F
+impl<A, B, C, D, E, G, H, I, J, K, F, R: 'static> Function<(A, B, C, D, E, G, H, I, J, K)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -148,9 +148,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L)> for F
+impl<A, B, C, D, E, G, H, I, J, K, L, F, R: 'static> Function<(A, B, C, D, E, G, H, I, J, K, L)>
+    for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -161,9 +162,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L, M)> for F
+impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R: 'static>
+    Function<(A, B, C, D, E, G, H, I, J, K, L, M)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -175,10 +177,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L, M, N)>
-    for F
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R: 'static>
+    Function<(A, B, C, D, E, G, H, I, J, K, L, M, N)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -190,10 +192,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R: 'static>
     Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -205,10 +207,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R: 'static>
     Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -220,10 +222,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R: 'static>
     Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)> for F
 where
-    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync,
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -235,9 +237,9 @@ where
     }
 }
 
-impl<F, R, Receiver> Method<Receiver, ()> for F
+impl<F, R: 'static, Receiver> Method<Receiver, ()> for F
 where
-    F: Fn(&Receiver) -> R + Send + Sync,
+    F: Fn(&Receiver) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -246,9 +248,9 @@ where
     }
 }
 
-impl<A, F, R, Receiver> Method<Receiver, (A,)> for F
+impl<A, F, R: 'static, Receiver> Method<Receiver, (A,)> for F
 where
-    F: Fn(&Receiver, A) -> R + Send + Sync,
+    F: Fn(&Receiver, A) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -257,9 +259,9 @@ where
     }
 }
 
-impl<A, B, F, R, Receiver> Method<Receiver, (A, B)> for F
+impl<A, B, F, R: 'static, Receiver> Method<Receiver, (A, B)> for F
 where
-    F: Fn(&Receiver, A, B) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -268,9 +270,9 @@ where
     }
 }
 
-impl<A, B, C, F, R, Receiver> Method<Receiver, (A, B, C)> for F
+impl<A, B, C, F, R: 'static, Receiver> Method<Receiver, (A, B, C)> for F
 where
-    F: Fn(&Receiver, A, B, C) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -279,9 +281,9 @@ where
     }
 }
 
-impl<A, B, C, D, F, R, Receiver> Method<Receiver, (A, B, C, D)> for F
+impl<A, B, C, D, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D)> for F
 where
-    F: Fn(&Receiver, A, B, C, D) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -290,9 +292,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, F, R, Receiver> Method<Receiver, (A, B, C, D, E)> for F
+impl<A, B, C, D, E, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -301,9 +303,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G)> for F
+impl<A, B, C, D, E, G, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E, G)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -312,9 +314,9 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H)> for F
+impl<A, B, C, D, E, G, H, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E, G, H)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -325,9 +327,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I)> for F
+impl<A, B, C, D, E, G, H, I, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I)>
+    for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -338,9 +341,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I, J)> for F
+impl<A, B, C, D, E, G, H, I, J, F, R: 'static, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -351,10 +355,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I, J, K)>
-    for F
+impl<A, B, C, D, E, G, H, I, J, K, F, R: 'static, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J, K)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -366,10 +370,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, F, R, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, F, R: 'static, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -381,10 +385,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R: 'static, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -400,10 +404,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R: 'static, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -419,10 +423,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R: 'static, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -438,10 +442,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R: 'static, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -457,10 +461,10 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R: 'static, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)> for F
 where
-    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync,
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync + 'static,
 {
     type Result = R;
 
@@ -516,9 +520,9 @@ mod tests {
             let (t, prefix, call) = tuple_type(i);
             let imp = format!(
                 r#"
-impl<{}F, R> Function<{}> for F
+impl<{}F, R: 'static> Function<{}> for F
 where
-    F: Fn{} -> R + Send + Sync,
+    F: Fn{} -> R + Send + Sync + 'static,
 {{
     type Result = R;
 
@@ -536,9 +540,9 @@ where
             let (t, prefix, call) = tuple_type(i);
             let imp = format!(
                 r#"
-impl<{}F, R, Receiver> Method<Receiver, {}> for F
+impl<{}F, R: 'static, Receiver> Method<Receiver, {}> for F
 where
-    F: Fn(&Receiver, {}) -> R + Send + Sync,
+    F: Fn(&Receiver, {}) -> R + Send + Sync + 'static,
 {{
     type Result = R;
 

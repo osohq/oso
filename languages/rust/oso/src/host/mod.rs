@@ -13,17 +13,13 @@ mod from_polar;
 mod method;
 mod to_polar;
 
-pub use class::{Class, Instance};
-pub use from_polar::FromPolar;
-pub use to_polar::{PolarResultIter, ToPolar};
+pub use class::{Class, ClassBuilder, Instance};
+pub use from_polar::{FromPolar, FromPolarList};
+pub use to_polar::{PolarResultIter, ToPolar, ToPolarList, ToPolarResults};
 
-/// The meta class - the class of all classess (except itself)
-#[derive(Clone, Default)]
-pub struct Type;
-
-fn type_class() -> Class {
-    let class = Class::<Type>::with_default();
-    class.erase_type()
+impl ToPolar for crate::Class {}
+fn metaclass() -> Class {
+    Class::builder::<Class>().name("Class").build()
 }
 
 /// Downcast `any` with proper error handling.
@@ -37,6 +33,7 @@ fn downcast<T: Any>(any: &dyn Any) -> Result<&T, TypeError> {
 }
 
 /// Maintain mappings and caches for Rust classes & instances
+#[derive(Clone)]
 pub struct Host {
     /// Reference to the inner `Polar` instance
     polar: Arc<Polar>,
@@ -61,24 +58,25 @@ impl Host {
             instances: HashMap::new(),
             polar,
         };
-        let type_class = type_class();
-        let name = Symbol("Type".to_string());
-        host.cache_class(type_class, name).unwrap();
+        let type_class = metaclass();
+        let name = Symbol(type_class.name.clone());
+        host.cache_class(type_class, name)
+            .expect("could not register the metaclass");
         host
-    }
-
-    pub fn type_class(&mut self) -> &mut Class {
-        self.classes.get_mut(&Symbol("Type".to_string())).unwrap()
     }
 
     pub fn get_class(&self, name: &Symbol) -> Option<&Class> {
         self.classes.get(name)
     }
 
-    pub fn get_class_from_type<C: 'static>(&self) -> Option<&Class> {
+    pub fn get_class_by_type_id(&self, id: std::any::TypeId) -> Option<&Class> {
         self.class_names
-            .get(&std::any::TypeId::of::<C>())
+            .get(&id)
             .and_then(|name| self.get_class(name))
+    }
+
+    pub fn get_class_from_type<C: 'static>(&self) -> Option<&Class> {
+        self.get_class_by_type_id(std::any::TypeId::of::<C>())
     }
 
     pub fn get_class_mut(&mut self, name: &Symbol) -> Option<&mut Class> {
@@ -124,7 +122,7 @@ impl Host {
         // @TODO: Handle the error if the class doesn't exist.
         let class = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
-        let fields = fields; // TODO: use
+        let fields = fields;
         let instance = class.init(fields, self)?;
         self.cache_instance(instance, Some(id));
         Ok(())
@@ -135,16 +133,16 @@ impl Host {
 
         let left = self.get_instance(left).unwrap();
         let right = self.get_instance(right).unwrap();
-        left.equals(right)
+        left.equals(right, &self)
     }
 
     pub fn isa(&self, term: Term, class_tag: &Symbol) -> bool {
         let name = &class_tag.0;
         match term.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                let class = self.get_class(class_tag).unwrap();
-                let instance = self.get_instance(*instance_id).unwrap();
-                class.is_instance(instance)
+                let class = self.get_class(class_tag).expect("class not found");
+                let instance = self.get_instance(*instance_id).expect("instance not found");
+                instance.instance_of(class)
             }
             Value::Boolean(_) => name == "Boolean",
             Value::Dictionary(_) => name == "Dictionary",

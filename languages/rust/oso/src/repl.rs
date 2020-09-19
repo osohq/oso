@@ -5,7 +5,7 @@ use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::Editor;
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
-use oso::Oso;
+use oso::{Class, Oso};
 use polar_core::formatting::to_polar::ToPolarString;
 
 use std::env;
@@ -86,7 +86,6 @@ impl Repl {
     pub fn oso_input(&mut self, prompt: &str) -> anyhow::Result<String> {
         let input = self.editor.readline(prompt)?;
         self.editor.add_history_entry(input.as_str());
-        // input.pop(); // remove the trailing ';'
         Ok(input)
     }
 
@@ -103,23 +102,39 @@ impl Drop for Repl {
     }
 }
 
+fn bootstrap_example(oso: &mut Oso) -> anyhow::Result<()> {
+    struct Foo;
+
+    oso.register_class(Class::builder::<Foo>().name("Foo").build())?;
+    Ok(())
+}
+
 pub fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let mut repl = Repl::new();
     let mut oso = Oso::new();
+    bootstrap_example(&mut oso)?;
 
     let mut args = env::args();
     let _ = args.next(); // skip the binary filename
     load_files(&mut oso, &mut args)?;
     loop {
         // get input
-        let input: String = match repl.oso_input("query> ") {
+        let mut input: String = match repl.oso_input("query> ") {
             Ok(input) => input,
             Err(e) => {
                 eprintln!("Readline error: {}", e);
                 break;
             }
         };
+
+        if input.starts_with("%def") {
+            if let Err(e) = oso.load_str(&input[4..]) {
+                println!("{}", e);
+            }
+            continue;
+        }
+        input.pop(); // remove trailing `;`
         let mut query = match oso.query(&input) {
             Err(e) => {
                 println!("{}", e);
@@ -139,7 +154,7 @@ pub fn main() -> anyhow::Result<()> {
                     }
                 }
             } else {
-                println!("{:?}", res.expect_err("error"))
+                println!("{}", res.expect_err("error"))
             }
         }
         if !has_result {

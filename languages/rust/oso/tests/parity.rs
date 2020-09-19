@@ -1,4 +1,4 @@
-use oso::{Class, Oso, PolarClass, ToPolar};
+use oso::{ClassBuilder, Oso, PolarClass};
 
 macro_rules! res {
     ($res:expr) => {
@@ -66,7 +66,7 @@ fn test() {
     tracing_subscriber::fmt::init();
 
     oso.register_class(
-        Class::with_constructor(A::new)
+        ClassBuilder::with_constructor(A::new)
             .name("A")
             .add_attribute_getter("x", |a_self: &A| a_self.x.clone())
             .add_method("foo", A::foo)
@@ -75,7 +75,7 @@ fn test() {
     .unwrap();
 
     oso.register_class(
-        Class::with_constructor(b::C::new)
+        ClassBuilder::with_constructor(b::C::new)
             .name("C")
             .add_attribute_getter("y", |c: &b::C| c.y.clone())
             .add_method("foo", b::C::foo)
@@ -102,21 +102,21 @@ fn test() {
     // let args: Vec<&ToPolar> = vec![]
     // assert!(oso.query_rule("specializers", ))
     // assert list(oso.query_rule("specializers", D("hello"), B.C("hello")))
-    res!(oso.query_rule("floatLists", None));
-    res!(oso.query_rule("intDicts", None));
-    res!(oso.query_rule("comparisons", None));
-    res!(oso.query_rule("testForall", None));
-    res!(oso.query_rule("testRest", None));
+    res!(oso.query_rule("floatLists", ()));
+    res!(oso.query_rule("intDicts", ()));
+    res!(oso.query_rule("comparisons", ()));
+    res!(oso.query_rule("testForall", ()));
+    res!(oso.query_rule("testRest", ()));
     let a = A::new("hello".to_string());
-    res!(oso.query_rule("testMatches", vec![&a as &dyn ToPolar]));
+    res!(oso.query_rule("testMatches", (a.clone(),)));
 
     let c = b::C::new("hello".to_string());
-    res!(oso.query_rule("testMethodCalls", vec![&a as &dyn ToPolar, &c]));
-    res!(oso.query_rule("testOr", None));
-    // res!(oso.query_rule("testHttpAndPathMapper", None));
+    res!(oso.query_rule("testMethodCalls", (a, c)));
+    res!(oso.query_rule("testOr", ()));
+    // res!(oso.query_rule("testHttpAndPathMapper", ()));
 
     // Test that cut doesn't return anything.
-    res!(@not oso.query_rule("testCut", None));
+    res!(@not oso.query_rule("testCut", ()));
 
     // Test that a constant can be called.
     // oso.register_constant("Math", math);

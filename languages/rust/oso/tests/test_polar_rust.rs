@@ -3,7 +3,7 @@
 /// rust class handling.
 use maplit::hashmap;
 
-use oso::{Class, PolarClass, ToPolar};
+use oso::{ClassBuilder, PolarClass};
 
 mod common;
 
@@ -159,7 +159,7 @@ fn test_external() {
 
     let mut test = OsoTest::new();
 
-    let foo_class = oso::Class::with_constructor(capital_foo)
+    let foo_class = oso::ClassBuilder::with_constructor(capital_foo)
         .name("Foo")
         .add_attribute_getter("a", |receiver: &Foo| receiver.a)
         // .add_method("b", |receiver: &Foo| oso::host::PolarResultIter(receiver.b()))
@@ -404,7 +404,7 @@ fn test_unify_externals() {
         }
     }
 
-    let foo_class = Class::with_constructor(Foo::new)
+    let foo_class = ClassBuilder::with_constructor(Foo::new)
         .name("Foo")
         .add_attribute_getter("x", |this: &Foo| this.x)
         .with_equality_check()
@@ -422,11 +422,7 @@ fn test_unify_externals() {
     let b = Foo::new(1);
     assert_eq!(a, b);
 
-    // TODO this interface is not convenient or easy to use due to all the casting. Maybe needs a macro?
-    let mut results = test
-        .oso
-        .query_rule("foos_equal", vec![&a as &dyn ToPolar, &b as &dyn ToPolar])
-        .unwrap();
+    let mut results = test.oso.query_rule("foos_equal", (a, b)).unwrap();
     results.next().expect("At least one result").unwrap();
 
     // Ensure that equality on a type that doesn't support it fails.
@@ -441,7 +437,7 @@ fn test_unify_externals() {
         }
     }
 
-    let bar_class = Class::with_constructor(Bar::new)
+    let bar_class = ClassBuilder::with_constructor(Bar::new)
         .name("Bar")
         .add_attribute_getter("x", |this: &Bar| this.x)
         .build();
@@ -467,7 +463,7 @@ fn test_unify_externals() {
         }
     }
 
-    let baz_class = Class::with_constructor(Baz::new)
+    let baz_class = ClassBuilder::with_constructor(Baz::new)
         .name("Baz")
         .add_attribute_getter("x", |this: &Baz| this.x)
         .with_equality_check()
