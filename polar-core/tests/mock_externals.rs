@@ -1,5 +1,5 @@
 /// Utils for mocking externals in tests.
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use polar_core::terms::{ExternalInstance, Symbol, Term, Value};
 
@@ -29,8 +29,12 @@ impl MockExternal {
         instance: Term,
         attribute: Symbol,
         args: Option<Vec<Term>>,
+        kwargs: Option<BTreeMap<Symbol, Term>>,
     ) -> Option<Term> {
-        assert!(args.is_none(), "Only support field lookups.");
+        assert!(
+            args.is_none() && kwargs.is_none(),
+            "Only support field lookups."
+        );
 
         if self.calls.remove(&call_id) {
             // Calls only return one result, so we have none if the call is in progress.

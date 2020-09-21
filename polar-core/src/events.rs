@@ -29,8 +29,9 @@ pub enum QueryEvent {
         /// Field name to lookup or method name to call. A class name indicates a constructor
         /// should be called.
         attribute: Symbol,
-        /// List of arguments to use if this is a method call.
+        /// List of arguments to a method call.
         args: Option<Vec<Term>>,
+        /// A map of keyword arguments to a method call.
         kwargs: Option<BTreeMap<Symbol, Term>>,
     },
 

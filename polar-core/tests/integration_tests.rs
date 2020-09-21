@@ -5,7 +5,7 @@ use maplit::btreemap;
 use permute::permute;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::iter::FromIterator;
 
 use polar_core::{
@@ -22,7 +22,13 @@ use polar_core::{
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
-fn no_results(_: u64, _: Term, _: Symbol, _: Option<Vec<Term>>) -> Option<Term> {
+fn no_results(
+    _: u64,
+    _: Term,
+    _: Symbol,
+    _: Option<Vec<Term>>,
+    _: Option<BTreeMap<Symbol, Term>>,
+) -> Option<Term> {
     None
 }
 
@@ -54,7 +60,7 @@ fn query_results<F, G, H, I, J, K>(
     mut message_handler: K,
 ) -> QueryResults
 where
-    F: FnMut(u64, Term, Symbol, Option<Vec<Term>>) -> Option<Term>,
+    F: FnMut(u64, Term, Symbol, Option<Vec<Term>>, Option<BTreeMap<Symbol, Term>>) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, Term),
     I: FnMut(Term, Symbol) -> bool,
@@ -83,12 +89,12 @@ where
                 instance,
                 attribute,
                 args,
-                kwargs: _
+                kwargs,
             } => {
                 query
                     .call_result(
                         call_id,
-                        external_call_handler(call_id, instance, attribute, args),
+                        external_call_handler(call_id, instance, attribute, args, kwargs),
                     )
                     .unwrap();
             }
@@ -171,7 +177,7 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
     (
         query_results(
             query,
-            |a, b, c, d| mock.borrow_mut().external_call(a, b, c, d),
+            |a, b, c, d, e| mock.borrow_mut().external_call(a, b, c, d, e),
             |a, b| mock.borrow_mut().make_external(a, b),
             |a, b| mock.borrow_mut().external_isa(a, b),
             |a, b, c| mock.borrow_mut().external_is_subspecializer(a, b, c),
@@ -205,7 +211,7 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
         .rev()
         .collect();
     let query = polar.new_query(query_str, false).unwrap();
-    query_results!(query, |_, _, _, _| external_results.pop())
+    query_results!(query, |_, _, _, _, _| external_results.pop())
 }
 
 #[track_caller]
@@ -698,7 +704,7 @@ fn test_lookup_derefs() {
         .unwrap();
     let query = polar.new_query("f(1)", false).unwrap();
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
         // check the argument is bound to an integer
         assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()
@@ -708,7 +714,7 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
         assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
@@ -763,7 +769,7 @@ fn test_externals_instantiated() {
         .unwrap();
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
         // make sure that what we get as input is an external instance
         // with the fields set correctly
         match &args.as_ref().unwrap()[0].value() {
