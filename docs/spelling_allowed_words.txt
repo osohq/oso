@@ -60,8 +60,6 @@ arity
 NaN
 constructable
 precommit
-enums
-proc
 
 ## Product names
 sqlite
@@ -102,3 +100,6 @@ structs
 usize
 vec
 toml
+enums
+proc
+io
