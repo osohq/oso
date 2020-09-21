@@ -635,7 +635,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
-    # TODO (dhatch): Was this a test to fix a bug, is it needed?
+    # TODO: (dhatch) Was this a test to fix a bug, is it needed?
     it 'raises if a null byte is encountered' do
       rule = <<~POLAR
         f(a) if a = "this is not allowed\0
@@ -644,7 +644,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  # TODO (dhatch): Should these tests be in Rust?
+  # TODO: (dhatch) Should these tests be in Rust?
   context 'when parsing' do # rubocop:disable Metrics/BlockLength
     it 'raises on IntegerOverflow errors' do
       int = '18446744073709551616'
