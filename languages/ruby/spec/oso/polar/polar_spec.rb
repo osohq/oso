@@ -499,6 +499,23 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'try(new X(), x)', 'x')).to eq([])
     end
 
+    context 'when calling methods on ruby instances' do
+        before do
+            stub_const('TestClass', Class.new do
+                def my_method(one, two, three:, four:)
+                    [one, two, three, four]
+                end
+            end)
+            subject.register_class(TestClass)
+        end
+
+        it 'accepts positional and keyword args' do
+            expect(qvar(subject, 'x = (new TestClass()).my_method(1, 2, four: 4, three: 3)', 'x')).to eq([[1,2,3,4]])
+        end
+    end
+
+
+
     context 'animal tests' do # rubocop:disable Metrics/BlockLength
       before do
         stub_const('Animal', Class.new do
