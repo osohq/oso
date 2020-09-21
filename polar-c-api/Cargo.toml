@@ -1,6 +1,6 @@
 [package]
 name = "polar-c-api"
-version = "0.5.2"
+version = "0.6.0"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 edition = "2018"
 
