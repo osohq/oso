@@ -24,3 +24,11 @@ pub trait PolarClass {
     where
         Self: Sized;
 }
+
+#[cfg(feature = "derive")]
+#[allow(unused_imports)]
+#[macro_use]
+extern crate oso_derive;
+#[cfg(feature = "derive")]
+#[doc(hidden)]
+pub use oso_derive::*;

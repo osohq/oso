@@ -686,7 +686,7 @@ checksum = "a86ed3f5f244b372d6b1a00b72ef7f8876d0bc6a78a4c9985c53614041512063"
 
 [[package]]
 name = "oso"
-version = "0.5.2-alpha"
+version = "0.6.0-alpha"
 dependencies = [
  "maplit",
  "oso-derive",
@@ -698,7 +698,7 @@ dependencies = [
 
 [[package]]
 name = "oso-derive"
-version = "0.5.2-alpha"
+version = "0.6.0-alpha"
 dependencies = [
  "quote 1.0.7",
  "syn 1.0.41",
@@ -769,13 +769,14 @@ dependencies = [
 
 [[package]]
 name = "polar-core"
-version = "0.5.2"
+version = "0.6.0-alpha"
 dependencies = [
  "anyhow",
  "js-sys",
  "lalrpop",
  "lalrpop-util",
  "lazy_static",
+ "log 0.4.11",
  "regex",
  "serde",
  "serde_json",
@@ -1111,7 +1112,6 @@ version = "0.1.0"
 dependencies = [
  "lazy_static",
  "oso",
- "oso-derive",
  "rocket",
 ]
 
