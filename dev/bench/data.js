@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600693962364,
+  "lastUpdate": 1600699738044,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -5963,6 +5963,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5980,
             "range": "± 2186",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b39a349feb4479d063afddc4652a7f538058b297",
+          "message": "Add ExternalUnify to Java (#426)\n\nCo-authored-by: Leina McDermott <leina05@gmail.com>",
+          "timestamp": "2020-09-21T10:39:57-04:00",
+          "tree_id": "c29b9556f3cf2cc75736107cbf8b03390eccf778",
+          "url": "https://github.com/osohq/oso/commit/b39a349feb4479d063afddc4652a7f538058b297"
+        },
+        "date": 1600699737229,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 696,
+            "range": "± 26",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2342,
+            "range": "± 62",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 63741,
+            "range": "± 1396",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 485082,
+            "range": "± 9170",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17138,
+            "range": "± 431",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17152,
+            "range": "± 498",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17132,
+            "range": "± 404",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17133,
+            "range": "± 423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15572,
+            "range": "± 319",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5159,
+            "range": "± 121",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5190,
+            "range": "± 169",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5694,
+            "range": "± 956",
             "unit": "ns/iter"
           }
         ]
