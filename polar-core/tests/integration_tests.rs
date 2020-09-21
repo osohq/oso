@@ -760,38 +760,52 @@ fn test_load_str_with_query() {
     }
 }
 
+/// Test using a constructor with positional + kwargs.
 #[test]
-fn test_externals_instantiated() {
+fn test_make_external() {
     let polar = Polar::new();
-    polar.register_constant(sym!("Foo"), term!(true));
-    polar
-        .load_str("f(x, foo: Foo) if foo.bar(new Bar(x: x)) = 1;")
+    let query = polar
+        .new_query("x = new Bar(1, a: 2, b: 3)", false)
         .unwrap();
 
-    let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
-        // make sure that what we get as input is an external instance
-        // with the fields set correctly
-        match &args.as_ref().unwrap()[0].value() {
-            Value::ExternalInstance(ExternalInstance {
-                constructor: Some(ref term),
-                ..
-            }) => assert!(
-                matches!(term.value(), Value::Call(Call {
-                    ref name, args: _, ref kwargs
-                }) if name.0 == "Bar" && kwargs.clone().unwrap() == btreemap!{sym!("x") => term!(1)}),
-                "expected external instance Bar {{ x: 1 }}, found: {}",
-                args.unwrap()[0].value().to_polar()
-            ),
-            _ => panic!("Expected external instance"),
-        }
-        foo_lookups.pop()
+    let mock_make_bar = |_, constructor: Term| match constructor.value() {
+        Value::Call(Call {
+            name,
+            args,
+            kwargs: Some(kwargs),
+        }) if name == &sym!("Bar")
+            && args == &vec![term!(1)]
+            && kwargs == &btreemap! {sym!("a") => term!(2), sym!("b") => term!(3)} => {}
+        _ => panic!("Expected call with args and kwargs"),
     };
-    let query = polar.new_query("f(1, new Foo())", false).unwrap();
-    let results = query_results!(query, mock_foo);
+    let results = query_results!(query, no_results, mock_make_bar, no_debug);
     assert_eq!(results.len(), 1);
 }
 
+/// Test external call with positional + kwargs.
+#[test]
+fn test_external_call() {
+    let polar = Polar::new();
+    polar.register_constant(sym!("Foo"), term!(true));
+    let mut foo_lookups = vec![term!(1)];
+
+    let query = polar
+        .new_query("(new Foo()).bar(1, a: 2, b: 3) = 1", false)
+        .unwrap();
+
+    let mock_foo_lookup =
+        |_, _, _, args: Option<Vec<Term>>, kwargs: Option<BTreeMap<Symbol, Term>>| {
+            assert_eq!(args.unwrap()[0], term!(1));
+            assert_eq!(
+                kwargs.unwrap(),
+                btreemap! {sym!("a") => term!(2), sym!("b") => term!(3)}
+            );
+            foo_lookups.pop()
+        };
+    let results = query_results!(query, mock_foo_lookup);
+    assert_eq!(results.len(), 1);
+    assert!(foo_lookups.is_empty());
+}
 #[test]
 #[ignore] // ignore because this take a LONG time (could consider lowering the goal limit)
 #[should_panic(expected = "Goal count exceeded! MAX_EXECUTED_GOALS = 10000")]
