@@ -87,14 +87,6 @@ impl<T: ToPolar> ToPolar for HashMap<String, T> {
     }
 }
 
-pub struct PolarIter<I>(pub I);
-
-impl<I: Clone + Iterator<Item = T>, T: ToPolar> ToPolar for PolarIter<I> {
-    fn to_polar_value(&self, host: &mut Host) -> Value {
-        Value::List(self.0.clone().map(|v| v.to_polar(host)).collect())
-    }
-}
-
 impl ToPolar for Value {
     fn to_polar_value(&self, _host: &mut Host) -> Value {
         self.clone()
@@ -141,5 +133,57 @@ impl<C: 'static + Clone + super::HostClass> ToPolar for C {
             repr: None,
             instance_id: instance,
         })
+    }
+}
+
+use std::iter;
+
+pub type PolarResultIter = Box<dyn Iterator<Item = Result<Box<dyn ToPolar>, crate::OsoError>>>;
+
+// Trait for the return value of class methods.
+// This allows us to return polar values, as well as options and results of polar values.
+pub trait ToPolarResults {
+    fn to_polar_results(&self) -> PolarResultIter;
+}
+
+impl<C: 'static + Sized + Clone + ToPolar> ToPolarResults for C {
+    fn to_polar_results(&self) -> PolarResultIter {
+        Box::new(iter::once(Ok(Box::new(self.clone()) as Box<dyn ToPolar>)))
+    }
+}
+
+impl<C: ToPolarResults, E: ToString> ToPolarResults for Result<C, E> {
+    fn to_polar_results(&self) -> PolarResultIter {
+        match self {
+            Ok(result) => result.to_polar_results(),
+            Err(e) => Box::new(iter::once(Err(crate::OsoError::Custom {
+                message: e.to_string(),
+            }))),
+        }
+    }
+}
+
+impl<C: ToPolarResults> ToPolarResults for Option<C> {
+    fn to_polar_results(&self) -> PolarResultIter {
+        self.as_ref().map_or_else(
+            || Box::new(std::iter::empty()) as PolarResultIter,
+            |e| e.to_polar_results(),
+        )
+    }
+}
+
+pub struct PolarIter<I, Iter>
+where
+    I: ToPolarResults + 'static,
+    Iter: std::iter::Iterator<Item = I> + Sized + Clone + 'static,
+{
+    pub iter: Iter,
+}
+
+impl<I: ToPolarResults, Iter: std::iter::Iterator<Item = I> + Clone + Sized + 'static>
+    ToPolarResults for PolarIter<I, Iter>
+{
+    fn to_polar_results(&self) -> PolarResultIter {
+        Box::new(self.iter.clone().flat_map(|e| e.to_polar_results()))
     }
 }

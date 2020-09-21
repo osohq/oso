@@ -1,8 +1,10 @@
+use std::any::Any;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
+use crate::errors::{OsoError, TypeError};
 use crate::Polar;
 
 mod class;
@@ -13,7 +15,7 @@ mod to_polar;
 
 pub use class::{Class, Instance};
 pub use from_polar::FromPolar;
-pub use to_polar::ToPolar;
+pub use to_polar::{PolarResultIter, ToPolar};
 
 /// The meta class - the class of all classess (except itself)
 #[derive(Clone, Default)]
@@ -24,10 +26,20 @@ fn type_class() -> Class {
     class.erase_type()
 }
 
+/// Downcast `any` with proper error handling.
+///
+/// # Arguments
+/// * `type_name` - used in error message. The target type name.
+fn downcast<T: Any>(any: &dyn Any) -> Result<&T, TypeError> {
+    any.downcast_ref().ok_or_else(|| TypeError {
+        expected: String::from(std::any::type_name::<T>()),
+    })
+}
+
 /// Maintain mappings and caches for Rust classes & instances
 pub struct Host {
     /// Reference to the inner `Polar` instance
-    polar: Rc<Polar>,
+    polar: Arc<Polar>,
 
     /// Map from names to `Class`s
     classes: HashMap<Symbol, Class>,
@@ -42,7 +54,7 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(polar: Rc<Polar>) -> Self {
+    pub fn new(polar: Arc<Polar>) -> Self {
         let mut host = Self {
             class_names: HashMap::new(),
             classes: HashMap::new(),
@@ -107,10 +119,12 @@ impl Host {
         Ok(())
     }
 
-    pub fn unify(&self, left: u64, right: u64) -> bool {
-        let _left = self.get_instance(left).unwrap();
-        let _right = self.get_instance(right).unwrap();
-        todo!("left == right")
+    pub fn unify(&self, left: u64, right: u64) -> crate::Result<bool> {
+        tracing::trace!("unify {:?}, {:?}", left, right);
+
+        let left = self.get_instance(left).unwrap();
+        let right = self.get_instance(right).unwrap();
+        left.equals(right)
     }
 
     pub fn isa(&self, term: Term, class_tag: &Symbol) -> bool {
@@ -136,16 +150,17 @@ impl Host {
         }
     }
 
-    pub fn is_subspecializer(&self, id: u64, left_tag: &Symbol, right_tag: &Symbol) -> bool {
-        let _instance = self.get_instance(id).unwrap();
-        let _left = self.get_class(left_tag).unwrap();
-        let _right = self.get_class(right_tag).unwrap();
-
-        todo!("????")
+    pub fn is_subspecializer(&self, _id: u64, _left_tag: &Symbol, _right_tag: &Symbol) -> bool {
+        // Rust has no notion of inheritance, so there are no subspecializers.
+        false
     }
 
-    pub fn operator(&self, _op: Operator, _args: [class::Instance; 2]) -> bool {
-        todo!()
+    pub fn operator(&self, _op: Operator, _args: [class::Instance; 2]) -> crate::Result<bool> {
+        // Operators are not supported
+        // TODO (dhatch): Implement.
+        Err(OsoError::UnimplementedOperation {
+            operation: String::from("comparison operators"),
+        })
     }
 }
 

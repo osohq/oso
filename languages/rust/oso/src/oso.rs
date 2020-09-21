@@ -4,7 +4,6 @@ use polar_core::terms::{Call, Symbol, Term, Value};
 
 use std::fs::File;
 use std::io::Read;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::host::Host;
@@ -13,7 +12,7 @@ use crate::ToPolar;
 
 #[derive(Clone)]
 pub struct Oso {
-    inner: Rc<polar_core::polar::Polar>,
+    inner: Arc<polar_core::polar::Polar>,
     host: Arc<Mutex<Host>>,
 }
 
@@ -25,7 +24,7 @@ impl Default for Oso {
 
 impl Oso {
     pub fn new() -> Self {
-        let inner = Rc::new(polar_core::polar::Polar::new());
+        let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
         let mut oso = Self {
@@ -45,7 +44,7 @@ impl Oso {
         actor: Actor,
         action: Action,
         resource: Resource,
-    ) -> bool
+    ) -> crate::Result<bool>
     where
         Actor: ToPolar,
         Action: ToPolar,
@@ -53,7 +52,11 @@ impl Oso {
     {
         let args: Vec<&dyn ToPolar> = vec![&actor, &action, &resource];
         let mut query = self.query_rule("allow", args).unwrap();
-        query.next().is_some()
+        match query.next() {
+            Some(Ok(_)) => Ok(true),
+            Some(Err(e)) => Err(e),
+            None => Ok(false),
+        }
     }
 
     pub fn clear(&mut self) {

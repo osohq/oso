@@ -100,7 +100,18 @@ oso.query('builtinSpecializers({foo: "foo"}, "Dictionary")').next
 raise unless oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').to_a.empty?
 oso.query('builtinSpecializers("foo", "String")').next
 raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?
-# rubocop:enable Layout/EmptyLineAfterGuardClause
 
 # Test deref behaviour
 oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'
+
+# Test unspecialized rule ordering
+result = oso.query_rule('testUnspecializedRuleOrder', 'foo', Oso::Polar::Variable.new('y'))
+raise unless result.next['y'] == 1
+raise unless result.next['y'] == 2
+result = oso.query_rule('testUnspecializedRuleOrder', 'foo', Oso::Polar::Variable.new('x'))
+raise unless result.next['x'] == 1
+raise unless result.next['x'] == 2
+result = oso.query_rule('testUnspecializedRuleOrder', 'foo', 'bar', Oso::Polar::Variable.new('z'))
+raise unless result.next['z'] == 1
+raise unless result.next['z'] == 2
+# rubocop:enable Layout/EmptyLineAfterGuardClause

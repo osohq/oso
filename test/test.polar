@@ -71,3 +71,12 @@ testHttpAndPathMapper() if
     and new PathMapper("/foo/{id}/bar/{ego}").map("/foo/1/bar/2") matches {id: "1", ego: "2"};
 
 testUnifyClass(A);
+
+testUnspecializedRuleOrder(_x, y) if y = 2;
+testUnspecializedRuleOrder(_x: String, y) if y = 1;
+
+testUnspecializedRuleOrder(x, _y) if x = 2;
+testUnspecializedRuleOrder(x, _y: String) if x = 1;
+
+testUnspecializedRuleOrder(_x, _y: String, z) if z = 2;
+testUnspecializedRuleOrder(_x: String, _y, z) if z = 1;

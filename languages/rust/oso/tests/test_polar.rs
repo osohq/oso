@@ -1,5 +1,7 @@
+#![allow(clippy::too_many_arguments)]
+
 use maplit::hashmap;
-use oso::{Oso, PolarClass};
+use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
 use oso_derive::*;
 
 struct OsoTest {
@@ -51,6 +53,19 @@ impl OsoTest {
                     .unwrap_or_else(|_| panic!("query: '{}', binding for '{}'", q, var))
             })
             .collect()
+    }
+
+    fn qeval(&mut self, q: &str) {
+        let mut results = self.oso.query(q).unwrap();
+        results
+            .next()
+            .expect("Query should have at least one result.")
+            .unwrap();
+    }
+
+    fn qnull(&mut self, q: &str) {
+        let mut results = self.oso.query(q).unwrap();
+        assert!(results.next().is_none(), "Query shouldn't have any results");
     }
 
     fn qvar_one<T>(&mut self, q: &str, var: &str, expected: T)
@@ -216,11 +231,11 @@ fn test_external() {
     let foo_class = oso::Class::with_constructor(capital_foo)
         .name("Foo")
         .add_attribute_getter("a", |receiver: &Foo| receiver.a)
-        // .add_method("b", |receiver: &Foo| oso::host::PolarIter(receiver.b()))
+        // .add_method("b", |receiver: &Foo| oso::host::PolarResultIter(receiver.b()))
         .add_class_method("c", Foo::c)
         .add_method::<_, _, u32>("d", Foo::d)
         .add_method("e", Foo::e)
-        // .add_method("f", |receiver: &Foo| oso::host::PolarIter(receiver.f()))
+        // .add_method("f", |receiver: &Foo| oso::host::PolarResultIter(receiver.f()))
         .add_method("g", Foo::g)
         .add_method("h", Foo::h)
         .build();
@@ -305,8 +320,6 @@ fn test_methods() {
 
 #[test]
 fn test_macros() {
-    // stub
-
     let _ = tracing_subscriber::fmt::try_init();
 
     #[derive(PolarClass)]
@@ -356,4 +369,265 @@ fn test_macros() {
     test.oso.register_class(class).unwrap();
 
     test.qvar_one(r#"new Baz().world() = x"#, "x", "goodbye world".to_string());
+}
+
+#[test]
+fn test_tuple_structs() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(PolarClass)]
+    struct Foo(i32, i32);
+
+    impl Foo {
+        fn new(a: i32, b: i32) -> Self {
+            Self(a, b)
+        }
+    }
+
+    // @TODO: In the future when we can reason about which attributes are accessible types
+    // we can auto generate these accessors too. For now we have to rely on the attribute for
+    // fields and manually doing it for tuple structs.
+    // Also foo.0 isn't valid polar syntax so if we wanted something like that to work in general for "tuple like objects
+    // that requires a bigger change.
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::new)
+                .add_attribute_getter("i0", |rcv: &Foo| rcv.0)
+                .add_attribute_getter("i1", |rcv: &Foo| rcv.1)
+                .build(),
+        )
+        .unwrap();
+
+    test.qvar_one(r#"foo = new Foo(1,2) and foo.i0 + foo.i1 = x"#, "x", 3);
+}
+
+#[test]
+fn test_results_and_options() {
+    let _ = tracing_subscriber::fmt::try_init();
+
+    #[derive(PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn new() -> Self {
+            Self
+        }
+
+        fn ok(&self) -> Result<i32, String> {
+            Ok(1)
+        }
+
+        fn err(&self) -> Result<i32, &'static str> {
+            Err("Some sort of error")
+        }
+
+        fn some(&self) -> Option<i32> {
+            Some(1)
+        }
+
+        fn none(&self) -> Option<i32> {
+            None
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::new)
+                .add_method("ok", Foo::ok)
+                .add_method("err", Foo::err)
+                .add_method("some", Foo::some)
+                .add_method("none", Foo::none)
+                .build(),
+        )
+        .unwrap();
+
+    test.qvar_one(r#"new Foo().ok() = x"#, "x", 1);
+    test.query_err("new Foo().err()");
+    test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
+    let results = test.query("new Foo().none()");
+    assert!(results.is_empty());
+}
+
+// TODO: dhatch see if there is a relevant test to port.
+#[test]
+fn test_unify_externals() {
+    let mut test = OsoTest::new();
+
+    #[derive(PartialEq, Clone, Debug)]
+    struct Foo {
+        x: i64,
+    }
+
+    impl HostClass for Foo {};
+    impl Foo {
+        fn new(x: i64) -> Self {
+            Self { x }
+        }
+    }
+
+    let foo_class = Class::with_constructor(Foo::new)
+        .name("Foo")
+        .add_attribute_getter("x", |this: &Foo| this.x)
+        .with_equality_check()
+        .build();
+
+    test.oso.register_class(foo_class).unwrap();
+
+    test.load_str("foos_equal(a, b) if a = b;");
+
+    // Test with instantiated in polar.
+    test.qeval("foos_equal(new Foo(1), new Foo(1))");
+    test.qnull("foos_equal(new Foo(1), new Foo(2))");
+
+    let a = Foo::new(1);
+    let b = Foo::new(1);
+    assert_eq!(a, b);
+
+    // TODO this interface is not convenient or easy to use due to all the casting. Maybe needs a macro?
+    let mut results = test
+        .oso
+        .query_rule("foos_equal", vec![&a as &dyn ToPolar, &b as &dyn ToPolar])
+        .unwrap();
+    results.next().expect("At least one result").unwrap();
+
+    // Ensure that equality on a type that doesn't support it fails.
+    struct Bar {
+        x: i64,
+    }
+
+    impl HostClass for Bar {};
+    impl Bar {
+        fn new(x: i64) -> Self {
+            Self { x }
+        }
+    }
+
+    let bar_class = Class::with_constructor(Bar::new)
+        .name("Bar")
+        .add_attribute_getter("x", |this: &Bar| this.x)
+        .build();
+
+    test.oso.register_class(bar_class).unwrap();
+
+    let mut query = test.oso.query("x = new Bar(1) = new Bar(2)").unwrap();
+    let result = query.next();
+
+    // TODO: (dhatch) Currently this query silently fails (no results).
+    // Instead, this should return UnsupportedOperation error.
+    assert!(result.is_none());
+
+    #[derive(PartialEq, Clone, Debug)]
+    struct Baz {
+        x: i64,
+    }
+
+    impl HostClass for Baz {};
+    impl Baz {
+        fn new(x: i64) -> Self {
+            Self { x }
+        }
+    }
+
+    let baz_class = Class::with_constructor(Baz::new)
+        .name("Baz")
+        .add_attribute_getter("x", |this: &Baz| this.x)
+        .with_equality_check()
+        .build();
+
+    test.oso.register_class(baz_class).unwrap();
+
+    let mut query = test.oso.query("x = new Foo(1) = new Baz(1)").unwrap();
+    let result = query.next();
+
+    // TODO: (dhatch) Currently this query silently fails (no results).
+    // Instead, this should return TypeError.
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_values() {
+    let _ = tracing_subscriber::fmt::try_init();
+
+    #[derive(PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn new() -> Self {
+            Self
+        }
+
+        fn one_two_three(&self) -> Vec<i32> {
+            vec![1, 2, 3]
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::new)
+                .add_iterator_method("one_two_three", Foo::one_two_three)
+                .add_method("as_list", Foo::one_two_three)
+                .build(),
+        )
+        .unwrap();
+
+    let results: Vec<i32> = test.qvar("new Foo().one_two_three() = x", "x");
+    assert!(results == vec![1, 2, 3]);
+    println!("{:?}", results);
+    let result: Vec<Vec<i32>> = test.qvar("new Foo().as_list() = x", "x");
+    assert!(result == vec![vec![1, 2, 3]]);
+    println!("{:?}", result);
+}
+
+#[test]
+fn test_arg_number() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn three(&self, one: i32, two: i32, three: i32) -> i32 {
+            one + two + three
+        }
+
+        fn many_method(
+            &self,
+            one: i32,
+            two: i32,
+            three: i32,
+            four: i32,
+            five: i32,
+            six: i32,
+            seven: i32,
+        ) -> i32 {
+            one + two + three + four + five + six + seven
+        }
+
+        fn many_class_method(
+            one: i32,
+            two: i32,
+            three: i32,
+            four: i32,
+            five: i32,
+            six: i32,
+            seven: i32,
+        ) -> i32 {
+            one + two + three + four + five + six + seven
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .add_method("many_method", Foo::three)
+                .add_method("many_method", Foo::many_method)
+                .add_class_method("many_class", Foo::many_class_method)
+                .build(),
+        )
+        .unwrap();
 }
