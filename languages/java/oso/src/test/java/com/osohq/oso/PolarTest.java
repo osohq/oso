@@ -47,6 +47,18 @@ public class PolarTest {
     public String myReturnNull() {
       return null;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof MyClass
+          && ((MyClass) obj).name.equals(this.name)
+          && ((MyClass) obj).id.equals(this.id);
+    }
+
+    @Override
+    public int hashCode() {
+      return this.id;
+    }
   }
 
   public static class MySubClass extends MyClass {
@@ -198,6 +210,45 @@ public class PolarTest {
     assertEquals(pred, java);
   }
 
+  @Test
+  public void testNaN() throws Exception {
+    p.registerConstant("nan", Double.NaN);
+
+    List<HashMap<String, Object>> results = p.query("x = nan").results();
+    HashMap<String, Object> result = results.get(0);
+    Object x = result.get("x");
+    assertTrue(x instanceof Double);
+    Double y = (Double) x;
+    assertTrue(Double.isNaN(y));
+
+    assertTrue(p.query("nan = nan").results().isEmpty(), "NaN != NaN");
+  }
+
+  @Test
+  public void testInfinities() throws Exception {
+    p.registerConstant("inf", Double.POSITIVE_INFINITY);
+
+    List<HashMap<String, Object>> inf_results = p.query("x = inf").results();
+    HashMap<String, Object> inf_result = inf_results.get(0);
+    Object inf = inf_result.get("x");
+    assertTrue((Double) inf == Double.POSITIVE_INFINITY);
+
+    assertFalse(p.query("inf = inf").results().isEmpty(), "Infinity == Infinity");
+
+    p.registerConstant("neg_inf", Double.NEGATIVE_INFINITY);
+
+    List<HashMap<String, Object>> neg_inf_results = p.query("x = neg_inf").results();
+    HashMap<String, Object> neg_inf_result = neg_inf_results.get(0);
+    Object neg_inf = neg_inf_result.get("x");
+    assertTrue((Double) neg_inf == Double.NEGATIVE_INFINITY);
+
+    assertFalse(p.query("neg_inf = neg_inf").results().isEmpty(), "-Infinity == -Infinity");
+
+    assertTrue(p.query("inf = neg_inf").results().isEmpty(), "Infinity != -Infinity");
+    assertTrue(p.query("inf < neg_inf").results().isEmpty(), "Infinity > -Infinity");
+    assertFalse(p.query("neg_inf < inf").results().isEmpty(), "-Infinity < Infinity");
+  }
+
   /*** TEST EXTERNALS ***/
 
   @Test
@@ -312,8 +363,8 @@ public class PolarTest {
 
   @Test
   public void testExternalIsSubSpecializer() throws Exception {
-    p.loadStr("f(a: MySubClass, x) if x = 1;");
-    p.loadStr("f(a: MyClass, x) if x = 2;");
+    p.loadStr("f(_: MySubClass, x) if x = 1;");
+    p.loadStr("f(_: MyClass, x) if x = 2;");
     List<HashMap<String, Object>> result =
         p.queryRule("f", new MySubClass("test", 1), new Variable("x")).results();
     assertTrue(
@@ -323,6 +374,14 @@ public class PolarTest {
     result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
     assertTrue(
         result.equals(List.of(Map.of("x", 2))), "Failed to order rules based on specializers.");
+  }
+
+  @Test
+  public void testExternalUnify() throws Exception {
+    assertFalse(p.query("new MyClass(\"foo\", 1) = new MyClass(\"foo\", 1)").results().isEmpty());
+    assertTrue(p.query("new MyClass(\"foo\", 1) = new MyClass(\"foo\", 2)").results().isEmpty());
+    assertTrue(p.query("new MyClass(\"foo\", 1) = new MyClass(\"bar\", 1)").results().isEmpty());
+    assertTrue(p.query("new MyClass(\"foo\", 1) = {foo: 1}").results().isEmpty());
   }
 
   @Test
@@ -449,7 +508,7 @@ public class PolarTest {
 
   @Test
   public void testUnboundVariable() throws Exception {
-    p.loadStr("rule(x, y) if y = 1;");
+    p.loadStr("rule(_x, y) if y = 1;");
     List<HashMap<String, Object>> results = p.query("rule(x, y)").results();
     HashMap<String, Object> result = results.get(0);
     assertTrue(result.get("x") instanceof Variable);
@@ -481,49 +540,10 @@ public class PolarTest {
         "allow(actor, \"get\", _: Http{path: path}) if "
             + "new PathMapper(\"/myclass/{id}\").map(path) = {id: id} and "
             + "allow(actor, \"get\", new MyClass(\"test\", new Integer(id)));\n"
-            + "allow(actor, \"get\", myclass: MyClass) if myclass.id = 12;");
+            + "allow(_actor, \"get\", myclass: MyClass) if myclass.id = 12;");
     Http http12 = new Http(null, "/myclass/12", null);
     assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");
     Http http13 = new Http(null, "/myclass/13", null);
     assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
-  }
-
-  @Test
-  public void testNaN() throws Exception {
-    p.registerConstant("nan", Double.NaN);
-
-    List<HashMap<String, Object>> results = p.query("x = nan").results();
-    HashMap<String, Object> result = results.get(0);
-    Object x = result.get("x");
-    assertTrue(x instanceof Double);
-    Double y = (Double) x;
-    assertTrue(Double.isNaN(y));
-
-    assertTrue(p.query("nan = nan").results().isEmpty(), "NaN != NaN");
-  }
-
-  @Test
-  public void testInfinities() throws Exception {
-    p.registerConstant("inf", Double.POSITIVE_INFINITY);
-
-    List<HashMap<String, Object>> inf_results = p.query("x = inf").results();
-    HashMap<String, Object> inf_result = inf_results.get(0);
-    Object inf = inf_result.get("x");
-    assertTrue((Double) inf == Double.POSITIVE_INFINITY);
-
-    assertFalse(p.query("inf = inf").results().isEmpty(), "Infinity == Infinity");
-
-    p.registerConstant("neg_inf", Double.NEGATIVE_INFINITY);
-
-    List<HashMap<String, Object>> neg_inf_results = p.query("x = neg_inf").results();
-    HashMap<String, Object> neg_inf_result = neg_inf_results.get(0);
-    Object neg_inf = neg_inf_result.get("x");
-    assertTrue((Double) neg_inf == Double.NEGATIVE_INFINITY);
-
-    assertFalse(p.query("neg_inf = neg_inf").results().isEmpty(), "-Infinity == -Infinity");
-
-    assertTrue(p.query("inf = neg_inf").results().isEmpty(), "Infinity != -Infinity");
-    assertTrue(p.query("inf < neg_inf").results().isEmpty(), "Infinity > -Infinity");
-    assertFalse(p.query("neg_inf < inf").results().isEmpty(), "-Infinity < Infinity");
   }
 }

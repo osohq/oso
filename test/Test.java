@@ -84,14 +84,7 @@ class Test {
     assert !o.queryRule("testHttpAndPathMapper").results().isEmpty();
 
     // Test we can unify against a class
-    // TODO: Enable when ExternalUnify implemented
-    throwsException = false;
-    try {
-      o.queryRule("testUnifyClass", A.class).results().isEmpty();
-    } catch (Exceptions.PolarRuntimeException e) {
-      throwsException = true;
-    }
-    assert throwsException;
+    assert !o.queryRule("testUnifyClass", A.class).results().isEmpty();
 
     // Test that a constant can be called.
     o.registerConstant("Math", Math.class);
