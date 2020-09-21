@@ -187,7 +187,7 @@ class Host:
                     return nan
                 else:
                     if not isinstance(number, float):
-                        raise PolarRuntimeException(
+                        raise PolarRuntimeError(
                             f'Expected a floating point number, got "{number}"'
                         )
             return number
