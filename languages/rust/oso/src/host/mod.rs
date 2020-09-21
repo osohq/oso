@@ -90,7 +90,9 @@ impl Host {
     /// Returns an instance of `Type` for this class.
     pub fn cache_class(&mut self, class: Class, name: Symbol) -> crate::Result<String> {
         if self.classes.contains_key(&name) {
-            return Err(OsoError::DuplicateClassError { name: name.0.to_owned() });
+            return Err(OsoError::DuplicateClassError {
+                name: name.0.to_owned(),
+            });
         }
 
         self.class_names.insert(class.type_id, name.clone());
@@ -105,7 +107,12 @@ impl Host {
 
     pub fn cache_instance(&mut self, instance: class::Instance, id: Option<u64>) -> u64 {
         let id = id.unwrap_or_else(|| self.polar.get_external_id());
-        tracing::trace!("insert instance {:?} {:?}, instances: {:?}", id, instance, self.instances.keys().collect::<Vec<_>>());
+        tracing::trace!(
+            "insert instance {:?} {:?}, instances: {:?}",
+            id,
+            instance,
+            self.instances.keys().collect::<Vec<_>>()
+        );
         self.instances.insert(id, instance);
         id
     }

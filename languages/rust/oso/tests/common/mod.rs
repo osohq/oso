@@ -49,8 +49,14 @@ impl OsoTest {
         res.into_iter()
             .map(|set| {
                 tracing::trace!("bindings {:?}", set.keys().collect::<Vec<_>>());
-                set.get_typed(var)
-                    .unwrap_or_else(|_| panic!("query: '{}', no binding for '{}' with type {}", q, var, std::any::type_name::<T>()))
+                set.get_typed(var).unwrap_or_else(|_| {
+                    panic!(
+                        "query: '{}', no binding for '{}' with type {}",
+                        q,
+                        var,
+                        std::any::type_name::<T>()
+                    )
+                })
             })
             .collect()
     }

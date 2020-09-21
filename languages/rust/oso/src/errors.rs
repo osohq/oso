@@ -12,9 +12,7 @@ pub enum OsoError {
     #[error("failed to convert type from Polar")]
     FromPolar,
     #[error("policy files must have the .polar extension. {filename} does not.")]
-    IncorrectFileType {
-        filename: String
-    },
+    IncorrectFileType { filename: String },
 
     #[error("Invariant error: {source}")]
     InvariantError {

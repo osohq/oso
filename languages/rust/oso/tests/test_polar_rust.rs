@@ -1,7 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 /// Tests that are unique to the Rust implementation of oso, testing things like
 /// rust class handling.
-
 use maplit::hashmap;
 
 use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
@@ -383,7 +382,6 @@ fn test_results_and_options() {
 
     test.qnull(r#"new Foo().none() = x and y = 1"#);
     test.qvar_one(r#"not (new Foo().none()) and y = 1"#, "y", 1);
-
 
     let results = test.query("new Foo().none()");
     assert!(results.is_empty());

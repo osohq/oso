@@ -786,7 +786,9 @@ fn test_variables_as_arguments() -> oso::Result<()> {
         vec![&Value::Variable(Symbol("a".to_owned())) as &dyn ToPolar],
     )?;
 
-    let a_var = query.map(|r| r.unwrap().get_typed::<i64>("a").unwrap()).collect::<Vec<_>>();
+    let a_var = query
+        .map(|r| r.unwrap().get_typed::<i64>("a").unwrap())
+        .collect::<Vec<_>>();
     assert_eq!(a_var, vec![1, 2, 3]);
 
     Ok(())
@@ -827,7 +829,8 @@ fn test_nan_inf() -> oso::Result<()> {
 
     let mut oso = test_oso();
     oso.oso.register_constant("inf", &std::f64::INFINITY)?;
-    oso.oso.register_constant("neg_inf", &std::f64::NEG_INFINITY)?;
+    oso.oso
+        .register_constant("neg_inf", &std::f64::NEG_INFINITY)?;
     oso.oso.register_constant("nan", &std::f64::NAN)?;
 
     let x = oso.qvar::<f64>("x = nan", "x").pop().unwrap();
