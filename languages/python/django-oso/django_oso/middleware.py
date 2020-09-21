@@ -1,6 +1,6 @@
 """Middleware"""
 
-from oso import OsoException
+from oso import OsoError
 
 from .auth import request_authorized, authorize
 
@@ -18,14 +18,14 @@ WHITELIST_STATUSES_DEFAULT = {
 def RequireAuthorization(get_response):
     """Check that ``authorize`` was called during the request.
 
-    :raises oso.OsoException: If ``authorize`` was not called during request
+    :raises oso.OsoError: If ``authorize`` was not called during request
                               processing.
 
     .. warning::
 
         This check is performed at the end of request processing before
         returning a response.  If any database modifications are committed
-        during the request, but it was not authorized, an OsoException will be
+        during the request, but it was not authorized, an OsoError will be
         raised, but the database modifications will not be rolled back.
 
         .. todo:: Would be good to have a solution to this ^, maybe a on
@@ -39,7 +39,7 @@ def RequireAuthorization(get_response):
 
         # Ensure authorization occurred.
         if not request_authorized(request):
-            raise OsoException("authorize was not called during processing request.")
+            raise OsoError("authorize was not called during processing request.")
 
         return response
 

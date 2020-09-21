@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize
 
-from oso import OsoException
+from oso import OsoError
 
 
 @pytest.fixture(autouse=True)
@@ -73,7 +73,7 @@ def test_require_authorization(client, settings, simple_policy):
     """Test that require authorization middleware works."""
     settings.MIDDLEWARE.append("django_oso.middleware.RequireAuthorization")
 
-    with pytest.raises(OsoException):
+    with pytest.raises(OsoError):
         response = client.get("/")
 
     response = client.get("/auth/")
