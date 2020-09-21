@@ -1178,18 +1178,19 @@ impl PolarVirtualMachine {
         self.log_with(
             || {
                 let mut msg = format!("LOOKUP: {}.{}", instance.to_string(), field_name);
-                // TODO (leina): add kwargs to log
-                if let Some(arguments) = &args {
-                    msg.push('(');
-                    msg.push_str(
-                        &arguments
-                            .iter()
-                            .map(|a| a.to_polar())
-                            .collect::<Vec<String>>()
-                            .join(", "),
-                    );
-                    msg.push(')');
-                }
+                msg.push('(');
+                let args = args
+                    .clone()
+                    .unwrap_or_else(Vec::new)
+                    .into_iter()
+                    .map(|a| a.to_polar());
+                let kwargs = kwargs
+                    .clone()
+                    .unwrap_or_else(BTreeMap::new)
+                    .into_iter()
+                    .map(|(k, v)| format!("{}: {}", k, v.to_polar()));
+                msg.push_str(&args.chain(kwargs).collect::<Vec<String>>().join(", "));
+                msg.push(')');
                 msg
             },
             &[],
