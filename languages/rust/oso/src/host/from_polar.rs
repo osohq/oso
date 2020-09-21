@@ -1,3 +1,4 @@
+#![allow(clippy::many_single_char_names, clippy::type_complexity)]
 //! Trait and implementations of `FromPolar` for converting from
 //! Polar types back to Rust types.
 
@@ -208,6 +209,485 @@ where
             let a = A::from_polar(&terms[0], host)?;
             let b = B::from_polar(&terms[1], host)?;
             Ok((a, b))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C> FromPolar for (A, B, C)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 3 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            Ok((a, b, c))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D> FromPolar for (A, B, C, D)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 4 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            Ok((a, b, c, d))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E> FromPolar for (A, B, C, D, E)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 5 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            Ok((a, b, c, d, e))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G> FromPolar for (A, B, C, D, E, G)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 6 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            Ok((a, b, c, d, e, g))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H> FromPolar for (A, B, C, D, E, G, H)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 7 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            Ok((a, b, c, d, e, g, h))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I> FromPolar for (A, B, C, D, E, G, H, I)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 8 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            Ok((a, b, c, d, e, g, h, i))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J> FromPolar for (A, B, C, D, E, G, H, I, J)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 9 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            Ok((a, b, c, d, e, g, h, i, j))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J, K> FromPolar for (A, B, C, D, E, G, H, I, J, K)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+    K: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 10 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            let k = K::from_polar(&terms[9], host)?;
+            Ok((a, b, c, d, e, g, h, i, j, k))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J, K, L> FromPolar for (A, B, C, D, E, G, H, I, J, K, L)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+    K: FromPolar,
+    L: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 11 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            let k = K::from_polar(&terms[9], host)?;
+            let l = L::from_polar(&terms[10], host)?;
+            Ok((a, b, c, d, e, g, h, i, j, k, l))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J, K, L, M> FromPolar for (A, B, C, D, E, G, H, I, J, K, L, M)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+    K: FromPolar,
+    L: FromPolar,
+    M: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 12 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            let k = K::from_polar(&terms[9], host)?;
+            let l = L::from_polar(&terms[10], host)?;
+            let m = M::from_polar(&terms[11], host)?;
+            Ok((a, b, c, d, e, g, h, i, j, k, l, m))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N> FromPolar for (A, B, C, D, E, G, H, I, J, K, L, M, N)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+    K: FromPolar,
+    L: FromPolar,
+    M: FromPolar,
+    N: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 13 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            let k = K::from_polar(&terms[9], host)?;
+            let l = L::from_polar(&terms[10], host)?;
+            let m = M::from_polar(&terms[11], host)?;
+            let n = N::from_polar(&terms[12], host)?;
+            Ok((a, b, c, d, e, g, h, i, j, k, l, m, n))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O> FromPolar
+    for (A, B, C, D, E, G, H, I, J, K, L, M, N, O)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+    K: FromPolar,
+    L: FromPolar,
+    M: FromPolar,
+    N: FromPolar,
+    O: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 14 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            let k = K::from_polar(&terms[9], host)?;
+            let l = L::from_polar(&terms[10], host)?;
+            let m = M::from_polar(&terms[11], host)?;
+            let n = N::from_polar(&terms[12], host)?;
+            let o = O::from_polar(&terms[13], host)?;
+            Ok((a, b, c, d, e, g, h, i, j, k, l, m, n, o))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P> FromPolar
+    for (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+    K: FromPolar,
+    L: FromPolar,
+    M: FromPolar,
+    N: FromPolar,
+    O: FromPolar,
+    P: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 15 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            let k = K::from_polar(&terms[9], host)?;
+            let l = L::from_polar(&terms[10], host)?;
+            let m = M::from_polar(&terms[11], host)?;
+            let n = N::from_polar(&terms[12], host)?;
+            let o = O::from_polar(&terms[13], host)?;
+            let p = P::from_polar(&terms[14], host)?;
+            Ok((a, b, c, d, e, g, h, i, j, k, l, m, n, o, p))
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q> FromPolar
+    for (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)
+where
+    A: FromPolar,
+    B: FromPolar,
+    C: FromPolar,
+    D: FromPolar,
+    E: FromPolar,
+    G: FromPolar,
+    H: FromPolar,
+    I: FromPolar,
+    J: FromPolar,
+    K: FromPolar,
+    L: FromPolar,
+    M: FromPolar,
+    N: FromPolar,
+    O: FromPolar,
+    P: FromPolar,
+    Q: FromPolar,
+{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {
+        Err(crate::OsoError::FromPolar)
+    }
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {
+        if terms.len() == 16 {
+            let a = A::from_polar(&terms[0], host)?;
+            let b = B::from_polar(&terms[1], host)?;
+            let c = C::from_polar(&terms[2], host)?;
+            let d = D::from_polar(&terms[3], host)?;
+            let e = E::from_polar(&terms[4], host)?;
+            let g = G::from_polar(&terms[5], host)?;
+            let h = H::from_polar(&terms[6], host)?;
+            let i = I::from_polar(&terms[7], host)?;
+            let j = J::from_polar(&terms[8], host)?;
+            let k = K::from_polar(&terms[9], host)?;
+            let l = L::from_polar(&terms[10], host)?;
+            let m = M::from_polar(&terms[11], host)?;
+            let n = N::from_polar(&terms[12], host)?;
+            let o = O::from_polar(&terms[13], host)?;
+            let p = P::from_polar(&terms[14], host)?;
+            let q = Q::from_polar(&terms[15], host)?;
+            Ok((a, b, c, d, e, g, h, i, j, k, l, m, n, o, p, q))
         } else {
             Err(crate::OsoError::FromPolar)
         }

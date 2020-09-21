@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 //! Traits to help with passing around methods of arbitrary arities
 //! and to help downcast+convert the arguments.
 
@@ -10,13 +11,23 @@ pub trait Function<Args = ()>: Send + Sync {
     fn invoke(&self, args: Args) -> Self::Result;
 }
 
+/// Similar to a `Function` but also takes an explicit `receiver`
+/// parameter than is the first argument of the call (i.e. the `self` param);
+pub trait Method<Receiver, Args = ()>: Send + Sync {
+    type Result;
+
+    fn invoke(&self, receiver: &Receiver, args: Args) -> Self::Result;
+}
+
+// Generated Impls (see test)
+
 impl<F, R> Function<()> for F
 where
     F: Fn() -> R + Send + Sync,
 {
     type Result = R;
 
-    fn invoke(&self, _: ()) -> Self::Result {
+    fn invoke(&self, _args: ()) -> Self::Result {
         (self)()
     }
 }
@@ -27,8 +38,8 @@ where
 {
     type Result = R;
 
-    fn invoke(&self, arg: (A,)) -> Self::Result {
-        (self)(arg.0)
+    fn invoke(&self, args: (A,)) -> Self::Result {
+        (self)(args.0)
     }
 }
 
@@ -43,12 +54,185 @@ where
     }
 }
 
-/// Similar to a `Function` but also takes an explicit `receiver`
-/// parameter than is the first argument of the call (i.e. the `self` param);
-pub trait Method<Receiver, Args = ()>: Send + Sync {
-    type Result;
+impl<A, B, C, F, R> Function<(A, B, C)> for F
+where
+    F: Fn(A, B, C) -> R + Send + Sync,
+{
+    type Result = R;
 
-    fn invoke(&self, receiver: &Receiver, args: Args) -> Self::Result;
+    fn invoke(&self, args: (A, B, C)) -> Self::Result {
+        (self)(args.0, args.1, args.2)
+    }
+}
+
+impl<A, B, C, D, F, R> Function<(A, B, C, D)> for F
+where
+    F: Fn(A, B, C, D) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D)) -> Self::Result {
+        (self)(args.0, args.1, args.2, args.3)
+    }
+}
+
+impl<A, B, C, D, E, F, R> Function<(A, B, C, D, E)> for F
+where
+    F: Fn(A, B, C, D, E) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E)) -> Self::Result {
+        (self)(args.0, args.1, args.2, args.3, args.4)
+    }
+}
+
+impl<A, B, C, D, E, G, F, R> Function<(A, B, C, D, E, G)> for F
+where
+    F: Fn(A, B, C, D, E, G) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G)) -> Self::Result {
+        (self)(args.0, args.1, args.2, args.3, args.4, args.5)
+    }
+}
+
+impl<A, B, C, D, E, G, H, F, R> Function<(A, B, C, D, E, G, H)> for F
+where
+    F: Fn(A, B, C, D, E, G, H) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H)) -> Self::Result {
+        (self)(args.0, args.1, args.2, args.3, args.4, args.5, args.6)
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, F, R> Function<(A, B, C, D, E, G, H, I)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, F, R> Function<(A, B, C, D, E, G, H, I, J)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, F, R> Function<(A, B, C, D, E, G, H, I, J, K)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J, K)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8, args.9,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J, K, L)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8, args.9, args.10,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L, M)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J, K, L, M)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8, args.9,
+            args.10, args.11,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L, M, N)>
+    for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J, K, L, M, N)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8, args.9,
+            args.10, args.11, args.12,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R>
+    Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J, K, L, M, N, O)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8, args.9,
+            args.10, args.11, args.12, args.13,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R>
+    Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8, args.9,
+            args.10, args.11, args.12, args.13, args.14,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R>
+    Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)> for F
+where
+    F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, args: (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)) -> Self::Result {
+        (self)(
+            args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8, args.9,
+            args.10, args.11, args.12, args.13, args.14, args.15,
+        )
+    }
 }
 
 impl<F, R, Receiver> Method<Receiver, ()> for F
@@ -57,7 +241,7 @@ where
 {
     type Result = R;
 
-    fn invoke(&self, receiver: &Receiver, _: ()) -> Self::Result {
+    fn invoke(&self, receiver: &Receiver, _args: ()) -> Self::Result {
         (self)(receiver)
     }
 }
@@ -68,8 +252,8 @@ where
 {
     type Result = R;
 
-    fn invoke(&self, receiver: &Receiver, arg: (A,)) -> Self::Result {
-        (self)(receiver, arg.0)
+    fn invoke(&self, receiver: &Receiver, args: (A,)) -> Self::Result {
+        (self)(receiver, args.0)
     }
 }
 
@@ -81,5 +265,348 @@ where
 
     fn invoke(&self, receiver: &Receiver, args: (A, B)) -> Self::Result {
         (self)(receiver, args.0, args.1)
+    }
+}
+
+impl<A, B, C, F, R, Receiver> Method<Receiver, (A, B, C)> for F
+where
+    F: Fn(&Receiver, A, B, C) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C)) -> Self::Result {
+        (self)(receiver, args.0, args.1, args.2)
+    }
+}
+
+impl<A, B, C, D, F, R, Receiver> Method<Receiver, (A, B, C, D)> for F
+where
+    F: Fn(&Receiver, A, B, C, D) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D)) -> Self::Result {
+        (self)(receiver, args.0, args.1, args.2, args.3)
+    }
+}
+
+impl<A, B, C, D, E, F, R, Receiver> Method<Receiver, (A, B, C, D, E)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D, E)) -> Self::Result {
+        (self)(receiver, args.0, args.1, args.2, args.3, args.4)
+    }
+}
+
+impl<A, B, C, D, E, G, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D, E, G)) -> Self::Result {
+        (self)(receiver, args.0, args.1, args.2, args.3, args.4, args.5)
+    }
+}
+
+impl<A, B, C, D, E, G, H, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D, E, G, H)) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D, E, G, H, I)) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I, J)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D, E, G, H, I, J)) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I, J, K)>
+    for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D, E, G, H, I, J, K)) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+            args.9,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, F, R, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: (A, B, C, D, E, G, H, I, J, K, L)) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+            args.9, args.10,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(
+        &self,
+        receiver: &Receiver,
+        args: (A, B, C, D, E, G, H, I, J, K, L, M),
+    ) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+            args.9, args.10, args.11,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(
+        &self,
+        receiver: &Receiver,
+        args: (A, B, C, D, E, G, H, I, J, K, L, M, N),
+    ) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+            args.9, args.10, args.11, args.12,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(
+        &self,
+        receiver: &Receiver,
+        args: (A, B, C, D, E, G, H, I, J, K, L, M, N, O),
+    ) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+            args.9, args.10, args.11, args.12, args.13,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(
+        &self,
+        receiver: &Receiver,
+        args: (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P),
+    ) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+            args.9, args.10, args.11, args.12, args.13, args.14,
+        )
+    }
+}
+
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R, Receiver>
+    Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)> for F
+where
+    F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync,
+{
+    type Result = R;
+
+    fn invoke(
+        &self,
+        receiver: &Receiver,
+        args: (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q),
+    ) -> Self::Result {
+        (self)(
+            receiver, args.0, args.1, args.2, args.3, args.4, args.5, args.6, args.7, args.8,
+            args.9, args.10, args.11, args.12, args.13, args.14, args.15,
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // This would be great if it was a proc macro but I don't wanna set up another crate.
+    // @WOW Hack, run this test and paste in the input.
+    #[ignore]
+    #[test]
+    fn gen_impls() {
+        fn tuple_type(i: usize) -> (String, String, String) {
+            let letters: [char; 16] = [
+                'A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+            ];
+            assert!(i <= letters.len());
+            match i {
+                0 => ("()".to_owned(), "".to_owned(), "()".to_owned()),
+                1 => ("(A,)".to_owned(), "A, ".to_owned(), "(args.0)".to_owned()),
+                n => {
+                    let letters = letters
+                        .iter()
+                        .take(n)
+                        .map(|i| i.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    let args = (0..i)
+                        .map(|i| format!("args.{}", i))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    (
+                        format!("({})", letters),
+                        format!("{}, ", letters),
+                        format!("({})", args),
+                    )
+                }
+            }
+        }
+
+        eprintln!("// Generated Impls (see test)");
+        for i in 0..=16 {
+            let (t, prefix, call) = tuple_type(i);
+            let imp = format!(
+                r#"
+impl<{}F, R> Function<{}> for F
+where
+    F: Fn{} -> R + Send + Sync,
+{{
+    type Result = R;
+
+    fn invoke(&self, args: {}) -> Self::Result {{
+        (self){}
+    }}
+}}
+"#,
+                prefix, t, t, t, call
+            );
+            eprintln!("{}", imp);
+        }
+
+        for i in 0..=16 {
+            let (t, prefix, call) = tuple_type(i);
+            let imp = format!(
+                r#"
+impl<{}F, R, Receiver> Method<Receiver, {}> for F
+where
+    F: Fn(&Receiver, {}) -> R + Send + Sync,
+{{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: {}) -> Self::Result {{
+        (self)(receiver, {}
+    }}
+}}
+"#,
+                prefix,
+                t,
+                prefix.trim_end_matches(", "),
+                t,
+                call.trim_start_matches('(')
+            );
+            eprintln!("{}", imp);
+        }
+
+        let letters: [char; 16] = [
+            'A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+        ];
+
+        for i in 2..=16 {
+            let (t, prefix, _call) = tuple_type(i);
+            let from_polars = {
+                let mut v = vec![];
+                for letter in letters.iter().take(i) {
+                    v.push(format!("{}: FromPolar,", letter));
+                }
+                v.join("\n")
+            };
+            let from_elements = {
+                let mut v = vec![];
+                for (n, letter) in letters.iter().enumerate().take(i) {
+                    v.push(format!(
+                        "let {} = {}::from_polar(&terms[{}], host)?;",
+                        letter.to_ascii_lowercase(),
+                        letter,
+                        n
+                    ));
+                }
+                v.join("\n")
+            };
+            let imp = format!(
+                r#"impl<{}> FromPolar for {}
+where
+    {}
+{{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {{
+        Err(crate::OsoError::FromPolar)
+    }}
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {{
+        if terms.len() == {} {{
+            {}
+            Ok({})
+        }} else {{
+            Err(crate::OsoError::FromPolar)
+        }}
+    }}
+}}"#,
+                prefix.trim_end_matches(", "),
+                t,
+                from_polars,
+                i,
+                from_elements,
+                t.to_ascii_lowercase()
+            );
+            eprintln!("{}", imp)
+        }
     }
 }

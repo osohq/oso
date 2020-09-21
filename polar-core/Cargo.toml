@@ -1,7 +1,12 @@
 [package]
 name = "polar-core"
-version = "0.5.2"
+description = "Polar Core Library"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
+license = "Apache-2.0"
+homepage = "https://github.com/osohq/oso"
+
+version = "0.6.0"
+
 edition = "2018"
 
 [lib]

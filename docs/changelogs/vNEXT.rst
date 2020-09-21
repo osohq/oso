@@ -37,7 +37,8 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Java instances may now be unified against other Java instances:
+
+  .. code-block:: polar
+
+    new Foo() = new Foo()
