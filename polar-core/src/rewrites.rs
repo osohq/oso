@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn rewrite_nested_literal() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("new Foo ( x: bar.y )");
+        let mut term = parse_query("new Foo(x: bar.y)");
         assert_eq!(term.to_polar(), "new Foo(x: bar.y)");
         rewrite_term(&mut term, &mut kb);
         assert_eq!(
