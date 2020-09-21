@@ -43,13 +43,17 @@ module Oso
       # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
-      def register_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+      def register_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         return if calls.key?(call_id)
 
         instance = host.to_ruby(instance)
-        args = (args || {}).map { |a| host.to_ruby(a) }
-        kwargs = Hash[(kwargs || {}).map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-        result = instance.__send__(attribute, *args, **kwargs)
+        args = args.map { |a| host.to_ruby(a) }
+        kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+        result = if kwargs.empty?
+                   instance.__send__(attribute, *args)
+                 else
+                   instance.__send__(attribute, *args, **kwargs)
+                 end
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
       rescue ArgumentError, NoMethodError
@@ -110,8 +114,8 @@ module Oso
 
         cls_name = constructor['Call']['name']
         args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
-        kwargs = constructor['Call']['kwargs']
-        kwargs = Hash[(kwargs || {}).map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+        kwargs = constructor['Call']['kwargs'] || {}
+        kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
@@ -120,7 +124,7 @@ module Oso
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         Enumerator.new do |yielder| # rubocop:disable Metrics/BlockLength
           loop do # rubocop:disable Metrics/BlockLength
             event = ffi_query.next_event
@@ -135,8 +139,8 @@ module Oso
               call_id = event.data['call_id']
               instance = event.data['instance']
               attribute = event.data['attribute']
-              args = event.data['args']
-              kwargs = event.data['kwargs']
+              args = event.data['args'] || []
+              kwargs = event.data['kwargs'] || {}
               handle_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
             when 'ExternalIsSubSpecializer'
               instance_id = event.data['instance_id']
