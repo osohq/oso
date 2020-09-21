@@ -7,8 +7,6 @@ oso is packaged as a :doc:`cargo</download>` package for use in rust application
 .. toctree::
     :hidden:
 
-    index
-
 To install, see :doc:`installation instructions </download>`.
 
 Working with Rust Types
