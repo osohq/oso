@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use maplit::hashmap;
 use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
 use oso_derive::*;
@@ -579,4 +581,53 @@ fn test_values() {
     let result: Vec<Vec<i32>> = test.qvar("new Foo().as_list() = x", "x");
     assert!(result == vec![vec![1, 2, 3]]);
     println!("{:?}", result);
+}
+
+#[test]
+fn test_arg_number() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn three(&self, one: i32, two: i32, three: i32) -> i32 {
+            one + two + three
+        }
+
+        fn many_method(
+            &self,
+            one: i32,
+            two: i32,
+            three: i32,
+            four: i32,
+            five: i32,
+            six: i32,
+            seven: i32,
+        ) -> i32 {
+            one + two + three + four + five + six + seven
+        }
+
+        fn many_class_method(
+            one: i32,
+            two: i32,
+            three: i32,
+            four: i32,
+            five: i32,
+            six: i32,
+            seven: i32,
+        ) -> i32 {
+            one + two + three + four + five + six + seven
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .add_method("many_method", Foo::three)
+                .add_method("many_method", Foo::many_method)
+                .add_class_method("many_class", Foo::many_class_method)
+                .build(),
+        )
+        .unwrap();
 }
