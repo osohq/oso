@@ -325,12 +325,12 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'can call host language methods' do # rubocop:disable Metrics/BlockLength
-    #test_host_method_string
+    # test_host_method_string
     it 'on strings' do
       expect(query(subject, 'x = "abc" and x.index("bc") = 1').length).to be 1
     end
 
-    #test_host_method_integer
+    # test_host_method_integer
     it 'on integers' do
       expect(query(subject, 'i = 4095 and i.bit_length = 12').length).to be 1
     end
