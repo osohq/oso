@@ -114,7 +114,7 @@ topic, please see our :doc:`use cases page <use-cases>`.
 What languages and frameworks do you support?
 ---------------------------------------------
 
-We currently support Python, Ruby, Java and Node.js, and are actively working on supporting more languages.
+We currently support Python, Ruby, Java and Node.js, Rust, and are actively working on supporting more languages.
 We have framework integrations for Flask & Django see :doc:`here
 </using/frameworks/index>`.
 
