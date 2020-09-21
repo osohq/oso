@@ -2907,7 +2907,7 @@ mod tests {
         let dict = Dictionary { fields };
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: term!(call!("x")),
+            field: term!(string!("x")),
             value: term!(1),
         })
         .unwrap();
@@ -2919,7 +2919,7 @@ mod tests {
         // Lookup with incorrect value
         vm.push_goal(Goal::Lookup {
             dict: dict.clone(),
-            field: term!(call!("x")),
+            field: term!(string!("x")),
             value: term!(2),
         })
         .unwrap();
@@ -2929,7 +2929,7 @@ mod tests {
         // Lookup with unbound value
         vm.push_goal(Goal::Lookup {
             dict,
-            field: term!(call!("x")),
+            field: term!(string!("x")),
             value: term!(sym!("y")),
         })
         .unwrap();

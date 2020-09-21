@@ -83,6 +83,7 @@ where
                 instance,
                 attribute,
                 args,
+                kwargs: _
             } => {
                 query
                     .call_result(
