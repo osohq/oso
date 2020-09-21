@@ -282,6 +282,14 @@ impl ResultSet {
         Box::new(self.bindings.keys().map(|sym| sym.0.as_ref()))
     }
 
+    pub fn iter_bindings(&self) -> Box<dyn std::iter::Iterator<Item = (&str, &Value)> + '_> {
+        Box::new(self.bindings.iter().map(|(k, v)| (k.0.as_ref(), v.value())))
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.bindings.is_empty()
+    }
+
     pub fn get(&self, name: &str) -> Option<crate::Value> {
         self.bindings
             .get(&Symbol(name.to_string()))

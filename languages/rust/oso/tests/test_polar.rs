@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use oso::{Class, FromPolar, HostClass, Oso, OsoError, PolarClass, ToPolar, Value};
+use oso::{Class, Oso, OsoError, PolarClass, ToPolar, Value};
 use oso_derive::*;
 use polar_core::error as polar_error;
 use polar_core::terms::Symbol;
@@ -16,14 +16,12 @@ use common::OsoTest;
 
 fn test_file_path() -> PathBuf {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let path = path.join(Path::new("tests/test_file.polar"));
-    path
+    path.join(Path::new("tests/test_file.polar"))
 }
 
 fn test_file_gx_path() -> PathBuf {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let path = path.join(Path::new("tests/test_file_gx.polar"));
-    path
+    path.join(Path::new("tests/test_file_gx.polar"))
 }
 
 // EXTERNALS
@@ -62,6 +60,7 @@ impl Actor {
         Widget::new(1)
     }
 
+    #[allow(dead_code)]
     pub fn widgets() {
         todo!("Iterator returning multiple choices not yet implemented.");
     }
@@ -260,7 +259,7 @@ fn test_already_loaded_file_error() -> oso::Result<()> {
                 polar_error::ErrorKind::Runtime(polar_error::RuntimeError::FileLoading { .. }),
             ..
         })
-    if &err.to_string() == &format!("Problem loading file: File {} has already been loaded.", path.to_string_lossy())),
+    if err.to_string() == format!("Problem loading file: File {} has already been loaded.", path.to_string_lossy())),
         "Error was {:?}",
         &err
     );
@@ -768,7 +767,7 @@ fn test_predicate_return_list() {
         .unwrap();
 
     let result = query.next().unwrap().unwrap();
-    assert_eq!(result.keys().collect::<Vec<_>>().len(), 0);
+    assert_eq!(result.keys().count(), 0);
 }
 
 // TODO (dhatch): API not great.
@@ -781,7 +780,7 @@ fn test_variables_as_arguments() -> oso::Result<()> {
 
     oso.oso.load_file(test_file_path())?;
 
-    let mut query = oso.oso.query_rule(
+    let query = oso.oso.query_rule(
         "f",
         vec![&Value::Variable(Symbol("a".to_owned())) as &dyn ToPolar],
     )?;
