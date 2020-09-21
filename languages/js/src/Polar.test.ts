@@ -149,6 +149,14 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     expect(await qvar(p, 'try(new X(), x)', 'x')).toStrictEqual([]);
   });
 
+  test('rejects keyword arguments in method calls', async () => {
+    const p = new Polar();
+    p.registerClass(A);
+    expect(p.query('x = (new A()).a(arg: 1)')).rejects.toThrow(
+      'KwargsError: JavaScript does not support keyword arguments'
+    );
+  });
+
   describe('animal tests', () => {
     const wolf =
       'new Animal({species: "canis lupus", genus: "canis", family: "canidae"})';
@@ -465,6 +473,16 @@ describe('#makeInstance', () => {
     await p.__host().makeInstance(ConstructorArgs.name, [one, two], 1);
     const instance = p.__host().getInstance(1);
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
+  });
+
+  test('rejects keyword args', async () => {
+    const p = new Polar();
+    p.registerClass(ConstructorArgs);
+    expect(
+      query(p, 'x = new ConstructorArgs(first: 1, second: 2)')
+    ).rejects.toThrow(
+      'KwargsError: JavaScript does not support keyword arguments'
+    );
   });
 });
 
