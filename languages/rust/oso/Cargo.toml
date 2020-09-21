@@ -16,7 +16,7 @@ required-features = ["cli"]
 
 [dependencies]
 maplit = "1.0.2"
-polar-core = { path = "../../../polar-core", version = "=0.6.0-alpha" }
+polar-core = { path = "../../../polar-core", version = "=0.6.0" }
 oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha", optional=true }
 thiserror = "1.0.20"
 tracing = { version = "0.1.19", features = ["log"] }
