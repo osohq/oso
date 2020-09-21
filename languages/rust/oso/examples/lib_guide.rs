@@ -1,5 +1,4 @@
 use oso::{Oso, PolarClass};
-use oso_derive::*;
 
 use std::collections::HashMap;
 

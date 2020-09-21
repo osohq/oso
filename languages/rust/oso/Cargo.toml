@@ -31,6 +31,6 @@ anyhow = "1.0"
 oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha" }
 
 [features]
-default = []
+default = ["derive"]
 cli = ["rustyline", "rustyline-derive", "anyhow"]
 derive = ["oso-derive"]
