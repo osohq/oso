@@ -149,7 +149,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     expect(await qvar(p, 'try(new X(), x)', 'x')).toStrictEqual([]);
   });
 
-  test('rejects keyword arguments in method calls', async () => {
+  test('rejects keyword arguments in method calls', () => {
     const p = new Polar();
     p.registerClass(A);
     expect(query(p, 'x = (new A()).a(arg: 1)')).rejects.toThrow(
@@ -475,7 +475,7 @@ describe('#makeInstance', () => {
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
   });
 
-  test('rejects keyword args', async () => {
+  test('rejects keyword args', () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
     expect(
