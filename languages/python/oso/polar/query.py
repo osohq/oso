@@ -71,10 +71,8 @@ class Query:
         if "Call" in constructor:
             cls_name = constructor["Call"]["name"]
             args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
-            kwargs = constructor["Call"]["kwargs"]
-            kwargs = (
-                {k: self.host.to_python(v) for k, v in kwargs.items()} if kwargs else {}
-            )
+            kwargs = constructor["Call"]["kwargs"] or {}
+            kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
         else:
             raise PolarApiException("Bad constructor")
         self.host.make_instance(cls_name, args, kwargs, id)
@@ -98,12 +96,8 @@ class Query:
                 callable(attr) and not data["args"] is None
             ):  # If it's a function, call it with the args.
                 args = [self.host.to_python(arg) for arg in data["args"]]
-                kwargs = data["kwargs"]
-                kwargs = (
-                    {k: self.host.to_python(v) for k, v in kwargs.items()}
-                    if kwargs
-                    else {}
-                )
+                kwargs = data["kwargs"] or {}
+                kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
                 result = attr(*args, **kwargs)
             elif not data["args"] is None:
                 raise RuntimeError(
