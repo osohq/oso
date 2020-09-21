@@ -60,6 +60,8 @@ arity
 NaN
 constructable
 precommit
+enums
+proc
 
 ## Product names
 sqlite

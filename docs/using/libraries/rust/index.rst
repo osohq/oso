@@ -4,6 +4,9 @@ Rust Authorization Library
 
 oso is packaged as a :doc:`cargo</download>` crate for use in Rust applications.
 
+API documentation for the crate lives `on docs.rs <https://docs.rs/oso/>`_.
+
+
 .. toctree::
     :hidden:
 
@@ -31,7 +34,7 @@ Polar supports both integer and floating point numbers, as well as booleans (see
 
 Strings
 ^^^^^^^
-Rust's `String <https://doc.rust-lang.org/std/string/struct.String.html>_`s are mapped to Polar :ref:`strings`. Many of rust's string methods may be called in policies:
+Rust `Strings <https://doc.rust-lang.org/std/string/struct.String.html>`_ are mapped to Polar :ref:`strings`. Many of rust's string methods may be called in policies:
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
@@ -88,7 +91,8 @@ Currently, no methods on ``Vec`` are exposed to Polar.
 HashMaps
 ^^^^^^^^ 
 
-Rust `HashMap`s are mapped to Polar :ref:`dictionaries`:
+Rust `HashMaps <https://doc.rust-lang.org/std/collections/struct.HashMap.html>`_ are mapped to Polar :ref:`dictionaries`,
+but require that the ``HashMap`` key is a ``String``:
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
@@ -163,6 +167,8 @@ Summary
     - Number (Float)
   * - bool
     - Boolean
+  * - String, &'static str, str
+    - String
   * - Vec
     - List
   * - HashMap
