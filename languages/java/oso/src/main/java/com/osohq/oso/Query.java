@@ -133,6 +133,9 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           if (!data.get("args").equals(null)) {
             jArgs = Optional.of(data.getJSONArray("args"));
           }
+          if (!data.get("kwargs").equals(null)) {
+              throw new Exceptions.InvalidCallError("Java does not support keyword arguments");
+          }
           handleCall(attrName, jArgs, instance, callId);
           break;
         case "ExternalIsa":
