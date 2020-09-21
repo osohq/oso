@@ -480,9 +480,7 @@ describe('#makeInstance', () => {
     p.registerClass(ConstructorArgs);
     expect(
       query(p, 'x = new ConstructorArgs(first: 1, second: 2)')
-    ).rejects.toThrow(
-      'JavaScript does not support keyword arguments'
-    );
+    ).rejects.toThrow('JavaScript does not support keyword arguments');
   });
 });
 

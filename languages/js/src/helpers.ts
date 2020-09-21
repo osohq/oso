@@ -1,11 +1,7 @@
 import { inspect } from 'util';
 import { readFile as _readFile } from 'fs';
 
-import {
-  InvalidQueryEventError,
-  KwargsError,
-  PolarError,
-} from './errors';
+import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
 import { isPolarTerm, QueryEventKind } from './types';
 import type { obj, QueryEvent } from './types';
 

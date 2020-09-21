@@ -230,8 +230,11 @@ public class PolarTest {
   @Test
   public void testNoKeywordArgs() throws Exception {
     p.registerConstant("MyClass", true);
-    assertThrows(Exceptions.InstantiationError.class, () -> p.query("x = new MyClass(\"test\", id: 1)"));
-    assertThrows(Exceptions.InvalidCallError.class, () -> p.query("x = (new MyClass(\"test\", 1)).foo(\"test\", id: 1)"));
+    assertThrows(
+        Exceptions.InstantiationError.class, () -> p.query("x = new MyClass(\"test\", id: 1)"));
+    assertThrows(
+        Exceptions.InvalidCallError.class,
+        () -> p.query("x = (new MyClass(\"test\", 1)).foo(\"test\", id: 1)"));
   }
 
   @Test
