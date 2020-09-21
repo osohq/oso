@@ -2,7 +2,7 @@
 
 use maplit::hashmap;
 use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
-use oso_derive::*;
+use oso_derive::PolarClass;
 
 struct OsoTest {
     oso: Oso,
