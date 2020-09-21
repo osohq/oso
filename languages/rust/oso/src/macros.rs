@@ -13,7 +13,7 @@ macro_rules! check_messages {
             match message.kind {
                 ::polar_core::messages::MessageKind::Print => ::tracing::debug!("{}", &message.msg),
                 ::polar_core::messages::MessageKind::Warning => {
-                    ::tracing::info!("{}", &message.msg)
+                    ::tracing::warn!("{}", &message.msg)
                 }
             }
         }
