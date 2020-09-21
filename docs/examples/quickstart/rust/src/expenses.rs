@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use std::string::ToString;
 
-use oso_derive::*;
+use oso::*;
 
 lazy_static! {
     pub static ref EXPENSES: [Expense; 3] = [

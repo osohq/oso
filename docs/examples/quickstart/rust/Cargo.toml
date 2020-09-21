@@ -9,5 +9,4 @@ edition = "2018"
 [dependencies]
 lazy_static = "1.4.0"
 rocket = "0.4.5"
-oso = { path = "../../../../languages/rust/oso" }
-oso-derive = { path = "../../../../languages/rust/oso-derive" }
+oso = { path = "../../../../languages/rust/oso", features=["derive"] }

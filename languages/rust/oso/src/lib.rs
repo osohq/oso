@@ -14,6 +14,7 @@ mod query;
 pub use crate::oso::Oso;
 pub use errors::{OsoError, Result};
 pub use host::{Class, FromPolar, HostClass, ToPolar};
+pub use polar_core;
 pub use polar_core::{polar::Polar, terms::Value};
 pub use query::{Query, ResultSet};
 
@@ -23,3 +24,11 @@ pub trait PolarClass {
     where
         Self: Sized;
 }
+
+#[cfg(feature = "derive")]
+#[allow(unused_imports)]
+#[macro_use]
+extern crate oso_derive;
+#[cfg(feature = "derive")]
+#[doc(hidden)]
+pub use oso_derive::*;

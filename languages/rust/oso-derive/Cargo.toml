@@ -1,7 +1,12 @@
 [package]
 name = "oso-derive"
-version = "0.5.2-alpha"
+description = "Oso Authorization Library Macros"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
+license = "Apache-2.0"
+homepage = "https://github.com/osohq/oso"
+
+version = "0.6.0-alpha"
+
 edition = "2018"
 
 [lib]
