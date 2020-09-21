@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use oso::{Class, FromPolar, HostClass, Oso, OsoError, PolarClass, ToPolar, Value};
 use oso_derive::*;
 use polar_core::error as polar_error;
+use polar_core::terms::Symbol;
 
 use maplit::hashmap;
 
@@ -595,21 +596,39 @@ fn test_animals() -> oso::Result<()> {
           what_is_class(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf";
           what_is_class(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog";
           what_is_class(_: Animal{species: s, genus: "canis"}, r) if r = s;
-    "#);
+    "#,
+    );
 
     assert_eq!(
         oso.qvar::<String>(&format!("what_is_class({}, r)", wolf), "r"),
-        vec!["wolf".to_owned(), "canis lupus".to_owned(), "canine".to_owned(), "canid".to_owned(), "animal".to_owned()]
+        vec![
+            "wolf".to_owned(),
+            "canis lupus".to_owned(),
+            "canine".to_owned(),
+            "canid".to_owned(),
+            "animal".to_owned()
+        ]
     );
 
     assert_eq!(
         oso.qvar::<String>(&format!("what_is_class({}, r)", dog), "r"),
-        vec!["dog".to_owned(), "canis familiaris".to_owned(), "canine".to_owned(), "canid".to_owned(), "animal".to_owned()]
+        vec![
+            "dog".to_owned(),
+            "canis familiaris".to_owned(),
+            "canine".to_owned(),
+            "canid".to_owned(),
+            "animal".to_owned()
+        ]
     );
 
     assert_eq!(
         oso.qvar::<String>(&format!("what_is_class({}, r)", canine), "r"),
-        vec!["".to_owned(), "canine".to_owned(), "canid".to_owned(), "animal".to_owned()]
+        vec![
+            "".to_owned(),
+            "canine".to_owned(),
+            "canid".to_owned(),
+            "animal".to_owned()
+        ]
     );
 
     assert_eq!(
@@ -632,7 +651,8 @@ fn test_animals() -> oso::Result<()> {
       what_is_mix(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog_dict";
       what_is_mix(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf_class";
       what_is_mix(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog_class";
-    "#);
+    "#,
+    );
 
     let wolf_dict = r#"{species: "canis lupus", genus: "canis", family: "canidae"}"#;
     let dog_dict = r#"{species: "canis familiaris", genus: "canis", family: "canidae"}"#;
@@ -640,17 +660,36 @@ fn test_animals() -> oso::Result<()> {
 
     assert_eq!(
         oso.qvar::<String>(&format!("what_is_mix({}, r)", wolf), "r"),
-        vec!["wolf_class".to_owned(), "canine_class".to_owned(), "canid_class".to_owned(), "animal_class".to_owned(), "wolf_dict".to_owned(), "canine_dict".to_owned()]
+        vec![
+            "wolf_class".to_owned(),
+            "canine_class".to_owned(),
+            "canid_class".to_owned(),
+            "animal_class".to_owned(),
+            "wolf_dict".to_owned(),
+            "canine_dict".to_owned()
+        ]
     );
 
     assert_eq!(
         oso.qvar::<String>(&format!("what_is_mix({}, r)", dog), "r"),
-        vec!["dog_class".to_owned(), "canine_class".to_owned(), "canid_class".to_owned(), "animal_class".to_owned(), "dog_dict".to_owned(), "canine_dict".to_owned()]
+        vec![
+            "dog_class".to_owned(),
+            "canine_class".to_owned(),
+            "canid_class".to_owned(),
+            "animal_class".to_owned(),
+            "dog_dict".to_owned(),
+            "canine_dict".to_owned()
+        ]
     );
 
     assert_eq!(
         oso.qvar::<String>(&format!("what_is_mix({}, r)", canine), "r"),
-        vec!["canine_class".to_owned(), "canid_class".to_owned(), "animal_class".to_owned(), "canine_dict".to_owned()]
+        vec![
+            "canine_class".to_owned(),
+            "canid_class".to_owned(),
+            "animal_class".to_owned(),
+            "canine_dict".to_owned()
+        ]
     );
 
     assert_eq!(
@@ -667,6 +706,139 @@ fn test_animals() -> oso::Result<()> {
         oso.qvar::<String>(&format!("what_is_mix({}, r)", canine_dict), "r"),
         vec!["canine_dict".to_owned()]
     );
+
+    Ok(())
+}
+
+#[test]
+fn test_inline_queries() {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    // Success if all inlines succeed.
+    oso.load_str("f(1); f(2); ?= f(1); ?= not f(3);");
+
+    // Fails if inline fails.
+    oso.oso.load_str("g(1); ?= g(2);").unwrap_err();
+}
+
+// Skipped parse error tests.
+
+#[test]
+fn test_predicate_return_list() {
+    common::setup();
+
+    #[derive(PolarClass, Debug, Clone)]
+    struct Actor;
+
+    impl Actor {
+        pub fn new() -> Self {
+            Self
+        }
+
+        pub fn groups(&self) -> Vec<String> {
+            vec![
+                "engineering".to_owned(),
+                "social".to_owned(),
+                "admin".to_owned(),
+            ]
+        }
+    }
+
+    let actor_class = Actor::get_polar_class_builder()
+        .name("ActorTwo")
+        .add_method("groups", Actor::groups)
+        .build();
+
+    let mut oso = test_oso();
+    oso.load_str(r#"allow(actor: ActorTwo, "join", "party") if "social" in actor.groups();"#);
+    oso.oso.register_class(actor_class).unwrap();
+
+    let mut query = oso
+        .oso
+        .query_rule(
+            "allow",
+            vec![
+                &Actor::new() as &dyn ToPolar,
+                &"join" as &dyn ToPolar,
+                &"party" as &dyn ToPolar,
+            ],
+        )
+        .unwrap();
+
+    let result = query.next().unwrap().unwrap();
+    assert_eq!(result.keys().collect::<Vec<_>>().len(), 0);
+}
+
+// TODO (dhatch): API not great.
+
+#[test]
+fn test_variables_as_arguments() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    oso.oso.load_file(test_file_path())?;
+
+    let mut query = oso.oso.query_rule(
+        "f",
+        vec![&Value::Variable(Symbol("a".to_owned())) as &dyn ToPolar],
+    )?;
+
+    let a_var = query.map(|r| r.unwrap().get_typed::<i64>("a").unwrap()).collect::<Vec<_>>();
+    assert_eq!(a_var, vec![1, 2, 3]);
+
+    Ok(())
+}
+
+// Skipped test_stack_trace, this is functionality that should be tested in core.
+// TODO ^
+
+#[test]
+fn test_lookup_runtime_error() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.query(r#"new Widget(1) = {bar: "bar"}"#);
+    oso.query_err(r#"new Widget(1).bar = "bar""#);
+
+    Ok(())
+}
+
+#[test]
+fn test_returns_unbound_variable() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.load_str("rule(x, y) if y = 1;");
+
+    let first = oso.query("rule(x, y)").pop().unwrap();
+
+    assert_eq!(first.get_typed::<i64>("y")?, 1);
+    assert!(matches!(first.get_typed("x")?, Value::Variable(_)));
+
+    Ok(())
+}
+
+#[test]
+fn test_nan_inf() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.oso.register_constant("inf", &std::f64::INFINITY)?;
+    oso.oso.register_constant("neg_inf", &std::f64::NEG_INFINITY)?;
+    oso.oso.register_constant("nan", &std::f64::NAN)?;
+
+    let x = oso.qvar::<f64>("x = nan", "x").pop().unwrap();
+    assert!(x.is_nan());
+    oso.qnull("nan = nan");
+
+    assert!(oso.qvar::<f64>("x = inf", "x").pop().unwrap().is_infinite());
+    assert!(oso.query("inf = inf").pop().is_some());
+
+    oso.qvar_one("x = neg_inf", "x", std::f64::NEG_INFINITY);
+    assert!(oso.query("neg_inf = neg_inf").pop().is_some());
 
     Ok(())
 }

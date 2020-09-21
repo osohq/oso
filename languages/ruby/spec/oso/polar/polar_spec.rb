@@ -624,6 +624,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'when loading a Polar string' do
+    # test_inline_queries
     context 'with inline queries' do
       it 'succeeds if all inline queries succeed' do
         subject.load_str('f(1); f(2); ?= f(1); ?= not f(3);')
@@ -634,6 +635,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # TODO (dhatch): Was this a test to fix a bug, is it needed?
     it 'raises if a null byte is encountered' do
       rule = <<~POLAR
         f(a) if a = "this is not allowed\0
@@ -642,6 +644,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  # TODO (dhatch): Should these tests be in Rust?
   context 'when parsing' do # rubocop:disable Metrics/BlockLength
     it 'raises on IntegerOverflow errors' do
       int = '18446744073709551616'
@@ -702,11 +705,13 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.register_class(Actor)
     end
 
+    # test_predicate_return_list
     it 'can return a list' do
       subject.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
       expect(subject.query_rule('allow', Actor.new, 'join', 'party').to_a).to eq([{}])
     end
 
+    # test_variables_as_arguments
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
       expect(subject.query_rule('f', Oso::Polar::Variable.new('a')).to_a).to eq(
@@ -716,6 +721,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'runtime errors' do # rubocop:disable Metrics/BlockLength
+    # test_stack_trace
     it 'include a stack trace' do
       subject.load_str 'foo(a,b) if a in b;'
       expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
@@ -732,6 +738,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # test_lookup_runtime_error
     it 'work for lookups' do
       stub_const('Foo', Class.new do
         def foo
@@ -747,6 +754,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'unbound variable' do
+    # test_returns_unbound_variable
     it 'returns unbound properly' do
       subject.load_str 'rule(x, y) if y = 1;'
 
@@ -758,6 +766,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  # test_nan_inf
   it 'handles ±∞ and NaN' do
     subject.register_constant('inf', value: Float::INFINITY)
     subject.register_constant('neg_inf', value: -Float::INFINITY)
