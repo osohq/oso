@@ -49,6 +49,7 @@ module Oso
         instance = host.to_ruby(instance)
         args = args.map { |a| host.to_ruby(a) }
         kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+        # The kwargs.empty? check is for Ruby < 2.7.
         result = if kwargs.empty?
                    instance.__send__(attribute, *args)
                  else
