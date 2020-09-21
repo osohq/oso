@@ -302,7 +302,7 @@ mod tests {
             ".(bar, \"y\", _value_2) and new (Foo(x: _value_2), _instance_1) and _instance_1"
         );
 
-        let mut term = parse_query("f(new Foo ( x: bar.y ))");
+        let mut term = parse_query("f(new Foo(x: bar.y))");
         assert_eq!(term.to_polar(), "f(new Foo(x: bar.y))");
         rewrite_term(&mut term, &mut kb);
         assert_eq!(
