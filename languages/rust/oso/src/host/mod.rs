@@ -91,7 +91,7 @@ impl Host {
     pub fn cache_class(&mut self, class: Class, name: Symbol) -> crate::Result<String> {
         if self.classes.contains_key(&name) {
             return Err(OsoError::DuplicateClassError {
-                name: name.0.to_owned(),
+                name: name.0,
             });
         }
 
