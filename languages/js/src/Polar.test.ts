@@ -152,8 +152,8 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
   test('rejects keyword arguments in method calls', async () => {
     const p = new Polar();
     p.registerClass(A);
-    expect(p.query('x = (new A()).a(arg: 1)')).rejects.toThrow(
-      'KwargsError: JavaScript does not support keyword arguments'
+    expect(query(p, 'x = (new A()).a(arg: 1)')).rejects.toThrow(
+      'JavaScript does not support keyword arguments'
     );
   });
 
@@ -481,7 +481,7 @@ describe('#makeInstance', () => {
     expect(
       query(p, 'x = new ConstructorArgs(first: 1, second: 2)')
     ).rejects.toThrow(
-      'KwargsError: JavaScript does not support keyword arguments'
+      'JavaScript does not support keyword arguments'
     );
   });
 });

@@ -2,7 +2,6 @@ import { inspect } from 'util';
 import { readFile as _readFile } from 'fs';
 
 import {
-  InvalidCallError,
   InvalidQueryEventError,
   KwargsError,
   PolarError,
@@ -103,10 +102,10 @@ function parseResult({ bindings }: obj): QueryEvent {
  */
 function parseMakeExternal(d: obj): QueryEvent {
   const instanceId = d.instance_id;
-  const ctor = d['constructor']?.value;
-  const tag = ctor?.Call?.name;
-  const fields = ctor?.Call?.args;
-  if (ctor?.Call?.kwargs !== undefined) throw new KwargsError();
+  const ctor = d['constructor']?.value?.Call;
+  const tag = ctor?.name;
+  const fields = ctor?.args;
+  if (ctor?.kwargs) throw new KwargsError();
   if (
     !Number.isSafeInteger(instanceId) ||
     typeof tag !== 'string' ||
@@ -133,7 +132,7 @@ function parseExternalCall({
   call_id: callId,
   instance,
 }: obj): QueryEvent {
-  if (kwargs !== undefined) throw new KwargsError();
+  if (kwargs) throw new KwargsError();
   if (
     !Number.isSafeInteger(callId) ||
     !isPolarTerm(instance) ||
