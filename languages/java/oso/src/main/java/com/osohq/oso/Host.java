@@ -149,6 +149,13 @@ public class Host implements Cloneable {
     return cls.isInstance(toJava(instance));
   }
 
+  /** Check if two instances unify. */
+  public boolean unify(long leftId, long rightId) throws Exceptions.UnregisteredInstanceError {
+    Object left = getInstance(leftId);
+    Object right = getInstance(rightId);
+    return left.equals(right);
+  }
+
   /** Convert Java Objects to Polar (JSON) terms. */
   public JSONObject toPolarTerm(Object value) throws Exceptions.OsoException {
     // Build Polar value

@@ -152,6 +152,13 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           answer = host.subspecializer(instanceId, leftTag, rightTag) ? 1 : 0;
           ffiQuery.questionResult(callId, answer);
           break;
+        case "ExternalUnify":
+          long leftId = data.getLong("left_instance_id");
+          long rightId = data.getLong("right_instance_id");
+          callId = data.getLong("call_id");
+          answer = host.unify(leftId, rightId) ? 1 : 0;
+          ffiQuery.questionResult(callId, answer);
+          break;
         case "Debug":
           if (data.has("message")) {
             String message = data.getString("message");
