@@ -1,8 +1,13 @@
 #![allow(clippy::too_many_arguments)]
 
 use maplit::hashmap;
+
 use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
-use oso_derive::PolarClass;
+// I don't know how to get this to work in this test without this import.
+// You get the macros from oso directly when you use the derive feature which is how people
+// will really do it.
+#[allow(unused_imports)]
+use oso_derive::*;
 
 struct OsoTest {
     oso: Oso,
