@@ -106,24 +106,20 @@ RestVar: Value  = "*" <n:Name> => {
     Value::RestVariable(n)
 };
 
-// Calls that don't support kwargs.
-// For now only constructors allow kwargs.
-// One day maybe external lookups and rules.
-SimpleCall: Value = {
+Call: Value = {
+    // No args.
     <name:Name> "("  ")" => {
         let args = vec![];
         let kwargs = None;
         Value::Call(Call{name, args, kwargs})
     },
+    // Positional args only.
     <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp> ")" => {
         args.push(arg);
         let kwargs = None;
         Value::Call(Call{name, args, kwargs})
     },
-};
-
-Call: Value = {
-    <call:SimpleCall> => call,
+    // Positional args + kwargs.
     <name:Name> "(" <mut args:(<TermExp> ",")*> <fields:(<Fields<Exp5<"Term">>>)>")" => {
         let kwargs = Some(fields);
         Value::Call(Call{name, args, kwargs})
@@ -161,11 +157,6 @@ DictionaryTerm: Value = <fields:Object<Exp5<"Term">>> => {
 // Pattern dictionaries cannot contain any operators.
 DictionaryPattern: Value = <fields:Object<Exp9<"Pattern">>> => {
     Value::Pattern(Pattern::Dictionary(fields))
-};
-
-InstanceLiteralTerm: Value = <tag:Name> <fields:Object<Exp5<"Term">>> => {
-    let instance = InstanceLiteral{tag, fields };
-    Value::InstanceLiteral(instance)
 };
 
 InstanceLiteralPattern: Value = <tag:Name> <fields:Object<Exp9<"Pattern">>> => {
@@ -488,7 +479,7 @@ pub Value: Value = {
     <DictionaryTerm>,
     <BuiltinOperation>,
     <RewrittenOperation>,
-    <SimpleCall>,
+    <Call>,
     <List<"Term">>,
 };
 
