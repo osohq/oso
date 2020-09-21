@@ -31,6 +31,7 @@ import {
   DuplicateClassAliasError,
   InlineQueryFailedError,
   InvalidConstructorError,
+  KwargsError,
   PolarFileNotFoundError,
   PolarFileExtensionError,
 } from './errors';
@@ -152,9 +153,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
   test('rejects keyword arguments in method calls', () => {
     const p = new Polar();
     p.registerClass(A);
-    expect(query(p, 'x = (new A()).a(arg: 1)')).rejects.toThrow(
-      'JavaScript does not support keyword arguments'
-    );
+    expect(query(p, 'x = (new A()).a(arg: 1)')).rejects.toThrow(KwargsError);
   });
 
   describe('animal tests', () => {
@@ -478,9 +477,8 @@ describe('#makeInstance', () => {
   test('rejects keyword args', () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
-    expect(
-      query(p, 'x = new ConstructorArgs(first: 1, second: 2)')
-    ).rejects.toThrow('JavaScript does not support keyword arguments');
+    const q = 'x = new ConstructorArgs(first: 1, second: 2)';
+    expect(query(p, q)).rejects.toThrow(KwargsError);
   });
 });
 
