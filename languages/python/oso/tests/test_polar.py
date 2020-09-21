@@ -106,7 +106,8 @@ def test_external(polar, qvar, qeval):
     assert qvar("new Foo().a = x", "x", one=True) == "A"
     with pytest.raises(
         InvalidCallError, match="tried to call 'a' but it is not callable"
-    ):        assert not qeval("new Foo().a() = x")
+    ):
+        assert not qeval("new Foo().a() = x")
     assert not qvar("new Foo().b = x", "x", one=True) == "b"
     assert qvar("new Foo().b() = x", "x", one=True) == "b"
     assert not qvar("Foo.c = x", "x", one=True) == "c"
