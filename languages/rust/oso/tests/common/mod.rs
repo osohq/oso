@@ -4,9 +4,6 @@ pub struct OsoTest {
     pub oso: Oso,
 }
 
-// TODO: this shouldn't make assertions so that it is clear what tests are
-// checking from reading the tests.
-
 impl OsoTest {
     pub fn new() -> Self {
         Self { oso: Oso::new() }

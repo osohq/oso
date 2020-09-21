@@ -90,9 +90,7 @@ impl Host {
     /// Returns an instance of `Type` for this class.
     pub fn cache_class(&mut self, class: Class, name: Symbol) -> crate::Result<String> {
         if self.classes.contains_key(&name) {
-            return Err(OsoError::DuplicateClassError {
-                name: name.0,
-            });
+            return Err(OsoError::DuplicateClassError { name: name.0 });
         }
 
         self.class_names.insert(class.type_id, name.clone());
