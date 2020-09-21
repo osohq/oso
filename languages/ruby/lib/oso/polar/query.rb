@@ -43,20 +43,12 @@ module Oso
       # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
-      def register_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+      def register_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
         return if calls.key?(call_id)
 
         instance = host.to_ruby(instance)
-        args = if args.nil?
-                 []
-               else
-                 args.map { |a| host.to_ruby(a) }
-               end
-        kwargs = if kwargs.nil?
-                   {}
-                 else
-                   Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-                 end
+        args = (args || {}).map { |a| host.to_ruby(a) }
+        kwargs = Hash[(kwargs || {}).map { |k, v| [k.to_sym, host.to_ruby(v)] }]
         result = instance.__send__(attribute, *args, **kwargs)
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
@@ -109,7 +101,7 @@ module Oso
         call_result(nil, call_id: call_id)
       end
 
-      def handle_make_external(data) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def handle_make_external(data) # rubocop:disable Metrics/AbcSize
         id = data['instance_id']
         raise DuplicateInstanceRegistrationError, id if host.instance? id
 
@@ -119,11 +111,7 @@ module Oso
         cls_name = constructor['Call']['name']
         args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
         kwargs = constructor['Call']['kwargs']
-        kwargs = if kwargs.nil?
-                   {}
-                 else
-                   Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-                 end
+        kwargs = Hash[(kwargs || {}).map { |k, v| [k.to_sym, host.to_ruby(v)] }]
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
