@@ -11,7 +11,7 @@ import os
 import shutil
 import tempfile
 
-from polar.exceptions import PolarRuntimeException
+from polar.exceptions import PolarRuntimeError
 
 from test_polar_externals import Qux, Bar, Foo, MyClass, YourClass, OurClass
 
@@ -299,13 +299,13 @@ def test_class_definitions(tell, qeval, load_file):
     load_file(Path(__file__).parent / "policies/classes.pol")
 
     # Test instantiation errors.
-    with pytest.raises(PolarRuntimeException):
+    with pytest.raises(PolarRuntimeError):
         qeval("NotADefinedClassName{foo: 1}")
-    with pytest.raises(PolarRuntimeException):
+    with pytest.raises(PolarRuntimeError):
         qeval("Three{foo: One{}}")
-    with pytest.raises(PolarRuntimeException):
+    with pytest.raises(PolarRuntimeError):
         qeval("Three{unit: Two{}}")
-    with pytest.raises(PolarRuntimeException):
+    with pytest.raises(PolarRuntimeError):
         qeval("Three{unit: One{}, pair: One{}}")
 
 
@@ -328,7 +328,7 @@ def test_groups(load_file, qeval, query):
     load_file(Path(__file__).parent / "policies/groups.pol")
 
     # Check that we can't instantiate groups.
-    with pytest.raises(PolarRuntimeException):
+    with pytest.raises(PolarRuntimeError):
         qeval("G{}")
 
     # Test rule ordering with groups.

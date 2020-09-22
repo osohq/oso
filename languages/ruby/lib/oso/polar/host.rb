@@ -69,7 +69,7 @@ module Oso
       # @param name [String]
       # @return [Symbol] if constructor is the default of `:new`.
       # @return [Proc] if a custom constructor was registered.
-      # @raise [UnregisteredConstructorError] if the constructor has not been registered.
+      # @raise [MissingConstructorError] if the constructor has not been registered.
       def get_constructor(name)
         raise MissingConstructorError, name unless constructors.key? name
 

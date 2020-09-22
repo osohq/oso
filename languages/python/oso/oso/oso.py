@@ -8,15 +8,12 @@ from typing import Any, cast, Callable, List, TYPE_CHECKING
 import inspect
 
 from polar import Polar
-from polar.exceptions import PolarException
 
 from .extras import Http, PathMapper
+from polar.exceptions import OsoError
 
 if TYPE_CHECKING:
     import flask
-
-
-OsoException = PolarException
 
 
 class Oso(Polar):
