@@ -41,7 +41,9 @@ impl Constructor {
 }
 
 #[derive(Clone)]
-pub struct AttributeGetter(pub Arc<dyn Fn(&dyn Any, &mut Host) -> crate::Result<Term>>);
+pub struct AttributeGetter(
+    pub Arc<dyn Fn(&dyn Any, &mut Host) -> crate::Result<Term> + Send + Sync>,
+);
 
 impl AttributeGetter {
     pub fn new<T, F, R>(f: F) -> Self

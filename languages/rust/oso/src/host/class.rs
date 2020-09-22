@@ -326,3 +326,4 @@ impl Instance {
 // and instances which don't need to be Send (e.g. created/accessed on a single thread for
 // just one query).
 unsafe impl Send for Instance {}
+unsafe impl Sync for Instance {}

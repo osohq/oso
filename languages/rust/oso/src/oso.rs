@@ -156,3 +156,14 @@ impl Oso {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_threadsafe() {
+        fn type_check<T: Send + Sync>() {}
+        // if you get a compile-time error here
+        // it means `Oso` is not threadsafe
+        type_check::<super::Oso>();
+    }
+}
