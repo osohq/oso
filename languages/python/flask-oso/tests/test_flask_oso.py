@@ -5,7 +5,7 @@ import pytest
 from flask import Flask
 from werkzeug.exceptions import Forbidden
 
-from oso import Oso, OsoException
+from oso import Oso, OsoError
 from flask_oso import FlaskOso, authorize, skip_authorization
 
 
@@ -43,7 +43,7 @@ def app_ctx(flask_app):
         yield
 
 
-def test_initialization(flask_app, oso, simple_policy, app_ctx, user):
+def test_initialization_with_set(flask_app, oso, simple_policy, app_ctx, user):
     """Test that setting oso works correctly."""
     # Establish that an improperly initalized flask oso throws an exception.
     flask_oso = FlaskOso()
@@ -55,6 +55,8 @@ def test_initialization(flask_app, oso, simple_policy, app_ctx, user):
     flask_oso.set_oso(oso)
     flask_oso.authorize(action="read", resource="resource")
 
+
+def test_initialization_with_init(flask_app, oso, simple_policy, app_ctx, user):
     # Works with oso init.
     flask_oso = FlaskOso(oso=oso)
     flask_oso.set_get_actor(lambda: user)
@@ -93,7 +95,7 @@ def test_require_authorization(flask_app, flask_oso, app_ctx, simple_policy):
         return "Hello"
 
     # Don't call authorize.
-    with pytest.raises(OsoException):
+    with pytest.raises(OsoError):
         with flask_app.test_client() as c:
             c.get("/")
 
@@ -207,7 +209,7 @@ def test_no_oso_error(flask_app, oso):
     """Test that using authorize without init app throws an error."""
     flask_oso = FlaskOso(oso=oso)
 
-    with pytest.raises(OsoException, match="Application context"):
+    with pytest.raises(OsoError, match="Application context"):
 
         @authorize(resource="test")
         def orm_function():
@@ -216,7 +218,7 @@ def test_no_oso_error(flask_app, oso):
         orm_function()
 
     with flask_app.app_context():
-        with pytest.raises(OsoException, match="init_app"):
+        with pytest.raises(OsoError, match="init_app"):
 
             @flask_app.route("/")
             @authorize(resource="test")

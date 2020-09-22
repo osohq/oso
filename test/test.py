@@ -2,7 +2,7 @@ import math
 import os
 
 from polar.exceptions import UnrecognizedEOF
-from oso import Oso, OsoException, Variable
+from oso import Oso, OsoError, Variable
 
 oso = Oso()
 

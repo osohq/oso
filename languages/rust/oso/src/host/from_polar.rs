@@ -8,8 +8,17 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use super::class::Instance;
-use super::{Host, HostClass};
+use super::Host;
+use crate::PolarClass;
 
+/// Convert Polar types to Rust types.
+///
+/// This trait is automatically implemented for any
+/// type that implements the `PolarClass` trait,
+/// which should be preferred.
+///
+/// This is also implemented automatically using the
+/// `#[derive(PolarClass)]` macro.
 pub trait FromPolar: Sized {
     fn from_polar(term: &Term, host: &mut Host) -> crate::Result<Self>;
 
@@ -19,7 +28,7 @@ pub trait FromPolar: Sized {
     }
 }
 
-impl<C: 'static + Clone + HostClass> FromPolar for C {
+impl<C: 'static + Clone + PolarClass> FromPolar for C {
     fn from_polar(term: &Term, host: &mut Host) -> crate::Result<Self> {
         match term.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => host
@@ -118,6 +127,7 @@ impl FromPolar for Value {
 
 impl FromPolar for Instance {
     fn from_polar(term: &Term, host: &mut Host) -> crate::Result<Self> {
+        //  TODO (dhatch): Why do we have cases for anything besides external instance?
         let instance = match term.value().clone() {
             Value::Boolean(b) => host
                 .get_class_from_type::<bool>()

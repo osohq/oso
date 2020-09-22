@@ -1,4 +1,4 @@
-use oso::{Class, HostClass, Oso, ToPolar};
+use oso::{Class, Oso, PolarClass, ToPolar};
 
 macro_rules! res {
     ($res:expr) => {
@@ -14,7 +14,7 @@ struct A {
     x: String,
 }
 
-impl HostClass for A {}
+impl PolarClass for A {}
 
 impl A {
     pub fn new(x: String) -> Self {
@@ -53,7 +53,7 @@ pub mod b {
         }
     }
 
-    impl oso::HostClass for C {}
+    impl oso::PolarClass for C {}
 }
 
 pub fn custom_c_constructor(y: String) -> b::C {

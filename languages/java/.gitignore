@@ -3,3 +3,5 @@
 *.class
 
 oso/dependency-reduced-pom.xml
+
+/*.project

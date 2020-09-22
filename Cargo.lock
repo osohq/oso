@@ -742,6 +742,7 @@ dependencies = [
  "polar-core",
  "rustyline",
  "rustyline-derive",
+ "tempfile",
  "thiserror",
  "tracing",
  "tracing-subscriber",

@@ -137,7 +137,7 @@ fn enums() -> anyhow::Result<()> {
         Guest,
     }
 
-    impl oso::HostClass for UserType {}
+    impl oso::PolarClass for UserType {}
 
     oso.register_class(
         oso::Class::<UserType>::new()
