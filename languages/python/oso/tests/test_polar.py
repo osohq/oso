@@ -473,6 +473,7 @@ def test_constructor(polar, qvar):
 
     polar.register_class(Foo)
 
+    # test positional args
     instance = qvar(
         "instance = new Foo(1,2,3,4)",
         "instance",
@@ -483,6 +484,7 @@ def test_constructor(polar, qvar):
     assert instance.bar == 3
     assert instance.baz == 4
 
+    # test positional and kwargs
     instance = qvar(
         "instance = new Foo(1, 2, bar: 3, baz: 4)",
         "instance",
@@ -493,6 +495,7 @@ def test_constructor(polar, qvar):
     assert instance.bar == 3
     assert instance.baz == 4
 
+    # test kwargs
     instance = qvar(
         "instance = new Foo(bar: 3, a: 1, baz: 4, b: 2)",
         "instance",
@@ -700,3 +703,39 @@ def test_static_method(polar, qeval):
     polar.register_class(Foo)
     polar.load_str("f(x: Foo) if x.map(Foo.plus_one) = [2, 3, 4];")
     assert next(polar.query_rule("f", Foo([1, 2, 3])))
+
+
+def test_method_with_kwargs(polar, qvar):
+    class Test:
+        def kwarg_method(self, x=1, y=2):
+            self.x = x
+            self.y = y
+            return True
+
+    polar.register_class(Test)
+    rules = """
+    defaults(result) if
+        test = new Test() and
+        test.kwarg_method() and
+        result = [test.x, test.y];
+
+    kwargs(result) if
+        test = new Test() and
+        test.kwarg_method(y: 4, x: 3) and
+        result = [test.x, test.y];
+
+    args(result) if
+        test = new Test() and
+        test.kwarg_method(5, 6) and
+        result = [test.x, test.y];
+
+    mixed(result) if
+        test = new Test() and
+        test.kwarg_method(7, y: 8) and
+        result = [test.x, test.y];
+    """
+    polar.load_str(rules)
+    qvar("defaults(result)", "result") == [1, 2]
+    qvar("kwargs(result)", "result") == [3, 4]
+    qvar("args(result)", "result") == [5, 6]
+    qvar("mixed(result)", "result") == [7, 8]

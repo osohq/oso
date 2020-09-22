@@ -194,7 +194,7 @@ def test_instance_round_trip(polar, query, qvar):
 def test_instance_initialization(polar, query, qvar):
     # test round trip through kb query
     user = Actor("sam")
-    env = query('new Actor{name:"sam"} = returned_user')[0]
+    env = query('new Actor(name:"sam") = returned_user')[0]
     assert polar.host.to_python(env["returned_user"]) == user
 
     env = query('new Actor(name:"sam") = returned_user')[0]

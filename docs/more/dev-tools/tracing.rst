@@ -32,7 +32,7 @@ Example
   [debug]     ]
   [debug]     RULE:
   [debug]     f(x) if
-  [debug]       new Foo{x: x}.foo() = x
+  [debug]       new Foo(x: x).foo() = x
   [debug]       QUERY: new (Foo{x: _x_10}, _instance_2_11) and .(_instance_2_11, foo(), _value_1_12) and _value_1_12 = _x_10, BINDINGS: {"_x_10": "12"}
   [debug]         QUERY: new (Foo{x: _x_10}, _instance_2_11), BINDINGS: {"_x_10": "12"}
   [debug]         QUERY: .(_instance_2_11, foo(), _value_1_12) and _value_1_12 = _x_10, BINDINGS: {"_instance_2_11": "Foo{x: 12}", "_x_10": "12"}

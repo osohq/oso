@@ -150,6 +150,39 @@ oso is available as a library in several languages:
 
         .. _NPM: https://www.npmjs.com/package/oso
 
+    .. group-tab:: Rust
+
+        The rust version of oso is available on crates.io_. 
+        
+        Add oso and oso-derive as dependencies in your Cargo.toml
+
+        .. code-block:: toml
+
+            oso = "{release}"
+            oso-derive = "{release}"
+
+        For more information on the oso Rust library, see the
+        :doc:`library documentation </using/libraries/rust/index>`.
+
+        .. admonition:: What's next
+            :class: tip
+
+            After you've installed oso, check out the
+            :doc:`/getting-started/quickstart`.
+
+        **Requirements**
+
+        - Rust stable
+        - Supported platforms:
+            - Linux
+            - OS X
+            - Windows
+
+        .. _crates.io: https://crates.io/crates/oso
+
+        
+
+
 **Libraries coming soon:**
 
 - JavaScript in the browser

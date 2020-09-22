@@ -75,18 +75,11 @@ class Query:
     def handle_make_external(self, data):
         id = data["instance_id"]
         constructor = data["constructor"]["value"]
-        if "InstanceLiteral" in constructor:
-            cls_name = constructor["InstanceLiteral"]["tag"]
-            fields = constructor["InstanceLiteral"]["fields"]["fields"]
-            args = []
-            kwargs = {k: self.host.to_python(v) for k, v in fields.items()}
-        elif "Call" in constructor:
+        if "Call" in constructor:
             cls_name = constructor["Call"]["name"]
             args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
-            kwargs = constructor["Call"]["kwargs"]
-            kwargs = (
-                {k: self.host.to_python(v) for k, v in kwargs.items()} if kwargs else {}
-            )
+            kwargs = constructor["Call"]["kwargs"] or {}
+            kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
         else:
             raise InvalidConstructorError()
         self.host.make_instance(cls_name, args, kwargs, id)
@@ -110,7 +103,9 @@ class Query:
                 callable(attr) and not data["args"] is None
             ):  # If it's a function, call it with the args.
                 args = [self.host.to_python(arg) for arg in data["args"]]
-                result = attr(*args)
+                kwargs = data["kwargs"] or {}
+                kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
+                result = attr(*args, **kwargs)
             elif not data["args"] is None:
                 raise InvalidCallError(
                     f"tried to call '{attribute}' but it is not callable"

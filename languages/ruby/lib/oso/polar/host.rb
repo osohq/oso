@@ -121,6 +121,7 @@ module Oso
       # @raise [PolarRuntimeError] if instance construction fails.
       def make_instance(cls_name, args:, kwargs:, id:) # rubocop:disable Metrics/MethodLength
         constructor = get_constructor(cls_name)
+        # The kwargs.empty? checks are for Ruby < 2.7.
         instance = if constructor == :new
                      if kwargs.empty?
                        get_class(cls_name).__send__(:new, *args)

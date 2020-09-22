@@ -31,6 +31,7 @@ import {
   DuplicateClassAliasError,
   InlineQueryFailedError,
   InvalidConstructorError,
+  KwargsError,
   PolarFileNotFoundError,
   PolarFileExtensionError,
 } from './errors';
@@ -147,6 +148,12 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     expect(await qvar(p, 'try(new B(), x)', 'x')).toStrictEqual([2, 1]);
     expect(await qvar(p, 'try(new C(), x)', 'x')).toStrictEqual([3, 2, 1]);
     expect(await qvar(p, 'try(new X(), x)', 'x')).toStrictEqual([]);
+  });
+
+  test('rejects keyword arguments in method calls', () => {
+    const p = new Polar();
+    p.registerClass(A);
+    expect(query(p, 'x = (new A()).a(arg: 1)')).rejects.toThrow(KwargsError);
   });
 
   describe('animal tests', () => {
@@ -465,6 +472,13 @@ describe('#makeInstance', () => {
     await p.__host().makeInstance(ConstructorArgs.name, [one, two], 1);
     const instance = p.__host().getInstance(1);
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
+  });
+
+  test('rejects keyword args', () => {
+    const p = new Polar();
+    p.registerClass(ConstructorArgs);
+    const q = 'x = new ConstructorArgs(first: 1, second: 2)';
+    expect(query(p, q)).rejects.toThrow(KwargsError);
   });
 });
 

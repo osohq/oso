@@ -5,7 +5,7 @@ use maplit::btreemap;
 use permute::permute;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::iter::FromIterator;
 
 use polar_core::{
@@ -22,7 +22,13 @@ use polar_core::{
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 use mock_externals::MockExternal;
 
-fn no_results(_: u64, _: Term, _: Symbol, _: Option<Vec<Term>>) -> Option<Term> {
+fn no_results(
+    _: u64,
+    _: Term,
+    _: Symbol,
+    _: Option<Vec<Term>>,
+    _: Option<BTreeMap<Symbol, Term>>,
+) -> Option<Term> {
     None
 }
 
@@ -54,7 +60,7 @@ fn query_results<F, G, H, I, J, K>(
     mut message_handler: K,
 ) -> QueryResults
 where
-    F: FnMut(u64, Term, Symbol, Option<Vec<Term>>) -> Option<Term>,
+    F: FnMut(u64, Term, Symbol, Option<Vec<Term>>, Option<BTreeMap<Symbol, Term>>) -> Option<Term>,
     G: FnMut(&str) -> String,
     H: FnMut(u64, Term),
     I: FnMut(Term, Symbol) -> bool,
@@ -83,11 +89,12 @@ where
                 instance,
                 attribute,
                 args,
+                kwargs,
             } => {
                 query
                     .call_result(
                         call_id,
-                        external_call_handler(call_id, instance, attribute, args),
+                        external_call_handler(call_id, instance, attribute, args, kwargs),
                     )
                     .unwrap();
             }
@@ -170,7 +177,7 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
     (
         query_results(
             query,
-            |a, b, c, d| mock.borrow_mut().external_call(a, b, c, d),
+            |a, b, c, d, e| mock.borrow_mut().external_call(a, b, c, d, e),
             |a, b| mock.borrow_mut().make_external(a, b),
             |a, b| mock.borrow_mut().external_isa(a, b),
             |a, b, c| mock.borrow_mut().external_is_subspecializer(a, b, c),
@@ -204,7 +211,7 @@ fn qext(polar: &mut Polar, query_str: &str, external_results: Vec<Value>) -> Que
         .rev()
         .collect();
     let query = polar.new_query(query_str, false).unwrap();
-    query_results!(query, |_, _, _, _| external_results.pop())
+    query_results!(query, |_, _, _, _, _| external_results.pop())
 }
 
 #[track_caller]
@@ -537,7 +544,7 @@ fn test_instance_lookup() {
     // Q: Not sure if this should be allowed? I can't get (new a{x: 1}).x to parse, but that might
     // be the only thing we should permit
     assert_eq!(
-        qext(&mut polar, "new a{x: 1}.x = 1", vec![value!(1)]).len(),
+        qext(&mut polar, "new a(x: 1).x = 1", vec![value!(1)]).len(),
         1
     );
 }
@@ -638,18 +645,18 @@ fn test_dict_specializers() {
     assert!(qnull(&mut polar, "g({y: 1})"));
 
     // Test unifying & isa-ing instances against our rules.
-    assert!(qnull(&mut polar, "f(new a{x: 1})"));
+    assert!(qnull(&mut polar, "f(new a(x: 1))"));
     assert_eq!(
-        qext(&mut polar, "g(new a{x: 1})", vec![value!(1), value!(1)]).len(),
+        qext(&mut polar, "g(new a(x: 1))", vec![value!(1), value!(1)]).len(),
         1
     );
-    assert!(qnull(&mut polar, "f(new a{})"));
-    assert!(qnull(&mut polar, "f(new a{x: {}})"));
-    assert!(qext(&mut polar, "g(new a{x: 2})", vec![value!(2), value!(2)]).is_empty());
+    assert!(qnull(&mut polar, "f(new a())"));
+    assert!(qnull(&mut polar, "f(new a(x: {}))"));
+    assert!(qext(&mut polar, "g(new a(x: 2))", vec![value!(2), value!(2)]).is_empty());
     assert_eq!(
         qext(
             &mut polar,
-            "g(new a{y: 2, x: 1})",
+            "g(new a(y: 2, x: 1))",
             vec![value!(1), value!(1)]
         )
         .len(),
@@ -693,11 +700,11 @@ fn test_bindings() {
 fn test_lookup_derefs() {
     let polar = Polar::new();
     polar
-        .load_str("f(x) if x = y and g(y); g(y) if new Foo{}.get(y) = y;")
+        .load_str("f(x) if x = y and g(y); g(y) if new Foo().get(y) = y;")
         .unwrap();
     let query = polar.new_query("f(1)", false).unwrap();
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
         // check the argument is bound to an integer
         assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()
@@ -707,7 +714,7 @@ fn test_lookup_derefs() {
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
+    let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
         assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()
     };
@@ -753,38 +760,52 @@ fn test_load_str_with_query() {
     }
 }
 
+/// Test using a constructor with positional + kwargs.
 #[test]
-fn test_externals_instantiated() {
+fn test_make_external() {
     let polar = Polar::new();
-    polar.register_constant(sym!("Foo"), term!(true));
-    polar
-        .load_str("f(x, foo: Foo) if foo.bar(new Bar{x: x}) = 1;")
+    let query = polar
+        .new_query("x = new Bar(1, a: 2, b: 3)", false)
         .unwrap();
 
-    let mut foo_lookups = vec![term!(1)];
-    let mock_foo = |_, _, _, args: Option<Vec<Term>>| {
-        // make sure that what we get as input is an external instance
-        // with the fields set correctly
-        match &args.as_ref().unwrap()[0].value() {
-            Value::ExternalInstance(ExternalInstance {
-                constructor: Some(ref term),
-                ..
-            }) => assert!(
-                matches!(term.value(), Value::InstanceLiteral(InstanceLiteral {
-                ref tag, ref fields
-            }) if tag.0 == "Bar" && fields.fields == btreemap!{sym!("x") => term!(1)}),
-                "expected external instance Bar {{ x: 1 }}, found: {}",
-                args.unwrap()[0].value().to_polar()
-            ),
-            _ => panic!("Expected external instance"),
-        }
-        foo_lookups.pop()
+    let mock_make_bar = |_, constructor: Term| match constructor.value() {
+        Value::Call(Call {
+            name,
+            args,
+            kwargs: Some(kwargs),
+        }) if name == &sym!("Bar")
+            && args == &vec![term!(1)]
+            && kwargs == &btreemap! {sym!("a") => term!(2), sym!("b") => term!(3)} => {}
+        _ => panic!("Expected call with args and kwargs"),
     };
-    let query = polar.new_query("f(1, new Foo{})", false).unwrap();
-    let results = query_results!(query, mock_foo);
+    let results = query_results!(query, no_results, mock_make_bar, no_debug);
     assert_eq!(results.len(), 1);
 }
 
+/// Test external call with positional + kwargs.
+#[test]
+fn test_external_call() {
+    let polar = Polar::new();
+    polar.register_constant(sym!("Foo"), term!(true));
+    let mut foo_lookups = vec![term!(1)];
+
+    let query = polar
+        .new_query("(new Foo()).bar(1, a: 2, b: 3) = 1", false)
+        .unwrap();
+
+    let mock_foo_lookup =
+        |_, _, _, args: Option<Vec<Term>>, kwargs: Option<BTreeMap<Symbol, Term>>| {
+            assert_eq!(args.unwrap()[0], term!(1));
+            assert_eq!(
+                kwargs.unwrap(),
+                btreemap! {sym!("a") => term!(2), sym!("b") => term!(3)}
+            );
+            foo_lookups.pop()
+        };
+    let results = query_results!(query, mock_foo_lookup);
+    assert_eq!(results.len(), 1);
+    assert!(foo_lookups.is_empty());
+}
 #[test]
 #[ignore] // ignore because this take a LONG time (could consider lowering the goal limit)
 #[should_panic(expected = "Goal count exceeded! MAX_EXECUTED_GOALS = 10000")]
@@ -1257,21 +1278,21 @@ fn test_unify_rule_head() {
 
     assert!(matches!(
         polar
-            .load_str("f(new Foo{a: Foo{a: 1}});")
+            .load_str("f(new Foo(a: Foo{a: 1}));")
             .expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
         polar
-            .load_str("f(x: new Foo{a: 1});")
+            .load_str("f(x: new Foo(a: 1));")
             .expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
         polar
-            .load_str("f(x: Foo{a: new Foo{a: 1}});")
+            .load_str("f(x: Foo{a: new Foo(a: 1)});")
             .expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
@@ -1282,12 +1303,12 @@ fn test_unify_rule_head() {
         .load_str("g(_: Foo{a: Foo{a: 1}}, x) if x = 1;")
         .unwrap();
 
-    let query = polar.new_query("f(new Foo{a: 1}, x)", false).unwrap();
+    let query = polar.new_query("f(new Foo(a: 1), x)", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
 
     let query = polar
-        .new_query("g(new Foo{a: new Foo{a: 1}}, x)", false)
+        .new_query("g(new Foo(a: new Foo(a: 1)), x)", false)
         .unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
@@ -1557,11 +1578,11 @@ fn test_external_unify() {
     let polar = Polar::new();
     polar.load_str("selfEq(x) if eq(x, x); eq(x, x);").unwrap();
 
-    let query = polar.new_query("selfEq(new Foo{})", false).unwrap();
+    let query = polar.new_query("selfEq(new Foo())", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert_eq!(results.len(), 1);
 
-    let query = polar.new_query("eq(new Foo{}, new Foo{})", false).unwrap();
+    let query = polar.new_query("eq(new Foo(), new Foo())", false).unwrap();
     let (results, _externals) = query_results_with_externals(query);
     assert!(results.is_empty());
 }

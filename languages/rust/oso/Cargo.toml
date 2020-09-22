@@ -17,7 +17,7 @@ required-features = ["cli"]
 [dependencies]
 maplit = "1.0.2"
 polar-core = { path = "../../../polar-core", version = "=0.6.0" }
-oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha", optional=true }
+oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha", optional = true }
 thiserror = "1.0.20"
 tracing = { version = "0.1.19", features = ["log"] }
 tracing-subscriber = { version = "0.2.11", features = ["fmt"] }
@@ -27,9 +27,10 @@ rustyline = { version = "6.2", optional = true }
 rustyline-derive = { version = "0.3.1", optional = true }
 
 [dev-dependencies]
+anyhow = "1.0"
 oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha" }
 
 [features]
-default = []
+default = ["derive"]
 cli = ["rustyline", "rustyline-derive", "anyhow"]
 derive = ["oso-derive"]
