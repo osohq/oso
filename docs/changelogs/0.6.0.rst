@@ -1,0 +1,91 @@
+=====
+0.6.0
+=====
+
+**Release date:** 2020-09-22
+
+Major news
+==========
+
+Rust support!
+-------------
+
+oso now supports applications written in Rust, using our
+:doc:`Rust library </using/libraries/rust/index>`. Download :doc:`here
+</download>`.
+
+
+Breaking changes
+================
+
+.. warning:: This release contains breaking changes. Be sure
+   to follow migration steps before upgrading.
+
+Updated ``new`` operator syntax
+-------------------------------
+
+Previously, the ``new`` operator could take one of two forms:
+
+  .. code-block:: polar
+
+    new Foo()
+
+    new Foo{}
+
+The former accepted positional arguments, and the latter accepted keyword
+arguments. In this release, the two forms have combined their powers, and
+positional and keyword arguments can both be passed via the parenthetical
+syntax:
+
+  .. code-block:: polar
+
+    new Foo(1, 2, foo: 3, bar: 4)
+
+Keyword arguments *must* follow positional arguments, and they are not
+supported in languages that themselves do not support keyword arguments, such
+as Java and JavaScript (Node.js).
+
+The curly brace syntax (``new Foo{}``) is no longer valid Polar and will fail
+to parse.
+
+Migrate to the new constructor syntax by replacing curly braces with
+parentheses.
+
+Renamed Python error type
+-------------------------
+
+The main Python error type is now called ``OsoError`` to be more consistent
+with the other libraries.
+
+Any error handling catching ``OsoException`` should be updated to instead
+catch ``OsoError``.
+
+New features
+============
+
+Keyword arguments now supported in method calls
+-----------------------------------------------
+
+In languages that support keyword arguments, they may now be passed to method
+calls using the following syntax:
+
+  .. code-block:: polar
+
+    foo.bar(1, 2, foo: 3, bar: 4)
+
+.. todo:: Link to relevant documentation section
+
+Other bugs & improvements
+=========================
+
+- Java instances may now be unified against other Java instances:
+
+  .. code-block:: polar
+
+    new Foo() = new Foo()
+
+- Fixed rule filtering when the input arguments are bound variables.
+  Fixes a performance regression for certain types of policy.
+- The Polar ``Variable`` type in Python is now printed as ``Variable(name)``.
+- Any rule with a specializer is ordered above a rule without a specializer.
+- Error handling in Python is now more consistent with the other libraries.
