@@ -7,59 +7,37 @@ NEXT
 Breaking changes
 ================
 
+.. TODO remove warning and replace with "None" if no breaking
+   changes.
+
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-Updated ``new`` operator syntax
--------------------------------
+Breaking change 1
+-----------------
 
-Previously, the ``new`` operator could take one of two forms:
+- summary of breaking change
 
-  .. code-block:: polar
+Link to migration guide
 
-    new Foo()
-
-    new Foo{}
-
-The former accepted positional arguments, and the latter accepted keyword
-arguments. In this release, the two forms have combined their powers, and
-positional and keyword arguments can both be passed via the parenthetical
-syntax:
-
-  .. code-block:: polar
-
-    new Foo(1, 2, foo: 3, bar: 4)
-
-Keyword arguments *must* follow positional arguments, and they are not
-supported in languages that themselves do not support keyword arguments, such
-as Java and JavaScript (Node.js).
-
-The curly brace syntax (``new Foo{}``) is no longer valid Polar and will fail
-to parse.
-
-Migrate to the new constructor syntax by replacing curly braces with
-parentheses.
 
 New features
 ============
 
-Keyword arguments now supported in method calls
------------------------------------------------
+Feature 1
+---------
 
-In languages that support keyword arguments, they may now be passed to method
-calls using the following syntax:
+- summary
+- of
+- user facing changes
 
-  .. code-block:: polar
+Link to relevant documentation section
 
-    foo.bar(1, 2, foo: 3, bar: 4)
-
-.. todo:: Link to relevant documentation section
 
 Other bugs & improvements
 =========================
 
-- Java instances may now be unified against other Java instances:
-
-  .. code-block:: polar
-
-    new Foo() = new Foo()
+- bulleted list
+- improvements
+- of smaller
+- potentially with doc links
