@@ -102,41 +102,10 @@ impl Class {
 
 #[derive(Clone)]
 pub struct ClassBuilder<T> {
-    /// The class name. Defaults to the `std::any::type_name`
-    name: String,
-    /// A wrapped method that constructs an instance of `T` from Polar terms
-    constructor: Option<Constructor>,
-    /// Methods that return simple attribute lookups on an instance of `T`
-    attributes: Attributes,
-    /// Instance methods on `T` that expect Polar terms, and an instance of `&T`
-    instance_methods: InstanceMethods,
-    /// Class methods on `T`
-    class_methods: ClassMethods,
-    type_id: TypeId,
-    /// A method to check whether the supplied `TypeId` matches this class
-    /// (This isn't using `type_id` because we might want to register other types here
-    /// in order to check inheritance)
-    class_check: Arc<dyn Fn(TypeId) -> bool + Send + Sync>,
-
-    /// A function that accepts arguments of this class and compares them for equality.
-    /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync>,
-
+    class: Class,
     /// A type marker. Used to ensure methods have the correct type.
     ty: std::marker::PhantomData<T>,
 }
-
-impl<T> fmt::Debug for ClassBuilder<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Class")
-            .field("name", &self.name)
-            .field("type_id", &self.type_id)
-            .finish()
-    }
-}
-
-// TODO seems like the name is based on fully qualified name, so we may want to
-// require this to be specified.
 
 impl<T> ClassBuilder<T>
 where
@@ -144,17 +113,20 @@ where
 {
     /// Create a new class builder.
     fn new() -> Self {
-        let name = std::any::type_name::<T>().to_string();
+        let fq_name = std::any::type_name::<T>().to_string();
+        let short_name = fq_name.split("::").last().expect("type has no name");
         Self {
-            name: name.clone(),
-            constructor: None,
-            attributes: HashMap::new(),
-            instance_methods: InstanceMethods::new(),
-            class_methods: ClassMethods::new(),
-            class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
-            equality_check: Arc::from(equality_not_supported(name)),
+            class: Class {
+                name: short_name.to_string(),
+                constructor: None,
+                attributes: HashMap::new(),
+                instance_methods: InstanceMethods::new(),
+                class_methods: ClassMethods::new(),
+                class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
+                equality_check: Arc::from(equality_not_supported(fq_name)),
+                type_id: TypeId::of::<T>(),
+            },
             ty: std::marker::PhantomData,
-            type_id: TypeId::of::<T>(),
         }
     }
 
@@ -183,7 +155,7 @@ where
         F: Function<Args, Result = T>,
         Args: FromPolarList,
     {
-        self.constructor = Some(Constructor::new(f));
+        self.class.constructor = Some(Constructor::new(f));
         self
     }
 
@@ -192,7 +164,7 @@ where
     where
         F: Fn(&T, &T) -> bool + Send + Sync + 'static,
     {
-        self.equality_check = Arc::new(move |a, b| {
+        self.class.equality_check = Arc::new(move |a, b| {
             tracing::trace!("equality check");
 
             let a = downcast(a).map_err(|e| e.user())?;
@@ -220,13 +192,13 @@ where
         R: crate::ToPolar,
         T: 'static,
     {
-        self.attributes.insert(name, AttributeGetter::new(f));
+        self.class.attributes.insert(name, AttributeGetter::new(f));
         self
     }
 
     /// Set the name of the polar class.
     pub fn name(mut self, name: &str) -> Self {
-        self.name = name.to_string();
+        self.class.name = name.to_string();
         self
     }
 
@@ -238,7 +210,9 @@ where
         F: Method<T, Args, Result = R>,
         R: ToPolarResults + 'static,
     {
-        self.instance_methods.insert(name, InstanceMethod::new(f));
+        self.class
+            .instance_methods
+            .insert(name, InstanceMethod::new(f));
         self
     }
 
@@ -253,7 +227,8 @@ where
         I: ToPolarResults + 'static,
         T: 'static,
     {
-        self.instance_methods
+        self.class
+            .instance_methods
             .insert(name, InstanceMethod::new_iterator(f));
         self
     }
@@ -266,35 +241,13 @@ where
         Args: FromPolarList,
         R: ToPolarResults + 'static,
     {
-        self.class_methods.insert(name, ClassMethod::new(f));
+        self.class.class_methods.insert(name, ClassMethod::new(f));
         self
     }
 
     /// Finish building a build the class
     pub fn build(self) -> Class {
-        Class {
-            name: self.name,
-            type_id: self.type_id,
-            constructor: self.constructor,
-            attributes: self.attributes,
-            instance_methods: self.instance_methods,
-            class_methods: self.class_methods,
-            equality_check: self.equality_check,
-            class_check: self.class_check,
-        }
-    }
-
-    pub fn is_class<C: 'static>(&self) -> bool {
-        tracing::trace!(
-            input = %std::any::type_name::<C>(),
-            class = %self.name,
-            "is_class"
-        );
-        (self.class_check)(TypeId::of::<C>())
-    }
-
-    pub fn equals(&self, instance: &Instance, other: &Instance) -> crate::Result<bool> {
-        (self.equality_check)(instance.inner.as_ref(), other.inner.as_ref())
+        self.class
     }
 }
 
