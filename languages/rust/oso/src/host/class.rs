@@ -83,6 +83,7 @@ impl<T> Class<T>
 where
     T: 'static,
 {
+    /// Create a new class builder.
     pub fn new() -> Self {
         let name = std::any::type_name::<T>().to_string();
         Self {
@@ -99,6 +100,7 @@ where
         }
     }
 
+    /// Create a new class builder for a type that implements Default and use that as the constructor.
     pub fn with_default() -> Self
     where
         T: std::default::Default,
@@ -106,6 +108,7 @@ where
         Self::with_constructor::<_, _>(T::default)
     }
 
+    /// Create a new class builder with a given constructor.
     pub fn with_constructor<F, Args>(f: F) -> Self
     where
         F: Function<Args, Result = T> + 'static,
@@ -116,6 +119,7 @@ where
         class
     }
 
+    /// Set the constructor function to use for polar `new` statements.
     pub fn set_constructor<F, Args>(mut self, f: F) -> Self
     where
         F: Function<Args, Result = T> + 'static,
@@ -125,6 +129,7 @@ where
         self
     }
 
+    /// Set an equality function to be used for polar `==` statements.
     pub fn set_equality_check<F>(mut self, f: F) -> Self
     where
         F: Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -141,6 +146,7 @@ where
         self
     }
 
+    /// Use PartialEq::eq as the equality check for polar `==` statements.
     pub fn with_equality_check(self) -> Self
     where
         T: PartialEq<T>,
@@ -148,6 +154,8 @@ where
         self.set_equality_check(|a, b| PartialEq::eq(a, b))
     }
 
+    /// Add an attribute getter for statments like `foo.bar`
+    /// `class.add_attribute_getter("bar", |instance| instance.bar)
     pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
     where
         F: Method<T, Result = R> + 'static,
@@ -159,11 +167,14 @@ where
         self
     }
 
+    /// Set the name of the polar class.
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.to_string();
         self
     }
 
+    /// Add a method for polar method calls like `foo.plus(1)
+    /// `class.add_attribute_getter("bar", |instance, n| instance.foo + n)
     pub fn add_method<F, Args, R>(mut self, name: &str, f: F) -> Self
     where
         Args: FromPolar,
@@ -191,6 +202,8 @@ where
         self
     }
 
+    /// A method that's called on the type instead of an instance.
+    /// eg `Foo.pi`
     pub fn add_class_method<F, Args, R>(mut self, name: &str, f: F) -> Self
     where
         F: Function<Args, Result = R> + 'static,
