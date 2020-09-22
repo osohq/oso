@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600793080918,
+  "lastUpdate": 1600795927385,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -7115,6 +7115,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 4744,
             "range": "± 1245",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f6f34c3117179d7179d60167754eb8d9b3a76bb5",
+          "message": "add app method call syntax docs (#448)\n\n* add app method call syntax docs\r\n\r\n* update changelog\r\n\r\n* added example to dot lookups for class method\r\n\r\n* small tweak",
+          "timestamp": "2020-09-22T13:23:44-04:00",
+          "tree_id": "e6ea166f9c3f21c18ce0a3efb15990de811f757b",
+          "url": "https://github.com/osohq/oso/commit/f6f34c3117179d7179d60167754eb8d9b3a76bb5"
+        },
+        "date": 1600795926590,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 696,
+            "range": "± 39",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2251,
+            "range": "± 422",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 60821,
+            "range": "± 2215",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 460791,
+            "range": "± 17741",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16496,
+            "range": "± 504",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 15678,
+            "range": "± 835",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16352,
+            "range": "± 719",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16402,
+            "range": "± 521",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14734,
+            "range": "± 635",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4828,
+            "range": "± 243",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5103,
+            "range": "± 281",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 4795,
+            "range": "± 547",
             "unit": "ns/iter"
           }
         ]
