@@ -7,8 +7,8 @@
 Major news
 ==========
 
-Rust support
----------------
+Rust support!
+-------------
 
 oso now supports applications written in Rust, using our
 :doc:`Rust library </using/libraries/rust/index>`. Download :doc:`here
@@ -83,6 +83,7 @@ Other bugs & improvements
   .. code-block:: polar
 
     new Foo() = new Foo()
+
 - Fixed rule filtering when the input arguments are bound variables.
   Fixes a performance regression for certain types of policy.
 - The Polar ``Variable`` type in Python is now printed as ``Variable(name)``.
