@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600736815318,
+  "lastUpdate": 1600738274764,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -6443,6 +6443,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5789,
             "range": "± 1028",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "072a0e3eb919bc2d6c6913967e03c646aa075092",
+          "message": "Support kwargs in method calls (#440)\n\n* remove support for instance literals in constructors\r\n\r\n* update all instance creation syntax to use () not {}\r\n\r\n* add kwargs to external calls\r\n\r\n* support kwargs in ruby methods\r\n\r\n* python test for kwarg methods\r\n\r\n* rubocop\r\n\r\n* Slightly simplify Ruby kwargs handling\r\n\r\n* update call macro for kwargs; use Call for constructors in tests instead of InstanceLiteral\r\n\r\n* Thread kwargs through integration tests\r\n\r\n* add kwarg tests to rust integration_test\r\n\r\n* Fix calls with kwargs on Ruby < 2.7\r\n\r\n* Comment Ruby version stuff\r\n\r\n* add no kwarg check to Java for calls\r\n\r\n* ruby test for kwargs with method calls\r\n\r\n* broken JS tests, WIP\r\n\r\n* Kill SimpleCall lalrpop production\r\n\r\n* Fix JS kwargs tests\r\n\r\n* Tweak Python kwargs handling\r\n\r\n* add kwargs to POLAR_LOG\r\n\r\n* format\r\n\r\n* whitespace\r\n\r\n* whitespace\r\n\r\n* Async keyword only needed if await used in function body\r\n\r\n* Assert against error type instead of string matching\r\n\r\n* Changelog\r\n\r\nCo-authored-by: Alex Plotnick <alex@osohq.com>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-09-21T19:20:49-06:00",
+          "tree_id": "8c6f7b14a1f132dbb13ef92575cf41c40ef85aa4",
+          "url": "https://github.com/osohq/oso/commit/072a0e3eb919bc2d6c6913967e03c646aa075092"
+        },
+        "date": 1600738273870,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 649,
+            "range": "± 30",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2178,
+            "range": "± 68",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 61155,
+            "range": "± 3827",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 453585,
+            "range": "± 12805",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16406,
+            "range": "± 3297",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16501,
+            "range": "± 1085",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16438,
+            "range": "± 1079",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16440,
+            "range": "± 928",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14922,
+            "range": "± 925",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4864,
+            "range": "± 481",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 4967,
+            "range": "± 372",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5526,
+            "range": "± 927",
             "unit": "ns/iter"
           }
         ]
