@@ -27,7 +27,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 fn hello(oso: State<OsoState>, user: User, id: usize) -> Result<Option<String>, Status> {
     if let Some(expense) = EXPENSES.get(id) {
         if oso.is_allowed(user.0, "GET", expense.clone()) {
-            Ok(Some(format!("{:?}", expense)))
+            Ok(Some(format!("{}", expense)))
         } else {
             Err(Status::Unauthorized)
         }

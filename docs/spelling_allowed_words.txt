@@ -92,3 +92,14 @@ amongst
 # Release specifiers
 rc
 dev
+
+
+# Rust terms
+struct
+structs
+usize
+vec
+toml
+enums
+proc
+io

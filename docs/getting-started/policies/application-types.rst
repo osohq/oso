@@ -31,7 +31,7 @@ make it possible to take advantage of an app's existing domain model. For exampl
                     self.is_admin = is_admin
 
             user = User("alice", True)
-            assert(oso.is_allowed(user, "foo", "bar))
+            assert(oso.is_allowed(user, "foo", "bar"))
 
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
         called ``is_admin``, it is evaluated by the policy and found to be true.
@@ -127,6 +127,33 @@ make it possible to take advantage of an app's existing domain model. For exampl
         The code above provides a ``User`` instance as the *actor* for our
         ``allow`` rule. Since ``User`` has a field called ``isAdmin``, it is
         evaluated by the Polar rule and found to be true.
+
+    .. group-tab:: Rust
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            allow(actor, action, resource) if actor.is_admin;
+
+        The above rule expects the ``actor`` variable to be a Rust instance with the attribute ``is_admin``.
+        The Rust instance is passed into oso with a call to ``oso.is_allowed``:
+
+        .. code-block:: rust
+            :caption: :fab:`rust` main.rs
+
+            #[derive(Clone, PolarClass)]
+            struct User {
+                #[polar(attribute)]
+                name: String,
+                #[polar(attribute)]
+                is_admin: bool,
+            }
+            oso.register_class(User::get_polar_class())?;
+            let user = User { name: "alice".to_string(), is_admin: true };
+            assert!(oso.is_allowed(user, "foo", "bar")?);
+
+        The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
+        called ``is_admin``, it is evaluated by the policy and found to be true.
 
 In addition to accessing attributes, you can also call methods on application
 instances in a policy:
@@ -246,6 +273,52 @@ using the :ref:`operator-new` operator if the class has been **registered**:
         We must pass positional arguments to the class constructor because
         JavaScript does not support keyword arguments.
 
+    .. group-tab:: Rust
+        We can register a Rust struct or enum using ``Oso::register_class``.
+        ``register_class`` takes as input a ``Class``, which can be constructed
+        either using the ``#[derive(PolarClass)]`` proc-macro, or manually using
+        ``Class::new::<T>()``:
+
+        .. code-block:: rust
+            :caption: :fab:`rust` main.rs
+
+            #[derive(Clone, PolarClass)]
+            struct User {
+                #[polar(attribute)]
+                name: String,
+                #[polar(attribute)]
+                is_admin: bool,
+            }
+
+            impl User {
+                fn new(name: String, is_admin: bool) -> Self {
+                    Self { name, is_admin }
+                }
+
+                fn is_called_alice(&self) -> bool {
+                    self.name == "alice"
+                }
+            }
+
+            oso.register_class(
+               User::get_polar_class_builder()
+                    .set_constructor(User::new)
+                    .add_method("is_called_alice", User::is_called_alice)
+                    .build(),
+            )?;
+
+        Once the class is registered, we can make a ``User`` object in Polar.
+        This can be helpful for writing inline test queries:
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            ?= allow(new User("bob", true), "foo", "bar");
+            ?= new User("alice", true).is_called_alice();
+
+        The Rust library only supports calling constructors and methods with positional
+        arguments, since Rust itself does not have keyword arguments.
+
 Registering classes also makes it possible to use :ref:`specialization`
 and the :ref:`operator-matches` with the registered class. Here's what
 specialization on an application type looks like.
@@ -318,6 +391,23 @@ Either way, using the rule could look like this:
               assert.equal(false, await oso.isAllowed("notauser", "foo", "bar"));
             })();
 
+    .. group-tab:: Rust
+
+        .. code-block:: rust
+            :caption: :fab:`rust` main.rs
+
+            #[derive(Clone, PolarClass)]
+            struct User {
+                #[polar(attribute)]
+                name: String,
+                #[polar(attribute)]
+                is_admin: bool,
+            }
+            oso.register_class(User::get_polar_class())?;
+
+            let user = User { name: "alice".to_string(), is_admin: true };
+            assert!(oso.is_allowed(user, "foo", "bar")?);
+            assert!(!oso.is_allowed("notauser", "foo", "bar")?);
 
 .. note::
     Type specializers automatically respect the
@@ -417,6 +507,42 @@ Once a class is registered, class or static methods can also be called from oso 
             const user = new User('alice', true);
 
             (async () => assert(await oso.isAllowed(user, "foo", "bar")))();
+
+    .. group-tab:: Rust
+
+        .. code-block:: polar
+            :caption: :fa:`oso` policy.polar
+
+            allow(actor: User, action, resource) if actor.name in User.superusers();
+
+        .. code-block:: rust
+            :caption: :fab:`rust` main.rs
+
+            #[derive(Clone, PolarClass)]
+            struct User {
+                #[polar(attribute)]
+                name: String,
+            }
+
+            impl User {
+                fn superusers() -> Vec<String> {
+                    vec![
+                        "alice".to_string(),
+                        "bhavik".to_string(),
+                        "clarice".to_string(),
+                    ]
+                }
+            }
+
+            oso.register_class(
+                User::get_polar_class_builder()
+                    .add_class_method("superusers". User::superusers)
+                    .build(),
+            )?;
+
+            let user = User { name: "alice".to_string() };
+            assert!(oso.is_allowed(user, "foo", "bar)?);
+
 
 .. _built-in-types:
 

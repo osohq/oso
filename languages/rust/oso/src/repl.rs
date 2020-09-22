@@ -42,10 +42,10 @@ struct InputValidator {}
 
 impl Validator for InputValidator {
     fn validate(&self, ctx: &mut ValidationContext) -> Result<ValidationResult, ReadlineError> {
-        let input = ctx.input();
-        if !input.ends_with(';') {
-            return Ok(ValidationResult::Incomplete);
-        }
+        let _input = ctx.input();
+        // if !input.ends_with(';') {
+        //     return Ok(ValidationResult::Incomplete);
+        // }
         Ok(ValidationResult::Valid(None))
     }
 }
@@ -84,9 +84,9 @@ impl Repl {
     }
 
     pub fn oso_input(&mut self, prompt: &str) -> anyhow::Result<String> {
-        let mut input = self.editor.readline(prompt)?;
+        let input = self.editor.readline(prompt)?;
         self.editor.add_history_entry(input.as_str());
-        input.pop(); // remove the trailing ';'
+        // input.pop(); // remove the trailing ';'
         Ok(input)
     }
 

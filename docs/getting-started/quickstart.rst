@@ -51,6 +51,13 @@ To start with, we have a simple ``Expense`` class, and some stored data in the
       :caption: :fab:`node-js` expense.js :download:`(link) </examples/quickstart/nodejs/expense.js>`
       :language: javascript
 
+  .. group-tab:: Rust
+
+    .. literalinclude:: /examples/quickstart/rust/src/expenses.rs
+      :class: copybutton
+      :caption: :fab:`rust` expenses.rs :download:`(link) </examples/quickstart/rust/src/expenses.rs>`
+      :language: rust
+
 We'll need our application to be able to control who has access to this data.
 Before we add a web server and start making some requests, lets see if we can get
 some basic authorization in place!
@@ -102,6 +109,15 @@ Adding oso
       .. code-block:: console
 
         $ npm install -g oso@{release}
+    
+    .. group-tab:: Rust
+
+      Add oso and oso-derive as dependencies in Cargo.toml
+
+      .. code-block:: toml
+
+        oso = "{release}"
+        oso-derive = "{release}"
 
 
 
@@ -140,6 +156,12 @@ arguments, **actor**, **action**, and **resource**:
     .. literalinclude:: /examples/quickstart/nodejs/allow-01.js
       :language: javascript
       :lines: 6-8
+
+  .. group-tab:: Rust
+
+    .. literalinclude:: /examples/quickstart/rust/src/main.rs
+      :language: rust
+      :lines: 16-18
 
 The above method call returns ``true`` if the **actor** ``"alice@example.com"`` may
 perform the **action** ``"GET"`` on the
@@ -391,6 +413,65 @@ start a REPL session and follow along:
       > await oso.isAllowed('bhavik@example.com', 'GET', expense);
       false
 
+  .. group-tab:: Rust
+
+    .. code-block:: rust
+      :caption: :fab:`rust` main.rs
+
+      use oso::{Oso, PolarClass};
+      use expenses::{Expense, EXPENSES};
+
+      fn main() {
+        let mut oso = Oso::new();
+        oso.register_class(Expense::get_polar_class()).unwrap();
+
+        let actor = "alice@example.com";
+        let resource = EXPENSES[1].clone();
+        let allowed = oso.is_allowed(actor, "GET", resource).unwrap();
+        println!("is_allowed => {}", allowed);
+      }
+
+    Should output:
+
+    .. code-block:: console
+
+      is_allowed => false
+
+    We can create a new policy file, and explicitly allow Alice to view
+    expenses
+
+    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+      :language: polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    We can load into our oso instance, and then see that Alice has the power and
+    everyone else is still denied:
+
+    .. code-block:: rust
+      :caption: :fab:`rust` main.rs
+
+      fn main() {
+        let mut oso = Oso::new();
+        oso.register_class(Expense::get_polar_class()).unwrap();
+        oso.load_file("expenses.polar").unwrap();
+
+        let alice = "alice@example.com";
+        let bhavik = "bhavik@example.com";
+        let resource = EXPENSES[1].clone();
+        let alice_is_allowed = oso.is_allowed(alice, "GET", resource).unwrap();
+        let bhavik_is_allowed = oso.is_allowed(bhavik, "GET", resource).unwrap();
+        println!("alice_is_allowed => {}", alice_is_allowed);
+        println!("bhavik_is_allowed => {}", bhavik_is_allowed);
+      }
+
+    Should output:
+
+    .. code-block:: console
+
+      alice_is_allowed => true
+      bhavik_is_allowed => false
+
 .. note::
   Each time you load a file, it will load the policy
   **without** clearing previously loaded rules. Be sure to
@@ -470,6 +551,14 @@ oso:
       :language: javascript
       :emphasize-lines: 3,7-9,19-22
 
+  .. group-tab:: Rust
+
+    .. literalinclude:: /examples/quickstart/rust/src/server.rs
+      :class: copybutton
+      :caption: :fab:`rust` server.rs :download:`(link) </examples/quickstart/rust/src/server.rs>`
+      :language: rust
+      :emphasize-lines: 7,29,44,47,53-55,63
+
 If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
 an existing expense, we respond with the expense data. Otherwise, we return
 ``"Not Found!"``.
@@ -510,6 +599,18 @@ We'll first start our server...
 
       $ node server.js
       running on port 5050
+
+  .. group-tab:: Rust
+
+    .. code-block:: console
+
+      $ cargo run
+      🔧 Configured for development.
+          => address: localhost
+          => port: 5050
+          ...
+      🛰  Mounting /:
+          => GET /expenses/<id> (hello)
 
 ...and then, in another terminal, we can test everything works by making some requests:
 
@@ -632,6 +733,30 @@ able to view expenses, but no one outside the company will be able to:
     policy. In the next section, we'll update our existing policy to leverage
     the ``Expense`` class defined in our application.
 
+  .. group-tab:: Rust
+
+    .. literalinclude:: /examples/quickstart/polar/expenses-03-rust.polar
+      :language: polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    .. |string_endsWithRust| replace:: the ``String::ends_with`` method
+    .. _string_endsWithRust: https://doc.rust-lang.org/std/string/struct.String.html#method.ends_with
+
+    We bind the provided email to the ``actor`` variable in the rule head
+    (specialized on the built-in :ref:`String <strings>` class), and then
+    perform the ``.ends_with("@example.com")`` check in the rule body. If you
+    noticed that the ``.ends_with`` call looks pretty familiar, you're right on
+    --- oso is actually calling out to |string_endsWithRust|_ defined in the
+    rust standard library. The **actor** value passed to oso is a
+    rust String, and oso allows us to call any ``String`` method from
+    rust's standard library on it.
+
+    And that's just the tip of the iceberg. You can register *any* application
+    object with oso and then leverage it in your application's authorization
+    policy. In the next section, we'll update our existing policy to leverage
+    the ``Expense`` class defined in our application.
+
 
 Once we've added our new dynamic rule and restarted the web server, every user
 with an ``@example.com`` email should be allowed to view any expense:
@@ -706,6 +831,17 @@ To accomplish that, we can **replace** our existing rule with:
     ``Expense`` instance and compares that value against the provided **actor**.
     And just like that, an actor can only see an expense if they submitted the expense.
 
+  .. group-tab:: Rust
+
+    .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+      :language: polar
+      :caption: :fa:`oso` expenses.polar
+      :class: copybutton
+
+    Behind the scenes, oso looks up the ``submitted_by`` field on the provided
+    ``Expense`` instance and compares that value against the provided **actor**.
+    And just like that, an actor can only see an expense if they submitted the expense.
+
 Now Alice can see her own expenses but not Bhavik's:
 
 .. code-block:: console
@@ -769,6 +905,15 @@ and the expense's amount is less than $100.00:
 
       allow(approver: User, "approve", expense: Expense) if
           approver = expense.submittedBy.manager
+          and expense.amount < 10000;
+
+  .. group-tab:: Rust
+
+    .. code-block:: polar
+      :class: no-select
+
+      allow(approver: User, "approve", expense: Expense) if
+          approver = expense.submitted_by.manager
           and expense.amount < 10000;
 
 In the process of evaluating that rule, the oso engine would call back into the
