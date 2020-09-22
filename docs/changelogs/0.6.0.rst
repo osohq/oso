@@ -73,7 +73,7 @@ calls using the following syntax:
 
     foo.bar(1, 2, foo: 3, bar: 4)
 
-.. todo:: Link to relevant documentation section
+See :ref:`application-methods`
 
 Other bugs & improvements
 =========================
