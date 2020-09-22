@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600726208209,
+  "lastUpdate": 1600736815318,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -6347,6 +6347,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5968,
             "range": "± 1158",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed77d3c5a385758dae752250007bda350df0a869",
+          "message": "Rust Docs (#434)\n\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-09-21T20:56:06-04:00",
+          "tree_id": "42ee74c58cd5a7b9bd81d80ac1ead3e74584bf99",
+          "url": "https://github.com/osohq/oso/commit/ed77d3c5a385758dae752250007bda350df0a869"
+        },
+        "date": 1600736814450,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 657,
+            "range": "± 77",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2284,
+            "range": "± 184",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 64961,
+            "range": "± 6306",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 487473,
+            "range": "± 30303",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17619,
+            "range": "± 4058",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17347,
+            "range": "± 1232",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17798,
+            "range": "± 1191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17182,
+            "range": "± 1426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15936,
+            "range": "± 1180",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5147,
+            "range": "± 314",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5544,
+            "range": "± 649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5789,
+            "range": "± 1028",
             "unit": "ns/iter"
           }
         ]
