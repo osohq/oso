@@ -83,6 +83,18 @@ Once oso is installed, launch the REPL from the terminal:
             $ npm run oso
             query>
 
+    .. group-tab:: Rust
+
+        To install the oso REPL, you can use ``cargo install --features=cli oso``
+        to download + install it from crates.io. Or run ``cargo run --features=cli``
+        from the ``languages/rust/oso`` directory in the `GitHub repository <https://github.com/osohq/oso>`_.
+
+        .. code-block:: console
+            :caption: :fab:`rust` Launch the REPL
+
+            $ oso
+            query>
+
 .. todo:: test above
 
 At the ``query>`` prompt, type a Polar expression and press ``Enter``.
