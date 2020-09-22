@@ -174,6 +174,3 @@ impl Host {
         })
     }
 }
-
-/// Marker trait: implements "ToPolar" via a registered class
-pub trait HostClass {}

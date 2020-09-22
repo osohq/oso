@@ -82,17 +82,38 @@ mod query;
 
 pub use crate::oso::Oso;
 pub use errors::{OsoError, Result};
-pub use host::{Class, FromPolar, HostClass, ToPolar};
+pub use host::{Class, FromPolar, ToPolar};
 pub use polar_core::terms::Value;
 pub use query::{Query, ResultSet};
 
 use polar_core::polar::Polar;
 
-pub trait PolarClass {
-    fn get_polar_class() -> Class<()>;
-    fn get_polar_class_builder() -> Class<Self>
-    where
-        Self: Sized;
+/// Classes that can be used as types in Polar policies.
+///
+/// Implementing this trait and `Clone` automatically makes the
+/// type `FromPolar` and `ToPolar`, so it can be used with
+/// `Oso::is_allowed` calls.
+///
+/// The default implementation creates a class definition with
+/// no attributes or methods registered. Either use `get_polar_class_builder`
+/// or the `#[derive(PolarClass)]` proc macro to register attributes and methods.
+///
+/// **Note** that the returned `Class` still must be registered on an `Oso`
+/// instance using `Oso::register_class`.
+pub trait PolarClass: Sized + 'static {
+    /// Returns the `Class` ready for registration
+    fn get_polar_class() -> Class {
+        Self::get_polar_class_builder().build()
+    }
+
+    /// Returns the partially defined `Class` for this type.
+    ///
+    /// Can still have methods added to it with `add_method`, and attributes
+    /// with `add_attribute_getter`.
+    /// Use `Class::build` to finish defining the type.
+    fn get_polar_class_builder() -> Class<Self> {
+        Class::new()
+    }
 }
 
 #[cfg(feature = "derive")]
