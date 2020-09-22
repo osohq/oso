@@ -526,9 +526,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ steps.version.outputs.oso_version }}
-          release_name: Release ${{ steps.version.outputs.oso_version }}
+          release_name: oso ${{ steps.version.outputs.oso_version }}
           body: |
-            Oso Release ${{ steps.version.outputs.oso_version }}
+            oso ${{ steps.version.outputs.oso_version }}
           draft: false
           prerelease: true
       - name: Upload Libraries
