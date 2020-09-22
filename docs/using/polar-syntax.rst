@@ -279,14 +279,36 @@ Dictionary Key Access
 ^^^^^^^^^^^^^^^^^^^^^
 
 The dot ``.`` operator can be used to access the value associated with
-a key in a dictionary or class instance. For example, the rule::
+a key in a dictionary. For example::
 
-  first_name(dict, x) if
-    dict = new Person() and
-    x = dict.first_name;
+    dict = { hello: "world" } and
+    dict.hello = "world"
 
-will access the value of the field named ``"first_name"`` in ``dict``,
-and unify it with ``x``.
+A string stored in a variable can be used as the key in a dot lookup using the following syntax::
+
+    dict = { hello: "world" } and
+    key = "hello" and
+    dict.(key) = "world"
+
+.. _application-methods:
+
+Application Method Calls
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The dot ``.`` operator can also be used to access methods or fields on application instances or
+constants. Arguments can be passed into methods as positional or keyword arguments, depending on the application
+language. Keyword arguments are only supported in languages that themselves support them (e.g. Python, Ruby).
+
+Accessing a field on an application instance looks like::
+
+    person = new Person() and
+    first_name = person.first_name
+
+Calling an application method from a policy looks like this::
+
+    person = new Person() and
+    person.set_address("12345 Broadway", city: "New York", state: "NY");
+
 
 .. _numerical-comparison:
 
