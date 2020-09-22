@@ -43,7 +43,7 @@ def app_ctx(flask_app):
         yield
 
 
-def test_initialization(flask_app, oso, simple_policy, app_ctx, user):
+def test_initialization_with_set(flask_app, oso, simple_policy, app_ctx, user):
     """Test that setting oso works correctly."""
     # Establish that an improperly initalized flask oso throws an exception.
     flask_oso = FlaskOso()
@@ -55,6 +55,8 @@ def test_initialization(flask_app, oso, simple_policy, app_ctx, user):
     flask_oso.set_oso(oso)
     flask_oso.authorize(action="read", resource="resource")
 
+
+def test_initialization_with_init(flask_app, oso, simple_policy, app_ctx, user):
     # Works with oso init.
     flask_oso = FlaskOso(oso=oso)
     flask_oso.set_get_actor(lambda: user)
