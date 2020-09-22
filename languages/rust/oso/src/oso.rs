@@ -147,7 +147,7 @@ impl Oso {
     }
 
     /// Register a rust type as a Polar class.
-    /// See Class docs.
+    /// See [`oso::Class`] docs.
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let name = Symbol(name);
@@ -156,7 +156,7 @@ impl Oso {
     }
 
     /// Register a rust type as a Polar constant.
-    /// See Constant docs.
+    /// See [`oso::Class`] docs.
     pub fn register_constant<V: crate::host::ToPolar>(
         &mut self,
         name: &str,
