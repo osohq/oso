@@ -112,7 +112,7 @@ Requiring authorization
 One downside to calling :py:meth:`flask_oso.FlaskOso.authorize`
 explicitly within route handlers is that the check might be forgotten.  To help detect this, the
 :py:meth:`flask_oso.FlaskOso.require_authorization` option can be enabled during
-initialization. This will cause an :py:class:`oso.OsoException` to be raised if
+initialization. This will cause an :py:class:`oso.OsoError` to be raised if
 a call to :py:meth:`flask_oso.FlaskOso.authorize` **is not** made during the
 processing of a request.
 

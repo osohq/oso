@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from flask import current_app, g, request, Blueprint
-from oso import Oso, OsoException
+from oso import Oso, OsoError
 from oso.extras import Http
 from werkzeug.exceptions import BadRequest, Forbidden
 
