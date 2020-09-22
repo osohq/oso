@@ -5,6 +5,7 @@ from django.http import HttpRequest
 from django.utils.autoreload import autoreload_started
 
 from oso import Oso as _Oso
+from polar.exceptions import DuplicateClassAliasError
 
 Oso = _Oso()
 """Singleton :py:class:`oso.Oso` instance.
@@ -24,21 +25,27 @@ def reset_oso():
 
 
 def init_oso():
+    def register_class(model, name=None):
+        try:
+            Oso.register_class(model, name=name)
+        except DuplicateClassAliasError as e:
+            pass
+
     # Register all models.
     for app in apps.get_app_configs():
         for model in app.get_models():
             app_namespace = app.name.replace(".", "::")
             name = f"{app_namespace}::{model.__name__}"
-            Oso.register_class(model, name=name)
+            register_class(model, name)
 
     # Custom registration for auth (AnonymousUser)
     if apps.is_installed("django.contrib.auth"):
         from django.contrib.auth.models import AnonymousUser
 
-    Oso.register_class(AnonymousUser, name=f"django::contrib::auth::AnonymousUser")
+    register_class(AnonymousUser, name=f"django::contrib::auth::AnonymousUser")
 
     # Register request
-    Oso.register_class(HttpRequest)
+    register_class(HttpRequest)
 
     loaded_files = []
 
