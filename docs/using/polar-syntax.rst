@@ -307,7 +307,7 @@ Accessing a field on an application instance looks like::
 Calling an application method from a policy looks like this::
 
     person = new Person() and
-    person.set_address("12345 Broadway", city: "New York", state: "NY");
+    person.check_address("12345 Broadway", city: "New York", state: "NY");
 
 Calling a class method on a class that has been registered as a constant could look like::
 
