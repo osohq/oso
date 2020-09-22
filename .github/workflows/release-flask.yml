@@ -83,9 +83,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
           tag_name: flask-v${{ steps.version.outputs.oso_version }}
-          release_name: flask-oso release ${{ steps.version.outputs.oso_version }}
+          release_name: flask-oso ${{ steps.version.outputs.oso_version }}
           body: |
-            flask-oso release ${{ steps.version.outputs.oso_version }}
+            flask-oso ${{ steps.version.outputs.oso_version }}
           draft: false
           prerelease: true
       - name: Upload Python Package
