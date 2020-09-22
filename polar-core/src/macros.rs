@@ -102,9 +102,23 @@ macro_rules! sym {
     };
 }
 
+#[macro_export]
+macro_rules! string {
+    ($arg:expr) => {
+        Value::String($arg.into())
+    };
+}
+
 // TODO: support kwargs
 #[macro_export]
 macro_rules! call {
+    ($name:expr) => {
+        Call {
+            name: sym!($name),
+            args: vec![],
+            kwargs: None
+        }
+    };
     ($name:expr, [$($args:expr),*]) => {
         Call {
             name: sym!($name),
@@ -114,8 +128,14 @@ macro_rules! call {
             kwargs: None
         }
     };
-    ($name:expr) => {
-        Value::String($name.into())
+    ($name:expr, [$($args:expr),*], $fields:expr) => {
+        Call {
+            name: sym!($name),
+            args: vec![
+                $(term!($args)),*
+            ],
+            kwargs: Some($fields)
+        }
     };
 }
 

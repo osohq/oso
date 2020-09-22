@@ -188,8 +188,8 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
 
         // Make some instances. The literals dont change anything, but is convenient for
         // us to track things.
-        let child = runner.make_external(instance!("Person"));
-        let grandchild = runner.make_external(instance!("Person"));
+        let child = runner.make_external(call!("Person"));
+        let grandchild = runner.make_external(call!("Person"));
 
         let n_children = term!(vec![child; n]); // n children in a list
         let one_grandchild = term!(vec![grandchild]);
@@ -228,7 +228,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                     b.iter_batched_ref(
                         || {
                             let mut runner =
-                                runner_from_query("has_grandchild_called(new Person{}, \"bert\")");
+                                runner_from_query("has_grandchild_called(new Person(), \"bert\")");
                             runner.register_pseudo_class("Person");
                             runner.load_str(policy).unwrap();
                             n_results(&mut runner, *n);
@@ -337,11 +337,11 @@ impl Runner {
 
     fn handle_debug(&mut self, _: String) {}
 
-    fn make_external(&mut self, literal: InstanceLiteral) -> Term {
+    fn make_external(&mut self, constructor: Call) -> Term {
         let instance_id = self.polar.get_external_id();
         Term::new_from_test(Value::ExternalInstance(ExternalInstance {
             instance_id,
-            constructor: Some(Term::new_from_test(Value::InstanceLiteral(literal))),
+            constructor: Some(Term::new_from_test(Value::Call(constructor))),
             repr: None,
         }))
     }

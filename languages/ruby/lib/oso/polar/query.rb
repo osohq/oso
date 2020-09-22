@@ -43,16 +43,18 @@ module Oso
       # @param args [Array<Hash>]
       # @raise [InvalidCallError] if the method doesn't exist on the instance or
       #   the args passed to the method are invalid.
-      def register_call(attribute, call_id:, instance:, args:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def register_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         return if calls.key?(call_id)
 
         instance = host.to_ruby(instance)
-        if args.nil?
-          result = instance.__send__(attribute)
-        else
-          args = args.map { |a| host.to_ruby(a) }
-          result = instance.__send__(attribute, *args)
-        end
+        args = args.map { |a| host.to_ruby(a) }
+        kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+        # The kwargs.empty? check is for Ruby < 2.7.
+        result = if kwargs.empty?
+                   instance.__send__(attribute, *args)
+                 else
+                   instance.__send__(attribute, *args, **kwargs)
+                 end
         result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
         calls[call_id] = result.lazy
       rescue ArgumentError, NoMethodError
@@ -93,8 +95,8 @@ module Oso
       # @param call_id [Integer]
       # @param instance [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
-      def handle_call(attribute, call_id:, instance:, args:)
-        register_call(attribute, call_id: call_id, instance: instance, args: args)
+      def handle_call(attribute, call_id:, instance:, args:, kwargs:)
+        register_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
         result = JSON.dump(next_call_result(call_id))
         call_result(result, call_id: call_id)
       rescue InvalidCallError => e
@@ -104,28 +106,17 @@ module Oso
         call_result(nil, call_id: call_id)
       end
 
-      def handle_make_external(data) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
+      def handle_make_external(data) # rubocop:disable Metrics/AbcSize
         id = data['instance_id']
         raise DuplicateInstanceRegistrationError, id if host.instance? id
 
         constructor = data['constructor']['value']
-        if constructor.key? 'InstanceLiteral'
-          cls_name = constructor['InstanceLiteral']['tag']
-          fields = constructor['InstanceLiteral']['fields']['fields']
-          kwargs = Hash[fields.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-          args = []
-        elsif constructor.key? 'Call'
-          cls_name = constructor['Call']['name']
-          args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
-          kwargs = constructor['Call']['kwargs']
-          kwargs = if kwargs.nil?
-                     {}
-                   else
-                     Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-                   end
-        else
-          raise InvalidConstructorError
-        end
+        raise InvalidConstructorError unless constructor.key? 'Call'
+
+        cls_name = constructor['Call']['name']
+        args = constructor['Call']['args'].map { |arg| host.to_ruby(arg) }
+        kwargs = constructor['Call']['kwargs'] || {}
+        kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
@@ -134,7 +125,7 @@ module Oso
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
+      def start # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         Enumerator.new do |yielder| # rubocop:disable Metrics/BlockLength
           loop do # rubocop:disable Metrics/BlockLength
             event = ffi_query.next_event
@@ -149,8 +140,9 @@ module Oso
               call_id = event.data['call_id']
               instance = event.data['instance']
               attribute = event.data['attribute']
-              args = event.data['args']
-              handle_call(attribute, call_id: call_id, instance: instance, args: args)
+              args = event.data['args'] || []
+              kwargs = event.data['kwargs'] || {}
+              handle_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
             when 'ExternalIsSubSpecializer'
               instance_id = event.data['instance_id']
               left_tag = event.data['left_class_tag']

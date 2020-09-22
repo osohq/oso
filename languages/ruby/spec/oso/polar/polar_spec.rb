@@ -414,18 +414,18 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
       subject.register_class(Bar)
       subject.register_class(Foo, from_polar: -> { Foo.new('A') })
-      expect(qvar(subject, 'new Foo{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new Foo{}.a() = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new Foo{}.b = x', 'x', one: true)).to eq('b')
-      expect(qvar(subject, 'new Foo{}.b() = x', 'x', one: true)).to eq('b')
-      expect(qvar(subject, 'new Foo{}.c = x', 'x', one: true)).to eq('c')
-      expect(qvar(subject, 'new Foo{}.c() = x', 'x', one: true)).to eq('c')
-      expect(qvar(subject, 'new Foo{} = f and f.a() = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new Foo{}.bar().y() = x', 'x', one: true)).to eq('y')
-      expect(qvar(subject, 'new Foo{}.e = x', 'x')).to eq([[1, 2, 3]])
-      expect(qvar(subject, 'new Foo{}.f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
-      expect(qvar(subject, 'new Foo{}.g.hello = x', 'x', one: true)).to eq('world')
-      expect(qvar(subject, 'new Foo{}.h = x', 'x', one: true)).to be true
+      expect(qvar(subject, 'new Foo().a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo().a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo().b = x', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'new Foo().b() = x', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'new Foo().c = x', 'x', one: true)).to eq('c')
+      expect(qvar(subject, 'new Foo().c() = x', 'x', one: true)).to eq('c')
+      expect(qvar(subject, 'new Foo().a() = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new Foo().bar().y() = x', 'x', one: true)).to eq('y')
+      expect(qvar(subject, 'new Foo().e = x', 'x')).to eq([[1, 2, 3]])
+      expect(qvar(subject, 'new Foo().f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
+      expect(qvar(subject, 'new Foo().g.hello = x', 'x', one: true)).to eq('world')
+      expect(qvar(subject, 'new Foo().h = x', 'x', one: true)).to be true
     end
 
     it 'respects the Ruby inheritance hierarchy for class specialization' do # rubocop:disable Metrics/BlockLength
@@ -479,24 +479,40 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         try(_: A{}, res) if res = 1;
       POLAR
 
-      expect(qvar(subject, 'new A{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new A{}.x = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new B{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new B{}.b = x', 'x', one: true)).to eq('B')
-      expect(qvar(subject, 'new B{}.x = x', 'x', one: true)).to eq('B')
-      expect(qvar(subject, 'new C{}.a = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new C{}.b = x', 'x', one: true)).to eq('B')
-      expect(qvar(subject, 'new C{}.c = x', 'x', one: true)).to eq('C')
-      expect(qvar(subject, 'new C{}.x = x', 'x', one: true)).to eq('C')
-      expect(qvar(subject, 'new X{}.x = x', 'x', one: true)).to eq('X')
+      expect(qvar(subject, 'new A().a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new A().x = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new B().a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new B().b = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'new B().x = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'new C().a = x', 'x', one: true)).to eq('A')
+      expect(qvar(subject, 'new C().b = x', 'x', one: true)).to eq('B')
+      expect(qvar(subject, 'new C().c = x', 'x', one: true)).to eq('C')
+      expect(qvar(subject, 'new C().x = x', 'x', one: true)).to eq('C')
+      expect(qvar(subject, 'new X().x = x', 'x', one: true)).to eq('X')
 
-      expect(query(subject, 'test(new A{})').length).to be 1
-      expect(query(subject, 'test(new B{})').length).to be 2
+      expect(query(subject, 'test(new A())').length).to be 1
+      expect(query(subject, 'test(new B())').length).to be 2
 
-      expect(qvar(subject, 'try(new A{}, x)', 'x')).to eq([1])
-      expect(qvar(subject, 'try(new B{}, x)', 'x')).to eq([2, 1])
-      expect(qvar(subject, 'try(new C{}, x)', 'x')).to eq([3, 2, 1])
-      expect(qvar(subject, 'try(new X{}, x)', 'x')).to eq([])
+      expect(qvar(subject, 'try(new A(), x)', 'x')).to eq([1])
+      expect(qvar(subject, 'try(new B(), x)', 'x')).to eq([2, 1])
+      expect(qvar(subject, 'try(new C(), x)', 'x')).to eq([3, 2, 1])
+      expect(qvar(subject, 'try(new X(), x)', 'x')).to eq([])
+    end
+
+    context 'when calling methods on ruby instances' do
+      before do
+        stub_const('TestClass',
+                   Class.new do
+                     def my_method(one, two, three:, four:)
+                       [one, two, three, four]
+                     end
+                   end)
+        subject.register_class(TestClass)
+      end
+
+      it 'accepts positional and keyword args' do
+        expect(qvar(subject, 'x = (new TestClass()).my_method(1, 2, four: 4, three: 3)', 'x')).to eq([[1, 2, 3, 4]])
+      end
     end
 
     context 'animal tests' do # rubocop:disable Metrics/BlockLength
@@ -520,16 +536,16 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         subject.register_class(Animal)
       end
 
-      let(:wolf) { 'new Animal{species: "canis lupus", genus: "canis", family: "canidae"}' }
-      let(:dog) { 'new Animal{species: "canis familiaris", genus: "canis", family: "canidae"}' }
-      let(:canine) { 'new Animal{genus: "canis", family: "canidae"}' }
-      let(:canid) {  'new Animal{family: "canidae"}' }
-      let(:animal) { 'new Animal{}' }
+      let(:wolf) { 'new Animal(species: "canis lupus", genus: "canis", family: "canidae")' }
+      let(:dog) { 'new Animal(species: "canis familiaris", genus: "canis", family: "canidae")' }
+      let(:canine) { 'new Animal(genus: "canis", family: "canidae")' }
+      let(:canid) {  'new Animal(family: "canidae")' }
+      let(:animal) { 'new Animal()' }
 
       it 'can unify instances' do
         subject.load_str <<~POLAR
-          yup() if new Animal{family: "steve"} = new Animal{family: "steve"};
-          nope() if new Animal{family: "steve"} = new Animal{family: "gabe"};
+          yup() if new Animal(family: "steve") = new Animal(family: "steve");
+          nope() if new Animal(family: "steve") = new Animal(family: "gabe");
         POLAR
         expect(query(subject, 'yup()')).to eq([{}])
         expect(query(subject, 'nope()')).to eq([])
@@ -709,8 +725,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
       end)
       subject.register_class(Foo)
-      expect(query(subject, 'new Foo{} = {bar: "bar"}')).to eq([])
-      expect { query(subject, 'new Foo{}.bar = "bar"') }.to raise_error do |e|
+      expect(query(subject, 'new Foo() = {bar: "bar"}')).to eq([])
+      expect { query(subject, 'new Foo().bar = "bar"') }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::PolarRuntimeError
       end
     end

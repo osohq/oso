@@ -29,7 +29,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         end
         subject.load_str <<~POLAR
           allow(u: User{}, 1, 2) if
-              x = new User{name: "alice"}
+              x = new User(name: "alice")
               and x.name = u.name
               and x.special = true;
         POLAR
@@ -81,7 +81,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         subject.load_str <<~POLAR
           allow(actor, "get", _: Http{path: path}) if
               new PathMapper("/widget/{id}").map(path) = {id: id} and
-              allow(actor, "get", new Widget{id: id});
+              allow(actor, "get", new Widget(id: id));
           allow(_actor, "get", widget: Widget{}) if widget.id = "12";
         POLAR
         widget12 = Oso::Http.new('host', '/widget/12', {})
