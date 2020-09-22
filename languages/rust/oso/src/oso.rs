@@ -10,6 +10,8 @@ use crate::host::Host;
 use crate::query::Query;
 use crate::ToPolar;
 
+/// Oso is the main struct you interact with. It is an instance of the Oso authorization library
+/// and contains the polar language knowledge base and query engine.
 #[derive(Clone)]
 pub struct Oso {
     inner: Arc<polar_core::polar::Polar>,
@@ -23,6 +25,7 @@ impl Default for Oso {
 }
 
 impl Oso {
+    /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
     pub fn new() -> Self {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
@@ -39,6 +42,7 @@ impl Oso {
         oso
     }
 
+    /// High level interface for authorization decisions. Makes an allow query with the given actor, action and resource and returns true or false.
     pub fn is_allowed<Actor, Action, Resource>(
         &mut self,
         actor: Actor,
@@ -59,6 +63,7 @@ impl Oso {
         }
     }
 
+    /// Clear out all files and rules that have been loaded.
     pub fn clear(&mut self) {
         *self = Self::new();
     }
@@ -76,6 +81,7 @@ impl Oso {
         Ok(())
     }
 
+    /// Load a file containing polar rules. All polar files must end in `.polar`
     pub fn load_file<P: AsRef<std::path::Path>>(&mut self, file: P) -> crate::Result<()> {
         let file = file.as_ref();
         if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
@@ -91,11 +97,21 @@ impl Oso {
         self.check_inline_queries()
     }
 
+    /// Load a string of polar source directly.
+    /// # Examples
+    /// ```ignore
+    /// oso.load_str("allow(a, b, c) if true;");
+    /// ```
     pub fn load_str(&mut self, s: &str) -> crate::Result<()> {
         self.inner.load(s, None)?;
         self.check_inline_queries()
     }
 
+    /// Query the knowledge base. This can be an allow query or any other polar expression.
+    /// # Examples
+    /// ```ignore
+    /// oso.query("x = 1 or x = 2");
+    /// ```
     pub fn query(&mut self, s: &str) -> crate::Result<Query> {
         let query = self.inner.new_query(s, false)?;
         check_messages!(self.inner);
@@ -103,6 +119,12 @@ impl Oso {
         Ok(query)
     }
 
+    /// Query the knowledge base but with a rule name and argument list.
+    /// This allows you to pass in rust values.
+    /// # Examples
+    /// ```ignore
+    /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
+    /// ```
     pub fn query_rule<'a>(
         &mut self,
         name: &str,
@@ -124,6 +146,8 @@ impl Oso {
         Ok(query)
     }
 
+    /// Register a rust type as a Polar class.
+    /// See Class docs.
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let name = Symbol(name);
@@ -131,6 +155,8 @@ impl Oso {
         self.register_constant(&class_name, &class)
     }
 
+    /// Register a rust type as a Polar constant.
+    /// See Constant docs.
     pub fn register_constant<V: crate::host::ToPolar>(
         &mut self,
         name: &str,

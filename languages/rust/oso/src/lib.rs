@@ -78,9 +78,10 @@ mod query;
 pub use crate::oso::Oso;
 pub use errors::{OsoError, Result};
 pub use host::{Class, FromPolar, HostClass, ToPolar};
-pub use polar_core;
-pub use polar_core::{polar::Polar, terms::Value};
+pub use polar_core::terms::Value;
 pub use query::{Query, ResultSet};
+
+use polar_core::polar::Polar;
 
 pub trait PolarClass {
     fn get_polar_class() -> Class<()>;
