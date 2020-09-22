@@ -282,7 +282,7 @@ The dot ``.`` operator can be used to access the value associated with
 a key in a dictionary or class instance. For example, the rule::
 
   first_name(dict, x) if
-    dict = new Person{} and
+    dict = new Person() and
     x = dict.first_name;
 
 will access the value of the field named ``"first_name"`` in ``dict``,
@@ -498,11 +498,11 @@ the dictionary.  For example::
     not {x: 1, y: 3} matches {x:1, y: 4}
 
     # a type name matches if the value has the same type
-    new Person{} matches Person
+    new Person() matches Person
 
     # The fields are checked in the same manner as dictionaries, and the type is
     # checked like above.
-    new Person{x: 1, y: 2} matches Person{x: 1}
+    new Person(x: 1, y: 2) matches Person{x: 1}
 
 For type matching, subclasses are also considered.  So, a class that is a
 subclass of ``Person`` would match ``Person{x: 1}``.

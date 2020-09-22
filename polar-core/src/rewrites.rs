@@ -294,60 +294,60 @@ mod tests {
     #[test]
     fn rewrite_nested_literal() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("new Foo { x: bar.y }");
-        assert_eq!(term.to_polar(), "new Foo{x: bar.y}");
+        let mut term = parse_query("new Foo(x: bar.y)");
+        assert_eq!(term.to_polar(), "new Foo(x: bar.y)");
         rewrite_term(&mut term, &mut kb);
         assert_eq!(
             term.to_polar(),
-            ".(bar, \"y\", _value_2) and new (Foo{x: _value_2}, _instance_1) and _instance_1"
+            ".(bar, \"y\", _value_2) and new (Foo(x: _value_2), _instance_1) and _instance_1"
         );
 
-        let mut term = parse_query("f(new Foo { x: bar.y })");
-        assert_eq!(term.to_polar(), "f(new Foo{x: bar.y})");
+        let mut term = parse_query("f(new Foo(x: bar.y))");
+        assert_eq!(term.to_polar(), "f(new Foo(x: bar.y))");
         rewrite_term(&mut term, &mut kb);
         assert_eq!(
             term.to_polar(),
-            ".(bar, \"y\", _value_4) and new (Foo{x: _value_4}, _instance_3) and f(_instance_3)"
+            ".(bar, \"y\", _value_4) and new (Foo(x: _value_4), _instance_3) and f(_instance_3)"
         );
     }
 
     #[test]
     fn rewrite_class_constructor() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("new Foo{a: 1, b: 2}");
-        assert_eq!(term.to_polar(), "new Foo{a: 1, b: 2}");
+        let mut term = parse_query("new Foo(a: 1, b: 2)");
+        assert_eq!(term.to_polar(), "new Foo(a: 1, b: 2)");
 
         rewrite_term(&mut term, &mut kb);
         // @ means external constructor
         assert_eq!(
             term.to_polar(),
-            "new (Foo{a: 1, b: 2}, _instance_1) and _instance_1"
+            "new (Foo(a: 1, b: 2), _instance_1) and _instance_1"
         );
     }
 
     #[test]
     fn rewrite_nested_class_constructor() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("new Foo{a: 1, b: new Foo{a: 2, b: 3}}");
-        assert_eq!(term.to_polar(), "new Foo{a: 1, b: new Foo{a: 2, b: 3}}");
+        let mut term = parse_query("new Foo(a: 1, b: new Foo(a: 2, b: 3))");
+        assert_eq!(term.to_polar(), "new Foo(a: 1, b: new Foo(a: 2, b: 3))");
 
         rewrite_term(&mut term, &mut kb);
         assert_eq!(
             term.to_polar(),
-            "new (Foo{a: 2, b: 3}, _instance_2) and new (Foo{a: 1, b: _instance_2}, _instance_1) and _instance_1"
+            "new (Foo(a: 2, b: 3), _instance_2) and new (Foo(a: 1, b: _instance_2), _instance_1) and _instance_1"
         );
     }
 
     #[test]
     fn rewrite_rules_constructor() {
         let mut kb = KnowledgeBase::new();
-        let mut rules = parse_rules("rule_test(new Foo{a: 1, b: 2});");
-        assert_eq!(rules[0].to_polar(), "rule_test(new Foo{a: 1, b: 2});");
+        let mut rules = parse_rules("rule_test(new Foo(a: 1, b: 2));");
+        assert_eq!(rules[0].to_polar(), "rule_test(new Foo(a: 1, b: 2));");
 
         rewrite_rule(&mut rules[0], &mut kb);
         assert_eq!(
             rules[0].to_polar(),
-            "rule_test(_instance_1) if new (Foo{a: 1, b: 2}, _instance_1);"
+            "rule_test(_instance_1) if new (Foo(a: 1, b: 2), _instance_1);"
         )
     }
 

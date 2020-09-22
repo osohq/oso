@@ -25,6 +25,7 @@ mod tests {
                 Term::new_from_test(value!(0)),
                 Term::new_from_test(value!("hello")),
             ]),
+            kwargs: None,
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let term = Term::new_from_test(value!(1));
@@ -35,13 +36,17 @@ mod tests {
             Symbol::new("world"),
             Term::new_from_test(Value::String("something".to_owned())),
         );
-        let literal = InstanceLiteral {
-            tag: Symbol::new("Foo"),
-            fields: Dictionary { fields },
+        let constructor = Call {
+            name: Symbol::new("Foo"),
+            args: vec![
+                term!(1234),
+                Term::new_from_test(Value::String("something".to_owned())),
+            ],
+            kwargs: Some(fields),
         };
         let event = QueryEvent::MakeExternal {
             instance_id: 12345,
-            constructor: Term::new_from_test(Value::InstanceLiteral(literal)),
+            constructor: Term::new_from_test(Value::Call(constructor)),
         };
         eprintln!("{}", serde_json::to_string(&event).unwrap());
         let external = Term::new_from_test(Value::ExternalInstance(ExternalInstance {
