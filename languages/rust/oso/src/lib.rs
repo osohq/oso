@@ -12,6 +12,11 @@
 //!
 //! For specific information on using with Rust, see the [Rust documentation](https://docs.osohq.com/using/libraries/rust/index.html).
 //!
+//! ## Note
+//!
+//! The oso Rust library is still in early development relative to the other
+//! oso libraries.
+//!
 //! # Example
 //!
 //! To get started, create a new `Oso` instance, and load Polar policies from either a
