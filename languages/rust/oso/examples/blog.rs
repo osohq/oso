@@ -25,8 +25,8 @@ fn example_one() -> anyhow::Result<()> {
     oso.load_str("is_a_foo(_x: Foo);")?;
     oso.register_class(Class::builder::<Foo>().name("Foo").build())?;
 
-    let foo = Foo {};
-    let mut query = oso.query_rule("is_a_foo", (foo,))?;
+    let example_foo = Foo {};
+    let mut query = oso.query_rule("is_a_foo", (example_foo,))?;
     let _ = query.next().expect("no results").expect("resulted in err");
 
     info!("Example complete");
@@ -46,12 +46,12 @@ fn example_two() -> anyhow::Result<()> {
     oso.register_class(
         Class::builder::<Foo>()
             .name("Foo")
-            .add_attribute_getter("x", |foo| foo.x)
+            .add_attribute_getter("x", |f| f.x)
             .build(),
     )?;
 
-    let foo = Foo { x: 1 };
-    let mut query = oso.query_rule("foo_x_is_one", (foo,))?;
+    let example_foo = Foo { x: 1 };
+    let mut query = oso.query_rule("foo_x_is_one", (example_foo,))?;
     let _ = query.next().expect("no results").expect("resulted in err");
 
     info!("Example complete");
@@ -78,13 +78,13 @@ fn example_three() -> anyhow::Result<()> {
     oso.register_class(
         Class::builder::<Foo>()
             .name("Foo")
-            .add_attribute_getter("x", |foo| foo.x)
+            .add_attribute_getter("x", |f| f.x)
             .add_method("x_plus_y", Foo::x_plus_y)
             .build(),
     )?;
 
-    let foo = Foo { x: 1 };
-    let mut query = oso.query_rule("x_plus_y_is_two", (foo,))?;
+    let example_foo = Foo { x: 1 };
+    let mut query = oso.query_rule("x_plus_y_is_two", (example_foo,))?;
     let _ = query.next().expect("no results").expect("resulted in err");
 
     info!("Example complete");
@@ -115,14 +115,14 @@ fn example_four() -> anyhow::Result<()> {
     oso.register_class(
         Class::builder::<Foo>()
             .name("Foo")
-            .add_attribute_getter("x", |foo| foo.x)
+            .add_attribute_getter("x", |f| f.x)
             .add_method("x_plus_y", Foo::x_plus_y)
             .add_class_method("get_z", Foo::get_z)
             .build(),
     )?;
 
-    let foo = Foo { x: 1 };
-    let mut query = oso.query_rule("x_plus_y_plus_z_is_five", (foo,))?;
+    let example_foo = Foo { x: 1 };
+    let mut query = oso.query_rule("x_plus_y_plus_z_is_five", (example_foo,))?;
     let _ = query.next().expect("no results").expect("resulted in err");
 
     info!("Example complete");

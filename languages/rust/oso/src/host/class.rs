@@ -64,11 +64,7 @@ impl Class {
 
     pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
         if let Some(constructor) = &self.constructor {
-            let instance = constructor.invoke(fields, host)?;
-            Ok(Instance {
-                ty: instance.as_ref().type_id(),
-                inner: instance,
-            })
+            constructor.invoke(fields, host)
         } else {
             Err(crate::OsoError::Custom {
                 message: format!("MissingConstructorError: {} has no constructor", self.name),
@@ -253,13 +249,12 @@ where
 
 #[derive(Clone)]
 pub struct Instance {
-    pub inner: Arc<dyn Any>,
-    ty: TypeId,
+    inner: Arc<dyn Any>,
 }
 
 impl fmt::Debug for Instance {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Instance<{:?}>", self.ty)
+        write!(f, "Instance<{:?}>", self.inner.as_ref().type_id())
     }
 }
 
@@ -267,7 +262,6 @@ impl Instance {
     pub fn new<T: 'static>(instance: T) -> Self {
         Self {
             inner: Arc::new(instance),
-            ty: TypeId::of::<T>(),
         }
     }
 
@@ -276,7 +270,7 @@ impl Instance {
     }
 
     pub fn class<'a>(&self, host: &'a Host) -> Option<&'a Class> {
-        host.get_class_by_type_id(self.ty)
+        host.get_class_by_type_id(self.inner.as_ref().type_id())
     }
 
     pub fn get_attr(&self, attr: &str, host: &mut Host) -> crate::Result<Term> {
@@ -285,8 +279,9 @@ impl Instance {
             .and_then(|c| c.attributes.get(attr))
             .ok_or_else(|| OsoError::Custom {
                 message: format!("attribute {} not found", attr),
-            })?;
-        (attr.0.clone())(self.inner.as_ref(), host)
+            })?
+            .clone();
+        attr.invoke(self, host)
     }
 
     pub fn call(
@@ -301,11 +296,9 @@ impl Instance {
             .ok_or_else(|| OsoError::Custom {
                 message: format!("method {} not found", attr),
             })?;
-        attr.invoke(self.inner.as_ref(), args, host)
+        attr.invoke(self, args, host)
     }
-}
 
-impl Instance {
     /// Return `true` if the `instance` of self equals the instance of `other`.
     pub fn equals(&self, other: &Self, host: &Host) -> crate::Result<bool> {
         tracing::trace!("equals");
@@ -317,6 +310,10 @@ impl Instance {
             tracing::warn!("class not found for equality check");
             Ok(false)
         }
+    }
+
+    pub fn downcast<T: 'static>(&self) -> Result<&T, crate::errors::TypeError> {
+        downcast(self.inner.as_ref())
     }
 }
 

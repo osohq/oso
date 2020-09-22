@@ -50,15 +50,15 @@ pub fn get_attribute(c: &mut Criterion) {
                 oso.register_class(
                     Class::builder::<Foo>()
                         .name("Foo")
-                        .add_attribute_getter("x", |foo| foo.x)
+                        .add_attribute_getter("x", |f| f.x)
                         .build(),
                 )
                 .unwrap();
                 oso
             },
             |oso| {
-                let foo = Foo { x: 1 };
-                let mut query = oso.query_rule("foo_x_is_one", (foo,)).unwrap();
+                let test_foo = Foo { x: 1 };
+                let mut query = oso.query_rule("foo_x_is_one", (test_foo,)).unwrap();
                 let _ = query.next().expect("no results").expect("resulted in err");
             },
             criterion::BatchSize::SmallInput,

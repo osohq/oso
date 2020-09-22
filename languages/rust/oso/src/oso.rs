@@ -146,7 +146,7 @@ impl Oso {
 
     /// Register a rust type as a Polar constant.
     /// See [`oso::Class`] docs.
-    pub fn register_constant<V: crate::host::ToPolar>(
+    pub fn register_constant<V: crate::host::ToPolar + Send + Sync>(
         &mut self,
         name: &str,
         value: V,

@@ -21,7 +21,7 @@ use crate::host::Instance;
 ///
 /// For non-primitive types, the instance will be stored
 /// on the provided `Host`.
-pub trait ToPolar: Sized + 'static {
+pub trait ToPolar: Send + Sync + Sized + 'static {
     fn to_polar_value(self, host: &mut Host) -> Value {
         let instance = Instance::new(self);
         let instance = host.cache_instance(instance, None);
@@ -37,7 +37,7 @@ pub trait ToPolar: Sized + 'static {
     }
 }
 
-impl<C: crate::PolarClass> ToPolar for C {
+impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
     fn to_polar_value(self, host: &mut Host) -> Value {
         let instance = Instance::new(self);
         let instance = host.cache_instance(instance, None);

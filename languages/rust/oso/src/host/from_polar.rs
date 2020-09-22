@@ -20,19 +20,24 @@ use crate::PolarClass;
 ///
 /// This is also implemented automatically using the
 /// `#[derive(PolarClass)]` macro.
-pub trait FromPolar: Clone + Sized + 'static {
+pub trait FromPolar: Clone + Send + Sync + Sized + 'static {
     fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
         match term.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => host
                 .get_instance(*instance_id)
-                .and_then(|instance| instance.inner.downcast_ref::<Self>().cloned())
-                .ok_or_else(|| crate::OsoError::FromPolar),
+                .ok_or_else(|| crate::OsoError::FromPolar)
+                .and_then(|instance| {
+                    instance
+                        .downcast::<Self>()
+                        .map_err(|e| e.invariant().into())
+                })
+                .map(Clone::clone),
             _ => Err(crate::OsoError::FromPolar),
         }
     }
 }
 
-impl<C: 'static + Clone + PolarClass> FromPolar for C {}
+impl<C: 'static + Clone + Send + Sync + PolarClass> FromPolar for C {}
 
 mod private {
     pub trait Sealed {}

@@ -1,15 +1,13 @@
 //! Wrapper structs for the generic `Function` and `Method` traits
 use polar_core::terms::Term;
 
-use std::any::Any;
 use std::sync::Arc;
 
 use super::to_polar::ToPolarResults;
 use crate::host::from_polar::FromPolarList;
 use crate::host::to_polar::{PolarIter, PolarResultIter};
 
-use super::class::Class;
-use super::downcast;
+use super::class::{Class, Instance};
 use super::method::{Function, Method};
 use super::Host;
 
@@ -19,10 +17,10 @@ fn join<A, B>(left: crate::Result<A>, right: crate::Result<B>) -> crate::Result<
 
 type TypeErasedFunction<R> = Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<R> + Send + Sync>;
 type TypeErasedMethod<R> =
-    Arc<dyn Fn(&dyn Any, Vec<Term>, &mut Host) -> crate::Result<R> + Send + Sync>;
+    Arc<dyn Fn(&Instance, Vec<Term>, &mut Host) -> crate::Result<R> + Send + Sync>;
 
 #[derive(Clone)]
-pub struct Constructor(TypeErasedFunction<Arc<dyn Any>>);
+pub struct Constructor(TypeErasedFunction<Instance>);
 
 impl Constructor {
     pub fn new<Args, F>(f: F) -> Self
@@ -31,19 +29,17 @@ impl Constructor {
         F: Function<Args>,
     {
         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            Args::from_polar_list(&args, host).map(|args| Arc::new(f.invoke(args)) as Arc<dyn Any>)
+            Args::from_polar_list(&args, host).map(|args| Instance::new(f.invoke(args)))
         }))
     }
 
-    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Arc<dyn Any>> {
+    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
         self.0(args, host)
     }
 }
 
 #[derive(Clone)]
-pub struct AttributeGetter(
-    pub Arc<dyn Fn(&dyn Any, &mut Host) -> crate::Result<Term> + Send + Sync>,
-);
+pub struct AttributeGetter(Arc<dyn Fn(&Instance, &mut Host) -> crate::Result<Term> + Send + Sync>);
 
 impl AttributeGetter {
     pub fn new<T, F, R>(f: F) -> Self
@@ -53,9 +49,13 @@ impl AttributeGetter {
         R: crate::ToPolar,
     {
         Self(Arc::new(move |receiver, host: &mut Host| {
-            let receiver = downcast(receiver).map_err(|e| e.invariant().into());
+            let receiver = receiver.downcast().map_err(|e| e.invariant().into());
             receiver.map(&f).map(|v| v.to_polar(host))
         }))
+    }
+
+    pub fn invoke(&self, receiver: &Instance, host: &mut Host) -> crate::Result<Term> {
+        self.0(receiver, host)
     }
 }
 
@@ -71,8 +71,8 @@ impl InstanceMethod {
         T: 'static,
     {
         Self(Arc::new(
-            move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                let receiver = downcast(receiver).map_err(|e| e.invariant().into());
+            move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
+                let receiver = receiver.downcast().map_err(|e| e.invariant().into());
 
                 let args = Args::from_polar_list(&args, host);
 
@@ -92,8 +92,8 @@ impl InstanceMethod {
         T: 'static,
     {
         Self(Arc::new(
-            move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                let receiver = downcast(receiver).map_err(|e| e.invariant().into());
+            move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
+                let receiver = receiver.downcast().map_err(|e| e.invariant().into());
 
                 let args = Args::from_polar_list(&args, host);
 
@@ -109,7 +109,7 @@ impl InstanceMethod {
 
     pub fn invoke(
         &self,
-        receiver: &dyn Any,
+        receiver: &Instance,
         args: Vec<Term>,
         host: &mut Host,
     ) -> crate::Result<PolarResultIter> {
@@ -118,8 +118,9 @@ impl InstanceMethod {
 
     pub fn from_class_method(name: String) -> Self {
         Self(Arc::new(
-            move |receiver: &dyn Any, args: Vec<Term>, host: &mut Host| {
-                downcast::<Class>(receiver)
+            move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
+                receiver
+                    .downcast::<Class>()
                     .map_err(|e| e.invariant().into())
                     .and_then(|class| {
                         tracing::trace!(class = %class.name, method=%name, "class_method");
