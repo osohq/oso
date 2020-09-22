@@ -86,10 +86,6 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def clear(self):
-        del self.ffi_polar
-        self.ffi_polar = FfiPolar()
-
     def load_file(self, policy_file):
         """Load in polar policies. By default, defers loading of knowledge base
         until a query is made."""
@@ -122,6 +118,9 @@ class Polar:
                 except StopIteration:
                     source = query.source()
                     raise InlineQueryFailedError(source.get())
+
+    def clear_rules(self):
+        self.ffi_polar.clear_rules()
 
     def query(self, query):
         """Query for a predicate, parsing it if necessary.

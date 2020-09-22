@@ -103,6 +103,21 @@ pub extern "C" fn polar_load(
 }
 
 #[no_mangle]
+pub extern "C" fn polar_clear_rules(polar_ptr: *mut Polar) -> i32 {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+
+        match polar.clear_rules() {
+            Err(err) => {
+                set_error(err);
+                POLAR_FAILURE
+            }
+            Ok(_) => POLAR_SUCCESS,
+        }
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn polar_register_constant(
     polar_ptr: *mut Polar,
     name: *const c_char,

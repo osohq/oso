@@ -24,6 +24,14 @@ impl Polar {
             .map_err(Error::into)
     }
 
+    #[wasm_bindgen(js_class = Polar, js_name = clearRules)]
+    pub fn wasm_clear_rules(&self) -> JsResult<()> {
+        self.0
+            .clear_rules()
+            .map_err(Error::from)
+            .map_err(Error::into)
+    }
+
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
     pub fn wasm_register_constant(&mut self, name: &str, value: &str) -> JsResult<()> {
         match serde_json::from_str(value) {

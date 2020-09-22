@@ -7,20 +7,16 @@ from django.conf import settings
 from django.test import RequestFactory
 from django.core.exceptions import PermissionDenied
 
-from django_oso.oso import Oso, reset_oso
+from django_oso.oso import Oso
 from django_oso.auth import authorize
 
 from oso import OsoError
 
 
-@pytest.fixture(autouse=True)
-def _reset_oso():
-    reset_oso()
-
-
 @pytest.fixture
 def simple_policy():
     """Load simple authorization policy."""
+    Oso.clear_rules()
     Oso.load_file(Path(__file__).parent / "simple.polar")
 
 

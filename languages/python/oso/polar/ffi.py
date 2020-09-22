@@ -27,6 +27,11 @@ class Polar:
         process_messages(self.next_message)
         check_result(result)
 
+    def clear_rules(self):
+        """Clear all rules from the Polar KB"""
+        result = lib.polar_clear_rules(self.ptr)
+        check_result(result)
+
     def new_query_from_str(self, query_str):
         new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
         process_messages(self.next_message)

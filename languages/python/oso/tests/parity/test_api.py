@@ -247,12 +247,12 @@ def test_iter_fields(polar, load_policy, query):
 
 
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Test relies on internal classes.")
-def test_clear(polar, load_policy, query):
+def test_clear_rules(polar, load_policy, query):
     old = Path(__file__).parent / "policies" / "load.pol"
     fails = Path(__file__).parent / "policies" / "reload_fail.pol"
     new = Path(__file__).parent / "policies" / "reload.pol"
 
-    polar.clear()
+    polar.clear_rules()
     polar.load_file(old)
 
     actor = Actor(name="milton", id=1)
@@ -264,11 +264,11 @@ def test_clear(polar, load_policy, query):
 
     # raises exception because new policy file specifies on a class defined in the old file,
     # but not in the new file
-    polar.clear()
+    polar.clear_rules()
     with pytest.raises(PolarRuntimeError):
         polar.load_file(fails)
 
-    polar.clear()
+    polar.clear_rules()
     polar.load_file(new)
     assert query(Predicate(name="allow", args=[actor, "make", resource]))
     assert not query(Predicate(name="allow", args=[actor, "get", resource]))

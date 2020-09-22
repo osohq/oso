@@ -406,13 +406,20 @@ describe('#loadFile', () => {
   });
 });
 
-describe('#clear', () => {
+describe('#clearRules', () => {
   test('clears the KB', async () => {
     const p = new Polar();
     await p.loadFile(await tempFileFx());
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
-    p.clear();
+    p.clearRules();
     expect(await query(p, 'f(x)')).toStrictEqual([]);
+  });
+
+  test('does not clear registered classes', async () => {
+    const p = new Polar();
+    p.registerClass(Belonger, 'Actor');
+    p.clearRules();
+    expect(await query(p, 'x = new Actor()')).toHaveLength(1);
   });
 });
 

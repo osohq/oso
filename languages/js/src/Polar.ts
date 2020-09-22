@@ -68,13 +68,12 @@ export class Polar {
   }
 
   /**
-   * Replace the current Polar VM instance, clearing out all loaded policy but
-   * retaining all registered classes and constants.
+   * Clear rules from the Polar KB, but
+   * retain all registered classes and constants.
    */
-  clear() {
-    const previous = this.#ffiPolar;
-    this.#ffiPolar = new FfiPolar();
-    previous.free();
+  clearRules() {
+    this.#ffiPolar.clearRules();
+    this.processMessages();
   }
 
   /**

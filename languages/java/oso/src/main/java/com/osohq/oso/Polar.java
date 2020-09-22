@@ -29,12 +29,12 @@ public class Polar {
   }
 
   /**
-   * Clear the KB, but maintain all registered classes and calls.
+   * Clear the rules from the KB, but maintain all registered classes and calls.
    *
    * @throws Exceptions.OsoException
    */
-  public void clear() throws Exceptions.OsoException {
-    ffiPolar = Ffi.get().polarNew();
+  public void clearRules() throws Exceptions.OsoException {
+    ffiPolar.clearRules();
   }
 
   /**

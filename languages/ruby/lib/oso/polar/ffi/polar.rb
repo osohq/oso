@@ -11,6 +11,7 @@ module Oso
 
           attach_function :new, :polar_new, [], FFI::Polar
           attach_function :load, :polar_load, [FFI::Polar, :string, :string], :int32
+          attach_function :clear_rules, :polar_clear_rules, [FFI::Polar], :int32
           attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar, :uint32], FFI::Query
           attach_function :new_id, :polar_get_external_id, [FFI::Polar], :uint64
           attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], FFI::Query
@@ -37,6 +38,13 @@ module Oso
           loaded = Rust.load(self, src, filename)
           process_messages
           raise FFI::Error.get if loaded.zero?
+        end
+
+        # @raise [FFI::Error] if the FFI call returns an error.
+        def clear_rules
+          cleared = Rust.clear_rules(self)
+
+          raise FFI::Error.get if cleared.zero?
         end
 
         # @return [FFI::Query] if there are remaining inline queries.
