@@ -1,6 +1,5 @@
 //! # oso policy engine for authorization
 //!
-//! TODO: API documentation
 
 #[macro_use]
 pub mod macros;
