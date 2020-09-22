@@ -2,6 +2,71 @@ use oso::{Oso, PolarClass};
 
 use std::collections::HashMap;
 
+fn types() -> anyhow::Result<()> {
+    let mut oso = Oso::new();
+
+    #[derive(Clone, PolarClass)]
+    struct User1 {
+        #[polar(attribute)]
+        name: String,
+        #[polar(attribute)]
+        is_admin: bool,
+    }
+    oso.register_class(User1::get_polar_class())?;
+    oso.load_str(r#"allow(actor: User1, action, resource) if actor.is_admin;"#)?;
+    let user1 = User1 {
+        name: "alice".to_string(),
+        is_admin: true,
+    };
+    assert!(oso.is_allowed(user1, "foo", "bar")?);
+
+    #[derive(Clone, PolarClass)]
+    struct User2 {
+        #[polar(attribute)]
+        name: String,
+        #[polar(attribute)]
+        is_admin: bool,
+    }
+
+    impl User2 {
+        fn new(name: String, is_admin: bool) -> Self {
+            Self { name, is_admin }
+        }
+
+        fn is_called_alice(&self) -> bool {
+            self.name == "alice"
+        }
+    }
+
+    oso.register_class(
+        User2::get_polar_class_builder()
+            .set_constructor(User2::new)
+            .add_method("is_called_alice", User2::is_called_alice)
+            .build(),
+    )?;
+    oso.load_str(r#"allow(user: User2, _, _) if user.is_admin;"#)?;
+    oso.load_str(r#"?= allow(new User2("bob", true), "foo", "bar");"#)?;
+    oso.load_str(r#"?= new User2("alice", true).is_called_alice();"#)?;
+
+    #[derive(Clone, PolarClass)]
+    struct User3 {
+        #[polar(attribute)]
+        name: String,
+        #[polar(attribute)]
+        is_admin: bool,
+    }
+    oso.register_class(User3::get_polar_class())?;
+    oso.load_str(r#"allow(actor, action, resource) if actor matches User3{name: "alice"};"#)?;
+    let user3 = User3 {
+        name: "alice".to_string(),
+        is_admin: true,
+    };
+    assert!(oso.is_allowed(user3, "foo", "bar")?);
+    assert!(!oso.is_allowed("notauser", "foo", "bar")?);
+
+    Ok(())
+}
+
 fn strings() -> anyhow::Result<()> {
     let mut oso = Oso::new();
 
@@ -118,6 +183,7 @@ fn main() -> anyhow::Result<()> {
     maps()?;
     enums()?;
     iters()?;
+    types()?;
     println!("Examples passed");
 
     Ok(())

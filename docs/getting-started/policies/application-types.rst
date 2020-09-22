@@ -405,7 +405,7 @@ Either way, using the rule could look like this:
             }
             oso.register_class(User::get_polar_class())?;
 
-            let user = User::new("alice", True);
+            let user = User { name: "alice".to_string(), is_admin: true };
             assert!(oso.is_allowed(user, "foo", "bar")?);
             assert!(!oso.is_allowed("notauser", "foo", "bar")?);
 
