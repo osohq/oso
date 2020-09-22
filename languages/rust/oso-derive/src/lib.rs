@@ -124,8 +124,6 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
                 builder.build()
             }
         }
-
-        impl oso::HostClass for #type_name {}
     };
     result.into()
 }

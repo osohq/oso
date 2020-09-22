@@ -7,6 +7,17 @@ use std::collections::HashMap;
 
 use super::Host;
 
+/// Convert Rust types to Polar types.
+///
+/// This trait is automatically implemented for any
+/// type that implements the `PolarClass` marker trait,
+/// which should be preferred.
+///
+/// This is also implemented automatically using the
+/// `#[derive(PolarClass)]` macro.
+///
+/// For non-primitive types, the instance will be stored
+/// on the provided `Host`.
 pub trait ToPolar {
     fn to_polar_value(&self, host: &mut Host) -> Value;
 
@@ -121,7 +132,7 @@ impl ToPolar for crate::Class {
     }
 }
 
-impl<C: 'static + Clone + super::HostClass> ToPolar for C {
+impl<C: 'static + Clone + crate::PolarClass> ToPolar for C {
     fn to_polar_value(&self, host: &mut Host) -> Value {
         let class = host
             .get_class_from_type::<C>()

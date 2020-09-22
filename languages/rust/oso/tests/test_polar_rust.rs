@@ -3,7 +3,7 @@
 /// rust class handling.
 use maplit::hashmap;
 
-use oso::{Class, HostClass, PolarClass, ToPolar};
+use oso::{Class, PolarClass, ToPolar};
 
 mod common;
 
@@ -397,7 +397,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl HostClass for Foo {};
+    impl PolarClass for Foo {};
     impl Foo {
         fn new(x: i64) -> Self {
             Self { x }
@@ -434,7 +434,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl HostClass for Bar {};
+    impl PolarClass for Bar {};
     impl Bar {
         fn new(x: i64) -> Self {
             Self { x }
@@ -460,7 +460,7 @@ fn test_unify_externals() {
         x: i64,
     }
 
-    impl HostClass for Baz {};
+    impl PolarClass for Baz {};
     impl Baz {
         fn new(x: i64) -> Self {
             Self { x }
