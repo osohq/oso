@@ -12,6 +12,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   let(:test_file) { File.join(__dir__, 'test_file.polar') }
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
 
+  # test_anything_works
   it 'works' do
     subject.load_str('f(1);')
     expect(query(subject, 'f(x)')).to eq([{ 'x' => 1 }])
@@ -55,6 +56,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(subject.query_rule('f', Oso::Polar::Predicate.new('pred', args: [1, 2])).to_a).to eq([{}])
     end
 
+    ## NOTE This is not an integration test - it uses the private API (host should be private).
     it 'converts Ruby instances in both directions' do
       actor = Actor.new('sam')
       expect(subject.host.to_ruby(subject.host.to_polar(actor))).to eq(actor)
@@ -74,6 +76,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(result).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
 
+    # NOTE -- This is NOT an integration test. It is a unit test.
     it 'caches instances and does not leak them' do
       stub_const('Counter', Class.new do
         @count = 0
@@ -102,6 +105,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
     end
 
+    # test_load_file_error_contains_filename
     it 'passes the filename across the FFI boundary' do
       file = Tempfile.new(['invalid', '.polar']).tap do |f|
         f.write(';')
@@ -115,21 +119,29 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # test_load_file_extension_check
     it 'raises if given a non-Polar file' do
       expect { subject.load_file('other.ext') }.to raise_error Oso::Polar::PolarFileExtensionError
     end
 
+    # test_load_file_nonexistent_file
+    # TODO: (dhatch) Not sure this is needed, why not just raise the standard file
+    # does not exist error?
     it 'raises if given a non-existent file' do
       expect { subject.load_file('other.polar') }.to raise_error Oso::Polar::PolarFileNotFoundError
     end
 
-    it 'is idempotent' do
+    # test_already_loaded_file_error
+    # TODO: (dhatch) This test isn't really needed any more since the error is handled
+    # in the core. We should test this once in the core.
+    it 'errors if file is already loaded' do
       expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::FileLoadingError
         expect(e.message).to eq("Problem loading file: File #{test_file} has already been loaded.")
       end
     end
 
+    # test_load_multiple_files
     it 'can load multiple files' do
       subject.load_file(test_file)
       subject.load_file(test_file_gx)
@@ -139,6 +151,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context '#clear' do
+    # test_clear
     it 'clears the KB' do
       subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
@@ -148,12 +161,14 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context '#query' do
+    # test_basic_queries
     it 'is able to make basic queries' do
       subject.load_str('f(1);')
       expect(subject.query('f(1)').to_a).to eq([{}])
       expect(subject.query_rule('f', 1).to_a).to eq([{}])
     end
 
+    # test_invalid_query
     it 'raises an error when given an invalid query' do
       expect { subject.query(1) }.to raise_error Oso::Polar::InvalidQueryTypeError
     end
@@ -161,6 +176,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
   context '#make_instance' do # rubocop:disable Metrics/BlockLength
     context 'when using the default constructor' do # rubocop:disable Metrics/BlockLength
+      # TODO (dhatch): This is a unit test.
+      # test_constructor_positional
       it 'handles positional args' do
         stub_const('Foo', Class.new do
           attr_reader :bar, :baz
@@ -299,6 +316,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context '#register_constant' do
+    # test_register_constant
     it 'works' do
       d = { 'a' => 1 }
       subject.register_constant('d', value: d)
@@ -307,26 +325,32 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'can call host language methods' do # rubocop:disable Metrics/BlockLength
+    # test_host_method_string
     it 'on strings' do
       expect(query(subject, 'x = "abc" and x.index("bc") = 1').length).to be 1
     end
 
+    # test_host_method_integer
     it 'on integers' do
       expect(query(subject, 'i = 4095 and i.bit_length = 12').length).to be 1
     end
 
+    # test_host_method_float
     it 'on floats' do
       expect(query(subject, 'f = 3.14159 and f.floor = 3').length).to be 1
     end
 
+    # test_host_method_list
     it 'on lists' do
       expect(query(subject, 'l = [1, 2, 3] and l.index(3) = 2 and l.clone = [1, 2, 3]').length).to be 1
     end
 
+    # test_host_method_dict
     it 'on dicts' do
       expect(query(subject, 'd = {a: 1} and d.fetch("a") = 1 and d.fetch("b", 2) = 2').length).to be 1
     end
 
+    # test_host_method_nil
     it 'that return nil' do
       stub_const('Foo', Class.new do
         def this_is_nil
@@ -344,12 +368,15 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context '#register_class' do # rubocop:disable Metrics/BlockLength
+    # test_duplicate_register_class
     it 'errors when registering the same class twice' do
       stub_const('Foo', Class.new)
       expect { subject.register_class Foo }.not_to raise_error
       expect { subject.register_class Foo }.to raise_error Oso::Polar::DuplicateClassAliasError
     end
 
+    # test_duplicate_register_class_alias
+    # test_duplicate_register_class_alias
     context 'when registering with an alias' do
       it 'raises an error if the alias matches an existing registration' do
         stub_const('Foo', Class.new)
@@ -359,6 +386,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # test_register_class
     it 'registers a Ruby class with Polar' do # rubocop:disable Metrics/BlockLength
       stub_const('Bar', Class.new do
         def y
@@ -428,6 +456,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'new Foo().h = x', 'x', one: true)).to be true
     end
 
+    # test_class_inheritance
     it 'respects the Ruby inheritance hierarchy for class specialization' do # rubocop:disable Metrics/BlockLength
       stub_const('A', Class.new do
         def a
@@ -515,6 +544,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # test_animals
     context 'animal tests' do # rubocop:disable Metrics/BlockLength
       before do
         stub_const('Animal', Class.new do
@@ -610,6 +640,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'when loading a Polar string' do
+    # test_inline_queries
     context 'with inline queries' do
       it 'succeeds if all inline queries succeed' do
         subject.load_str('f(1); f(2); ?= f(1); ?= not f(3);')
@@ -620,6 +651,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # TODO: (dhatch) Was this a test to fix a bug, is it needed?
     it 'raises if a null byte is encountered' do
       rule = <<~POLAR
         f(a) if a = "this is not allowed\0
@@ -628,6 +660,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  # TODO: (dhatch) Should these tests be in Rust?
   context 'when parsing' do # rubocop:disable Metrics/BlockLength
     it 'raises on IntegerOverflow errors' do
       int = '18446744073709551616'
@@ -688,11 +721,13 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.register_class(Actor)
     end
 
+    # test_predicate_return_list
     it 'can return a list' do
       subject.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
       expect(subject.query_rule('allow', Actor.new, 'join', 'party').to_a).to eq([{}])
     end
 
+    # test_variables_as_arguments
     it 'can handle variables as arguments' do
       subject.load_file(test_file)
       expect(subject.query_rule('f', Oso::Polar::Variable.new('a')).to_a).to eq(
@@ -702,6 +737,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'runtime errors' do # rubocop:disable Metrics/BlockLength
+    # test_stack_trace
     it 'include a stack trace' do
       subject.load_str 'foo(a,b) if a in b;'
       expect { query(subject, 'foo(1,2)') }.to raise_error do |e|
@@ -718,6 +754,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # test_lookup_runtime_error
     it 'work for lookups' do
       stub_const('Foo', Class.new do
         def foo
@@ -733,6 +770,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   end
 
   context 'unbound variable' do
+    # test_returns_unbound_variable
     it 'returns unbound properly' do
       subject.load_str 'rule(x, y) if y = 1;'
 
@@ -744,6 +782,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  # test_nan_inf
   it 'handles ±∞ and NaN' do
     subject.register_constant('inf', value: Float::INFINITY)
     subject.register_constant('neg_inf', value: -Float::INFINITY)

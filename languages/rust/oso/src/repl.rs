@@ -131,10 +131,10 @@ pub fn main() -> anyhow::Result<()> {
         while let Some(res) = query.next() {
             has_result = true;
             if let Ok(res) = res {
-                if res.bindings.is_empty() {
+                if res.is_empty() {
                     println!("true");
                 } else {
-                    for (var, value) in res.bindings {
+                    for (var, value) in res.iter_bindings() {
                         println!("{} = {}", var, value.to_polar());
                     }
                 }
