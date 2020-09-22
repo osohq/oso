@@ -292,8 +292,8 @@ A string stored in a variable can be used as the key in a dot lookup using the f
 
 .. _application-methods:
 
-Application Method Calls
-^^^^^^^^^^^^^^^^^^^^^^^^
+Application Field or Method Access
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The dot ``.`` operator can also be used to access methods or fields on application instances or
 constants. Arguments can be passed into methods as positional or keyword arguments, depending on the application
@@ -308,6 +308,11 @@ Calling an application method from a policy looks like this::
 
     person = new Person() and
     person.set_address("12345 Broadway", city: "New York", state: "NY");
+
+Calling a class method on a class that has been registered as a constant could look like::
+
+    person = new Person() and
+    Person.log("created new person")
 
 
 .. _numerical-comparison:
