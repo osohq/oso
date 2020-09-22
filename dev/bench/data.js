@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600781162811,
+  "lastUpdate": 1600782697265,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -6635,6 +6635,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5750,
             "range": "± 605",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "121e795d900a7849f930702c32714bf47a8bd24c",
+          "message": "Python exceptions overhaul (#406)\n\n\r\n* refactor Python exceptions to be consistent with Ruby\r\n\r\n* update host.py with more specific error types\r\n\r\n* update query.py with more specific error types\r\n\r\n* some docstrings for python exceptions\r\n\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-09-22T09:41:50-04:00",
+          "tree_id": "cf5653a0f493e8a78bd119c0df260478f7fb2557",
+          "url": "https://github.com/osohq/oso/commit/121e795d900a7849f930702c32714bf47a8bd24c"
+        },
+        "date": 1600782696344,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 775,
+            "range": "± 60",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2727,
+            "range": "± 317",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 70794,
+            "range": "± 3334",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 542561,
+            "range": "± 27543",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 19731,
+            "range": "± 2638",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 19573,
+            "range": "± 1593",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 20610,
+            "range": "± 2623",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19880,
+            "range": "± 2020",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17945,
+            "range": "± 1636",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5799,
+            "range": "± 540",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5982,
+            "range": "± 683",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6802,
+            "range": "± 982",
             "unit": "ns/iter"
           }
         ]
