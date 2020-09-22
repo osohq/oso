@@ -37,7 +37,22 @@ pub trait ToPolar: Sized + 'static {
     }
 }
 
-impl<C: crate::PolarClass> ToPolar for C {}
+impl<C: crate::PolarClass> ToPolar for C {
+    fn to_polar_value(self, host: &mut Host) -> Value {
+        let instance = Instance::new(self);
+        let instance = host.cache_instance(instance, None);
+        if host.get_class_from_type::<Self>().is_none() {
+            let class = Self::get_polar_class();
+            let name = Symbol(class.name.clone());
+            let _ = host.cache_class(class, name);
+        }
+        Value::ExternalInstance(ExternalInstance {
+            constructor: None,
+            repr: Some(std::any::type_name::<Self>().to_owned()),
+            instance_id: instance,
+        })
+    }
+}
 
 mod private {
     pub trait Sealed {}

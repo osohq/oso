@@ -563,3 +563,22 @@ fn test_arg_number() {
         )
         .unwrap();
 }
+
+#[test]
+fn test_without_registering() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(Clone, PolarClass)]
+    struct Foo {
+        #[polar(attribute)]
+        x: u32,
+    }
+
+    let mut test = OsoTest::new();
+    test.oso.load_str("f(foo: Foo) if 1 = foo.x;").unwrap();
+    test.oso
+        .query_rule("f", (Foo { x: 1 },))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap();
+}
