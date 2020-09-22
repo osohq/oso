@@ -1,633 +1,845 @@
-#![allow(clippy::too_many_arguments)]
+/// Common tests for all integrations.
+use std::collections::HashMap;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+
+use oso::{Class, Oso, OsoError, PolarClass, ToPolar, Value};
+use polar_core::error as polar_error;
+use polar_core::terms::Symbol;
 
 use maplit::hashmap;
 
-use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
+mod common;
 
-struct OsoTest {
-    oso: Oso,
+use common::OsoTest;
+
+fn test_file_path() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    path.join(Path::new("tests/test_file.polar"))
 }
 
-impl OsoTest {
-    fn new() -> Self {
-        Self { oso: Oso::new() }
+fn test_file_gx_path() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    path.join(Path::new("tests/test_file_gx.polar"))
+}
+
+// EXTERNALS
+
+#[derive(PolarClass, Debug, Clone, PartialEq)]
+struct Widget {
+    #[polar(attribute)]
+    id: i64,
+}
+
+impl Widget {
+    pub fn new(id: i64) -> Self {
+        Self { id }
     }
 
-    fn load_str(&mut self, policy: &str) {
-        self.oso.load_str(policy).unwrap();
+    fn polar_class() -> Class {
+        Widget::get_polar_class_builder()
+            .name("Widget")
+            .set_constructor(Self::new)
+            .build()
+    }
+}
+
+#[derive(PolarClass, Debug, Clone, PartialEq)]
+struct Actor {
+    #[polar(attribute)]
+    name: String,
+}
+
+impl Actor {
+    pub fn new(name: String) -> Self {
+        Self { name }
     }
 
-    fn load_file(&mut self, here: &str, name: &str) {
-        // hack because `file!()` starts from workspace root
-        // https://github.com/rust-lang/cargo/issues/3946
-        let folder = std::path::PathBuf::from(&here.replace("languages/rust/oso/", ""));
-        let mut file = folder.parent().unwrap().to_path_buf();
-        file.push(name);
-        println!("{:?}", file);
-        self.oso.load_file(file.to_str().unwrap()).unwrap();
+    pub fn widget(&self) -> Widget {
+        Widget::new(1)
     }
 
-    fn query(&mut self, q: &str) -> Vec<oso::ResultSet> {
-        let results = self.oso.query(q).unwrap();
-        let mut result_vec = vec![];
-        for r in results {
-            result_vec.push(r.expect("result is an error"))
-        }
-        result_vec
+    #[allow(dead_code)]
+    pub fn widgets() {
+        todo!("Iterator returning multiple choices not yet implemented.");
     }
 
-    fn query_err(&mut self, q: &str) -> String {
-        let mut results = self.oso.query(q).unwrap();
-        let err = results
-            .next()
-            .unwrap()
-            .expect_err("query should return an error");
-        err.to_string()
+    fn polar_class() -> Class {
+        Actor::get_polar_class_builder()
+            .name("Actor")
+            .add_method("widget", Actor::widget)
+            .build()
     }
+}
 
-    fn qvar<T: oso::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
-        let res = self.query(q);
-        res.into_iter()
-            .map(|set| {
-                set.get_typed(var)
-                    .unwrap_or_else(|_| panic!("query: '{}', binding for '{}'", q, var))
-            })
-            .collect()
-    }
+fn test_oso() -> OsoTest {
+    let mut test = OsoTest::new();
+    test.oso.register_class(Widget::polar_class()).unwrap();
+    test.oso.register_class(Actor::polar_class()).unwrap();
 
-    fn qeval(&mut self, q: &str) {
-        let mut results = self.oso.query(q).unwrap();
-        results
-            .next()
-            .expect("Query should have at least one result.")
-            .unwrap();
-    }
-
-    fn qnull(&mut self, q: &str) {
-        let mut results = self.oso.query(q).unwrap();
-        assert!(results.next().is_none(), "Query shouldn't have any results");
-    }
-
-    fn qvar_one<T>(&mut self, q: &str, var: &str, expected: T)
-    where
-        T: oso::FromPolar + PartialEq<T> + std::fmt::Debug,
-    {
-        let mut res = self.qvar::<T>(q, var);
-        assert_eq!(res.len(), 1, "expected exactly one result");
-        assert_eq!(res.pop().unwrap(), expected);
-    }
+    test
 }
 
 #[test]
-fn test_anything_works() {
-    let _ = tracing_subscriber::fmt::try_init();
+fn test_anything_works() -> oso::Result<()> {
+    common::setup();
+    let mut oso = Oso::new();
+    oso.load_str("f(1);")?;
 
-    let mut test = OsoTest::new();
-    test.load_str("f(1);");
-    let results = test.query("f(x)");
-    assert_eq!(results[0].get_typed::<u32>("x").unwrap(), 1);
-    let results = test.query("f(y)");
-    assert_eq!(results[0].get_typed::<u32>("y").unwrap(), 1);
-}
-
-#[test]
-fn test_helpers() {
-    let _ = tracing_subscriber::fmt::try_init();
-
-    let mut test = OsoTest::new();
-    test.load_file(file!(), "test_file.polar");
+    let mut query = oso.query("f(x)")?;
+    let next = query.next().unwrap()?;
+    let x: i64 = next.get_typed("x")?;
+    assert_eq!(x, 1);
     assert_eq!(
-        test.query("f(x)"),
-        vec![
-            hashmap! { "x" => 1, },
-            hashmap! { "x" => 2, },
-            hashmap! { "x" => 3, },
-        ]
+        next.keys().map(&str::to_owned).collect::<Vec<_>>(),
+        vec!["x"]
     );
-    assert_eq!(test.qvar::<u32>("f(x)", "x"), [1, 2, 3]);
+
+    Ok(())
 }
 
 #[test]
-fn test_data_conversions() {
-    let _ = tracing_subscriber::fmt::try_init();
+fn test_data_conversions_polar_values() -> oso::Result<()> {
+    common::setup();
 
-    let mut test = OsoTest::new();
-    test.load_str(
-        r#"
-        a(1);
-        b("two");
-        c(true);
-        d([1, "two", true]);"#,
-    );
-    test.qvar_one("a(x)", "x", 1);
-    test.qvar_one("b(x)", "x", "two".to_string());
-    test.qvar_one("c(x)", "x", true);
-    use polar_core::terms::Value;
-    // TODO: do we want to handle hlists better?
-    // e.g. https://docs.rs/hlist/0.1.2/hlist/
-    test.qvar_one(
-        "d(x)",
-        "x",
-        vec![
-            Value::Number(polar_core::terms::Numeric::Integer(1)),
-            Value::String("two".to_string()),
-            Value::Boolean(true),
-        ],
-    );
+    let mut test_oso = OsoTest::new();
+
+    // Converts Polar values into Rust values.
+    test_oso.load_str(r#"f({x: [1, "two", true], y: {z: false}});"#);
+    let mut query = test_oso.oso.query("f(x)")?;
+
+    let x: HashMap<String, Value> = query.next().unwrap()?.get_typed("x")?;
+
+    let v_x = x.get("x").unwrap();
+
+    // TODO (dhatch): Type handling: Would be great to be able to get each index
+    // out here dynamically, the same way we can with result set.
+    if let Value::List(x_vec) = v_x {
+        assert_eq!(
+            query.from_polar::<i64>(&x_vec.get(0).unwrap().to_owned())?,
+            1
+        );
+        assert_eq!(
+            query.from_polar::<String>(&x_vec.get(1).unwrap().to_owned())?,
+            String::from("two")
+        );
+        assert_eq!(
+            query.from_polar::<bool>(&x_vec.get(2).unwrap().to_owned())?,
+            true
+        );
+    } else {
+        panic!("x not list.");
+    }
+
+    let v_y = x.get("y").unwrap();
+    let y: HashMap<String, bool> = query.from_polar_value(v_y.to_owned())?;
+    assert_eq!(y, hashmap! {String::from("z") => false});
+
+    Ok(())
 }
 
-// This logic is changing. Updated when fixed
+// TODO (dhatch): No predicate right now.
 #[ignore]
 #[test]
-fn test_load_function() {
-    let _ = tracing_subscriber::fmt::try_init();
+fn test_data_conversions_predicates() -> oso::Result<()> {
+    common::setup();
 
-    let mut test = OsoTest::new();
-    test.load_file(file!(), "test_file.polar");
-    test.load_file(file!(), "test_file.polar");
-    assert_eq!(
-        test.query("f(x)"),
-        vec![
-            hashmap! { "x" => 1, },
-            hashmap! { "x" => 2, },
-            hashmap! { "x" => 3, },
-        ]
-    );
-    assert_eq!(test.qvar::<u32>("f(x)", "x"), [1, 2, 3]);
+    let mut test_oso = OsoTest::new();
+    test_oso.load_str("f(x) if pred(1, 2);");
 
-    test.oso.clear();
-    test.load_file(file!(), "test_file.polar");
-    test.load_file(file!(), "test_file_gx.polar");
-    assert_eq!(
-        test.query("f(x)"),
-        vec![
-            hashmap! { "x" => 1, },
-            hashmap! { "x" => 2, },
-            hashmap! { "x" => 3, },
-        ]
-    );
-    assert_eq!(
-        test.query("g(x)"),
-        vec![
-            hashmap! { "x" => 1, },
-            hashmap! { "x" => 2, },
-            hashmap! { "x" => 3, },
-        ]
+    todo!("No predicate in API");
+}
+
+#[test]
+fn test_data_conversions_instances() {
+    // TODO (dhatch): Ruby version of this test is not an integration test, not ported.
+}
+
+#[test]
+fn test_data_conversions_externals() -> oso::Result<()> {
+    common::setup();
+    let mut oso = test_oso();
+
+    let actor = Actor::new(String::from("sam"));
+    let widget = Widget::new(1);
+
+    oso.load_str("allow(actor, resource) if actor.widget().id = resource.id;");
+    let query_results = oso
+        .oso
+        .query_rule(
+            "allow",
+            vec![&actor as &dyn ToPolar, &widget as &dyn ToPolar],
+        )?
+        .map(|r| r.unwrap())
+        .collect::<Vec<_>>();
+
+    assert_eq!(query_results.len(), 1);
+
+    Ok(())
+}
+
+#[ignore]
+#[test]
+fn test_data_conversion_iterator_external_calls() {
+    todo!("Unimplemented");
+}
+
+#[ignore]
+#[test]
+fn test_data_conversions_no_leak() {
+    // TODO not integration test
+    todo!("Unimplemented.");
+}
+
+#[test]
+fn test_load_file_error_contains_filename() {
+    common::setup();
+    let mut oso = test_oso();
+
+    let mut tempfile = tempfile::Builder::new()
+        .suffix(".polar")
+        .tempfile()
+        .unwrap();
+    let file = tempfile.as_file_mut();
+
+    writeln!(file, ";").unwrap();
+    file.sync_all().unwrap();
+
+    let err = oso.oso.load_file(tempfile.path()).unwrap_err();
+    if let OsoError::Polar(err) = err {
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "did not expect to find the token ';' at line 1, column 1 in file {}",
+                tempfile.path().to_string_lossy().into_owned()
+            )
+        );
+    } else {
+        panic!("Unexpected error type {:?}", err);
+    }
+}
+
+#[test]
+fn test_load_file_extension_check() {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    let err = oso.oso.load_file("not_polar_file.txt").unwrap_err();
+    assert!(
+        matches!(err, OsoError::IncorrectFileType { filename } if filename == "not_polar_file.txt")
     );
 }
 
 #[test]
-fn test_external() {
-    let _ = tracing_subscriber::fmt::try_init();
+fn test_load_file_nonexistent_file() {
+    common::setup();
 
+    let mut oso = test_oso();
+
+    let err = oso.oso.load_file("not_a_file.polar").unwrap_err();
+    assert!(matches!(err, OsoError::Io(_)));
+}
+
+#[test]
+fn test_already_loaded_file_error() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    let path = test_file_path();
+
+    oso.oso.load_file(&path)?;
+    let err = oso.oso.load_file(&path).unwrap_err();
+
+    assert!(
+        matches!(&err,
+        OsoError::Polar(polar_error::PolarError {
+            kind:
+                polar_error::ErrorKind::Runtime(polar_error::RuntimeError::FileLoading { .. }),
+            ..
+        })
+    if err.to_string() == format!("Problem loading file: File {} has already been loaded.", path.to_string_lossy())),
+        "Error was {:?}",
+        &err
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_load_multiple_files() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    let path = test_file_path();
+    let path_gx = test_file_gx_path();
+
+    oso.oso.load_file(path)?;
+    oso.oso.load_file(path_gx)?;
+
+    assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
+    assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);
+
+    Ok(())
+}
+
+#[test]
+fn test_clear() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.oso.load_file(test_file_path())?;
+
+    assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
+    oso.oso.clear();
+
+    oso.qnull("f(x)");
+
+    Ok(())
+}
+
+#[test]
+fn test_basic_queries() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.load_str("f(1);");
+    let results = oso.query("f(1)");
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(
+        results
+            .get(0)
+            .map(|r| r.keys().next().is_none())
+            .unwrap_or_default(),
+        true
+    );
+
+    Ok(())
+}
+
+// TODO unit test
+//#[test]
+//fn test_constructor_positional() -> oso::Result<()> {
+//common::setup();
+
+//let mut oso = test_oso();
+
+//#[derive(PolarClass, Debug, Clone)]
+//struct Foo {
+//#[polar(attribute)]
+//bar: i64,
+//#[polar(attribute)]
+//baz: i64,
+//}
+
+//impl Foo {
+//pub fn new(bar: i64, baz: i64) -> Self {
+//Self { bar, baz }
+//}
+//}
+
+//let foo_class = Foo::get_polar_class_builder()
+//.set_constructor(Foo::new)
+//.name("Foo")
+//.build();
+
+//oso.oso.register_class(foo_class)?;
+
+//Ok(());
+//}
+
+#[test]
+fn test_register_constant() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    let d = hashmap! {String::from("a") => 1};
+    oso.oso.register_constant("d", &d)?;
+
+    assert_eq!(oso.qvar::<i64>("d.a = x", "x"), vec![1]);
+
+    Ok(())
+}
+
+#[ignore]
+#[test]
+fn test_host_method_string() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_integer() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_float() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_list() {
+    todo!();
+}
+
+#[ignore]
+#[test]
+fn test_host_method_dict() {
+    todo!();
+}
+
+// test_host_method_nil skipped. Covered by option tests.
+
+#[test]
+fn test_duplicate_register_class() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    #[derive(PolarClass, Default, Debug, Clone)]
+    struct Foo {};
+
+    let foo_class = Foo::get_polar_class_builder().name("Foo").build();
+
+    oso.oso.register_class(foo_class.clone())?;
+    let err = oso.oso.register_class(foo_class).unwrap_err();
+    assert!(matches!(err, OsoError::DuplicateClassError { name } if &name == "Foo"));
+
+    Ok(())
+}
+
+// test_duplicate_register_class_alias skipped. Functionality covered above.
+
+#[test]
+fn test_register_class() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    #[derive(PolarClass, Default, Debug, Clone)]
+    struct Bar;
+
+    impl Bar {
+        pub fn y(&self) -> String {
+            "y".to_owned()
+        }
+    }
+
+    let bar_class = Bar::get_polar_class_builder()
+        .name("Bar")
+        .add_method("y", Bar::y)
+        .build();
+
+    #[derive(PolarClass, Debug, Clone)]
     struct Foo {
-        a: &'static str,
+        #[polar(attribute)]
+        a: String,
     }
 
     impl Foo {
-        fn new(a: Option<&'static str>) -> Self {
-            Self {
-                a: a.unwrap_or("a"),
-            }
+        pub fn new(a: String) -> Self {
+            Self { a }
         }
 
-        #[allow(dead_code)]
-        fn b(&self) -> impl Iterator<Item = &'static str> + Clone {
-            vec!["b"].into_iter()
+        pub fn b(&self) -> Vec<String> {
+            vec!["b".to_owned()]
         }
 
-        fn c() -> &'static str {
-            "c"
+        pub fn c(&self) -> String {
+            "c".to_owned()
         }
 
-        fn d<X>(&self, x: X) -> X {
+        pub fn d(&self, x: String) -> String {
             x
         }
 
-        fn e(&self) -> Vec<u32> {
+        pub fn bar(&self) -> Bar {
+            Bar::default()
+        }
+
+        pub fn e(&self) -> Vec<i64> {
             vec![1, 2, 3]
         }
 
-        #[allow(dead_code)]
-        fn f(&self) -> impl Iterator<Item = Vec<u32>> + Clone {
-            vec![vec![1, 2, 3], vec![4, 5, 6], vec![7]].into_iter()
+        pub fn f(&self) -> Vec<Vec<i64>> {
+            // NOTE: Slight different with ruby test.
+            // Ruby tests with yielding multiple types, we
+            // only yield one.
+            vec![vec![1, 2, 3], vec![4, 5, 6]]
         }
 
-        fn g(&self) -> std::collections::HashMap<String, &'static str> {
-            hashmap!("hello".to_string() => "world")
+        pub fn g(&self) -> HashMap<String, String> {
+            hashmap! {"hello".to_owned() => "world".to_owned()}
         }
 
-        fn h(&self) -> bool {
+        pub fn h(&self) -> bool {
             true
         }
     }
 
-    fn capital_foo() -> Foo {
-        Foo::new(Some("A"))
-    }
-
-    let mut test = OsoTest::new();
-
-    let foo_class = oso::Class::with_constructor(capital_foo)
+    let foo_class = Foo::get_polar_class_builder()
         .name("Foo")
-        .add_attribute_getter("a", |receiver: &Foo| receiver.a)
-        // .add_method("b", |receiver: &Foo| oso::host::PolarResultIter(receiver.b()))
-        .add_class_method("c", Foo::c)
-        .add_method::<_, _, u32>("d", Foo::d)
+        .set_constructor(|| Foo::new("A".to_owned()))
+        .add_method("b", Foo::b)
+        .add_method("c", Foo::c)
+        .add_method("d", Foo::d)
+        .add_method("bar", Foo::bar)
         .add_method("e", Foo::e)
-        // .add_method("f", |receiver: &Foo| oso::host::PolarResultIter(receiver.f()))
+        // TODO make this an iterator
+        .add_method("f", Foo::f)
         .add_method("g", Foo::g)
         .add_method("h", Foo::h)
         .build();
-    test.oso.register_class(foo_class).unwrap();
 
-    test.qvar_one("new Foo().a = x", "x", "A".to_string());
-    test.query_err("new Foo().a() = x");
+    oso.oso.register_class(bar_class)?;
+    oso.oso.register_class(foo_class)?;
 
-    // test.query_err("new Foo().b = x");
-    // test.qvar_one("new Foo().b() = x", "x", vec!["b".to_string()]);
+    oso.qvar_one("new Foo().a = x", "x", String::from("A"));
+    oso.query_err("new Foo().b = x");
+    oso.qvar_one("new Foo().b() = x", "x", vec!["b".to_owned()]);
+    oso.qvar_one("new Foo().c() = x", "x", "c".to_owned());
+    oso.qvar_one("new Foo() = f and f.a = x", "x", "A".to_owned());
+    oso.qvar_one("new Foo().bar().y() = x", "x", "y".to_owned());
+    oso.qvar_one("new Foo().e() = x", "x", vec![1, 2, 3]);
+    // TODO oso.qvar_one("new Foo().f() = x", "x", vec![1, 2, 3]);
+    oso.qvar_one("new Foo().g().hello = x", "x", "world".to_owned());
+    oso.qvar_one("new Foo().h() = x", "x", true);
 
-    test.qvar_one("Foo.c() = x", "x", "c".to_string());
-    test.qvar_one("new Foo().d(1) = x", "x", 1);
-    test.query_err("new Foo().d(\"1\") = x");
-    test.qvar_one("new Foo() = f and f.a = x", "x", "A".to_string());
-    test.qvar_one("new Foo().e() = x", "x", vec![1, 2, 3]);
-    // test.qvar_one(
-    //     "new Foo().f() = x",
-    //     "x",
-    //     vec![vec![1, 2, 3], vec![4, 5, 6], vec![7]],
-    // );
-    test.qvar_one("new Foo().g().hello = x", "x", "world".to_string());
-    test.qvar_one("new Foo().h() = x", "x", true);
+    Ok(())
+}
+
+// test_class_inheritance skipped, no inheritance.
+
+#[test]
+fn test_animals() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    #[derive(PolarClass, Debug, Clone, PartialEq)]
+    struct Animal {
+        #[polar(attribute)]
+        family: String,
+        #[polar(attribute)]
+        genus: String,
+        #[polar(attribute)]
+        species: String,
+    }
+
+    impl Animal {
+        pub fn new(family: String, genus: String, species: String) -> Self {
+            Self {
+                family,
+                genus,
+                species,
+            }
+        }
+    }
+
+    let animal_class = Animal::get_polar_class_builder()
+        .name("Animal")
+        .set_constructor(Animal::new)
+        .with_equality_check()
+        .build();
+
+    oso.oso.register_class(animal_class)?;
+
+    let wolf = r#"new Animal("canidae", "canis", "canis lupus")"#;
+    let dog = r#"new Animal("canidae", "canis", "canis familiaris")"#;
+    let canine = r#"new Animal("canidae", "canis", "")"#;
+    let canid = r#"new Animal("canidae", "", "")"#;
+    let animal = r#"new Animal("", "", "")"#;
+
+    oso.load_str(
+        r#"
+      yup() if new Animal("steve", "", "") = new Animal("steve", "", "");
+      nope() if new Animal("steve", "", "") = new Animal("gabe", "", "");
+    "#,
+    );
+
+    oso.qeval("yup()");
+    oso.qnull("nope()");
+
+    oso.load_str(
+        r#"
+      what_is(_: {genus: "canis"}, r) if r = "canine";
+      what_is(_: {species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+      what_is(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog";
+    "#,
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is({}, r)", wolf), "r"),
+        vec!["wolf".to_owned(), "canine".to_owned()]
+    );
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is({}, r)", dog), "r"),
+        vec!["dog".to_owned(), "canine".to_owned()]
+    );
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is({}, r)", canine), "r"),
+        vec!["canine".to_owned()]
+    );
+
+    oso.load_str(
+        r#"
+          what_is_class(_: Animal{}, r) if r = "animal";
+          what_is_class(_: Animal{genus: "canis"}, r) if r = "canine";
+          what_is_class(_: Animal{family: "canidae"}, r) if r = "canid";
+          what_is_class(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf";
+          what_is_class(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog";
+          what_is_class(_: Animal{species: s, genus: "canis"}, r) if r = s;
+    "#,
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", wolf), "r"),
+        vec![
+            "wolf".to_owned(),
+            "canis lupus".to_owned(),
+            "canine".to_owned(),
+            "canid".to_owned(),
+            "animal".to_owned()
+        ]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", dog), "r"),
+        vec![
+            "dog".to_owned(),
+            "canis familiaris".to_owned(),
+            "canine".to_owned(),
+            "canid".to_owned(),
+            "animal".to_owned()
+        ]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", canine), "r"),
+        vec![
+            "".to_owned(),
+            "canine".to_owned(),
+            "canid".to_owned(),
+            "animal".to_owned()
+        ]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", canid), "r"),
+        vec!["canid".to_owned(), "animal".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_class({}, r)", animal), "r"),
+        vec!["animal".to_owned()]
+    );
+
+    oso.load_str(
+        r#"
+      what_is_mix(_: Animal{}, r) if r = "animal_class";
+      what_is_mix(_: Animal{genus: "canis"}, r) if r = "canine_class";
+      what_is_mix(_: {genus: "canis"}, r) if r = "canine_dict";
+      what_is_mix(_: Animal{family: "canidae"}, r) if r = "canid_class";
+      what_is_mix(_: {species: "canis lupus", genus: "canis"}, r) if r = "wolf_dict";
+      what_is_mix(_: {species: "canis familiaris", genus: "canis"}, r) if r = "dog_dict";
+      what_is_mix(_: Animal{species: "canis lupus", genus: "canis"}, r) if r = "wolf_class";
+      what_is_mix(_: Animal{species: "canis familiaris", genus: "canis"}, r) if r = "dog_class";
+    "#,
+    );
+
+    let wolf_dict = r#"{species: "canis lupus", genus: "canis", family: "canidae"}"#;
+    let dog_dict = r#"{species: "canis familiaris", genus: "canis", family: "canidae"}"#;
+    let canine_dict = r#"{genus: "canis", family: "canidae"}"#;
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", wolf), "r"),
+        vec![
+            "wolf_class".to_owned(),
+            "canine_class".to_owned(),
+            "canid_class".to_owned(),
+            "animal_class".to_owned(),
+            "wolf_dict".to_owned(),
+            "canine_dict".to_owned()
+        ]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", dog), "r"),
+        vec![
+            "dog_class".to_owned(),
+            "canine_class".to_owned(),
+            "canid_class".to_owned(),
+            "animal_class".to_owned(),
+            "dog_dict".to_owned(),
+            "canine_dict".to_owned()
+        ]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", canine), "r"),
+        vec![
+            "canine_class".to_owned(),
+            "canid_class".to_owned(),
+            "animal_class".to_owned(),
+            "canine_dict".to_owned()
+        ]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", wolf_dict), "r"),
+        vec!["wolf_dict".to_owned(), "canine_dict".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", dog_dict), "r"),
+        vec!["dog_dict".to_owned(), "canine_dict".to_owned()]
+    );
+
+    assert_eq!(
+        oso.qvar::<String>(&format!("what_is_mix({}, r)", canine_dict), "r"),
+        vec!["canine_dict".to_owned()]
+    );
+
+    Ok(())
 }
 
 #[test]
-//#[allow(clippy::redundant-closure)]
-fn test_methods() {
-    use std::default::Default;
+fn test_inline_queries() {
+    common::setup();
 
-    let _ = tracing_subscriber::fmt::try_init();
+    let mut oso = test_oso();
 
-    #[derive(PolarClass, Clone)]
-    struct Foo {
-        #[polar(attribute)]
-        a: String,
-    }
+    // Success if all inlines succeed.
+    oso.load_str("f(1); f(2); ?= f(1); ?= not f(3);");
+
+    // Fails if inline fails.
+    oso.oso.load_str("g(1); ?= g(2);").unwrap_err();
+}
+
+// Skipped parse error tests.
+
+#[test]
+fn test_predicate_return_list() {
+    common::setup();
 
     #[derive(PolarClass, Debug, Clone)]
-    struct Bar {
-        #[polar(attribute)]
-        b: String,
-    }
+    struct Actor;
 
-    impl Default for Bar {
-        fn default() -> Self {
-            Self {
-                b: "default".to_owned(),
-            }
-        }
-    }
-
-    impl Bar {
-        pub fn bar(&self) -> Bar {
-            self.clone()
-        }
-
-        pub fn foo(&self) -> Foo {
-            Foo { a: self.b.clone() }
-        }
-    }
-    let mut test = OsoTest::new();
-    test.oso.register_class(Foo::get_polar_class()).unwrap();
-    #[allow(clippy::redundant_closure)]
-    // @TODO: Not sure how to get the default call to typecheck without the closure wrapper.
-    test.oso
-        .register_class(
-            Bar::get_polar_class_builder()
-                .set_constructor(|| Bar::default())
-                .add_method("foo", |bar: &Bar| bar.foo())
-                .add_method("bar", |bar: &Bar| bar.bar())
-                .add_method("clone", Clone::clone)
-                .build(),
-        )
-        .unwrap();
-
-    // Test chaining
-    test.qvar_one(r#"new Bar().bar().foo().a = x"#, "x", "default".to_string());
-    // Test trait method.
-    test.qvar_one(r#"new Bar().clone().b = x"#, "x", "default".to_string());
-}
-
-#[test]
-fn test_macros() {
-    let _ = tracing_subscriber::fmt::try_init();
-
-    #[derive(PolarClass)]
-    #[polar(class_name = "Bar")]
-    struct Foo {
-        #[polar(attribute)]
-        a: String,
-        #[polar(attribute)]
-        b: String,
-    }
-
-    impl Foo {
-        fn new(a: String) -> Self {
-            Self {
-                a,
-                b: "b".to_owned(),
-            }
-        }
-
-        fn goodbye() -> Self {
-            Self {
-                a: "goodbye".to_owned(),
-                b: "b".to_owned(),
-            }
-        }
-    }
-
-    let mut test = OsoTest::new();
-    test.oso
-        .register_class(
-            Foo::get_polar_class_builder()
-                .set_constructor(Foo::new)
-                .build(),
-        )
-        .unwrap();
-
-    test.query(r#"new Bar("hello") = x"#);
-    test.qvar_one(r#"new Bar("hello").a = x"#, "x", "hello".to_string());
-    test.qvar_one(r#"new Bar("hello").b = x"#, "x", "b".to_string());
-
-    let class_builder = Foo::get_polar_class_builder();
-    let class = class_builder
-        .name("Baz")
-        .set_constructor(Foo::goodbye)
-        .add_method("world", |receiver: &Foo| format!("{} world", receiver.a))
-        .build();
-    test.oso.register_class(class).unwrap();
-
-    test.qvar_one(r#"new Baz().world() = x"#, "x", "goodbye world".to_string());
-}
-
-#[test]
-fn test_tuple_structs() {
-    let _ = tracing_subscriber::fmt::try_init();
-    #[derive(PolarClass)]
-    struct Foo(i32, i32);
-
-    impl Foo {
-        fn new(a: i32, b: i32) -> Self {
-            Self(a, b)
-        }
-    }
-
-    // @TODO: In the future when we can reason about which attributes are accessible types
-    // we can auto generate these accessors too. For now we have to rely on the attribute for
-    // fields and manually doing it for tuple structs.
-    // Also foo.0 isn't valid polar syntax so if we wanted something like that to work in general for "tuple like objects
-    // that requires a bigger change.
-    let mut test = OsoTest::new();
-    test.oso
-        .register_class(
-            Foo::get_polar_class_builder()
-                .set_constructor(Foo::new)
-                .add_attribute_getter("i0", |rcv: &Foo| rcv.0)
-                .add_attribute_getter("i1", |rcv: &Foo| rcv.1)
-                .build(),
-        )
-        .unwrap();
-
-    test.qvar_one(r#"foo = new Foo(1,2) and foo.i0 + foo.i1 = x"#, "x", 3);
-}
-
-#[test]
-fn test_results_and_options() {
-    let _ = tracing_subscriber::fmt::try_init();
-
-    #[derive(PolarClass)]
-    struct Foo;
-
-    impl Foo {
-        fn new() -> Self {
+    impl Actor {
+        pub fn new() -> Self {
             Self
         }
 
-        fn ok(&self) -> Result<i32, String> {
-            Ok(1)
-        }
-
-        fn err(&self) -> Result<i32, &'static str> {
-            Err("Some sort of error")
-        }
-
-        fn some(&self) -> Option<i32> {
-            Some(1)
-        }
-
-        fn none(&self) -> Option<i32> {
-            None
+        pub fn groups(&self) -> Vec<String> {
+            vec![
+                "engineering".to_owned(),
+                "social".to_owned(),
+                "admin".to_owned(),
+            ]
         }
     }
 
-    let mut test = OsoTest::new();
-    test.oso
-        .register_class(
-            Foo::get_polar_class_builder()
-                .set_constructor(Foo::new)
-                .add_method("ok", Foo::ok)
-                .add_method("err", Foo::err)
-                .add_method("some", Foo::some)
-                .add_method("none", Foo::none)
-                .build(),
-        )
-        .unwrap();
-
-    test.qvar_one(r#"new Foo().ok() = x"#, "x", 1);
-    test.query_err("new Foo().err()");
-    test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
-    let results = test.query("new Foo().none()");
-    assert!(results.is_empty());
-}
-
-// TODO: dhatch see if there is a relevant test to port.
-#[test]
-fn test_unify_externals() {
-    let mut test = OsoTest::new();
-
-    #[derive(PartialEq, Clone, Debug)]
-    struct Foo {
-        x: i64,
-    }
-
-    impl HostClass for Foo {};
-    impl Foo {
-        fn new(x: i64) -> Self {
-            Self { x }
-        }
-    }
-
-    let foo_class = Class::with_constructor(Foo::new)
-        .name("Foo")
-        .add_attribute_getter("x", |this: &Foo| this.x)
-        .with_equality_check()
+    let actor_class = Actor::get_polar_class_builder()
+        .name("ActorTwo")
+        .add_method("groups", Actor::groups)
         .build();
 
-    test.oso.register_class(foo_class).unwrap();
+    let mut oso = test_oso();
+    oso.load_str(r#"allow(actor: ActorTwo, "join", "party") if "social" in actor.groups();"#);
+    oso.oso.register_class(actor_class).unwrap();
 
-    test.load_str("foos_equal(a, b) if a = b;");
-
-    // Test with instantiated in polar.
-    test.qeval("foos_equal(new Foo(1), new Foo(1))");
-    test.qnull("foos_equal(new Foo(1), new Foo(2))");
-
-    let a = Foo::new(1);
-    let b = Foo::new(1);
-    assert_eq!(a, b);
-
-    // TODO this interface is not convenient or easy to use due to all the casting. Maybe needs a macro?
-    let mut results = test
+    let mut query = oso
         .oso
-        .query_rule("foos_equal", vec![&a as &dyn ToPolar, &b as &dyn ToPolar])
-        .unwrap();
-    results.next().expect("At least one result").unwrap();
-
-    // Ensure that equality on a type that doesn't support it fails.
-    struct Bar {
-        x: i64,
-    }
-
-    impl HostClass for Bar {};
-    impl Bar {
-        fn new(x: i64) -> Self {
-            Self { x }
-        }
-    }
-
-    let bar_class = Class::with_constructor(Bar::new)
-        .name("Bar")
-        .add_attribute_getter("x", |this: &Bar| this.x)
-        .build();
-
-    test.oso.register_class(bar_class).unwrap();
-
-    let mut query = test.oso.query("x = new Bar(1) = new Bar(2)").unwrap();
-    let result = query.next();
-
-    // TODO: (dhatch) Currently this query silently fails (no results).
-    // Instead, this should return UnsupportedOperation error.
-    assert!(result.is_none());
-
-    #[derive(PartialEq, Clone, Debug)]
-    struct Baz {
-        x: i64,
-    }
-
-    impl HostClass for Baz {};
-    impl Baz {
-        fn new(x: i64) -> Self {
-            Self { x }
-        }
-    }
-
-    let baz_class = Class::with_constructor(Baz::new)
-        .name("Baz")
-        .add_attribute_getter("x", |this: &Baz| this.x)
-        .with_equality_check()
-        .build();
-
-    test.oso.register_class(baz_class).unwrap();
-
-    let mut query = test.oso.query("x = new Foo(1) = new Baz(1)").unwrap();
-    let result = query.next();
-
-    // TODO: (dhatch) Currently this query silently fails (no results).
-    // Instead, this should return TypeError.
-    assert!(result.is_none());
-}
-
-#[test]
-fn test_values() {
-    let _ = tracing_subscriber::fmt::try_init();
-
-    #[derive(PolarClass)]
-    struct Foo;
-
-    impl Foo {
-        fn new() -> Self {
-            Self
-        }
-
-        fn one_two_three(&self) -> Vec<i32> {
-            vec![1, 2, 3]
-        }
-    }
-
-    let mut test = OsoTest::new();
-    test.oso
-        .register_class(
-            Foo::get_polar_class_builder()
-                .set_constructor(Foo::new)
-                .add_iterator_method("one_two_three", Foo::one_two_three)
-                .add_method("as_list", Foo::one_two_three)
-                .build(),
+        .query_rule(
+            "allow",
+            vec![
+                &Actor::new() as &dyn ToPolar,
+                &"join" as &dyn ToPolar,
+                &"party" as &dyn ToPolar,
+            ],
         )
         .unwrap();
 
-    let results: Vec<i32> = test.qvar("new Foo().one_two_three() = x", "x");
-    assert!(results == vec![1, 2, 3]);
-    println!("{:?}", results);
-    let result: Vec<Vec<i32>> = test.qvar("new Foo().as_list() = x", "x");
-    assert!(result == vec![vec![1, 2, 3]]);
-    println!("{:?}", result);
+    let result = query.next().unwrap().unwrap();
+    assert_eq!(result.keys().count(), 0);
+}
+
+// TODO (dhatch): API not great.
+
+#[test]
+fn test_variables_as_arguments() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+
+    oso.oso.load_file(test_file_path())?;
+
+    let query = oso.oso.query_rule(
+        "f",
+        vec![&Value::Variable(Symbol("a".to_owned())) as &dyn ToPolar],
+    )?;
+
+    let a_var = query
+        .map(|r| r.unwrap().get_typed::<i64>("a").unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(a_var, vec![1, 2, 3]);
+
+    Ok(())
+}
+
+// Skipped test_stack_trace, this is functionality that should be tested in core.
+// TODO ^
+
+#[test]
+fn test_lookup_runtime_error() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.query(r#"new Widget(1) = {bar: "bar"}"#);
+    oso.query_err(r#"new Widget(1).bar = "bar""#);
+
+    Ok(())
 }
 
 #[test]
-fn test_arg_number() {
-    let _ = tracing_subscriber::fmt::try_init();
-    #[derive(PolarClass)]
-    struct Foo;
+fn test_returns_unbound_variable() -> oso::Result<()> {
+    common::setup();
 
-    impl Foo {
-        fn three(&self, one: i32, two: i32, three: i32) -> i32 {
-            one + two + three
-        }
+    let mut oso = test_oso();
+    oso.load_str("rule(x, y) if y = 1;");
 
-        fn many_method(
-            &self,
-            one: i32,
-            two: i32,
-            three: i32,
-            four: i32,
-            five: i32,
-            six: i32,
-            seven: i32,
-        ) -> i32 {
-            one + two + three + four + five + six + seven
-        }
+    let first = oso.query("rule(x, y)").pop().unwrap();
 
-        fn many_class_method(
-            one: i32,
-            two: i32,
-            three: i32,
-            four: i32,
-            five: i32,
-            six: i32,
-            seven: i32,
-        ) -> i32 {
-            one + two + three + four + five + six + seven
-        }
-    }
+    assert_eq!(first.get_typed::<i64>("y")?, 1);
+    assert!(matches!(first.get_typed("x")?, Value::Variable(_)));
 
-    let mut test = OsoTest::new();
-    test.oso
-        .register_class(
-            Foo::get_polar_class_builder()
-                .add_method("many_method", Foo::three)
-                .add_method("many_method", Foo::many_method)
-                .add_class_method("many_class", Foo::many_class_method)
-                .build(),
-        )
-        .unwrap();
+    Ok(())
+}
+
+#[test]
+fn test_nan_inf() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.oso.register_constant("inf", &std::f64::INFINITY)?;
+    oso.oso
+        .register_constant("neg_inf", &std::f64::NEG_INFINITY)?;
+    oso.oso.register_constant("nan", &std::f64::NAN)?;
+
+    let x = oso.qvar::<f64>("x = nan", "x").pop().unwrap();
+    assert!(x.is_nan());
+    oso.qnull("nan = nan");
+
+    assert!(oso.qvar::<f64>("x = inf", "x").pop().unwrap().is_infinite());
+    assert!(oso.query("inf = inf").pop().is_some());
+
+    oso.qvar_one("x = neg_inf", "x", std::f64::NEG_INFINITY);
+    assert!(oso.query("neg_inf = neg_inf").pop().is_some());
+
+    Ok(())
 }
