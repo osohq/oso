@@ -300,7 +300,7 @@ fn test_clear_rules() -> oso::Result<()> {
     }
     let foo_class = Foo::get_polar_class_builder()
         .name("Foo")
-        .set_constructor(|| Foo::new())
+        .set_constructor(Foo::new)
         .build();
 
     oso.oso.register_class(foo_class)?;
