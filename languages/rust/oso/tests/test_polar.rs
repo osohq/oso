@@ -4,7 +4,6 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use oso::{Class, Oso, OsoError, PolarClass, ToPolar, Value};
-use oso_derive::*;
 use polar_core::error as polar_error;
 use polar_core::terms::Symbol;
 

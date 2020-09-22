@@ -3,7 +3,7 @@
 /// rust class handling.
 use maplit::hashmap;
 
-use oso::{Class, HostClass, Oso, PolarClass, ToPolar};
+use oso::{Class, HostClass, PolarClass, ToPolar};
 
 mod common;
 
