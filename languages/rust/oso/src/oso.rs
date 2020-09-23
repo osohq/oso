@@ -66,6 +66,7 @@ impl Oso {
     /// Clear out all files and rules that have been loaded.
     pub fn clear_rules(&mut self) -> crate::Result<()> {
         self.inner.clear_rules()?;
+        check_messages!(self.inner);
         Ok(())
     }
 

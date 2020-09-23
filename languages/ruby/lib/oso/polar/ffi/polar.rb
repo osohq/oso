@@ -43,7 +43,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def clear_rules
           cleared = Rust.clear_rules(self)
-
+          process_messages
           raise FFI::Error.get if cleared.zero?
         end
 

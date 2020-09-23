@@ -30,6 +30,7 @@ class Polar:
     def clear_rules(self):
         """Clear all rules from the Polar KB"""
         result = lib.polar_clear_rules(self.ptr)
+        process_messages(self.next_message)
         check_result(result)
 
     def new_query_from_str(self, query_str):
