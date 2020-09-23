@@ -129,6 +129,7 @@ where
     pub fn with_default() -> Self
     where
         T: std::default::Default,
+        T: Send + Sync,
     {
         Self::with_constructor::<_, _>(T::default)
     }
@@ -137,6 +138,7 @@ where
     pub fn with_constructor<F, Args>(f: F) -> Self
     where
         F: Function<Args, Result = T>,
+        T: Send + Sync,
         Args: FromPolarList,
     {
         let mut class: ClassBuilder<T> = ClassBuilder::new();
@@ -148,6 +150,7 @@ where
     pub fn set_constructor<F, Args>(mut self, f: F) -> Self
     where
         F: Function<Args, Result = T>,
+        T: Send + Sync,
         Args: FromPolarList,
     {
         self.class.constructor = Some(Constructor::new(f));
@@ -257,20 +260,22 @@ where
 /// retrived using `Instance::downcast`.
 #[derive(Clone)]
 pub struct Instance {
-    inner: Arc<dyn std::any::Any>,
+    inner: Arc<dyn std::any::Any + Send + Sync>,
+    type_name: &'static str,
 }
 
 impl fmt::Debug for Instance {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Instance<{:?}>", self.inner.as_ref().type_id())
+        write!(f, "Instance<{}>", self.type_name)
     }
 }
 
 impl Instance {
     /// Create a new instance
-    pub fn new<T: 'static>(instance: T) -> Self {
+    pub fn new<T: Send + Sync + 'static>(instance: T) -> Self {
         Self {
             inner: Arc::new(instance),
+            type_name: std::any::type_name::<T>(),
         }
     }
 
@@ -280,8 +285,11 @@ impl Instance {
     }
 
     /// Looks up the `Class` for this instance on the provided `host`
-    pub fn class<'a>(&self, host: &'a Host) -> Option<&'a Class> {
+    pub fn class<'a>(&self, host: &'a Host) -> crate::Result<&'a Class> {
         host.get_class_by_type_id(self.inner.as_ref().type_id())
+            .ok_or_else(|| OsoError::MissingClassError {
+                name: self.type_name.to_string(),
+            })
     }
 
     /// Lookup an attribute on the instance via the registered `Class`
@@ -289,9 +297,10 @@ impl Instance {
         tracing::trace!({ method = %name }, "get_attr");
         let attr = self
             .class(host)
-            .and_then(|c| c.attributes.get(name))
-            .ok_or_else(|| OsoError::Custom {
-                message: format!("attribute {} not found", name),
+            .and_then(|c| {
+                c.attributes.get(name).ok_or_else(|| OsoError::Custom {
+                    message: format!("attribute {} not found", name),
+                })
             })?
             .clone();
         attr.invoke(self, host)
@@ -305,24 +314,19 @@ impl Instance {
         host: &mut Host,
     ) -> crate::Result<super::to_polar::PolarResultIter> {
         tracing::trace!({method = %name, ?args}, "call");
-        let method = self
-            .class(host)
-            .and_then(|c| c.get_method(name))
-            .ok_or_else(|| OsoError::Custom {
+        let method = self.class(host).and_then(|c| {
+            c.get_method(name).ok_or_else(|| OsoError::Custom {
                 message: format!("method {} not found", name),
-            })?;
+            })
+        })?;
         method.invoke(self, args, host)
     }
 
     /// Return `true` if the `instance` of self equals the instance of `other`.
     pub fn equals(&self, other: &Self, host: &Host) -> crate::Result<bool> {
         tracing::trace!("equals");
-        if let Some(c) = self.class(host) {
-            (c.equality_check)(&self, &other)
-        } else {
-            tracing::warn!("class not found for equality check");
-            Ok(false)
-        }
+        self.class(host)
+            .and_then(|c| (c.equality_check)(&self, &other))
     }
 
     /// Attempt to downcast the inner type of the instance to a reference to the type `T`

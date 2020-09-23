@@ -158,14 +158,6 @@ impl Oso {
     }
 }
 
-// @TODO: This is very unsafe.
-// Temporary workaround. We need to differentiate between instances which
-// _do_ need to be `Send` (e.g. registered as constants on the base `Oso` objects)
-// and instances which don't need to be Send (e.g. created/accessed on a single thread for
-// just one query).
-unsafe impl Send for Oso {}
-unsafe impl Sync for Oso {}
-
 // Make sure the `Oso` object is threadsafe
 #[cfg(test)]
 static_assertions::assert_impl_all!(Oso: Send, Sync);

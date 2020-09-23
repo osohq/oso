@@ -27,6 +27,7 @@ impl Constructor {
     where
         Args: FromPolarList,
         F: Function<Args>,
+        F::Result: Send + Sync,
     {
         Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
             Args::from_polar_list(&args, host).map(|args| Instance::new(f.invoke(args)))

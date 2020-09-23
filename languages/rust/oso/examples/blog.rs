@@ -140,3 +140,8 @@ pub fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test() {
+    main().unwrap();
+}

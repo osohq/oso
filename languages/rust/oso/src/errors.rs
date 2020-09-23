@@ -39,6 +39,9 @@ pub enum OsoError {
     #[error("Class {name} already registered")]
     DuplicateClassError { name: String },
 
+    #[error("No class called {name} has been registered")]
+    MissingClassError { name: String },
+
     /// TODO: replace all these with proper variants
     #[error("{message}")]
     Custom { message: String },

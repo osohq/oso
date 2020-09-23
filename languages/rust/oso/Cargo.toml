@@ -13,7 +13,7 @@ edition = "2018"
 bench = false
 
 [[bench]]
-name = "blog"
+name = "bench"
 harness = false
 
 [[bin]]

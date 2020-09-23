@@ -113,11 +113,10 @@ impl Query {
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
         match constructor.value() {
             Value::Call(Call { name, args, .. }) => {
-                let _instance = self.host.make_instance(name, args.clone(), instance_id)?;
+                self.host.make_instance(name, args.clone(), instance_id)
             }
-            _ => panic!("not valid"),
+            _ => lazy_error!("invalid type for constructing an instance -- internal error"),
         }
-        Ok(())
     }
 
     fn register_call(

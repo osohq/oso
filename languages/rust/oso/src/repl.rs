@@ -102,18 +102,10 @@ impl Drop for Repl {
     }
 }
 
-fn bootstrap_example(oso: &mut Oso) -> anyhow::Result<()> {
-    struct Foo;
-
-    oso.register_class(Class::builder::<Foo>().name("Foo").build())?;
-    Ok(())
-}
-
 pub fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let mut repl = Repl::new();
     let mut oso = Oso::new();
-    bootstrap_example(&mut oso)?;
 
     let mut args = env::args();
     let _ = args.next(); // skip the binary filename
