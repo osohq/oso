@@ -49,10 +49,13 @@ impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
     fn to_polar_value(self, host: &mut Host) -> Value {
         let instance = Instance::new(self);
         let instance = host.cache_instance(instance, None);
-        if host.get_class_from_type::<Self>().is_none() {
+        if host.get_class_from_type::<Self>().is_err() {
             let class = Self::get_polar_class();
             let name = Symbol(class.name.clone());
-            let _ = host.cache_class(class, name);
+            tracing::info!("class {} not previously registered, doing so now", name.0);
+            if let Err(e) = host.cache_class(class, name.clone()) {
+                tracing::debug!({ name = %name.0 }, "failed to cache class: {}", e);
+            }
         }
         Value::ExternalInstance(ExternalInstance {
             constructor: None,

@@ -287,7 +287,7 @@ impl Instance {
     /// Looks up the `Class` for this instance on the provided `host`
     pub fn class<'a>(&self, host: &'a Host) -> crate::Result<&'a Class> {
         host.get_class_by_type_id(self.inner.as_ref().type_id())
-            .ok_or_else(|| OsoError::MissingClassError {
+            .map_err(|_| OsoError::MissingClassError {
                 name: self.type_name.to_string(),
             })
     }

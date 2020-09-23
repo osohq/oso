@@ -5,7 +5,7 @@ use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::Editor;
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
-use oso::{Class, Oso};
+use oso::Oso;
 use polar_core::formatting::to_polar::ToPolarString;
 
 use std::env;

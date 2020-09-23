@@ -42,6 +42,9 @@ pub enum OsoError {
     #[error("No class called {name} has been registered")]
     MissingClassError { name: String },
 
+    #[error("Tried to find an instance that doesn't exist -- internal error")]
+    MissingInstanceError,
+
     /// TODO: replace all these with proper variants
     #[error("{message}")]
     Custom { message: String },

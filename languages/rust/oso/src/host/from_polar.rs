@@ -38,7 +38,6 @@ pub trait FromPolar: Clone + Sized + 'static {
         match term.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => host
                 .get_instance(*instance_id)
-                .ok_or_else(|| crate::OsoError::FromPolar)
                 .and_then(|instance| {
                     instance
                         .downcast::<Self>()

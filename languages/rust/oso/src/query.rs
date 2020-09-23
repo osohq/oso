@@ -197,7 +197,7 @@ impl Query {
         class_tag: Symbol,
     ) -> crate::Result<()> {
         tracing::debug!(instance = ?instance, class = %class_tag, "isa");
-        let res = self.host.isa(instance, &class_tag);
+        let res = self.host.isa(instance, &class_tag)?;
         self.question_result(call_id, res);
         Ok(())
     }
