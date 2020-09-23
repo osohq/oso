@@ -122,7 +122,8 @@ impl Oso {
     /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
     /// ```
     pub fn query_rule(&mut self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
-        let args = args.to_polar_list(&mut self.host);
+        let mut query_host = self.host.clone();
+        let args = args.to_polar_list(&mut query_host);
         let query_value = Value::Call(Call {
             name: Symbol(name.to_string()),
             args,
@@ -131,7 +132,7 @@ impl Oso {
         let query_term = Term::new_from_ffi(query_value);
         let query = self.inner.new_query_from_term(query_term, false);
         check_messages!(self.inner);
-        let query = Query::new(query, self.host.clone());
+        let query = Query::new(query, query_host);
         Ok(query)
     }
 
