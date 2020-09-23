@@ -6,7 +6,7 @@ test: rust-test python-test ruby-test java-test python-flask-test \
 	python-django-test wasm-test js-test rustoso-test
 
 rust-test:
-	cargo test
+	cargo test --all-targets
 
 rust-build:
 	cargo build
@@ -50,9 +50,6 @@ fmt.jar:
 java-fmt: fmt.jar
 	$(eval FILES := $(shell git ls-files '*.java'))
 	java -jar fmt.jar --replace $(FILES)
-
-rustoso-test:
-	$(MAKE) -C languages/rust test
 
 docs-test: python-build
 	$(MAKE) -C docs test
