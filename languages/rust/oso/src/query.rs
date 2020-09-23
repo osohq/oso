@@ -18,8 +18,6 @@ pub struct Query {
     inner: polar_core::polar::Query,
     calls: HashMap<u64, PolarResultIter>,
     host: Host,
-    /// Marker to make sure query is not safe to Send/Sync
-    _marker: std::ptr::NonNull<()>,
 }
 
 impl Query {
@@ -28,7 +26,6 @@ impl Query {
             calls: HashMap::new(),
             inner,
             host,
-            _marker: std::ptr::NonNull::from(&()),
         }
     }
 
@@ -304,4 +301,4 @@ impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<
 
 // Make sure the `Query` object is _not_ threadsafe
 #[cfg(test)]
-static_assertions::const_assert!(!impls::impls!(Query: Send | Sync));
+static_assertions::assert_not_impl_any!(Query: Send, Sync);

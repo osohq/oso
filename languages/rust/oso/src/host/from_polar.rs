@@ -33,7 +33,7 @@ use crate::PolarClass;
 ///
 /// `FromPolar` implementors must also be concrete, sized types without
 /// any borrows.
-pub trait FromPolar: Clone + Send + Sync + Sized + 'static {
+pub trait FromPolar: Clone + Sized + 'static {
     fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
         match term.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => host

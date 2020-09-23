@@ -42,7 +42,6 @@ rustyline-derive = { version = "0.3.1", optional = true }
 [dev-dependencies]
 anyhow = "1.0"
 criterion = "0.3"
-impls = "1.0.3"
 oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha" }
 tempfile = "3.1.0"
 static_assertions = "1.1.0"
