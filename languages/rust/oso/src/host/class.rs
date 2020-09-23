@@ -2,7 +2,7 @@
 
 use polar_core::terms::Term;
 
-use std::any::{Any, TypeId};
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
@@ -22,8 +22,8 @@ type InstanceMethods = HashMap<&'static str, InstanceMethod>;
 
 fn equality_not_supported(
     type_name: String,
-) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync> {
-    let eq = move |_: &dyn Any, _: &dyn Any| -> crate::Result<bool> {
+) -> Box<dyn Fn(&Instance, &Instance) -> crate::Result<bool> + Send + Sync> {
+    let eq = move |_: &Instance, _: &Instance| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
             type_name: type_name.clone(),
@@ -54,7 +54,7 @@ pub struct Class {
 
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync>,
+    equality_check: Arc<dyn Fn(&Instance, &Instance) -> crate::Result<bool> + Send + Sync>,
 }
 
 impl Class {
@@ -163,8 +163,8 @@ where
         self.class.equality_check = Arc::new(move |a, b| {
             tracing::trace!("equality check");
 
-            let a = downcast(a).map_err(|e| e.user())?;
-            let b = downcast(b).map_err(|e| e.user())?;
+            let a = a.downcast().map_err(|e| e.user())?;
+            let b = b.downcast().map_err(|e| e.user())?;
 
             Ok((f)(a, b))
         });
@@ -249,7 +249,7 @@ where
 
 #[derive(Clone)]
 pub struct Instance {
-    inner: Arc<dyn Any>,
+    inner: Arc<dyn std::any::Any>,
 }
 
 impl fmt::Debug for Instance {
@@ -305,7 +305,7 @@ impl Instance {
         // TODO: LOL this &* below is tricky! Have a function to do this, and make instance not
         // pub.
         if let Some(c) = self.class(host) {
-            (c.equality_check)(&*self.inner, &*other.inner)
+            (c.equality_check)(&self, &other)
         } else {
             tracing::warn!("class not found for equality check");
             Ok(false)
