@@ -16,7 +16,7 @@ Breaking changes
 ``Oso.clear()`` replaced with ``Oso.clear_rules()``/``clearRules()``
 ---------------------------------------------------------------------
 
-The ``Oso.clear()`` method in oso's language libraries is deprecated.
+The ``Oso.clear()`` method in oso's language libraries has been removed.
 To clear rules from the Polar knowledge base, use the new ``clear_rules()``
 (or ``clearRules()``) method, which clears rules but leaves registered classes
 and constants in place.
