@@ -150,13 +150,19 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  context '#clear' do
-    # test_clear
-    it 'clears the KB' do
+  context '#clear_rules' do
+    it 'clears rules from the KB' do
       subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
-      subject.clear
+      subject.clear_rules
       expect(query(subject, 'f(x)')).to eq([])
+    end
+
+    it 'leaves registered classes and instances' do
+      stub_const('Foo', Class.new)
+      subject.register_class(Foo, name: 'Foo')
+      subject.clear_rules
+      expect(query(subject, 'x = new Foo()').length).to be 1
     end
   end
 

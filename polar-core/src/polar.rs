@@ -180,6 +180,16 @@ impl Polar {
         self.load(src, None)
     }
 
+    /// Clear rules from the knowledge base
+    pub fn clear_rules(&self) {
+        let mut kb = self.kb.write().unwrap();
+        kb.rules.clear();
+        kb.sources = Sources::default();
+        kb.inline_queries.clear();
+        self.loaded_content.write().unwrap().clear();
+        self.loaded_files.write().unwrap().clear();
+    }
+
     pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
         let term = { self.kb.write().unwrap().inline_queries.pop() };
         term.map(|t| self.new_query_from_term(t, trace))

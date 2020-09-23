@@ -352,12 +352,12 @@ public class PolarTest {
     List<HashMap<String, Object>> result =
         p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
     assertTrue(result.equals(List.of(Map.of("x", 1))));
-    p.clear();
+    p.clearRules();
 
     p.loadStr("f(a: MySubClass, x) if x = a.id;");
     result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
     assertTrue(result.isEmpty(), "Failed to filter rules by specializers.");
-    p.clear();
+    p.clearRules();
 
     p.loadStr("f(a: OtherClass, x) if x = a.id;");
     assertThrows(
@@ -484,12 +484,15 @@ public class PolarTest {
   }
 
   @Test
-  public void testClear() throws Exception {
+  public void testClearRules() throws Exception {
     p.loadFile("src/test/java/com/osohq/oso/test.polar");
     assertEquals(
         List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)), p.query("f(x)").results());
-    p.clear();
+    p.clearRules();
     assertTrue(p.query("f(x)").results().isEmpty());
+
+    // make sure classes are still registered
+    assertFalse(p.query("x = new MyClass(\"test\", 1)").results().isEmpty());
   }
 
   public static class Foo {

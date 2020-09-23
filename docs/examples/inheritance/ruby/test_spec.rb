@@ -24,7 +24,7 @@ RSpec.describe do
 
   def load_file(example_name)
       file = File.join(File.dirname(__FILE__), '..', example_name)
-      OSO.clear
+      OSO.clear_rules
       OSO.load_file(file)
       OSO
   end

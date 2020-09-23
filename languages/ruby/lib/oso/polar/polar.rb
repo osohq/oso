@@ -52,9 +52,9 @@ module Oso
         register_class String
       end
 
-      # Replace the current Polar instance but retain all registered classes and constructors.
-      def clear
-        @ffi_polar = FFI::Polar.create
+      # Clear all rules and rule sources from the current Polar instance
+      def clear_rules
+        ffi_polar.clear_rules
       end
 
       # Load a Polar policy file.
