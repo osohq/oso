@@ -10,7 +10,6 @@ use std::sync::Arc;
 use crate::errors::OsoError;
 
 use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod};
-use super::downcast;
 use super::from_polar::FromPolarList;
 use super::method::{Function, Method};
 use super::to_polar::ToPolarResults;
@@ -312,8 +311,15 @@ impl Instance {
         }
     }
 
+    /// Attempt to downcast the inner type of the instance to a reference to the type `T`
+    /// This should be the _only_ place using downcast to avoid mistakes.
     pub fn downcast<T: 'static>(&self) -> Result<&T, crate::errors::TypeError> {
-        downcast(self.inner.as_ref())
+        self.inner
+            .as_ref()
+            .downcast_ref()
+            .ok_or_else(|| crate::errors::TypeError {
+                expected: String::from(std::any::type_name::<T>()),
+            })
     }
 }
 

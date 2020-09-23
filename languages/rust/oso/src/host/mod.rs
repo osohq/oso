@@ -1,10 +1,9 @@
-use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
-use crate::errors::{OsoError, TypeError};
+use crate::errors::OsoError;
 use crate::Polar;
 
 mod class;
@@ -20,16 +19,6 @@ pub use to_polar::{PolarResultIter, ToPolar, ToPolarList, ToPolarResults};
 impl ToPolar for crate::Class {}
 fn metaclass() -> Class {
     Class::builder::<Class>().name("Class").build()
-}
-
-/// Downcast `any` with proper error handling.
-///
-/// # Arguments
-/// * `type_name` - used in error message. The target type name.
-fn downcast<T: Any>(any: &dyn Any) -> Result<&T, TypeError> {
-    any.downcast_ref().ok_or_else(|| TypeError {
-        expected: String::from(std::any::type_name::<T>()),
-    })
 }
 
 /// Maintain mappings and caches for Rust classes & instances
