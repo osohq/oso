@@ -281,16 +281,31 @@ fn test_load_multiple_files() -> oso::Result<()> {
 }
 
 #[test]
-fn test_clear() -> oso::Result<()> {
+fn test_clear_rules() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
     oso.oso.load_file(test_file_path())?;
-
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
-    oso.oso.clear();
+
+    #[derive(PolarClass, Default, Debug, Clone)]
+    struct Foo;
+    impl Foo {
+        pub fn new() -> Self {
+            Self {}
+        }
+    }
+    let foo_class = Foo::get_polar_class_builder()
+        .name("Foo")
+        .set_constructor(Foo::new)
+        .build();
+
+    oso.oso.register_class(foo_class)?;
+
+    oso.oso.clear_rules();
 
     oso.qnull("f(x)");
+    assert_eq!(oso.query("x = new Foo()").len(), 1);
 
     Ok(())
 }

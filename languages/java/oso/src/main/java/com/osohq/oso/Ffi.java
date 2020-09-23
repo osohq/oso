@@ -37,6 +37,12 @@ public class Ffi {
       return checkResult(result);
     }
 
+    protected int clearRules() throws Exceptions.OsoException {
+      int result = polarLib.polar_clear_rules(ptr);
+      processMessages();
+      return checkResult(result);
+    }
+
     protected Query newQueryFromStr(String queryStr) throws Exceptions.OsoException {
       Pointer queryPtr = polarLib.polar_new_query(ptr, queryStr, 0);
       processMessages();
@@ -192,6 +198,8 @@ public class Ffi {
     long polar_get_external_id(Pointer polar_ptr);
 
     int polar_load(Pointer polar_ptr, String src, String filename);
+
+    int polar_clear_rules(Pointer polar_ptr);
 
     Pointer polar_new();
 

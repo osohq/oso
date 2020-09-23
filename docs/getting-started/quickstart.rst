@@ -109,7 +109,7 @@ Adding oso
       .. code-block:: console
 
         $ npm install -g oso@{release}
-    
+
     .. group-tab:: Rust
 
       Add oso and oso-derive as dependencies in Cargo.toml
@@ -475,7 +475,7 @@ start a REPL session and follow along:
 .. note::
   Each time you load a file, it will load the policy
   **without** clearing previously loaded rules. Be sure to
-  clear oso using the ``clear`` method or create a new instance if you want
+  clear oso using the ``clear_rules()`` method or create a new instance if you want
   to try adding a few new rules.
 
 When we ask oso for a policy decision via ``allow``, the oso engine

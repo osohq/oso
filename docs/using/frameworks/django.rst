@@ -163,4 +163,3 @@ Oso
 
 .. autodata:: django_oso.oso.Oso
 
-.. autofunction:: django_oso.oso.reset_oso

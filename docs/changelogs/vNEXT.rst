@@ -13,13 +13,17 @@ Breaking changes
 .. warning:: This release contains breaking changes. Be sure
    to follow migration steps before upgrading.
 
-Breaking change 1
------------------
+``Oso.clear()`` replaced with ``Oso.clear_rules()``/``clearRules()``
+---------------------------------------------------------------------
 
-- summary of breaking change
+The ``Oso.clear()`` method in oso's language libraries has been removed.
+To clear rules from the Polar knowledge base, use the new ``clear_rules()``
+(or ``clearRules()``) method, which clears rules but leaves registered classes
+and constants in place.
 
-Link to migration guide
-
+To migrate, replace calls to ``Oso.clear()`` with either ``Oso.clear_rules()`` or
+``Oso.clearRules()``, depending on the library you are using.
+It is no longer necessary to re-register classes/constants after clearing.
 
 New features
 ============
