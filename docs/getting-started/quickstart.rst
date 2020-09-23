@@ -9,127 +9,82 @@ you.
 In general, it takes less than 5 minutes to add oso to an existing application
 and begin writing an authorization policy.
 
-In this guide, we're going to add oso to our project, write our first policy,
-create a simple web server with no authorization, and write some rules for it.
-We encourage you to code along in your local environment!
+In this guide, we're going to walk through how to add authorization to a simple web server using oso.
+You'll be able to follow along by editing the sample application in the repl.it environment below.
+
+The source code of the completed application is also available on `GitHub <TODO LINK>`_.
 
 Expenses Application
 ====================
 
-Our application serves data about expenses submitted by users.
+Our sample application serves data about expenses submitted by users.
 
-To start with, we have a simple ``Expense`` class, and some stored data in the
+If you navigate to ``quickstart/expenses.py``, you'll see a simple ``Expense`` class, and some data stored in the
 ``EXPENSES`` dictionary.
 
-.. tabs::
+The HTTP server code is stored in ``quickstart/server.py``, where we have defined a route handler for ``GET`` requests to
+the path ``/expenses/{id}``.
 
-  .. group-tab:: Python
+You can run the server by hitting the "Run" button while on ``server.py``, or from the command line with:
 
-    .. literalinclude:: /examples/quickstart/python/expense.py
-      :class: copybutton
-      :caption: :fab:`python` expense.py :download:`(link) </examples/quickstart/python/expense.py>`
-      :language: python
+.. code-block:: text
 
-  .. group-tab:: Ruby
+    $ poetry run python quickstart/server.py
 
-    .. literalinclude:: /examples/quickstart/ruby/expense.rb
-      :class: copybutton
-      :caption: :fas:`gem` expense.rb :download:`(link) </examples/quickstart/ruby/expense.rb>`
-      :language: ruby
+The app doesn't have any authorization yet, so if you head to localhost:5050/expenses/1, for example,
+you'll see the first expense displayed.
 
-  .. group-tab:: Java
+.. TODO: explain the target auth scheme here (e.g. you can view an expense if you submitted it or whatever)
 
-    .. literalinclude:: /examples/quickstart/java/Expense.java
-      :class: copybutton
-      :caption: :fab:`java` expense.java :download:`(link) </examples/quickstart/java/Expense.java>`
-      :language: java
-
-  .. group-tab:: Node.js
-
-    .. literalinclude:: /examples/quickstart/nodejs/expense.js
-      :class: copybutton
-      :caption: :fab:`node-js` expense.js :download:`(link) </examples/quickstart/nodejs/expense.js>`
-      :language: javascript
-
-  .. group-tab:: Rust
-
-    .. literalinclude:: /examples/quickstart/rust/src/expenses.rs
-      :class: copybutton
-      :caption: :fab:`rust` expenses.rs :download:`(link) </examples/quickstart/rust/src/expenses.rs>`
-      :language: rust
-
-We'll need our application to be able to control who has access to this data.
-Before we add a web server and start making some requests, lets see if we can get
-some basic authorization in place!
+Now we can add oso to control who has access to the expenses data.
 
 Adding oso
 ==========
 
-.. admonition:: Installation
+Adding oso to an application basically consists of three steps:
 
-  In order to write our first authorization policy, we first need to add oso to
-  our application. If you don't already have it :doc:`installed </download>`, go ahead and
-  do so now:
+1. Create a .polar policy file
+2. Initialize the global oso instance by loading the policy and registering relevant application classes
+3. Add calls to Oso.is_allowed() at authorization enforcement points
 
-  .. tabs::
-    .. group-tab:: Python
+The repl.it environment should already have oso installed from our ``poetry.lock`` files. To use oso locally,
+you can find download and installation instructions :doc:`here </download>`.
 
-      oso v{release} supports Python versions **>= 3.6**
+Creating a policy
+^^^^^^^^^^^^^^^^^
 
-      .. code-block:: console
+oso policies are written in a declarative policy language called Polar. Polar files have the ``.polar`` extension.
+We've already created a policy file for this project, ``expenses.polar``, which you can find in the project's root
+directory. oso policies are made up of :ref:`Polar rules <TODO RULES LINK>`. You can include any kind of rule in a policy,
+but the oso library is designed to evaluate :ref:`allow rules <TODO>`, which specify the conditions that allow an
+**actor** to perform an **action** on a **resource**.
 
-        $ pip install oso=={release}
+We'll leave the policy empty for now, but we'll come back to it and add rules later.
 
-    .. group-tab:: Ruby
+Initializing the oso instance
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-      oso v{release} supports Ruby versions **>= 2.4**
+To use the oso library, we need to create a global instance of the ``Oso`` class, which we will use to get
+authorization decisions from oso. We also need to load our policy file by calling ``Oso.load()``, and register
+any application classes that we want oso to know about using ``Oso.register_class()``.
+We're going to register the ``Expense`` class now, since we'll use it in our policy later on.
 
-      .. code-block:: console
+Initialize the ``Oso`` instance by adding the following lines of code
+after the imports in ``quickstart/server.py``:
 
-        $ gem install oso-oso -v {release}
+.. code-block:: python
 
-    .. group-tab:: Java
+    from oso import Oso
 
-      oso v{release} supports Java versions **>= 10**
+    oso = Oso()
+    oso.register_class(Expense)
+    oso.load_file("expenses.polar")
 
-      Go to the oso `Maven Repository <https://search.maven.org/artifact/com.osohq/oso>`_.
-
-      Either download the latest JAR and add this to your Java project libraries,
-      load using your IDE, add the project as a dependency to your build system,
-      or build from the command line with:
-
-      .. code-block:: console
-
-        $ javac -cp {JAR}:. Expense.java
-
-    .. group-tab:: Node.js
-
-      oso v{release} supports Node.js versions **>= 10**
-
-      .. code-block:: console
-
-        $ npm install -g oso@{release}
-
-    .. group-tab:: Rust
-
-      Add oso and oso-derive as dependencies in Cargo.toml
-
-      .. code-block:: toml
-
-        oso = "{release}"
-        oso-derive = "{release}"
-
-
-
-Now that we've installed oso, let's see how to make some basic authorization
-decisions.
-
-Decisions, decisions...
-=======================
+Enforcing authorization
+^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``Oso`` instance exposes a method to evaluate ``allow`` rules that takes three
 arguments, **actor**, **action**, and **resource**:
-
 
 .. tabs::
   .. group-tab:: Python
@@ -171,326 +126,104 @@ verb used in our server, but this could be anything.
 .. note:: For more on **actors**, **actions**, and **resources**, check out
   :doc:`/more/glossary`.
 
-oso's authorization system is deny-by-default. Since we haven't yet written any
-policy code, Alice is not allowed to view expenses. To see that in action,
-start a REPL session and follow along:
+We want to call this method at our application's authorization enforcement points. In this app,
+we'll enforce authorization for our expense data in the ``/expenses/{id}`` route handler.
+
+As in the example above, the **actor** will be the authenticated user's email address.
+In lieu of setting up real identity and authentication systems, we'll use a
+custom HTTP header to indicate that a request is "authenticated" as a particular
+user. We'll use the HTTP request method, in this case ``"GET"`` as the **action**, and
+the **resource** is the expense retrieved from our stored expenses.
 
 .. tabs::
-  .. group-tab:: Python
 
-    Run: ``python``
+    .. group-tab:: Python
 
-    .. code-block:: pycon
+        Update the ``do_GET()`` method in ``quickstart/server.py`` so that it looks like this:
 
+        .. code-block:: python
 
-      >>> from expense import *
-      >>> from oso import Oso
-      >>> oso = Oso()
-      >>> alice = "alice@example.com"
-      >>> expense = EXPENSES[1]
-      >>> oso.is_allowed(alice, "GET", expense)
-      False
+            def do_GET(self):
+                try:
+                    _, resource, id = self.path.split("/")
+                    if resource != "expenses":
+                        return self._respond("Not Found!", 404)
+                    expense = db[int(id)]
+                except (ValueError, KeyError):
+                    return self._respond("Not Found!", 404)
 
-    We can create a new policy file, and
-    explicitly allow Alice to GET any expense...
+                actor = self.headers.get("user", None)
+                action = "GET"
+                if oso.is_allowed(actor, action, expense):
+                    self._respond(expense)
+                else:
+                    self._respond("Not Authorized!", 403)
 
-    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
-      :language: polar
-      :caption: :fa:`oso` expenses.polar
-      :class: copybutton
 
-    ...which we can load into our oso instance:
+oso's authorization system is deny-by-default. Since we haven't yet written any
+policy code, no one is allowed to view any expenses. To see that in action,
+start the server and try to ``"GET"`` an expense with the following curl command:
 
-    .. code-block:: pycon
+.. code-block:: text
 
-      >>> oso.register_class(Expense)
-      >>> oso.load_file("expenses.polar")
+    TODO
 
-    ...and now Alice has the power...
+Now that we have all our authorization plumbing in place, we can implement our permissions scheme
+by writing some rules.
 
-    .. code-block:: pycon
+Adding rules
+------------
 
-      >>> oso.is_allowed(alice, "GET", expense)
-      True
+In our policy file (``quickstart/expenses.polar``), let's add a rule to explictly allow ``alice@example.com``
+to view expenses:
 
-    ...and everyone else is still denied:
-
-    .. code-block:: pycon
-
-      >>> oso.is_allowed("bhavik@example.com", "GET", expense)
-      False
-
-
-  .. group-tab:: Ruby
-
-    Run: ``irb``
-
-    .. code-block:: irb
-
-        irb(main):001:0> require './expense'
-        => true
-        irb(main):002:0> require 'oso'
-        => true
-        irb(main):003:0> OSO = Oso.new
-        => #<Oso::Oso:0x00007ffc9c8c6b58>
-        irb(main):004:0> alice = "alice@example.com"
-        => "alice@example.com"
-        irb(main):005:0> expense = EXPENSES[1]
-        => #<Expense:0x00007ffc9c916388 @amount=500, @description="coffee", @submitted_by="alice@example.com">
-        irb(main):006:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
-        => false
-
-    We can create a new policy file, and
-    explicitly allow Alice to GET any expense...
-
-    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
-      :language: polar
-      :caption: :fa:`oso` expenses.polar
-      :class: copybutton
-
-    ...which we can load into our oso instance:
-
-    .. code-block:: irb
-
-      irb(main):007:0> OSO.register_class(Expense)
-      => nil
-      irb(main):008:0> OSO.load_file("expenses.polar")
-      => nil
-
-    ...and now Alice has the power...
-
-    .. code-block:: irb
-
-      irb(main):009:0> OSO.allowed?(actor: alice, action: "GET", resource: expense)
-      => true
-
-    ...and everyone else is still denied:
-
-    .. code-block:: irb
-
-      irb(main):010:0> OSO.allowed?(actor: "bhavik@example.com", action: "GET", resource: expense)
-      => false
-
-  .. group-tab:: Java
-
-    To follow along, either try using ``jshell`` (requires Java version >= 9)
-    or copy the follow code into a ``main`` method in ``Expense.java``.
-
-
-    .. tabs::
-      .. group-tab:: Java main
-
-          .. code-block:: java
-            :caption: :fab:`java` Expense.java
-
-            import com.osohq.oso.Oso;
-
-            public class Expense {
-                // ...
-
-                public static void main(String[] args) throws Exception {
-                    Oso oso = new Oso();
-                    String alice = "alice@example.com";
-                    Expense expense = Expense.EXPENSES[1];
-                    System.out.println(oso.isAllowed(alice, "GET", expense));
-                }
-            }
-
-          Should output:
-
-          .. code-block:: console
-
-            false
-
-      .. group-tab:: JShell
-
-        Run: ``jshell --class-path {JAR} Expense.java``
-
-        .. code-block:: jshell
-
-            jshell> import com.osohq.oso.Oso;
-
-            jshell> Oso oso = new Oso();
-            oso ==> com.osohq.oso.Oso@55b699ef
-
-            jshell> String alice = "alice@example.com"
-            alice ==> "alice@example.com"
-
-            jshell> Expense expense = Expense.EXPENSES[1]
-            expense ==> Expense(amount=5000, description=software, submittedBy=alice@example.com)
-
-            jshell> oso.isAllowed(alice, "GET", expense)
-            $12 ==> false
-
-    We can create a new policy file, and explicitly allow Alice to view
-    expenses
-
-    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
-      :language: polar
-      :caption: :fa:`oso` expenses.polar
-      :class: copybutton
-
-    We can load into our oso instance, and then see that Alice has the power and
-    everyone else is still denied:
-
-    .. tabs::
-      .. group-tab:: Java main
-
-        .. code-block:: java
-            :caption: :fab:`java` Expense.java
-
-            public static void main(String[] args) throws Exception {
-                Oso oso = new Oso();
-                oso.registerClass(Expense.class, "Expense");
-                oso.loadFile("expenses.polar");
-                String alice = "alice@example.com";
-                String bhavik = "bhavik@example.com";
-                Expense expense = Expense.EXPENSES[1];
-                System.out.println(oso.isAllowed(alice, "GET", expense));
-                System.out.println(oso.isAllowed(bhavik, "GET", expense));
-            }
-
-        Should output:
-
-        .. code-block:: console
-
-          true
-          false
-
-      .. group-tab:: JShell
-
-        .. code-block:: jshell
-
-          jshell> oso.loadFile("expenses.polar")
-
-          jshell> oso.isAllowed(alice, "GET", expense)
-          $14 ==> true
-
-          jshell> oso.isAllowed("bhavik@example.com", "GET", expense)
-          $15 ==> false
-
-  .. group-tab:: Node.js
-
-    Run: ``node --experimental-repl-await``
-
-    .. code-block:: node
-
-      > const { EXPENSES } = require('./expense');
-      > const { Oso } = require('oso');
-      > const oso = new Oso();
-      > const alice = 'alice@example.com';
-      > const expense = EXPENSES[1];
-      > await oso.isAllowed(alice, 'GET', expense);
-      false
-
-    We can create a new policy file, and
-    explicitly allow Alice to GET any expense...
-
-    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
-      :language: polar
-      :caption: :fa:`oso` expenses.polar
-      :class: copybutton
-
-    ...which we can load into our oso instance:
-
-    .. code-block:: node
-
-      > const { Expense } = require('./expense');
-      > oso.registerClass(Expense);
-      > await oso.loadFile("expenses.polar");
-
-    ...and now Alice has the power...
-
-    .. code-block:: node
-
-      > await oso.isAllowed(alice, 'GET', expense);
-      true
-
-    ...and everyone else is still denied:
-
-    .. code-block:: node
-
-      > await oso.isAllowed('bhavik@example.com', 'GET', expense);
-      false
-
-  .. group-tab:: Rust
-
-    .. code-block:: rust
-      :caption: :fab:`rust` main.rs
-
-      use oso::{Oso, PolarClass};
-      use expenses::{Expense, EXPENSES};
-
-      fn main() {
-        let mut oso = Oso::new();
-        oso.register_class(Expense::get_polar_class()).unwrap();
-
-        let actor = "alice@example.com";
-        let resource = EXPENSES[1].clone();
-        let allowed = oso.is_allowed(actor, "GET", resource).unwrap();
-        println!("is_allowed => {}", allowed);
-      }
-
-    Should output:
-
-    .. code-block:: console
-
-      is_allowed => false
-
-    We can create a new policy file, and explicitly allow Alice to view
-    expenses
-
-    .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
-      :language: polar
-      :caption: :fa:`oso` expenses.polar
-      :class: copybutton
-
-    We can load into our oso instance, and then see that Alice has the power and
-    everyone else is still denied:
-
-    .. code-block:: rust
-      :caption: :fab:`rust` main.rs
-
-      fn main() {
-        let mut oso = Oso::new();
-        oso.register_class(Expense::get_polar_class()).unwrap();
-        oso.load_file("expenses.polar").unwrap();
-
-        let alice = "alice@example.com";
-        let bhavik = "bhavik@example.com";
-        let resource = EXPENSES[1].clone();
-        let alice_is_allowed = oso.is_allowed(alice, "GET", resource).unwrap();
-        let bhavik_is_allowed = oso.is_allowed(bhavik, "GET", resource).unwrap();
-        println!("alice_is_allowed => {}", alice_is_allowed);
-        println!("bhavik_is_allowed => {}", bhavik_is_allowed);
-      }
-
-    Should output:
-
-    .. code-block:: console
-
-      alice_is_allowed => true
-      bhavik_is_allowed => false
+.. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+    :language: polar
+    :caption: :fa:`oso` expenses.polar
+    :class: copybutton
 
 .. note::
   Each time you load a file, it will load the policy
   **without** clearing previously loaded rules. Be sure to
-  clear oso using the ``clear_rules()`` method or create a new instance if you want
-  to try adding a few new rules.
+  clear oso using the ``clear_rules()`` method if you want to
+  invalidate previously loaded rules.
 
-When we ask oso for a policy decision via ``allow``, the oso engine
+With our new rule, requests made "by Alice" now succeed, as you can see with the same curl command
+from before:
+
+.. code-block:: console
+
+    TODO: edit link
+
+    $ curl -H "user: alice@example.com" localhost:5050/expenses/1
+    Expense(amount=500, description='coffee', submitted_by='alice@example.com')
+
+Okay, so what just happened?
+
+When we ask oso for a policy decision via ``Oso.is_allowed()``, the oso engine
 searches through its knowledge base to determine whether the provided
 **actor**, **action**, and **resource** satisfy any **allow** rules.
 
-In the above case, we passed in ``alice`` as the **actor**, ``"GET"`` as the
+In the above case, we passed in ``alice@example.com`` as the **actor**, ``"GET"`` as the
 **action**, and ``EXPENSE[1]`` as the **resource**, satisfying the
 ``allow("alice@example.com", "GET", _expense);`` rule.
-When we pass in ``"bhavik@example.com"`` as
+
+If we try the curl command with ``"bhavik@example.com"`` as
 the actor, the rule no longer succeeds because the string ``"bhavik@example.com"`` does not
 match the string ``"alice@example.com"``.
 
+.. code-block:: console
+
+    TODO: edit link
+
+    $ curl -H "user: bhavik@example.com" localhost:5050/expenses/1
+    Not Authorized!
+
+If you aren't seeing the same thing, make sure you created your policy
+correctly in ``expenses.polar``.
+
 A Quick Note on Type Checking
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You may have already guessed that the ``Expense`` term following the colon in the head of our policy rule
 specifies a parameter type restriction. This is a :ref:`specializer <Specialization>`, a pattern that controls rule
 execution based on whether the supplied argument matches it. Here, we specialize the third argument on
@@ -498,131 +231,6 @@ our own ``Expense`` class, which will restrict this rule to arguments that are i
 subclass. Specializers are optional but highly recommended to avoid bugs that could arise if
 an unexpected type of resource is passed into a certain rule. We'll see more examples of specializers later in this guide.
 
-
-Authorizing HTTP Requests
-=========================
-
-Now that we are confident we can control access to our expense data,
-let's see what it would look like in a web server.
-Our web server contains some simple logic to filter out bad requests and not much else.
-
-In lieu of setting up real identity and authentication systems, we'll use a
-custom HTTP header to indicate that a request is "authenticated" as a particular
-user. The header value will be an email address, e.g., ``"alice@example.com"``.
-We'll pass it to ``allow`` as the **actor** and we'll use the HTTP method as the
-**action**.
-
-Finally, the **resource** is the expense retrieved from our stored expenses.
-
-Here is the code for our web server. The highlighted lines show where we added
-oso:
-
-.. tabs::
-
-  .. group-tab:: Python
-
-    .. literalinclude:: /examples/quickstart/python/server.py
-      :class: copybutton
-      :caption: :fab:`python` server.py :download:`(link) </examples/quickstart/python/server.py>`
-      :language: python
-      :emphasize-lines: 2,6-7,26-29
-
-  .. group-tab:: Ruby
-
-    .. literalinclude:: /examples/quickstart/ruby/server.rb
-      :class: copybutton
-      :caption: :fas:`gem` server.rb :download:`(link) </examples/quickstart/ruby/server.rb>`
-      :language: ruby
-      :emphasize-lines: 1,6-7,18-21
-
-  .. group-tab:: Java
-
-    .. literalinclude:: /examples/quickstart/java/Server.java
-      :class: copybutton
-      :caption: :fab:`java` Server.java :download:`(link) </examples/quickstart/java/Server.java>`
-      :language: java
-      :emphasize-lines: 1,7-12,34-38
-
-  .. group-tab:: Node.js
-
-    .. literalinclude:: /examples/quickstart/nodejs/server.js
-      :class: copybutton
-      :caption: :fab:`node-js` server.js :download:`(link) </examples/quickstart/nodejs/server.js>`
-      :language: javascript
-      :emphasize-lines: 3,7-9,19-22
-
-  .. group-tab:: Rust
-
-    .. literalinclude:: /examples/quickstart/rust/src/server.rs
-      :class: copybutton
-      :caption: :fab:`rust` server.rs :download:`(link) </examples/quickstart/rust/src/server.rs>`
-      :language: rust
-      :emphasize-lines: 7,29,44,47,53-55,63
-
-If the request path matches the form ``/expenses/:id`` and ``:id`` is the ID of
-an existing expense, we respond with the expense data. Otherwise, we return
-``"Not Found!"``.
-
-Let's use `cURL <https://curl.haxx.se/>`_ to check that everything's working.
-We'll first start our server...
-
-.. tabs::
-  .. group-tab:: Python
-
-    .. code-block:: console
-
-      $ python server.py
-      running on port 5050
-
-  .. group-tab:: Ruby
-
-    .. code-block:: console
-
-      $ ruby server.rb
-      [2020-07-15 00:35:52] INFO  WEBrick 1.3.1
-      [2020-07-15 00:35:52] INFO  ruby 2.4.10 (2020-03-31) [x86_64-linux]
-      [2020-07-15 00:35:52] INFO  WEBrick::HTTPServer#start: pid=537647 port=5050
-
-  .. group-tab:: Java
-
-    Run the server from your IDE, or from the command line:
-
-    .. code-block:: console
-
-        $ javac -cp {JAR}:. Server.java
-        $ java -cp {JAR}:. Server
-        Server running on /127.0.0.1:5050
-
-  .. group-tab:: Node.js
-
-    .. code-block:: console
-
-      $ node server.js
-      running on port 5050
-
-  .. group-tab:: Rust
-
-    .. code-block:: console
-
-      $ cargo run
-      🔧 Configured for development.
-          => address: localhost
-          => port: 5050
-          ...
-      🛰  Mounting /:
-          => GET /expenses/<id> (hello)
-
-...and then, in another terminal, we can test everything works by making some requests:
-
-.. code-block:: console
-
-  $ curl -H "user: alice@example.com" localhost:5050/expenses/1
-  Expense(amount=500, description='coffee', submitted_by='alice@example.com')
-  $ curl -H "user: bhavik@example.com" localhost:5050/expenses/1
-  Not Authorized!
-
-If you aren't seeing the same thing, make sure you created your policy
-correctly in ``expenses.polar``.
 
 Rules Over Dynamic Data
 -----------------------
