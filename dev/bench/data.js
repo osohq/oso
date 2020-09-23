@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600827728975,
+  "lastUpdate": 1600881686470,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -7307,6 +7307,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6038,
             "range": "± 2760",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b5b10680ad179438d55baa11036425c65baed1ff",
+          "message": "clear() -> clear_rules() (#445)\n\n* add clear_rules to polar core + c api\r\n\r\nreplace clear() with clear_rules() in python lib\r\n\r\nupdate django tests to use clear_rules\r\n\r\nreplace clear() with clear_rules() in ruby lib\r\n\r\nreplace clear() with clearRules() in java lib\r\n\r\nrubocop\r\n\r\nreplace clear() with clear_rules() in rust lib\r\n\r\nadd clear_rules to wasm and replace clear() with clearRules() in node lib\r\n\r\nspelling\r\n\r\n* add unwrap\r\n\r\n* clippy\r\n\r\n* changelog\r\n\r\n* spelling\r\n\r\n* Update docs/changelogs/vNEXT.rst\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* add message checks\r\n\r\n* clean up\r\n\r\n* add python test for clear_rules\r\n\r\n* Update polar-wasm-api/src/polar.rs\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* Update languages/rust/oso/src/oso.rs\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* cleanup\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-09-23T13:11:44-04:00",
+          "tree_id": "a07a114189fa6a892d850f397ea7d5da13afbbf8",
+          "url": "https://github.com/osohq/oso/commit/b5b10680ad179438d55baa11036425c65baed1ff"
+        },
+        "date": 1600881685515,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 747,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2475,
+            "range": "± 127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 69954,
+            "range": "± 9131",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 498860,
+            "range": "± 16517",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18292,
+            "range": "± 1265",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18232,
+            "range": "± 1062",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18782,
+            "range": "± 1361",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18378,
+            "range": "± 979",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16753,
+            "range": "± 1426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5526,
+            "range": "± 279",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5839,
+            "range": "± 736",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6683,
+            "range": "± 731",
             "unit": "ns/iter"
           }
         ]
