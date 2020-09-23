@@ -181,15 +181,13 @@ impl Polar {
     }
 
     /// Clear rules from the knowledge base
-    pub fn clear_rules(&self) -> PolarResult<()> {
+    pub fn clear_rules(&self) {
         let mut kb = self.kb.write().unwrap();
-        kb.rules = HashMap::new();
+        kb.rules.clear();
         kb.sources = Sources::default();
-        kb.inline_queries = vec![];
+        kb.inline_queries.clear();
         self.loaded_content.write().unwrap().clear();
         self.loaded_files.write().unwrap().clear();
-
-        Ok(())
     }
 
     pub fn next_inline_query(&self, trace: bool) -> Option<Query> {
