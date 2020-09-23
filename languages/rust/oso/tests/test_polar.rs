@@ -305,7 +305,7 @@ fn test_clear_rules() -> oso::Result<()> {
 
     oso.oso.register_class(foo_class)?;
 
-    oso.oso.clear_rules()?;
+    oso.oso.clear_rules();
 
     oso.qnull("f(x)");
     assert_eq!(oso.query("x = new Foo()").len(), 1);
