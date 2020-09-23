@@ -246,6 +246,15 @@ where
     }
 }
 
+/// Container for an instance of a `Class`
+///
+/// Not guaranteed to be an instance of a registered class,
+/// this is looked up through the `Instance::class` method,
+/// and the `ToPolar` implementation for `PolarClass` will
+/// register the class if not seen before.
+///
+/// A reference to the underlying type of the Instance can be
+/// retrived using `Instance::downcast`.
 #[derive(Clone)]
 pub struct Instance {
     inner: Arc<dyn std::any::Any>,
@@ -258,51 +267,56 @@ impl fmt::Debug for Instance {
 }
 
 impl Instance {
+    /// Create a new instance
     pub fn new<T: 'static>(instance: T) -> Self {
         Self {
             inner: Arc::new(instance),
         }
     }
 
+    /// Check whether this is an instance of `class`
     pub fn instance_of(&self, class: &Class) -> bool {
         self.inner.as_ref().type_id() == class.type_id
     }
 
+    /// Looks up the `Class` for this instance on the provided `host`
     pub fn class<'a>(&self, host: &'a Host) -> Option<&'a Class> {
         host.get_class_by_type_id(self.inner.as_ref().type_id())
     }
 
-    pub fn get_attr(&self, attr: &str, host: &mut Host) -> crate::Result<Term> {
+    /// Lookup an attribute on the instance via the registered `Class`
+    pub fn get_attr(&self, name: &str, host: &mut Host) -> crate::Result<Term> {
+        tracing::trace!({ method = %name }, "get_attr");
         let attr = self
             .class(host)
-            .and_then(|c| c.attributes.get(attr))
+            .and_then(|c| c.attributes.get(name))
             .ok_or_else(|| OsoError::Custom {
-                message: format!("attribute {} not found", attr),
+                message: format!("attribute {} not found", name),
             })?
             .clone();
         attr.invoke(self, host)
     }
 
+    /// Call the named method on the instance via the registered `Class`
     pub fn call(
         &self,
-        attr: &str,
+        name: &str,
         args: Vec<Term>,
         host: &mut Host,
     ) -> crate::Result<super::to_polar::PolarResultIter> {
-        let attr = self
+        tracing::trace!({method = %name, ?args}, "call");
+        let method = self
             .class(host)
-            .and_then(|c| c.get_method(attr))
+            .and_then(|c| c.get_method(name))
             .ok_or_else(|| OsoError::Custom {
-                message: format!("method {} not found", attr),
+                message: format!("method {} not found", name),
             })?;
-        attr.invoke(self, args, host)
+        method.invoke(self, args, host)
     }
 
     /// Return `true` if the `instance` of self equals the instance of `other`.
     pub fn equals(&self, other: &Self, host: &Host) -> crate::Result<bool> {
         tracing::trace!("equals");
-        // TODO: LOL this &* below is tricky! Have a function to do this, and make instance not
-        // pub.
         if let Some(c) = self.class(host) {
             (c.equality_check)(&self, &other)
         } else {

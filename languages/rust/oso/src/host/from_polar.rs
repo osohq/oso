@@ -20,6 +20,19 @@ use crate::PolarClass;
 ///
 /// This is also implemented automatically using the
 /// `#[derive(PolarClass)]` macro.
+///
+/// ## Trait bounds
+///
+/// Currently `FromPolar` requires `Clone` because we can only
+/// get a borrowed value back from oso. In the future, this could
+/// be updated to return borrowed data instead.
+///
+/// `FromPolar` also requires types to be `Send + Sync`, since it
+/// is possible to store a `FromPolar` value on an `Oso` instance
+/// which can be shared between threads
+///
+/// `FromPolar` implementors must also be concrete, sized types without
+/// any borrows.
 pub trait FromPolar: Clone + Send + Sync + Sized + 'static {
     fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
         match term.value() {
@@ -40,6 +53,7 @@ pub trait FromPolar: Clone + Send + Sync + Sized + 'static {
 impl<C: 'static + Clone + Send + Sync + PolarClass> FromPolar for C {}
 
 mod private {
+    /// Prevents implementations of `FromPolarList` outside of this crate
     pub trait Sealed {}
 }
 

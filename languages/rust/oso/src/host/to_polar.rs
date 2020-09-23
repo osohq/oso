@@ -21,6 +21,14 @@ use crate::host::Instance;
 ///
 /// For non-primitive types, the instance will be stored
 /// on the provided `Host`.
+/// ## Trait bounds
+///
+/// `ToPolar` requires types to be `Send + Sync`, since it
+/// is possible to store a `ToPolar` value on an `Oso` instance
+/// which can be shared between threads.
+///
+/// `ToPolar` implementors must also be concrete, sized types without
+/// any borrows.
 pub trait ToPolar: Send + Sync + Sized + 'static {
     fn to_polar_value(self, host: &mut Host) -> Value {
         let instance = Instance::new(self);
@@ -55,6 +63,7 @@ impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
 }
 
 mod private {
+    /// Prevents implementations of `ToPolarList` outside of this crate
     pub trait Sealed {}
 }
 
