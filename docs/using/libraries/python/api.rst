@@ -6,7 +6,7 @@ Classes
 =======
 
 .. autoclass:: oso.Oso
-   :members: is_allowed, load_str, load_file, register_class, query_rule, query, clear
+   :members: is_allowed, load_str, load_file, register_class, query_rule, query, clear_rules
 
 .. autoclass:: oso.Variable
 
