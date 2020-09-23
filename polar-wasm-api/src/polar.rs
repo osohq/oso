@@ -25,9 +25,8 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = clearRules)]
-    pub fn wasm_clear_rules(&self) -> JsResult<()> {
-        self.0.clear_rules();
-        Ok(())
+    pub fn wasm_clear_rules(&self) {
+        self.0.clear_rules()
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
