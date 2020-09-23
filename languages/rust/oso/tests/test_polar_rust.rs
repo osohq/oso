@@ -379,6 +379,8 @@ fn test_results_and_options() {
         .unwrap();
 
     test.qvar_one(r#"new Foo().ok() = x"#, "x", 1);
+    // TODO (dhatch): Assert type of error
+    // TODO (dhatch): Check nested method error
     test.query_err("new Foo().err()");
     test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
 
