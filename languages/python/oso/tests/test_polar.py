@@ -62,6 +62,19 @@ def test_load_function(polar, query, qvar):
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
 
+def test_clear_rules(polar, query):
+    class Test:
+        pass
+
+    polar.register_class(Test)
+    polar.load_str("f(x) if x = 1;")
+    assert len(query("f(1)")) == 1
+    assert len(query("x = new Test()")) == 1
+    polar.clear_rules()
+    assert len(query("f(1)")) == 0
+    assert len(query("x = new Test()")) == 1
+
+
 def test_external(polar, qvar, qeval):
     class Bar:
         def y(self):
