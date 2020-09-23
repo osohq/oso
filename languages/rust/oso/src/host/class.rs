@@ -324,3 +324,21 @@ impl Instance {
 // just one query).
 unsafe impl Send for Instance {}
 unsafe impl Sync for Instance {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_instance_of() {
+        struct Foo {}
+        struct Bar {}
+
+        let foo_class = Class::builder::<Foo>().build();
+        let bar_class = Class::builder::<Bar>().build();
+        let foo_instance = Instance::new(Foo {});
+
+        assert!(foo_instance.instance_of(&foo_class));
+        assert!(!foo_instance.instance_of(&bar_class));
+    }
+}

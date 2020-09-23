@@ -301,3 +301,7 @@ impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<
         })
     }
 }
+
+// Make sure the `Query` object is _not_ threadsafe
+#[cfg(test)]
+static_assertions::const_assert!(!impls::impls!(Query: Send | Sync));
