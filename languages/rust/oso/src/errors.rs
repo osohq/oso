@@ -30,7 +30,7 @@ pub enum OsoError {
         type_name: String,
     },
 
-    #[error("{operation} are unimplemented in oso-rust.")]
+    #[error("{operation} are unimplemented in the oso Rust library")]
     UnimplementedOperation { operation: String },
 
     #[error("failed to convert type to Polar")]

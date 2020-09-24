@@ -176,6 +176,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
             throw new Exceptions.PolarRuntimeException("Caused by: " + e.getMessage());
           }
           break;
+        case "ExternalOp":
+          throw new Exceptions.UnimplementedOperation("comparison operators");
         default:
           throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
       }

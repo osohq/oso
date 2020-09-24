@@ -402,6 +402,15 @@ public class PolarTest {
     assertFalse(p.query("test(1)").results().isEmpty());
   }
 
+  @Test
+  public void testExternalOp() throws Exception {
+    p.registerClass(Foo.class, "Foo");
+    assertThrows(
+        Exceptions.UnimplementedOperation.class,
+        () -> p.query("new Foo() == new Foo()"),
+        "Expected error.");
+  }
+
   /**** TEST PARSING ****/
 
   @Test

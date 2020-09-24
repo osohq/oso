@@ -34,6 +34,7 @@ import {
   KwargsError,
   PolarFileNotFoundError,
   PolarFileExtensionError,
+  UnimplementedOperationError,
 } from './errors';
 
 test('it works', async () => {
@@ -719,4 +720,12 @@ describe('±∞ and NaN', () => {
     expect(await query(p, 'inf < neg_inf')).toStrictEqual([]);
     expect(await query(p, 'neg_inf < inf')).toStrictEqual([map()]);
   });
+});
+
+test('fails gracefully on ExternalOp events', () => {
+  const p = new Polar();
+  p.registerClass(X);
+  expect(query(p, 'new X() == new X()')).rejects.toThrow(
+    UnimplementedOperationError
+  );
 });

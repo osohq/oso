@@ -68,6 +68,12 @@ module Oso
       end
     end
 
+    class UnimplementedOperationError < PolarRuntimeError # rubocop:disable Style/Documentation
+      def initialize(operation)
+        super("#{operation} are unimplemented in the oso Ruby library")
+      end
+    end
+
     # Generic operational exception.
     class OperationalError < Error; end
     class UnknownError < OperationalError; end

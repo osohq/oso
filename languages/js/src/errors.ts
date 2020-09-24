@@ -83,6 +83,13 @@ export class PolarFileNotFoundError extends PolarError {
   }
 }
 
+export class UnimplementedOperationError extends PolarError {
+  constructor(operation: string) {
+    super(`${operation} are unimplemented in the oso Node.js library`);
+    Object.setPrototypeOf(this, UnimplementedOperationError.prototype);
+  }
+}
+
 export class UnregisteredClassError extends PolarError {
   constructor(name: string) {
     super(`Unregistered class: ${name}.`);

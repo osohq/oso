@@ -1,7 +1,12 @@
 import { inspect } from 'util';
 import { readFile as _readFile } from 'fs';
 
-import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
+import {
+  InvalidQueryEventError,
+  KwargsError,
+  PolarError,
+  UnimplementedOperationError,
+} from './errors';
 import { isPolarTerm, QueryEventKind } from './types';
 import type { obj, QueryEvent } from './types';
 
@@ -62,7 +67,7 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
       case event['Debug'] !== undefined:
         return parseDebug(event['Debug']);
       case event['ExternalOp'] !== undefined:
-        throw new PolarError('Comparing JS objects is not yet supported.');
+        throw new UnimplementedOperationError('comparison operators');
       default:
         throw new Error();
     }
