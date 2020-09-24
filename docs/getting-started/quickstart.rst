@@ -51,13 +51,8 @@ GitHub <TODO LINK>`_.
 
     .. tab:: 2. Adding oso
 
-        Adding oso to an application basically consists of three steps:
-
-        1. Create a .polar policy file
-        2. Initialize the global oso instance by loading the policy and registering relevant application classes
-        3. Add calls to Oso.is_allowed() at authorization enforcement points
-
-        The repl.it environment should already have oso installed from our ``poetry.lock`` files. To use oso locally,
+        We're going to use oso's :doc:`python library </using/libraries/python/index>` to add authorization to the app.
+        The repl.it environment should already have oso installed from our ``poetry.lock`` file. To use oso locally,
         you can find download and installation instructions :doc:`here </download>`.
 
         **Creating a policy**
@@ -91,7 +86,7 @@ GitHub <TODO LINK>`_.
         **Enforcing authorization**
 
         The ``Oso`` instance exposes a method to evaluate ``allow`` rules that takes three
-        arguments, **actor**, **action**, and **resource**:
+        arguments, :doc:`actor, action, and resource </more/glossary>`:
 
         .. literalinclude:: /examples/quickstart/python/allow-01.py
             :language: python
@@ -102,7 +97,6 @@ GitHub <TODO LINK>`_.
         **resource** ``EXPENSES[1]``. We're using ``"GET"`` here to match up with the HTTP
         verb used in our server, but this could be anything.
 
-        .. note:: For more on **actors**, **actions**, and **resources**, check out :doc:`/more/glossary`.
 
         We want to call this method at our application's authorization enforcement points. In this app,
         we'll enforce authorization for our expense data in the ``/expenses/{id}`` route handler.
