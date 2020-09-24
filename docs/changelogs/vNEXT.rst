@@ -41,7 +41,5 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Language libraries that haven't yet implemented operations on application
+  instances (Java, Node.js, Ruby, Rust) now throw a uniform error type.
