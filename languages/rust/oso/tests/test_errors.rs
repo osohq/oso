@@ -252,48 +252,272 @@ fn test_wrong_argument_types() {
 /// - Arguments that are not registered
 #[test]
 fn test_wrong_argument_types_constructor() {
+    common::setup();
 
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo;
+
+    // TODO (dhatch): This must be clone do to constraints on ToPolar.
+    #[derive(PolarClass, Clone)]
+    struct Bar;
+
+    impl Foo {
+        fn new(_bar: Bar) -> Self {
+            Foo
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .set_constructor(Foo::new)
+        .build();
+
+    oso.oso.register_class(foo_class).unwrap();
+    oso.oso.register_class(Bar::get_polar_class()).unwrap();
+
+    oso.load_str("new_foo(val) if _v = new Foo(val);");
+
+    let mut query = oso.oso.query_rule("new_foo", (Bar,)).unwrap();
+    assert_eq!(query.next().unwrap().unwrap().keys().count(), 0);
+
+    let mut query = oso.oso.query_rule("new_foo", (1,)).unwrap();
+    assert!(query.next().unwrap().is_err());
+
+    let mut query = oso.oso.query_rule("new_foo", (Foo,)).unwrap();
+    assert!(query.next().unwrap().is_err());
 }
 
 /// Test match with non-existent attributes does not raise error
 #[test]
 fn test_match_attribute_does_not_exist() {
+    common::setup();
 
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo {
+        #[polar(attribute)]
+        x: i64
+    };
+
+    impl Foo {
+        fn new() -> Self {
+            Foo {x: 1}
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .set_constructor(Foo::new)
+        .build();
+
+    oso.oso.register_class(foo_class).unwrap();
+
+    oso.load_str("foo(d) if d matches Foo{x: 1};");
+    oso.load_str("no_match_foo(d) if not d matches Foo{not_an_attr: 1};");
+    oso.qeval("foo(new Foo())");
+    oso.qeval("no_match_foo(new Foo())");
 }
 
 /// Test that match with class that doesn't exist raises error
 #[test]
 fn test_match_non_existent_class() {
+    common::setup();
 
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo {
+        #[polar(attribute)]
+        x: i64
+    };
+
+    impl Foo {
+        fn new() -> Self {
+            Foo {x: 1}
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .set_constructor(Foo::new)
+        .build();
+
+    oso.oso.register_class(foo_class).unwrap();
+
+    oso.load_str("foo(d) if d matches Bar{x: 1};");
+    oso.query_err("foo(new Foo())");
 }
 
 /// Test that incorrect number of arguments raises error:
 /// - Incorrect number of arguments on method
 /// - Incorrect number of arguments for constructor
 #[test]
-fn test_wrong_argument_arity() {
+fn test_wrong_argument_arity() -> oso::Result<()> {
+    common::setup();
 
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn a(&self, x: i64) -> i64 {
+            x
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .add_method("a", Foo::a)
+        .build();
+
+    oso.oso.register_class(foo_class)?;
+
+    oso.load_str("getmethod_a1(x, val) if val = x.a(val);");
+    oso.load_str("getmethod_a2(x, val, val2) if val = x.a(val, val2);");
+    oso.load_str("getmethod_a0(x) if val = x.a();");
+
+    // Correct number of arguments
+    let mut query = oso.oso.query_rule("getmethod_a1", (Foo, 1))?;
+    assert_eq!(query.next().unwrap().unwrap().keys().count(), 0);
+
+    // Too many arguments
+    let mut query = oso.oso.query_rule("getmethod_a2", (Foo, 1, 2))?;
+    assert!(query.next().unwrap().is_err());
+
+    // Too few arguments
+    let mut query = oso.oso.query_rule("getmethod_a0", (Foo,))?;
+    assert!(query.next().unwrap().is_err());
+
+    Ok(())
 }
 
 /// Test that constructing a class that is not registered raises error
 #[test]
 fn test_class_does_not_exist() {
+    common::setup();
 
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo {
+        #[polar(attribute)]
+        x: i64
+    };
+
+    impl Foo {
+        fn new() -> Self {
+            Foo {x: 1}
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .set_constructor(Foo::new)
+        .build();
+
+    oso.oso.register_class(foo_class).unwrap();
+
+    oso.load_str("bar(b) if b = new Bar()");
+    let mut query = oso.oso.query("bar(b)").unwrap();
+    assert!(query.next().unwrap().is_err());
 }
 
 /// Test that using keyword arguments for constructor raises error:
 /// - Keyword args only
 /// - Mixed parameters
 #[test]
-fn test_mixed_keyword_arguments_error() {
+fn test_constructor_keyword_arguments_error() {
+    common::setup();
 
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo {
+        #[polar(attribute)]
+        x: i64
+    };
+
+    impl Foo {
+        fn new(x: i64) -> Self {
+            Foo {x}
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .set_constructor(Foo::new)
+        .build();
+
+    oso.oso.register_class(foo_class).unwrap();
+
+    let mut query = oso.oso.query("x = new Foo(1)").unwrap();
+    assert_eq!(query.next().unwrap().unwrap().keys().count(), 1);
+
+    let mut query = oso.oso.query("x = new Foo(x: 1)").unwrap();
+    assert!(query.next().unwrap().is_err());
+
+    let mut query = oso.oso.query("x = new Foo(1, x: 1)").unwrap();
+    assert!(query.next().unwrap().is_err());
 }
 
-/// Test operator raises not implemented error
-/// Operators are unimplemented, make sure all return error.
+/// Test that using keyword arguments for method raises error:
+/// - Keyword args only
+/// - Mixed parameters
 #[test]
-fn test_operator_unimplemented() {
+fn test_method_keyword_arguments_error() -> oso::Result<()> {
+    common::setup();
 
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo {
+        #[polar(attribute)]
+        x: i64
+    };
+
+    impl Foo {
+        fn new() -> Self {
+            Foo {x: 1}
+        }
+
+        fn a(&self, x: i64) -> i64 {
+            x
+        }
+    }
+
+    let foo_class = Foo::get_polar_class_builder()
+        .set_constructor(Foo::new)
+        .add_method("a", Foo::a)
+        .build();
+
+    oso.oso.register_class(foo_class)?;
+
+    let mut query = oso.oso.query("x = new Foo(1).a(1)").unwrap();
+    assert_eq!(query.next().unwrap()?.get_typed::<i64>("x")?, 1);
+
+    let mut query = oso.oso.query("x = new Foo(1).a(x: 1)").unwrap();
+    assert!(query.next().unwrap().is_err());
+
+    let mut query = oso.oso.query("x = new Foo(1).a(1, x: 1)").unwrap();
+    assert!(query.next().unwrap().is_err());
+
+    Ok(())
+}
+
+/// Test operator raises not implemented error.
+#[test]
+fn test_operator_unimplemented() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = OsoTest::new();
+
+    #[derive(PolarClass)]
+    struct Foo(i64);
+
+    let foo_class = Foo::get_polar_class_builder()
+        .build();
+
+    oso.oso.register_class(foo_class)?;
+
+    Ok(())
 }
 
 /// Test that auto-registration when possible succeeds:
