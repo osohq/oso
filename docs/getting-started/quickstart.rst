@@ -19,7 +19,7 @@ GitHub <TODO LINK>`_.
 
 .. tabs::
 
-    .. tab:: Expenses Application
+    .. tab:: Intro
 
         Our sample application serves data about expenses submitted by users.
 
