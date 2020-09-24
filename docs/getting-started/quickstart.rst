@@ -19,7 +19,7 @@ GitHub <TODO LINK>`_.
 
 .. tabs::
 
-    .. tab:: 1. Expenses Application
+    .. tab:: Expenses Application
 
         Our sample application serves data about expenses submitted by users.
 
@@ -48,7 +48,7 @@ GitHub <TODO LINK>`_.
 
         Now we can add oso to control who has access to the expenses data.
 
-    .. tab:: 2. Adding oso
+    .. tab:: Adding oso
 
         We're going to use oso's :doc:`python library </using/libraries/python/index>` to add authorization to the app.
         The repl.it environment should already have oso installed from our ``poetry.lock`` file. To use oso locally,
@@ -145,7 +145,7 @@ GitHub <TODO LINK>`_.
         Now that we have all our authorization plumbing in place, we can implement our permissions scheme
         by writing some rules.
 
-    .. tab:: 3. Adding our first rule
+    .. tab:: Adding our first rule
 
         In our policy file (``quickstart/expenses.polar``), let's add a rule that allows anyone with
         an email ending in ``"@example.com"`` to view all expenses. That way, everyone at Example.com, Inc. will be
@@ -204,7 +204,7 @@ GitHub <TODO LINK>`_.
         If you aren't seeing the same thing, make sure you created your policy
         correctly in ``expenses.polar``.
 
-    .. tab:: 4. Using application data
+    .. tab:: Using application data
 
         We now have some basic access control, but the higher-ups at Example.com, Inc. aren't satisfied with
         our policy that allows all employees to see each other's expenses. They
@@ -277,15 +277,6 @@ GitHub <TODO LINK>`_.
             :doc:`/getting-started/policies/application-types`.
 
 
-
-Summary
-=======
-
-We just went through a ton of stuff:
-
-* Installing oso.
-* Setting up our app to enforce the policy decisions made by oso.
-* Writing authorization rules over static and dynamic application data.
 
 .. admonition:: What's next
     :class: tip whats-next
