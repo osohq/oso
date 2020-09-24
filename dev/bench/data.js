@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600881686470,
+  "lastUpdate": 1600910741836,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -7403,6 +7403,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6683,
             "range": "± 731",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4723a70e19641a53c791d83bc31dc7f58ebd8f9e",
+          "message": "Various oso Rust refactors (#450)\n\n* Don't share `Host` between query instances.\r\n\r\n- Change methods to return converted terms instead.\r\n\r\n* Move class onto the class builder.\r\n\r\n* Make classes work without registering them if they impl PolarClass.\r\n\r\n* Make functions use `Instance` and make inner private.\r\n\r\n* Make only one downcast method.\r\n\r\n- Remove unsafe Send + Sync, just make everything require it.\r\n\r\n- Better errors for missing class",
+          "timestamp": "2020-09-23T21:13:27-04:00",
+          "tree_id": "556ac85cca482f9a36aefb99bbed54ea43a64c93",
+          "url": "https://github.com/osohq/oso/commit/4723a70e19641a53c791d83bc31dc7f58ebd8f9e"
+        },
+        "date": 1600910741004,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 776,
+            "range": "± 55",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2634,
+            "range": "± 230",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 68390,
+            "range": "± 7305",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 491621,
+            "range": "± 26175",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17695,
+            "range": "± 1132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17748,
+            "range": "± 1378",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18238,
+            "range": "± 1159",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18136,
+            "range": "± 1078",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16345,
+            "range": "± 1245",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5444,
+            "range": "± 506",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5707,
+            "range": "± 660",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6553,
+            "range": "± 1165",
             "unit": "ns/iter"
           }
         ]
