@@ -21,9 +21,6 @@ GitHub <TODO LINK>`_.
 
     .. tab:: 1. Expenses Application
 
-        Expenses Application
-        ====================
-
         Our sample application serves data about expenses submitted by users.
 
         If you navigate to ``quickstart/expenses.py``, you'll see a simple ``Expense`` class, and some data stored in the
