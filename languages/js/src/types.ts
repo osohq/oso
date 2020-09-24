@@ -301,6 +301,35 @@ export interface ExternalIsa {
 }
 
 /**
+ * Polar operators.
+ *
+ * Currently, the only operators supported for external operations are
+ * comparison operators.
+ *
+ * @internal
+ */
+enum PolarOperator {
+  Eq,
+  Geq,
+  Gt,
+  Leq,
+  Lt,
+  Neq,
+}
+
+/**
+ * The `ExternalOp` [[`QueryEvent`]] is how Polar evaluates an operation
+ * involving one or more application instances.
+ *
+ * @internal
+ */
+export interface ExternalOp {
+  args: PolarTerm[];
+  callId: number;
+  operator: PolarOperator;
+}
+
+/**
  * The `ExternalUnify` [[`QueryEvent`]] is how Polar determines whether a pair
  * of values unify where at least one of the values is an application instance
  * (and, as such, Polar cannot determine unification internally).
@@ -334,6 +363,7 @@ export enum QueryEventKind {
   ExternalCall,
   ExternalIsa,
   ExternalIsSubspecializer,
+  ExternalOp,
   ExternalUnify,
   MakeExternal,
   Result,
@@ -351,6 +381,7 @@ export interface QueryEvent {
     | ExternalCall
     | ExternalIsa
     | ExternalIsSubspecializer
+    | ExternalOp
     | ExternalUnify
     | MakeExternal
     | Result;

@@ -808,4 +808,12 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     expect(query(subject, 'inf < neg_inf')).to eq([])
     expect(query(subject, 'neg_inf < inf')).to eq([{}])
   end
+
+  it 'fails gracefully on ExternalOp events' do
+    stub_const('Foo', Class.new)
+    subject.register_class(Foo)
+    expect { query(subject, 'new Foo() == new Foo()') }.to raise_error do |e|
+      expect(e).to be_an Oso::Polar::UnimplementedOperationError
+    end
+  end
 end

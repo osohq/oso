@@ -169,6 +169,8 @@ module Oso
               end
               command = JSON.dump(host.to_polar(input))
               ffi_query.debug_command(command)
+            when 'ExternalOp'
+              raise UnimplementedOperationError, 'comparison operators'
             else
               raise "Unhandled event: #{JSON.dump(event.inspect)}"
             end

@@ -346,4 +346,10 @@ public class Exceptions {
       super(msg, details);
     }
   }
+
+  public static class UnimplementedOperation extends PolarRuntimeException {
+    public UnimplementedOperation(String operation) {
+      super(operation + " are unimplemented in the oso Java library");
+    }
+  }
 }
