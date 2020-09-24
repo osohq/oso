@@ -56,7 +56,7 @@ impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
             // If we hit this error its because somehow we didn't find the class, and yet
             // we also weren't able to register the class because the name already exists.
             // TODO: can we handle this without panicking?
-            host.cache_class(class, name.clone())
+            host.cache_class(class, name)
                 .expect("failed to register a class that we thought was previously unregistered");
         }
         Value::ExternalInstance(ExternalInstance {
