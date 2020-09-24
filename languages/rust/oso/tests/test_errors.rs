@@ -509,26 +509,21 @@ fn test_operator_unimplemented() -> oso::Result<()> {
 
     let mut oso = OsoTest::new();
 
-    #[derive(PolarClass)]
+    #[derive(PolarClass, PartialOrd, PartialEq)]
     struct Foo(i64);
 
     let foo_class = Foo::get_polar_class_builder()
+        .with_equality_check()
         .build();
 
     oso.oso.register_class(foo_class)?;
 
+    oso.load_str("lt(a, b) if a < b;");
+    oso.qeval("lt(1, 2)");
+
+    assert!(Foo(0) < Foo(1));
+    let mut query = oso.oso.query_rule("lt", (Foo(0), Foo(1))).unwrap();
+    assert!(query.next().unwrap().is_err());
+
     Ok(())
-}
-
-/// Test that auto-registration when possible succeeds:
-///
-/// - attribute lookup
-/// - method call
-/// - nested method call
-/// - external unification
-/// - isa'ing
-/// - is_subspecializer
-#[test]
-fn test_auto_registration() {
-
 }
