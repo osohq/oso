@@ -1,10 +1,9 @@
-use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
 
-use crate::errors::{OsoError, TypeError};
+use crate::errors::OsoError;
 use crate::Polar;
 
 mod class;
@@ -13,30 +12,17 @@ mod from_polar;
 mod method;
 mod to_polar;
 
-pub use class::{Class, Instance};
-pub use from_polar::FromPolar;
-pub use to_polar::{PolarResultIter, ToPolar};
+pub use class::{Class, ClassBuilder, Instance};
+pub use from_polar::{FromPolar, FromPolarList};
+pub use to_polar::{PolarResultIter, ToPolar, ToPolarList, ToPolarResults};
 
-/// The meta class - the class of all classess (except itself)
-#[derive(Clone, Default)]
-pub struct Type;
-
-fn type_class() -> Class {
-    let class = Class::<Type>::with_default();
-    class.erase_type()
-}
-
-/// Downcast `any` with proper error handling.
-///
-/// # Arguments
-/// * `type_name` - used in error message. The target type name.
-fn downcast<T: Any>(any: &dyn Any) -> Result<&T, TypeError> {
-    any.downcast_ref().ok_or_else(|| TypeError {
-        expected: String::from(std::any::type_name::<T>()),
-    })
+impl ToPolar for crate::Class {}
+fn metaclass() -> Class {
+    Class::builder::<Class>().name("oso::host::Class").build()
 }
 
 /// Maintain mappings and caches for Rust classes & instances
+#[derive(Clone)]
 pub struct Host {
     /// Reference to the inner `Polar` instance
     polar: Arc<Polar>,
@@ -61,28 +47,40 @@ impl Host {
             instances: HashMap::new(),
             polar,
         };
-        let type_class = type_class();
-        let name = Symbol("Type".to_string());
-        host.cache_class(type_class, name).unwrap();
+        let type_class = metaclass();
+        let name = Symbol(type_class.name.clone());
+        host.cache_class(type_class, name)
+            .expect("could not register the metaclass");
         host
     }
 
-    pub fn type_class(&mut self) -> &mut Class {
-        self.classes.get_mut(&Symbol("Type".to_string())).unwrap()
+    pub fn get_class(&self, name: &Symbol) -> crate::Result<&Class> {
+        self.classes
+            .get(name)
+            .ok_or_else(|| OsoError::MissingClassError {
+                name: name.0.clone(),
+            })
     }
 
-    pub fn get_class(&self, name: &Symbol) -> Option<&Class> {
-        self.classes.get(name)
-    }
-
-    pub fn get_class_from_type<C: 'static>(&self) -> Option<&Class> {
+    pub fn get_class_by_type_id(&self, id: std::any::TypeId) -> crate::Result<&Class> {
         self.class_names
-            .get(&std::any::TypeId::of::<C>())
+            .get(&id)
+            .ok_or_else(|| OsoError::MissingClassError {
+                name: format!("TypeId: {:?}", id),
+            })
             .and_then(|name| self.get_class(name))
     }
 
-    pub fn get_class_mut(&mut self, name: &Symbol) -> Option<&mut Class> {
-        self.classes.get_mut(name)
+    pub fn get_class_from_type<C: 'static>(&self) -> crate::Result<&Class> {
+        self.get_class_by_type_id(std::any::TypeId::of::<C>())
+    }
+
+    pub fn get_class_mut(&mut self, name: &Symbol) -> crate::Result<&mut Class> {
+        self.classes
+            .get_mut(name)
+            .ok_or_else(|| OsoError::MissingClassError {
+                name: name.0.clone(),
+            })
     }
 
     /// Add the class to the host classes
@@ -98,9 +96,11 @@ impl Host {
         Ok(name.0)
     }
 
-    pub fn get_instance(&self, id: u64) -> Option<&class::Instance> {
+    pub fn get_instance(&self, id: u64) -> crate::Result<&class::Instance> {
         tracing::trace!("instances: {:?}", self.instances.keys().collect::<Vec<_>>());
-        self.instances.get(&id)
+        self.instances
+            .get(&id)
+            .ok_or_else(|| OsoError::MissingInstanceError)
     }
 
     pub fn cache_instance(&mut self, instance: class::Instance, id: Option<u64>) -> u64 {
@@ -124,7 +124,7 @@ impl Host {
         // @TODO: Handle the error if the class doesn't exist.
         let class = self.get_class(name).unwrap().clone();
         debug_assert!(self.instances.get(&id).is_none());
-        let fields = fields; // TODO: use
+        let fields = fields;
         let instance = class.init(fields, self)?;
         self.cache_instance(instance, Some(id));
         Ok(())
@@ -135,16 +135,16 @@ impl Host {
 
         let left = self.get_instance(left).unwrap();
         let right = self.get_instance(right).unwrap();
-        left.equals(right)
+        left.equals(right, &self)
     }
 
-    pub fn isa(&self, term: Term, class_tag: &Symbol) -> bool {
+    pub fn isa(&self, term: Term, class_tag: &Symbol) -> crate::Result<bool> {
         let name = &class_tag.0;
-        match term.value() {
+        let res = match term.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
-                let class = self.get_class(class_tag).unwrap();
-                let instance = self.get_instance(*instance_id).unwrap();
-                class.is_instance(instance)
+                let class = self.get_class(class_tag)?;
+                let instance = self.get_instance(*instance_id)?;
+                instance.instance_of(class)
             }
             Value::Boolean(_) => name == "Boolean",
             Value::Dictionary(_) => name == "Dictionary",
@@ -158,7 +158,8 @@ impl Host {
             }
             Value::String(_) => name == "String",
             _ => false,
-        }
+        };
+        Ok(res)
     }
 
     pub fn is_subspecializer(&self, _id: u64, _left_tag: &Symbol, _right_tag: &Symbol) -> bool {

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use oso::{Class, Oso, OsoError, PolarClass, ToPolar, Value};
+use oso::{Class, Oso, OsoError, PolarClass, Value};
 use polar_core::error as polar_error;
 use polar_core::terms::Symbol;
 
@@ -166,10 +166,7 @@ fn test_data_conversions_externals() -> oso::Result<()> {
     oso.load_str("allow(actor, resource) if actor.widget().id = resource.id;");
     let query_results = oso
         .oso
-        .query_rule(
-            "allow",
-            vec![&actor as &dyn ToPolar, &widget as &dyn ToPolar],
-        )?
+        .query_rule("allow", (actor, widget))?
         .map(|r| r.unwrap())
         .collect::<Vec<_>>();
 
@@ -371,7 +368,7 @@ fn test_register_constant() -> oso::Result<()> {
     let mut oso = test_oso();
 
     let d = hashmap! {String::from("a") => 1};
-    oso.oso.register_constant("d", &d)?;
+    oso.oso.register_constant("d", d)?;
 
     assert_eq!(oso.qvar::<i64>("d.a = x", "x"), vec![1]);
 
@@ -770,14 +767,7 @@ fn test_predicate_return_list() {
 
     let mut query = oso
         .oso
-        .query_rule(
-            "allow",
-            vec![
-                &Actor::new() as &dyn ToPolar,
-                &"join" as &dyn ToPolar,
-                &"party" as &dyn ToPolar,
-            ],
-        )
+        .query_rule("allow", (Actor::new(), "join", "party"))
         .unwrap();
 
     let result = query.next().unwrap().unwrap();
@@ -794,10 +784,9 @@ fn test_variables_as_arguments() -> oso::Result<()> {
 
     oso.oso.load_file(test_file_path())?;
 
-    let query = oso.oso.query_rule(
-        "f",
-        vec![&Value::Variable(Symbol("a".to_owned())) as &dyn ToPolar],
-    )?;
+    let query = oso
+        .oso
+        .query_rule("f", (Value::Variable(Symbol("a".to_owned())),))?;
 
     let a_var = query
         .map(|r| r.unwrap().get_typed::<i64>("a").unwrap())
@@ -841,10 +830,10 @@ fn test_nan_inf() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.oso.register_constant("inf", &std::f64::INFINITY)?;
+    oso.oso.register_constant("inf", std::f64::INFINITY)?;
     oso.oso
-        .register_constant("neg_inf", &std::f64::NEG_INFINITY)?;
-    oso.oso.register_constant("nan", &std::f64::NAN)?;
+        .register_constant("neg_inf", std::f64::NEG_INFINITY)?;
+    oso.oso.register_constant("nan", std::f64::NAN)?;
 
     let x = oso.qvar::<f64>("x = nan", "x").pop().unwrap();
     assert!(x.is_nan());

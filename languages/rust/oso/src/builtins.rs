@@ -4,30 +4,30 @@ use polar_core::terms::{Symbol, Value};
 
 use std::collections::HashMap;
 
-use crate::Class;
+use crate::{Class, ClassBuilder};
 
-fn boolean() -> Class<bool> {
-    Class::<bool>::with_default().name("Boolean")
+fn boolean() -> ClassBuilder<bool> {
+    ClassBuilder::<bool>::with_default().name("Boolean")
 }
 
-fn integer() -> Class<i64> {
-    Class::<i64>::with_default().name("Integer")
+fn integer() -> ClassBuilder<i64> {
+    ClassBuilder::<i64>::with_default().name("Integer")
 }
 
-fn float() -> Class<f64> {
-    Class::<f64>::with_default().name("Float")
+fn float() -> ClassBuilder<f64> {
+    ClassBuilder::<f64>::with_default().name("Float")
 }
 
-fn list() -> Class<Vec<Value>> {
-    Class::<Vec<Value>>::with_default().name("List")
+fn list() -> ClassBuilder<Vec<Value>> {
+    ClassBuilder::<Vec<Value>>::with_default().name("List")
 }
 
-fn dictionary() -> Class<HashMap<Symbol, Value>> {
-    Class::<HashMap<Symbol, Value>>::with_default().name("Dictionary")
+fn dictionary() -> ClassBuilder<HashMap<Symbol, Value>> {
+    ClassBuilder::<HashMap<Symbol, Value>>::with_default().name("Dictionary")
 }
 
-fn string() -> Class<String> {
-    Class::<String>::with_default()
+fn string() -> ClassBuilder<String> {
+    ClassBuilder::<String>::with_default()
         .name("String")
         .add_method("len", |s: &String| s.len() as i64)
         .add_method("is_empty", |s: &String| s.is_empty())
@@ -142,11 +142,11 @@ fn string() -> Class<String> {
 /// Returns the builtin types, the name, class, and instance
 pub fn classes() -> Vec<Class> {
     vec![
-        boolean().erase_type(),
-        integer().erase_type(),
-        float().erase_type(),
-        list().erase_type(),
-        dictionary().erase_type(),
-        string().erase_type(),
+        boolean().build(),
+        integer().build(),
+        float().build(),
+        list().build(),
+        dictionary().build(),
+        string().build(),
     ]
 }

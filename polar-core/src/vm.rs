@@ -5,8 +5,6 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
-use ::log::trace;
-
 use super::debugger::{DebugEvent, Debugger};
 use super::error::{self, PolarResult};
 use super::events::*;
@@ -695,7 +693,6 @@ impl PolarVirtualMachine {
     /// Print a message to the output stream.
     fn print<S: Into<String>>(&self, message: S) {
         let message = message.into();
-        trace!("{}", &message);
         self.messages.push(MessageKind::Print, message);
     }
 

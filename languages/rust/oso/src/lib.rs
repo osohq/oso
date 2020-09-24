@@ -82,7 +82,7 @@ mod query;
 
 pub use crate::oso::Oso;
 pub use errors::{OsoError, Result};
-pub use host::{Class, FromPolar, ToPolar};
+pub use host::{Class, ClassBuilder, FromPolar, FromPolarList, ToPolar, ToPolarList};
 pub use polar_core::terms::Value;
 pub use query::{Query, ResultSet};
 
@@ -111,8 +111,8 @@ pub trait PolarClass: Sized + 'static {
     /// Can still have methods added to it with `add_method`, and attributes
     /// with `add_attribute_getter`.
     /// Use `Class::build` to finish defining the type.
-    fn get_polar_class_builder() -> Class<Self> {
-        Class::new()
+    fn get_polar_class_builder() -> ClassBuilder<Self> {
+        Class::builder()
     }
 }
 

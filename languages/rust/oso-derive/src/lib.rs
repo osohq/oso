@@ -113,13 +113,13 @@ pub fn derive_polar_class_impl(ts: TokenStream) -> TokenStream {
 
     let result = quote! {
         impl oso::PolarClass for #type_name {
-            fn get_polar_class_builder() -> oso::Class<#type_name> {
-                oso::Class::new()
+            fn get_polar_class_builder() -> oso::ClassBuilder<#type_name> {
+                oso::Class::builder()
                     .name(#class_name)
                     #(#getters)*
             }
 
-            fn get_polar_class() -> oso::Class<()> {
+            fn get_polar_class() -> oso::Class {
                 let builder = #type_name::get_polar_class_builder();
                 builder.build()
             }

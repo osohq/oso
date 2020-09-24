@@ -1,9 +1,8 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
-use crate::host::{Instance, PolarResultIter};
-use crate::{FromPolar, ToPolar};
+use crate::host::{Host, Instance, PolarResultIter};
+use crate::FromPolar;
 
 use polar_core::events::*;
 use polar_core::terms::*;
@@ -18,11 +17,11 @@ impl Iterator for Query {
 pub struct Query {
     inner: polar_core::polar::Query,
     calls: HashMap<u64, PolarResultIter>,
-    host: Arc<Mutex<crate::host::Host>>,
+    host: Host,
 }
 
 impl Query {
-    pub fn new(inner: polar_core::polar::Query, host: Arc<Mutex<crate::host::Host>>) -> Self {
+    pub fn new(inner: polar_core::polar::Query, host: Host) -> Self {
         Self {
             calls: HashMap::new(),
             inner,
@@ -99,10 +98,8 @@ impl Query {
         self.inner.question_result(call_id, result);
     }
 
-    fn call_result(&mut self, call_id: u64, result: Box<dyn ToPolar>) -> crate::Result<()> {
-        let mut host = self.host.lock().unwrap();
-        let value = result.to_polar(&mut host);
-        Ok(self.inner.call_result(call_id, Some(value))?)
+    fn call_result(&mut self, call_id: u64, result: Term) -> crate::Result<()> {
+        Ok(self.inner.call_result(call_id, Some(result))?)
     }
 
     fn call_result_none(&mut self, call_id: u64) -> crate::Result<()> {
@@ -114,14 +111,12 @@ impl Query {
     }
 
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
-        let mut host = self.host.lock().unwrap();
         match constructor.value() {
             Value::Call(Call { name, args, .. }) => {
-                host.make_instance(name, args.clone(), instance_id)?;
+                self.host.make_instance(name, args.clone(), instance_id)
             }
-            _ => panic!("not valid"),
+            _ => lazy_error!("invalid type for constructing an instance -- internal error"),
         }
-        Ok(())
     }
 
     fn register_call(
@@ -132,34 +127,18 @@ impl Query {
         args: Option<Vec<Term>>,
     ) -> crate::Result<()> {
         if self.calls.get(&call_id).is_none() {
-            let (f, args) = if let Some(args) = args {
-                if let Some(m) = instance.methods.get(&name) {
-                    (m, args)
-                } else {
-                    return lazy_error!("instance method not found");
-                }
-            } else if let Some(attr) = instance.attributes.get(&name) {
-                (attr, vec![])
-            } else {
-                tracing::trace!(
-                    "attribute {:?} not found in attributes {:?}",
-                    &name,
-                    instance.attributes.keys().collect::<Vec<_>>()
-                );
-                return lazy_error!("attribute lookup not found");
-            };
             tracing::trace!(call_id, name = %name, args = ?args, "register_call");
-            let host = &mut self.host.lock().unwrap();
-            let result = f.invoke(instance.instance.as_ref(), args, host)?;
-            self.calls.insert(call_id, result.to_polar_results());
+            let results = if let Some(args) = args {
+                instance.call(&name.0, args, &mut self.host)?
+            } else {
+                Box::new(std::iter::once(instance.get_attr(&name.0, &mut self.host)))
+            };
+            self.calls.insert(call_id, results);
         }
         Ok(())
     }
 
-    fn next_call_result(
-        &mut self,
-        call_id: u64,
-    ) -> Option<Result<Box<dyn ToPolar>, crate::OsoError>> {
+    fn next_call_result(&mut self, call_id: u64) -> Option<Result<Term, crate::OsoError>> {
         self.calls.get_mut(&call_id).and_then(|c| c.next())
     }
 
@@ -174,7 +153,7 @@ impl Query {
         if kwargs.is_some() {
             return lazy_error!("Invalid call error: kwargs not supported in Rust.");
         }
-        let instance = Instance::from_polar(&instance, &mut self.host.lock().unwrap()).unwrap();
+        let instance = Instance::from_polar(&instance, &self.host).unwrap();
         if let Err(e) = self.register_call(call_id, instance, name, args) {
             self.application_error(e);
             return self.call_result_none(call_id);
@@ -201,12 +180,11 @@ impl Query {
     ) -> crate::Result<()> {
         assert_eq!(args.len(), 2);
         let res = {
-            let mut host = self.host.lock().unwrap();
             let args = [
-                Instance::from_polar(&args[0], &mut host).unwrap(),
-                Instance::from_polar(&args[1], &mut host).unwrap(),
+                Instance::from_polar(&args[0], &self.host).unwrap(),
+                Instance::from_polar(&args[1], &self.host).unwrap(),
             ];
-            host.operator(operator, args)?
+            self.host.operator(operator, args)?
         };
         self.question_result(call_id, res);
         Ok(())
@@ -219,7 +197,7 @@ impl Query {
         class_tag: Symbol,
     ) -> crate::Result<()> {
         tracing::debug!(instance = ?instance, class = %class_tag, "isa");
-        let res = self.host.lock().unwrap().isa(instance, &class_tag);
+        let res = self.host.isa(instance, &class_tag)?;
         self.question_result(call_id, res);
         Ok(())
     }
@@ -230,11 +208,7 @@ impl Query {
         left_instance_id: u64,
         right_instance_id: u64,
     ) -> crate::Result<()> {
-        let res = self
-            .host
-            .lock()
-            .unwrap()
-            .unify(left_instance_id, right_instance_id)?;
+        let res = self.host.unify(left_instance_id, right_instance_id)?;
         self.question_result(call_id, res);
         Ok(())
     }
@@ -246,11 +220,9 @@ impl Query {
         left_class_tag: Symbol,
         right_class_tag: Symbol,
     ) -> crate::Result<()> {
-        let res = self.host.lock().unwrap().is_subspecializer(
-            instance_id,
-            &left_class_tag,
-            &right_class_tag,
-        );
+        let res = self
+            .host
+            .is_subspecializer(instance_id, &left_class_tag, &right_class_tag);
         self.question_result(call_id, res);
         Ok(())
     }
@@ -262,23 +234,21 @@ impl Query {
     }
 
     /// Covert `term` into type `T`.
-    pub fn from_polar<T: FromPolar>(&mut self, term: &Term) -> crate::Result<T> {
-        let mut host = self.host.lock().unwrap();
-        Ok(T::from_polar(term, &mut host)?)
+    pub fn from_polar<T: FromPolar>(&self, term: &Term) -> crate::Result<T> {
+        Ok(T::from_polar(term, &self.host)?)
     }
 
     // TODO (dhatch): Get rid of this when implementing value type for the library.
     /// Convert `value` into type `T`.
-    pub fn from_polar_value<T: FromPolar>(&mut self, value: Value) -> crate::Result<T> {
-        let mut host = self.host.lock().unwrap();
-        Ok(T::from_polar(&Term::new_temporary(value), &mut host)?)
+    pub fn from_polar_value<T: FromPolar>(&self, value: Value) -> crate::Result<T> {
+        Ok(T::from_polar(&Term::new_temporary(value), &self.host)?)
     }
 }
 
 #[derive(Clone)]
 pub struct ResultSet {
     bindings: polar_core::kb::Bindings,
-    host: Arc<Mutex<crate::host::Host>>,
+    host: crate::host::Host,
 }
 
 impl ResultSet {
@@ -306,7 +276,7 @@ impl ResultSet {
         self.bindings
             .get(&Symbol(name.to_string()))
             .ok_or_else(|| crate::OsoError::FromPolar)
-            .and_then(|term| T::from_polar(term, &mut self.host.lock().unwrap()))
+            .and_then(|term| T::from_polar(term, &self.host))
     }
 }
 
@@ -327,3 +297,7 @@ impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<
         })
     }
 }
+
+// Make sure the `Query` object is _not_ threadsafe
+#[cfg(test)]
+static_assertions::assert_not_impl_any!(Query: Send, Sync);

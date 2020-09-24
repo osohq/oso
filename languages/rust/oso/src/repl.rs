@@ -86,7 +86,6 @@ impl Repl {
     pub fn oso_input(&mut self, prompt: &str) -> anyhow::Result<String> {
         let input = self.editor.readline(prompt)?;
         self.editor.add_history_entry(input.as_str());
-        // input.pop(); // remove the trailing ';'
         Ok(input)
     }
 
@@ -113,13 +112,21 @@ pub fn main() -> anyhow::Result<()> {
     load_files(&mut oso, &mut args)?;
     loop {
         // get input
-        let input: String = match repl.oso_input("query> ") {
+        let mut input: String = match repl.oso_input("query> ") {
             Ok(input) => input,
             Err(e) => {
                 eprintln!("Readline error: {}", e);
                 break;
             }
         };
+
+        if input.starts_with("%def") {
+            if let Err(e) = oso.load_str(&input[4..]) {
+                println!("{}", e);
+            }
+            continue;
+        }
+        input.pop(); // remove trailing `;`
         let mut query = match oso.query(&input) {
             Err(e) => {
                 println!("{}", e);
@@ -139,7 +146,7 @@ pub fn main() -> anyhow::Result<()> {
                     }
                 }
             } else {
-                println!("{:?}", res.expect_err("error"))
+                println!("{}", res.expect_err("error"))
             }
         }
         if !has_result {

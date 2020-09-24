@@ -1,28 +1,28 @@
 //! Support for dynamic class objects in Rust
 
-use polar_core::terms::{Symbol, Term};
+use polar_core::terms::Term;
 
-use std::any::{Any, TypeId};
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
 use crate::errors::OsoError;
-use crate::FromPolar;
 
-use super::class_method::{ClassMethod, Constructor, InstanceMethod};
-use super::downcast;
+use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod};
+use super::from_polar::FromPolarList;
 use super::method::{Function, Method};
 use super::to_polar::ToPolarResults;
 use super::Host;
 
-type ClassMethods = HashMap<Symbol, ClassMethod>;
-type InstanceMethods = HashMap<Symbol, InstanceMethod>;
+type Attributes = HashMap<&'static str, AttributeGetter>;
+type ClassMethods = HashMap<&'static str, ClassMethod>;
+type InstanceMethods = HashMap<&'static str, InstanceMethod>;
 
 fn equality_not_supported(
     type_name: String,
-) -> Box<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync> {
-    let eq = move |_: &dyn Any, _: &dyn Any| -> crate::Result<bool> {
+) -> Box<dyn Fn(&Instance, &Instance) -> crate::Result<bool> + Send + Sync> {
+    let eq = move |_: &Instance, _: &Instance| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
             type_name: type_name.clone(),
@@ -33,20 +33,19 @@ fn equality_not_supported(
 }
 
 #[derive(Clone)]
-pub struct Class<T = ()> {
+pub struct Class {
     /// The class name. Defaults to the `std::any::type_name`
     pub name: String,
-    /// A wrapped method that constructs an instance of `T` from Polar terms
-    pub constructor: Option<Constructor>,
-    /// Methods that return simple attribute lookups on an instance of `T`
-    pub attributes: InstanceMethods,
-    /// Instance methods on `T` that expect Polar terms, and an instance of `&T`
-    pub instance_methods: InstanceMethods,
-    /// Class methods on `T`
-    pub class_methods: ClassMethods,
     pub type_id: TypeId,
-    /// A method to check whether the supplied argument is in instance of `T`
-    instance_check: Arc<dyn Fn(&dyn Any) -> bool + Send + Sync>,
+    /// A wrapped method that constructs an instance of `T` from Polar terms
+    constructor: Option<Constructor>,
+    /// Methods that return simple attribute lookups on an instance of `T`
+    attributes: Attributes,
+    /// Instance methods on `T` that expect Polar terms, and an instance of `&T`
+    instance_methods: InstanceMethods,
+    /// Class methods on `T`
+    class_methods: ClassMethods,
+
     /// A method to check whether the supplied `TypeId` matches this class
     /// (This isn't using `type_id` because we might want to register other types here
     /// in order to check inheritance)
@@ -54,49 +53,75 @@ pub struct Class<T = ()> {
 
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&dyn Any, &dyn Any) -> crate::Result<bool> + Send + Sync>,
+    equality_check: Arc<dyn Fn(&Instance, &Instance) -> crate::Result<bool> + Send + Sync>,
+}
 
-    /// A type marker. This is erased when the class is ready to be constructed with
-    /// `erase_type`
+impl Class {
+    pub fn builder<T: 'static>() -> ClassBuilder<T> {
+        ClassBuilder::new()
+    }
+
+    pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
+        if let Some(constructor) = &self.constructor {
+            constructor.invoke(fields, host)
+        } else {
+            Err(crate::OsoError::Custom {
+                message: format!("MissingConstructorError: {} has no constructor", self.name),
+            })
+        }
+    }
+
+    pub fn call(
+        &self,
+        attr: &str,
+        args: Vec<Term>,
+        host: &mut Host,
+    ) -> crate::Result<super::to_polar::PolarResultIter> {
+        let attr = self
+            .class_methods
+            .get(attr)
+            .expect("class method not found");
+        attr.clone().invoke(args, host)
+    }
+
+    fn get_method(&self, name: &str) -> Option<InstanceMethod> {
+        tracing::trace!({class=%self.name, name}, "get_method");
+        if self.type_id == TypeId::of::<Class>() {
+            // all methods on `Class` redirect by looking up the class method
+            Some(InstanceMethod::from_class_method(name.to_string()))
+        } else {
+            self.instance_methods.get(name).cloned()
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ClassBuilder<T> {
+    class: Class,
+    /// A type marker. Used to ensure methods have the correct type.
     ty: std::marker::PhantomData<T>,
 }
 
-impl fmt::Debug for Class {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Class")
-            .field("name", &self.name)
-            .field("type_id", &self.type_id)
-            .finish()
-    }
-}
-
-impl Default for Class {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// TODO seems like the name is based on fully qualified name, so we may want to
-// require this to be specified.
-
-impl<T> Class<T>
+impl<T> ClassBuilder<T>
 where
     T: 'static,
 {
     /// Create a new class builder.
-    pub fn new() -> Self {
-        let name = std::any::type_name::<T>().to_string();
+    fn new() -> Self {
+        let fq_name = std::any::type_name::<T>().to_string();
+        let short_name = fq_name.split("::").last().expect("type has no name");
         Self {
-            name: name.clone(),
-            constructor: None,
-            attributes: InstanceMethods::new(),
-            instance_methods: InstanceMethods::new(),
-            class_methods: ClassMethods::new(),
-            instance_check: Arc::new(|any| any.is::<T>()),
-            class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
-            equality_check: Arc::from(equality_not_supported(name)),
+            class: Class {
+                name: short_name.to_string(),
+                constructor: None,
+                attributes: HashMap::new(),
+                instance_methods: InstanceMethods::new(),
+                class_methods: ClassMethods::new(),
+                class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
+                equality_check: Arc::from(equality_not_supported(fq_name)),
+                type_id: TypeId::of::<T>(),
+            },
             ty: std::marker::PhantomData,
-            type_id: TypeId::of::<T>(),
         }
     }
 
@@ -104,6 +129,7 @@ where
     pub fn with_default() -> Self
     where
         T: std::default::Default,
+        T: Send + Sync,
     {
         Self::with_constructor::<_, _>(T::default)
     }
@@ -111,10 +137,11 @@ where
     /// Create a new class builder with a given constructor.
     pub fn with_constructor<F, Args>(f: F) -> Self
     where
-        F: Function<Args, Result = T> + 'static,
-        Args: FromPolar + 'static,
+        F: Function<Args, Result = T>,
+        T: Send + Sync,
+        Args: FromPolarList,
     {
-        let mut class: Class<T> = Class::new();
+        let mut class: ClassBuilder<T> = ClassBuilder::new();
         class = class.set_constructor(f);
         class
     }
@@ -122,10 +149,11 @@ where
     /// Set the constructor function to use for polar `new` statements.
     pub fn set_constructor<F, Args>(mut self, f: F) -> Self
     where
-        F: Function<Args, Result = T> + 'static,
-        Args: FromPolar + 'static,
+        F: Function<Args, Result = T>,
+        T: Send + Sync,
+        Args: FromPolarList,
     {
-        self.constructor = Some(Constructor::new(f));
+        self.class.constructor = Some(Constructor::new(f));
         self
     }
 
@@ -134,11 +162,11 @@ where
     where
         F: Fn(&T, &T) -> bool + Send + Sync + 'static,
     {
-        self.equality_check = Arc::new(move |a, b| {
+        self.class.equality_check = Arc::new(move |a, b| {
             tracing::trace!("equality check");
 
-            let a = downcast(a).map_err(|e| e.user())?;
-            let b = downcast(b).map_err(|e| e.user())?;
+            let a = a.downcast().map_err(|e| e.user())?;
+            let b = b.downcast().map_err(|e| e.user())?;
 
             Ok((f)(a, b))
         });
@@ -156,171 +184,177 @@ where
 
     /// Add an attribute getter for statments like `foo.bar`
     /// `class.add_attribute_getter("bar", |instance| instance.bar)
-    pub fn add_attribute_getter<F, R>(mut self, name: &str, f: F) -> Self
+    pub fn add_attribute_getter<F, R>(mut self, name: &'static str, f: F) -> Self
     where
-        F: Method<T, Result = R> + 'static,
-        R: ToPolarResults + 'static,
+        F: Fn(&T) -> R + Send + Sync + 'static,
+        R: crate::ToPolar,
         T: 'static,
     {
-        self.attributes
-            .insert(Symbol(name.to_string()), InstanceMethod::new(f));
+        self.class.attributes.insert(name, AttributeGetter::new(f));
         self
     }
 
     /// Set the name of the polar class.
     pub fn name(mut self, name: &str) -> Self {
-        self.name = name.to_string();
+        self.class.name = name.to_string();
         self
     }
 
     /// Add a method for polar method calls like `foo.plus(1)
     /// `class.add_attribute_getter("bar", |instance, n| instance.foo + n)
-    pub fn add_method<F, Args, R>(mut self, name: &str, f: F) -> Self
+    pub fn add_method<F, Args, R>(mut self, name: &'static str, f: F) -> Self
     where
-        Args: FromPolar,
-        F: Method<T, Args, Result = R> + 'static,
+        Args: FromPolarList,
+        F: Method<T, Args, Result = R>,
         R: ToPolarResults + 'static,
     {
-        self.instance_methods
-            .insert(Symbol(name.to_string()), InstanceMethod::new(f));
+        self.class
+            .instance_methods
+            .insert(name, InstanceMethod::new(f));
         self
     }
 
     /// A method that returns multiple values. Every element in the iterator returned by the method will
     /// be a separate polar return value.
-    pub fn add_iterator_method<F, Args, I>(mut self, name: &str, f: F) -> Self
+    pub fn add_iterator_method<F, Args, I>(mut self, name: &'static str, f: F) -> Self
     where
-        Args: FromPolar,
-        F: Method<T, Args> + 'static,
+        Args: FromPolarList,
+        F: Method<T, Args>,
         F::Result: IntoIterator<Item = I>,
-        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Sized + Clone + 'static,
+        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Sized + 'static,
         I: ToPolarResults + 'static,
         T: 'static,
     {
-        self.instance_methods
-            .insert(Symbol(name.to_string()), InstanceMethod::new_iterator(f));
+        self.class
+            .instance_methods
+            .insert(name, InstanceMethod::new_iterator(f));
         self
     }
 
     /// A method that's called on the type instead of an instance.
     /// eg `Foo.pi`
-    pub fn add_class_method<F, Args, R>(mut self, name: &str, f: F) -> Self
+    pub fn add_class_method<F, Args, R>(mut self, name: &'static str, f: F) -> Self
     where
-        F: Function<Args, Result = R> + 'static,
-        Args: FromPolar + 'static,
+        F: Function<Args, Result = R>,
+        Args: FromPolarList,
         R: ToPolarResults + 'static,
     {
-        self.class_methods
-            .insert(Symbol(name.to_string()), ClassMethod::new(f));
+        self.class.class_methods.insert(name, ClassMethod::new(f));
         self
     }
 
-    /// Erase the generic type parameter
-    /// This is done before registering so
-    /// that the host can store all of the same type. The generic paramtere
-    /// is just used for the builder pattern part of Class
-    /// TODO: Skip this shenanigans and make there a builder instead?
-    pub fn erase_type(self) -> Class<()> {
-        Class {
-            name: self.name,
-            constructor: self.constructor,
-            attributes: self.attributes,
-            instance_methods: self.instance_methods,
-            class_methods: self.class_methods,
-            instance_check: self.instance_check,
-            class_check: self.class_check,
-            type_id: self.type_id,
-            equality_check: self.equality_check,
-            ty: std::marker::PhantomData,
-        }
-    }
-
-    pub fn build(self) -> Class<()> {
-        self.erase_type()
-    }
-
-    pub fn is_class<C: 'static>(&self) -> bool {
-        tracing::trace!(
-            input = %std::any::type_name::<C>(),
-            class = %self.name,
-            "is_class"
-        );
-        (self.class_check)(TypeId::of::<C>())
-    }
-
-    pub fn is_instance(&self, instance: &Instance) -> bool {
-        tracing::trace!(
-            instance = %instance.name,
-            class = %self.name,
-            "is_instance"
-        );
-        (self.instance_check)(instance.instance.as_ref())
-    }
-
-    pub fn equals(&self, instance: &Instance, other: &Instance) -> crate::Result<bool> {
-        (self.equality_check)(instance.instance.as_ref(), other.instance.as_ref())
+    /// Finish building a build the class
+    pub fn build(self) -> Class {
+        self.class
     }
 }
 
-impl Class {
-    pub fn cast_to_instance(&self, instance: impl Any) -> Instance {
-        Instance {
-            name: self.name.clone(),
-            instance: Arc::new(instance),
-            attributes: Arc::new(self.attributes.clone()),
-            methods: Arc::new(self.instance_methods.clone()),
-            class: self.clone(),
-        }
-    }
-
-    pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
-        if let Some(constructor) = &self.constructor {
-            let instance = constructor.invoke(fields, host)?;
-            Ok(Instance {
-                name: self.name.clone(),
-                instance,
-                attributes: Arc::new(self.attributes.clone()),
-                methods: Arc::new(self.instance_methods.clone()),
-                class: self.clone(),
-            })
-        } else {
-            Err(crate::OsoError::Custom {
-                message: format!("MissingConstructorError: {} has no constructor", self.name),
-            })
-        }
-    }
-}
-
+/// Container for an instance of a `Class`
+///
+/// Not guaranteed to be an instance of a registered class,
+/// this is looked up through the `Instance::class` method,
+/// and the `ToPolar` implementation for `PolarClass` will
+/// register the class if not seen before.
+///
+/// A reference to the underlying type of the Instance can be
+/// retrived using `Instance::downcast`.
 #[derive(Clone)]
 pub struct Instance {
-    pub name: String,
-    pub instance: Arc<dyn Any>,
-    pub attributes: Arc<InstanceMethods>,
-    pub methods: Arc<InstanceMethods>,
-
-    // TODO this should likely not be held by value.
-    pub class: Class,
+    inner: Arc<dyn std::any::Any + Send + Sync>,
+    type_name: &'static str,
 }
 
-impl std::fmt::Debug for Instance {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Instance<{}>", self.name)
+impl fmt::Debug for Instance {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Instance<{}>", self.type_name)
     }
 }
 
 impl Instance {
+    /// Create a new instance
+    pub fn new<T: Send + Sync + 'static>(instance: T) -> Self {
+        Self {
+            inner: Arc::new(instance),
+            type_name: std::any::type_name::<T>(),
+        }
+    }
+
+    /// Check whether this is an instance of `class`
+    pub fn instance_of(&self, class: &Class) -> bool {
+        self.inner.as_ref().type_id() == class.type_id
+    }
+
+    /// Looks up the `Class` for this instance on the provided `host`
+    pub fn class<'a>(&self, host: &'a Host) -> crate::Result<&'a Class> {
+        host.get_class_by_type_id(self.inner.as_ref().type_id())
+            .map_err(|_| OsoError::MissingClassError {
+                name: self.type_name.to_string(),
+            })
+    }
+
+    /// Lookup an attribute on the instance via the registered `Class`
+    pub fn get_attr(&self, name: &str, host: &mut Host) -> crate::Result<Term> {
+        tracing::trace!({ method = %name }, "get_attr");
+        let attr = self
+            .class(host)
+            .and_then(|c| {
+                c.attributes.get(name).ok_or_else(|| OsoError::Custom {
+                    message: format!("attribute {} not found", name),
+                })
+            })?
+            .clone();
+        attr.invoke(self, host)
+    }
+
+    /// Call the named method on the instance via the registered `Class`
+    pub fn call(
+        &self,
+        name: &str,
+        args: Vec<Term>,
+        host: &mut Host,
+    ) -> crate::Result<super::to_polar::PolarResultIter> {
+        tracing::trace!({method = %name, ?args}, "call");
+        let method = self.class(host).and_then(|c| {
+            c.get_method(name).ok_or_else(|| OsoError::Custom {
+                message: format!("method {} not found", name),
+            })
+        })?;
+        method.invoke(self, args, host)
+    }
+
     /// Return `true` if the `instance` of self equals the instance of `other`.
-    pub fn equals(&self, other: &Self) -> crate::Result<bool> {
+    pub fn equals(&self, other: &Self, host: &Host) -> crate::Result<bool> {
         tracing::trace!("equals");
-        // TODO: LOL this &* below is tricky! Have a function to do this, and make instance not
-        // pub.
-        (self.class.equality_check)(&*self.instance, &*other.instance)
+        self.class(host)
+            .and_then(|c| (c.equality_check)(&self, &other))
+    }
+
+    /// Attempt to downcast the inner type of the instance to a reference to the type `T`
+    /// This should be the _only_ place using downcast to avoid mistakes.
+    pub fn downcast<T: 'static>(&self) -> Result<&T, crate::errors::TypeError> {
+        self.inner
+            .as_ref()
+            .downcast_ref()
+            .ok_or_else(|| crate::errors::TypeError {
+                expected: String::from(std::any::type_name::<T>()),
+            })
     }
 }
 
-// @TODO: This is very unsafe.
-// Temporary workaround. We need to differentiate between instances which
-// _do_ need to be `Send` (e.g. registered as constants on the base `Oso` objects)
-// and instances which don't need to be Send (e.g. created/accessed on a single thread for
-// just one query).
-unsafe impl Send for Instance {}
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_instance_of() {
+        struct Foo {}
+        struct Bar {}
+
+        let foo_class = Class::builder::<Foo>().build();
+        let bar_class = Class::builder::<Bar>().build();
+        let foo_instance = Instance::new(Foo {});
+
+        assert!(foo_instance.instance_of(&foo_class));
+        assert!(!foo_instance.instance_of(&bar_class));
+    }
+}
