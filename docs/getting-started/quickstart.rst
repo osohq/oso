@@ -32,20 +32,19 @@ GitHub <TODO LINK>`_.
         You can run the server by hitting the "Run" button while on ``server.py``, or from the embedded command line with:
 
         .. code-block:: console
+            :class: copybutton
 
             $ poetry run python quickstart/server.py
 
-        When you run the server, you'll see a browser window appear showing the server's index route. If you copy the browser
-        URL, you can use it to cURL the expenses route:
+        When you run the server, it will print out the URL it can be reached at.
+        You can use the URL to cURL the expenses route from a local terminal:
 
         .. code-block:: console
+            :class: copybutton
 
             $ curl <PASTE URL HERE>/expenses/1
 
         The response will contain the expense data, since the app doesn't have any authorization yet.
-
-        Note that each time you use cURL in this guide, you'll need to re-copy the URL from the browser as it will change
-        as you edit the application.
 
         Now we can add oso to control who has access to the expenses data.
 
@@ -76,6 +75,8 @@ GitHub <TODO LINK>`_.
         after the imports in ``quickstart/server.py``:
 
         .. code-block:: python
+            :caption: :fa:`oso` server.py
+            :class: copybutton
 
             from oso import Oso
 
@@ -111,6 +112,8 @@ GitHub <TODO LINK>`_.
         Update the ``do_GET()`` method in ``quickstart/server.py`` so that it looks like this:
 
         .. code-block:: python
+            :caption: :fa:`oso` server.py
+            :class: copybutton
 
             def do_GET(self):
                 try:
@@ -135,6 +138,7 @@ GitHub <TODO LINK>`_.
         then use the following curl command:
 
         .. code-block:: console
+            :class: copybutton
 
             $ curl <PASTE URL HERE>/expenses/1
 
@@ -173,11 +177,10 @@ GitHub <TODO LINK>`_.
         an ``@example.com`` email should be allowed to view any expense:
 
         .. code-block:: console
+            :class: copybutton
 
             $ curl -H "user: alice@example.com" <PASTE URL HERE>/expenses/1
             Expense(...)
-
-        .. TODO: decide if we still need the following three paragraphs
 
         Okay, so what just happened?
 
@@ -193,6 +196,7 @@ GitHub <TODO LINK>`_.
         are denied access:
 
         .. code-block:: console
+            :class: copybutton
 
             $ curl -H "user: alice@foo.com" <PASTE URL HERE>/expenses/1
             Not Authorized!
@@ -221,6 +225,7 @@ GitHub <TODO LINK>`_.
         Now Alice can see her own expenses but not Bhavik's:
 
         .. code-block:: console
+            :class: copybutton
 
             TODO: update links
 
@@ -232,6 +237,7 @@ GitHub <TODO LINK>`_.
         And vice-versa:
 
         .. code-block:: console
+            :class: copybutton
 
             TODO: update links
 
@@ -250,6 +256,7 @@ GitHub <TODO LINK>`_.
 
 
         .. code-block:: polar
+            :class: copybutton
             :class: no-select
 
             allow(approver: User, "approve", expense: Expense) if
