@@ -53,9 +53,11 @@ impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
             let class = Self::get_polar_class();
             let name = Symbol(class.name.clone());
             tracing::info!("class {} not previously registered, doing so now", name.0);
-            if let Err(e) = host.cache_class(class, name.clone()) {
-                tracing::debug!({ name = %name.0 }, "failed to cache class: {}", e);
-            }
+            // If we hit this error its because somehow we didn't find the class, and yet
+            // we also weren't able to register the class because the name already exists.
+            // TODO: can we handle this without panicking?
+            host.cache_class(class, name.clone())
+                .expect("failed to register a class that we thought was previously unregistered");
         }
         Value::ExternalInstance(ExternalInstance {
             constructor: None,

@@ -3,7 +3,7 @@
 	clippy lint wasm-build wasm-test js-test
 
 test: rust-test python-test ruby-test java-test python-flask-test \
-	python-django-test wasm-test js-test rustoso-test
+	python-django-test wasm-test js-test
 
 rust-test:
 	cargo test --all-targets
