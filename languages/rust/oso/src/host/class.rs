@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::errors::OsoError;
+use crate::errors::{InvalidCallError, OsoError};
 
 use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod};
 use super::from_polar::FromPolarList;
@@ -71,16 +71,23 @@ impl Class {
         }
     }
 
+    /// Call class method `attr` on `self` with arguments from `args`.
+    ///
+    /// Returns: An iterable of results from the method.
     pub fn call(
         &self,
         attr: &str,
         args: Vec<Term>,
         host: &mut Host,
     ) -> crate::Result<super::to_polar::PolarResultIter> {
-        let attr = self
-            .class_methods
-            .get(attr)
-            .expect("class method not found");
+        let attr =
+            self.class_methods
+                .get(attr)
+                .ok_or_else(|| InvalidCallError::ClassMethodNotFound {
+                    method_name: attr.to_owned(),
+                    type_name: self.name.clone(),
+                })?;
+
         attr.clone().invoke(args, host)
     }
 
@@ -109,7 +116,7 @@ where
     /// Create a new class builder.
     fn new() -> Self {
         let fq_name = std::any::type_name::<T>().to_string();
-        let short_name = fq_name.split("::").last().expect("type has no name");
+        let short_name = fq_name.split("::").last().expect("type has invalid name");
         Self {
             class: Class {
                 name: short_name.to_string(),
@@ -118,7 +125,7 @@ where
                 instance_methods: InstanceMethods::new(),
                 class_methods: ClassMethods::new(),
                 class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
-                equality_check: Arc::from(equality_not_supported(fq_name)),
+                equality_check: Arc::from(equality_not_supported(short_name.to_string())),
                 type_id: TypeId::of::<T>(),
             },
             ty: std::marker::PhantomData,
@@ -261,12 +268,15 @@ where
 #[derive(Clone)]
 pub struct Instance {
     inner: Arc<dyn std::any::Any + Send + Sync>,
-    type_name: &'static str,
+
+    /// The type name of the Instance, to be used for debugging purposes only.
+    /// To get the registered name, use `Instance::name`.
+    debug_type_name: &'static str,
 }
 
 impl fmt::Debug for Instance {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Instance<{}>", self.type_name)
+        write!(f, "Instance<{}>", self.debug_type_name)
     }
 }
 
@@ -275,7 +285,7 @@ impl Instance {
     pub fn new<T: Send + Sync + 'static>(instance: T) -> Self {
         Self {
             inner: Arc::new(instance),
-            type_name: std::any::type_name::<T>(),
+            debug_type_name: std::any::type_name::<T>(),
         }
     }
 
@@ -288,8 +298,13 @@ impl Instance {
     pub fn class<'a>(&self, host: &'a Host) -> crate::Result<&'a Class> {
         host.get_class_by_type_id(self.inner.as_ref().type_id())
             .map_err(|_| OsoError::MissingClassError {
-                name: self.type_name.to_string(),
+                name: self.debug_type_name.to_string(),
             })
+    }
+
+    /// Get the registered name of this instance on ``host``.
+    pub fn name<'a>(&self, host: &'a Host) -> crate::Result<&'a str> {
+        Ok(self.class(host)?.name.as_ref())
     }
 
     /// Lookup an attribute on the instance via the registered `Class`
@@ -298,8 +313,12 @@ impl Instance {
         let attr = self
             .class(host)
             .and_then(|c| {
-                c.attributes.get(name).ok_or_else(|| OsoError::Custom {
-                    message: format!("attribute {} not found", name),
+                c.attributes.get(name).ok_or_else(|| {
+                    InvalidCallError::AttributeNotFound {
+                        attribute_name: name.to_owned(),
+                        type_name: self.debug_type_name.to_owned(),
+                    }
+                    .into()
                 })
             })?
             .clone();
@@ -307,6 +326,11 @@ impl Instance {
     }
 
     /// Call the named method on the instance via the registered `Class`
+    ///
+    /// Returns: PolarResultIter, or an Error if the method cannot be called.
+    ///
+    /// N.B: If the method itself returns an error, this will be captured in
+    /// the PolarResultIterator (the first result will be an Error).
     pub fn call(
         &self,
         name: &str,
@@ -315,8 +339,12 @@ impl Instance {
     ) -> crate::Result<super::to_polar::PolarResultIter> {
         tracing::trace!({method = %name, ?args}, "call");
         let method = self.class(host).and_then(|c| {
-            c.get_method(name).ok_or_else(|| OsoError::Custom {
-                message: format!("method {} not found", name),
+            c.get_method(name).ok_or_else(|| {
+                InvalidCallError::MethodNotFound {
+                    method_name: name.to_owned(),
+                    type_name: self.debug_type_name.to_owned(),
+                }
+                .into()
             })
         })?;
         method.invoke(self, args, host)

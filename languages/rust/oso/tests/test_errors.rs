@@ -1,9 +1,9 @@
 /// Tests that errors are raised & correct.
 mod common;
 
-use oso::{PolarClass, Value};
-use polar_core::terms::Symbol;
 use common::OsoTest;
+use oso::{OsoError, PolarClass, Value};
+use polar_core::terms::Symbol;
 
 // TODO in all tests, check type of error & message
 
@@ -25,7 +25,17 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
 
     // Type that doesn't support unification.
     let mut query = oso.oso.query_rule("unify", (Foo(1), Foo(1)))?;
-    query.next().unwrap().expect_err("Should be an error");
+    let error = query.next().unwrap().unwrap_err();
+    assert!(
+        matches!(
+            &error,
+            OsoError::UnsupportedOperation {
+                operation,
+                type_name
+            } if operation == "equals" && type_name == "Foo"),
+        "{} doesn't match expected error",
+        error
+    );
 
     // Type that does support unification with a type that doesn't.
     #[derive(PolarClass, PartialEq)]
@@ -44,8 +54,31 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
     oso.oso.register_class(eq_foo_class)?;
 
     let mut query = oso.oso.query_rule("unify", (EqFoo(1), Foo(1)))?;
-    // TODO Actually should it? Not totally sure?
-    query.next().unwrap().expect_err("Should error");
+    let error = query.next().unwrap().unwrap_err();
+
+    // TODO definitely need stack traces, these would be hard to diagnose
+    // otherwise.
+    assert!(
+        matches!(
+            &error,
+            OsoError::TypeError(oso::errors::TypeError {
+                expected
+            }) if expected == "test_errors::test_unify_external_not_supported::EqFoo"),
+        "{} doesn't match expected error",
+        error
+    );
+
+    let mut query = oso.oso.query_rule("unify", (EqFoo(1), 1))?;
+    let error = query.next().unwrap().unwrap_err();
+    assert!(
+        matches!(
+            &error,
+            OsoError::TypeError(oso::errors::TypeError {
+                expected
+            }) if expected == "test_errors::test_unify_external_not_supported::EqFoo"),
+        "{} doesn't match expected error",
+        error
+    );
 
     Ok(())
 }
@@ -64,8 +97,14 @@ fn test_attribute_does_not_exist() -> oso::Result<()> {
     oso.load_str("getattr(x, y, val) if val = x.(y);");
 
     // TODO dhatch: Query API for variables needs improvement.
-    let mut query = oso.oso.query_rule("getattr", (Foo, "bar", Value::Variable(Symbol("a".to_owned()))))?;
-    query.next().unwrap().expect_err("Attribute does not exist.");
+    let mut query = oso.oso.query_rule(
+        "getattr",
+        (Foo, "bar", Value::Variable(Symbol("a".to_owned()))),
+    )?;
+    query
+        .next()
+        .unwrap()
+        .expect_err("Attribute does not exist.");
 
     Ok(())
 }
@@ -215,7 +254,10 @@ fn test_wrong_argument_types() {
     assert!(query.next().unwrap().is_err());
 
     // Unregistered argument.
-    let mut query = oso.oso.query_rule("bar_x", (Foo, Bar, Unregistered)).unwrap();
+    let mut query = oso
+        .oso
+        .query_rule("bar_x", (Foo, Bar, Unregistered))
+        .unwrap();
     assert!(query.next().unwrap().is_err());
 
     // Wrong type of argument.
@@ -298,12 +340,12 @@ fn test_match_attribute_does_not_exist() {
     #[derive(PolarClass)]
     struct Foo {
         #[polar(attribute)]
-        x: i64
+        x: i64,
     };
 
     impl Foo {
         fn new() -> Self {
-            Foo {x: 1}
+            Foo { x: 1 }
         }
     }
 
@@ -329,12 +371,12 @@ fn test_match_non_existent_class() {
     #[derive(PolarClass)]
     struct Foo {
         #[polar(attribute)]
-        x: i64
+        x: i64,
     };
 
     impl Foo {
         fn new() -> Self {
-            Foo {x: 1}
+            Foo { x: 1 }
         }
     }
 
@@ -401,12 +443,12 @@ fn test_class_does_not_exist() {
     #[derive(PolarClass)]
     struct Foo {
         #[polar(attribute)]
-        x: i64
+        x: i64,
     };
 
     impl Foo {
         fn new() -> Self {
-            Foo {x: 1}
+            Foo { x: 1 }
         }
     }
 
@@ -433,12 +475,12 @@ fn test_constructor_keyword_arguments_error() {
     #[derive(PolarClass)]
     struct Foo {
         #[polar(attribute)]
-        x: i64
+        x: i64,
     };
 
     impl Foo {
         fn new(x: i64) -> Self {
-            Foo {x}
+            Foo { x }
         }
     }
 
@@ -470,12 +512,12 @@ fn test_method_keyword_arguments_error() -> oso::Result<()> {
     #[derive(PolarClass)]
     struct Foo {
         #[polar(attribute)]
-        x: i64
+        x: i64,
     };
 
     impl Foo {
         fn new() -> Self {
-            Foo {x: 1}
+            Foo { x: 1 }
         }
 
         fn a(&self, x: i64) -> i64 {
@@ -512,9 +554,7 @@ fn test_operator_unimplemented() -> oso::Result<()> {
     #[derive(PolarClass, PartialOrd, PartialEq)]
     struct Foo(i64);
 
-    let foo_class = Foo::get_polar_class_builder()
-        .with_equality_check()
-        .build();
+    let foo_class = Foo::get_polar_class_builder().with_equality_check().build();
 
     oso.oso.register_class(foo_class)?;
 
@@ -527,3 +567,5 @@ fn test_operator_unimplemented() -> oso::Result<()> {
 
     Ok(())
 }
+
+// TODO (dhatch): Test errors for application method failures.
