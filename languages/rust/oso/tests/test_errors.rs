@@ -569,3 +569,10 @@ fn test_operator_unimplemented() -> oso::Result<()> {
 }
 
 // TODO (dhatch): Test errors for application method failures.
+
+// TODO (dhatch): What would happen for something like
+// val matches Foo { x: 1 } where val.x is not an integer.
+//
+// This would raise a type error (if we did one-sided external unification,
+// but we want the matches to just fail.  This wouldn't be caught by the
+// current application error implementation.
