@@ -1,6 +1,7 @@
 use polar_core::terms::*;
 use std::collections::btree_map::BTreeMap;
 use std::collections::hash_map::HashMap;
+use std::convert::TryFrom;
 
 // Should we call it something else?
 #[derive(Clone, Debug, PartialEq)]
@@ -68,5 +69,96 @@ impl PolarValue {
             PolarValue::Variable(s) => Value::Variable(Symbol(s.clone())),
         };
         Term::new_from_ffi(value)
+    }
+}
+
+pub trait FromPolarValue: Clone + Sized + 'static {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self>;
+}
+
+impl FromPolarValue for PolarValue {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+        Ok(val)
+    }
+}
+
+macro_rules! polar_to_int {
+    ($i:ty) => {
+        impl FromPolarValue for $i {
+            fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+                if let PolarValue::Integer(i) = val {
+                    <$i>::try_from(i).map_err(|_| crate::OsoError::FromPolar)
+                } else {
+                    Err(crate::OsoError::FromPolar)
+                }
+            }
+        }
+    };
+}
+
+polar_to_int!(u8);
+polar_to_int!(i8);
+polar_to_int!(u16);
+polar_to_int!(i16);
+polar_to_int!(u32);
+polar_to_int!(i32);
+polar_to_int!(i64);
+
+impl FromPolarValue for f64 {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::Float(f) = val {
+            Ok(f)
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+
+impl FromPolarValue for String {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::String(s) = val {
+            Ok(s)
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+
+impl FromPolarValue for bool {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::Boolean(b) = val {
+            Ok(b)
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+
+impl<T: FromPolarValue> FromPolarValue for HashMap<String, T> {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::Map(map) = val {
+            let mut result = HashMap::new();
+            for (k, v) in map {
+                let val = T::from_polar_value(v)?;
+                result.insert(k, val);
+            }
+            Ok(result)
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
+
+impl<T: FromPolarValue> FromPolarValue for Vec<T> {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::List(l) = val {
+            let mut result = vec![];
+            for v in l {
+                result.push(T::from_polar_value(v)?);
+            }
+            Ok(result)
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
     }
 }

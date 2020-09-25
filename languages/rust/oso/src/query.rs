@@ -271,12 +271,10 @@ impl ResultSet {
             .map(|t| PolarValue::from_term(t).unwrap())
     }
 
-    pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
-        // TODO (dhatch): Type error
-        self.bindings
-            .get(&Symbol(name.to_string()))
+    pub fn get_typed<T: crate::host::FromPolarValue>(&self, name: &str) -> crate::Result<T> {
+        self.get(name)
             .ok_or_else(|| crate::OsoError::FromPolar)
-            .and_then(|term| T::from_polar(term, &self.host))
+            .and_then(|value| T::from_polar_value(value))
     }
 }
 
@@ -286,7 +284,7 @@ impl std::fmt::Debug for ResultSet {
     }
 }
 
-impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<S, T>>
+impl<S: AsRef<str>, T: crate::host::FromPolarValue + PartialEq<T>> PartialEq<HashMap<S, T>>
     for ResultSet
 {
     fn eq(&self, other: &HashMap<S, T>) -> bool {
