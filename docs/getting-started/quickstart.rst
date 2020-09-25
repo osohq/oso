@@ -28,7 +28,7 @@ embedded IDE below, or you can view `the complete source code on GitHub
         The HTTP server code lives in ``quickstart/server.py``, where we have
         defined a route handler for ``GET`` requests to the path
         ``/expenses/:id``. We've already added an authorization check using
-        the :doc:`oso python library </using/python/index>` to control access
+        the :doc:`oso python library </using/libraries/python/index>` to control access
         to expense resources. You can learn more about how to add oso to your
         application :doc:`here </getting-started/application/index>`.
 
@@ -211,3 +211,6 @@ embedded IDE below, or you can view `the complete source code on GitHub
 ------------------------
 
 .. include:: /newsletter.rst
+
+.. spelling::
+   cURL
