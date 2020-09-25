@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use polar_core::terms::{ExternalInstance, Numeric, Operator, Symbol, Term, Value};
+use polar_core::terms::{self, ExternalInstance, Numeric, Operator, Symbol, Term};
 
 use crate::errors::OsoError;
 use crate::Polar;
@@ -11,6 +11,9 @@ mod class_method;
 mod from_polar;
 mod method;
 mod to_polar;
+mod value;
+
+pub use value::*;
 
 pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
@@ -141,22 +144,22 @@ impl Host {
     pub fn isa(&self, term: Term, class_tag: &Symbol) -> crate::Result<bool> {
         let name = &class_tag.0;
         let res = match term.value() {
-            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
+            terms::Value::ExternalInstance(ExternalInstance { instance_id, .. }) => {
                 let class = self.get_class(class_tag)?;
                 let instance = self.get_instance(*instance_id)?;
                 instance.instance_of(class)
             }
-            Value::Boolean(_) => name == "Boolean",
-            Value::Dictionary(_) => name == "Dictionary",
-            Value::List(_) => name == "List",
-            Value::Number(n) => {
+            terms::Value::Boolean(_) => name == "Boolean",
+            terms::Value::Dictionary(_) => name == "Dictionary",
+            terms::Value::List(_) => name == "List",
+            terms::Value::Number(n) => {
                 name == "Number"
                     || match n {
                         Numeric::Integer(_) => name == "Integer",
                         Numeric::Float(_) => name == "Float",
                     }
             }
-            Value::String(_) => name == "String",
+            terms::Value::String(_) => name == "String",
             _ => false,
         };
         Ok(res)

@@ -9,6 +9,7 @@ use std::iter;
 
 use super::Host;
 use crate::host::Instance;
+use crate::PolarValue;
 
 /// Convert Rust types to Polar types.
 ///
@@ -163,6 +164,12 @@ impl<T: ToPolar> ToPolar for HashMap<String, T> {
                 .map(|(k, v)| (Symbol(k), v.to_polar(host)))
                 .collect(),
         })
+    }
+}
+
+impl ToPolar for PolarValue {
+    fn to_polar_value(self, _host: &mut Host) -> Value {
+        self.to_term().value().clone()
     }
 }
 
