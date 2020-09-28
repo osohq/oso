@@ -1,4 +1,8 @@
+use std::fmt;
+
 use thiserror::Error;
+
+pub use polar_core::error as polar;
 
 // TODO stack traces????
 
@@ -10,7 +14,7 @@ pub enum OsoError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
-    Polar(#[from] polar_core::error::PolarError),
+    Polar(#[from] polar::PolarError),
     #[error("failed to convert type from Polar")]
     FromPolar,
     #[error("policy files must have the .polar extension. {filename} does not.")]
@@ -24,7 +28,7 @@ pub enum OsoError {
 
     /// A TypeError caused by user input.
     #[error(transparent)]
-    TypeError(#[from] TypeError),
+    TypeError(TypeError),
 
     #[error("Unsupported operation {operation} for type {type_name}.")]
     UnsupportedOperation {
@@ -96,12 +100,36 @@ pub enum InvariantError {
 }
 
 #[derive(Error, Debug)]
-#[error("Type error: expected `{expected}`")]
 pub struct TypeError {
+    pub got: Option<String>,
     pub expected: String,
 }
 
+impl fmt::Display for TypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref got) = self.got {
+            writeln!(f, "Type error: Expected {} got {}", self.expected, got)
+        } else {
+            writeln!(f, "Type error: Expected {}.", self.expected)
+        }
+    }
+}
+
 impl TypeError {
+    /// Create a type error with expected type `expected`.
+    pub fn expected(expected: String) -> Self {
+        Self {
+            got: None,
+            expected
+        }
+    }
+
+    /// Set `got` on self.
+    pub fn got(mut self, got: String) -> Self {
+        self.got.replace(got);
+        self
+    }
+
     /// Convert `self` into `InvariantError`,
     /// indicating an invariant that should never occur.
     pub fn invariant(self) -> InvariantError {
@@ -111,7 +139,7 @@ impl TypeError {
     /// Convert `self` into `OsoError`, indicating a user originating type error.
     /// For example, calling a method with a paramter of an incorrect type from within Polar.
     pub fn user(self) -> OsoError {
-        OsoError::from(self)
+        OsoError::TypeError(self)
     }
 }
 
