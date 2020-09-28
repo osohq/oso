@@ -20,7 +20,10 @@ impl Expression {
             .push(op!(Unify, self.variable_term(), other));
     }
 
-    pub fn lookup(&mut self, field: Term, value: Term) -> (Symbol, Term) {
+    /// Add lookup of `field` assigned to `value` on `self.
+    ///
+    /// Returns: A partial expression for `value`.
+    pub fn lookup(&mut self, field: Term, value: Term) -> Term {
         // Note this is a 2-arg lookup (Dot) not 3-arg. (Pre rewrite).
         assert!(matches!(field.value(), Value::String(_)));
 
@@ -31,14 +34,16 @@ impl Expression {
         ));
 
         let name = value.value().clone().symbol().unwrap();
-        (
-            name.clone(),
-            Term::new_temporary(Value::Partial(Expression::new(name))),
-        )
+        Term::new_temporary(Value::Partial(Expression::new(name)))
     }
 
     /// Return a regular expression consisting of the expression represented by this partial.
-    pub fn finalize(self) -> Term {
+    pub fn as_term(self) -> Term {
+        Term::new_temporary(Value::Partial(self))
+    }
+
+    // HACK for formatting.
+    pub fn as_expression(self) -> Term {
         Term::new_temporary(Value::Expression(Operation {
             operator: Operator::And,
             args: self
@@ -67,8 +72,22 @@ mod test {
     use crate::polar::Polar;
     use crate::terms::Call;
 
+    macro_rules! assert_partial_expression {
+        ($bindings:expr, $sym:expr, $right:expr) => {
+            assert_eq!(
+                $bindings.get(&sym!($sym))
+                    .unwrap()
+                    .value()
+                    .clone()
+                    .partial()?
+                    .as_expression()
+                    .to_polar(),
+                $right)
+        }
+    }
+
     #[test]
-    fn basic_test() {
+    fn basic_test() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
         polar.load_str(r#"f(x) if x = 1;"#).unwrap();
         polar.load_str(r#"f(x) if x = 2;"#).unwrap();
@@ -96,35 +115,41 @@ mod test {
         // They all just be AND'd together.
         //
         // Really simple unification works fine...
-        assert_eq!(
-            next_binding().get(&sym!("partial_a")).unwrap().to_polar(),
+        assert_partial_expression!(
+            next_binding(),
+            "a",
             "a = 1"
         );
 
-        assert_eq!(
-            next_binding().get(&sym!("partial_a")).unwrap().to_polar(),
+        assert_partial_expression!(
+            next_binding(),
+            "a",
             "a = 2"
         );
 
         let next = next_binding();
         // LOOKUPS also work.. but obviously the expression could be merged and simplified.
         // The basic information is there though.
-        assert_eq!(
-            next.get(&sym!("partial_a")).unwrap().to_polar(),
+        assert_partial_expression!(
+            next,
+            "a",
             "_value_1_11 = a.a"
         );
-        assert_eq!(
-            next.get(&sym!("partial__value_1_11")).unwrap().to_polar(),
+        assert_partial_expression!(
+            next,
+            "_value_1_11",
             "_value_1_11 = 3"
         );
 
         let next = next_binding();
-        assert_eq!(
-            next.get(&sym!("partial_a")).unwrap().to_polar(),
+        assert_partial_expression!(
+            next,
+            "a",
             "_value_2_12 = a.b"
         );
-        assert_eq!(
-            next.get(&sym!("partial__value_2_12")).unwrap().to_polar(),
+        assert_partial_expression!(
+            next,
+            "_value_2_12",
             "_value_2_12 = 4"
         );
 
@@ -132,5 +157,30 @@ mod test {
         while let Some(msg) = query.next_message() {
             println!("{:?}", msg);
         }
+
+        Ok(())
+    }
+
+
+    #[test]
+    fn test_partial_and() -> Result<(), crate::error::PolarError> {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x, y, z) if x = y and x = z;"#).unwrap();
+
+        let mut query =
+            polar.new_query_from_term(term!(call!("f", [Expression::new(sym!("a")), 1, 2])), false);
+
+        let mut next_binding = || {
+            if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
+                bindings
+            } else {
+                panic!("not bindings");
+            }
+        };
+
+        let next = next_binding();
+        assert_partial_expression!(next, "a", "a = 1 and a = 2");
+
+        Ok(())
     }
 }

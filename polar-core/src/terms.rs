@@ -212,6 +212,7 @@ pub enum Value {
 }
 
 impl Value {
+    // TODO these don't actually have to consume self.
     pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
         match self {
             Value::Variable(name) => Ok(name),

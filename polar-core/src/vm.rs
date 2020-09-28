@@ -420,7 +420,8 @@ impl PolarVirtualMachine {
         };
 
         Ok(QueryEvent::Result {
-            bindings: self.bindings(false),
+            // TODO (dhatch): Don't return everything eventually.
+            bindings: self.bindings(true),
             trace,
         })
     }
@@ -547,12 +548,6 @@ impl PolarVirtualMachine {
             ));
         }
         self.bindings.push(Binding(var.clone(), value));
-    }
-
-    /// Push a binding of a parital onto the binding stack.
-    fn bind_partial(&mut self, var: &Symbol, value: Term) {
-        let new_var = Symbol(format!("partial_{}", var.0));
-        self.bind(&new_var, value);
     }
 
     /// Augment the bindings stack with constants from a hash map.
@@ -1624,15 +1619,11 @@ impl PolarVirtualMachine {
             Value::Partial(partial) => {
                 let mut partial = partial.clone();
 
-                let (name, next_partial) = partial.lookup(field, value.clone());
+                let value_partial = partial.lookup(field, value.clone());
 
-                self.push_goal(Goal::Unify {
-                    left: value.clone(),
-                    right: next_partial.clone(),
-                })?;
-
-                self.bind_partial(&name, next_partial);
-                self.bind_partial(partial.name(), partial.clone().finalize());
+                let lookup_result_var = value.value().clone().symbol().unwrap();
+                self.bind(&lookup_result_var, value_partial);
+                self.bind(partial.name(), partial.clone().as_term());
             }
             _ => {
                 return Err(self.type_error(
@@ -1883,13 +1874,13 @@ impl PolarVirtualMachine {
             (Value::Partial(partial), _) => {
                 let mut partial = partial.clone();
                 partial.unify(right.clone());
-                self.bind_partial(&partial.name().clone(), partial.finalize());
+                self.bind(&partial.name().clone(), partial.as_term());
             }
 
             (_, Value::Partial(partial)) => {
                 let mut partial = partial.clone();
                 partial.unify(left.clone());
-                self.bind_partial(&partial.name().clone(), partial.finalize());
+                self.bind(&partial.name().clone(), partial.as_term());
             }
 
             // Unify rest-variables with list tails.
