@@ -1,4 +1,4 @@
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, Value, Pattern};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -16,15 +16,42 @@ impl Constraints {
         }
     }
 
-    pub fn unify(&mut self, other: Term) {
-        self.operations
-            .push(op!(Unify, self.variable_term(), other));
+    pub fn unify(&mut self, other: Term) -> bool {
+        let op = op!(Unify, self.variable_term(), other);
+        if !self.is_compatible(op) {
+            return false;
+        }
+
+        self.operations.push(op);
+
+        return true;
     }
 
+    pub fn isa(&mut self, other: Term) -> bool {
+        let isa_op = op!(Isa, self.variable_term(), other);
+        if !self.is_compatible(|op| {
+            if op.operator == Operation::Isa {
+                let right = args.pop().unwrap();
+                let left = args.pop().unwrap();
 
-    pub fn isa(&mut self, other: Term) {
-        self.operations
-            .push(op!(Isa, self.variable_term(), other));
+                if let Value::Pattern(Pattern::Instance(instance)) = right {
+                    let check_tag = instance.tag;
+
+                }
+            }
+        }) {
+            return false;
+        }
+
+        self.operations.push(isa_op);
+
+        return true;
+    }
+
+    pub fn is_compatible<F>(&self, check: F) -> bool
+    where F: Fn(&Operation) -> bool
+    {
+        self.operations.iter().all(check)
     }
 
     /// Add lookup of `field` assigned to `value` on `self.
@@ -88,15 +115,17 @@ mod test {
     macro_rules! assert_partial_expression {
         ($bindings:expr, $sym:expr, $right:expr) => {
             assert_eq!(
-                $bindings.get(&sym!($sym))
+                $bindings
+                    .get(&sym!($sym))
                     .unwrap()
                     .value()
                     .clone()
                     .partial()?
                     .as_expression()
                     .to_polar(),
-                $right)
-        }
+                $right
+            )
+        };
     }
 
     #[test]
@@ -128,43 +157,19 @@ mod test {
         // They all just be AND'd together.
         //
         // Really simple unification works fine...
-        assert_partial_expression!(
-            next_binding(),
-            "a",
-            "_this = 1"
-        );
+        assert_partial_expression!(next_binding(), "a", "_this = 1");
 
-        assert_partial_expression!(
-            next_binding(),
-            "a",
-            "_this = 2"
-        );
+        assert_partial_expression!(next_binding(), "a", "_this = 2");
 
         let next = next_binding();
         // LOOKUPS also work.. but obviously the expression could be merged and simplified.
         // The basic information is there though.
-        assert_partial_expression!(
-            next,
-            "a",
-            "_value_1_11 = _this.a"
-        );
-        assert_partial_expression!(
-            next,
-            "_value_1_11",
-            "_this = 3"
-        );
+        assert_partial_expression!(next, "a", "_value_1_11 = _this.a");
+        assert_partial_expression!(next, "_value_1_11", "_this = 3");
 
         let next = next_binding();
-        assert_partial_expression!(
-            next,
-            "a",
-            "_value_2_12 = _this.b"
-        );
-        assert_partial_expression!(
-            next,
-            "_value_2_12",
-            "_this = 4"
-        );
+        assert_partial_expression!(next, "a", "_value_2_12 = _this.b");
+        assert_partial_expression!(next, "_value_2_12", "_this = 4");
 
         // Print messages
         while let Some(msg) = query.next_message() {
@@ -174,14 +179,15 @@ mod test {
         Ok(())
     }
 
-
     #[test]
     fn test_partial_and() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
         polar.load_str(r#"f(x, y, z) if x = y and x = z;"#).unwrap();
 
-        let mut query =
-            polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a")), 1, 2])), false);
+        let mut query = polar.new_query_from_term(
+            term!(call!("f", [Constraints::new(sym!("a")), 1, 2])),
+            false,
+        );
 
         let mut next_binding = || {
             if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
@@ -200,12 +206,16 @@ mod test {
     #[test]
     fn test_partial_two_rule() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"f(x, y, z) if x = y and x = z and g(x);"#).unwrap();
+        polar
+            .load_str(r#"f(x, y, z) if x = y and x = z and g(x);"#)
+            .unwrap();
         polar.load_str(r#"g(x) if x = 3;"#).unwrap();
         polar.load_str(r#"g(x) if x = 4 or x = 5;"#).unwrap();
 
-        let mut query =
-            polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a")), 1, 2])), false);
+        let mut query = polar.new_query_from_term(
+            term!(call!("f", [Constraints::new(sym!("a")), 1, 2])),
+            false,
+        );
 
         let mut next_binding = || {
             if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
@@ -249,8 +259,16 @@ mod test {
         assert_partial_expression!(next, "_value_1_9", "_this = 1");
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_this matches User{} and _value_2_11 = _this.bar");
-        assert_partial_expression!(next, "a", "_this matches User{} and _value_2_11 = _this.bar");
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this matches User{} and _value_2_11 = _this.bar"
+        );
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this matches User{} and _value_2_11 = _this.bar"
+        );
 
         Ok(())
     }
@@ -258,11 +276,19 @@ mod test {
     #[test]
     fn test_partial_isa_two_rule() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#).unwrap();
-        polar.load_str(r#"f(x: User) if x.bar = 1 and g(x);"#).unwrap();
+        polar
+            .load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#)
+            .unwrap();
+        polar
+            .load_str(r#"f(x: User) if x.bar = 1 and g(x);"#)
+            .unwrap();
 
-        polar.load_str(r#"g(x: Post) if x.baz = 1 and g(x);"#).unwrap();
-        polar.load_str(r#"g(x: User) if x.bar = 1 and g(x);"#).unwrap();
+        polar
+            .load_str(r#"g(x: Post) if x.baz = 1 and g(x);"#)
+            .unwrap();
+        polar
+            .load_str(r#"g(x: User) if x.bar = 1 and g(x);"#)
+            .unwrap();
 
         let mut query =
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
@@ -280,8 +306,16 @@ mod test {
         assert_partial_expression!(next, "_value_1_9", "_this = 1");
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_this matches User{} and _value_2_11 = _this.bar");
-        assert_partial_expression!(next, "a", "_this matches User{} and _value_2_11 = _this.bar");
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this matches User{} and _value_2_11 = _this.bar"
+        );
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this matches User{} and _value_2_11 = _this.bar"
+        );
 
         Ok(())
     }
