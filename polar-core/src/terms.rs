@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 pub use super::numerics::Numeric;
-use super::partial::Expression;
+use super::partial::Constraints;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -208,7 +208,7 @@ pub enum Value {
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),
-    Partial(Expression),
+    Partial(Constraints),
 }
 
 impl Value {
@@ -244,7 +244,7 @@ impl Value {
         }
     }
 
-    pub fn partial(self) -> Result<Expression, error::RuntimeError> {
+    pub fn partial(self) -> Result<Constraints, error::RuntimeError> {
         match self {
             Value::Partial(e) => Ok(e),
             _ => Err(error::RuntimeError::TypeError {

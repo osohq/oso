@@ -422,7 +422,7 @@ impl PolarVirtualMachine {
 
         Ok(QueryEvent::Result {
             // TODO (dhatch): Don't return everything eventually.
-            bindings: self.bindings(true),
+            bindings: self.bindings(false),
             trace,
         })
     }
@@ -565,7 +565,7 @@ impl PolarVirtualMachine {
     pub fn bindings(&self, include_temps: bool) -> Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings[self.csp..] {
-            if !include_temps && self.is_temporary_var(&var) {
+            if !include_temps && self.is_temporary_var(&var) && !matches!(value.value(), Value::Partial(_)) {
                 continue;
             }
             bindings.insert(var.clone(), self.deep_deref(value));
@@ -1001,6 +1001,19 @@ impl PolarVirtualMachine {
                 }
             }
 
+            (Value::Partial(partial), _) => {
+                let mut partial = partial.clone();
+
+                partial.isa(right.clone());
+
+                let name = partial.name().clone();
+                self.bind(&name, partial.as_term());
+            }
+
+            (_, Value::Partial(_)) => {
+                unimplemented!("Don't do that!");
+            },
+
             (Value::Variable(symbol), _) => {
                 if let Some(value) = self.value(&symbol).cloned() {
                     self.push_goal(Goal::Isa {
@@ -1015,7 +1028,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // TODO isa partial.
             (_, Value::Variable(symbol)) => {
                 if let Some(value) = self.value(&symbol).cloned() {
                     self.push_goal(Goal::Isa {
@@ -1058,6 +1070,7 @@ impl PolarVirtualMachine {
                 }
             }
 
+            // TODO unfold partial isa into field isa & type check.
             (
                 Value::ExternalInstance(left_instance),
                 Value::Pattern(Pattern::Instance(right_literal)),
@@ -2056,7 +2069,7 @@ impl PolarVirtualMachine {
 
     /// Unify a partial `left` with a term `right`.
     /// This is sort of a "sub-goal" of `Unify`.
-    fn unify_partial(&mut self, partial: &partial::Expression, right: &Term) -> PolarResult<()> {
+    fn unify_partial(&mut self, partial: &partial::Constraints, right: &Term) -> PolarResult<()> {
         let mut partial = partial.clone();
         if let Value::Partial(right_partial) = right.value() {
             partial.unify(Term::new_temporary(Value::Variable(
@@ -2330,7 +2343,7 @@ impl PolarVirtualMachine {
                     });
                     if let Some(specializer) = &param.specializer {
                         goals.push(Goal::Isa {
-                            left: arg.clone(),
+                            left: param.parameter.clone(),
                             right: specializer.clone(),
                         });
                     }

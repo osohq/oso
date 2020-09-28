@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::partial::Expression;
+use crate::partial::Constraints;
 use crate::rules::*;
 use crate::terms::*;
 
@@ -200,8 +200,8 @@ impl From<Operation> for TestHelper<Value> {
         Self(Value::Expression(other))
     }
 }
-impl From<Expression> for TestHelper<Value> {
-    fn from(other: Expression) -> Self {
+impl From<Constraints> for TestHelper<Value> {
+    fn from(other: Constraints) -> Self {
         Self(Value::Partial(other))
     }
 }

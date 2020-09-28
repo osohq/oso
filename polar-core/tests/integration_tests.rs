@@ -1087,6 +1087,7 @@ fn test_singleton_vars() {
 
 #[test]
 fn test_print() {
+    // TODO: If polar_log is on this test will fail.
     let polar = Polar::new();
     polar.load_str("f(x,y,z) if print(x, y, z);").unwrap();
     let message_handler = |output: &Message| {
