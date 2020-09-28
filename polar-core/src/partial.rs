@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Expression {
     operations: Vec<Operation>,
+    // TODO move to the top level value type to correspond better with Value::Variable.
     variable: Symbol,
 }
 
@@ -54,12 +55,18 @@ impl Expression {
         }))
     }
 
+    pub fn clone_with_name(&self, name: Symbol) -> Self {
+        let mut new = self.clone();
+        new.variable = name;
+        new
+    }
+
     pub fn name(&self) -> &Symbol {
         &self.variable
     }
 
     fn variable_term(&self) -> Term {
-        Term::new_temporary(Value::Variable(self.variable.clone()))
+        Term::new_temporary(Value::Variable(sym!("_this")))
     }
 }
 
@@ -118,13 +125,13 @@ mod test {
         assert_partial_expression!(
             next_binding(),
             "a",
-            "a = 1"
+            "_this = 1"
         );
 
         assert_partial_expression!(
             next_binding(),
             "a",
-            "a = 2"
+            "_this = 2"
         );
 
         let next = next_binding();
@@ -133,24 +140,24 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_value_1_11 = a.a"
+            "_value_1_11 = _this.a"
         );
         assert_partial_expression!(
             next,
             "_value_1_11",
-            "_value_1_11 = 3"
+            "_this = 3"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_value_2_12 = a.b"
+            "_value_2_12 = _this.b"
         );
         assert_partial_expression!(
             next,
             "_value_2_12",
-            "_value_2_12 = 4"
+            "_this = 4"
         );
 
         // Print messages
@@ -179,7 +186,37 @@ mod test {
         };
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "a = 1 and a = 2");
+        assert_partial_expression!(next, "a", "_this = 1 and _this = 2");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_partial_two_rule() -> Result<(), crate::error::PolarError> {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x, y, z) if x = y and x = z and g(x);"#).unwrap();
+        polar.load_str(r#"g(x) if x = 3;"#).unwrap();
+        polar.load_str(r#"g(x) if x = 4 or x = 5;"#).unwrap();
+
+        let mut query =
+            polar.new_query_from_term(term!(call!("f", [Expression::new(sym!("a")), 1, 2])), false);
+
+        let mut next_binding = || {
+            if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
+                bindings
+            } else {
+                panic!("not bindings");
+            }
+        };
+
+        let next = next_binding();
+        assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 3");
+
+        let next = next_binding();
+        assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 4");
+
+        let next = next_binding();
+        assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 5");
 
         Ok(())
     }

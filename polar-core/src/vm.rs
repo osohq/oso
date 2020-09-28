@@ -17,6 +17,7 @@ use super::rules::*;
 use super::sources::*;
 use super::terms::*;
 use super::traces::*;
+use crate::partial;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]
@@ -599,7 +600,9 @@ impl PolarVirtualMachine {
     }
 
     /// Look up a variable in the bindings stack and return
-    /// a reference to its value.
+    /// a reference to its value if it's bound.
+    ///
+    /// NOTE: Partial are not considered to be bound.
     fn value(&self, variable: &Symbol) -> Option<&Term> {
         self.bindings
             .iter()
@@ -681,6 +684,9 @@ impl PolarVirtualMachine {
                     term.clone_with_value(Value::Variable(new))
                 }
             }
+            Value::Partial(_) => todo!(
+                "rename partials, we think not possible because you cannot write one in Polar"
+            ),
             Value::RestVariable(sym) => {
                 if let Some(new) = renames.get(sym) {
                     term.clone_with_value(Value::RestVariable(new.clone()))
@@ -1009,6 +1015,7 @@ impl PolarVirtualMachine {
                 }
             }
 
+            // TODO isa partial.
             (_, Value::Variable(symbol)) => {
                 if let Some(value) = self.value(&symbol).cloned() {
                     self.push_goal(Goal::Isa {
@@ -1387,6 +1394,7 @@ impl PolarVirtualMachine {
                 let right = args.pop().unwrap();
                 let left = args.pop().unwrap();
                 match (left.value(), right.value()) {
+                    // TODO partial.
                     (Value::Variable(var), _) => match self.value(var) {
                         None => self.push_goal(Goal::Unify { left, right })?,
                         Some(value) => {
@@ -1867,21 +1875,8 @@ impl PolarVirtualMachine {
             (Value::Variable(var), _) => self.unify_var(var, right)?,
             (_, Value::Variable(var)) => self.unify_var(var, left)?,
 
-            (Value::Partial(_), Value::Partial(_)) => {
-                unimplemented!("idk");
-            }
-
-            (Value::Partial(partial), _) => {
-                let mut partial = partial.clone();
-                partial.unify(right.clone());
-                self.bind(&partial.name().clone(), partial.as_term());
-            }
-
-            (_, Value::Partial(partial)) => {
-                let mut partial = partial.clone();
-                partial.unify(left.clone());
-                self.bind(&partial.name().clone(), partial.as_term());
-            }
+            (Value::Partial(partial), _) => self.unify_partial(partial, right)?,
+            (_, Value::Partial(partial)) => self.unify_partial(partial, left)?,
 
             // Unify rest-variables with list tails.
             (Value::RestVariable(var), _) => self.unify_var(var, right)?,
@@ -2024,14 +2019,56 @@ impl PolarVirtualMachine {
             (None, Some(value)) => {
                 // Left is unbound, right is bound;
                 // bind left to the value of right.
+                let value = if let Value::Partial(partial) = value.value() {
+                    let old_name = partial.name();
+
+                    let partial = partial.clone_with_name(left.clone());
+                    let partial_value = value.clone_with_value(Value::Partial(partial));
+
+                    self.bind(old_name, Term::new_temporary(Value::Variable(left.clone())));
+
+                    partial_value
+                } else {
+                    value
+                };
                 self.bind(left, value);
             }
             (None, None) => {
                 // Neither is bound, so bind them together.
                 // TODO: should theoretically bind the earliest one here?
-                self.bind(left, right.clone());
+                let value = if let Value::Partial(partial) = right.value() {
+                    let old_name = partial.name();
+
+                    let partial = partial.clone_with_name(left.clone());
+                    let partial_value = right.clone_with_value(Value::Partial(partial));
+
+                    self.bind(old_name, Term::new_temporary(Value::Variable(left.clone())));
+
+                    partial_value
+                } else {
+                    right.clone()
+                };
+                self.bind(left, value);
             }
         }
+        Ok(())
+    }
+
+    /// Unify a partial `left` with a term `right`.
+    /// This is sort of a "sub-goal" of `Unify`.
+    fn unify_partial(&mut self, partial: &partial::Expression, right: &Term) -> PolarResult<()> {
+        let mut partial = partial.clone();
+        if let Value::Partial(right_partial) = right.value() {
+            partial.unify(Term::new_temporary(Value::Variable(
+                right_partial.name().clone(),
+            )));
+        } else {
+            partial.unify(right.clone());
+        }
+
+        let name = partial.name().clone();
+        self.bind(&name, partial.as_term());
+
         Ok(())
     }
 
