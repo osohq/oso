@@ -1087,6 +1087,9 @@ impl PolarVirtualMachine {
             }
 
             (_, Value::Pattern(Pattern::Instance(right_literal))) => {
+                if !right_literal.fields.is_empty() {
+                    return self.backtrack();
+                }
                 self.push_goal(Goal::IsaExternal {
                     instance: left.clone(),
                     literal: right_literal.clone(),
