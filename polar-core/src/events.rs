@@ -1,16 +1,30 @@
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+
 use super::kb::*;
 use super::terms::*;
 use super::traces::*;
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use super::runnable::Runnable;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub enum QueryEvent {
     None,
 
-    Done,
+    /// This runnable is complete with `result`.
+    Done {
+        result: bool
+    },
+
+    /// Run the runnable and place its result in `call_id` when it
+    /// completes.
+    #[serde(skip)]
+    Run {
+        runnable: Box<dyn Runnable>,
+        call_id: u64
+    },
 
     Debug {
         message: String,
@@ -67,4 +81,10 @@ pub enum QueryEvent {
         operator: Operator,
         args: TermList,
     },
+}
+
+impl std::fmt::Debug for QueryEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "QueryEvent")
+    }
 }

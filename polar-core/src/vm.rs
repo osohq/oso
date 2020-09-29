@@ -384,7 +384,7 @@ impl PolarVirtualMachine {
 
         if self.goals.is_empty() {
             if self.choices.is_empty() {
-                return Ok(QueryEvent::Done);
+                return Ok(QueryEvent::Done { result: true });
             } else {
                 self.backtrack()?;
             }
@@ -923,7 +923,7 @@ impl PolarVirtualMachine {
         self.goals.clear();
         self.choices.clear();
         assert!(self.is_halted());
-        QueryEvent::Done
+        QueryEvent::Done { result: true }
     }
 
     /// Comparison operator that essentially performs partial unification.
@@ -2662,7 +2662,7 @@ mod tests {
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![goal]);
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!()},
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
 
         assert!(vm.is_halted());
@@ -2676,19 +2676,19 @@ mod tests {
 
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{}},
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
 
         // Querying for f(1), f(2)
         vm.push_goal(query!(f1.clone(), f2.clone())).unwrap();
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{}},
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
 
         // Querying for f(3)
         vm.push_goal(query!(op!(And, f3.clone()))).unwrap();
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
         // Querying for f(1), f(2), f(3)
         let parts = vec![f1, f2, f3];
@@ -2700,7 +2700,7 @@ mod tests {
                 })),
             })
             .unwrap();
-            assert_query_events!(vm, [QueryEvent::Done]);
+            assert_query_events!(vm, [QueryEvent::Done { result: true }]);
         }
     }
 
@@ -2712,13 +2712,13 @@ mod tests {
 
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{}},
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
 
         let q = op!(Unify, term!(1), term!(2));
         vm.push_goal(query!(q)).unwrap();
 
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
     }
 
     #[test]
@@ -2740,7 +2740,7 @@ mod tests {
         assert!(
             matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [1,2] isa [1,2]
@@ -2752,7 +2752,7 @@ mod tests {
         assert!(
             matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [1,2] isNOTa [2,1]
@@ -2761,7 +2761,7 @@ mod tests {
             right: two_one_list,
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [1] isNOTa [1,2]
@@ -2770,7 +2770,7 @@ mod tests {
             right: one_two_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [1,2] isNOTa [1]
@@ -2779,7 +2779,7 @@ mod tests {
             right: one_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [1] isNOTa []
@@ -2788,7 +2788,7 @@ mod tests {
             right: empty_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [] isNOTa [1]
@@ -2797,7 +2797,7 @@ mod tests {
             right: one_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [1] isNOTa 1
@@ -2806,7 +2806,7 @@ mod tests {
             right: one.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // 1 isNOTa [1]
@@ -2815,7 +2815,7 @@ mod tests {
             right: one_list,
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done));
+        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
         assert!(vm.is_halted());
 
         // [1,2] isa [1, *rest]
@@ -2826,7 +2826,7 @@ mod tests {
         .unwrap();
         assert_query_events!(vm, [
             QueryEvent::Result{hashmap!{sym!("rest") => term!([2])}},
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
     }
 
@@ -2847,7 +2847,7 @@ mod tests {
             right,
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Dicts with identical keys and different values DO NOT isa.
         let right = Pattern::term_as_pattern(&term!(btreemap! {
@@ -2859,7 +2859,7 @@ mod tests {
             right,
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
         // {} isa {}.
         vm.push_goal(Goal::Isa {
@@ -2867,7 +2867,7 @@ mod tests {
             right: Pattern::term_as_pattern(&term!(btreemap! {})),
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Non-empty dicts should isa against an empty dict.
         vm.push_goal(Goal::Isa {
@@ -2875,7 +2875,7 @@ mod tests {
             right: Pattern::term_as_pattern(&term!(btreemap! {})),
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
@@ -2883,7 +2883,7 @@ mod tests {
             right: Pattern::term_as_pattern(&left),
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
         // Superset dict isa subset dict.
         vm.push_goal(Goal::Isa {
@@ -2891,7 +2891,7 @@ mod tests {
             right: Pattern::term_as_pattern(&term!(btreemap! {sym!("x") => term!(1)})),
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Subset dict isNOTa superset dict.
         vm.push_goal(Goal::Isa {
@@ -2899,7 +2899,7 @@ mod tests {
             right: Pattern::term_as_pattern(&left),
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
     }
 
     #[test]
@@ -2919,7 +2919,7 @@ mod tests {
             right,
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Dicts with identical keys and different values DO NOT unify.
         let right = term!(btreemap! {
@@ -2931,7 +2931,7 @@ mod tests {
             right,
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
         // Empty dicts unify.
         vm.push_goal(Goal::Unify {
@@ -2939,7 +2939,7 @@ mod tests {
             right: term!(btreemap! {}),
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Empty dict should not unify against a non-empty dict.
         vm.push_goal(Goal::Unify {
@@ -2947,14 +2947,14 @@ mod tests {
             right: term!(btreemap! {}),
         })
         .unwrap();
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
         // Subset match should fail.
         let right = term!(btreemap! {
             sym!("x") => term!(1),
         });
         vm.push_goal(Goal::Unify { left, right }).unwrap();
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
     }
 
     #[test]
@@ -2972,7 +2972,7 @@ mod tests {
             })
         });
         vm.push_goal(Goal::Unify { left, right }).unwrap();
-        assert_query_events!(vm, [QueryEvent::Result { hashmap!{sym!("result") => term!(1)} }, QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Result { hashmap!{sym!("result") => term!(1)} }, QueryEvent::Done { result: true }]);
     }
 
     #[test]
@@ -3002,7 +3002,7 @@ mod tests {
         })
         .unwrap();
 
-        assert_query_events!(vm, [QueryEvent::Done]);
+        assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
         // Lookup with unbound value
         vm.push_goal(Goal::Lookup {
@@ -3180,7 +3180,7 @@ mod tests {
 
         loop {
             match vm.run().unwrap() {
-                QueryEvent::Done => break,
+                QueryEvent::Done { .. } => break,
                 QueryEvent::ExternalIsa {
                     call_id, class_tag, ..
                 } => {
@@ -3204,7 +3204,7 @@ mod tests {
         let mut results = vec![];
         loop {
             match vm.run().unwrap() {
-                QueryEvent::Done => break,
+                QueryEvent::Done { .. } => break,
                 QueryEvent::ExternalIsa { .. } => (),
                 QueryEvent::Result { bindings, .. } => results.push(bindings),
                 _ => panic!("Unexpected event"),
@@ -3255,7 +3255,7 @@ mod tests {
         let mut results = Vec::new();
         loop {
             match vm.run().unwrap() {
-                QueryEvent::Done => break,
+                QueryEvent::Done { .. } => break,
                 QueryEvent::Result { bindings, .. } => results.push(bindings),
                 QueryEvent::ExternalIsSubSpecializer {
                     call_id,
@@ -3410,7 +3410,7 @@ mod tests {
         .unwrap();
         assert_query_events!(vm, [
             QueryEvent::Debug { message } if &message[..] == "consequent" && vm.is_halted(),
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
 
         // Check alternative path when conditional fails.
@@ -3422,7 +3422,7 @@ mod tests {
         .unwrap();
         assert_query_events!(vm, [
             QueryEvent::Debug { message } if &message[..] == "alternative" && vm.is_halted(),
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
 
         // Ensure bindings are cleaned up after conditional.
@@ -3440,7 +3440,7 @@ mod tests {
         .unwrap();
         assert_query_events!(vm, [
             QueryEvent::Debug { message } if &message[..] == "consequent" && vm.bindings(true).is_empty() && vm.is_halted(),
-            QueryEvent::Done
+            QueryEvent::Done { result: true }
         ]);
     }
 }

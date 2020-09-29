@@ -74,7 +74,7 @@ where
             message_handler(&msg)
         }
         match event {
-            QueryEvent::Done => break,
+            QueryEvent::Done { .. } => break,
             QueryEvent::Result { bindings, trace } => {
                 results.push((
                     bindings

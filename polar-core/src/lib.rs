@@ -15,6 +15,7 @@ mod numerics;
 pub mod parser;
 mod partial;
 pub mod polar;
+mod runnable;
 mod rewrites;
 pub mod rules;
 mod sources;

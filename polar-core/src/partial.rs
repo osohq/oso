@@ -16,36 +16,28 @@ impl Constraints {
         }
     }
 
-    pub fn unify(&mut self, other: Term) -> bool {
+    pub fn unify(&mut self, other: Term) {
         let op = op!(Unify, self.variable_term(), other);
-        if !self.is_compatible(op) {
-            return false;
-        }
-
         self.operations.push(op);
-
-        return true;
     }
 
-    pub fn isa(&mut self, other: Term) -> bool {
+    pub fn isa(&mut self, other: Term) {
         let isa_op = op!(Isa, self.variable_term(), other);
-        if !self.is_compatible(|op| {
-            if op.operator == Operation::Isa {
-                let right = args.pop().unwrap();
-                let left = args.pop().unwrap();
+        //if !self.is_compatible(|op| {
+            //if op.operator == Operation::Isa {
+                //let right = args.pop().unwrap();
+                //let left = args.pop().unwrap();
 
-                if let Value::Pattern(Pattern::Instance(instance)) = right {
-                    let check_tag = instance.tag;
+                //if let Value::Pattern(Pattern::Instance(instance)) = right {
+                    //let check_tag = instance.tag;
 
-                }
-            }
-        }) {
-            return false;
-        }
+                //}
+            //}
+        //}) {
+            //return false;
+        //}
 
         self.operations.push(isa_op);
-
-        return true;
     }
 
     pub fn is_compatible<F>(&self, check: F) -> bool
@@ -277,17 +269,10 @@ mod test {
     fn test_partial_isa_two_rule() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
         polar
-            .load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#)
+            .load_str(r#"f(x: Post) if x.foo = 0;"#)
             .unwrap();
         polar
-            .load_str(r#"f(x: User) if x.bar = 1 and g(x);"#)
-            .unwrap();
-
-        polar
-            .load_str(r#"g(x: Post) if x.baz = 1 and g(x);"#)
-            .unwrap();
-        polar
-            .load_str(r#"g(x: User) if x.bar = 1 and g(x);"#)
+            .load_str(r#"f(x: User) if x.bar = 1;"#)
             .unwrap();
 
         let mut query =
@@ -303,7 +288,7 @@ mod test {
 
         let next = next_binding();
         assert_partial_expression!(next, "a", "_this matches Post{} and _value_1_9 = _this.foo");
-        assert_partial_expression!(next, "_value_1_9", "_this = 1");
+        assert_partial_expression!(next, "_value_1_9", "_this = 0");
 
         let next = next_binding();
         assert_partial_expression!(
@@ -313,8 +298,8 @@ mod test {
         );
         assert_partial_expression!(
             next,
-            "a",
-            "_this matches User{} and _value_2_11 = _this.bar"
+            "_value_2_11",
+            "_this = 1"
         );
 
         Ok(())

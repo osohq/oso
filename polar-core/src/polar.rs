@@ -58,7 +58,7 @@ impl Iterator for Query {
             return None;
         }
         let event = self.vm.run();
-        if let Ok(QueryEvent::Done) = event {
+        if let Ok(QueryEvent::Done { .. }) = event {
             self.done = true;
         }
         Some(event)
