@@ -44,8 +44,9 @@ impl Query {
 
     fn pop_runnable(&mut self, result: bool) -> PolarResult<Option<QueryEvent>> {
         if let Some((_, call_id)) = self.runnable_stack.pop() {
-            self.top_runnable().external_question_result(call_id, result);
-            Ok(None)
+            self.top_runnable()
+                .external_question_result(call_id, result)
+                .map(|_| None)
         } else {
             Ok(Some(QueryEvent::Done { result }))
         }
@@ -56,15 +57,15 @@ impl Query {
             QueryEvent::Run { runnable, call_id } => {
                 self.push_runnable(runnable, call_id)?;
                 self.next_event()
-            },
+            }
             QueryEvent::Done { result } => {
                 if let Some(event) = self.pop_runnable(result)? {
                     Ok(event)
                 } else {
                     self.next_event()
                 }
-            },
-            ev => Ok(ev)
+            }
+            ev => Ok(ev),
         }
     }
 
@@ -73,11 +74,14 @@ impl Query {
     }
 
     pub fn question_result(&mut self, call_id: u64, result: bool) {
-        self.top_runnable().external_question_result(call_id, result)
+        // TODO remove unwrap & pipe up to ffi.
+        self.top_runnable()
+            .external_question_result(call_id, result)
+            .unwrap()
     }
 
     pub fn application_error(&mut self, message: String) {
-        self.top_runnable().external_error(message)
+        self.top_runnable().external_error(message).unwrap()
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {

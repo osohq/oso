@@ -26,7 +26,7 @@ pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(
 #[cfg(target_arch = "wasm32")]
 pub const QUERY_TIMEOUT_S: f64 = 30_000.0;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 #[must_use = "ignored goals are never accomplished"]
 #[allow(clippy::large_enum_variant)]
 pub enum Goal {
@@ -104,6 +104,23 @@ pub enum Goal {
         left: Term,
         right: Term,
     },
+
+    /// Run the `runnable`.
+    Run {
+        runnable: Box<dyn Runnable>,
+    },
+
+    /// Bind `var` to `value`.
+    Bind {
+        var: Symbol,
+        value: Term,
+    },
+}
+
+impl std::fmt::Debug for Goal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Goal")
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -366,6 +383,8 @@ impl PolarVirtualMachine {
                 self.trace.push(trace.clone());
             }
             Goal::Unify { left, right } => self.unify(&left, &right)?,
+            Goal::Bind { var, value } => self.bind(&var, value.clone()),
+            Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
         Ok(QueryEvent::None)
     }
@@ -508,7 +527,10 @@ impl PolarVirtualMachine {
     pub fn bindings(&self, include_temps: bool) -> Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings[self.csp..] {
-            if !include_temps && self.is_temporary_var(&var) && !matches!(value.value(), Value::Partial(_)) {
+            if !include_temps
+                && self.is_temporary_var(&var)
+                && !matches!(value.value(), Value::Partial(_))
+            {
                 continue;
             }
             bindings.insert(var.clone(), self.deep_deref(value));
@@ -947,15 +969,26 @@ impl PolarVirtualMachine {
             (Value::Partial(partial), _) => {
                 let mut partial = partial.clone();
 
-                partial.isa(right.clone());
+                let compatibility = partial.isa(right.clone());
 
                 let name = partial.name().clone();
-                self.bind(&name, partial.as_term());
+
+                // Run compatibility check
+                self.choose_conditional(
+                    vec![Goal::Run {
+                        runnable: compatibility,
+                    }],
+                    vec![Goal::Bind {
+                        var: name,
+                        value: partial.as_term(),
+                    }],
+                    vec![Goal::Backtrack],
+                )?;
             }
 
             (_, Value::Partial(_)) => {
                 unimplemented!("Don't do that!");
-            },
+            }
 
             (Value::Variable(symbol), _) => {
                 if let Some(value) = self.value(&symbol).cloned() {
@@ -2433,6 +2466,18 @@ impl PolarVirtualMachine {
         };
         self.set_error_context(term, error)
     }
+
+    fn run_runnable(&mut self, runnable: Box<dyn Runnable>) -> PolarResult<QueryEvent> {
+        let runnable_result = self.kb.read().unwrap().gensym("runnable_result");
+        let call_id = self.new_call_id(&runnable_result);
+
+        self.push_goal(Goal::Unify {
+            left: Term::new_temporary(Value::Variable(runnable_result)),
+            right: Term::new_temporary(Value::Boolean(true)),
+        })?;
+
+        Ok(QueryEvent::Run { runnable, call_id })
+    }
 }
 
 impl Runnable for PolarVirtualMachine {
@@ -2495,9 +2540,10 @@ impl Runnable for PolarVirtualMachine {
     }
 
     /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
-    fn external_question_result(&mut self, call_id: u64, answer: bool) {
+    fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
         self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
+        Ok(())
     }
 
     /// Handle an external result provided by the application.
@@ -2549,10 +2595,14 @@ impl Runnable for PolarVirtualMachine {
         Ok(())
     }
 
-
     /// Handle an error coming from outside the vm.
-    fn external_error(&mut self, message: String) {
+    fn external_error(&mut self, message: String) -> PolarResult<()> {
         self.external_error = Some(message);
+        Ok(())
+    }
+
+    fn clone_runnable(&self) -> Box<dyn Runnable> {
+        unimplemented!("Make Goal::Run take a closure Fn -> Runnable");
     }
 }
 
@@ -2744,7 +2794,10 @@ mod tests {
         assert!(
             matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [1,2] isa [1,2]
@@ -2756,7 +2809,10 @@ mod tests {
         assert!(
             matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [1,2] isNOTa [2,1]
@@ -2765,7 +2821,10 @@ mod tests {
             right: two_one_list,
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [1] isNOTa [1,2]
@@ -2774,7 +2833,10 @@ mod tests {
             right: one_two_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [1,2] isNOTa [1]
@@ -2783,7 +2845,10 @@ mod tests {
             right: one_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [1] isNOTa []
@@ -2792,7 +2857,10 @@ mod tests {
             right: empty_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [] isNOTa [1]
@@ -2801,7 +2869,10 @@ mod tests {
             right: one_list.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [1] isNOTa 1
@@ -2810,7 +2881,10 @@ mod tests {
             right: one.clone(),
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // 1 isNOTa [1]
@@ -2819,7 +2893,10 @@ mod tests {
             right: one_list,
         })
         .unwrap();
-        assert!(matches!(vm.run().unwrap(), QueryEvent::Done { result: true }));
+        assert!(matches!(
+            vm.run().unwrap(),
+            QueryEvent::Done { result: true }
+        ));
         assert!(vm.is_halted());
 
         // [1,2] isa [1, *rest]
@@ -3190,7 +3267,7 @@ mod tests {
                 } => {
                     external_isas.push(class_tag.clone());
                     // Return `true` if the specified `class_tag` is `"a"`.
-                    vm.external_question_result(call_id, class_tag.0 == "a")
+                    vm.external_question_result(call_id, class_tag.0 == "a").unwrap()
                 }
                 QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
                 _ => panic!("Unexpected event"),
@@ -3268,12 +3345,12 @@ mod tests {
                     ..
                 } => {
                     // For this test we sort classes lexically.
-                    vm.external_question_result(call_id, left_class_tag < right_class_tag)
+                    vm.external_question_result(call_id, left_class_tag < right_class_tag).unwrap()
                 }
                 QueryEvent::MakeExternal { .. } => (),
                 QueryEvent::ExternalIsa { call_id, .. } => {
                     // For this test, anything is anything.
-                    vm.external_question_result(call_id, true)
+                    vm.external_question_result(call_id, true).unwrap()
                 }
                 _ => panic!("Unexpected event"),
             }

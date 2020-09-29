@@ -1,5 +1,9 @@
-use crate::terms::{Operation, Operator, Symbol, Term, Value, Pattern};
 use serde::{Deserialize, Serialize};
+
+use crate::error::PolarResult;
+use crate::events::QueryEvent;
+use crate::runnable::Runnable;
+use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Constraints {
@@ -21,27 +25,21 @@ impl Constraints {
         self.operations.push(op);
     }
 
-    pub fn isa(&mut self, other: Term) {
+    pub fn isa(&mut self, other: Term) -> Box<dyn Runnable> {
         let isa_op = op!(Isa, self.variable_term(), other);
-        //if !self.is_compatible(|op| {
-            //if op.operator == Operation::Isa {
-                //let right = args.pop().unwrap();
-                //let left = args.pop().unwrap();
 
-                //if let Value::Pattern(Pattern::Instance(instance)) = right {
-                    //let check_tag = instance.tag;
-
-                //}
-            //}
-        //}) {
-            //return false;
-        //}
+        let constraint_check = Box::new(IsaConstraintCheck::new(
+            self.operations.clone(),
+            isa_op.clone()
+        ));
 
         self.operations.push(isa_op);
+        constraint_check
     }
 
     pub fn is_compatible<F>(&self, check: F) -> bool
-    where F: Fn(&Operation) -> bool
+    where
+        F: Fn(&Operation) -> bool,
     {
         self.operations.iter().all(check)
     }
@@ -92,6 +90,75 @@ impl Constraints {
 
     fn variable_term(&self) -> Term {
         Term::new_temporary(Value::Variable(sym!("_this")))
+    }
+}
+
+#[derive(Clone)]
+struct IsaConstraintCheck {
+    existing: Vec<Operation>,
+    proposed_tag: Option<Symbol>,
+}
+
+impl IsaConstraintCheck {
+    pub fn new(existing: Vec<Operation>, mut proposed: Operation) -> Self {
+        let right = proposed.args.pop().unwrap();
+        let proposed_tag = if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
+            Some(instance.tag.clone())
+        } else {
+            None
+        };
+
+        Self {
+            existing,
+            proposed_tag,
+        }
+    }
+
+    /// Check if constraint is compatible with proposed.
+    ///
+    /// Returns: None if compatible, QueryEvent::Done { false } if incompatible,
+    /// or QueryEvent to ask for compatibility.
+    fn check_constraint(&self, mut constraint: Operation) -> Option<QueryEvent> {
+        if constraint.operator != Operator::Isa {
+            return None;
+        }
+
+        let right = constraint.args.pop().unwrap();
+        if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
+            // is_subclass check of instance tag against proposed
+            if self.proposed_tag.as_ref().unwrap() != &instance.tag {
+                return Some(QueryEvent::Done { result: false });
+            }
+
+            // TODO check fields for compatibility.
+        }
+
+        None
+    }
+}
+
+impl Runnable for IsaConstraintCheck {
+    fn run(&mut self) -> PolarResult<QueryEvent> {
+        if self.proposed_tag.is_none() {
+            return Ok(QueryEvent::Done { result: true })
+        }
+
+        loop {
+            let next = self.existing.pop();
+            if let Some(constraint) = next {
+                if let Some(event) = self.check_constraint(constraint) {
+                    return Ok(event)
+                }
+
+                continue;
+            } else {
+                return Ok(QueryEvent::Done { result: true })
+            }
+        }
+    }
+
+    fn clone_runnable(&self) -> Box<dyn Runnable> {
+        Box::new(self.clone())
     }
 }
 
@@ -247,20 +314,20 @@ mod test {
         };
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_this matches Post{} and _value_1_9 = _this.foo");
-        assert_partial_expression!(next, "_value_1_9", "_this = 1");
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this matches Post{} and _value_1_11 = _this.foo"
+        );
+        assert_partial_expression!(next, "_value_1_11", "_this = 1");
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _value_2_11 = _this.bar"
+            "_this matches User{} and _value_2_13 = _this.bar"
         );
-        assert_partial_expression!(
-            next,
-            "a",
-            "_this matches User{} and _value_2_11 = _this.bar"
-        );
+        assert_partial_expression!(next, "_value_2_13", "_this = 1");
 
         Ok(())
     }
@@ -268,12 +335,10 @@ mod test {
     #[test]
     fn test_partial_isa_two_rule() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar
-            .load_str(r#"f(x: Post) if x.foo = 0;"#)
-            .unwrap();
-        polar
-            .load_str(r#"f(x: User) if x.bar = 1;"#)
-            .unwrap();
+        polar.load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#).unwrap();
+        polar.load_str(r#"f(x: User) if x.bar = 1 and g(x);"#).unwrap();
+        polar.load_str(r#"g(x: Post) if x.post = 1;"#).unwrap();
+        polar.load_str(r#"g(x: User) if x.user = 1;"#).unwrap();
 
         let mut query =
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
@@ -287,20 +352,24 @@ mod test {
         };
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_this matches Post{} and _value_1_9 = _this.foo");
-        assert_partial_expression!(next, "_value_1_9", "_this = 0");
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this matches Post{} and _value_1_13 = _this.foo and _this matches Post{} and _value_3_24 = _this.post"
+        );
+        assert_partial_expression!(next, "_value_1_13", "_this = 0");
+        assert_partial_expression!(next, "_value_3_24", "_this = 1");
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _value_2_11 = _this.bar"
+            "_this matches User{} and _value_2_15 = _this.bar and _this matches User{} and _value_4_34 = _this.user"
         );
-        assert_partial_expression!(
-            next,
-            "_value_2_11",
-            "_this = 1"
-        );
+        assert_partial_expression!(next, "_value_2_15", "_this = 1");
+        assert_partial_expression!(next, "_value_4_34", "_this = 1");
+
+        assert!(matches!(query.next_event().unwrap(), QueryEvent::Done { .. }));
 
         Ok(())
     }
