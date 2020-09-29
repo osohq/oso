@@ -1069,13 +1069,13 @@ fn test_singleton_vars() {
     assert!(matches!(&output.kind, MessageKind::Warning));
     assert_eq!(
         &output.msg,
-        "Singleton variable x is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n       ^"
+        "Singleton variable x is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n       ^"
     );
     let output = polar.next_message().unwrap();
     assert!(matches!(&output.kind, MessageKind::Warning));
     assert_eq!(
         &output.msg,
-        "Singleton variable y is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n           ^"
+        "Singleton variable y is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>\n001: f(x:X,y:Y,z:Z) if z = z;\n           ^"
     );
     let output = polar.next_message().unwrap();
     assert!(matches!(&output.kind, MessageKind::Warning));
