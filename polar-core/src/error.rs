@@ -268,12 +268,14 @@ impl fmt::Display for RuntimeError {
 pub enum OperationalError {
     Unimplemented(String),
     Unknown,
+    InvalidState(String)
 }
 
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Unimplemented(s) => write!(f, "{} is not yet implemented", s),
+            Self::InvalidState(s) => write!(f, "Invalid state: {}", s),
             Self::Unknown => write!(f, "we hit an error we do not know how to handle or did not expect. Please submit a bug"),
         }
     }

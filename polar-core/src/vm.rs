@@ -18,6 +18,7 @@ use super::sources::*;
 use super::terms::*;
 use super::traces::*;
 use crate::partial;
+use crate::runnable::Runnable;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]
@@ -367,64 +368,6 @@ impl PolarVirtualMachine {
             Goal::Unify { left, right } => self.unify(&left, &right)?,
         }
         Ok(QueryEvent::None)
-    }
-
-    /// Run the virtual machine. While there are goals on the stack,
-    /// pop them off and execute them one at at time until we have a
-    /// `QueryEvent` to return. May be called multiple times to restart
-    /// the machine.
-    pub fn run(&mut self) -> PolarResult<QueryEvent> {
-        if self.query_start_time.is_none() {
-            #[cfg(not(target_arch = "wasm32"))]
-            let query_start_time = Some(std::time::Instant::now());
-            #[cfg(target_arch = "wasm32")]
-            let query_start_time = Some(js_sys::Date::now());
-            self.query_start_time = query_start_time;
-        }
-
-        if self.goals.is_empty() {
-            if self.choices.is_empty() {
-                return Ok(QueryEvent::Done { result: true });
-            } else {
-                self.backtrack()?;
-            }
-        }
-
-        while let Some(goal) = self.goals.pop() {
-            match self.next(goal.clone())? {
-                QueryEvent::None => (),
-                event => {
-                    self.external_error = None;
-                    return Ok(event);
-                }
-            }
-            self.maybe_break(DebugEvent::Goal(goal.clone()))?;
-        }
-
-        if self.log {
-            self.print("⇒ result");
-            if self.tracing {
-                for t in &self.trace {
-                    self.print(&format!("trace\n{}", t.draw(&self)));
-                }
-            }
-        }
-
-        let trace = if self.tracing {
-            let trace = self.trace.first().cloned();
-            trace.map(|trace| TraceResult {
-                formatted: trace.draw(&self),
-                trace,
-            })
-        } else {
-            None
-        };
-
-        Ok(QueryEvent::Result {
-            // TODO (dhatch): Don't return everything eventually.
-            bindings: self.bindings(false),
-            trace,
-        })
     }
 
     /// Return true if there is nothing left to do.
@@ -1816,66 +1759,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Handle an external result provided by the application.
-    ///
-    /// If the value is `Some(_)` then we have a result, and bind the
-    /// symbol associated with the call ID to the result value. If the
-    /// value is `None` then the external has no (more) results, so we
-    /// backtrack to the choice point left by `Goal::LookupExternal`.
-    pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> PolarResult<()> {
-        // TODO: Open question if we need to pass errors back down to rust.
-        // For example what happens if the call asked for a field that doesn't exist?
-
-        if let Some(value) = term {
-            self.log_with(|| format!("=> {}", value.to_string()), &[]);
-
-            self.bind(
-                &self
-                    .call_id_symbols
-                    .get(&call_id)
-                    .expect("unregistered external call ID")
-                    .clone(),
-                value,
-            );
-        } else {
-            self.log("=> No more results.", &[]);
-
-            // No more results. Clean up, cut out the retry alternative,
-            // and backtrack.
-            self.call_id_symbols.remove(&call_id).expect("bad call ID");
-
-            let check_error = if let Some(goal) = self.goals.last() {
-                match *(*goal) {
-                    Goal::CheckError => true,
-                    _ => false,
-                }
-            } else {
-                false
-            };
-
-            self.push_goal(Goal::Backtrack)?;
-            self.push_goal(Goal::Cut {
-                choice_index: self.choices.len() - 1,
-            })?;
-
-            if check_error {
-                self.push_goal(Goal::CheckError)?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
-    pub fn external_question_result(&mut self, call_id: u64, answer: bool) {
-        let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
-        self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
-    }
-
-    /// Handle an error coming from outside the vm.
-    pub fn external_error(&mut self, message: String) {
-        self.external_error = Some(message);
-    }
-
     /// Unify `left` and `right` terms.
     ///
     /// Outcomes of a unification are:
@@ -2549,6 +2432,127 @@ impl PolarVirtualMachine {
             stack_trace: Some(stack_trace),
         };
         self.set_error_context(term, error)
+    }
+}
+
+impl Runnable for PolarVirtualMachine {
+    /// Run the virtual machine. While there are goals on the stack,
+    /// pop them off and execute them one at at time until we have a
+    /// `QueryEvent` to return. May be called multiple times to restart
+    /// the machine.
+    fn run(&mut self) -> PolarResult<QueryEvent> {
+        if self.query_start_time.is_none() {
+            #[cfg(not(target_arch = "wasm32"))]
+            let query_start_time = Some(std::time::Instant::now());
+            #[cfg(target_arch = "wasm32")]
+            let query_start_time = Some(js_sys::Date::now());
+            self.query_start_time = query_start_time;
+        }
+
+        if self.goals.is_empty() {
+            if self.choices.is_empty() {
+                return Ok(QueryEvent::Done { result: true });
+            } else {
+                self.backtrack()?;
+            }
+        }
+
+        while let Some(goal) = self.goals.pop() {
+            match self.next(goal.clone())? {
+                QueryEvent::None => (),
+                event => {
+                    self.external_error = None;
+                    return Ok(event);
+                }
+            }
+            self.maybe_break(DebugEvent::Goal(goal.clone()))?;
+        }
+
+        if self.log {
+            self.print("⇒ result");
+            if self.tracing {
+                for t in &self.trace {
+                    self.print(&format!("trace\n{}", t.draw(&self)));
+                }
+            }
+        }
+
+        let trace = if self.tracing {
+            let trace = self.trace.first().cloned();
+            trace.map(|trace| TraceResult {
+                formatted: trace.draw(&self),
+                trace,
+            })
+        } else {
+            None
+        };
+
+        Ok(QueryEvent::Result {
+            // TODO (dhatch): Don't return everything eventually.
+            bindings: self.bindings(false),
+            trace,
+        })
+    }
+
+    /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
+    fn external_question_result(&mut self, call_id: u64, answer: bool) {
+        let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
+        self.bind(&var, Term::new_temporary(Value::Boolean(answer)));
+    }
+
+    /// Handle an external result provided by the application.
+    ///
+    /// If the value is `Some(_)` then we have a result, and bind the
+    /// symbol associated with the call ID to the result value. If the
+    /// value is `None` then the external has no (more) results, so we
+    /// backtrack to the choice point left by `Goal::LookupExternal`.
+    fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> PolarResult<()> {
+        // TODO: Open question if we need to pass errors back down to rust.
+        // For example what happens if the call asked for a field that doesn't exist?
+
+        if let Some(value) = term {
+            self.log_with(|| format!("=> {}", value.to_string()), &[]);
+
+            self.bind(
+                &self
+                    .call_id_symbols
+                    .get(&call_id)
+                    .expect("unregistered external call ID")
+                    .clone(),
+                value,
+            );
+        } else {
+            self.log("=> No more results.", &[]);
+
+            // No more results. Clean up, cut out the retry alternative,
+            // and backtrack.
+            self.call_id_symbols.remove(&call_id).expect("bad call ID");
+
+            let check_error = if let Some(goal) = self.goals.last() {
+                match *(*goal) {
+                    Goal::CheckError => true,
+                    _ => false,
+                }
+            } else {
+                false
+            };
+
+            self.push_goal(Goal::Backtrack)?;
+            self.push_goal(Goal::Cut {
+                choice_index: self.choices.len() - 1,
+            })?;
+
+            if check_error {
+                self.push_goal(Goal::CheckError)?;
+            }
+        }
+        Ok(())
+    }
+
+
+    /// Handle an error coming from outside the vm.
+    fn external_error(&mut self, message: String) {
+        self.external_error = Some(message);
     }
 }
 
