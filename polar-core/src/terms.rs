@@ -101,6 +101,10 @@ impl Symbol {
     pub fn new(name: &str) -> Self {
         Self(name.to_string())
     }
+
+    pub fn is_temporary_var(&self) -> bool {
+        self.0.starts_with("_")
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -419,8 +423,11 @@ impl Term {
             Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
                 fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
             }
-            // TODO wrong?
-            Value::Partial(_) => {}
+            Value::Partial(ref mut partial) => { partial
+                .operations_mut()
+                .iter_mut()
+                .for_each(|op| op.args.iter_mut().for_each(|arg| arg.map_replace(f)))
+            }
         };
         self.replace_value(value);
     }

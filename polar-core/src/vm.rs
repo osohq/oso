@@ -624,7 +624,7 @@ impl PolarVirtualMachine {
 
     /// Return `true` if `var` is a temporary variable.
     fn is_temporary_var(&self, name: &Symbol) -> bool {
-        name.0.starts_with('_')
+        name.is_temporary_var()
     }
 
     /// Return `true` if `var` is a constant variable.
@@ -2532,9 +2532,11 @@ impl Runnable for PolarVirtualMachine {
             None
         };
 
+        let bindings = partial::simplify_bindings(self.bindings(true));
+
         Ok(QueryEvent::Result {
             // TODO (dhatch): Don't return everything eventually.
-            bindings: self.bindings(false),
+            bindings,
             trace,
         })
     }

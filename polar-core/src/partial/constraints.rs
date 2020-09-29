@@ -20,6 +20,14 @@ impl Constraints {
         }
     }
 
+    pub fn operations(&self) -> &Vec<Operation> {
+        &self.operations
+    }
+
+    pub fn operations_mut(&mut self) -> &mut Vec<Operation> {
+        &mut self.operations
+    }
+
     pub fn unify(&mut self, other: Term) {
         let op = op!(Unify, self.variable_term(), other);
         self.operations.push(op);
