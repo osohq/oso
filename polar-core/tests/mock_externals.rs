@@ -70,15 +70,19 @@ impl MockExternal {
 
     pub fn external_is_subspecializer(
         &mut self,
-        instance_id: u64,
+        instance_id: Option<u64>,
         left_class_tag: Symbol,
         right_class_tag: Symbol,
     ) -> bool {
-        match self.get_external(instance_id) {
-            Value::InstanceLiteral(literal) => {
-                literal.tag == left_class_tag || literal.tag == right_class_tag
+        if let Some(instance_id) = instance_id {
+            match self.get_external(instance_id) {
+                Value::InstanceLiteral(literal) => {
+                    literal.tag == left_class_tag || literal.tag == right_class_tag
+                }
+                _ => panic!("expected instance literal"),
             }
-            _ => panic!("expected instance literal"),
+        } else {
+            left_class_tag >= right_class_tag
         }
     }
 }

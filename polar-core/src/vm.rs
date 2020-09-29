@@ -2363,7 +2363,7 @@ impl PolarVirtualMachine {
                 // check ordering based on the classes
                 Ok(QueryEvent::ExternalIsSubSpecializer {
                     call_id,
-                    instance_id,
+                    instance_id: Some(instance_id),
                     left_class_tag: left_lit.tag.clone(),
                     right_class_tag: right_lit.tag.clone(),
                 })
