@@ -142,8 +142,6 @@ def test_partial(rf, settings, partial_policy):
     request = rf.get("/")
     request.user = "test_admin"
 
-    authorize_filter = authorize_type(request, action="get", resource_type="test_app::Post")
+    authorize_filter = authorize_type(request, action="get", resource_type=Post)
     q = Post.objects.filter(authorize_filter)
     assert q.count() == 4
-
-    # assert we get correct posts.

@@ -158,7 +158,7 @@ impl Runnable for IsaConstraintCheck {
 
         if let Some(result) = self.result.take() {
             if !result {
-                return Ok(QueryEvent::Done { result: false })
+                return Ok(QueryEvent::Done { result: false });
             }
         }
 
@@ -205,8 +205,8 @@ mod test {
                     .unwrap()
                     .value()
                     .clone()
-                    .partial()?
-                    .as_expression()
+                    .expression()
+                    .unwrap()
                     .to_polar(),
                 $right
             )
@@ -242,19 +242,18 @@ mod test {
         // They all just be AND'd together.
         //
         // Really simple unification works fine...
-        assert_partial_expression!(next_binding(), "a", "_this = 1");
+        assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(1));
 
-        assert_partial_expression!(next_binding(), "a", "_this = 2");
+        assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(2));
+
 
         let next = next_binding();
         // LOOKUPS also work.. but obviously the expression could be merged and simplified.
         // The basic information is there though.
-        assert_partial_expression!(next, "a", "_value_1_11 = _this.a");
-        assert_partial_expression!(next, "_value_1_11", "_this = 3");
+        assert_partial_expression!(next, "a", "3 = _this.a");
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_value_2_12 = _this.b");
-        assert_partial_expression!(next, "_value_2_12", "_this = 4");
+        assert_partial_expression!(next, "a", "4 = _this.b");
 
         // Print messages
         while let Some(msg) = query.next_message() {
@@ -343,17 +342,15 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and _value_1_11 = _this.foo"
+            "_this matches Post{} and 1 = _this.foo"
         );
-        assert_partial_expression!(next, "_value_1_11", "_this = 1");
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _value_2_13 = _this.bar"
+            "_this matches User{} and 1 = _this.bar"
         );
-        assert_partial_expression!(next, "_value_2_13", "_this = 1");
 
         Ok(())
     }
@@ -368,25 +365,33 @@ mod test {
             .load_str(r#"f(x: User) if x.bar = 1 and g(x);"#)
             .unwrap();
         polar.load_str(r#"g(x: Post) if x.post = 1;"#).unwrap();
-        polar.load_str(r#"g(x: PostSubclass) if x.post_subclass = 1;"#).unwrap();
+        polar
+            .load_str(r#"g(x: PostSubclass) if x.post_subclass = 1;"#)
+            .unwrap();
         polar.load_str(r#"g(x: User) if x.user = 1;"#).unwrap();
-        polar.load_str(r#"g(x: UserSubclass) if x.user_subclass = 1;"#).unwrap();
+        polar
+            .load_str(r#"g(x: UserSubclass) if x.user_subclass = 1;"#)
+            .unwrap();
 
         let mut query =
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
 
-        let mut next_binding = || {
-            loop {
-                match query.next_event().unwrap() {
-                    QueryEvent::Result { bindings, .. } => return bindings,
-                    QueryEvent::ExternalIsSubSpecializer { call_id, instance_id, left_class_tag, right_class_tag } => {
-                        assert!(instance_id.is_none());
-                        assert_eq!(call_id, 700000);
-                        eprintln!("left: {:?}, right: {:?}", &left_class_tag, &right_class_tag);
-                        query.question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0));
-                    }
-                    _ => panic!("not bindings"),
+        let mut next_binding = || loop {
+            match query.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::ExternalIsSubSpecializer {
+                    call_id,
+                    instance_id,
+                    left_class_tag,
+                    right_class_tag,
+                } => {
+                    assert!(instance_id.is_none());
+                    assert_eq!(call_id, 700000);
+                    eprintln!("left: {:?}, right: {:?}", &left_class_tag, &right_class_tag);
+                    query
+                        .question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0));
                 }
+                _ => panic!("not bindings"),
             }
         };
 
@@ -394,37 +399,29 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and _value_1_15 = _this.foo and _this matches Post{} and _value_3_33 = _this.post"
+            "_this matches Post{} and 0 = _this.foo and _this matches Post{} and 1 = _this.post"
         );
-        assert_partial_expression!(next, "_value_1_15", "_this = 0");
-        assert_partial_expression!(next, "_value_3_33", "_this = 1");
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and _value_1_15 = _this.foo and _this matches PostSubclass{} and _value_4_35 = _this.post_subclass"
+            "_this matches Post{} and 0 = _this.foo and _this matches PostSubclass{} and 1 = _this.post_subclass"
         );
-        assert_partial_expression!(next, "_value_1_15", "_this = 0");
-        assert_partial_expression!(next, "_value_4_35", "_this = 1");
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _value_2_17 = _this.bar and _this matches User{} and _value_5_53 = _this.user"
+            "_this matches User{} and 1 = _this.bar and _this matches User{} and 1 = _this.user"
         );
-        assert_partial_expression!(next, "_value_2_17", "_this = 1");
-        assert_partial_expression!(next, "_value_5_53", "_this = 1");
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _value_2_17 = _this.bar and _this matches UserSubclass{} and _value_6_55 = _this.user_subclass"
+            "_this matches User{} and 1 = _this.bar and _this matches UserSubclass{} and 1 = _this.user_subclass"
         );
-        assert_partial_expression!(next, "_value_2_17", "_this = 1");
-        assert_partial_expression!(next, "_value_6_55", "_this = 1");
 
         assert!(matches!(query.next_event().unwrap(), QueryEvent::Done { .. }));
 

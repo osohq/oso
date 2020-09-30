@@ -125,19 +125,12 @@ mod test {
         let mut bar_partial = bar_partial_term.value().clone().partial().unwrap();
         bar_partial.unify(term!(1));
 
-        bindings.insert(
-            sym!("a"),
-            term!(constraint));
-        bindings.insert(
-            sym!("_value_1"),
-            term!(bar_partial));
+        bindings.insert(sym!("a"), term!(constraint));
+        bindings.insert(sym!("_value_1"), term!(bar_partial));
 
         let bindings = simplify_bindings(bindings);
         let a_term = bindings.get(&sym!("a")).unwrap();
 
-        if let Value::Expression(op) = a_term.value() {
-            eprintln!("{:?}", a_term.to_polar());
-            panic!("");
-        }
+        assert_eq!(a_term.to_polar(), "1 = _this.foo");
     }
 }

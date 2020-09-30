@@ -44,8 +44,11 @@ def authorize_type(request, resource_type, *, actor=None, action=None):
     if action is None:
         action = request.method
 
-    if issubclass(resource_type, models.Model):
-        resource_type = get_model_name(resource_type)
+    try:
+        if issubclass(resource_type, models.Model):
+            resource_type = get_model_name(resource_type)
+    except TypeError:
+        assert isinstance(resource_type, str)
 
     partial_resource = Partial('resource', TypeConstraint(resource_type))
     results = Oso.query_rule("allow", actor, action, partial_resource)
