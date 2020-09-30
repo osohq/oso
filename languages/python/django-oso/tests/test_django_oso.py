@@ -7,18 +7,24 @@ from django.conf import settings
 from django.test import RequestFactory
 from django.core.exceptions import PermissionDenied
 
-from django_oso.oso import Oso
-from django_oso.auth import authorize
+from django_oso.oso import Oso, reset_oso
+from django_oso.auth import authorize, authorize_type
 
 from oso import OsoError
 
+@pytest.fixture(autouse=True)
+def reset():
+    reset_oso()
 
 @pytest.fixture
 def simple_policy():
     """Load simple authorization policy."""
-    Oso.clear_rules()
     Oso.load_file(Path(__file__).parent / "simple.polar")
 
+@pytest.fixture
+def partial_policy():
+    """Load partial authorization policy."""
+    Oso.load_file(Path(__file__).parent / "partial.polar")
 
 def test_policy_autoload():
     """Test that policies are loaded from policy directory."""
@@ -116,3 +122,28 @@ def test_route_authorization(client, settings, simple_policy):
     # would be a 404 and not apply authorization.
     response = client.get("/notfound/")
     assert response.status_code == 403
+
+@pytest.mark.django_db
+def test_partial(rf, settings, partial_policy):
+    from test_app.models import Post
+
+    Post(name="test", is_private=False).save()
+    Post(name="test_public", is_private=False).save()
+    Post(name="test_private", is_private=True).save()
+    Post(name="test_private_2", is_private=True).save()
+
+    request = rf.get("/")
+    request.user = "test_user"
+
+    authorize_filter = authorize_type(request, action="get", resource_type="test_app::Post")
+    q = Post.objects.filter(authorize_filter)
+    assert q.count() == 1
+
+    request = rf.get("/")
+    request.user = "test_admin"
+
+    authorize_filter = authorize_type(request, action="get", resource_type="test_app::Post")
+    q = Post.objects.filter(authorize_filter)
+    assert q.count() == 4
+
+    # assert we get correct posts.

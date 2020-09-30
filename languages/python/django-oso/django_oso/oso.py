@@ -37,6 +37,9 @@ def init_oso():
     # Register request
     register_class(HttpRequest)
 
+    return load_policy_files()
+
+def load_policy_files():
     loaded_files = []
 
     # Load all polar files in each app's "policy" directory.
@@ -51,3 +54,7 @@ def init_oso():
                     loaded_files.append(file_path)
 
     return loaded_files
+
+def reset_oso():
+    Oso.clear_rules()
+    load_policy_files()
