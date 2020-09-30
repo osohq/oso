@@ -127,17 +127,17 @@ def test_route_authorization(client, settings, simple_policy):
 def test_partial(rf, settings, partial_policy):
     from test_app.models import Post
 
-    Post(name="test", is_private=False).save()
-    Post(name="test_public", is_private=False).save()
-    Post(name="test_private", is_private=True).save()
-    Post(name="test_private_2", is_private=True).save()
+    Post(name="test", is_private=False, timestamp=1).save()
+    Post(name="test_public", is_private=False, timestamp=1).save()
+    Post(name="test_private", is_private=True, timestamp=1).save()
+    Post(name="test_private_2", is_private=True, timestamp=1).save()
 
     request = rf.get("/")
     request.user = "test_user"
 
     authorize_filter = authorize_type(request, action="get", resource_type="test_app::Post")
     q = Post.objects.filter(authorize_filter)
-    assert q.count() == 1
+    assert q.count() == 2
 
     request = rf.get("/")
     request.user = "test_admin"

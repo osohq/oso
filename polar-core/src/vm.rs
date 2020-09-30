@@ -1780,6 +1780,22 @@ impl PolarVirtualMachine {
                     args: vec![left_term, right_term],
                 })
             }
+            (Value::Partial(partial), _) => {
+                let mut partial = partial.clone();
+                partial.compare(op, right_term.clone());
+
+                let name = partial.name().clone();
+                self.bind(&name, partial.as_term());
+                Ok(QueryEvent::None)
+            },
+            (_, Value::Partial(partial), ) => {
+                let mut partial = partial.clone();
+                partial.compare(op, left_term.clone());
+
+                let name = partial.name().clone();
+                self.bind(&name, partial.as_term());
+                Ok(QueryEvent::None)
+            },
             (left, right) => Err(self.type_error(
                 term,
                 format!(
@@ -2535,7 +2551,6 @@ impl Runnable for PolarVirtualMachine {
         let bindings = partial::simplify_bindings(self.bindings(true));
 
         Ok(QueryEvent::Result {
-            // TODO (dhatch): Don't return everything eventually.
             bindings,
             trace,
         })

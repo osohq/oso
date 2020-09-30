@@ -1,8 +1,39 @@
 use std::collections::HashSet;
 
-use crate::kb::Bindings;
-use crate::terms::{Symbol, Term, Value, Operator};
 use crate::formatting::ToPolarString;
+use crate::kb::Bindings;
+use crate::terms::{Operator, Symbol, Term, Value, Operation};
+use crate::partial::Constraints;
+
+
+// Variable(?) <= bound value which might be a partial
+//
+// Top level unify
+//
+// a: _this = ?
+// ?
+//
+// Dot op and comparison or unify
+//
+// a: (_this.foo = _temp)
+// _temp: this = ?
+//
+// a: _this.foo = _temp
+// _temp: this > 0
+//
+// a: _this.foo = _temp
+// _temp: this > 0, this = 1, this < 0
+//
+// _this.foo > 0 and _this.foo = 1 and _this.foo < 0
+//
+// a: _this.a = _value_2_8
+// _value_2_8: _this.b = _value_1_9
+// _value_1_9: _this > 0
+//
+// a: _this.a.b = _value_1_9
+// _value_1_9: _this > 0
+//
+// a: _this.a.b > 0
 
 pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
     let root_partials = get_roots(&bindings);
@@ -20,9 +51,9 @@ pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
 
 fn simplify_partial(term: Term, bindings: &Bindings) -> Term {
     let term = simplify_partial_variables(term, bindings);
-    simplify_unify_partials(term, bindings)
+    let term = simplify_unify_partials(term, bindings);
+    simplify_dot_ops(term, bindings)
 }
-
 
 fn simplify_partial_variables(term: Term, bindings: &Bindings) -> Term {
     term.cloned_map_replace(&mut |term: &Term| {
@@ -41,31 +72,120 @@ fn simplify_partial_variables(term: Term, bindings: &Bindings) -> Term {
     })
 }
 
+fn dot_field(op: &Value) -> usize {
+    match op {
+        Value::Expression(op) if op.operator == Operator::Dot => 1,
+        Value::Partial(_) => 2,
+        _ => 0
+    }
+}
+
+fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
+    term.cloned_map_replace(&mut |term: &Term| {
+        if let Value::Partial(partial) = term.value() {
+            let mut operations = vec![];
+            for op in partial.operations() {
+                if op.operator == Operator::Unify {
+                    let mut op = op.clone();
+                    let left = op.args.get(0).unwrap().value().clone();
+                    let right = op.args.get(1).unwrap().value().clone();
+
+                    match (dot_field(&left), dot_field(&right)) {
+                        (1, 2) => {
+                            let right = simplify_dot_ops(term!(right), bindings);
+                            simplify_dot_ops_helper(&left, right.value(), &mut operations)
+                        },
+                        (2, 1) => {
+                            let left = simplify_dot_ops(term!(left), bindings);
+                            simplify_dot_ops_helper(&right, left.value(), &mut operations)
+                        },
+                        (_, _) => operations.push(op.clone())
+                    };
+                } else {
+                    operations.push(op.clone());
+                }
+            }
+
+            eprintln!("ops: {:?}", operations);
+            return term.clone_with_value(Value::Partial(partial.clone_with_operations(operations)));
+        } else {
+            return term.clone();
+        }
+    })
+}
+
+fn simplify_dot_ops_helper(dot_op: &Value, other: &Value, operations: &mut Vec<Operation>) {
+    eprintln!("dot_op: {:?}", &dot_op.to_polar());
+    eprintln!("other: {:?}", &other.to_polar());
+    if let Value::Partial(partial) = other {
+        let mut args = vec![];
+        for operation in partial.operations() {
+            let left = operation.args.get(0).unwrap().value();
+            let right = operation.args.get(1).unwrap().value();
+
+            match (is_this_arg(left), is_this_arg(right)) {
+                (true, false) => {
+                    args.push(term!(Operation {
+                        operator: operation.operator,
+                        args: vec![term!(dot_op.clone()), term!(right.clone())]
+                    }));
+                }
+                (false, true) => {
+                    args.push(term!(Operation {
+                        operator: operation.operator,
+                        args: vec![term!(left.clone()), term!(dot_op.clone())]
+                    }));
+                }
+                (_, _) => panic!("invalid")
+            }
+        }
+
+        operations.push(Operation {
+            operator: Operator::And,
+            args
+        });
+    }
+}
+
+fn not_this_arg(operation: &Operation) -> Option<Term> {
+    let left = operation.args.get(0).unwrap();
+    let right = operation.args.get(1).unwrap();
+
+    match (is_this_arg(left.value()), is_this_arg(right.value())) {
+        (false, true) => Some(left.clone()),
+        (true, false) => Some(right.clone()),
+        _ => None,
+    }
+}
+
+fn is_this_arg(value: &Value) -> bool {
+    matches!(value, Value::Variable(sym) if sym.0 == "_this")
+}
+
+// partial(_x_5) { partial(_value_1_6) { _this > 0, _this > 1 } = _this.a }
+
 // Take partial(_this = ?) and output ?.
 fn simplify_unify_partials(term: Term, _: &Bindings) -> Term {
-    term.cloned_map_replace(&mut |term: &Term| {
-        if let Value::Partial(p) = term.value() {
-            if p.operations().len() == 1 && p.operations().first().unwrap().operator == Operator::Unify {
-                let mut op = p.operations().first().unwrap().clone();
-                let right = op.args.pop().unwrap();
-                let left = op.args.pop().unwrap();
+    if let Value::Partial(p) = term.value() {
+        let operator = p.operations().first().unwrap().operator;
+        let is_unify = matches!(
+            operator,
+            Operator::Unify
+        );
 
-                match (left.value(), right.value()) {
-                    (_, Value::Variable(sym)) if sym.0 == "_this" => {
-                        left.clone()
-                    },
-                    (Value::Variable(sym), _) if sym.0 == "_this" => {
-                        right.clone()
-                    },
-                    _ => term.clone()
-                }
-            } else {
-                term.clone()
+        if p.operations().len() == 1 && is_unify {
+            let op = p.operations().first().unwrap();
+
+            match not_this_arg(op) {
+                Some(term) => term,
+                None => term.clone(),
             }
         } else {
             term.clone()
         }
-    })
+    } else {
+        term.clone()
+    }
 }
 
 fn get_roots(bindings: &Bindings) -> HashSet<Symbol> {

@@ -3,7 +3,7 @@ use super::rules::*;
 use super::terms::*;
 
 /// Replace the left value by the AND of the right and the left.
-fn and_wrap(a: &mut Term, b: Term) {
+pub fn and_wrap(a: &mut Term, b: Term) {
     let new_value = Value::Expression(Operation {
         operator: Operator::And,
         args: vec![b, a.clone()],

@@ -228,6 +228,16 @@ impl Value {
         }
     }
 
+    pub fn string(self) -> Result<String, error::RuntimeError> {
+        match self {
+            Value::String(string) => Ok(string),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected string, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
     pub fn instance_literal(self) -> Result<InstanceLiteral, error::RuntimeError> {
         match self {
             Value::InstanceLiteral(literal) => Ok(literal),

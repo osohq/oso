@@ -45,6 +45,25 @@ impl Constraints {
         constraint_check
     }
 
+    pub fn compare(&mut self, operator: Operator, other: Term) {
+        assert!(matches!(
+            operator,
+            Operator::Lt
+                | Operator::Gt
+                | Operator::Leq
+                | Operator::Geq
+                | Operator::Eq
+                | Operator::Neq
+        ));
+
+        let op = Operation {
+            operator,
+            args: vec![self.variable_term(), other],
+        };
+
+        self.operations.push(op);
+    }
+
     pub fn is_compatible<F>(&self, check: F) -> bool
     where
         F: Fn(&Operation) -> bool,
@@ -89,6 +108,12 @@ impl Constraints {
     pub fn clone_with_name(&self, name: Symbol) -> Self {
         let mut new = self.clone();
         new.variable = name;
+        new
+    }
+
+    pub fn clone_with_operations(&self, operations: Vec<Operation>) -> Self {
+        let mut new = self.clone();
+        new.operations = operations;
         new
     }
 
@@ -424,6 +449,61 @@ mod test {
         );
 
         assert!(matches!(query.next_event().unwrap(), QueryEvent::Done { .. }));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_partial_comparison() -> Result<(), crate::error::PolarError> {
+        let polar = Polar::new();
+        polar.load_str(r#"positive(x) if x > 0;"#).unwrap();
+        polar.load_str(r#"positive(x) if x > 0 and x < 0;"#).unwrap();
+
+        let mut query = polar.new_query_from_term(
+            term!(call!("positive", [Constraints::new(sym!("a"))])),
+            false,
+        );
+
+        let mut next_binding = || {
+            let event = query.next_event().unwrap();
+            if let QueryEvent::Result { bindings, .. } = event {
+                bindings
+            } else {
+                panic!("not bindings, {:?}", &event);
+            }
+        };
+
+        let next = next_binding();
+        assert_partial_expression!(next, "a", "_this > 0");
+
+        let next = next_binding();
+        assert_partial_expression!(next, "a", "_this > 0 and _this < 0");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_partial_comparison_dot() -> Result<(), crate::error::PolarError> {
+        let polar = Polar::new();
+        polar.load_str(r#"positive(x) if x.a.b > 0;"#).unwrap();
+        polar.load_str(r#"positive(x) if x > 0 and x < 0;"#).unwrap();
+
+        let mut query = polar.new_query_from_term(
+            term!(call!("positive", [Constraints::new(sym!("a"))])),
+            false,
+        );
+
+        let mut next_binding = || {
+            let event = query.next_event().unwrap();
+            if let QueryEvent::Result { bindings, .. } = event {
+                bindings
+            } else {
+                panic!("not bindings, {:?}", &event);
+            }
+        };
+
+        let next = next_binding();
+        assert_partial_expression!(next, "a", "_this.a > 0");
 
         Ok(())
     }

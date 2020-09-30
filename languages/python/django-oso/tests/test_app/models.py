@@ -16,6 +16,7 @@ class TestRegistration2(models.Model):
 class Post(models.Model):
     is_private = models.BooleanField()
     name = models.CharField(max_length=256)
+    timestamp = models.IntegerField()
 
     def __str__(self):
         return f"Post(name={self.name}, is_private={self.is_private})"
