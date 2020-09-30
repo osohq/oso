@@ -1,6 +1,8 @@
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
+from django.db import models
 
-from .oso import Oso
+from .oso import Oso, get_model_name
 from polar.partial import Partial, TypeConstraint
 
 from .partial import partial_to_query_filter
@@ -42,15 +44,23 @@ def authorize_type(request, resource_type, *, actor=None, action=None):
     if action is None:
         action = request.method
 
-    partial_resource = Partial('resource', TypeConstraint(resource_type))
-    result = Oso.query_rule("allow", actor, action, partial_resource)
+    if issubclass(resource_type, models.Model):
+        resource_type = get_model_name(resource_type)
 
-    try:
-        first = next(result)
-    except StopIteration:
+    partial_resource = Partial('resource', TypeConstraint(resource_type))
+    results = Oso.query_rule("allow", actor, action, partial_resource)
+
+    filter = None
+    for result in results:
+        resource_partial = result['bindings']['resource']
+        if filter is None:
+            filter = Q()
+
+        filter = filter | partial_to_query_filter(resource_partial, resource_type)
+
+    if filter is None:
         raise PermissionDenied()
 
-    filter = partial_to_query_filter(first['bindings']['resource'], resource_type)
     return filter
 
 def skip_authorization(request):
