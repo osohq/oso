@@ -217,10 +217,13 @@ impl Query {
     fn handle_external_is_subspecializer(
         &mut self,
         call_id: u64,
-        instance_id: u64,
+        instance_id: Option<u64>,
         left_class_tag: Symbol,
         right_class_tag: Symbol,
     ) -> crate::Result<()> {
+        // TODO: No unwrap
+        let instance_id = instance_id.unwrap();
+
         let res = self
             .host
             .is_subspecializer(instance_id, &left_class_tag, &right_class_tag);

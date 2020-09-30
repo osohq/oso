@@ -13,6 +13,8 @@ pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
     }
 
     to_expressions(&mut bindings);
+    remove_temporaries(&mut bindings);
+
     bindings
 }
 
@@ -91,6 +93,20 @@ fn to_expressions(bindings: &mut Bindings) {
     }
 
     bindings.extend(new_bindings.into_iter());
+}
+
+fn remove_temporaries(bindings: &mut Bindings) {
+    let mut remove = HashSet::new();
+
+    for (name, _) in bindings.iter() {
+        if name.is_temporary_var() {
+            remove.insert(name.clone());
+        }
+    }
+
+    for name in remove.iter() {
+        bindings.remove(name);
+    }
 }
 
 #[cfg(test)]
