@@ -56,7 +56,12 @@ def authorize_type(request, resource_type, *, actor=None, action=None):
         if filter is None:
             filter = Q()
 
-        filter = filter | partial_to_query_filter(resource_partial, resource_type)
+        next_filter = partial_to_query_filter(resource_partial, resource_type)
+        if next_filter == Q():
+            return next_filter
+
+        print("filter: ", next_filter)
+        filter = filter | next_filter
 
     if filter is None:
         raise PermissionDenied()
