@@ -180,7 +180,6 @@ impl Runnable for IsaConstraintCheck {
         assert_eq!(call_id, 700000);
 
         self.result = Some(answer);
-        eprintln!("question result: {:?}", &self.result);
         Ok(())
     }
 

@@ -60,7 +60,6 @@ def authorize_type(request, resource_type, *, actor=None, action=None):
         if next_filter == Q():
             return next_filter
 
-        print("filter: ", next_filter)
         filter = filter | next_filter
 
     if filter is None:
