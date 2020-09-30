@@ -3,7 +3,8 @@ from math import inf, isnan, nan
 from pathlib import Path
 
 from polar import polar_class
-from polar import exceptions, Polar, Predicate, Query, Variable
+from polar import exceptions, Polar, Predicate, Query, Variable, Partial, Expression
+from polar.partial import TypeConstraint
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserError, PolarRuntimeError, InvalidCallError
 
@@ -752,3 +753,65 @@ def test_method_with_kwargs(polar, qvar):
     qvar("kwargs(result)", "result") == [3, 4]
     qvar("args(result)", "result") == [5, 6]
     qvar("mixed(result)", "result") == [7, 8]
+
+def test_partial(polar):
+    polar.load_str("f(1);")
+    polar.load_str("f(x) if x = 1 and x = 2;")
+
+    results = polar.query_rule("f", Partial("x"))
+    first = next(results)
+
+    x = first['bindings']['x']
+    assert x == 1
+
+    second = next(results)
+    x = second['bindings']['x']
+
+    # Top level should be and
+    assert isinstance(x, Expression)
+    assert x.operator == 'And'
+    and_args = x.args
+
+    first_arg = and_args[0]
+    assert first_arg.operator == 'Unify'
+    assert first_arg.args[0] == Variable('_this')
+    assert first_arg.args[1] == 1
+
+    polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
+
+    results = polar.query_rule("g", Partial("x"))
+    first = next(results)
+
+    x = first['bindings']['x']
+    assert isinstance(x, Expression)
+    assert x.operator == 'And'
+    and_args = x.args
+
+    assert and_args[0].operator == 'Unify'
+    assert and_args[0].args[0] == 1
+    assert and_args[0].args[1].operator == 'Dot'
+    assert and_args[0].args[1].args[0] == Variable('_this')
+    assert and_args[0].args[1].args[1] == 'bar'
+
+    assert and_args[1].operator == 'Unify'
+    assert and_args[1].args[0] == 2
+    assert and_args[1].args[1].operator == 'Dot'
+    assert and_args[1].args[1].args[0] == Variable('_this')
+    assert and_args[1].args[1].args[1] == 'baz'
+
+def test_partial_constraint(polar):
+    class User: pass
+    class Post: pass
+
+    polar.register_class(User)
+    polar.register_class(Post)
+
+    polar.load_str("f(x: User) if x.user = 1;")
+    polar.load_str("f(x: Post) if x.post = 1;")
+
+    partial = Partial("x", TypeConstraint("User"))
+    results = polar.query_rule("f", partial)
+
+    first = next(results)['bindings']['x']
+    assert isinstance(first, Expression)
+    assert first is True
