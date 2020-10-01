@@ -39,7 +39,8 @@ impl Query {
     }
 
     fn push_runnable(&mut self, runnable: Box<dyn Runnable>, call_id: u64) -> PolarResult<()> {
-        Ok(self.runnable_stack.push((runnable, call_id)))
+        self.runnable_stack.push((runnable, call_id));
+        Ok(())
     }
 
     fn pop_runnable(&mut self, result: bool) -> PolarResult<Option<QueryEvent>> {

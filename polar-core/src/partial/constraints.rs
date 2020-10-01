@@ -88,13 +88,12 @@ impl Constraints {
         Term::new_temporary(Value::Partial(Constraints::new(name)))
     }
 
-    /// Return a regular expression consisting of the expression represented by this partial.
-    pub fn as_term(self) -> Term {
+    pub fn term(self) -> Term {
         Term::new_temporary(Value::Partial(self))
     }
 
-    // HACK for formatting.
-    pub fn as_expression(self) -> Term {
+    /// Return the expression represented by this partial's constraints.
+    pub fn expression(self) -> Term {
         Term::new_temporary(Value::Expression(Operation {
             operator: Operator::And,
             args: self

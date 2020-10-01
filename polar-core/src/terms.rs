@@ -103,7 +103,7 @@ impl Symbol {
     }
 
     pub fn is_temporary_var(&self) -> bool {
-        self.0.starts_with("_")
+        self.0.starts_with('_')
     }
 }
 

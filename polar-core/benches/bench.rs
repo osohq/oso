@@ -300,7 +300,9 @@ impl Runner {
             let event = self.next();
             match event {
                 QueryEvent::Result { bindings, .. } => return self.handle_result(bindings),
-                QueryEvent::Done if self.expected_result.is_some() => panic!("Result expected"),
+                QueryEvent::Done { .. } if self.expected_result.is_some() => {
+                    panic!("Result expected")
+                }
                 QueryEvent::Done { .. } => break,
                 QueryEvent::MakeExternal { .. } => {}
                 QueryEvent::ExternalIsa { call_id, .. } => self.handle_external_isa(call_id),

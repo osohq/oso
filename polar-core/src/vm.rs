@@ -980,7 +980,7 @@ impl PolarVirtualMachine {
                     }],
                     vec![Goal::Bind {
                         var: name,
-                        value: partial.as_term(),
+                        value: partial.term(),
                     }],
                     vec![Goal::Backtrack],
                 )?;
@@ -1620,7 +1620,7 @@ impl PolarVirtualMachine {
 
                 let lookup_result_var = value.value().clone().symbol().unwrap();
                 self.bind(&lookup_result_var, value_partial);
-                self.bind(partial.name(), partial.clone().as_term());
+                self.bind(partial.name(), partial.clone().term());
             }
             _ => {
                 return Err(self.type_error(
@@ -1785,7 +1785,7 @@ impl PolarVirtualMachine {
                 partial.compare(op, right_term.clone());
 
                 let name = partial.name().clone();
-                self.bind(&name, partial.as_term());
+                self.bind(&name, partial.term());
                 Ok(QueryEvent::None)
             }
             (_, Value::Partial(partial)) => {
@@ -1793,7 +1793,7 @@ impl PolarVirtualMachine {
                 partial.compare(op, left_term.clone());
 
                 let name = partial.name().clone();
-                self.bind(&name, partial.as_term());
+                self.bind(&name, partial.term());
                 Ok(QueryEvent::None)
             }
             (left, right) => Err(self.type_error(
@@ -2012,7 +2012,7 @@ impl PolarVirtualMachine {
         }
 
         let name = partial.name().clone();
-        self.bind(&name, partial.as_term());
+        self.bind(&name, partial.term());
 
         Ok(())
     }

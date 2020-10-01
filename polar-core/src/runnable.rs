@@ -35,38 +35,3 @@ impl Clone for Box<dyn Runnable> {
         (*self).clone_runnable()
     }
 }
-
-#[derive(Clone)]
-pub struct DoneRunnable {
-    result: bool,
-}
-
-impl DoneRunnable {
-    pub fn new(result: bool) -> Self {
-        Self { result }
-    }
-}
-
-impl Runnable for DoneRunnable {
-    fn run(&mut self) -> PolarResult<QueryEvent> {
-        Ok(QueryEvent::Done {
-            result: self.result,
-        })
-    }
-
-    fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
-        Err(OperationalError::InvalidState("Unexpected query answer".to_string()).into())
-    }
-
-    fn external_error(&mut self, _message: String) -> PolarResult<()> {
-        Err(OperationalError::InvalidState("Unexpected external error".to_string()).into())
-    }
-
-    fn external_call_result(&mut self, _call_id: u64, _term: Option<Term>) -> PolarResult<()> {
-        Err(OperationalError::InvalidState("Unexpected external call".to_string()).into())
-    }
-
-    fn clone_runnable(&self) -> Box<dyn Runnable> {
-        Box::new(self.clone())
-    }
-}

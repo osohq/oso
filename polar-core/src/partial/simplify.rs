@@ -212,7 +212,7 @@ fn to_expressions(bindings: &mut Bindings) {
     for (name, val) in bindings.iter() {
         if let Value::Partial(partial) = val.value() {
             let name = name.clone();
-            let partial = partial.clone().as_expression();
+            let partial = partial.clone().expression();
             new_bindings.insert(name, partial);
         }
     }
