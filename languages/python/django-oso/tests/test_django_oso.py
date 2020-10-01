@@ -133,6 +133,7 @@ def test_partial(rf, settings, partial_policy):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
+    Post(name="test_past", is_private=False, timestamp=-1).save()
     Post(name="test_public", is_private=False, timestamp=1).save()
     Post(name="test_private", is_private=True, timestamp=1).save()
     Post(name="test_private_2", is_private=True, timestamp=1).save()
@@ -151,4 +152,4 @@ def test_partial(rf, settings, partial_policy):
 
     authorize_filter = authorize_type(request, action="get", resource_type=Post)
     q = Post.objects.filter(authorize_filter)
-    assert q.count() == 4
+    assert q.count() == 5
