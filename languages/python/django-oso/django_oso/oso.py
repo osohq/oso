@@ -13,10 +13,12 @@ Oso = _Oso()
 Use for loading policy files and registering classes.
 """
 
+
 def get_model_name(model):
     app_name = model._meta.app_label
     app_namespace = app_name.replace(".", "::")
     return f"{app_namespace}::{model.__name__}"
+
 
 def init_oso():
     def register_class(model, name=None):
@@ -41,6 +43,7 @@ def init_oso():
 
     return load_policy_files()
 
+
 def load_policy_files():
     loaded_files = []
 
@@ -56,6 +59,7 @@ def load_policy_files():
                     loaded_files.append(file_path)
 
     return loaded_files
+
 
 def reset_oso():
     Oso.clear_rules()

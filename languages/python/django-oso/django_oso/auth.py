@@ -37,6 +37,7 @@ def authorize(request, resource, *, actor=None, action=None):
     if not authorized:
         raise PermissionDenied()
 
+
 def authorize_type(request, resource_type, *, actor=None, action=None):
     if actor is None:
         actor = request.user
@@ -50,12 +51,12 @@ def authorize_type(request, resource_type, *, actor=None, action=None):
     except TypeError:
         assert isinstance(resource_type, str)
 
-    partial_resource = Partial('resource', TypeConstraint(resource_type))
+    partial_resource = Partial("resource", TypeConstraint(resource_type))
     results = Oso.query_rule("allow", actor, action, partial_resource)
 
     filter = None
     for result in results:
-        resource_partial = result['bindings']['resource']
+        resource_partial = result["bindings"]["resource"]
         if filter is None:
             filter = Q()
 
@@ -69,6 +70,7 @@ def authorize_type(request, resource_type, *, actor=None, action=None):
         raise PermissionDenied()
 
     return filter
+
 
 def skip_authorization(request):
     """Mark ``request`` as not requiring authorization.

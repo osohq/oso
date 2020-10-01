@@ -214,8 +214,8 @@ class Host:
         elif tag == "Variable":
             return Variable(value[tag])
         elif tag == "Expression":
-            args = list(map(self.to_python, value[tag]['args']))
-            operator = value[tag]['operator']
+            args = list(map(self.to_python, value[tag]["args"]))
+            operator = value[tag]["operator"]
 
             return Expression(operator, args)
         elif tag == "Pattern":

@@ -1787,15 +1787,15 @@ impl PolarVirtualMachine {
                 let name = partial.name().clone();
                 self.bind(&name, partial.as_term());
                 Ok(QueryEvent::None)
-            },
-            (_, Value::Partial(partial), ) => {
+            }
+            (_, Value::Partial(partial)) => {
                 let mut partial = partial.clone();
                 partial.compare(op, left_term.clone());
 
                 let name = partial.name().clone();
                 self.bind(&name, partial.as_term());
                 Ok(QueryEvent::None)
-            },
+            }
             (left, right) => Err(self.type_error(
                 term,
                 format!(
@@ -2550,10 +2550,7 @@ impl Runnable for PolarVirtualMachine {
 
         let bindings = partial::simplify_bindings(self.bindings(true));
 
-        Ok(QueryEvent::Result {
-            bindings,
-            trace,
-        })
+        Ok(QueryEvent::Result { bindings, trace })
     }
 
     /// Handle an external response to ExternalIsSubSpecializer and ExternalIsa
@@ -3284,7 +3281,8 @@ mod tests {
                 } => {
                     external_isas.push(class_tag.clone());
                     // Return `true` if the specified `class_tag` is `"a"`.
-                    vm.external_question_result(call_id, class_tag.0 == "a").unwrap()
+                    vm.external_question_result(call_id, class_tag.0 == "a")
+                        .unwrap()
                 }
                 QueryEvent::ExternalIsSubSpecializer { .. } | QueryEvent::Result { .. } => (),
                 _ => panic!("Unexpected event"),
@@ -3362,7 +3360,8 @@ mod tests {
                     ..
                 } => {
                     // For this test we sort classes lexically.
-                    vm.external_question_result(call_id, left_class_tag < right_class_tag).unwrap()
+                    vm.external_question_result(call_id, left_class_tag < right_class_tag)
+                        .unwrap()
                 }
                 QueryEvent::MakeExternal { .. } => (),
                 QueryEvent::ExternalIsa { call_id, .. } => {

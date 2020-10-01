@@ -38,7 +38,6 @@ impl MessageQueue {
         eprintln!("{}", &msg);
         let mut messages = self.messages.lock().unwrap();
         messages.push_back(Message { kind, msg });
-
     }
 
     pub fn extend<T: IntoIterator<Item = Message>>(&self, iter: T) {

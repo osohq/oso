@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use crate::formatting::ToPolarString;
+//use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
-use crate::terms::{Operator, Symbol, Term, Value, Operation};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 // Variable(?) <= bound value which might be a partial
 //
@@ -76,7 +76,7 @@ fn dot_field(op: &Value) -> usize {
     match op {
         Value::Expression(op) if op.operator == Operator::Dot => 1,
         Value::Partial(_) => 2,
-        _ => 0
+        _ => 0,
     }
 }
 
@@ -92,12 +92,12 @@ fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
                         (1, 2) => {
                             let right = simplify_dot_ops(term!(right), bindings);
                             simplify_dot_ops_helper(&left, right.value(), &mut operations, bindings)
-                        },
+                        }
                         (2, 1) => {
                             let left = simplify_dot_ops(term!(left), bindings);
                             simplify_dot_ops_helper(&right, left.value(), &mut operations, bindings)
-                        },
-                        (_, _) => operations.push(operation.clone())
+                        }
+                        (_, _) => operations.push(operation.clone()),
                     };
                 } else {
                     operations.push(operation.clone());
@@ -112,7 +112,12 @@ fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
     })
 }
 
-fn simplify_dot_ops_helper(dot_op: &Value, other: &Value, operations: &mut Vec<Operation>, _: &Bindings) {
+fn simplify_dot_ops_helper(
+    dot_op: &Value,
+    other: &Value,
+    operations: &mut Vec<Operation>,
+    _: &Bindings,
+) {
     //eprintln!("dot_op: {:?}", &dot_op.to_polar());
     //eprintln!("other: {:?}", &other.to_polar());
     if let Value::Partial(partial) = other {
@@ -136,7 +141,7 @@ fn simplify_dot_ops_helper(dot_op: &Value, other: &Value, operations: &mut Vec<O
                             args: vec![term!(left.clone()), term!(dot_op.clone())]
                         }));
                     }
-                    (_, _) => panic!("invalid")
+                    (_, _) => panic!("invalid"),
                 }
             } else {
                 args.push(term!(operation.clone()))
@@ -145,7 +150,7 @@ fn simplify_dot_ops_helper(dot_op: &Value, other: &Value, operations: &mut Vec<O
 
         operations.push(Operation {
             operator: Operator::And,
-            args
+            args,
         });
     }
 }
@@ -171,10 +176,7 @@ fn is_this_arg(value: &Value) -> bool {
 fn simplify_unify_partials(term: Term, _: &Bindings) -> Term {
     if let Value::Partial(p) = term.value() {
         let operator = p.operations().first().unwrap().operator;
-        let is_unify = matches!(
-            operator,
-            Operator::Unify
-        );
+        let is_unify = matches!(operator, Operator::Unify);
 
         if p.operations().len() == 1 && is_unify {
             let op = p.operations().first().unwrap();
@@ -234,9 +236,8 @@ fn remove_temporaries(bindings: &mut Bindings) {
 
 #[cfg(test)]
 mod test {
-    use crate::macros::*;
-
     use super::*;
+    use crate::formatting::ToPolarString;
     use crate::partial::Constraints;
 
     #[test]

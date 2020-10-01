@@ -268,7 +268,7 @@ impl fmt::Display for RuntimeError {
 pub enum OperationalError {
     Unimplemented(String),
     Unknown,
-    InvalidState(String)
+    InvalidState(String),
 }
 
 impl fmt::Display for OperationalError {

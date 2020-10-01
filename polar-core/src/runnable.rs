@@ -1,4 +1,4 @@
-use crate::error::{PolarResult, OperationalError};
+use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
 use crate::terms::Term;
 
@@ -24,7 +24,6 @@ pub trait Runnable {
         Err(OperationalError::InvalidState("Unexpected external call".to_string()).into())
     }
 
-
     // TODO Alternative?: Goal::Run takes a Runnable constructor function.
     /// Create a new runnable that when run will perform the same operation as
     /// this one.
@@ -39,7 +38,7 @@ impl Clone for Box<dyn Runnable> {
 
 #[derive(Clone)]
 pub struct DoneRunnable {
-    result: bool
+    result: bool,
 }
 
 impl DoneRunnable {
@@ -50,7 +49,9 @@ impl DoneRunnable {
 
 impl Runnable for DoneRunnable {
     fn run(&mut self) -> PolarResult<QueryEvent> {
-        Ok(QueryEvent::Done { result: self.result })
+        Ok(QueryEvent::Done {
+            result: self.result,
+        })
     }
 
     fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {

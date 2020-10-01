@@ -12,19 +12,23 @@ from django_oso.auth import authorize, authorize_type
 
 from oso import OsoError
 
+
 @pytest.fixture(autouse=True)
 def reset():
     reset_oso()
+
 
 @pytest.fixture
 def simple_policy():
     """Load simple authorization policy."""
     Oso.load_file(Path(__file__).parent / "simple.polar")
 
+
 @pytest.fixture
 def partial_policy():
     """Load partial authorization policy."""
     Oso.load_file(Path(__file__).parent / "partial.polar")
+
 
 def test_policy_autoload():
     """Test that policies are loaded from policy directory."""
@@ -123,6 +127,7 @@ def test_route_authorization(client, settings, simple_policy):
     response = client.get("/notfound/")
     assert response.status_code == 403
 
+
 @pytest.mark.django_db
 def test_partial(rf, settings, partial_policy):
     from test_app.models import Post
@@ -135,7 +140,9 @@ def test_partial(rf, settings, partial_policy):
     request = rf.get("/")
     request.user = "test_user"
 
-    authorize_filter = authorize_type(request, action="get", resource_type="test_app::Post")
+    authorize_filter = authorize_type(
+        request, action="get", resource_type="test_app::Post"
+    )
     q = Post.objects.filter(authorize_filter)
     assert q.count() == 2
 

@@ -85,7 +85,9 @@ impl Query {
                     right_class_tag,
                 ),
                 QueryEvent::Debug { message } => self.handle_debug(message),
-                QueryEvent::Run { .. } => todo!("This should be a separate variant so that we don't have to handle this case.")
+                QueryEvent::Run { .. } => todo!(
+                    "This should be a separate variant so that we don't have to handle this case."
+                ),
             };
             if let Err(e) = result {
                 // TODO (dhatch): These seem to be getting swallowed

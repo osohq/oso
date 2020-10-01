@@ -433,11 +433,10 @@ impl Term {
             Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
                 fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
             }
-            Value::Partial(ref mut partial) => { partial
+            Value::Partial(ref mut partial) => partial
                 .operations_mut()
                 .iter_mut()
-                .for_each(|op| op.args.iter_mut().for_each(|arg| arg.map_replace(f)))
-            }
+                .for_each(|op| op.args.iter_mut().for_each(|arg| arg.map_replace(f))),
         };
         self.replace_value(value);
     }

@@ -1,5 +1,6 @@
 class Partial:
     """A partial variable."""
+
     def __init__(self, name, *constraints):
         self.name = name
         self.constraints = constraints
@@ -13,10 +14,13 @@ class Partial:
     def to_polar(self):
         return {
             "variable": self.name,
-            "operations": [c.to_polar() for c in self.constraints]
+            "operations": [c.to_polar() for c in self.constraints],
         }
 
-class Constraint: pass
+
+class Constraint:
+    pass
+
 
 class TypeConstraint(Constraint):
     def __init__(self, type_name):
@@ -27,7 +31,15 @@ class TypeConstraint(Constraint):
             "operator": "Isa",
             "args": [
                 {"value": {"Variable": "_this"}},
-                {"value": {"Pattern": {"Instance": {"tag": self.type_name, "fields": {"fields":
-                                                                                      {}}}}}}
-            ]
+                {
+                    "value": {
+                        "Pattern": {
+                            "Instance": {
+                                "tag": self.type_name,
+                                "fields": {"fields": {}},
+                            }
+                        }
+                    }
+                },
+            ],
         }

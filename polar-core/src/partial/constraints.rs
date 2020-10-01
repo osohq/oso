@@ -271,7 +271,6 @@ mod test {
 
         assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(2));
 
-
         let next = next_binding();
         // LOOKUPS also work.. but obviously the expression could be merged and simplified.
         // The basic information is there though.
@@ -364,18 +363,10 @@ mod test {
         };
 
         let next = next_binding();
-        assert_partial_expression!(
-            next,
-            "a",
-            "_this matches Post{} and _this.foo = 1"
-        );
+        assert_partial_expression!(next, "a", "_this matches Post{} and _this.foo = 1");
 
         let next = next_binding();
-        assert_partial_expression!(
-            next,
-            "a",
-            "_this matches User{} and _this.bar = 1"
-        );
+        assert_partial_expression!(next, "a", "_this matches User{} and _this.bar = 1");
 
         Ok(())
     }
@@ -457,7 +448,9 @@ mod test {
     fn test_partial_comparison() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
         polar.load_str(r#"positive(x) if x > 0;"#).unwrap();
-        polar.load_str(r#"positive(x) if x > 0 and x < 0;"#).unwrap();
+        polar
+            .load_str(r#"positive(x) if x > 0 and x < 0;"#)
+            .unwrap();
 
         let mut query = polar.new_query_from_term(
             term!(call!("positive", [Constraints::new(sym!("a"))])),

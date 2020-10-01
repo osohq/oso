@@ -3,6 +3,7 @@ from django.db.models import Q
 from polar.expression import Expression
 from polar.variable import Variable
 
+
 def partial_to_query_filter(partial, type_name):
     """
     Expression(And, [
@@ -23,15 +24,17 @@ def partial_to_query_filter(partial, type_name):
     q = and_expr(partial, type_name)
     return q
 
+
 COMPARISONS = {
-    'Unify': lambda q, f, v: Q(**{f: v}),
-    'Eq': lambda q, f, v: Q(**{f: v}),
-    'Neq': lambda q, f, v: ~Q(**{f: v}),
-    'Geq': lambda q, f, v: Q(**{f"{f}__gte": v}),
-    'Gt': lambda q, f, v: Q(**{f"{f}__gt": v}),
-    'Leq': lambda q, f, v: Q(**{f"{f}__leq": v}),
-    'Lt': lambda q, f, v: Q(**{f"{f}__lt": v}),
+    "Unify": lambda q, f, v: Q(**{f: v}),
+    "Eq": lambda q, f, v: Q(**{f: v}),
+    "Neq": lambda q, f, v: ~Q(**{f: v}),
+    "Geq": lambda q, f, v: Q(**{f"{f}__gte": v}),
+    "Gt": lambda q, f, v: Q(**{f"{f}__gt": v}),
+    "Leq": lambda q, f, v: Q(**{f"{f}__leq": v}),
+    "Lt": lambda q, f, v: Q(**{f"{f}__lt": v}),
 }
+
 
 def and_expr(expr, type_name):
     q = Q()
@@ -52,13 +55,17 @@ def and_expr(expr, type_name):
 
     return q
 
+
 def dot_op_field(expr):
     """Get the field from dot op ``expr`` or return ``False``."""
-    return (isinstance(expr, Expression) and
-            expr.operator == "Dot" and
-            isinstance(expr.args[0], Variable) and
-            expr.args[0] == Variable("_this") and
-            expr.args[1])
+    return (
+        isinstance(expr, Expression)
+        and expr.operator == "Dot"
+        and isinstance(expr.args[0], Variable)
+        and expr.args[0] == Variable("_this")
+        and expr.args[1]
+    )
+
 
 def compare_expr(expr, type_name):
     q = Q()

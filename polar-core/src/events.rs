@@ -3,9 +3,9 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use super::kb::*;
+use super::runnable::Runnable;
 use super::terms::*;
 use super::traces::*;
-use super::runnable::Runnable;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
@@ -15,7 +15,7 @@ pub enum QueryEvent {
 
     /// This runnable is complete with `result`.
     Done {
-        result: bool
+        result: bool,
     },
 
     /// Run the runnable and place its result in `call_id` when it
@@ -23,7 +23,7 @@ pub enum QueryEvent {
     #[serde(skip)]
     Run {
         runnable: Box<dyn Runnable>,
-        call_id: u64
+        call_id: u64,
     },
 
     Debug {

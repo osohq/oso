@@ -1,5 +1,6 @@
 import json
 
+
 class Expression:
     def __init__(self, operator, args):
         self.operator = operator
@@ -10,6 +11,7 @@ class Expression:
 
     def __str__(self):
         return f"Expression({self.operator}, {self.args})"
+
 
 class Pattern:
     def __init__(self, tag, fields):
