@@ -1445,8 +1445,8 @@ impl PolarVirtualMachine {
                     }
                     _ => {
                         return Err(self.type_error(
-                            item,
-                            format!("can only use `in` on a list, this is {:?}", item.value()),
+                            &list,
+                            format!("can only use `in` on a list, this is {:?}", list.value()),
                         ));
                     }
                 }

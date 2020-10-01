@@ -754,7 +754,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
               foo(1,2)
             in rule foo at line 1, column 13
               a in b
-          Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 1, column 13
+          Type error: can only use `in` on a list, this is Number(Integer(2)) at line 1, column 7
         TRACE
         expect(e.message).to eq(error)
       end
