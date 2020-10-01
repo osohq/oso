@@ -275,10 +275,10 @@ mod test {
         let next = next_binding();
         // LOOKUPS also work.. but obviously the expression could be merged and simplified.
         // The basic information is there though.
-        assert_partial_expression!(next, "a", "3 = _this.a");
+        assert_partial_expression!(next, "a", "_this.a = 3");
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "4 = _this.b");
+        assert_partial_expression!(next, "a", "_this.b = 4");
 
         // Print messages
         while let Some(msg) = query.next_message() {
@@ -367,14 +367,14 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and 1 = _this.foo"
+            "_this matches Post{} and _this.foo = 1"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and 1 = _this.bar"
+            "_this matches User{} and _this.bar = 1"
         );
 
         Ok(())
@@ -424,28 +424,28 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and 0 = _this.foo and _this matches Post{} and 1 = _this.post"
+            "_this matches Post{} and _this.foo = 0 and _this matches Post{} and _this.post = 1"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and 0 = _this.foo and _this matches PostSubclass{} and 1 = _this.post_subclass"
+            "_this matches Post{} and _this.foo = 0 and _this matches PostSubclass{} and _this.post_subclass = 1"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and 1 = _this.bar and _this matches User{} and 1 = _this.user"
+            "_this matches User{} and _this.bar = 1 and _this matches User{} and _this.user = 1"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and 1 = _this.bar and _this matches UserSubclass{} and 1 = _this.user_subclass"
+            "_this matches User{} and _this.bar = 1 and _this matches UserSubclass{} and _this.user_subclass = 1"
         );
 
         assert!(matches!(query.next_event().unwrap(), QueryEvent::Done { .. }));
@@ -485,8 +485,7 @@ mod test {
     #[test]
     fn test_partial_comparison_dot() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"positive(x) if x.a.b > 0;"#).unwrap();
-        polar.load_str(r#"positive(x) if x > 0 and x < 0;"#).unwrap();
+        polar.load_str(r#"positive(x) if x.a > 0;"#).unwrap();
 
         let mut query = polar.new_query_from_term(
             term!(call!("positive", [Constraints::new(sym!("a"))])),
