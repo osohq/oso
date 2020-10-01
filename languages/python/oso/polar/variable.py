@@ -6,3 +6,6 @@ class Variable(str):
 
     def __str__(self):
         return repr(self)
+
+    def __eq__(self, other):
+        return isinstance(other, type(self)) and super().__eq__(other)
