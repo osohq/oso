@@ -110,7 +110,8 @@ html_show_sourcelink = False
 
 # add copy button to <pre> elements inside a div with class="copyable"
 copybutton_selector = "div.copybutton pre"
-copybutton_prompt_text = "\\[\\d*\\]: |\\.\\.\\.: "
+# TODO(gj): add other prompts
+copybutton_prompt_text = "\\[\\d*\\]: |\\.\\.\\.: |\\$ "
 copybutton_prompt_is_regexp = True
 
 # The name of the Pygments (syntax highlighting) style to use.
