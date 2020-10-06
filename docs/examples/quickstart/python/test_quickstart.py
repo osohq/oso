@@ -19,7 +19,7 @@ def test_quickstart_policy_1():
     assert not oso.is_allowed("bhavik@foo.com", "GET", expense)
 
 
-def test_quickstart_policy_4():
+def test_quickstart_policy_2():
     oso = Oso()
     oso.register_class(Expense)
     oso.load_file("../polar/expenses-02-python.polar")
