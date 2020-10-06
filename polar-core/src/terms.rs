@@ -216,8 +216,7 @@ pub enum Value {
 }
 
 impl Value {
-    // TODO these don't actually have to consume self.
-    pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
+    pub fn as_symbol(&self) -> Result<&Symbol, error::RuntimeError> {
         match self {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
@@ -228,9 +227,9 @@ impl Value {
         }
     }
 
-    pub fn string(self) -> Result<String, error::RuntimeError> {
+    pub fn as_string(&self) -> Result<&str, error::RuntimeError> {
         match self {
-            Value::String(string) => Ok(string),
+            Value::String(string) => Ok(string.as_ref()),
             _ => Err(error::RuntimeError::TypeError {
                 msg: format!("Expected string, got: {}", self.to_polar()),
                 stack_trace: None, // @TODO
@@ -238,7 +237,7 @@ impl Value {
         }
     }
 
-    pub fn instance_literal(self) -> Result<InstanceLiteral, error::RuntimeError> {
+    pub fn as_instance_literal(&self) -> Result<&InstanceLiteral, error::RuntimeError> {
         match self {
             Value::InstanceLiteral(literal) => Ok(literal),
             _ => Err(error::RuntimeError::TypeError {
@@ -248,17 +247,17 @@ impl Value {
         }
     }
 
-    pub fn expression(self) -> Result<Operation, error::RuntimeError> {
+    pub fn as_expression(&self) -> Result<&Operation, error::RuntimeError> {
         match self {
             Value::Expression(op) => Ok(op),
             _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                msg: format!("Expected expression, got: {}", self.to_polar()),
                 stack_trace: None, // @TODO
             }),
         }
     }
 
-    pub fn partial(self) -> Result<Constraints, error::RuntimeError> {
+    pub fn as_partial(&self) -> Result<&Constraints, error::RuntimeError> {
         match self {
             Value::Partial(e) => Ok(e),
             _ => Err(error::RuntimeError::TypeError {
@@ -268,11 +267,11 @@ impl Value {
         }
     }
 
-    pub fn call(self) -> Result<Call, error::RuntimeError> {
+    pub fn as_call(&self) -> Result<&Call, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
             _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                msg: format!("Expected call, got: {}", self.to_polar()),
                 stack_trace: None, // @TODO
             }),
         }

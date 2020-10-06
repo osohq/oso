@@ -1598,14 +1598,13 @@ impl PolarVirtualMachine {
             | Value::String(_) => {
                 let value = value
                     .value()
-                    .clone()
-                    .symbol()
+                    .as_symbol()
                     .map_err(|mut e| {
                         e.add_stack_trace(self);
                         e
                     })
                     .expect("bad lookup value");
-                let call_id = self.new_call_id(&value);
+                let call_id = self.new_call_id(value);
                 self.push_goal(Goal::LookupExternal {
                     call_id,
                     instance: object.clone(),
@@ -1618,8 +1617,8 @@ impl PolarVirtualMachine {
 
                 let value_partial = partial.lookup(field, value.clone());
 
-                let lookup_result_var = value.value().clone().symbol().unwrap();
-                self.bind(&lookup_result_var, value_partial);
+                let lookup_result_var = value.value().as_symbol().unwrap();
+                self.bind(lookup_result_var, value_partial);
                 self.bind(partial.name(), partial.clone().term());
             }
             _ => {

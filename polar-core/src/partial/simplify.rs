@@ -246,7 +246,7 @@ mod test {
 
         let mut constraint = Constraints::new(sym!("a"));
         let bar_partial_term = constraint.lookup(term!("foo"), term!(sym!("_value_1")));
-        let mut bar_partial = bar_partial_term.value().clone().partial().unwrap();
+        let mut bar_partial = bar_partial_term.value().as_partial().unwrap().clone();
         bar_partial.unify(term!(1));
 
         bindings.insert(sym!("a"), term!(constraint));

@@ -77,8 +77,8 @@ impl Constraints {
             term!(op!(Dot, self.variable_term(), field))
         ));
 
-        let name = value.value().clone().symbol().unwrap();
-        Term::new_temporary(Value::Partial(Constraints::new(name)))
+        let name = value.value().as_symbol().unwrap();
+        Term::new_temporary(Value::Partial(Constraints::new(name.clone())))
     }
 
     pub fn term(self) -> Term {
@@ -220,8 +220,7 @@ mod test {
                     .get(&sym!($sym))
                     .unwrap()
                     .value()
-                    .clone()
-                    .expression()
+                    .as_expression()
                     .unwrap()
                     .to_polar(),
                 $right
