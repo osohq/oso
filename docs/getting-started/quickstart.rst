@@ -77,7 +77,8 @@ added an authorization check using the :doc:`oso library
 can learn more about how to add oso to your application :doc:`here
 </getting-started/application/index>`.
 
-The third file is the oso policy file, ``expenses.polar`` is currently empty.
+The third file is the oso policy file, ``expenses.polar``, and is currently
+empty.
 
 .. admonition:: Try it!
     :class: tip try-it
