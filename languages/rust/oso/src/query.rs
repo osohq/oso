@@ -85,9 +85,7 @@ impl Query {
                     right_class_tag,
                 ),
                 QueryEvent::Debug { message } => self.handle_debug(message),
-                QueryEvent::Run { .. } => todo!(
-                    "This should be a separate variant so that we don't have to handle this case."
-                ),
+                event => unimplemented!("Unhandled event {:?}", event)
             };
             if let Err(e) = result {
                 // TODO (dhatch): These seem to be getting swallowed
@@ -219,13 +217,10 @@ impl Query {
     fn handle_external_is_subspecializer(
         &mut self,
         call_id: u64,
-        instance_id: Option<u64>,
+        instance_id: u64,
         left_class_tag: Symbol,
         right_class_tag: Symbol,
     ) -> crate::Result<()> {
-        // TODO: No unwrap
-        let instance_id = instance_id.unwrap();
-
         let res = self
             .host
             .is_subspecializer(instance_id, &left_class_tag, &right_class_tag);

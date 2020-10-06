@@ -97,15 +97,16 @@ class Host:
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
 
+    def is_subclass(self, left_tag, right_tag) -> bool:
+        """Return true if left is a subclass (or the same class) as right."""
+        left = self.get_class(left_tag)
+        right = self.get_class(right_tag)
+        return issubclass(left, right)
+
     def is_subspecializer(self, instance_id, left_tag, right_tag) -> bool:
         """Return true if the left class is more specific than the right class
         with respect to the given instance."""
         try:
-            if instance_id is None:
-                left = self.get_class(left_tag)
-                right = self.get_class(right_tag)
-                return issubclass(left, right)
-
             mro = self.get_instance(instance_id).__class__.__mro__
             left = self.get_class(left_tag)
             right = self.get_class(right_tag)

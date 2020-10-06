@@ -61,6 +61,8 @@ class Query:
                 self.handle_external_unify(data)
             elif kind == "ExternalIsSubSpecializer":
                 self.handle_external_is_subspecializer(data)
+            elif kind == "ExternalIsSubclass":
+                self.handle_external_is_subclass(data)
             elif kind == "Debug":
                 self.handle_debug(data)
             elif kind == "Result":
@@ -151,6 +153,12 @@ class Query:
         left_tag = data["left_class_tag"]
         right_tag = data["right_class_tag"]
         answer = self.host.is_subspecializer(instance_id, left_tag, right_tag)
+        self.ffi_query.question_result(data["call_id"], answer)
+
+    def handle_external_is_subclass(self, data):
+        left_tag = data["left_class_tag"]
+        right_tag = data["right_class_tag"]
+        answer = self.host.is_subclass(left_tag, right_tag)
         self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_debug(self, data):

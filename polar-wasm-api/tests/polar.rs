@@ -1,6 +1,11 @@
-use js_sys::{Error, JsString, Map, Object, Reflect};
+use js_sys::{Error, Map, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
+
+fn is_done_event(event: Object) -> bool {
+    let event_kind: JsValue = "Done".into();
+    Reflect::get(&event, &event_kind).is_ok()
+}
 
 #[wasm_bindgen_test]
 fn load_file_succeeds() {
@@ -35,8 +40,8 @@ fn next_inline_query_succeeds() {
     let bindings = Reflect::get(&event_data, &data_key).unwrap();
     assert_eq!(bindings.dyn_into::<Map>().unwrap().size(), 0);
 
-    let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    assert_eq!(event, "Done");
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    assert!(is_done_event(event));
 
     assert!(polar.wasm_next_inline_query().is_none());
 }
@@ -47,8 +52,10 @@ fn next_inline_query_errors() {
     let res = polar.wasm_load("?= 1 = 2;", None);
     assert!(matches!(res, Ok(())));
     let mut query = polar.wasm_next_inline_query().unwrap();
-    let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    assert_eq!(event, "Done");
+
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    assert!(is_done_event(event));
+
     assert!(polar.wasm_next_inline_query().is_none());
 }
 
@@ -78,8 +85,9 @@ fn register_constant_errors() {
 fn new_query_from_str_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
-    let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    assert_eq!(event, "Done");
+
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    assert!(is_done_event(event));
 }
 
 #[wasm_bindgen_test]
@@ -96,8 +104,8 @@ fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let term = r#"{"value":{"Call":{"name":"x","args":[]}}}"#;
     let mut query = polar.wasm_new_query_from_term(term).unwrap();
-    let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    assert_eq!(event, "Done");
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    assert!(is_done_event(event));
 }
 
 #[wasm_bindgen_test]

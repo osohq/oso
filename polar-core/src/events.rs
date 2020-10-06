@@ -56,12 +56,19 @@ pub enum QueryEvent {
         class_tag: Symbol,
     },
 
-    /// Checks if the instance is more specifically and instance/subclass of A than B.
+    /// Checks if the left is more specific than right with respect to instance.
     ExternalIsSubSpecializer {
         call_id: u64,
-        instance_id: Option<u64>,
+        instance_id: u64,
         left_class_tag: Symbol,
         right_class_tag: Symbol,
+    },
+
+    /// Checks if left class tag is a subclass or the same class as right.
+    ExternalIsSubclass {
+        call_id: u64,
+        left_class_tag: Symbol,
+        right_class_tag: Symbol
     },
 
     /// Unifies two external instances.

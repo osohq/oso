@@ -153,9 +153,8 @@ impl IsaConstraintCheck {
         let right = constraint.args.pop().unwrap();
         if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
             // is_subclass check of instance tag against proposed
-            return Some(QueryEvent::ExternalIsSubSpecializer {
+            return Some(QueryEvent::ExternalIsSubclass {
                 call_id: 700000,
-                instance_id: None,
                 left_class_tag: self.proposed_tag.clone().unwrap(),
                 right_class_tag: instance.tag.clone(),
             });
@@ -387,13 +386,11 @@ mod test {
         let mut next_binding = || loop {
             match query.next_event().unwrap() {
                 QueryEvent::Result { bindings, .. } => return bindings,
-                QueryEvent::ExternalIsSubSpecializer {
+                QueryEvent::ExternalIsSubclass {
                     call_id,
-                    instance_id,
                     left_class_tag,
                     right_class_tag,
                 } => {
-                    assert!(instance_id.is_none());
                     assert_eq!(call_id, 700000);
                     eprintln!("left: {:?}, right: {:?}", &left_class_tag, &right_class_tag);
                     query

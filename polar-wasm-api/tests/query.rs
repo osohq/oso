@@ -34,8 +34,9 @@ fn call_result_succeeds() {
 
     query.wasm_call_result(3.0, None).unwrap();
 
-    let event: JsString = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    assert_eq!(event, "Done");
+    let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
+    let event_kind: JsValue = "Done".into();
+    assert!(Reflect::get(&event, &event_kind).is_ok())
 }
 
 #[wasm_bindgen_test]

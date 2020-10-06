@@ -46,7 +46,7 @@ fn no_isa(_: Term, _: Symbol) -> bool {
     true
 }
 
-fn no_is_subspecializer(_: Option<u64>, _: Symbol, _: Symbol) -> bool {
+fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
     false
 }
 
@@ -64,7 +64,7 @@ where
     G: FnMut(&str) -> String,
     H: FnMut(u64, Term),
     I: FnMut(Term, Symbol) -> bool,
-    J: FnMut(Option<u64>, Symbol, Symbol) -> bool,
+    J: FnMut(u64, Symbol, Symbol) -> bool,
     K: FnMut(&Message),
 {
     let mut results = vec![];
