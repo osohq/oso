@@ -8,6 +8,7 @@ pub mod formatting;
 mod lexer;
 #[macro_use]
 pub mod macros;
+mod counter;
 pub mod events;
 pub mod kb;
 pub mod messages;

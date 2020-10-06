@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::error::PolarResult;
+use crate::counter::Counter;
+use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
@@ -122,6 +123,7 @@ struct IsaConstraintCheck {
     existing: Vec<Operation>,
     proposed_tag: Option<Symbol>,
     result: Option<bool>,
+    last_call_id: u64,
 }
 
 impl IsaConstraintCheck {
@@ -137,6 +139,7 @@ impl IsaConstraintCheck {
             existing,
             proposed_tag,
             result: None,
+            last_call_id: 0,
         }
     }
 
@@ -144,16 +147,23 @@ impl IsaConstraintCheck {
     ///
     /// Returns: None if compatible, QueryEvent::Done { false } if incompatible,
     /// or QueryEvent to ask for compatibility.
-    fn check_constraint(&self, mut constraint: Operation) -> Option<QueryEvent> {
+    fn check_constraint(
+        &mut self,
+        mut constraint: Operation,
+        counter: &Counter,
+    ) -> Option<QueryEvent> {
         if constraint.operator != Operator::Isa {
             return None;
         }
 
         let right = constraint.args.pop().unwrap();
         if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
+            let call_id = counter.next();
+            self.last_call_id = call_id;
+
             // is_subclass check of instance tag against proposed
             return Some(QueryEvent::ExternalIsSubclass {
-                call_id: 700000,
+                call_id,
                 left_class_tag: self.proposed_tag.clone().unwrap(),
                 right_class_tag: instance.tag.clone(),
             });
@@ -166,7 +176,7 @@ impl IsaConstraintCheck {
 }
 
 impl Runnable for IsaConstraintCheck {
-    fn run(&mut self) -> PolarResult<QueryEvent> {
+    fn run(&mut self, counter: Counter) -> PolarResult<QueryEvent> {
         if self.proposed_tag.is_none() {
             return Ok(QueryEvent::Done { result: true });
         }
@@ -180,7 +190,7 @@ impl Runnable for IsaConstraintCheck {
         loop {
             let next = self.existing.pop();
             if let Some(constraint) = next {
-                if let Some(event) = self.check_constraint(constraint) {
+                if let Some(event) = self.check_constraint(constraint, &counter) {
                     return Ok(event);
                 }
 
@@ -192,7 +202,9 @@ impl Runnable for IsaConstraintCheck {
     }
 
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
-        assert_eq!(call_id, 700000);
+        if call_id != self.last_call_id {
+            return Err(OperationalError::InvalidState(String::from("Unexpected call id")).into());
+        }
 
         self.result = Some(answer);
         Ok(())
@@ -389,7 +401,6 @@ mod test {
                     left_class_tag,
                     right_class_tag,
                 } => {
-                    assert_eq!(call_id, 700000);
                     eprintln!("left: {:?}, right: {:?}", &left_class_tag, &right_class_tag);
                     query
                         .question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))

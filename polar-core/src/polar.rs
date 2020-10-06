@@ -1,3 +1,4 @@
+use super::counter::Counter;
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
@@ -54,7 +55,8 @@ impl Query {
     }
 
     pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
-        match self.top_runnable().run()? {
+        let counter = self.vm.id_counter();
+        match self.top_runnable().run(counter)? {
             QueryEvent::Run { runnable, call_id } => {
                 self.push_runnable(runnable, call_id)?;
                 self.next_event()
@@ -105,7 +107,7 @@ impl Iterator for Query {
         if self.done {
             return None;
         }
-        let event = self.vm.run();
+        let event = self.vm.run(Counter::default());
         if let Ok(QueryEvent::Done { .. }) = event {
             self.done = true;
         }

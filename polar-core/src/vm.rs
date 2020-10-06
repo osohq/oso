@@ -17,6 +17,7 @@ use super::rules::*;
 use super::sources::*;
 use super::terms::*;
 use super::traces::*;
+use crate::counter::Counter;
 use crate::partial;
 use crate::runnable::Runnable;
 
@@ -291,6 +292,13 @@ impl PolarVirtualMachine {
             .read()
             .expect("cannot acquire KB read lock")
             .new_id()
+    }
+
+    pub fn id_counter(&self) -> Counter {
+        self.kb
+            .read()
+            .expect("cannot acquire KB read lock")
+            .id_counter()
     }
 
     fn new_call_id(&mut self, symbol: &Symbol) -> u64 {
@@ -2500,7 +2508,7 @@ impl Runnable for PolarVirtualMachine {
     /// pop them off and execute them one at at time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
-    fn run(&mut self) -> PolarResult<QueryEvent> {
+    fn run(&mut self, _: Counter) -> PolarResult<QueryEvent> {
         if self.query_start_time.is_none() {
             #[cfg(not(target_arch = "wasm32"))]
             let query_start_time = Some(std::time::Instant::now());
@@ -2666,19 +2674,19 @@ mod tests {
             assert!($vm.is_halted());
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}]) => {
-            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
+            assert!(matches!($vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, []);
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}, $($tail:tt)*]) => {
-            assert!(matches!($vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
+            assert!(matches!($vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, [$($tail)*]);
         };
         ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?]) => {
-            assert!(matches!($vm.run().unwrap(), $($pattern)|+ $(if $guard)?));
+            assert!(matches!($vm.run(Counter::default()).unwrap(), $($pattern)|+ $(if $guard)?));
             assert_query_events!($vm, []);
         };
         ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?, $($tail:tt)*]) => {
-            assert!(matches!($vm.run().unwrap(), $($pattern)|+ $(if $guard)?));
+            assert!(matches!($vm.run(Counter::default()).unwrap(), $($pattern)|+ $(if $guard)?));
             assert_query_events!($vm, [$($tail)*]);
         };
         // TODO (dhatch) Be able to use btreemap! to match on specific bindings.
@@ -2805,10 +2813,10 @@ mod tests {
         })
         .unwrap();
         assert!(
-            matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+            matches!(vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2820,10 +2828,10 @@ mod tests {
         })
         .unwrap();
         assert!(
-            matches!(vm.run().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+            matches!(vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2835,7 +2843,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2847,7 +2855,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2859,7 +2867,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2871,7 +2879,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2883,7 +2891,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2895,7 +2903,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2907,7 +2915,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -3131,7 +3139,7 @@ mod tests {
             }],
         );
         assert!(matches!(
-            vm.run().unwrap(),
+            vm.run(Counter::default()).unwrap(),
             QueryEvent::Debug { message } if &message[..] == "Hello"
         ));
     }
@@ -3143,7 +3151,7 @@ mod tests {
             false,
             vec![Goal::Halt],
         );
-        let _ = vm.run().unwrap();
+        let _ = vm.run(Counter::default()).unwrap();
         assert_eq!(vm.goals.len(), 0);
         assert_eq!(vm.bindings.len(), 0);
     }
@@ -3164,7 +3172,7 @@ mod tests {
                 right: vals,
             }],
         );
-        let _ = vm.run().unwrap();
+        let _ = vm.run(Counter::default()).unwrap();
         assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
         assert_eq!(vm.value(&y), Some(&Term::new_from_test(one)));
     }
@@ -3186,7 +3194,7 @@ mod tests {
             right: term!(y),
         }])
         .unwrap();
-        let _ = vm.run().unwrap();
+        let _ = vm.run(Counter::default()).unwrap();
         assert_eq!(vm.value(&sym!("x")), Some(&one));
         vm.backtrack().unwrap();
 
@@ -3197,7 +3205,7 @@ mod tests {
             right: one.clone(),
         }])
         .unwrap();
-        let _ = vm.run().unwrap();
+        let _ = vm.run(Counter::default()).unwrap();
         assert_eq!(vm.value(&z), Some(&one));
 
         // Left variable bound to value
@@ -3207,7 +3215,7 @@ mod tests {
             right: two,
         }])
         .unwrap();
-        let _ = vm.run().unwrap();
+        let _ = vm.run(Counter::default()).unwrap();
         assert_eq!(vm.value(&z), Some(&one));
     }
 
@@ -3238,7 +3246,7 @@ mod tests {
             Value::Variable(sym) => Some(sym.0.clone()),
             _ => None,
         };
-        assert_eq!(x_value.unwrap(), "_x_0");
+        assert_eq!(x_value.unwrap(), "_x_1");
 
         let y_value = match &renamed_terms[3].value() {
             Value::List(terms) => match &terms[0].value() {
@@ -3247,7 +3255,7 @@ mod tests {
             },
             _ => None,
         };
-        assert_eq!(y_value.unwrap(), "_y_1");
+        assert_eq!(y_value.unwrap(), "_y_2");
     }
 
     #[test]
@@ -3273,7 +3281,7 @@ mod tests {
         let mut external_isas = vec![];
 
         loop {
-            match vm.run().unwrap() {
+            match vm.run(Counter::default()).unwrap() {
                 QueryEvent::Done { .. } => break,
                 QueryEvent::ExternalIsa {
                     call_id, class_tag, ..
@@ -3298,7 +3306,7 @@ mod tests {
 
         let mut results = vec![];
         loop {
-            match vm.run().unwrap() {
+            match vm.run(Counter::default()).unwrap() {
                 QueryEvent::Done { .. } => break,
                 QueryEvent::ExternalIsa { .. } => (),
                 QueryEvent::Result { bindings, .. } => results.push(bindings),
@@ -3349,7 +3357,7 @@ mod tests {
 
         let mut results = Vec::new();
         loop {
-            match vm.run().unwrap() {
+            match vm.run(Counter::default()).unwrap() {
                 QueryEvent::Done { .. } => break,
                 QueryEvent::Result { bindings, .. } => results.push(bindings),
                 QueryEvent::ExternalIsSubSpecializer {
@@ -3433,7 +3441,7 @@ mod tests {
                 right_instance_id: 1,
             })
             .unwrap();
-            let result = vm.run();
+            let result = vm.run(Counter::default());
             match result {
                 Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
                 Err(err) => {
@@ -3464,7 +3472,7 @@ mod tests {
 
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
         vm.bind(&sym!("x"), term!(1));
-        let _ = vm.run();
+        let _ = vm.run(Counter::default());
         let _ = vm.next(Rc::new(query!(call!("bar", [value!([sym!("x")])]))));
         // After calling the query goal we should be left with the
         // prefiltered rules

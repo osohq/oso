@@ -1,3 +1,4 @@
+use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
 use crate::terms::Term;
@@ -10,7 +11,7 @@ pub trait Runnable {
     /// Run the Runnable until a Error or QueryEvent is obtained.
     ///
     /// Returns: The next query event or an error.
-    fn run(&mut self) -> PolarResult<QueryEvent>;
+    fn run(&mut self, counter: Counter) -> PolarResult<QueryEvent>;
 
     fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
         Err(OperationalError::InvalidState("Unexpected query answer".to_string()).into())
