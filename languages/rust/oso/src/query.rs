@@ -91,7 +91,7 @@ impl Query {
                 // TODO (dhatch): These seem to be getting swallowed
                 tracing::error!("application error {}", e);
                 if let Err(e) = self.application_error(e) {
-                    return Some(Err(e.into()));
+                    return Some(Err(e));
                 }
             }
         }
