@@ -1,10 +1,5 @@
 # frozen_string_literal: true
 
-require 'json'
-require 'pp'
-require 'set'
-require 'digest/md5'
-
 # Missing Ruby type.
 module PolarBoolean; end
 # Monkey-patch Ruby true type.
