@@ -165,10 +165,7 @@ html_theme_options = {
 html_show_sphinx = False
 version_dropdown = True
 version_info = {"release": "/", "devel": "/devel"}
-html_sidebars = {
-    "**": ["globaltoc.html", "localtoc.html"],
-    "getting-started/quickstart": ["globaltoc.html"],
-}
+html_sidebars = {"**": ["globaltoc.html", "localtoc.html"]}
 
 html_logo = "oso_logo_trimmed.png"
 html_js_files = [
