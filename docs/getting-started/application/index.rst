@@ -333,7 +333,7 @@ Authorizing Access to Data
         In the :doc:`/getting-started/quickstart`, our main objective was to
         determine who could "GET" expenses. Our final policy looked like:
 
-        .. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+        .. literalinclude:: /examples/quickstart/polar/expenses-02-python.polar
             :language: polar
             :caption: :fa:`oso` expenses.polar
 
