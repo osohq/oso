@@ -353,3 +353,7 @@ footer .subscribe-form {
 body {
   font-family: "Space Grotesk", sans-serif;
 }
+
+div.sphinx-tabs {
+  margin-top: 0.6rem;
+}

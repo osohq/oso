@@ -10,39 +10,154 @@ server.
 .. admonition:: Try it!
     :class: tip try-it
 
-    To follow along, clone `the sample app
-    <https://github.com/osohq/oso-python-quickstart>`_:
+    .. tabs::
+        .. group-tab:: Python
 
-    .. code-block:: console
-        :class: copybutton
+            To follow along, clone `the sample app
+            <https://github.com/osohq/oso-python-quickstart>`_:
 
-        $ git clone https://github.com/osohq/oso-python-quickstart.git
+            .. code-block:: console
+                :class: copybutton
 
-Intro
-=====
+                $ git clone https://github.com/osohq/oso-python-quickstart.git
 
-Our sample application serves data about expenses submitted by users. If you
-navigate to ``quickstart/expense.py``, you'll see a simple ``Expense`` class
-and some sample data stored in a dictionary.
+        .. group-tab:: Ruby
 
-The HTTP server code lives in ``quickstart/server.py``, where we have defined a
+                To follow along, clone `the sample app
+                <https://github.com/osohq/oso-ruby-quickstart>`_:
+
+                .. code-block:: console
+                    :class: copybutton
+
+                    $ git clone https://github.com/osohq/oso-ruby-quickstart.git
+
+        .. group-tab:: Java
+
+            To follow along, clone `the sample app
+            <https://github.com/osohq/oso-java-quickstart>`_:
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ git clone https://github.com/osohq/oso-java-quickstart.git
+
+        .. group-tab:: Node.js
+
+            To follow along, clone `the sample app
+            <https://github.com/osohq/oso-nodejs-quickstart>`_:
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ git clone https://github.com/osohq/oso-nodejs-quickstart.git
+
+        .. group-tab:: Rust
+
+            To follow along, clone `the sample app
+            <https://github.com/osohq/oso-rust-quickstart>`_:
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ git clone https://github.com/osohq/oso-rust-quickstart.git
+
+Run the server
+==============
+
+Our sample application serves data about expenses submitted by users. The sample application
+has three important files.
+
+One file has a simple ``Expense`` class
+and some sample data stored in a map.
+
+A second file has our HTTP server code, where we have defined a
 route handler for ``GET`` requests to the path ``/expenses/:id``. We've already
-added an authorization check using the :doc:`oso python library
-</using/libraries/python/index>` to control access to expense resources. You
+added an authorization check using the :doc:`oso library
+</using/libraries/index>` to control access to expense resources. You
 can learn more about how to add oso to your application :doc:`here
 </getting-started/application/index>`.
+
+The third file is the oso policy file, ``expenses.polar`` is currently empty.
 
 .. admonition:: Try it!
     :class: tip try-it
 
-    Run the server from a terminal with ``make run``. Once it's up, open a
-    second terminal and make a request using cURL:
+    .. tabs::
+        .. group-tab:: Python
 
-    .. code-block:: console
-        :class: copybutton
+            Install the project dependencies with pip, then run the server:
 
-        $ curl localhost:8000/expenses/1
-        Not Authorized!
+            .. code-block:: console
+                :class: copybutton
+
+                $ pip install -r requirements.txt
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ python quickstart/server.py
+                server running on port 5050
+
+        .. group-tab:: Ruby
+
+            Install the project dependencies with Bundler, then run the server:
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ bundle install
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ bundle exec ruby server.rb
+                [2020-10-06 12:22:26] INFO  WEBrick 1.6.0
+                [2020-10-06 12:22:26] INFO  ruby 2.7.0 (2019-12-25) [x86_64-darwin19]
+                [2020-10-06 12:22:26] INFO  WEBrick::HTTPServer#start: pid=47366 port=5050
+
+        .. group-tab:: Java
+
+            Go to the `Maven Repository
+            <https://search.maven.org/artifact/com.osohq/oso>`_ to install
+            oso. Either add oso as a dependency to your build system, or
+            download the latest JAR file and add it to your Java project
+            libraries.
+
+            Once you have oso installed, run ``Server.java``.
+
+
+        .. group-tab:: Node.js
+
+            Install the project dependencies with NPM (or Yarn), then run the server:
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ npm install
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ npm start
+                server running on port 5050
+
+        .. group-tab:: Rust
+
+            Run the server with Cargo, which will also install project dependencies:
+
+            .. code-block:: console
+                :class: copybutton
+
+                $ cargo run
+
+        With the server running, open a
+        second terminal and make a request using cURL:
+
+        .. code-block:: console
+            :class: copybutton
+
+            $ curl localhost:8000/expenses/1
+            Not Authorized!
 
 You'll get a "Not Authorized!" response because we haven't added any rules to
 our oso policy (in ``expenses.polar``), and oso is deny-by-default.
@@ -64,24 +179,88 @@ allow an **actor** to perform an **action** on a **resource**.
     In our policy file (``expenses.polar``), let's add a rule that allows
     anyone with an email ending in ``"@example.com"`` to view all expenses:
 
-    .. literalinclude:: /examples/quickstart/polar/expenses-03-py.polar
-        :language: polar
-        :caption: :fa:`oso` expenses.polar
-        :class: copybutton
+    .. tabs::
+        .. group-tab:: Python
 
-.. |str_endswith| replace:: the ``str.endswith`` method
-.. _str_endswith: https://docs.python.org/3/library/stdtypes.html#str.endswith
+            .. literalinclude:: /examples/quickstart/polar/expenses-01-python.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+            .. |str_endswith| replace:: the ``str.endswith`` method
+            .. _str_endswith: https://docs.python.org/3/library/stdtypes.html#str.endswith
+
+            Note that the call to ``.endswith`` is actually calling out to
+            |str_endswith|_ defined in the Python standard library. The
+            **actor** value passed to oso is a Python string, and oso allows
+            us to call methods from Python's standard library on it.
+
+        .. group-tab:: Ruby
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-01-ruby.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+            .. |string_end_with| replace:: the ``String#end_with?`` method
+            .. _string_end_with: https://ruby-doc.org/core/String.html#method-i-end_with-3F
+
+            Note that the call to ``.end_with?`` is actually calling out to
+            |string_end_with|_ defined in the Ruby standard library. The
+            **actor** value passed to oso is a Ruby string, and oso allows
+            us to call methods from Ruby's standard library on it.
+
+        .. group-tab:: Java
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-01-java.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+            .. |string_endsWithJava| replace:: the ``String.endsWith`` method
+            .. _string_endsWithJava: https://docs.oracle.com/javase/10/docs/api/java/lang/String.html#endsWith(java.lang.String)
+
+            Note that the call to ``.endsWith`` is actually calling out to
+            |string_endsWithJava|_ defined in the Java standard library. The
+            **actor** value passed to oso is a Java string, and oso allows
+            us to call methods from Java's standard library on it.
+
+        .. group-tab:: Node.js
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-01-nodejs.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+            .. |string_endsWithJS| replace:: the ``String.prototype.endsWith`` method
+            .. _string_endsWithJS: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith
+
+            Note that the call to ``.endsWith`` is actually calling out to
+            |string_endsWithJS|_ defined in the JavaScript standard library.
+            The **actor** value passed to oso is a JavaScript string, and oso
+            allows us to call methods from JavaScript's standard library on
+            it.
+
+        .. group-tab:: Rust
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-01-rust.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+            .. |string_endsWithRust| replace:: the ``String::ends_with`` method
+            .. _string_endsWithRust: https://doc.rust-lang.org/std/string/struct.String.html#method.ends_with
+
+            Note that the call to ``.ends_with`` is actually calling out to
+            |string_endsWithRust|_ defined in the Rust standard library. The
+            **actor** value passed to oso is a Rust string, and oso allows us
+            to call methods from Rust's standard library on it.
 
 The ``Expense`` and ``String`` terms following the colons in the head of the
 rule are :ref:`specializers <Specialization>`, patterns that control rule
 execution based on whether they match the supplied argument. This syntax
-ensures that the rule will only be evaluated when the actor is a string and the
-resource is an instance of the ``Expense`` class.
-
-The second thing to note is that the call to ``.endswith`` is actually calling
-out to |str_endswith|_ defined in the Python standard library. The **actor**
-value passed to oso is a Python string, and oso allows us to call methods from
-Python's standard library on it.
+ensures that the rule will only be evaluated when the actor is a string and
+the resource is an instance of the ``Expense`` class.
 
 .. admonition:: Try it!
     :class: tip try-it
@@ -133,10 +312,41 @@ Currently, anyone with an email ending in ``@example.com`` can see all expenses
     Let's modify our existing rule such that users can only see their own
     expenses:
 
-    .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
-        :language: polar
-        :caption: :fa:`oso` expenses.polar
-        :class: copybutton
+    .. tabs::
+        .. group-tab:: Python
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-02-python.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+        .. group-tab:: Ruby
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-02-ruby.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+        .. group-tab:: Java
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-02-java.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+        .. group-tab:: Node.js
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-02-nodejs.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
+
+        .. group-tab:: Rust
+
+            .. literalinclude:: /examples/quickstart/polar/expenses-02-rust.polar
+                :language: polar
+                :caption: :fa:`oso` expenses.polar
+                :class: copybutton
 
 Behind the scenes, oso looks up the ``submitted_by`` field on the provided
 ``Expense`` instance and compares that value against the provided **actor**.
@@ -152,18 +362,13 @@ And just like that, an actor can only see an expense if they submitted it!
 
         $ curl -H "user: alice@example.com" localhost:8000/expenses/1
         Expense(...)
-        $ curl -H "user: alice@example.com" localhost:8000/expenses/3
-        Not Authorized!
-
-    And vice-versa:
 
     .. code-block:: console
         :class: copybutton
 
-        $ curl -H "user: bhavik@example.com" localhost:8000/expenses/1
+        $ curl -H "user: alice@example.com" localhost:8000/expenses/3
         Not Authorized!
-        $ curl -H "user: bhavik@example.com" localhost:8000/expenses/3
-        Expense(...)
+
 
 Feel free to play around with the current policy and experiment with adding
 your own rules!
@@ -173,12 +378,51 @@ application, you could write a policy rule in oso that says a ``User`` may
 ``"approve"`` an ``Expense`` if they manage the ``User`` who submitted the
 expense and the expense's amount is less than $100.00:
 
-.. code-block:: polar
-    :class: copybutton no-select
+.. tabs::
+    .. group-tab:: Python
 
-    allow(approver: User, "approve", expense: Expense) if
-        approver = expense.submitted_by.manager
-        and expense.amount < 10000;
+        .. code-block:: polar
+            :class: no-select
+
+            allow(approver: User, "approve", expense: Expense) if
+                approver = expense.submitted_by.manager
+                and expense.amount < 10000;
+
+    .. group-tab:: Ruby
+
+        .. code-block:: polar
+            :class: no-select
+
+            allow(approver: User, "approve", expense: Expense) if
+                approver = expense.submitted_by.manager
+                and expense.amount < 10000;
+
+    .. group-tab:: Java
+
+        .. code-block:: polar
+            :class: no-select
+
+            allow(approver: User, "approve", expense: Expense) if
+                approver = expense.submittedBy.manager
+                and expense.amount < 10000;
+
+    .. group-tab:: Node.js
+
+        .. code-block:: polar
+            :class: no-select
+
+            allow(approver: User, "approve", expense: Expense) if
+                approver = expense.submittedBy.manager
+                and expense.amount < 10000;
+
+    .. group-tab:: Rust
+
+        .. code-block:: polar
+            :class: no-select
+
+            allow(approver: User, "approve", expense: Expense) if
+                approver = expense.submitted_by.manager
+                and expense.amount < 10000;
 
 In the process of evaluating that rule, the oso engine would call back into the
 application in order to make determinations that rely on application data, such
