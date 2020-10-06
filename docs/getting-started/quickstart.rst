@@ -13,7 +13,7 @@ server.
     .. tabs::
         .. group-tab:: Python
 
-            To follow along, clone `the sample app
+            To follow along, clone `the Python sample app
             <https://github.com/osohq/oso-python-quickstart>`_:
 
             .. code-block:: console
@@ -23,7 +23,7 @@ server.
 
         .. group-tab:: Ruby
 
-                To follow along, clone `the sample app
+                To follow along, clone `the Ruby sample app
                 <https://github.com/osohq/oso-ruby-quickstart>`_:
 
                 .. code-block:: console
@@ -33,7 +33,7 @@ server.
 
         .. group-tab:: Java
 
-            To follow along, clone `the sample app
+            To follow along, clone `the Java sample app
             <https://github.com/osohq/oso-java-quickstart>`_:
 
             .. code-block:: console
@@ -43,7 +43,7 @@ server.
 
         .. group-tab:: Node.js
 
-            To follow along, clone `the sample app
+            To follow along, clone `the Node.js sample app
             <https://github.com/osohq/oso-nodejs-quickstart>`_:
 
             .. code-block:: console
@@ -53,7 +53,7 @@ server.
 
         .. group-tab:: Rust
 
-            To follow along, clone `the sample app
+            To follow along, clone `the Rust sample app
             <https://github.com/osohq/oso-rust-quickstart>`_:
 
             .. code-block:: console
