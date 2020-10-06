@@ -64,13 +64,6 @@ impl Constraints {
         self.operations.push(op);
     }
 
-    pub fn is_compatible<F>(&self, check: F) -> bool
-    where
-        F: Fn(&Operation) -> bool,
-    {
-        self.operations.iter().all(check)
-    }
-
     /// Add lookup of `field` assigned to `value` on `self.
     ///
     /// Returns: A partial expression for `value`.
