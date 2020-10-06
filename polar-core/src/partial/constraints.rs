@@ -8,7 +8,6 @@ use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Constraints {
     operations: Vec<Operation>,
-    // TODO move to the top level value type to correspond better with Value::Variable.
     variable: Symbol,
 }
 
@@ -81,12 +80,12 @@ impl Constraints {
         Term::new_temporary(Value::Partial(Constraints::new(name.clone())))
     }
 
-    pub fn term(self) -> Term {
+    pub fn into_term(self) -> Term {
         Term::new_temporary(Value::Partial(self))
     }
 
     /// Return the expression represented by this partial's constraints.
-    pub fn expression(self) -> Term {
+    pub fn into_expression(self) -> Term {
         Term::new_temporary(Value::Expression(Operation {
             operator: Operator::And,
             args: self

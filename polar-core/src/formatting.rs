@@ -556,7 +556,7 @@ pub mod to_polar {
                 Value::Partial(p) => format!(
                     "partial({}) {{ {} }}",
                     p.name().0,
-                    p.clone().expression().to_polar()
+                    p.clone().into_expression().to_polar()
                 ),
             }
         }

@@ -9,15 +9,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// but can translate to and from this type.
 pub type Bindings = HashMap<Symbol, Term>;
 
-#[derive(Clone)]
-pub enum Type {
-    Class { name: Symbol },
-}
-
 #[derive(Default)]
 pub struct KnowledgeBase {
     pub constants: Bindings,
-    pub types: HashMap<Symbol, Type>,
     pub rules: HashMap<Symbol, GenericRule>,
     pub sources: Sources,
     /// For symbols returned from gensym.
@@ -33,7 +27,6 @@ impl KnowledgeBase {
     pub fn new() -> Self {
         Self {
             constants: HashMap::new(),
-            types: HashMap::new(),
             rules: HashMap::new(),
             sources: Sources::default(),
             id_counter: AtomicU64::new(1),
