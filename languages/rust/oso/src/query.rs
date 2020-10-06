@@ -85,18 +85,20 @@ impl Query {
                     right_class_tag,
                 ),
                 QueryEvent::Debug { message } => self.handle_debug(message),
-                event => unimplemented!("Unhandled event {:?}", event)
+                event => unimplemented!("Unhandled event {:?}", event),
             };
             if let Err(e) = result {
                 // TODO (dhatch): These seem to be getting swallowed
                 tracing::error!("application error {}", e);
-                self.application_error(e);
+                if let Err(e) = self.application_error(e) {
+                    return Some(Err(e.into()));
+                }
             }
         }
     }
 
-    fn question_result(&mut self, call_id: u64, result: bool) {
-        self.inner.question_result(call_id, result);
+    fn question_result(&mut self, call_id: u64, result: bool) -> crate::Result<()> {
+        Ok(self.inner.question_result(call_id, result)?)
     }
 
     fn call_result(&mut self, call_id: u64, result: Term) -> crate::Result<()> {
@@ -107,8 +109,8 @@ impl Query {
         Ok(self.inner.call_result(call_id, None)?)
     }
 
-    fn application_error(&mut self, error: crate::OsoError) {
-        self.inner.application_error(error.to_string())
+    fn application_error(&mut self, error: crate::OsoError) -> crate::Result<()> {
+        Ok(self.inner.application_error(error.to_string())?)
     }
 
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
@@ -156,7 +158,7 @@ impl Query {
         }
         let instance = Instance::from_polar(&instance, &self.host).unwrap();
         if let Err(e) = self.register_call(call_id, instance, name, args) {
-            self.application_error(e);
+            self.application_error(e)?;
             return self.call_result_none(call_id);
         }
 
@@ -164,7 +166,7 @@ impl Query {
             match result {
                 Ok(r) => self.call_result(call_id, r),
                 Err(e) => {
-                    self.application_error(e);
+                    self.application_error(e)?;
                     self.call_result_none(call_id)
                 }
             }
@@ -187,7 +189,7 @@ impl Query {
             ];
             self.host.operator(operator, args)?
         };
-        self.question_result(call_id, res);
+        self.question_result(call_id, res)?;
         Ok(())
     }
 
@@ -199,7 +201,7 @@ impl Query {
     ) -> crate::Result<()> {
         tracing::debug!(instance = ?instance, class = %class_tag, "isa");
         let res = self.host.isa(instance, &class_tag)?;
-        self.question_result(call_id, res);
+        self.question_result(call_id, res)?;
         Ok(())
     }
 
@@ -210,7 +212,7 @@ impl Query {
         right_instance_id: u64,
     ) -> crate::Result<()> {
         let res = self.host.unify(left_instance_id, right_instance_id)?;
-        self.question_result(call_id, res);
+        self.question_result(call_id, res)?;
         Ok(())
     }
 
@@ -224,7 +226,7 @@ impl Query {
         let res = self
             .host
             .is_subspecializer(instance_id, &left_class_tag, &right_class_tag);
-        self.question_result(call_id, res);
+        self.question_result(call_id, res)?;
         Ok(())
     }
 

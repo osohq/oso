@@ -394,7 +394,8 @@ mod test {
                     assert_eq!(call_id, 700000);
                     eprintln!("left: {:?}, right: {:?}", &left_class_tag, &right_class_tag);
                     query
-                        .question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0));
+                        .question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))
+                        .unwrap();
                 }
                 _ => panic!("not bindings"),
             }

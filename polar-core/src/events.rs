@@ -68,7 +68,7 @@ pub enum QueryEvent {
     ExternalIsSubclass {
         call_id: u64,
         left_class_tag: Symbol,
-        right_class_tag: Symbol
+        right_class_tag: Symbol,
     },
 
     /// Unifies two external instances.

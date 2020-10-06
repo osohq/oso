@@ -74,15 +74,14 @@ impl Query {
         self.top_runnable().external_call_result(call_id, value)
     }
 
-    pub fn question_result(&mut self, call_id: u64, result: bool) {
+    pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
         // TODO remove unwrap & pipe up to ffi.
         self.top_runnable()
             .external_question_result(call_id, result)
-            .unwrap()
     }
 
-    pub fn application_error(&mut self, message: String) {
-        self.top_runnable().external_error(message).unwrap()
+    pub fn application_error(&mut self, message: String) -> PolarResult<()> {
+        self.top_runnable().external_error(message)
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {

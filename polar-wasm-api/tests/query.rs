@@ -60,7 +60,7 @@ fn app_error_succeeds() {
     assert_eq!(call_id, 3.0);
 
     let msg = "doin' the hokey-pokey";
-    query.wasm_app_error(msg);
+    query.wasm_app_error(msg).unwrap();
 
     let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
     assert_eq!(err.name(), "RuntimeError::Application");

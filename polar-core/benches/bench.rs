@@ -322,7 +322,7 @@ impl Runner {
     }
 
     fn handle_external_isa(&mut self, call_id: u64) {
-        self.query.question_result(call_id, true)
+        self.query.question_result(call_id, true).unwrap();
     }
 
     fn handle_external_call(&mut self, call_id: u64) {

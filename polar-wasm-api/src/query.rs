@@ -43,8 +43,11 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = questionResult)]
-    pub fn wasm_question_result(&mut self, call_id: f64, result: bool) {
-        self.0.question_result(call_id as u64, result)
+    pub fn wasm_question_result(&mut self, call_id: f64, result: bool) -> JsResult<()> {
+        self.0
+            .question_result(call_id as u64, result)
+            .map_err(Error::from)
+            .map_err(Error::into)
     }
 
     #[wasm_bindgen(js_class = Query, js_name = debugCommand)]
@@ -56,8 +59,11 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = appError)]
-    pub fn wasm_app_error(&mut self, msg: &str) {
-        self.0.application_error(msg.to_owned())
+    pub fn wasm_app_error(&mut self, msg: &str) -> JsResult<()> {
+        self.0
+            .application_error(msg.to_owned())
+            .map_err(Error::from)
+            .map_err(Error::into)
     }
 
     #[wasm_bindgen(js_class = Query, js_name = nextMessage)]
