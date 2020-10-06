@@ -64,18 +64,17 @@ server.
 Run the server
 ==============
 
-Our sample application serves data about expenses submitted by users. The sample application
-has three important files.
+Our sample application serves data about expenses submitted by users. The
+sample application has three important files.
 
-One file has a simple ``Expense`` class
-and some sample data stored in a map.
+One file defines a simple ``Expense`` class and some sample data stored in a
+map.
 
-A second file has our HTTP server code, where we have defined a
-route handler for ``GET`` requests to the path ``/expenses/:id``. We've already
-added an authorization check using the :doc:`oso library
-</using/libraries/index>` to control access to expense resources. You
-can learn more about how to add oso to your application :doc:`here
-</getting-started/application/index>`.
+A second file has our HTTP server code, where we have defined a route handler
+for ``GET`` requests to the path ``/expenses/:id``. We've already added an
+authorization check using the :doc:`oso library </using/libraries/index>` to
+control access to expense resources. You can learn more about how to add oso to
+your application :doc:`here </getting-started/application/index>`.
 
 The third file is the oso policy file, ``expenses.polar``, and is currently
 empty.
@@ -119,17 +118,16 @@ empty.
         .. group-tab:: Java
 
             Go to the `Maven Repository
-            <https://search.maven.org/artifact/com.osohq/oso>`_ to install
-            oso. Either add oso as a dependency to your build system, or
-            download the latest JAR file and add it to your Java project
-            libraries.
+            <https://search.maven.org/artifact/com.osohq/oso>`_ to install oso.
+            Either add oso as a dependency to your build system, or download
+            the latest JAR file and add it to your Java project libraries.
 
             Once you have oso installed, run ``Server.java``.
 
-
         .. group-tab:: Node.js
 
-            Install the project dependencies with NPM (or Yarn), then run the server:
+            Install the project dependencies with NPM (or Yarn), then run the
+            server:
 
             .. code-block:: console
                 :class: copybutton
@@ -144,7 +142,8 @@ empty.
 
         .. group-tab:: Rust
 
-            Run the server with Cargo, which will also install project dependencies:
+            Run the server with Cargo, which will also install project
+            dependencies:
 
             .. code-block:: console
                 :class: copybutton
