@@ -195,7 +195,33 @@ method to interact with this directly. For example:
   oso.load_str("role(user, role_name) if user.role = role_name;")
 
   alice = User("alice", "accountant")
-  assert oso.query_rule("role", alice, "accountant")
+  assert list(oso.query_rule("role", alice, "accountant"))
+
+.. tip::
+
+    Try setting the ``POLAR_LOG`` environment variable before executing a
+    polar query, to see a :doc:`trace </more/dev-tools/tracing>` of how the query is
+    evaluated:
+
+    .. code-block:: console
+        :class: copybutton
+
+        $ POLAR_LOG=1 python user.py
+        [debug]   QUERY: role(<__main__.User object at 0x105da6190>, "accountant"), BINDINGS: {}
+        [debug]     APPLICABLE_RULES:
+        [debug]       role(user, role_name) if user.role = role_name;
+        [debug]     RULE: role(user, role_name) if user.role = role_name;
+        [debug]       QUERY: .(_user_5, "role", _value_1_7) and _value_1_7 = _role_name_6, BINDINGS: {_role_name_6 = "accountant", _user_5 = <__main__.User object at 0x105da6190>}
+        [debug]         QUERY: .(_user_5, "role", _value_1_7), BINDINGS: {_user_5 = <__main__.User object at 0x105da6190>}
+        [debug]           LOOKUP: <__main__.User object at 0x105da6190>.role()
+        [debug]           => "accountant"
+        [debug]         QUERY: _value_1_7 = _role_name_6, BINDINGS: {_role_name_6 = "accountant", _value_1_7 = "accountant"}
+        [debug]   BACKTRACK
+        [debug]           LOOKUP: <__main__.User object at 0x105da6190>.role()
+        [debug]           => No more results.
+        [debug]           BACKTRACK
+        [debug]           HALT
+
 
 Summary
 =======
