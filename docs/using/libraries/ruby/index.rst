@@ -29,12 +29,6 @@ You can pass any Ruby instance into oso and access its methods and fields from y
 Ruby instances can be constructed from inside an oso policy using the :ref:`operator-new` operator if the Ruby class has been **registered** using
 the ``#register_class`` method. An example of this can be found :ref:`here <application-types>`.
 
-.. tip::
-
-  To construct a Ruby instance using the :ref:`operator-new` operator, its
-  constructor must accept keyword arguments.  The new operator cannot pass
-  positional arguments at this time.
-
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
 Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`).
