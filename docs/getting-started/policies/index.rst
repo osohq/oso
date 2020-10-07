@@ -200,7 +200,7 @@ method to interact with this directly. For example:
 .. tip::
 
     Try setting the ``POLAR_LOG`` environment variable before executing a
-    polar query, to see a :doc:`trace </more/dev-tools/tracing>` of how the query is
+    polar query to see a :doc:`trace </more/dev-tools/tracing>` of how the query is
     evaluated:
 
     .. code-block:: console
