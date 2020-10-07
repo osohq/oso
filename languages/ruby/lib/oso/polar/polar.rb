@@ -169,10 +169,6 @@ module Oso
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
-      # @return [Hash<String, String>]
-      attr_reader :loaded_names
-      # @return [Hash<String, String>]
-      attr_reader :loaded_contents
 
       # The R and L in REPL for systems where readline is available.
       def repl_readline(prompt)
