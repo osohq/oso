@@ -11,13 +11,11 @@ import org.json.JSONObject;
 public class Host implements Cloneable {
   private Ffi.Polar ffiPolar;
   private Map<String, Class<?>> classes;
-  private Map<String, Constructor<?>> constructors;
   private Map<Long, Object> instances;
 
   public Host(Ffi.Polar polarPtr) {
     ffiPolar = polarPtr;
     classes = new HashMap<String, Class<?>>();
-    constructors = new HashMap<String, Constructor<?>>();
     instances = new HashMap<Long, Object>();
   }
 
@@ -25,7 +23,6 @@ public class Host implements Cloneable {
   public Host clone() {
     Host host = new Host(ffiPolar);
     host.classes.putAll(classes);
-    host.constructors.putAll(constructors);
     host.instances.putAll(instances);
     return host;
   }
@@ -45,14 +42,12 @@ public class Host implements Cloneable {
    * @param name The name used to reference the class from within Polar.
    * @throws Exceptions.DuplicateClassAliasError If the name is already registered.
    */
-  public String cacheClass(Class<?> cls, Constructor<?> constructor, String name)
-      throws Exceptions.DuplicateClassAliasError {
+  public String cacheClass(Class<?> cls, String name) throws Exceptions.DuplicateClassAliasError {
     if (classes.containsKey(name)) {
       throw new Exceptions.DuplicateClassAliasError(
           name, classes.get(name).getName(), cls.getName());
     }
     classes.put(name, cls);
-    constructors.put(name, constructor);
     return name;
   }
 
@@ -80,33 +75,31 @@ public class Host implements Cloneable {
     return id;
   }
 
-  /** Make an instance of a Java class from a {@code Map<String, Object>} of fields. */
+  /** Make an instance of a Java class from a {@code List<Object>} of fields. */
   public Object makeInstance(String className, List<Object> initargs, long id)
       throws Exceptions.OsoException {
-    Constructor<?> constructor = constructors.get(className);
-    if (constructor == null) {
-      // Try to find a constructor applicable to the supplied arguments.
-      Class<?> cls = classes.get(className);
-      Class<?>[] argTypes =
-          initargs.stream()
-              .map(arg -> arg.getClass())
-              .collect(Collectors.toUnmodifiableList())
-              .toArray(new Class[0]);
-      search:
-      for (Constructor<?> c : cls.getConstructors()) {
-        Class<?>[] paramTypes = c.getParameterTypes();
-        if (argTypes.length == paramTypes.length) {
-          for (int i = 0; i < paramTypes.length; i++) {
-            if (!paramTypes[i].isAssignableFrom(argTypes[i])) {
-              continue search;
-            }
+    Constructor<?> constructor = null;
+    // Try to find a constructor applicable to the supplied arguments.
+    Class<?> cls = classes.get(className);
+    Class<?>[] argTypes =
+        initargs.stream()
+            .map(arg -> arg.getClass())
+            .collect(Collectors.toUnmodifiableList())
+            .toArray(new Class[0]);
+    search:
+    for (Constructor<?> c : cls.getConstructors()) {
+      Class<?>[] paramTypes = c.getParameterTypes();
+      if (argTypes.length == paramTypes.length) {
+        for (int i = 0; i < paramTypes.length; i++) {
+          if (!paramTypes[i].isAssignableFrom(argTypes[i])) {
+            continue search;
           }
-          constructor = c;
-          break search;
         }
+        constructor = c;
+        break search;
       }
-      if (constructor == null) throw new Exceptions.MissingConstructorError(className);
     }
+    if (constructor == null) throw new Exceptions.MissingConstructorError(className);
 
     Object instance;
     try {
