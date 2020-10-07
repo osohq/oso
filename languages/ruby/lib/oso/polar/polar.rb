@@ -137,16 +137,16 @@ module Oso
       def register_class(cls, name: nil, from_polar: nil)
         from_polar = Proc.new if block_given?
         name = host.cache_class(cls, name: name, constructor: from_polar)
-        register_constant(name, value: cls)
+        register_constant(cls, name: name)
       end
 
       # Register a Ruby object with Polar.
       #
-      # @param name [String] the name to register the object as.
       # @param value [Object] the object to register.
+      # @param name [String] the name to register the object as.
       # @return [self] for chaining.
-      def register_constant(name, value:)
-        ffi_polar.register_constant(name, value: host.to_polar(value))
+      def register_constant(value, name:)
+        ffi_polar.register_constant(host.to_polar(value), name: name)
         self
       end
 
