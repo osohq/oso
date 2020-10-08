@@ -574,7 +574,6 @@ impl PolarVirtualMachine {
 
     /// Look up a variable in the bindings stack and return
     /// a reference to its value if it's bound.
-    ///
     fn value(&self, variable: &Symbol) -> Option<&Term> {
         self.bindings
             .iter()
