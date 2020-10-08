@@ -27,7 +27,7 @@ pub const QUERY_TIMEOUT_S: std::time::Duration = std::time::Duration::from_secs(
 #[cfg(target_arch = "wasm32")]
 pub const QUERY_TIMEOUT_S: f64 = 30_000.0;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[must_use = "ignored goals are never accomplished"]
 #[allow(clippy::large_enum_variant)]
 pub enum Goal {
@@ -116,12 +116,6 @@ pub enum Goal {
         var: Symbol,
         value: Term,
     },
-}
-
-impl std::fmt::Debug for Goal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Goal")
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -535,9 +529,7 @@ impl PolarVirtualMachine {
     pub fn bindings(&self, include_temps: bool) -> Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings[self.csp..] {
-            if !include_temps
-                && self.is_temporary_var(&var)
-                && !matches!(value.value(), Value::Partial(_))
+            if !include_temps && self.is_temporary_var(&var) && !value.value().as_partial().is_ok()
             {
                 continue;
             }
@@ -655,9 +647,7 @@ impl PolarVirtualMachine {
                     term.clone_with_value(Value::Variable(new))
                 }
             }
-            Value::Partial(_) => todo!(
-                "rename partials, we think not possible because you cannot write one in Polar"
-            ),
+            Value::Partial(_) => unimplemented!("partials should not be in rules"),
             Value::RestVariable(sym) => {
                 if let Some(new) = renames.get(sym) {
                     term.clone_with_value(Value::RestVariable(new.clone()))
@@ -992,10 +982,6 @@ impl PolarVirtualMachine {
                 )?;
             }
 
-            (_, Value::Partial(_)) => {
-                unimplemented!("Don't do that!");
-            }
-
             (Value::Variable(symbol), _) => {
                 if let Some(value) = self.value(&symbol).cloned() {
                     self.push_goal(Goal::Isa {
@@ -1052,7 +1038,6 @@ impl PolarVirtualMachine {
                 }
             }
 
-            // TODO unfold partial isa into field isa & type check.
             (
                 Value::ExternalInstance(left_instance),
                 Value::Pattern(Pattern::Instance(right_literal)),
@@ -1694,7 +1679,14 @@ impl PolarVirtualMachine {
                     ));
                 }
             }
-            (_, _) => todo!(),
+            (_, _) => {
+                return Err(self.set_error_context(
+                    term,
+                    error::RuntimeError::Unsupported {
+                        msg: "numeric operation only supported on numbers".to_string(),
+                    },
+                ))
+            }
         }
         Ok(QueryEvent::None)
     }

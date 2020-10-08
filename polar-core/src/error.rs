@@ -268,6 +268,8 @@ impl fmt::Display for RuntimeError {
 pub enum OperationalError {
     Unimplemented(String),
     Unknown,
+
+    /// An invariant has been broken internally.
     InvalidState(String),
 }
 

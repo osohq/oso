@@ -1,4 +1,3 @@
-use super::counter::Counter;
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
@@ -77,7 +76,6 @@ impl Query {
     }
 
     pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
-        // TODO remove unwrap & pipe up to ffi.
         self.top_runnable()
             .external_question_result(call_id, result)
     }
@@ -107,7 +105,7 @@ impl Iterator for Query {
         if self.done {
             return None;
         }
-        let event = self.vm.run(Counter::default());
+        let event = self.next_event();
         if let Ok(QueryEvent::Done { .. }) = event {
             self.done = true;
         }

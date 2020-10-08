@@ -36,3 +36,9 @@ impl Clone for Box<dyn Runnable> {
         (*self).clone_runnable()
     }
 }
+
+impl std::fmt::Debug for Box<dyn Runnable> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Box<dyn Runnable>")
+    }
+}

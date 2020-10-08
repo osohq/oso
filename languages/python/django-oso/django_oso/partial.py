@@ -2,23 +2,32 @@ from django.db.models import Q
 
 from polar.expression import Expression
 from polar.variable import Variable
+from polar.exceptions import UnsupportedError
 
 
 def partial_to_query_filter(partial, type_name):
     """
-    Expression(And, [
-        Expression(Isa, [
-            Variable('_this'),
-            Pattern(test_app::Post, {})]),
-        Expression(Isa, [
-            Variable('_this'),
-            Pattern(test_app::Post, {})]),
-        Expression(Unify, [
-            False,
-            Expression(
-                Dot, [
-                    Variable('_this'),
-                    'is_private'])])])
+    Convert a partial expression to a django query ``Q`` object.
+
+    Example expression structure::
+
+        Expression(And, [
+            Expression(Isa, [
+                Variable('_this'),
+                Pattern(test_app::Post, {})]),
+            Expression(Isa, [
+                Variable('_this'),
+                Pattern(test_app::Post, {})]),
+            Expression(Unify, [
+                False,
+                Expression(
+                    Dot, [
+                        Variable('_this'),
+                        'is_private'])])])
+
+    Output::
+
+        Q(is_private=False)
     """
 
     q = and_expr(partial, type_name)
@@ -46,12 +55,10 @@ def and_expr(expr, type_name):
             q = q & compare_expr(expression, type_name)
         elif expression.operator == "And":
             q = q & and_expr(expression, type_name)
-        elif expression.operator == "Or":
-            assert False
         elif expression.operator == "Isa":
             assert expression.args[1].tag == type_name
         else:
-            raise Exception(f"Unexpected operator {expression.operator}")
+            raise UnsupportedError(f"Unimplemented partial operator {expression.operator}")
 
     return q
 

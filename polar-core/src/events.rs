@@ -9,7 +9,7 @@ use super::traces::*;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum QueryEvent {
     None,
 
@@ -88,10 +88,4 @@ pub enum QueryEvent {
         operator: Operator,
         args: TermList,
     },
-}
-
-impl std::fmt::Debug for QueryEvent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "QueryEvent")
-    }
 }

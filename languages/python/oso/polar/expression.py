@@ -1,6 +1,3 @@
-import json
-
-
 class Expression:
     def __init__(self, operator, args):
         self.operator = operator
