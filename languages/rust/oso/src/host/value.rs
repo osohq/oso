@@ -1,5 +1,4 @@
 use polar_core::terms::*;
-use std::collections::btree_map::BTreeMap;
 use std::collections::hash_map::HashMap;
 use std::convert::TryFrom;
 

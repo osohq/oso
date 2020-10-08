@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 
 use oso::{Class, FromPolarValue, Oso, OsoError, PolarClass, PolarValue};
 use polar_core::error as polar_error;
-use polar_core::terms::Symbol;
 
 use maplit::hashmap;
 
