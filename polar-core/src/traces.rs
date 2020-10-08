@@ -21,3 +21,7 @@ pub struct TraceResult {
     pub trace: Rc<Trace>,
     pub formatted: String,
 }
+
+// step out is break after the next trace pop
+// step into is break after the next query (self.trace.push)
+// break after the next query as long as the current trace stack is not longer than the one when you started stepping.

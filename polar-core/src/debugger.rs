@@ -275,15 +275,15 @@ impl Debugger {
   goals                   Print current goal stack.
   h[elp]                  Print this help documentation.
   l[ine] [<n>]            Print the current line and <n> lines of context.
-  n[ext]                  Alias for 'over'.
-  out                     Evaluate goals through the end of the current parent
-                          query and stop at its next sibling (if one exists).
-  over                    Evaluate goals until reaching the next sibling of the
-                          current query (if one exists).
-  queries                 Print current query stack.
+  n[ext]                  Step to the next query at the same level of the stack (step over in vscode)
+  s[tep]                  Step to the next query                                (step into in vscode)
+  o[ut]                   Step out of the current level to the one above        (step out in vscode)
+  g[oal]                  Step to the next goal
+  stack                   Print the query stack
+  bindings                Print relevant bindings
+  constants               Print constants
+  all-bindings            Print all bindings
   q[uit]                  Alias for 'continue'.
-  stack                   Alias for 'queries'.
-  s[tep]                  Evaluate one goal.
   var [<name> ...]        Print available variables. If one or more arguments
                           are provided, print the value of those variables."
                         .to_string(),
@@ -293,3 +293,13 @@ impl Debugger {
         None
     }
 }
+
+// debugger steping kinds (vscode)
+// (into, out) up and down tree structure
+// over - laterally in same tree structure
+
+// step-goal - different thing mostly for us
+
+// into is query by query
+// out is up from whatever level you're in
+// over is next clause in the same level, don't go down a level.
