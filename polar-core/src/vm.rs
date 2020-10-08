@@ -1390,7 +1390,6 @@ impl PolarVirtualMachine {
                 let right = args.pop().unwrap();
                 let left = args.pop().unwrap();
                 match (left.value(), right.value()) {
-                    // TODO partial.
                     (Value::Variable(var), _) => match self.value(var) {
                         None => self.push_goal(Goal::Unify { left, right })?,
                         Some(value) => {
