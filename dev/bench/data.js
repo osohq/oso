@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1601573327755,
+  "lastUpdate": 1602173355884,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -7787,6 +7787,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6325,
             "range": "± 858",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d64882be713d9bf8376660aaa89d188a3d529fe",
+          "message": "Add POLAR_LOG to getting started (#461)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-10-08T12:00:26-04:00",
+          "tree_id": "5b61bf375331a495cd8e2daea35c9d8a7ac477e7",
+          "url": "https://github.com/osohq/oso/commit/0d64882be713d9bf8376660aaa89d188a3d529fe"
+        },
+        "date": 1602173354977,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 663,
+            "range": "± 39",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2256,
+            "range": "± 114",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 62881,
+            "range": "± 4030",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 460429,
+            "range": "± 33356",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16743,
+            "range": "± 1284",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16674,
+            "range": "± 4562",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16618,
+            "range": "± 1571",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17053,
+            "range": "± 2548",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15700,
+            "range": "± 1223",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5026,
+            "range": "± 495",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5168,
+            "range": "± 350",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5533,
+            "range": "± 821",
             "unit": "ns/iter"
           }
         ]
