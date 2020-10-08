@@ -212,7 +212,7 @@ public class PolarTest {
 
   @Test
   public void testNaN() throws Exception {
-    p.registerConstant("nan", Double.NaN);
+    p.registerConstant(Double.NaN, "nan");
 
     List<HashMap<String, Object>> results = p.query("x = nan").results();
     HashMap<String, Object> result = results.get(0);
@@ -226,7 +226,7 @@ public class PolarTest {
 
   @Test
   public void testInfinities() throws Exception {
-    p.registerConstant("inf", Double.POSITIVE_INFINITY);
+    p.registerConstant(Double.POSITIVE_INFINITY, "inf");
 
     List<HashMap<String, Object>> inf_results = p.query("x = inf").results();
     HashMap<String, Object> inf_result = inf_results.get(0);
@@ -235,7 +235,7 @@ public class PolarTest {
 
     assertFalse(p.query("inf = inf").results().isEmpty(), "Infinity == Infinity");
 
-    p.registerConstant("neg_inf", Double.NEGATIVE_INFINITY);
+    p.registerConstant(Double.NEGATIVE_INFINITY, "neg_inf");
 
     List<HashMap<String, Object>> neg_inf_results = p.query("x = neg_inf").results();
     HashMap<String, Object> neg_inf_result = neg_inf_results.get(0);
@@ -280,7 +280,7 @@ public class PolarTest {
 
   @Test
   public void testNoKeywordArgs() throws Exception {
-    p.registerConstant("MyClass", true);
+    p.registerConstant(true, "MyClass");
     assertThrows(
         Exceptions.InstantiationError.class, () -> p.query("x = new MyClass(\"test\", id: 1)"));
     assertThrows(
