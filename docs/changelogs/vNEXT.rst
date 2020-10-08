@@ -22,11 +22,11 @@ To migrate, replace calls to ``Oso.clear()`` with either ``Oso.clear_rules()`` o
 ``Oso.clearRules()``, depending on the library you are using.
 It is no longer necessary to re-register classes/constants after clearing.
 
-Ruby method signature for ``Oso#register_constant`` updated
------------------------------------------------------------
+Method signature for ``Oso.register_constant()`` updated
+--------------------------------------------------------
 
-The positional and named arguments were swapped to mirror the signature of
-``Oso#register_class``.
+The parameters were swapped to mirror the signature of
+``Oso.register_class()``.
 
 Select Ruby methods now return ``self`` to enable method chaining
 -----------------------------------------------------------------
