@@ -368,7 +368,7 @@ fn test_register_constant() -> oso::Result<()> {
     let mut oso = test_oso();
 
     let d = hashmap! {String::from("a") => 1};
-    oso.oso.register_constant("d", d)?;
+    oso.oso.register_constant(d, "d")?;
 
     assert_eq!(oso.qvar::<i64>("d.a = x", "x"), vec![1]);
 
@@ -830,10 +830,10 @@ fn test_nan_inf() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.oso.register_constant("inf", std::f64::INFINITY)?;
+    oso.oso.register_constant(std::f64::INFINITY, "inf")?;
     oso.oso
-        .register_constant("neg_inf", std::f64::NEG_INFINITY)?;
-    oso.oso.register_constant("nan", std::f64::NAN)?;
+        .register_constant(std::f64::NEG_INFINITY, "neg_inf")?;
+    oso.oso.register_constant(std::f64::NAN, "nan")?;
 
     let x = oso.qvar::<f64>("x = nan", "x").pop().unwrap();
     assert!(x.is_nan());

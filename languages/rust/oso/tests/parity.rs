@@ -119,8 +119,8 @@ fn test() {
     res!(@not oso.query_rule("testCut", ()));
 
     // Test that a constant can be called.
-    // oso.register_constant("Math", math);
-    // oso.load_str("?= Math.factorial(5) == 120;").unwrap();
+    // oso.register_constant(math, "MyMath");
+    // oso.load_str("?= MyMath.factorial(5) == 120;").unwrap();
 
     // Test built-in type specializers.
     res!(oso.query(r#"builtinSpecializers(true, "Boolean")"#));
