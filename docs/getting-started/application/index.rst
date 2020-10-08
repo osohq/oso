@@ -44,7 +44,7 @@ Running The Example
 .. tabs::
     .. group-tab:: Python
 
-        The application has a few requirements, including Flask and, or course, oso.
+        The application has a few requirements, including Flask and, of course, oso.
         We recommend installing these within a virtual environment:
 
         .. code-block:: console

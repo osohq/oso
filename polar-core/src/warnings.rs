@@ -85,7 +85,7 @@ pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
                 }
                 msg
             } else {
-                format!("Singleton variable {} is unused or undefined, see <https://docs.oso.dev/using/polar-syntax.html#variables>", sym)
+                format!("Singleton variable {} is unused or undefined, see <https://docs.osohq.com/using/polar-syntax.html#variables>", sym)
             };
             if let Some(ref source) = term
                 .get_source_id()

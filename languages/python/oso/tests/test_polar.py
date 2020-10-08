@@ -421,7 +421,7 @@ def test_runtime_errors(polar, query):
     foo(1,2)
   in rule foo at line 2, column 17
     a in b
-Type error: can only use `in` on a list, this is Variable(Symbol("_a_3")) at line 2, column 17"""
+Type error: can only use `in` on a list, this is Number(Integer(2)) at line 1, column 7"""
     )
 
 
