@@ -164,13 +164,9 @@ fn test_data_conversions_externals() -> oso::Result<()> {
     let widget = Widget::new(1);
 
     oso.load_str("allow(actor, resource) if actor.widget().id = resource.id;");
-    let query_results = oso
-        .oso
-        .query_rule("allow", (actor, widget))?
-        .map(|r| r.unwrap())
-        .collect::<Vec<_>>();
+    let query_results = oso.oso.query_rule("allow", (actor, widget))?.count();
 
-    assert_eq!(query_results.len(), 1);
+    assert_eq!(query_results, 1);
 
     Ok(())
 }
