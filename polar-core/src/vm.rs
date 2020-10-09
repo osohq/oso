@@ -2585,10 +2585,7 @@ impl Runnable for PolarVirtualMachine {
             self.call_id_symbols.remove(&call_id).expect("bad call ID");
 
             let check_error = if let Some(goal) = self.goals.last() {
-                match *(*goal) {
-                    Goal::CheckError => true,
-                    _ => false,
-                }
+                matches!(*(*goal), Goal::CheckError)
             } else {
                 false
             };
