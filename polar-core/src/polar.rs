@@ -60,7 +60,7 @@ impl Query {
         }
     }
 
-    fn top_runnable(&mut self) -> &mut (dyn Runnable + 'static) {
+    fn top_runnable(&mut self) -> &mut (dyn Runnable) {
         self.runnable_stack
             .last_mut()
             .map(|b| b.0.as_mut())
