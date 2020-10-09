@@ -95,7 +95,7 @@ empty.
             .. code-block:: console
                 :class: copybutton
 
-                $ python quickstart/server.py
+                $ python server.py
                 server running on port 5050
 
         .. group-tab:: Ruby
