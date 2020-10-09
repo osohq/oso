@@ -86,8 +86,8 @@ assert list(oso.query_rule("testUnifyClass", A))
 assert not list(oso.query_rule("testCut"))
 
 # Test that a constant can be called.
-oso.register_constant("Math", math)
-oso.load_str("?= Math.factorial(5) == 120;")
+oso.register_constant(math, "MyMath")
+oso.load_str("?= MyMath.factorial(5) == 120;")
 
 # Test built-in type specializers.
 assert list(oso.query('builtinSpecializers(true, "Boolean")'))

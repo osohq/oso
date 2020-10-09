@@ -325,7 +325,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     # test_register_constant
     it 'works' do
       d = { 'a' => 1 }
-      subject.register_constant('d', value: d)
+      subject.register_constant(d, name: 'd')
       expect(qvar(subject, 'd.a = x', 'x')).to eq([1])
     end
   end
@@ -790,9 +790,9 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
   # test_nan_inf
   it 'handles ±∞ and NaN' do
-    subject.register_constant('inf', value: Float::INFINITY)
-    subject.register_constant('neg_inf', value: -Float::INFINITY)
-    subject.register_constant('nan', value: Float::NAN)
+    subject.register_constant(Float::INFINITY, name: 'inf')
+    subject.register_constant(-Float::INFINITY, name: 'neg_inf')
+    subject.register_constant(Float::NAN, name: 'nan')
 
     x = qvar(subject, 'x = nan', 'x', one: true)
     expect(x.nan?).to be true

@@ -38,7 +38,7 @@ describe('#registerCall', () => {
     };
 
     const p = new Polar();
-    p.registerConstant('sync', sync);
+    p.registerConstant(sync, 'sync');
 
     expect(await qvar(p, 'sync.undefined = x', 'x', true)).toBeUndefined();
     expect(query(p, 'sync.undefined()')).rejects.toThrow(
@@ -143,7 +143,7 @@ describe('#registerCall', () => {
     };
 
     const p = new Polar();
-    p.registerConstant('async', async);
+    p.registerConstant(async, 'async');
 
     expect(await qvar(p, 'async.promise = x', 'x', true)).toStrictEqual([
       1,
