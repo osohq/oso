@@ -99,8 +99,8 @@ oso.registerClass(E);
   if (!(await oso.queryRule('testCut').next()).done) throw new Error();
 
   // Test that a constant can be called.
-  oso.registerConstant('Math', Math);
-  await oso.loadStr('?= Math.acos(1.0) = 0;');
+  oso.registerConstant(Math, 'MyMath');
+  await oso.loadStr('?= MyMath.acos(1.0) = 0;');
 
   // Test built-in type specializers.
   if (

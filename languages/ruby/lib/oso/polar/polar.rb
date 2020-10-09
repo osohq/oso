@@ -1,10 +1,5 @@
 # frozen_string_literal: true
 
-require 'json'
-require 'pp'
-require 'set'
-require 'digest/md5'
-
 # Missing Ruby type.
 module PolarBoolean; end
 # Monkey-patch Ruby true type.
@@ -53,8 +48,10 @@ module Oso
       end
 
       # Clear all rules and rule sources from the current Polar instance
+      # @return [self] for chaining.
       def clear_rules
         ffi_polar.clear_rules
+        self
       end
 
       # Load a Polar policy file.
@@ -62,6 +59,7 @@ module Oso
       # @param name [String]
       # @raise [PolarFileExtensionError] if provided filename has invalid extension.
       # @raise [PolarFileNotFoundError] if provided filename does not exist.
+      # @return [self] for chaining.
       def load_file(name)
         raise PolarFileExtensionError, name unless File.extname(name) == '.polar'
 
@@ -78,6 +76,7 @@ module Oso
       # @raise [NullByteInPolarFileError] if str includes a non-terminating null byte.
       # @raise [InlineQueryFailedError] on the first failed inline query.
       # @raise [Error] if any of the FFI calls raise one.
+      # @return [self] for chaining.
       def load_str(str, filename: nil) # rubocop:disable Metrics/MethodLength
         raise NullByteInPolarFileError if str.chomp("\0").include?("\0")
 
@@ -92,6 +91,7 @@ module Oso
             raise InlineQueryFailedError, next_query.source
           end
         end
+        self
       end
 
       # Query for a Polar predicate or string.
@@ -129,18 +129,25 @@ module Oso
 
       # Register a Ruby class with Polar.
       #
-      # @param cls [Class]
-      # @param name [String]
+      # @param cls [Class] the class to register.
+      # @param name [String] the name to register the class as. Defaults to the name of the class.
       # @param from_polar [Proc]
       # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
+      # @return [self] for chaining.
       def register_class(cls, name: nil, from_polar: nil)
         from_polar = Proc.new if block_given?
         name = host.cache_class(cls, name: name, constructor: from_polar)
-        register_constant(name, value: cls)
+        register_constant(cls, name: name)
       end
 
-      def register_constant(name, value:)
-        ffi_polar.register_constant(name, value: host.to_polar(value))
+      # Register a Ruby object with Polar.
+      #
+      # @param value [Object] the object to register.
+      # @param name [String] the name to register the object as.
+      # @return [self] for chaining.
+      def register_constant(value, name:)
+        ffi_polar.register_constant(host.to_polar(value), name: name)
+        self
       end
 
       # Start a REPL session.
@@ -162,10 +169,6 @@ module Oso
 
       # @return [FFI::Polar]
       attr_reader :ffi_polar
-      # @return [Hash<String, String>]
-      attr_reader :loaded_names
-      # @return [Hash<String, String>]
-      attr_reader :loaded_contents
 
       # The R and L in REPL for systems where readline is available.
       def repl_readline(prompt)

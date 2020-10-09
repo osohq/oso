@@ -44,7 +44,7 @@ Running The Example
 .. tabs::
     .. group-tab:: Python
 
-        The application has a few requirements, including Flask and, or course, oso.
+        The application has a few requirements, including Flask and, of course, oso.
         We recommend installing these within a virtual environment:
 
         .. code-block:: console
@@ -333,7 +333,7 @@ Authorizing Access to Data
         In the :doc:`/getting-started/quickstart`, our main objective was to
         determine who could "GET" expenses. Our final policy looked like:
 
-        .. literalinclude:: /examples/quickstart/polar/expenses-04.polar
+        .. literalinclude:: /examples/quickstart/polar/expenses-02-python.polar
             :language: polar
             :caption: :fa:`oso` expenses.polar
 
@@ -398,7 +398,7 @@ Authorizing Access to Data
         In the :doc:`/getting-started/quickstart`, our main objective was to
         determine who could "GET" expenses. Our final policy looked like:
 
-        .. literalinclude:: /examples/quickstart/polar/expenses-04-java.polar
+        .. literalinclude:: /examples/quickstart/polar/expenses-02-java.polar
             :language: polar
             :caption: :fa:`oso` expenses.polar
 
