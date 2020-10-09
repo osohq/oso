@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::rc::Rc;
 
 use super::error::PolarResult;
@@ -297,8 +298,64 @@ impl Debugger {
                         message: vm.query_summary(&query)});
                 }
             }
-            // "stack" | "trace" => {
-            // }
+            "stack" | "trace" => {
+                let mut trace_stack = vm.trace_stack.clone();
+                let mut trace = vm.trace.clone();
+
+                // Build linear stack from trace tree. Not just using query stack because it doesn't
+                // know about rules, query stack should really use this too.
+                let mut stack = vec![];
+                while let Some(t) = trace.last() {
+                    stack.push(t.clone());
+                    trace = trace_stack
+                        .pop()
+                        .map(|ts| ts.as_ref().clone())
+                        .unwrap_or_else(Vec::new);
+                }
+
+                stack.reverse();
+
+                let mut i = stack.iter().filter(|t| t.term().is_some()).count();
+
+                let mut st = String::new();
+                let mut rule = None;
+                for t in stack {
+                    match &t.node {
+                        Node::Rule(r) => {
+                            rule = Some(r.clone());
+                        }
+                        Node::Term(t) => {
+                            if matches!(t.value(), Value::Expression(Operation { operator: Operator::And, args}) if args.len() == 1)
+                            {
+                                continue;
+                            }
+
+
+                            let _ = write!(st, "{}: {}", i, vm.term_source(t, false));
+                            i-= 1;
+                            let _ = write!(st, "\n  ");
+                            if let Some(source) = vm.source(t) {
+                                if let Some(rule) = &rule {
+                                    let _ = write!(st, "in rule {} ", rule.name.to_polar());
+                                } else {
+                                    let _ = write!(st, "in query ");
+                                }
+                                let (row, column) = crate::lexer::loc_to_pos(&source.src, t.offset());
+                                let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
+                                if let Some(filename) = source.filename {
+                                    let _ = write!(st, " in file {}", filename);
+                                }
+                                let _ = writeln!(st);
+                            };
+
+                        }
+                    }
+                }
+
+                return Some(Goal::Debug {
+                    message: st
+                })
+            }
             "goals" => return Some(show(&vm.goals)),
             "bindings" => {
                 return Some(show(&vm.bindings))
