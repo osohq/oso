@@ -969,12 +969,16 @@ fn test_arithmetic() {
 
 #[test]
 fn test_debug() {
+    let source = indoc!(
+        r#"
+        a() if debug("a") and b() and c() and d();
+        b();
+        c() if debug("c");
+        d();"#
+    );
+
     let polar = Polar::new();
-    polar
-        .load_str(
-            "a() if debug(\"a\") and b() and c() and d();\nb();\nc() if debug(\"c\");\nd();\n",
-        )
-        .unwrap();
+    polar.load_str(source).unwrap();
 
     let mut call_num = 0;
     let debug_handler = |s: &str| {
@@ -986,8 +990,13 @@ fn test_debug() {
             1 => {
                 let expected = indoc!(
                     r#"
-                001: a() if debug("a") and b() and c() and d();
-                                           ^"#
+                    query: b()
+
+                    001: a() if debug("a") and b() and c() and d();
+                                               ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();"#
                 );
                 assert_eq!(s, expected);
                 "over"
@@ -995,8 +1004,13 @@ fn test_debug() {
             2 => {
                 let expected = indoc!(
                     r#"
+                    query: c()
+
                     001: a() if debug("a") and b() and c() and d();
-                                                       ^"#
+                                                       ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();"#
                 );
                 assert_eq!(s, expected);
                 "over"
@@ -1008,8 +1022,13 @@ fn test_debug() {
             4 => {
                 let expected = indoc!(
                     r#"
+                    query: d()
+
                     001: a() if debug("a") and b() and c() and d();
-                                                               ^"#
+                                                               ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();"#
                 );
                 assert_eq!(s, expected);
                 "over"
@@ -1023,25 +1042,60 @@ fn test_debug() {
     let query = polar.new_query("a()", false).unwrap();
     let _results = query_results!(query, no_results, no_externals, debug_handler);
 
+    let source = indoc!(
+        r#"
+        a() if debug() and b() and c() and d();
+        a() if 5 = 5;
+        b() if 1 = 1 and 2 = 2;
+        c() if 3 = 3 and 4 = 4;
+        d();"#
+    );
+
+    let polar = Polar::new();
+    polar.load_str(source).unwrap();
+
+    // step => b()
+    // step => 1=1 and 2=2
+    // out => c()
+    // step => 3=3 and 4=4
+    // step => 3=3
+    // out => d()
+    // over => 5 = 5
+
     let mut call_num = 0;
     let debug_handler = |s: &str| {
         let rt = match call_num {
             0 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
-                "out"
+                assert_eq!(s, "Welcome to the debugger!");
+                "step"
             }
             1 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
-                "out"
+                assert_eq!(s.lines().next().unwrap(), "query: b()");
+                "step"
             }
             2 => {
-                let expected = indoc!(
-                    r#"
-                001: a() if debug("a") and b() and c() and d();
-                                                           ^"#
-                );
-                assert_eq!(s, expected);
+                assert_eq!(s.lines().next().unwrap(), "query: 1 = 1 and 2 = 2");
                 "out"
+            }
+            3 => {
+                assert_eq!(s.lines().next().unwrap(), "query: c()");
+                "step"
+            }
+            4 => {
+                assert_eq!(s.lines().next().unwrap(), "query: 3 = 3 and 4 = 4");
+                "step"
+            }
+            5 => {
+                assert_eq!(s.lines().next().unwrap(), "query: 3 = 3");
+                "out"
+            }
+            6 => {
+                assert_eq!(s.lines().next().unwrap(), "query: d()");
+                "over"
+            }
+            7 => {
+                assert_eq!(s.lines().next().unwrap(), "query: 5 = 5");
+                "c"
             }
             _ => panic!("Too many calls: {}", s),
         };
