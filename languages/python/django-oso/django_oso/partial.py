@@ -58,7 +58,9 @@ def and_expr(expr, type_name):
         elif expression.operator == "Isa":
             assert expression.args[1].tag == type_name
         else:
-            raise UnsupportedError(f"Unimplemented partial operator {expression.operator}")
+            raise UnsupportedError(
+                f"Unimplemented partial operator {expression.operator}"
+            )
 
     return q
 

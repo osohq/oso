@@ -529,7 +529,7 @@ impl PolarVirtualMachine {
     pub fn bindings(&self, include_temps: bool) -> Bindings {
         let mut bindings = HashMap::new();
         for Binding(var, value) in &self.bindings[self.csp..] {
-            if !include_temps && self.is_temporary_var(&var) && !value.value().as_partial().is_ok()
+            if !include_temps && self.is_temporary_var(&var) && value.value().as_partial().is_err()
             {
                 continue;
             }
