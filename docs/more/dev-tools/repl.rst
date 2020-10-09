@@ -131,9 +131,11 @@ To query for predicates defined in a policy, we'll need to load the
 policy files. For instance, suppose we had just one ``allow`` rule for
 Alice, say, in the file ``alice.polar``:
 
-.. literalinclude:: /examples/quickstart/polar/expenses-02.polar
+.. code-block:: polar
     :caption: :fa:`oso` alice.polar
     :class: copybutton
+
+    allow("alice@example.com", "GET", _expense: Expense);
 
 Then we can run the REPL, passing that filename (and any others we need)
 on the command line:
