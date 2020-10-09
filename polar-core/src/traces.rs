@@ -16,6 +16,16 @@ pub struct Trace {
     pub children: Vec<Rc<Trace>>,
 }
 
+impl Trace {
+    pub fn term(&self) -> Option<Term> {
+        if let Node::Term(t) = &self.node {
+            Some(t.clone())
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TraceResult {
     pub trace: Rc<Trace>,

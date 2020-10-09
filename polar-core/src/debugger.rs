@@ -9,6 +9,17 @@ use super::traces::*;
 use super::vm::*;
 
 impl PolarVirtualMachine {
+    pub fn query_summary(&self, query: &Term) -> String {
+        let relevant_bindings = self.relevant_bindings(&[&query]);
+        let bindings_str = relevant_bindings
+            .iter()
+            .map(|(var, val)| format!("{} = {}", var.0, val.to_polar()))
+            .collect::<Vec<String>>()
+            .join(", ");
+        let query_str = query.to_polar();
+        format!("QUERY: {}, BINDINGS: {{{}}}", query_str, bindings_str)
+    }
+
     /// Drive debugger.
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         let mut debugger = self.debugger.clone();
@@ -205,6 +216,8 @@ impl Debugger {
         }
     }
 
+    /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
+    /// This is used to implement the `step`, `over`, and `out` debug commands
     fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
         let message = vm.trace.last().and_then(|trace| {
             if let Trace {
@@ -213,15 +226,13 @@ impl Debugger {
             } = &**trace
             {
                 match q.value() {
-                    // Q: do we even want to break for ands?
                     Value::Expression(Operation {
                         operator: Operator::And,
                         args,
                     }) if args.len() == 1 => return None,
                     _ => {
-                        let query = q.to_polar();
                         let source = self.query_source(&q, &vm.kb.read().unwrap().sources, 3);
-                        Some(format!("query: {}\n\n{}", query, source))
+                        Some(format!("{}\n\n{}", vm.query_summary(q), source))
                     }
                 }
             } else {
@@ -258,7 +269,19 @@ impl Debugger {
         let parts: Vec<&str> = command.split_whitespace().collect();
         match *parts.get(0).unwrap_or(&"help") {
             "c" | "continue" | "q" | "quit" => self.step = None,
-            "goals" => return Some(show(&vm.goals)),
+
+            "n" | "next" | "over" => {
+                self.step = Some(Step::Over{ level: vm.trace_stack.len() })
+            }
+            "s" | "step" | "into" => {
+                self.step = Some(Step::InTo)
+            }
+            "o" | "out" => {
+                self.step = Some(Step::Out{ level: vm.trace_stack.len() })
+            }
+            "g" | "goal" => {
+                self.step = Some(Step::Goal)
+            }
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
                 return Some(Goal::Debug {
@@ -268,32 +291,17 @@ impl Debugger {
                     ),
                 });
             }
-            "n" | "next" | "over" => {
-                self.step = Some(Step::Over{ level: vm.trace_stack.len() })
-                // self.step = Some(Step::Over {
-                //     snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
-                // })
+            "query" => {
+                if let Some(query) = vm.trace.last().and_then(|t| t.term()) {
+                    return Some(Goal::Debug {
+                        message: vm.query_summary(&query)});
+                }
             }
-            "s" | "step" | "into" => {
-                self.step = Some(Step::InTo)
-                // self.step = Some(Step::Over {
-                //     snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
-                // })
-            }
-            "o" | "out" => {
-                self.step = Some(Step::Out{ level: vm.trace_stack.len() })
-            }
-            "g" | "goal" => {
-                self.step = Some(Step::Goal)
-            }
-            "stack" | "trace" => {
-                // return Some(show(&vm.queries)),
-            }
+            // "stack" | "trace" => {
+            // }
+            "goals" => return Some(show(&vm.goals)),
             "bindings" => {
-                // return Some(show(&vm.bindings)),
-            }
-            "constants" => {
-                // return Some(show(&vm.bindings)),
+                return Some(show(&vm.bindings))
             }
             "var" => {
                 if parts.len() > 1 {
@@ -324,21 +332,20 @@ impl Debugger {
             _ => {
                 return Some(Goal::Debug {
                     message: "Debugger Commands
-  bindings                Print current binding stack.
-  c[ontinue]              Continue evaluation.
-  goals                   Print current goal stack.
   h[elp]                  Print this help documentation.
-  l[ine] [<n>]            Print the current line and <n> lines of context.
+  c[ontinue]              Continue evaluation.
   n[ext]                  Step to the next query at the same level of the stack (step over in vscode)
   s[tep]                  Step to the next query                                (step into in vscode)
   o[ut]                   Step out of the current level to the one above        (step out in vscode)
   g[oal]                  Step to the next goal
+  l[ine] [<n>]            Print the current line and <n> lines of context.
+  query                   Print the current query
   stack                   Print the query stack
-  bindings [all]          Print relevant bindings (or all bindings)
-  constants               Print constants
-  q[uit]                  Alias for 'continue'.
+  goals                   Print current goal stack.
+  bindings                Print all bindings
   var [<name> ...]        Print available variables. If one or more arguments
-                          are provided, print the value of those variables."
+                          are provided, print the value of those variables.
+  q[uit]                  Alias for 'continue'."
                         .to_string(),
                 })
             }
@@ -346,13 +353,3 @@ impl Debugger {
         None
     }
 }
-
-// debugger steping kinds (vscode)
-// (into, out) up and down tree structure
-// over - laterally in same tree structure
-
-// step-goal - different thing mostly for us
-
-// into is query by query
-// out is up from whatever level you're in
-// over is next clause in the same level, don't go down a level.
