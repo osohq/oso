@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
-    runnable_stack: Vec<(Box<dyn Runnable>, u64)>,
+    runnable_stack: Vec<(Box<dyn Runnable>, u64)>, // Tuple of Runnable + call_id.
     vm: PolarVirtualMachine,
     term: Term,
     done: bool,
@@ -31,13 +31,13 @@ impl Query {
         }
     }
 
-    // Runnable lifecycle
-    //
-    // 1. Get Runnable A from the top of the Runnable stack, defaulting to the VM.
-    // 2. If Runnable A emits a Run event containing Runnable B, push Runnable B onto the stack.
-    // 3. Immediately request the next event, which will execute Runnable B.
-    // 4. When Runnable B emits a Done event, pop Runnable B off the stack and return its result as
-    //    an answer to Runnable A.
+    /// Runnable lifecycle
+    ///
+    /// 1. Get Runnable A from the top of the Runnable stack, defaulting to the VM.
+    /// 2. If Runnable A emits a Run event containing Runnable B, push Runnable B onto the stack.
+    /// 3. Immediately request the next event, which will execute Runnable B.
+    /// 4. When Runnable B emits a Done event, pop Runnable B off the stack and return its result as
+    ///    an answer to Runnable A.
     pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
         let counter = self.vm.id_counter();
         match self.top_runnable().run(counter)? {
@@ -72,9 +72,9 @@ impl Query {
         Ok(())
     }
 
-    // If the Runnable stack is empty, the VM is done, and we return a Done event. Otherwise, we
-    // report the result of a sub-Runnable to its parent and return `None` to indicate that the
-    // sub-Runnable is complete.
+    /// If the Runnable stack is empty, the VM is done, and we return a Done event. Otherwise, we
+    /// report the result of a sub-Runnable to its parent and return `None` to indicate that the
+    /// sub-Runnable is complete.
     fn pop_runnable(&mut self, result: bool) -> PolarResult<Option<QueryEvent>> {
         if let Some((_, call_id)) = self.runnable_stack.pop() {
             self.top_runnable()
