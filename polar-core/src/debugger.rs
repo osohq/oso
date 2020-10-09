@@ -4,6 +4,7 @@ use super::error::PolarResult;
 use super::formatting::{source_lines, ToPolarString};
 use super::sources::*;
 use super::terms::*;
+use super::traces::*;
 
 use super::vm::*;
 
@@ -35,6 +36,7 @@ impl PolarVirtualMachine {
 enum Step {
     /// Pause after evaluating the next [`Goal`](../vm/enum.Goal.html).
     Goal,
+
     /// Step **over** goals until reaching the next sibling [`Goal::Query`](../vm/enum.Goal.html).
     /// This is not necessarily the next [`Goal::Query`](../vm/enum.Goal.html), but rather the next
     /// [`Goal::Query`](../vm/enum.Goal.html) where the query stack sans that query is identical to
@@ -63,10 +65,10 @@ enum Step {
     /// debug(), b() # Body of rule a().
     /// b()          # Second term in the body of rule a().
     /// ```
-    Over {
-        /// Snapshot of the current query stack sans the current query.
-        snapshot: Queries,
-    },
+    // Over {
+    //     /// Snapshot of the current query stack sans the current query.
+    //     snapshot: Queries,
+    // },
     /// Step **out** of the current parent query, evaluating goals until reaching the
     /// [`Goal::Query`](../vm/enum.Goal.html) for its next sibling.
     ///
@@ -113,10 +115,18 @@ enum Step {
     /// - Store a slice of the current query stack *without the last three queries* (current query,
     ///   body of current rule, and head of current rule).
     /// - Evaluate goals until the current query stack *without the current query* matches the
-    ///   stored slice.
+    //   stored slice.
+    // Out {
+    //     /// Snapshot of the current query stack sans its last three queries.
+    //     snapshot: Queries,
+    // },
+    Over {
+        level: usize,
+    }, // break on query if we haven't tracestackpushed, otherwise break when we pop back to this level.
+    InTo, // break on any trace.push, break on query
+    // break on TraceStackPop
     Out {
-        /// Snapshot of the current query stack sans its last three queries.
-        snapshot: Queries,
+        level: usize,
     },
 }
 
@@ -131,6 +141,7 @@ enum Step {
 pub enum DebugEvent {
     Goal(Rc<Goal>),
     Query,
+    Pop,
 }
 
 /// Tracks internal debugger state.
@@ -172,23 +183,52 @@ impl Debugger {
     /// - `Some(Goal::Debug { message })` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
     fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
-        self.step.as_ref().and_then(|step| match (step, event) {
-            (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
-                message: goal.to_string(),
-            })),
-            (Step::Over { snapshot }, DebugEvent::Query)
-            | (Step::Out { snapshot }, DebugEvent::Query)
-                if vm.queries[..vm.queries.len() - 1] == snapshot[..] =>
-            {
-                Some(Rc::new(Goal::Debug {
-                    message: vm.queries.last().map_or_else(
-                        || "".to_string(),
-                        |query| self.query_source(&query, &vm.kb.read().unwrap().sources, 0),
-                    ),
-                }))
+        if let Some(step) = self.step.as_ref() {
+            //eprintln!("maybe break {:?}, {:?}", event, step);
+            match (step, event) {
+                (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
+                    message: goal.to_string(),
+                })),
+                (Step::InTo, DebugEvent::Query) => self.break_query(vm),
+                (Step::Out { level }, DebugEvent::Query)
+                    if vm.trace_stack.is_empty() || vm.trace_stack.len() < *level =>
+                {
+                    self.break_query(vm)
+                }
+                (Step::Over { level }, DebugEvent::Query) if vm.trace_stack.len() == *level => {
+                    self.break_query(vm)
+                }
+                _ => None,
             }
-            _ => None,
-        })
+        } else {
+            None
+        }
+    }
+
+    fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
+        let message = vm.trace.last().and_then(|trace| {
+            if let Trace {
+                node: Node::Term(q),
+                ..
+            } = &**trace
+            {
+                match q.value() {
+                    // Q: do we even want to break for ands?
+                    Value::Expression(Operation {
+                        operator: Operator::And,
+                        args,
+                    }) if args.len() == 1 => return None,
+                    _ => {
+                        let query = q.to_polar();
+                        let source = self.query_source(&q, &vm.kb.read().unwrap().sources, 3);
+                        Some(format!("query: {}\n\n{}", query, source))
+                    }
+                }
+            } else {
+                None
+            }
+        });
+        message.map(|message| Rc::new(Goal::Debug { message }))
     }
 
     /// Process debugging commands from the user.
@@ -217,7 +257,6 @@ impl Debugger {
         }
         let parts: Vec<&str> = command.split_whitespace().collect();
         match *parts.get(0).unwrap_or(&"help") {
-            "bindings" => return Some(show(&vm.bindings)),
             "c" | "continue" | "q" | "quit" => self.step = None,
             "goals" => return Some(show(&vm.goals)),
             "l" | "line" => {
@@ -230,17 +269,32 @@ impl Debugger {
                 });
             }
             "n" | "next" | "over" => {
-                self.step = Some(Step::Over {
-                    snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
-                })
+                self.step = Some(Step::Over{ level: vm.trace_stack.len() })
+                // self.step = Some(Step::Over {
+                //     snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
+                // })
             }
-            "out" => {
-                self.step = Some(Step::Out {
-                    snapshot: vm.queries[..vm.queries.len().saturating_sub(3)].to_vec(),
-                })
+            "s" | "step" | "into" => {
+                self.step = Some(Step::InTo)
+                // self.step = Some(Step::Over {
+                //     snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
+                // })
             }
-            "stack" | "queries" => return Some(show(&vm.queries)),
-            "s" | "step" => self.step = Some(Step::Goal),
+            "o" | "out" => {
+                self.step = Some(Step::Out{ level: vm.trace_stack.len() })
+            }
+            "g" | "goal" => {
+                self.step = Some(Step::Goal)
+            }
+            "stack" | "trace" => {
+                // return Some(show(&vm.queries)),
+            }
+            "bindings" => {
+                // return Some(show(&vm.bindings)),
+            }
+            "constants" => {
+                // return Some(show(&vm.bindings)),
+            }
             "var" => {
                 if parts.len() > 1 {
                     let vars: Vec<Binding> = parts[1..]
@@ -280,9 +334,8 @@ impl Debugger {
   o[ut]                   Step out of the current level to the one above        (step out in vscode)
   g[oal]                  Step to the next goal
   stack                   Print the query stack
-  bindings                Print relevant bindings
+  bindings [all]          Print relevant bindings (or all bindings)
   constants               Print constants
-  all-bindings            Print all bindings
   q[uit]                  Alias for 'continue'.
   var [<name> ...]        Print available variables. If one or more arguments
                           are provided, print the value of those variables."
