@@ -156,7 +156,7 @@ empty.
         .. code-block:: console
             :class: copybutton
 
-            $ curl localhost:8000/expenses/1
+            $ curl localhost:5050/expenses/1
             Not Authorized!
 
 You'll get a "Not Authorized!" response because we haven't added any rules to
@@ -271,7 +271,7 @@ the resource is an instance of the ``Expense`` class.
     .. code-block:: console
         :class: copybutton
 
-        $ curl -H "user: alice@example.com" localhost:8000/expenses/1
+        $ curl -H "user: alice@example.com" localhost:5050/expenses/1
         Expense(...)
 
 Okay, so what just happened?
@@ -293,7 +293,7 @@ satisfied, and Alice is allowed to view the requested expense.
     .. code-block:: console
         :class: copybutton
 
-        $ curl -H "user: alice@foo.com" localhost:8000/expenses/1
+        $ curl -H "user: alice@foo.com" localhost:5050/expenses/1
         Not Authorized!
 
 If you aren't seeing the same thing, make sure you created your policy
@@ -360,13 +360,13 @@ And just like that, an actor can only see an expense if they submitted it!
     .. code-block:: console
         :class: copybutton
 
-        $ curl -H "user: alice@example.com" localhost:8000/expenses/1
+        $ curl -H "user: alice@example.com" localhost:5050/expenses/1
         Expense(...)
 
     .. code-block:: console
         :class: copybutton
 
-        $ curl -H "user: alice@example.com" localhost:8000/expenses/3
+        $ curl -H "user: alice@example.com" localhost:5050/expenses/3
         Not Authorized!
 
 
