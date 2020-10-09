@@ -87,8 +87,8 @@ class Test {
     assert !o.queryRule("testUnifyClass", A.class).results().isEmpty();
 
     // Test that a constant can be called.
-    o.registerConstant("Math", Math.class);
-    o.loadStr("?= Math.PI == 3.141592653589793;");
+    o.registerConstant(Math.class, "MyMath");
+    o.loadStr("?= MyMath.PI == 3.141592653589793;");
 
     // Test built-in type specializers.
     assert !o.query("builtinSpecializers(true, \"Boolean\")").results().isEmpty();

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'json'
+
 module Oso
   module Polar
     # A single Polar query.

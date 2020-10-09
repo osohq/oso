@@ -139,13 +139,13 @@ export class Polar {
   registerClass<T>(cls: Class<T>, alias?: string): void {
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const name = this.#host.cacheClass(cls, alias);
-    this.registerConstant(name, cls);
+    this.registerConstant(cls, name);
   }
 
   /**
    * Register a JavaScript value for use in Polar policies.
    */
-  registerConstant(name: string, value: any): void {
+  registerConstant(value: any, name: string): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }

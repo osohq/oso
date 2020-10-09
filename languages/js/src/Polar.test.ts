@@ -494,7 +494,7 @@ describe('#registerConstant', () => {
   test('works', async () => {
     const p = new Polar();
     const d = { a: 1 };
-    p.registerConstant('d', d);
+    p.registerConstant(d, 'd');
     expect(await qvar(p, 'd.a = x', 'x')).toStrictEqual([1]);
   });
 
@@ -533,7 +533,7 @@ describe('#registerConstant', () => {
     describe('that return undefined', () => {
       test('without things blowing up', async () => {
         const p = new Polar();
-        p.registerConstant('u', {});
+        p.registerConstant({}, 'u');
         expect(await query(p, 'u.x = u.y')).toStrictEqual([map()]);
         expect(query(p, 'u.x.y')).rejects.toThrow();
       });
@@ -550,8 +550,8 @@ describe('#registerConstant', () => {
 
   test('registering the same constant twice overwrites', () => {
     const p = new Polar();
-    p.registerConstant('x', 1);
-    p.registerConstant('x', 2);
+    p.registerConstant(1, 'x');
+    p.registerConstant(2, 'x');
     expect(p.loadStr('?= x == 2;')).resolves;
   });
 });
@@ -562,8 +562,8 @@ describe('unifying a promise', () => {
       const p = new Polar();
       const a = Promise.resolve(1);
       const b = Promise.resolve(1);
-      p.registerConstant('a', a);
-      p.registerConstant('b', b);
+      p.registerConstant(a, 'a');
+      p.registerConstant(b, 'b');
       const result = await query(p, 'a = b');
       expect(result).toStrictEqual([map()]);
     });
@@ -572,8 +572,8 @@ describe('unifying a promise', () => {
       const p = new Polar();
       const a = Promise.resolve(1);
       const b = Promise.resolve(2);
-      p.registerConstant('a', a);
-      p.registerConstant('b', b);
+      p.registerConstant(a, 'a');
+      p.registerConstant(b, 'b');
       const result = await query(p, 'a = b');
       expect(result).toStrictEqual([]);
     });
@@ -584,7 +584,7 @@ describe('unifying a promise', () => {
     xtest('succeeds if the resolved value unifies with the non-promise', async () => {
       const p = new Polar();
       const a = Promise.resolve(1);
-      p.registerConstant('a', a);
+      p.registerConstant(a, 'a');
       const result = await query(p, 'a = 1');
       expect(result).toStrictEqual([map()]);
     });
@@ -592,7 +592,7 @@ describe('unifying a promise', () => {
     test("fails if the resolved value doesn't unify with the non-promise", async () => {
       const p = new Polar();
       const a = Promise.resolve(1);
-      p.registerConstant('a', a);
+      p.registerConstant(a, 'a');
       const result = await query(p, 'a = 2');
       expect(result).toStrictEqual([]);
     });
@@ -672,7 +672,7 @@ Type error: can only use \`in\` on a list, this is Number(Integer(2)) at line 1,
 
     test('work for lookups', () => {
       const p = new Polar();
-      p.registerConstant('undefined', undefined);
+      p.registerConstant(undefined, 'undefined');
       expect(query(p, 'undefined.foo')).rejects.toThrow(
         `trace (most recent evaluation last):
   in query at line 1, column 1
@@ -700,9 +700,9 @@ describe('unbound variables', () => {
 describe('±∞ and NaN', () => {
   test('are handled properly', async () => {
     const p = new Polar();
-    p.registerConstant('nan', NaN);
-    p.registerConstant('inf', Infinity);
-    p.registerConstant('neg_inf', -Infinity);
+    p.registerConstant(NaN, 'nan');
+    p.registerConstant(Infinity, 'inf');
+    p.registerConstant(-Infinity, 'neg_inf');
 
     const nan = (await query(p, 'x = nan'))[0];
     expect(Number.isNaN(nan.get('x'))).toBe(true);
