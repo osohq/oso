@@ -614,7 +614,7 @@ def test_datetime(polar, query):
 
 def test_other_constants(polar, qvar, query):
     d = {"a": 1}
-    polar.register_constant("d", d)
+    polar.register_constant(d, "d")
     assert qvar("x = d.a", "x") == [1]
 
 
@@ -627,9 +627,9 @@ def test_host_methods(qeval):
 
 
 def test_inf_nan(polar, qeval, query):
-    polar.register_constant("inf", inf)
-    polar.register_constant("neg_inf", -inf)
-    polar.register_constant("nan", nan)
+    polar.register_constant(inf, "inf")
+    polar.register_constant(-inf, "neg_inf")
+    polar.register_constant(nan, "nan")
 
     assert isnan(query("x = nan")[0]["x"])
     assert not query("nan = nan")
