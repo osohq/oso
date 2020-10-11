@@ -5,7 +5,9 @@ import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 
-from oso import Oso, OsoException
+import pytest
+
+from oso import Oso, OsoError
 
 ITERS = 100
 
@@ -23,11 +25,10 @@ def exhaust(i):
     try:
         for _ in i:
             pass
-    except OsoException:
+    except OsoError:
         pass
 
 def torch_oso(oso):
-    print("torcher")
     for i in range(ITERS):
         x = X(r())
         y = X(r())
@@ -41,8 +42,7 @@ def torch_oso(oso):
 
         exhaust(oso.query_rule('allow', r(), str(r())))
 
-
-def main():
+def test_multi():
     oso = Oso()
     oso.load_str("allow(x, y) if x == y;")
 
@@ -54,7 +54,7 @@ def main():
 
     for i, future in enumerate(concurrent.futures.as_completed(futures)):
         future.result()
-        print(f"{i} done")
 
-if __name__ == '__main__':
-    main()
+    # If we got here none of these crashed.
+    assert True
+    
