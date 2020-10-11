@@ -1945,6 +1945,29 @@ impl PolarVirtualMachine {
             right_value = self.value(right_sym).cloned();
         }
 
+        // Rebind the previous name of `term` to a variable pointing to
+        // `var`. `term` must be a partial.
+        //
+        // Return: A new partial with the name updated to `var`.
+        let mut rebind_partial = |var: &Symbol, term: &Term| {
+            if let Value::Partial(partial) = term.value() {
+                let old_name = partial.name();
+
+                let partial = partial.clone_with_name(var.clone());
+                let partial_value = term.clone_with_value(Value::Partial(partial));
+
+                // Rebind the previous name of the partial to the new variable
+                // that contains the partial. This is necessary because partials are
+                // mutated with new constraints.  Without this rebinding, the old version
+                // of the partial without additional constraints added would be returned.
+                self.bind(old_name, Term::new_temporary(Value::Variable(var.clone())));
+
+                partial_value
+            } else {
+                panic!("rebind partial must be called with `term` as a partial.");
+            }
+        };
+
         match (left_value, right_value) {
             (Some(left), Some(right)) => {
                 // Both are bound, unify their values.
@@ -1957,39 +1980,27 @@ impl PolarVirtualMachine {
                     right: right.clone(),
                 })?;
             }
-            (None, Some(value)) => {
+            (None, Some(term)) => {
                 // Left is unbound, right is bound;
                 // bind left to the value of right.
-                let value = if let Value::Partial(partial) = value.value() {
-                    let old_name = partial.name();
-
-                    let partial = partial.clone_with_name(left.clone());
-                    let partial_value = value.clone_with_value(Value::Partial(partial));
-
-                    self.bind(old_name, Term::new_temporary(Value::Variable(left.clone())));
-
-                    partial_value
+                let term = if term.value().as_partial().is_ok() {
+                    rebind_partial(left, &term)
                 } else {
-                    value
+                    term
                 };
-                self.bind(left, value);
+
+                self.bind(left, term);
             }
             (None, None) => {
                 // Neither is bound, so bind them together.
                 // TODO: should theoretically bind the earliest one here?
-                let value = if let Value::Partial(partial) = right.value() {
-                    let old_name = partial.name();
-
-                    let partial = partial.clone_with_name(left.clone());
-                    let partial_value = right.clone_with_value(Value::Partial(partial));
-
-                    self.bind(old_name, Term::new_temporary(Value::Variable(left.clone())));
-
-                    partial_value
+                let term = if right.value().as_partial().is_ok() {
+                    rebind_partial(left, right)
                 } else {
                     right.clone()
                 };
-                self.bind(left, value);
+
+                self.bind(left, term);
             }
         }
         Ok(())
@@ -3534,3 +3545,4 @@ mod tests {
         ]);
     }
 }
+
