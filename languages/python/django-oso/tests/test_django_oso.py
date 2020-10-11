@@ -8,7 +8,7 @@ from django.test import RequestFactory
 from django.core.exceptions import PermissionDenied
 
 from django_oso.oso import Oso, reset_oso
-from django_oso.auth import authorize, authorize_type
+from django_oso.auth import authorize, authorize_model
 
 from oso import OsoError
 
@@ -141,8 +141,8 @@ def test_partial(rf, settings, partial_policy):
     request = rf.get("/")
     request.user = "test_user"
 
-    authorize_filter = authorize_type(
-        request, action="get", resource_type="test_app::Post"
+    authorize_filter = authorize_model(
+        request, action="get", model="test_app::Post"
     )
     q = Post.objects.filter(authorize_filter)
     assert q.count() == 2
@@ -150,6 +150,6 @@ def test_partial(rf, settings, partial_policy):
     request = rf.get("/")
     request.user = "test_admin"
 
-    authorize_filter = authorize_type(request, action="get", resource_type=Post)
+    authorize_filter = authorize_model(request, action="get", model=Post)
     q = Post.objects.filter(authorize_filter)
     assert q.count() == 5

@@ -38,7 +38,31 @@ def authorize(request, resource, *, actor=None, action=None):
         raise PermissionDenied()
 
 
-def authorize_type(request, resource_type, *, actor=None, action=None):
+def authorize_model(request, model, *, actor=None, action=None) -> Q:
+    """Authorize ``request`` for django model ``model``, ``actor``, and ``action``.
+
+    Partially evalutes the Polar rule allow(actor, action, Partial(model)). If
+    authorization fails, raises a :py:class:`django.core.exceptions.PermissionDenied`
+    exception.
+
+    Otherwise, returns a django ``Q`` object representing a filter that must be
+    applied to ``model``. This object can be applied to filter query results to
+    only contain authorized objects.
+
+    For example::
+
+        post_filter = authorize_model(request, Post)
+        authorized_posts = Post.objects.filter(post_filter)
+
+    :param actor: The actor making the request. Defaults to ``request.user``.
+    :param action: The action to authorize the actor to perform. Defaults to
+                    ``request.method``.
+    :param model: The model to authorize access for, or the string name of the model
+                  class in Polar (``app_name::ModelName``).
+
+    :raises django.core.exceptions.PermissionDenied: If the request is not authorized.
+    :returns: A django ``Q`` object representing the authorization filter.
+    """
     if actor is None:
         actor = request.user
 
@@ -46,10 +70,11 @@ def authorize_type(request, resource_type, *, actor=None, action=None):
         action = request.method
 
     try:
-        if issubclass(resource_type, models.Model):
-            resource_type = get_model_name(resource_type)
+        if issubclass(model, models.Model):
+            resource_type = get_model_name(model)
     except TypeError:
-        assert isinstance(resource_type, str)
+        assert isinstance(model, str)
+        resource_type = model
 
     partial_resource = Partial("resource", TypeConstraint(resource_type))
     results = Oso.query_rule("allow", actor, action, partial_resource)
