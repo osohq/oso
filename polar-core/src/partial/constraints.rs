@@ -8,8 +8,8 @@ use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Constraints {
-    operations: Vec<Operation>,
-    variable: Symbol,
+    pub operations: Vec<Operation>,
+    pub variable: Symbol,
 }
 
 impl Constraints {
