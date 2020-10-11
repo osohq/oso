@@ -1,5 +1,7 @@
 from django.db import models
 
+from django_oso.models import AuthorizedModel
+
 import pytest
 
 
@@ -13,7 +15,7 @@ class TestRegistration2(models.Model):
         app_label = "test_app"
 
 
-class Post(models.Model):
+class Post(AuthorizedModel):
     is_private = models.BooleanField()
     name = models.CharField(max_length=256)
     timestamp = models.IntegerField()

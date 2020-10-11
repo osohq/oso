@@ -153,3 +153,6 @@ def test_partial(rf, settings, partial_policy):
     authorize_filter = authorize_model(request, action="get", model=Post)
     q = Post.objects.filter(authorize_filter)
     assert q.count() == 5
+
+    q = Post.objects.authorize(request, action="get")
+    assert q.count() == 5
