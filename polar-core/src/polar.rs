@@ -46,14 +46,13 @@ impl Query {
                 self.next_event()
             }
             QueryEvent::Done { result } => {
-                if let Some(event) = self.pop_runnable(result)? {
+                if let Some((_, result_call_id)) = self.pop_runnable() {
+                    self.top_runnable().external_question_result(result_call_id, result)?;
+                    self.next_event()
+                } else {
                     // VM is done.
                     assert!(self.runnable_stack.is_empty());
-                    assert!(matches!(event, QueryEvent::Done { .. }));
-                    Ok(event)
-                } else {
-                    // A non-VM Runnable is done. Continue execution.
-                    self.next_event()
+                    Ok(QueryEvent::Done { result })
                 }
             }
             ev => Ok(ev),
@@ -72,17 +71,8 @@ impl Query {
         Ok(())
     }
 
-    /// If the Runnable stack is empty, the VM is done, and we return a Done event. Otherwise, we
-    /// report the result of a sub-Runnable to its parent and return `None` to indicate that the
-    /// sub-Runnable is complete.
-    fn pop_runnable(&mut self, result: bool) -> PolarResult<Option<QueryEvent>> {
-        if let Some((_, call_id)) = self.runnable_stack.pop() {
-            self.top_runnable()
-                .external_question_result(call_id, result)
-                .map(|_| None)
-        } else {
-            Ok(Some(QueryEvent::Done { result }))
-        }
+    fn pop_runnable(&mut self) -> Option<(Box<dyn Runnable>, u64)> {
+        self.runnable_stack.pop()
     }
 
     pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
