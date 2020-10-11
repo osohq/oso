@@ -9,6 +9,7 @@ from django.core.exceptions import PermissionDenied
 
 from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
+from polar.errors import UnsupportedError
 
 from oso import OsoError
 
@@ -141,9 +142,7 @@ def test_partial(rf, settings, partial_policy):
     request = rf.get("/")
     request.user = "test_user"
 
-    authorize_filter = authorize_model(
-        request, action="get", model="test_app::Post"
-    )
+    authorize_filter = authorize_model(request, action="get", model="test_app::Post")
     q = Post.objects.filter(authorize_filter)
     assert q.count() == 2
 
@@ -156,3 +155,26 @@ def test_partial(rf, settings, partial_policy):
 
     q = Post.objects.authorize(request, action="get")
     assert q.count() == 5
+
+
+@pytest.mark.django_db
+def test_partial_errors(rf, settings):
+    from test_app.models import Post
+
+    Post(name="test", is_private=False, timestamp=1).save()
+    Post(name="test_past", is_private=False, timestamp=-1).save()
+    Post(name="test_public", is_private=False, timestamp=1).save()
+    Post(name="test_private", is_private=True, timestamp=1).save()
+    Post(name="test_private_2", is_private=True, timestamp=1).save()
+
+    request = rf.get("/")
+    request.user = "test_user"
+
+    Oso.load_str('allow(_, "fail", post: test_app::Post) if post matches {x: 1};')
+
+    with pytest.raises(UnsupportedError):
+        q = Post.objects.authorize(request, action="fail")
+
+    # No rules for this.
+    q = Post.objects.authorize(request, action="get")
+    assert q.count() == 0

@@ -226,7 +226,7 @@ class Host:
                 return Pattern(instance["tag"], instance["fields"]["fields"])
             elif pattern_tag == "Dictionary":
                 dictionary = value[tag]["Dictionary"]
-                return Pattern(None, dictionary["fields"]["fields"])
+                return Pattern(None, dictionary["fields"])
             else:
                 raise UnexpectedPolarTypeError("Pattern: " + value[tag])
 

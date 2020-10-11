@@ -47,7 +47,8 @@ impl Query {
             }
             QueryEvent::Done { result } => {
                 if let Some((_, result_call_id)) = self.pop_runnable() {
-                    self.top_runnable().external_question_result(result_call_id, result)?;
+                    self.top_runnable()
+                        .external_question_result(result_call_id, result)?;
                     self.next_event()
                 } else {
                     // VM is done.
