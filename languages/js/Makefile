@@ -10,7 +10,7 @@ wasm: clean
 	cp src/polar_wasm_api.js src/polar_wasm_api.d.ts src/polar_wasm_api_bg.wasm src/polar_wasm_api_bg.wasm.d.ts dist/src/
 
 install:
-	yarn install
+	yarn install --network-timeout 100000
 
 clean: install
 	yarn clean
