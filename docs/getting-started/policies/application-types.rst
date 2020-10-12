@@ -50,16 +50,16 @@ make it possible to take advantage of an app's existing domain model. For exampl
             :caption: :fas:`gem` app.rb
 
             class User
-                attr_reader :name
-                attr_reader :is_admin
+              attr_reader :name
+              attr_reader :is_admin
 
-                def initialize(name:, is_admin:)
-                    @name = name
-                    @is_admin = is_admin
-                end
+              def initialize(name, is_admin:)
+                @name = name
+                @is_admin = is_admin
+              end
             end
 
-            user = User.new(name: "alice", is_admin: true)
+            user = User.new("alice", is_admin: true)
             raise "should be allowed" unless OSO.allowed?(actor: user, action: "foo", resource: "bar")
 
         The code above provides a ``User`` object as the *actor* for our ``allow`` rule. Since ``User`` has an attribute
@@ -215,15 +215,7 @@ using the :ref:`operator-new` operator if the class has been **registered**:
         .. code-block:: polar
             :caption: :fa:`oso` policy.polar
 
-            ?= allow(new User(name: "alice", is_admin: true), "foo", "bar");
-
-        Initialization arguments provided in this way are passed as keywords.
-        We can also pass positional arguments to the class constructor:
-
-        .. code-block:: polar
-            :caption: :fa:`oso` policy.polar
-
-            ?= allow(new User("alice", true), "foo", "bar");
+            ?= allow(new User("alice", is_admin: true), "foo", "bar");
 
     .. group-tab:: Java
         Java classes are registered using ``registerClass()``:
@@ -361,7 +353,7 @@ Either way, using the rule could look like this:
             :caption: :fas:`gem` app.rb
 
             OSO.register_class(User)
-            user = User.new(name: "alice", is_admin: true)
+            user = User.new("alice", is_admin: true)
             raise "should be allowed" unless OSO.allowed?(actor: user, action: "foo", resource: "bar")
             raise "should not be allowed" unless not OSO.allowed?(actor: user, action: "foo", resource: "bar")
 
@@ -450,15 +442,15 @@ Once a class is registered, class or static methods can also be called from oso 
             :caption: :fas:`gem` app.rb
 
             class User
-                # ...
-                def self.superusers
-                    ["alice", "bhavik", "clarice"]
-                end
+              # ...
+              def self.superusers
+                ["alice", "bhavik", "clarice"]
+              end
             end
 
             OSO.register_class(User)
 
-            user = User.new(name: "alice", is_admin: true)
+            user = User.new("alice", is_admin: true)
             raise "should be allowed" unless OSO.allowed?(actor: user, action: "foo", resource: "bar")
 
     .. group-tab:: Java

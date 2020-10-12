@@ -7,7 +7,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -170,25 +169,13 @@ public class Polar {
   /** Register a Java class with Polar. */
   public void registerClass(Class<?> cls)
       throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-    registerClass(cls, cls.getName(), null);
-  }
-
-  /** Register a Java class with Polar using a specific constructor. */
-  public void registerClass(Class<?> cls, Constructor<?> constructor)
-      throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-    registerClass(cls, cls.getName(), constructor);
+    registerClass(cls, cls.getName());
   }
 
   /** Register a Java class with Polar using an alias. */
   public void registerClass(Class<?> cls, String name)
       throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-    registerClass(cls, name, null);
-  }
-
-  /** Register a Java class with an optional constructor and alias. */
-  public void registerClass(Class<?> cls, String name, Constructor<?> constructor)
-      throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
-    host.cacheClass(cls, constructor, name);
+    host.cacheClass(cls, name);
     registerConstant(cls, name);
   }
 

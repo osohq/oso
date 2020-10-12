@@ -91,12 +91,6 @@ class PolarFileNotFoundError(PolarRuntimeError):
         super().__init__(f"Could not find file: {file}")
 
 
-class MissingConstructorError(PolarRuntimeError):
-    """Constructor not found when attempting to register a Python class with Polar"""
-
-    pass
-
-
 class UnregisteredInstanceError(PolarRuntimeError):
     pass
 

@@ -35,11 +35,7 @@ class B:
             return -1
 
 
-def custom_c_constructor(y):
-    return B.C(y)
-
-
-oso.register_class(B.C, name="C", from_polar=custom_c_constructor)
+oso.register_class(B.C, name="C")
 
 
 class E:
