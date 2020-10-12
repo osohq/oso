@@ -4,7 +4,7 @@ on:
     tags:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
-      - main
+      - steve/ci
 
 jobs:
   version:
@@ -15,7 +15,7 @@ jobs:
       - name: Set version env
         run: echo "::set-env name=oso_version::$(cat VERSION)"
       - name: Check github ref matches
-        if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/steve/ci'
         env:
           github_ref: ${{ github.ref }}
         run: grep "${github_ref/refs\/tags\/v/}" VERSION
@@ -458,7 +458,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: github.ref != 'refs/heads/steve/ci'
     needs:
       [
         build_wheels,
@@ -611,8 +611,8 @@ jobs:
       - uses: rtCamp/action-slack-notify@master
         env:
           SLACK_CHANNEL: firehose
-          SLACK_COLOR: 'danger'
+          SLACK_COLOR: "danger"
           SLACK_MESSAGE: "${{ github.event.head_commit.url }}"
-          SLACK_TITLE: 'Release job failed.'
+          SLACK_TITLE: "Release job failed."
           SLACK_USERNAME: github-actions
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_TO_FIREHOSE }}
