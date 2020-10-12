@@ -55,6 +55,13 @@ Note that custom constructors are still supported for the Rust library since
 specifying a static ``new`` method for a type is nothing more than a
 convention.
 
+Improvements to the debugger
+----------------------------
+Three ways to step through queries, step, over and out.
+Inspect the stack.
+Inspect queries at every level of the stack.
+Relevant bindings and queries printed while stepping.
+
 New features
 ============
 
