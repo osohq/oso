@@ -2505,7 +2505,7 @@ impl PolarVirtualMachine {
 
 impl Runnable for PolarVirtualMachine {
     /// Run the virtual machine. While there are goals on the stack,
-    /// pop them off and execute them one at at time until we have a
+    /// pop them off and execute them one at a time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
     fn run(&mut self, _: Counter) -> PolarResult<QueryEvent> {
