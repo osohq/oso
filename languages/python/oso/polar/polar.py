@@ -188,11 +188,11 @@ class Polar:
         either be a method or a string. In the case of a string, Polar will
         look for the method using `getattr(cls, from_polar)`."""
         cls_name = self.host.cache_class(cls, name, from_polar)
-        self.register_constant(cls_name, cls)
+        self.register_constant(cls, cls_name)
 
-    def register_constant(self, name, value):
+    def register_constant(self, value, name):
         """Register `value` as a Polar constant variable called `name`."""
-        self.ffi_polar.register_constant(name, self.host.to_polar(value))
+        self.ffi_polar.register_constant(self.host.to_polar(value), name)
 
 
 def polar_class(_cls=None, *, name=None, from_polar=None):

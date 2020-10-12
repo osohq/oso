@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'json'
+
 module Oso
   module Polar
     module FFI
@@ -92,7 +94,7 @@ module Oso
         # @param name [String]
         # @param value [Hash<String, Object>]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def register_constant(name, value:)
+        def register_constant(value, name:)
           registered = Rust.register_constant(self, name, JSON.dump(value))
           raise FFI::Error.get if registered.zero?
         end
