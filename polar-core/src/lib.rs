@@ -10,6 +10,7 @@ mod lexer;
 pub mod macros;
 mod counter;
 pub mod events;
+mod folder;
 pub mod kb;
 pub mod messages;
 mod numerics;
