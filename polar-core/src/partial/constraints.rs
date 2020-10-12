@@ -143,7 +143,8 @@ impl IsaConstraintCheck {
         }
     }
 
-    /// Check if constraint is compatible with proposed.
+    /// Check if the existing constraints set is compatible with the proposed
+    /// matches class.
     ///
     /// Returns: None if compatible, QueryEvent::Done { false } if incompatible,
     /// or QueryEvent to ask for compatibility.
