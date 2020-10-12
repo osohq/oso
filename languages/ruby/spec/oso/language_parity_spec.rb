@@ -80,8 +80,8 @@ oso.query_rule('testUnifyClass', A).next
 raise unless oso.query_rule('testCut').to_a.empty?
 
 # Test that a constant can be called.
-oso.register_class Math
-oso.load_str '?= Math.acos(1.0) = 0.0;'
+oso.register_constant Math, name: 'MyMath'
+oso.load_str '?= MyMath.acos(1.0) = 0.0;'
 
 # Test built-in type specializers.
 # rubocop:disable Layout/EmptyLineAfterGuardClause

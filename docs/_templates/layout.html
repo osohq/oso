@@ -1,36 +1,49 @@
-{% extends "!layout.html" %}
-{%- block extrahead %}
-{{ super() }}
-<script src="https://kit.fontawesome.com/2c76e395a4.js" crossorigin="anonymous"></script>
-{% endblock %}
-{% block footer %} {{ super() }}
+{% extends "!layout.html" %} {%- block extrahead %} {{ super() }}
+<script
+  src="https://kit.fontawesome.com/2c76e395a4.js"
+  crossorigin="anonymous"
+></script>
+{% endblock %} {% block footer %} {{ super() }}
 <!-- Start of HubSpot Embed Code -->
-<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/8091225.js"></script>
+<script
+  type="text/javascript"
+  id="hs-script-loader"
+  async
+  defer
+  src="//js.hs-scripts.com/8091225.js"
+></script>
 <!-- End of HubSpot Embed Code -->
-{% endblock %}
-
-{%- block extrafooter %}
+{% endblock %} {%- block extrafooter %}
 <div class="subscribe-form align-right newsletter-footer w-form">
-    <form id="subscribe-form-docs" name="subscribe-form-docs">
-        <label class="matter-textfield-filled">
-            <input type="email" maxlength="256" name="Email-Address" id="Email-Address" required=True
-                placeholder="Email Address">
-        </label>
-        <button type="submit" data-wait="Churning..." class="matter-button-contained subscribe">
-            Subscribe
-        </button>
-    </form>
+  <form id="subscribe-form-docs" name="subscribe-form-docs">
+    <label class="matter-textfield-filled">
+      <input
+        type="email"
+        maxlength="256"
+        name="Email-Address"
+        id="Email-Address"
+        required="True"
+        placeholder="Email Address"
+      />
+    </label>
+    <button
+      type="submit"
+      data-wait="Churning..."
+      class="matter-button-contained subscribe"
+    >
+      Subscribe
+    </button>
+  </form>
 </div>
 <div class="subscribe-form">
-    <a href="https://github.com/osohq/">
-        <em class="fab fa-github" aria-hidden="true"></em>
-    </a>
-    <a href="https://join-slack.osohq.com/">
-        <em class="fab fa-slack" aria-hidden="true"></em>
-    </a>
-    <a href="https://twitter.com/osohq">
-        <em class="fab fa-twitter" aria-hidden="true"></em>
-    </a>
+  <a href="https://github.com/osohq/">
+    <em class="fab fa-github" aria-hidden="true"></em>
+  </a>
+  <a href="https://join-slack.osohq.com/">
+    <em class="fab fa-slack" aria-hidden="true"></em>
+  </a>
+  <a href="https://twitter.com/osohq">
+    <em class="fab fa-twitter" aria-hidden="true"></em>
+  </a>
 </div>
-{{ super() }}
-{%- endblock %}
+{{ super() }} {%- endblock %}
