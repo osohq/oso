@@ -28,7 +28,6 @@ When evaluation hits a ``debug()``, the ``debug>`` prompt will appear:
 
 .. code-block:: oso
 
-  Welcome to the debugger!
   debug>
 
 The debugger operates as a simple command-driven REPL, much like other
