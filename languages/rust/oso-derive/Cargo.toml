@@ -5,7 +5,7 @@ authors = ["Oso Security, Inc. <support@osohq.com>"]
 license = "Apache-2.0"
 homepage = "https://github.com/osohq/oso"
 
-version = "0.6.0-alpha"
+version = "0.7.0"
 
 edition = "2018"
 
