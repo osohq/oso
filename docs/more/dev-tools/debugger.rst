@@ -52,22 +52,22 @@ Print the debugger command reference.
 
   debug> help
   Debugger Commands
-    bindings                Print current binding stack.
-    c[ontinue]              Continue evaluation.
-    goals                   Print current goal stack.
-    h[elp]                  Print this help documentation.
-    l[ine] [<n>]            Print the current line and <n> lines of context.
-    n[ext]                  Alias for 'over'.
-    out                     Evaluate goals through the end of the current parent
-                            query and stop at its next sibling (if one exists).
-    over                    Evaluate goals until reaching the next sibling of the
-                            current query (if one exists).
-    queries                 Print current query stack.
-    q[uit]                  Alias for 'continue'.
-    stack                   Alias for 'queries'.
-    s[tep]                  Evaluate one goal.
-    var [<name> ...]        Print available variables. If one or more arguments
-                            are provided, print the value of those variables.
+  bindings                Print current binding stack.
+  c[ontinue]              Continue evaluation.
+  goals                   Print current goal stack.
+  h[elp]                  Print this help documentation.
+  l[ine] [<n>]            Print the current line and <n> lines of context.
+  n[ext]                  Alias for 'over'.
+  out                     Evaluate goals through the end of the current parent
+                          query and stop at its next sibling (if one exists).
+  over                    Evaluate goals until reaching the next sibling of the
+                          current query (if one exists).
+  queries                 Print current query stack.
+  q[uit]                  Alias for 'continue'.
+  stack                   Alias for 'queries'.
+  s[tep]                  Evaluate one goal.
+  var [<name> ...]        Print available variables. If one or more arguments
+                          are provided, print the value of those variables.
 
 Navigation
 ==========
@@ -80,27 +80,10 @@ The Polar file used in the following examples looks like this:
 .. code-block:: polar
 
   a() if debug() and b() and c() and d();
-  b();
-  c() if debug();
+  a() if 5 = 5;
+  b() if 1 = 1 and 2 = 2;
+  c() if 3 = 3 and 4 = 4;
   d();
-
-``s[tep]``
-----------
-
-Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
-
-.. code-block:: oso
-
-  debug> line
-  003: c() if debug();
-              ^
-  debug> step
-  PopQuery(debug)
-  debug> step
-  PopQuery(debug)
-  debug> line
-  001: a() if debug() and b() and c() and d();
-                                  ^
 
 ``c[ontinue]`` or ``q[uit]``
 ----------------------------
@@ -111,60 +94,177 @@ Continue evaluation after the ``debug()`` predicate.
 
   debug> line
   001: a() if debug() and b() and c() and d();
-                                  ^
+              ^
   debug> continue
   [exit]
+
+.. ``g[oal]``
+.. ----------
+
+.. Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
+
+.. .. code-block:: oso
+
+..   debug> line
+..   001: a() if debug() and b() and c() and d();
+..               ^
+
+..   debug> goal
+..   PopQuery(debug())
+
+..   debug> goal
+..   Query(b())
+
+..   debug> line
+..   001: a() if debug() and b() and c() and d();
+..                           ^
+
+``s[tep]`` or ``into``
+----------------------
+Step to the next query. This is the lowest-level step of Polar's logical evaluation process.
+After each step, the debugger prints the currenty query, relevant bindings, and context from the policy file.
+
+.. code-block:: oso
+
+  debug> line
+  001: a() if debug() and b() and c() and d();
+              ^
+  debug> step
+  QUERY: b(), BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+                          ^
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+
+  debug> step
+  QUERY: 1 = 1 and 2 = 2, BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+              ^
+  004: c() if 3 = 3 and 4 = 4;
+  005: d();
+
+  debug> step
+  QUERY: 1 = 1, BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+              ^
+  004: c() if 3 = 3 and 4 = 4;
+  005: d();
+
+  debug> step
+  QUERY: 2 = 2, BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+                      ^
+  004: c() if 3 = 3 and 4 = 4;
+  005: d();
+
 
 ``over`` or ``n[ext]``
 ----------------------
 
-Continue evaluation until the next query.
+Step to the next query at the same level of the query stack. This command is the same as ``step``, but it will not enter a lower
+level of the stack. For example, it will not step into the body of a rule.
 
 .. code-block:: oso
 
-  Welcome to the debugger!
   debug> line
   001: a() if debug() and b() and c() and d();
               ^
-  debug> over
+
+  debug> next
+  QUERY: b(), BINDINGS: {}
+
   001: a() if debug() and b() and c() and d();
                           ^
-  debug> over
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+
+  debug> next
+  QUERY: c(), BINDINGS: {}
+
   001: a() if debug() and b() and c() and d();
                                   ^
-  debug> over
-  Welcome to the debugger!
-  debug> line
-  003: c() if debug();
-              ^
-  debug> over
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+
+  debug> next
+  QUERY: d(), BINDINGS: {}
+
   001: a() if debug() and b() and c() and d();
                                           ^
-  debug> over
-  [exit]
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+
+  debug> next
+  True
+  QUERY: 5 = 5, BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+  002: a() if 5 = 5;
+              ^
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+  005: d();
+
+  debug> next
+  True
 
 ``out``
 -------
 
-Evaluate goals through the end of the current parent query and stop at the next
-sibling of the parent query (if one exists).
+Step out of the current level of the query stack, and stop at the next query at the level above.
+Can be thought of as stepping to the next sibling of the current parent query (if one exists).
 
 .. code-block:: oso
 
-  Welcome to the debugger!
   debug> line
+  003: b() if 1 = 1 and 2 = 2;
+              ^
+
+  debug> out
+  QUERY: c(), BINDINGS: {}
+
   001: a() if debug() and b() and c() and d();
+                                  ^
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+
+  debug> step
+  QUERY: 3 = 3 and 4 = 4, BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
               ^
+  005: d();
+
   debug> out
-  Welcome to the debugger!
-  debug> line
-  003: c() if debug();
-              ^
-  debug> out
+  QUERY: d(), BINDINGS: {}
+
   001: a() if debug() and b() and c() and d();
                                           ^
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+
   debug> out
-  [exit]
+  True
+  True
 
 Context
 =======
@@ -174,28 +274,32 @@ The Polar file used in the following examples looks like this:
 .. code-block:: polar
 
   a() if debug() and b() and c() and d();
-  b();
-  c() if debug();
+  a() if 5 = 5;
+  b() if 1 = 1 and 2 = 2;
+  c() if 3 = 3 and 4 = 4;
   d();
 
-``goals``
----------
+.. ``goals``
+.. ---------
 
-Print current stack of goals.
+.. Print current stack of goals.
 
-.. code-block:: oso
+.. .. code-block:: oso
 
-  Welcome to the debugger!
-  debug> line
-  001: a() if debug() and b() and c() and d();
-              ^
-  debug> goals
-  PopQuery(a())
-  PopQuery(debug(), b(), c(), d())
-  Query(d())
-  Query(c())
-  Query(b())
-  PopQuery(debug())
+..   debug> line
+..   001: a() if debug() and b() and c() and d();
+..               ^
+..   debug> goals
+..   PopQuery(a())
+..   TraceStackPop
+..   TraceStackPop
+..   PopQuery(debug() and b() and c() and d())
+..   TraceStackPop
+..   Query(d())
+..   Query(c())
+..   Query(b())
+..   PopQuery(debug())
+
 
 ``l[ine] [<n>]``
 ----------------
@@ -206,16 +310,18 @@ lines of additional context above and below it.
 .. code-block:: oso
 
   debug> line
-  003: c() if debug();
+  003: b() if 1 = 1 and 2 = 2;
               ^
+
   debug> line 2
   001: a() if debug() and b() and c() and d();
-  002: b();
-  003: c() if debug();
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
               ^
-  004: d();
+  004: c() if 3 = 3 and 4 = 4;
+  005: d();
 
-``queries`` or ``stack``
+``stack`` or ``trace``
 ------------------------
 
 Print current stack of queries.
@@ -225,10 +331,42 @@ Print current stack of queries.
   debug> line
   001: a() if debug() and b() and c() and d();
               ^
-  debug> queries
-  a()
-  debug() and b() and c() and d()
-  debug()
+
+  debug> stack
+  2: a()
+    in query at line 1, column 1
+  1: debug() and b() and c() and d()
+    in rule a at line 1, column 8 in file test.polar
+  0: debug()
+    in rule a at line 1, column 8 in file test.polar
+
+  debug> step
+  QUERY: b(), BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+                          ^
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+  004: c() if 3 = 3 and 4 = 4;
+  debug> step
+  QUERY: 1 = 1 and 2 = 2, BINDINGS: {}
+
+  001: a() if debug() and b() and c() and d();
+  002: a() if 5 = 5;
+  003: b() if 1 = 1 and 2 = 2;
+              ^
+  004: c() if 3 = 3 and 4 = 4;
+  005: d();
+
+  debug> stack
+  3: a()
+    in query at line 1, column 1
+  2: debug() and b() and c() and d()
+    in rule a at line 1, column 8 in file test.polar
+  1: b()
+    in rule a at line 1, column 20 in file test.polar
+  0: 1 = 1 and 2 = 2
+    in rule b at line 3, column 8 in file test.polar
 
 Variables
 =========
