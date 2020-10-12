@@ -11,6 +11,7 @@ from oso import Oso, OsoError
 
 ITERS = 100
 
+
 class X:
     def __init__(self, x):
         self.x = x
@@ -18,8 +19,10 @@ class X:
     def __eq__(self, other):
         return self.x == other.x
 
+
 def r():
     return random.randint(0, 5)
+
 
 def exhaust(i):
     try:
@@ -28,19 +31,21 @@ def exhaust(i):
     except OsoError:
         pass
 
+
 def torch_oso(oso):
     for i in range(ITERS):
         x = X(r())
         y = X(r())
-        exhaust(oso.query_rule('allow', x, y))
+        exhaust(oso.query_rule("allow", x, y))
         time.sleep(random.random() * 0.01)
 
-        exhaust(oso.query_rule('allow', r(), r()))
+        exhaust(oso.query_rule("allow", r(), r()))
 
-        exhaust(oso.query_rule('allow', 1))
+        exhaust(oso.query_rule("allow", 1))
         time.sleep(random.random() * 0.01)
 
-        exhaust(oso.query_rule('allow', r(), str(r())))
+        exhaust(oso.query_rule("allow", r(), str(r())))
+
 
 def test_multi():
     oso = Oso()
@@ -57,4 +62,3 @@ def test_multi():
 
     # If we got here none of these crashed.
     assert True
-    
