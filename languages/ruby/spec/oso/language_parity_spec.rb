@@ -35,7 +35,7 @@ module B
     end
   end
 end
-oso.register_class(B::C, name: 'C') { |y| B::C.new(y) }
+oso.register_class(B::C, name: 'C')
 
 class E
   def self.sum(args)

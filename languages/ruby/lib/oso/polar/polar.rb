@@ -48,6 +48,7 @@ module Oso
       end
 
       # Clear all rules and rule sources from the current Polar instance
+      #
       # @return [self] for chaining.
       def clear_rules
         ffi_polar.clear_rules
@@ -131,12 +132,12 @@ module Oso
       #
       # @param cls [Class] the class to register.
       # @param name [String] the name to register the class as. Defaults to the name of the class.
-      # @param from_polar [Proc]
-      # @raise [InvalidConstructorError] if provided an invalid 'from_polar' constructor.
+      # @raise [DuplicateClassAliasError] if attempting to register a class
+      # under a previously-registered name.
+      # @raise [FFI::Error] if the FFI call returns an error.
       # @return [self] for chaining.
-      def register_class(cls, name: nil, from_polar: nil)
-        from_polar = Proc.new if block_given?
-        name = host.cache_class(cls, name: name, constructor: from_polar)
+      def register_class(cls, name: nil)
+        name = host.cache_class(cls, name: name || cls.name)
         register_constant(cls, name: name)
       end
 
@@ -145,6 +146,7 @@ module Oso
       # @param value [Object] the object to register.
       # @param name [String] the name to register the object as.
       # @return [self] for chaining.
+      # @raise [FFI::Error] if the FFI call returns an error.
       def register_constant(value, name:)
         ffi_polar.register_constant(host.to_polar(value), name: name)
         self
