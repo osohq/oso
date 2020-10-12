@@ -5,21 +5,23 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
-use super::debugger::{DebugEvent, Debugger};
-use super::error::{self, PolarResult};
-use super::events::*;
-use super::formatting::ToPolarString;
-use super::kb::*;
-use super::lexer::loc_to_pos;
-use super::messages::*;
-use super::numerics::*;
-use super::rules::*;
-use super::sources::*;
-use super::terms::*;
-use super::traces::*;
 use crate::counter::Counter;
+use crate::debugger::{DebugEvent, Debugger};
+use crate::error::{self, PolarResult};
+use crate::events::*;
+use crate::folder::Folder;
+use crate::formatting::ToPolarString;
+use crate::kb::*;
+use crate::lexer::loc_to_pos;
+use crate::messages::*;
+use crate::numerics::*;
 use crate::partial;
+use crate::rewrites::Renamer;
+use crate::rules::*;
 use crate::runnable::Runnable;
+use crate::sources::*;
+use crate::terms::*;
+use crate::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]
@@ -622,41 +624,11 @@ impl PolarVirtualMachine {
         name.is_temporary_var()
     }
 
-    /// Return `true` if `var` is a constant variable.
-    fn is_constant_var(&self, name: &Symbol) -> bool {
-        self.bindings
-            .iter()
-            .take(self.csp)
-            .any(|binding| binding.0 == *name)
-    }
-
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
-        let mut renames = HashMap::<Symbol, Symbol>::new();
-        let mut rule = rule.clone();
-        rule.map_replace(&mut move |term| match term.value() {
-            Value::Variable(sym) if !self.is_constant_var(sym) => {
-                if let Some(new) = renames.get(sym) {
-                    term.clone_with_value(Value::Variable(new.clone()))
-                } else {
-                    let new = self.kb.read().unwrap().gensym(&sym.0);
-                    renames.insert(sym.clone(), new.clone());
-                    term.clone_with_value(Value::Variable(new))
-                }
-            }
-            Value::Partial(_) => unimplemented!("partials should not be in rules"),
-            Value::RestVariable(sym) => {
-                if let Some(new) = renames.get(sym) {
-                    term.clone_with_value(Value::RestVariable(new.clone()))
-                } else {
-                    let new = self.kb.read().unwrap().gensym(&sym.0);
-                    renames.insert(sym.clone(), new.clone());
-                    term.clone_with_value(Value::RestVariable(new))
-                }
-            }
-            _ => term.clone(),
-        });
-        rule
+        let kb = &*self.kb.read().unwrap();
+        let mut renamer = Renamer::new(&kb);
+        renamer.fold_rule(rule.clone())
     }
 
     /// Print a message to the output stream.

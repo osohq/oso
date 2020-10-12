@@ -1,6 +1,48 @@
+use std::collections::HashMap;
+
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
+
+use crate::folder::Folder;
+
+pub struct Renamer<'kb> {
+    kb: &'kb KnowledgeBase,
+    renames: HashMap<Symbol, Symbol>,
+}
+
+impl<'kb> Renamer<'kb> {
+    pub fn new(kb: &'kb KnowledgeBase) -> Self {
+        Self {
+            kb,
+            renames: HashMap::new(),
+        }
+    }
+}
+
+impl<'kb> Folder for Renamer<'kb> {
+    fn fold_variable(&mut self, v: Symbol) -> Symbol {
+        if self.kb.is_constant(&v) {
+            v
+        } else if let Some(w) = self.renames.get(&v) {
+            w.clone()
+        } else {
+            let w = self.kb.gensym(&v.0);
+            self.renames.insert(v, w.clone());
+            w
+        }
+    }
+
+    fn fold_rest_variable(&mut self, r: Symbol) -> Symbol {
+        if let Some(s) = self.renames.get(&r) {
+            s.clone()
+        } else {
+            let s = self.kb.gensym(&r.0);
+            self.renames.insert(r, s.clone());
+            s
+        }
+    }
+}
 
 /// Replace the left value by the AND of the right and the left.
 fn and_wrap(a: &mut Term, b: Term) {
