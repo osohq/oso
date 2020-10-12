@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1602516272996,
+  "lastUpdate": 1602523396968,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -8267,6 +8267,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6082,
             "range": "± 1232",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "948ca45579459d5ec6809f58fb643e0e8c467223",
+          "message": "Fix CI release trigger (#467)\n\n* Update dependent jobs for release check.\r\n\r\n* Up network timeout for yarn",
+          "timestamp": "2020-10-12T13:11:21-04:00",
+          "tree_id": "9d4dd79ee51a73009052754c27c03ec339545495",
+          "url": "https://github.com/osohq/oso/commit/948ca45579459d5ec6809f58fb643e0e8c467223"
+        },
+        "date": 1602523395981,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 741,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2431,
+            "range": "± 126",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65895,
+            "range": "± 3684",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 485319,
+            "range": "± 21142",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17511,
+            "range": "± 1235",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17937,
+            "range": "± 1476",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17071,
+            "range": "± 1038",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17309,
+            "range": "± 1753",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16092,
+            "range": "± 1469",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5173,
+            "range": "± 337",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5354,
+            "range": "± 482",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6013,
+            "range": "± 1745",
             "unit": "ns/iter"
           }
         ]
