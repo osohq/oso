@@ -55,7 +55,7 @@ enum Step {
     /// level than the current one.
     Out { level: usize },
     /// Step **in**. Will break on the next query.
-    InTo,
+    Into,
 }
 
 /// VM breakpoints.
@@ -116,7 +116,7 @@ impl Debugger {
                 (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
                     message: goal.to_string(),
                 })),
-                (Step::InTo, DebugEvent::Query) => self.break_query(vm),
+                (Step::Into, DebugEvent::Query) => self.break_query(vm),
                 (Step::Out { level }, DebugEvent::Query)
                     if vm.trace_stack.is_empty() || vm.trace_stack.len() < *level =>
                 {
@@ -190,7 +190,7 @@ impl Debugger {
                 self.step = Some(Step::Over{ level: vm.trace_stack.len() })
             }
             "s" | "step" | "into" => {
-                self.step = Some(Step::InTo)
+                self.step = Some(Step::Into)
             }
             "o" | "out" => {
                 self.step = Some(Step::Out{ level: vm.trace_stack.len() })
