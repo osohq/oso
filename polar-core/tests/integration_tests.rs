@@ -1054,14 +1054,6 @@ fn test_debug() {
     let polar = Polar::new();
     polar.load_str(source).unwrap();
 
-    // step => b()
-    // step => 1=1 and 2=2
-    // out => c()
-    // step => 3=3 and 4=4
-    // step => 3=3
-    // out => d()
-    // over => 5 = 5
-
     let mut call_num = 0;
     let debug_handler = |s: &str| {
         let rt = match call_num {
