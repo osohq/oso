@@ -48,8 +48,8 @@ impl PolarVirtualMachine {
 enum Step {
     /// Pause after evaluating the next [`Goal`](../vm/enum.Goal.html).
     Goal,
-    /// Step **over** the current query. Will break on the next query where the trace stack is at the level
-    /// as the current one.
+    /// Step **over** the current query. Will break on the next query where the trace stack is at the same
+    /// level as the current one.
     Over { level: usize },
     /// Step **out** of the current query. Will break on the next query where the trace stack is at a lower
     /// level than the current one.

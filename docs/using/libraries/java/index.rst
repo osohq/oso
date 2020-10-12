@@ -54,23 +54,13 @@ you may supply an alias:
 
     registerClass(Person.class, "User")
 
-You may also register a Java class with a particular `Constructor
-<https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Constructor.html>`_
-(obtained via, e.g., `Class.getConstructor(Class...)
-<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructor(java.lang.Class...)>`_):
-
-.. code-block:: Java
-    :caption: :fab:`java` User.java
-
-    registerClass(User.class, User.class.getConstructor(...))
-
-If you omit the constructor (recommended), the default behavior at instantiation
-time is to search in the list returned by `Class.getConstructors()
+At instantiation time, oso will search the list returned by
+`Class.getConstructors()
 <https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructors()>`_
 for a constructor that is applicable to the supplied positional constructor
-arguments. For example, given the Polar expression ``new User("alice@example.com")``,
-oso will search for a ``Constructor`` with one parameter compatible with
-``String.class``, e.g.:
+arguments. For example, given the Polar expression ``new
+User("alice@example.com")``, oso will search for a ``Constructor`` with one
+parameter compatible with ``String.class``, e.g.:
 
 .. code-block:: java
     :caption: :fab:`java` User.java

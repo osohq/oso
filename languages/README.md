@@ -90,7 +90,6 @@ Maintain mappings & caches for host language classes & instances.
 | -------------- | ------ | ---- | ---- | ------- | ---- |
 | `ffi_polar`    | x      | x    | x    | x       | x    |
 | `classes`      | x      | x    | x    | x       | x    |
-| `constructors` | x      | x    | x    |         |      |
 | `instances`    | x      | x    | x    | x       | x    |
 
 | Method              | Python | Ruby | Java | Node.js | Rust |
@@ -99,7 +98,6 @@ Maintain mappings & caches for host language classes & instances.
 | copy                | x      | x    | x    | x       |      |
 | `get_class`         | x      | x    | x    | x       | x    |
 | `cache_class`       | x      | x    | x    | x       | x    |
-| `get_constructor`   | x      | x    |      |         |      |
 | `get_instance`      | x      | x    | x    | x       | x    |
 | `has_instance`      |        | x    | x    | x       |      |
 | `cache_instance`    | x      | x    | x    | x       | x    |

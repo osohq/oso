@@ -10,8 +10,6 @@ module Oso
       attr_reader :ffi_polar
       # @return [Hash<String, Class>]
       attr_reader :classes
-      # @return [Hash<String, Object>]
-      attr_reader :constructors
       # @return [Hash<Integer, Object>]
       attr_reader :instances
 
@@ -20,14 +18,12 @@ module Oso
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
         @classes = {}
-        @constructors = {}
         @instances = {}
       end
 
       def initialize_copy(other)
         @ffi_polar = other.ffi_polar
         @classes = other.classes.dup
-        @constructors = other.constructors.dup
         @instances = other.instances.dup
       end
 
@@ -44,36 +40,16 @@ module Oso
 
       # Store a Ruby class in the {#classes} cache.
       #
-      # @param cls [Class] the class to cache
-      # @param name [String] the name to cache the class as. Defaults to the name of the class.
-      # @param constructor [Proc] optional custom constructor function. Defaults to the :new method.
+      # @param cls [Class] the class to cache.
+      # @param name [String] the name to cache the class as.
       # @return [String] the name the class is cached as.
-      # @raise [UnregisteredClassError] if the class has not been registered.
-      def cache_class(cls, name:, constructor:) # rubocop:disable Metrics/MethodLength
-        name = cls.name if name.nil?
+      # @raise [DuplicateClassAliasError] if attempting to register a class
+      # under a previously-registered name.
+      def cache_class(cls, name:)
         raise DuplicateClassAliasError, name: name, old: get_class(name), new: cls if classes.key? name
 
         classes[name] = cls
-        if constructor.nil?
-          constructors[name] = :new
-        elsif constructor.respond_to? :call
-          constructors[name] = constructor
-        else
-          raise InvalidConstructorError
-        end
         name
-      end
-
-      # Fetch a constructor from the {#constructors} cache.
-      #
-      # @param name [String]
-      # @return [Symbol] if constructor is the default of `:new`.
-      # @return [Proc] if a custom constructor was registered.
-      # @raise [MissingConstructorError] if the constructor has not been registered.
-      def get_constructor(name)
-        raise MissingConstructorError, name unless constructors.key? name
-
-        constructors[name]
       end
 
       # Check if an instance exists in the {#instances} cache.
@@ -100,12 +76,12 @@ module Oso
         instances[id]
       end
 
-      # Cache a Ruby instance in the {#instances} cache, fetching a {#new_id}
-      # if one isn't provided.
+      # Cache a Ruby instance in the {#instances} cache, fetching a new id if
+      # one isn't provided.
       #
       # @param instance [Object]
-      # @param id [Integer]
-      # @return [Integer]
+      # @param id [Integer] the instance ID. Generated via FFI if not provided.
+      # @return [Integer] the instance ID.
       def cache_instance(instance, id: nil)
         id = ffi_polar.new_id if id.nil?
         instances[id] = instance
@@ -114,24 +90,17 @@ module Oso
 
       # Construct and cache a Ruby instance.
       #
-      # @param cls_name [String]
-      # @param args [Array<Object>]
-      # @param kwargs [Hash<String, Object>]
-      # @param id [Integer]
+      # @param cls_name [String] name of the instance's class.
+      # @param args [Array<Object>] positional args to the constructor.
+      # @param kwargs [Hash<String, Object>] keyword args to the constructor.
+      # @param id [Integer] the instance ID.
       # @raise [PolarRuntimeError] if instance construction fails.
-      def make_instance(cls_name, args:, kwargs:, id:) # rubocop:disable Metrics/MethodLength
-        constructor = get_constructor(cls_name)
-        # The kwargs.empty? checks are for Ruby < 2.7.
-        instance = if constructor == :new
-                     if kwargs.empty?
-                       get_class(cls_name).__send__(:new, *args)
-                     else
-                       get_class(cls_name).__send__(:new, *args, **kwargs)
-                     end
-                   elsif kwargs.empty?
-                     constructor.call(*args)
+      # @return [Integer] the instance ID.
+      def make_instance(cls_name, args:, kwargs:, id:)
+        instance = if kwargs.empty? # This check is for Ruby < 2.7.
+                     get_class(cls_name).__send__(:new, *args)
                    else
-                     constructor.call(*args, **kwargs)
+                     get_class(cls_name).__send__(:new, *args, **kwargs)
                    end
         cache_instance(instance, id: id)
       rescue StandardError => e

@@ -32,7 +32,6 @@ module Oso
     # Errors originating from this side of the FFI boundary.
 
     class UnregisteredClassError < PolarRuntimeError; end
-    class MissingConstructorError < PolarRuntimeError; end
     class UnregisteredInstanceError < PolarRuntimeError; end
     class DuplicateInstanceRegistrationError < PolarRuntimeError; end
 
