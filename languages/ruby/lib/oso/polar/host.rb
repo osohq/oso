@@ -97,8 +97,7 @@ module Oso
       # @raise [PolarRuntimeError] if instance construction fails.
       # @return [Integer] the instance ID.
       def make_instance(cls_name, args:, kwargs:, id:)
-        # The kwargs.empty? checks are for Ruby < 2.7.
-        instance = if kwargs.empty?
+        instance = if kwargs.empty? # This check is for Ruby < 2.7.
                      get_class(cls_name).__send__(:new, *args)
                    else
                      get_class(cls_name).__send__(:new, *args, **kwargs)
