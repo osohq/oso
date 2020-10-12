@@ -449,6 +449,7 @@ jobs:
         with:
           name: oso_js_node
       - name: Run tests
+        # Timeout fix: https://stackoverflow.com/a/51508426
         run: |
           yarn install --prod  --network-timeout 100000
           node dist/test/parity.js
