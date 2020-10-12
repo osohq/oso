@@ -1679,7 +1679,14 @@ impl PolarVirtualMachine {
                     ));
                 }
             }
-            (_, _) => todo!(),
+            (_, _) => {
+                return Err(self.set_error_context(
+                    term,
+                    error::RuntimeError::ArithmeticError {
+                        msg: term.to_polar(),
+                    },
+                ))
+            }
         }
         Ok(QueryEvent::None)
     }
