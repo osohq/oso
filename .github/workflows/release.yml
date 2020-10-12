@@ -45,6 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
+        if: runner.os != 'macOS'
         with:
           path: |
             ~/.cargo/registry
@@ -170,6 +171,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
+        if: runner.os != 'macOS'
         with:
           path: |
             ~/.cargo/registry
@@ -611,8 +613,8 @@ jobs:
       - uses: rtCamp/action-slack-notify@master
         env:
           SLACK_CHANNEL: firehose
-          SLACK_COLOR: 'danger'
+          SLACK_COLOR: "danger"
           SLACK_MESSAGE: "${{ github.event.head_commit.url }}"
-          SLACK_TITLE: 'Release job failed.'
+          SLACK_TITLE: "Release job failed."
           SLACK_USERNAME: github-actions
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_TO_FIREHOSE }}
