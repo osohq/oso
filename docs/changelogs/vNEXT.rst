@@ -37,6 +37,24 @@ Select Ruby methods now return ``self`` to enable method chaining
 - ``Oso#register_class``
 - ``Oso#register_constant``
 
+Custom constructors no longer supported in the Java, Python, or Ruby libraries
+------------------------------------------------------------------------------
+
+For the Java, Python, and Ruby libraries, custom constructors are a relic. They
+were useful for translating keyword args into positional args before oso
+supported supplying positional args when constructing an instance via Polar's
+:ref:`new operator <operator-new>`. They were also useful for specifying a
+``find_or_create``-style class method as a constructor, but that's been
+superseded by the introduction of calling methods directly on registered
+constants, including classes.
+
+To migrate, replace usage of a custom constructor with an equivalent class
+method.
+
+Note that custom constructors are still supported for the Rust library since
+specifying a static ``new`` method for a type is nothing more than a
+convention.
+
 New features
 ============
 

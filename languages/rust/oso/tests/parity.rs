@@ -56,10 +56,6 @@ pub mod b {
     impl oso::PolarClass for C {}
 }
 
-pub fn custom_c_constructor(y: String) -> b::C {
-    b::C::new(y)
-}
-
 #[test]
 fn test() {
     let mut oso = Oso::new();
