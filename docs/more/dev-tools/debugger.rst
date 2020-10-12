@@ -98,26 +98,6 @@ Continue evaluation after the ``debug()`` predicate.
   debug> continue
   [exit]
 
-.. ``g[oal]``
-.. ----------
-
-.. Evaluate one goal (one instruction on the Polar VM). This is *very* low level.
-
-.. .. code-block:: oso
-
-..   debug> line
-..   001: a() if debug() and b() and c() and d();
-..               ^
-
-..   debug> goal
-..   PopQuery(debug())
-
-..   debug> goal
-..   Query(b())
-
-..   debug> line
-..   001: a() if debug() and b() and c() and d();
-..                           ^
 
 ``s[tep]`` or ``into``
 ----------------------
@@ -273,32 +253,9 @@ The Polar file used in the following examples looks like this:
 
 .. code-block:: polar
 
-  a() if debug() and b() and c() and d();
-  a() if 5 = 5;
-  b() if 1 = 1 and 2 = 2;
+  a(x) if debug() and b(x) and c();
+  b(x) if (y = 1 and x = y) and y = 1;
   c() if 3 = 3 and 4 = 4;
-  d();
-
-.. ``goals``
-.. ---------
-
-.. Print current stack of goals.
-
-.. .. code-block:: oso
-
-..   debug> line
-..   001: a() if debug() and b() and c() and d();
-..               ^
-..   debug> goals
-..   PopQuery(a())
-..   TraceStackPop
-..   TraceStackPop
-..   PopQuery(debug() and b() and c() and d())
-..   TraceStackPop
-..   Query(d())
-..   Query(c())
-..   Query(b())
-..   PopQuery(debug())
 
 
 ``l[ine] [<n>]``
@@ -310,16 +267,14 @@ lines of additional context above and below it.
 .. code-block:: oso
 
   debug> line
-  003: b() if 1 = 1 and 2 = 2;
-              ^
+  001: a(x) if debug() and b(x) and c();
+                           ^
 
   debug> line 2
-  001: a() if debug() and b() and c() and d();
-  002: a() if 5 = 5;
-  003: b() if 1 = 1 and 2 = 2;
-              ^
-  004: c() if 3 = 3 and 4 = 4;
-  005: d();
+  001: a(x) if debug() and b(x) and c();
+                           ^
+  002: b(x) if (y = 1 and x = y) and y = 1;
+  003: c() if 3 = 3 and 4 = 4;
 
 ``stack`` or ``trace``
 ------------------------
@@ -329,44 +284,78 @@ Print current stack of queries.
 .. code-block:: oso
 
   debug> line
-  001: a() if debug() and b() and c() and d();
-              ^
-
+  001: a(x) if debug() and b(x) and c();
+                           ^
   debug> stack
-  2: a()
+  2: a(1)
     in query at line 1, column 1
-  1: debug() and b() and c() and d()
-    in rule a at line 1, column 8 in file test.polar
-  0: debug()
-    in rule a at line 1, column 8 in file test.polar
+  1: debug() and b(x) and c()
+    in rule a at line 1, column 9 in file test.polar
+  0: b(x)
+    in rule a at line 1, column 21 in file test.polar
 
   debug> step
-  QUERY: b(), BINDINGS: {}
+  QUERY: _y_6 = 1 and _x_5 = _y_6 and _y_6 = 1, BINDINGS: {_x_5 = 1}
 
-  001: a() if debug() and b() and c() and d();
-                          ^
-  002: a() if 5 = 5;
-  003: b() if 1 = 1 and 2 = 2;
-  004: c() if 3 = 3 and 4 = 4;
-  debug> step
-  QUERY: 1 = 1 and 2 = 2, BINDINGS: {}
-
-  001: a() if debug() and b() and c() and d();
-  002: a() if 5 = 5;
-  003: b() if 1 = 1 and 2 = 2;
-              ^
-  004: c() if 3 = 3 and 4 = 4;
-  005: d();
+  001: a(x) if debug() and b(x) and c();
+  002: b(x) if (y = 1 and x = y) and y = 1;
+               ^
+  003: c() if 3 = 3 and 4 = 4;
 
   debug> stack
-  3: a()
+  3: a(1)
     in query at line 1, column 1
-  2: debug() and b() and c() and d()
-    in rule a at line 1, column 8 in file test.polar
-  1: b()
-    in rule a at line 1, column 20 in file test.polar
-  0: 1 = 1 and 2 = 2
-    in rule b at line 3, column 8 in file test.polar
+  2: debug() and b(x) and c()
+    in rule a at line 1, column 9 in file test.polar
+  1: b(x)
+    in rule a at line 1, column 21 in file test.polar
+  0: (y = 1 and x = y) and y = 1
+    in rule b at line 2, column 9 in file test.polar
+
+  debug> out
+  QUERY: c(), BINDINGS: {}
+
+  001: a(x) if debug() and b(x) and c();
+                                    ^
+  002: b(x) if (y = 1 and x = y) and y = 1;
+  003: c() if 3 = 3 and 4 = 4;
+
+  debug> stack
+  2: a(1)
+    in query at line 1, column 1
+  1: debug() and b(x) and c()
+    in rule a at line 1, column 9 in file test.polar
+  0: c()
+    in rule a at line 1, column 30 in file test.polar
+
+
+``query [<i>]``
+---------------
+
+Print the current query (no args), or the query at level ``i`` of the query stack.
+
+.. code-block:: oso
+
+  debug> stack
+  4: a(1)
+    in query at line 1, column 1
+  3: debug() and b(x) and c()
+    in rule a at line 1, column 9 in file test.polar
+  2: b(x)
+    in rule a at line 1, column 21 in file test.polar
+  1: (y = 1 and x = y) and y = 1
+    in rule b at line 2, column 9 in file test.polar
+  0: y = 1 and x = y
+    in rule b at line 2, column 10 in file test.polar
+
+  debug> query
+  QUERY: _y_12 = 1 and _x_11 = _y_12, BINDINGS: {_x_11 = 1}
+
+  debug> query 1
+  QUERY: _y_12 = 1 and _x_11 = _y_12 and _y_12 = 1, BINDINGS: {_x_11 = 1}
+
+  debug> query 2
+  QUERY: b(_x_8), BINDINGS: {_x_8 = 1}
 
 Variables
 =========

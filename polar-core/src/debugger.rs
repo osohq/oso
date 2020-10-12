@@ -331,7 +331,7 @@ impl Debugger {
   o[ut]                   Step out of the current query stack level to the next query in the level above.
   g[oal]                  Step to the next goal of the Polar VM.
   l[ine] [<n>]            Print the current line and <n> lines of context.
-  query                   Print the current query.
+  query [<i>]             Print the current query or the query at level <i> in the query stack.
   stack | trace           Print the current query stack.
   goals                   Print the current goal stack.
   bindings                Print all bindings
