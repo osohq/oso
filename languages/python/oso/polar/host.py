@@ -7,7 +7,6 @@ from .exceptions import (
     PolarRuntimeError,
     UnregisteredClassError,
     DuplicateClassAliasError,
-    MissingConstructorError,
     UnregisteredInstanceError,
     DuplicateInstanceRegistrationError,
     UnexpectedPolarTypeError,
@@ -19,11 +18,10 @@ from .predicate import Predicate
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes={}, constructors={}, instances={}):
+    def __init__(self, polar, classes={}, instances={}):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
         self.classes = classes.copy()
-        self.constructors = constructors.copy()
         self.instances = instances.copy()
 
     def copy(self):
@@ -31,7 +29,6 @@ class Host:
         return type(self)(
             self.ffi_polar,
             classes=self.classes.copy(),
-            constructors=self.constructors.copy(),
             instances=self.instances.copy(),
         )
 
@@ -42,22 +39,14 @@ class Host:
         except KeyError:
             raise UnregisteredClassError(name)
 
-    def cache_class(self, cls, name=None, constructor=None):
+    def cache_class(self, cls, name=None):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
         if name in self.classes.keys():
             raise DuplicateClassAliasError(name, self.get_class(name), cls)
 
         self.classes[name] = cls
-        self.constructors[name] = constructor or cls
         return name
-
-    def get_constructor(self, name):
-        """Fetch a constructor by name from the cache."""
-        try:
-            return self.constructors[name]
-        except:
-            raise MissingConstructorError(name)
 
     def get_instance(self, id):
         """Look up Python instance by id."""
@@ -73,16 +62,15 @@ class Host:
         return id
 
     def make_instance(self, name, args, kwargs, id):
-        """Make and cache a new instance of a Python class."""
-        cls = self.get_class(name)
-        constructor = self.get_constructor(name)
-        if isinstance(constructor, str):
-            constructor = getattr(cls, constructor)
+        """Construct and cache a Python instance."""
         if id in self.instances:
             raise DuplicateInstanceRegistrationError(id)
-        instance = constructor(*args, **kwargs)
-        self.cache_instance(instance, id)
-        return instance
+        cls = self.get_class(name)
+        try:
+            instance = cls(*args, **kwargs)
+        except TypeError as e:
+            raise PolarRuntimeError(f"Error constructing instance of {name}: {e}")
+        return self.cache_instance(instance, id)
 
     def unify(self, left_instance_id, right_instance_id) -> bool:
         """Return true if the left instance is equal to the right."""
