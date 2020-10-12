@@ -984,19 +984,31 @@ fn test_debug() {
     let debug_handler = |s: &str| {
         let rt = match call_num {
             0 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: a() if debug("a") and b() and c() and d();
+                                ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();
+                    "#
+                );
+                assert_eq!(s, expected);
                 "over"
             }
             1 => {
                 let expected = indoc!(
                     r#"
-                    query: b()
+                    QUERY: b(), BINDINGS: {}
 
                     001: a() if debug("a") and b() and c() and d();
                                                ^
                     002: b();
                     003: c() if debug("c");
-                    004: d();"#
+                    004: d();
+                    "#
                 );
                 assert_eq!(s, expected);
                 "over"
@@ -1004,31 +1016,44 @@ fn test_debug() {
             2 => {
                 let expected = indoc!(
                     r#"
-                    query: c()
+                    QUERY: c(), BINDINGS: {}
 
                     001: a() if debug("a") and b() and c() and d();
                                                        ^
                     002: b();
                     003: c() if debug("c");
-                    004: d();"#
+                    004: d();
+                    "#
                 );
                 assert_eq!(s, expected);
                 "over"
             }
             3 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: a() if debug("a") and b() and c() and d();
+                    002: b();
+                    003: c() if debug("c");
+                                ^
+                    004: d();
+                    "#
+                );
+                assert_eq!(s, expected);
                 "over"
             }
             4 => {
                 let expected = indoc!(
                     r#"
-                    query: d()
+                    QUERY: d(), BINDINGS: {}
 
                     001: a() if debug("a") and b() and c() and d();
                                                                ^
                     002: b();
                     003: c() if debug("c");
-                    004: d();"#
+                    004: d();
+                    "#
                 );
                 assert_eq!(s, expected);
                 "over"
@@ -1058,35 +1083,41 @@ fn test_debug() {
     let debug_handler = |s: &str| {
         let rt = match call_num {
             0 => {
-                assert_eq!(s, "Welcome to the debugger!");
+                assert_eq!(s.lines().next().unwrap(), "QUERY: debug(), BINDINGS: {}");
                 "step"
             }
             1 => {
-                assert_eq!(s.lines().next().unwrap(), "query: b()");
+                assert_eq!(s.lines().next().unwrap(), "QUERY: b(), BINDINGS: {}");
                 "step"
             }
             2 => {
-                assert_eq!(s.lines().next().unwrap(), "query: 1 = 1 and 2 = 2");
+                assert_eq!(
+                    s.lines().next().unwrap(),
+                    "QUERY: 1 = 1 and 2 = 2, BINDINGS: {}"
+                );
                 "out"
             }
             3 => {
-                assert_eq!(s.lines().next().unwrap(), "query: c()");
+                assert_eq!(s.lines().next().unwrap(), "QUERY: c(), BINDINGS: {}");
                 "step"
             }
             4 => {
-                assert_eq!(s.lines().next().unwrap(), "query: 3 = 3 and 4 = 4");
+                assert_eq!(
+                    s.lines().next().unwrap(),
+                    "QUERY: 3 = 3 and 4 = 4, BINDINGS: {}"
+                );
                 "step"
             }
             5 => {
-                assert_eq!(s.lines().next().unwrap(), "query: 3 = 3");
+                assert_eq!(s.lines().next().unwrap(), "QUERY: 3 = 3, BINDINGS: {}");
                 "out"
             }
             6 => {
-                assert_eq!(s.lines().next().unwrap(), "query: d()");
+                assert_eq!(s.lines().next().unwrap(), "QUERY: d(), BINDINGS: {}");
                 "over"
             }
             7 => {
-                assert_eq!(s.lines().next().unwrap(), "query: 5 = 5");
+                assert_eq!(s.lines().next().unwrap(), "QUERY: 5 = 5, BINDINGS: {}");
                 "c"
             }
             _ => panic!("Too many calls: {}", s),
