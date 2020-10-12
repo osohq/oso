@@ -48,98 +48,14 @@ impl PolarVirtualMachine {
 enum Step {
     /// Pause after evaluating the next [`Goal`](../vm/enum.Goal.html).
     Goal,
-
-    /// Step **over** goals until reaching the next sibling [`Goal::Query`](../vm/enum.Goal.html).
-    /// This is not necessarily the next [`Goal::Query`](../vm/enum.Goal.html), but rather the next
-    /// [`Goal::Query`](../vm/enum.Goal.html) where the query stack sans that query is identical to
-    /// the current query stack sans the current query. For example, when the `debug()` predicate
-    /// is evaluated in the following snippet of Polar...
-    ///
-    /// ```polar
-    /// a() if debug() and b();
-    /// b();
-    /// ?= a()
-    /// ```
-    ///
-    /// ...the query stack will look as follows:
-    ///
-    /// ```text
-    /// a()          # Head of rule a().
-    /// debug(), b() # Body of rule a().
-    /// debug()      # First term in the body of rule a().
-    /// ```
-    ///
-    /// If the user wants to jump **over** `debug()` (the current query) to arrive at `b()` (the
-    /// next query in the body of `a()`), evaluate goals until the query stack looks as follows:
-    ///
-    /// ```text
-    /// a()          # Head of rule a().
-    /// debug(), b() # Body of rule a().
-    /// b()          # Second term in the body of rule a().
-    /// ```
-    // Over {
-    //     /// Snapshot of the current query stack sans the current query.
-    //     snapshot: Queries,
-    // },
-    /// Step **out** of the current parent query, evaluating goals until reaching the
-    /// [`Goal::Query`](../vm/enum.Goal.html) for its next sibling.
-    ///
-    /// To illustrate this movement, let's step through the queries for the following snippet of
-    /// polar:
-    ///
-    /// ```text
-    /// a() if b() and c();
-    /// b() if debug() and d();
-    /// c();
-    /// d();
-    /// ?= a()
-    /// ```
-    ///
-    /// First we query for the head of `a()`, then the body of `a()`, and then `b()`, the first
-    /// clause in the body of `a()`. Next we query for the body of `b()` and the first clause in
-    /// the body of `b()`, a `debug()` predicate. By the time we reach that `debug()` predicate,
-    /// the query stack looks like this:
-    ///
-    /// ```text
-    /// a()          # head of a()
-    /// b(), c()     # body of a()
-    /// b()          # first clause in body of a() / head of b()
-    /// debug(), d() # body of b()
-    /// debug()      # first clause in body of b()
-    /// ```
-    ///
-    /// From our current position (evaluating the `debug()` predicate in the body of `b()`), we
-    /// would [`Step::Out`](enum.Step.html) if we wanted to continue evaluating goals until
-    /// reaching `c()` in the body of `a()`. We're stepping entirely **out** of the current parent
-    /// query, `b()`, to arrive at its next sibling, `c()`. When we arrive at the
-    /// [`Goal::Query`](../vm/enum.Goal.html) for `c()`, the query stack will look as follows:
-    ///
-    /// ```text
-    /// a()          # head of a()
-    /// b(), c()     # body of a()
-    /// c()          # second clause in body of a() / head of c()
-    /// ```
-    ///
-    /// The query stack above `c()` is identical to the previous stack snippet above `b()`, which
-    /// makes sense since they share a parent -- the query for the body of `a()`. That gives us our
-    /// test for stepping **out**:
-    ///
-    /// - Store a slice of the current query stack *without the last three queries* (current query,
-    ///   body of current rule, and head of current rule).
-    /// - Evaluate goals until the current query stack *without the current query* matches the
-    //   stored slice.
-    // Out {
-    //     /// Snapshot of the current query stack sans its last three queries.
-    //     snapshot: Queries,
-    // },
-    Over {
-        level: usize,
-    }, // break on query if we haven't tracestackpushed, otherwise break when we pop back to this level.
-    InTo, // break on any trace.push, break on query
-    // break on TraceStackPop
-    Out {
-        level: usize,
-    },
+    /// Step **over** the current query. Will break on the next query where the trace stack is at the level
+    /// as the current one.
+    Over { level: usize },
+    /// Step **out** of the current query. Will break on the next query where the trace stack is at a lower
+    /// level than the current one.
+    Out { level: usize },
+    /// Step **in**. Will break on the next query.
+    InTo,
 }
 
 /// VM breakpoints.
@@ -196,7 +112,6 @@ impl Debugger {
     /// - `None` -> Continue evaluation.
     fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
         if let Some(step) = self.step.as_ref() {
-            //eprintln!("maybe break {:?}, {:?}", event, step);
             match (step, event) {
                 (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
                     message: goal.to_string(),
@@ -230,7 +145,7 @@ impl Debugger {
                     Value::Expression(Operation {
                         operator: Operator::And,
                         args,
-                    }) if args.len() == 1 => return None,
+                    }) if args.len() == 1 => None,
                     _ => {
                         let source = self.query_source(&q, &vm.kb.read().unwrap().sources, 3);
                         Some(format!("{}\n\n{}", vm.query_summary(q), source))
@@ -293,17 +208,38 @@ impl Debugger {
                 });
             }
             "query" => {
-                if let Some(query) = vm.trace.last().and_then(|t| t.term()) {
+                let mut level = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+                let mut trace_stack = vm.trace_stack.clone();
+
+                let mut term = vm.trace.last().and_then(|t| t.term());
+                while level > 0 {
+                    if let Some(trace) = trace_stack.pop().map(|ts| ts.as_ref().clone()) {
+                        trace.last().map(|t| {
+                            if let Trace{node: Node::Term(t), ..} = &**t {
+                                term = Some(t.clone());
+                                level-=1;
+                            }
+                        });
+                    } else {
+                        return Some(Goal::Debug {
+                            message: "Error: level is out of range".to_owned()
+                        })
+                    }
+                }
+
+                if let Some(query) = term {
                     return Some(Goal::Debug {
                         message: vm.query_summary(&query)});
+                } else {
+                    return Some(Goal::Debug {
+                        message: "".to_owned()
+                    })
                 }
             }
             "stack" | "trace" => {
                 let mut trace_stack = vm.trace_stack.clone();
                 let mut trace = vm.trace.clone();
 
-                // Build linear stack from trace tree. Not just using query stack because it doesn't
-                // know about rules, query stack should really use this too.
                 let mut stack = vec![];
                 while let Some(t) = trace.last() {
                     stack.push(t.clone());
@@ -331,7 +267,7 @@ impl Debugger {
                             }
 
 
-                            let _ = write!(st, "{}: {}", i, vm.term_source(t, false));
+                            let _ = write!(st, "{}: {}", i-1, vm.term_source(t, false));
                             i-= 1;
                             let _ = write!(st, "\n  ");
                             if let Some(source) = vm.source(t) {
@@ -347,7 +283,6 @@ impl Debugger {
                                 }
                                 let _ = writeln!(st);
                             };
-
                         }
                     }
                 }
