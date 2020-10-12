@@ -450,7 +450,7 @@ jobs:
           name: oso_js_node
       - name: Run tests
         run: |
-          yarn install --prod
+          yarn install --prod  --network-timeout 100000
           node dist/test/parity.js
         working-directory: oso_js_node
 
