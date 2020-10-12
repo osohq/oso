@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1602278715851,
+  "lastUpdate": 1602516272996,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -8171,6 +8171,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5672,
             "range": "± 1048",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dde96db90e3cb3119fa8b3bcdab2b53fc929c4d5",
+          "message": "Update dependencies (#465)\n\n* Bump Rust dependencies.\r\n\r\n* Bump cibuildwheel version (adds Pythobn 3.9 to targets).",
+          "timestamp": "2020-10-12T11:12:28-04:00",
+          "tree_id": "031cb9dd7fdc8d2e553d3fa26a4dc746b7024e6c",
+          "url": "https://github.com/osohq/oso/commit/dde96db90e3cb3119fa8b3bcdab2b53fc929c4d5"
+        },
+        "date": 1602516272202,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 687,
+            "range": "± 50",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2329,
+            "range": "± 206",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 67433,
+            "range": "± 5112",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 497400,
+            "range": "± 19924",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18205,
+            "range": "± 1202",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18352,
+            "range": "± 1289",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18141,
+            "range": "± 1133",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18249,
+            "range": "± 1764",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16362,
+            "range": "± 791",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5481,
+            "range": "± 322",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5616,
+            "range": "± 656",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6082,
+            "range": "± 1232",
             "unit": "ns/iter"
           }
         ]
