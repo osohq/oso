@@ -391,14 +391,14 @@ impl Debugger {
                     message: "Debugger Commands
   h[elp]                  Print this help documentation.
   c[ontinue]              Continue evaluation.
-  n[ext]                  Step to the next query at the same level of the stack (step over in vscode)
-  s[tep]                  Step to the next query                                (step into in vscode)
-  o[ut]                   Step out of the current level to the one above        (step out in vscode)
-  g[oal]                  Step to the next goal
+  s[tep] | into           Step to the next query (will step into rules).
+  n[ext] | over           Step to the next query at the same level of the query stack (will not step into rules).
+  o[ut]                   Step out of the current query stack level to the next query in the level above.
+  g[oal]                  Step to the next goal of the Polar VM.
   l[ine] [<n>]            Print the current line and <n> lines of context.
-  query                   Print the current query
-  stack                   Print the query stack
-  goals                   Print current goal stack.
+  query                   Print the current query.
+  stack | trace           Print the current query stack.
+  goals                   Print the current goal stack.
   bindings                Print all bindings
   var [<name> ...]        Print available variables. If one or more arguments
                           are provided, print the value of those variables.
