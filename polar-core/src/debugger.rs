@@ -214,12 +214,12 @@ impl Debugger {
                 let mut term = vm.trace.last().and_then(|t| t.term());
                 while level > 0 {
                     if let Some(trace) = trace_stack.pop().map(|ts| ts.as_ref().clone()) {
-                        trace.last().map(|t| {
+                        if let Some(t) = trace.last() {
                             if let Trace{node: Node::Term(t), ..} = &**t {
                                 term = Some(t.clone());
                                 level-=1;
                             }
-                        });
+                        }
                     } else {
                         return Some(Goal::Debug {
                             message: "Error: level is out of range".to_owned()
