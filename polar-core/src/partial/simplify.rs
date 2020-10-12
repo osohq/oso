@@ -49,27 +49,9 @@ pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
 
 #[allow(clippy::let_and_return)]
 fn simplify_partial(term: Term, bindings: &Bindings) -> Term {
-    let term = simplify_partial_variables(term, bindings);
     let term = simplify_unify_partials(term, bindings);
     let term = simplify_dot_ops(term, bindings);
     term
-}
-
-fn simplify_partial_variables(term: Term, bindings: &Bindings) -> Term {
-    term.cloned_map_replace(&mut |term: &Term| {
-        if let Value::Variable(name) = term.value() {
-            let value = bindings.get(name);
-            value
-                .cloned()
-                .map(|term| simplify_partial(term, bindings))
-                .unwrap_or_else(|| {
-                    // NOTE this might be an error
-                    term.clone()
-                })
-        } else {
-            term.clone()
-        }
-    })
 }
 
 fn dot_field(op: &Value) -> usize {
@@ -231,30 +213,5 @@ fn remove_temporaries(bindings: &mut Bindings) {
 
     for name in remove.iter() {
         bindings.remove(name);
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::formatting::ToPolarString;
-    use crate::partial::Constraints;
-
-    #[test]
-    fn test_variable_subsitution() {
-        let mut bindings = Bindings::new();
-
-        let mut constraint = Constraints::new(sym!("a"));
-        let bar_partial_term = constraint.lookup(term!("foo"), term!(sym!("_value_1")));
-        let mut bar_partial = bar_partial_term.value().as_partial().unwrap().clone();
-        bar_partial.unify(term!(1));
-
-        bindings.insert(sym!("a"), term!(constraint));
-        bindings.insert(sym!("_value_1"), term!(bar_partial));
-
-        let bindings = simplify_bindings(bindings);
-        let a_term = bindings.get(&sym!("a")).unwrap();
-
-        assert_eq!(a_term.to_polar(), "1 = _this.foo");
     }
 }

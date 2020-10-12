@@ -575,11 +575,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn deep_deref(&self, term: &Term) -> Term {
-        match term.value() {
-            // Partial eval expression so don't deref SKETCHY
-            Value::Expression(_) => term.clone(),
-            _ => term.cloned_map_replace(&mut |t| self.deref(t)),
-        }
+        term.cloned_map_replace(&mut |t| self.deref(t))
     }
 
     /// Recursively dereference a variable.
