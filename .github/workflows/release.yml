@@ -594,3 +594,20 @@ jobs:
       #     asset_path: ./oso-docs.zip
       #     asset_name: oso-docs.zip
       #     asset_content_type: application/zip
+  alert-failure:
+    name: Alert on failure
+    if: ${{ !success() }}
+    runs-on: ubuntu-latest
+    needs:
+      [
+        release,
+      ]
+    steps:
+      - uses: rtCamp/action-slack-notify@master
+        env:
+          SLACK_CHANNEL: firehose
+          SLACK_COLOR: 'danger'
+          SLACK_MESSAGE: "${{ github.event.head_commit.url }}"
+          SLACK_TITLE: 'Release job failed.'
+          SLACK_USERNAME: github-actions
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_TO_FIREHOSE }}

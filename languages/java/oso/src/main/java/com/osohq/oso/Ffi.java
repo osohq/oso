@@ -67,7 +67,7 @@ public class Ffi {
       }
     }
 
-    protected int registerConstant(String name, String value) throws Exceptions.OsoException {
+    protected int registerConstant(String value, String name) throws Exceptions.OsoException {
       return checkResult(polarLib.polar_register_constant(ptr, name, value));
     }
 

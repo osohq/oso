@@ -54,7 +54,7 @@ class Polar:
             return None
         return Query(q)
 
-    def register_constant(self, name, value):
+    def register_constant(self, value, name):
         name = to_c_str(name)
         value = ffi_serialize(value)
         result = lib.polar_register_constant(self.ptr, name, value)

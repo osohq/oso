@@ -189,12 +189,12 @@ public class Polar {
   public void registerClass(Class<?> cls, String name, Constructor<?> constructor)
       throws Exceptions.DuplicateClassAliasError, Exceptions.OsoException {
     host.cacheClass(cls, constructor, name);
-    registerConstant(name, cls);
+    registerConstant(cls, name);
   }
 
   /** Registers `value` as a Polar constant variable called `name`. */
-  public void registerConstant(String name, Object value) throws Exceptions.OsoException {
-    ffiPolar.registerConstant(name, host.toPolarTerm(value).toString());
+  public void registerConstant(Object value, String name) throws Exceptions.OsoException {
+    ffiPolar.registerConstant(host.toPolarTerm(value).toString(), name);
   }
 
   /** Confirm that all queued inline queries succeed. */

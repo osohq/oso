@@ -143,15 +143,15 @@ impl Oso {
         let name = class.name.clone();
         let name = Symbol(name);
         let class_name = self.host.cache_class(class.clone(), name)?;
-        self.register_constant(&class_name, class)
+        self.register_constant(class, &class_name)
     }
 
     /// Register a rust type as a Polar constant.
     /// See [`oso::Class`] docs.
     pub fn register_constant<V: crate::host::ToPolar + Send + Sync>(
         &mut self,
-        name: &str,
         value: V,
+        name: &str,
     ) -> crate::Result<()> {
         self.inner
             .register_constant(Symbol(name.to_string()), value.to_polar(&mut self.host));
