@@ -449,8 +449,9 @@ jobs:
         with:
           name: oso_js_node
       - name: Run tests
+        # Timeout fix: https://stackoverflow.com/a/51508426
         run: |
-          yarn install --prod
+          yarn install --prod  --network-timeout 100000
           node dist/test/parity.js
         working-directory: oso_js_node
 
@@ -600,7 +601,11 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       [
-        release,
+        validate_python,
+        validate_python_musl,
+        validate_ruby,
+        validate_java,
+        validate_js,
       ]
     steps:
       - uses: rtCamp/action-slack-notify@master
