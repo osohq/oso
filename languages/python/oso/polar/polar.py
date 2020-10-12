@@ -58,13 +58,12 @@ def print_error(error):
 
 
 CLASSES = {}
-CONSTRUCTORS = {}
 
 
 class Polar:
     """Polar API"""
 
-    def __init__(self, classes=CLASSES, constructors=CONSTRUCTORS):
+    def __init__(self, classes=CLASSES):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
 
@@ -80,7 +79,7 @@ class Polar:
 
         # Pre-registered classes.
         for name, cls in classes.items():
-            self.register_class(cls, name=name, from_polar=constructors[name])
+            self.register_class(cls, name=name)
 
     def __del__(self):
         del self.host
@@ -183,11 +182,9 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None, from_polar=None):
-        """Register `cls` as a class accessible by Polar. `from_polar` can
-        either be a method or a string. In the case of a string, Polar will
-        look for the method using `getattr(cls, from_polar)`."""
-        cls_name = self.host.cache_class(cls, name, from_polar)
+    def register_class(self, cls, *, name=None):
+        """Register `cls` as a class accessible by Polar."""
+        cls_name = self.host.cache_class(cls, name)
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):
@@ -195,18 +192,13 @@ class Polar:
         self.ffi_polar.register_constant(self.host.to_polar(value), name)
 
 
-def polar_class(_cls=None, *, name=None, from_polar=None):
+def polar_class(_cls=None, *, name=None):
     """Decorator to register a Python class with Polar.
-    An alternative to ``register_class()``.
-
-    :param str from_polar: Name of class function to create a new instance from ``fields``.
-                           Defaults to class constructor.
-    """
+    An alternative to ``register_class()``."""
 
     def wrap(cls):
         cls_name = cls.__name__ if name is None else name
         CLASSES[cls_name] = cls
-        CONSTRUCTORS[cls_name] = from_polar or cls
         return cls
 
     if _cls is None:

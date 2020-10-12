@@ -112,11 +112,8 @@ def test_external(polar, qvar, qeval):
         def h(self):
             return True
 
-    def capital_foo():
-        return Foo(a="A")
-
-    polar.register_class(Foo, from_polar=capital_foo)
-    assert qvar("new Foo().a = x", "x", one=True) == "A"
+    polar.register_class(Foo)
+    assert qvar("new Foo().a = x", "x", one=True) == "a"
     with pytest.raises(
         InvalidCallError, match="tried to call 'a' but it is not callable"
     ):
@@ -125,7 +122,7 @@ def test_external(polar, qvar, qeval):
     assert qvar("new Foo().b() = x", "x", one=True) == "b"
     assert not qvar("Foo.c = x", "x", one=True) == "c"
     assert qvar("Foo.c() = x", "x", one=True) == "c"
-    assert qvar("new Foo() = f and f.a = x", "x", one=True) == "A"
+    assert qvar("new Foo() = f and f.a = x", "x", one=True) == "a"
     assert qvar("new Foo().bar().y() = x", "x", one=True) == "y"
     assert qvar("new Foo().e() = x", "x", one=True) == [1, 2, 3]
     assert qvar("new Foo().f() = x", "x") == [[1, 2, 3], [4, 5, 6], 7]

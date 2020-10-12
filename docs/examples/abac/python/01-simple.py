@@ -5,7 +5,7 @@ EXPENSES = [
 ]
 
 # expense-class-start
-@polar_class(from_polar="by_id")
+@polar_class
 class Expense:
     """Expense model"""  # expense-class-end
 
@@ -42,7 +42,7 @@ class User:
                 yield User(name)
 
 
-@polar_class(from_polar="by_id")
+@polar_class
 class Project:
     """Project model"""
 
@@ -55,7 +55,7 @@ class Project:
         return Project(id, 0)
 
 
-@polar_class(from_polar="by_id")
+@polar_class
 class Team:
     """Team model"""
 
@@ -67,7 +67,7 @@ class Team:
         return Team(0)
 
 
-@polar_class(from_polar="by_id")
+@polar_class
 class Organization:
     """Organization model"""
 
