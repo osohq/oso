@@ -134,7 +134,7 @@ impl Debugger {
 
     /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
     /// This is used to implement the `step`, `over`, and `out` debug commands
-    fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
+    pub fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
         let message = vm.trace.last().and_then(|trace| {
             if let Trace {
                 node: Node::Term(q),
@@ -148,7 +148,7 @@ impl Debugger {
                     }) if args.len() == 1 => None,
                     _ => {
                         let source = self.query_source(&q, &vm.kb.read().unwrap().sources, 3);
-                        Some(format!("{}\n\n{}", vm.query_summary(q), source))
+                        Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
                     }
                 }
             } else {

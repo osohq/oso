@@ -1453,17 +1453,23 @@ impl PolarVirtualMachine {
                 }
             }
             Operator::Debug => {
-                let mut message = "Welcome to the debugger!".to_string();
+                let mut message = "".to_string();
                 if !args.is_empty() {
                     message += &format!(
-                        "\ndebug({})",
+                        "debug({})",
                         args.iter()
                             .map(|arg| self.deref(arg).to_polar())
                             .collect::<Vec<String>>()
                             .join(", ")
                     );
                 }
-                self.push_goal(Goal::Debug { message })?
+                if let Some(debug_goal) = self.debugger.break_query(&self) {
+                    self.goals.push(debug_goal);
+                } else {
+                    self.push_goal(Goal::Debug {
+                        message: "".to_owned(),
+                    })?
+                }
             }
             Operator::Print => {
                 self.print(
