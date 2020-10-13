@@ -203,7 +203,6 @@ Releases
     :maxdepth: 1
     :caption: See below for release notes:
 
-    vNEXT <changelogs/vNEXT>
     v0.6.0 <changelogs/0.6.0>
     v0.5.2 <changelogs/0.5.2>
     v0.5.1 <changelogs/0.5.1>

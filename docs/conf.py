@@ -104,7 +104,7 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "theme/**",
-    #"changelogs/vNEXT.rst",
+    "changelogs/vNEXT.rst",
     "changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",
