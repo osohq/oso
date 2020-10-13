@@ -57,10 +57,12 @@ convention.
 
 Improvements to the debugger
 ----------------------------
-Three ways to step through queries, step, over and out.
-Inspect the stack.
-Inspect queries at every level of the stack.
-Relevant bindings and queries printed while stepping.
+Changes to the way stepping is implemented.
+- Step steps by query instead of goal.
+- Over and out are now implemented using a stack that tracks query parents.
+New `goal` command to step by goal (the way step used to work).
+New `stack` command to show all parent queries of the current one.
+`query n` command can take an integer argument `n` to inspect the query at the nth level of the stack.
 
 New features
 ============
