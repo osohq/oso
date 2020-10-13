@@ -29,7 +29,7 @@ required-features = ["anyhow"]
 [dependencies]
 impl-trait-for-tuples = { git = "https://github.com/bkchr/impl-trait-for-tuples", rev = "c6781ff" }
 maplit = "1.0.2"
-polar-core = { path = "../../../polar-core", version = "=0.6.0" }
+polar-core = { path = "../../../polar-core", version = "=0.7.0" }
 oso-derive = { path = "../oso-derive", version = "=0.6.0-alpha", optional = true }
 thiserror = "1.0.21"
 tracing = { version = "0.1.21", features = ["log"] }

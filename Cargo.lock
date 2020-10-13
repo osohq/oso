@@ -800,7 +800,7 @@ dependencies = [
 
 [[package]]
 name = "polar-c-api"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "cbindgen",
  "polar-core",
@@ -810,7 +810,7 @@ dependencies = [
 
 [[package]]
 name = "polar-core"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "criterion",
@@ -832,7 +832,7 @@ dependencies = [
 
 [[package]]
 name = "polar-wasm-api"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",

@@ -60,6 +60,7 @@ arity
 NaN
 constructable
 precommit
+args
 
 ## Product names
 sqlite
