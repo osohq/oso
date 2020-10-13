@@ -6,6 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 pub use super::numerics::Numeric;
+use super::partial::Constraints;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -99,6 +100,10 @@ pub struct Symbol(pub String);
 impl Symbol {
     pub fn new(name: &str) -> Self {
         Self(name.to_string())
+    }
+
+    pub fn is_temporary_var(&self) -> bool {
+        self.0.starts_with('_')
     }
 }
 
@@ -207,10 +212,11 @@ pub enum Value {
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),
+    Partial(Constraints),
 }
 
 impl Value {
-    pub fn symbol(self) -> Result<Symbol, error::RuntimeError> {
+    pub fn as_symbol(&self) -> Result<&Symbol, error::RuntimeError> {
         match self {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
@@ -221,7 +227,17 @@ impl Value {
         }
     }
 
-    pub fn instance_literal(self) -> Result<InstanceLiteral, error::RuntimeError> {
+    pub fn as_string(&self) -> Result<&str, error::RuntimeError> {
+        match self {
+            Value::String(string) => Ok(string.as_ref()),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected string, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn as_instance_literal(&self) -> Result<&InstanceLiteral, error::RuntimeError> {
         match self {
             Value::InstanceLiteral(literal) => Ok(literal),
             _ => Err(error::RuntimeError::TypeError {
@@ -231,21 +247,31 @@ impl Value {
         }
     }
 
-    pub fn expression(self) -> Result<Operation, error::RuntimeError> {
+    pub fn as_expression(&self) -> Result<&Operation, error::RuntimeError> {
         match self {
             Value::Expression(op) => Ok(op),
             _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                msg: format!("Expected expression, got: {}", self.to_polar()),
                 stack_trace: None, // @TODO
             }),
         }
     }
 
-    pub fn call(self) -> Result<Call, error::RuntimeError> {
+    pub fn as_partial(&self) -> Result<&Constraints, error::RuntimeError> {
+        match self {
+            Value::Partial(e) => Ok(e),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected partial, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn as_call(&self) -> Result<&Call, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
             _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected instance literal, got: {}", self.to_polar()),
+                msg: format!("Expected call, got: {}", self.to_polar()),
                 stack_trace: None, // @TODO
             }),
         }
@@ -256,7 +282,8 @@ impl Value {
             Value::Call(_)
             | Value::ExternalInstance(_)
             | Value::Variable(_)
-            | Value::RestVariable(_) => false,
+            | Value::RestVariable(_)
+            | Value::Partial(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
             Value::InstanceLiteral(_) | Value::Pattern(_) => panic!("unexpected value type"),
             Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
@@ -405,6 +432,10 @@ impl Term {
             Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
                 fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
             }
+            Value::Partial(ref mut partial) => partial
+                .operations_mut()
+                .iter_mut()
+                .for_each(|op| op.args.iter_mut().for_each(|arg| arg.map_replace(f))),
         };
         self.replace_value(value);
     }

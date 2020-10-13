@@ -17,7 +17,7 @@ import sys
 from data import *
 
 
-@polar_class(from_polar="by_name")
+@polar_class
 class User:
     """User model"""
 
@@ -49,7 +49,7 @@ class User:
                 yield User.by_name(name)
 
 
-@polar_class(from_polar="id")
+@polar_class
 class Expense:
     """Expense model"""
 
@@ -67,7 +67,7 @@ class Expense:
             return Expense()
 
 
-@polar_class(from_polar="id")
+@polar_class
 class Project:
     """Project model"""
 
@@ -82,7 +82,7 @@ class Project:
             return Project()
 
 
-@polar_class(from_polar="id")
+@polar_class
 class Team:
     """Team model"""
 
@@ -97,7 +97,7 @@ class Team:
             return Team()
 
 
-@polar_class(from_polar="id")
+@polar_class
 class Organization:
     """Organization model"""
 

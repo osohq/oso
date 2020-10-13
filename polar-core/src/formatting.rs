@@ -60,6 +60,7 @@ impl Trace {
 /// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached,
 /// and return the source line containing the `offset` character as well as `num_lines` lines
 /// above and below it.
+// @TODO: Can we have the caret under the whole range of the expression instead of just the beginning.
 pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
     // Sliding window of lines: current line + indicator + additional context above + below.
     let max_lines = num_lines * 2 + 2;
@@ -409,17 +410,23 @@ pub mod to_polar {
                         )
                     }
                 }
-                // `Dot` sometimes formats as a predicate
+                // Lookup operator
                 Dot => {
-                    if self.args.len() == 2 {
-                        let call_term = if let Value::String(s) = self.args[1].value() {
-                            s.to_string()
-                        } else {
-                            self.args[1].to_polar()
-                        };
-                        format!("{}.{}", self.args[0].to_polar(), call_term)
+                    let call_term = if let Value::String(s) = self.args[1].value() {
+                        s.to_string()
                     } else {
-                        format!(".({})", format_args(self.operator, &self.args, ", "))
+                        self.args[1].to_polar()
+                    };
+                    match self.args.len() {
+                        2 => format!("{}.{}", self.args[0].to_polar(), call_term),
+                        3 => format!(
+                            "{}.{} = {}",
+                            self.args[0].to_polar(),
+                            call_term,
+                            self.args[2].to_polar()
+                        ),
+                        // Invalid
+                        _ => format!(".({})", format_args(self.operator, &self.args, ", ")),
                     }
                 }
                 // Unary operators
@@ -430,12 +437,27 @@ pub mod to_polar {
                 ),
                 // Binary operators
                 Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa | In
-                | Assign => format!(
-                    "{} {} {}",
-                    to_polar_parens(self.operator, &self.args[0]),
-                    self.operator.to_polar(),
-                    to_polar_parens(self.operator, &self.args[1])
-                ),
+                | Assign => match self.args.len() {
+                    2 => format!(
+                        "{} {} {}",
+                        to_polar_parens(self.operator, &self.args[0]),
+                        self.operator.to_polar(),
+                        to_polar_parens(self.operator, &self.args[1]),
+                    ),
+                    3 => format!(
+                        "{} {} {} = {}",
+                        to_polar_parens(self.operator, &self.args[0]),
+                        self.operator.to_polar(),
+                        to_polar_parens(self.operator, &self.args[1]),
+                        to_polar_parens(self.operator, &self.args[2]),
+                    ),
+                    // Invalid
+                    _ => format!(
+                        "{}({})",
+                        self.operator.to_polar(),
+                        format_args(self.operator, &self.args, ", ")
+                    ),
+                },
                 // n-ary operators
                 And => format_args(
                     self.operator,
@@ -553,6 +575,11 @@ pub mod to_polar {
                 Value::Variable(s) => s.to_polar(),
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
+                Value::Partial(p) => format!(
+                    "partial({}) {{ {} }}",
+                    p.name().0,
+                    p.clone().into_expression().to_polar()
+                ),
             }
         }
     }

@@ -41,14 +41,10 @@ class Widget:
         frobbed.append(what)
         yield self
 
-    def from_polar(id, name=""):
-        return Widget(id, name)
-
 
 @polar_class
 class DooDad(Widget):
-    def from_polar(id, name=""):
-        return DooDad(id, name)
+    pass
 
 
 @dataclass
@@ -81,9 +77,6 @@ class Company:
             yield "admin"
         else:
             yield "guest"
-
-    def from_polar(id, default_role):
-        return Company(id, default_role)
 
     def roles(self):
         yield "guest"

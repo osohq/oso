@@ -37,17 +37,45 @@ Select Ruby methods now return ``self`` to enable method chaining
 - ``Oso#register_class``
 - ``Oso#register_constant``
 
+Custom constructors no longer supported in the Java, Python, or Ruby libraries
+------------------------------------------------------------------------------
+
+For the Java, Python, and Ruby libraries, custom constructors are a relic. They
+were useful for translating keyword args into positional args before oso
+supported supplying positional args when constructing an instance via Polar's
+:ref:`new operator <operator-new>`. They were also useful for specifying a
+``find_or_create``-style class method as a constructor, but that's been
+superseded by the introduction of calling methods directly on registered
+constants, including classes.
+
+To migrate, replace usage of a custom constructor with an equivalent class
+method.
+
+Note that custom constructors are still supported for the Rust library since
+specifying a static ``new`` method for a type is nothing more than a
+convention.
+
 New features
 ============
 
-Feature 1
----------
+List filtering in ``django-oso`` (preview)
+-------------------------------------------
 
-- summary
-- of
-- user facing changes
+oso can now respond to some queries with a set of constraints instead of a
+yes or no decision.  In the ``django-oso`` library, the
+:py:meth:`django_oso.auth.authorize_model` function and
+:py:class:`django_oso.models.AuthorizedModel` class have been added to use this
+functionality to authorize a **collection** of objects.  Instead of fetching all
+objects and evaluating a query, the relevant authorization constraints will be
+pushed down to the ORM and applied to a Django ``QuerySet``.
 
-Link to relevant documentation section
+This feature makes implementing list endpoints with authorization more
+performant, since authorization does not need to be applied after fetching data.
+
+**This feature is currently in preview.**
+
+
+.. todo:: Link to blog post
 
 
 Other bugs & improvements
@@ -55,3 +83,15 @@ Other bugs & improvements
 
 - Language libraries that haven't yet implemented operations on application
   instances (Java, Node.js, Ruby, Rust) now throw a uniform error type.
+
+Improvements to the debugger
+----------------------------
+
+- Changes to the way stepping is implemented:
+    - ``step`` steps by query instead of goal.
+    - ``over`` and ``out`` are now implemented using a stack that tracks query
+      parents.
+- New ``goal`` command to step by goal (the way ``step`` used to work).
+- New ``stack`` command to show all parent queries of the current one.
+- ``query n`` command can take an integer argument ``n`` to inspect the query
+  at the nth level of the stack.

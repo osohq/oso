@@ -1,16 +1,30 @@
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+
 use super::kb::*;
+use super::runnable::Runnable;
 use super::terms::*;
 use super::traces::*;
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum QueryEvent {
     None,
 
-    Done,
+    /// This runnable is complete with `result`.
+    Done {
+        result: bool,
+    },
+
+    /// Run `runnable`, and report the result to its parent using `call_id`
+    /// when it completes.
+    #[serde(skip)]
+    Run {
+        call_id: u64,
+        runnable: Box<dyn Runnable>,
+    },
 
     Debug {
         message: String,
@@ -42,10 +56,17 @@ pub enum QueryEvent {
         class_tag: Symbol,
     },
 
-    /// Checks if the instance is more specifically and instance/subclass of A than B.
+    /// Checks if the left is more specific than right with respect to instance.
     ExternalIsSubSpecializer {
         call_id: u64,
         instance_id: u64,
+        left_class_tag: Symbol,
+        right_class_tag: Symbol,
+    },
+
+    /// Checks if left class tag is a subclass or the same class as right.
+    ExternalIsSubclass {
+        call_id: u64,
         left_class_tag: Symbol,
         right_class_tag: Symbol,
     },

@@ -42,9 +42,6 @@ class Widget:
     def company(self):
         return Company(id=self.id)
 
-    def from_polar(id):
-        return Widget(id)
-
 
 @dataclass
 class Company:
@@ -55,14 +52,15 @@ class Company:
     # Class variables.
     roles = ("guest", "admin")
 
+    def __init__(self, id, default_role=""):
+        self.id = id
+        self.default_role = default_role
+
     def role(self, actor: Actor):
         if actor.name == "president":
             yield "admin"
         else:
             yield "guest"
-
-    def from_polar(id, default_role):
-        return Company(id, default_role)
 
 
 @pytest.fixture(scope="module")
@@ -70,7 +68,7 @@ def test_oso():
     oso = Oso()
     oso.register_class(Jwt)
     oso.register_class(Actor)
-    oso.register_class(Widget, from_polar="from_polar")
+    oso.register_class(Widget)
     oso.register_class(Company)
     oso.load_file(Path(__file__).parent / "test_oso.polar")
 

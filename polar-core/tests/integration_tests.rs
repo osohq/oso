@@ -74,7 +74,7 @@ where
             message_handler(&msg)
         }
         match event {
-            QueryEvent::Done => break,
+            QueryEvent::Done { .. } => break,
             QueryEvent::Result { bindings, trace } => {
                 results.push((
                     bindings
@@ -106,16 +106,24 @@ where
                 call_id,
                 instance,
                 class_tag,
-            } => query.question_result(call_id, external_isa_handler(instance, class_tag)),
+            } => query
+                .question_result(call_id, external_isa_handler(instance, class_tag))
+                .unwrap(),
             QueryEvent::ExternalIsSubSpecializer {
                 call_id,
                 instance_id,
                 left_class_tag,
                 right_class_tag,
-            } => query.question_result(
-                call_id,
-                external_is_subspecializer_handler(instance_id, left_class_tag, right_class_tag),
-            ),
+            } => query
+                .question_result(
+                    call_id,
+                    external_is_subspecializer_handler(
+                        instance_id,
+                        left_class_tag,
+                        right_class_tag,
+                    ),
+                )
+                .unwrap(),
             QueryEvent::Debug { ref message } => {
                 query.debug_command(&debug_handler(message)).unwrap();
             }
@@ -969,25 +977,46 @@ fn test_arithmetic() {
 
 #[test]
 fn test_debug() {
+    let source = indoc!(
+        r#"
+        a() if debug("a") and b() and c() and d();
+        b();
+        c() if debug("c");
+        d();"#
+    );
+
     let polar = Polar::new();
-    polar
-        .load_str(
-            "a() if debug(\"a\") and b() and c() and d();\nb();\nc() if debug(\"c\");\nd();\n",
-        )
-        .unwrap();
+    polar.load_str(source).unwrap();
 
     let mut call_num = 0;
     let debug_handler = |s: &str| {
         let rt = match call_num {
             0 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: a() if debug("a") and b() and c() and d();
+                                ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();
+                    "#
+                );
+                assert_eq!(s, expected);
                 "over"
             }
             1 => {
                 let expected = indoc!(
                     r#"
-                001: a() if debug("a") and b() and c() and d();
-                                           ^"#
+                    QUERY: b(), BINDINGS: {}
+
+                    001: a() if debug("a") and b() and c() and d();
+                                               ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();
+                    "#
                 );
                 assert_eq!(s, expected);
                 "over"
@@ -995,21 +1024,44 @@ fn test_debug() {
             2 => {
                 let expected = indoc!(
                     r#"
+                    QUERY: c(), BINDINGS: {}
+
                     001: a() if debug("a") and b() and c() and d();
-                                                       ^"#
+                                                       ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();
+                    "#
                 );
                 assert_eq!(s, expected);
                 "over"
             }
             3 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: a() if debug("a") and b() and c() and d();
+                    002: b();
+                    003: c() if debug("c");
+                                ^
+                    004: d();
+                    "#
+                );
+                assert_eq!(s, expected);
                 "over"
             }
             4 => {
                 let expected = indoc!(
                     r#"
+                    QUERY: d(), BINDINGS: {}
+
                     001: a() if debug("a") and b() and c() and d();
-                                                               ^"#
+                                                               ^
+                    002: b();
+                    003: c() if debug("c");
+                    004: d();
+                    "#
                 );
                 assert_eq!(s, expected);
                 "over"
@@ -1023,25 +1075,58 @@ fn test_debug() {
     let query = polar.new_query("a()", false).unwrap();
     let _results = query_results!(query, no_results, no_externals, debug_handler);
 
+    let source = indoc!(
+        r#"
+        a() if debug() and b() and c() and d();
+        a() if 5 = 5;
+        b() if 1 = 1 and 2 = 2;
+        c() if 3 = 3 and 4 = 4;
+        d();"#
+    );
+
+    let polar = Polar::new();
+    polar.load_str(source).unwrap();
+
     let mut call_num = 0;
     let debug_handler = |s: &str| {
         let rt = match call_num {
             0 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"a\")");
-                "out"
+                assert_eq!(s.lines().next().unwrap(), "QUERY: debug(), BINDINGS: {}");
+                "step"
             }
             1 => {
-                assert_eq!(s, "Welcome to the debugger!\ndebug(\"c\")");
-                "out"
+                assert_eq!(s.lines().next().unwrap(), "QUERY: b(), BINDINGS: {}");
+                "step"
             }
             2 => {
-                let expected = indoc!(
-                    r#"
-                001: a() if debug("a") and b() and c() and d();
-                                                           ^"#
+                assert_eq!(
+                    s.lines().next().unwrap(),
+                    "QUERY: 1 = 1 and 2 = 2, BINDINGS: {}"
                 );
-                assert_eq!(s, expected);
                 "out"
+            }
+            3 => {
+                assert_eq!(s.lines().next().unwrap(), "QUERY: c(), BINDINGS: {}");
+                "step"
+            }
+            4 => {
+                assert_eq!(
+                    s.lines().next().unwrap(),
+                    "QUERY: 3 = 3 and 4 = 4, BINDINGS: {}"
+                );
+                "step"
+            }
+            5 => {
+                assert_eq!(s.lines().next().unwrap(), "QUERY: 3 = 3, BINDINGS: {}");
+                "out"
+            }
+            6 => {
+                assert_eq!(s.lines().next().unwrap(), "QUERY: d(), BINDINGS: {}");
+                "over"
+            }
+            7 => {
+                assert_eq!(s.lines().next().unwrap(), "QUERY: 5 = 5, BINDINGS: {}");
+                "c"
             }
             _ => panic!("Too many calls: {}", s),
         };
@@ -1087,6 +1172,7 @@ fn test_singleton_vars() {
 
 #[test]
 fn test_print() {
+    // TODO: If polar_log is on this test will fail.
     let polar = Polar::new();
     polar.load_str("f(x,y,z) if print(x, y, z);").unwrap();
     let message_handler = |output: &Message| {
