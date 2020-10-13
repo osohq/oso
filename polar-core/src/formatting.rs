@@ -424,7 +424,8 @@ pub mod to_polar {
                             call_term,
                             self.args[2].to_polar()
                         ),
-                        _ => panic!("Invalid lookup operation: {:?}", self),
+                        // Invalid
+                        _ => format!(".({})", format_args(self.operator, &self.args, ", ")),
                     }
                 }
                 // Unary operators
@@ -449,7 +450,12 @@ pub mod to_polar {
                         to_polar_parens(self.operator, &self.args[1]),
                         to_polar_parens(self.operator, &self.args[2]),
                     ),
-                    _ => panic!("Invalid operation: {:?}", self),
+                    // Invalid
+                    _ => format!(
+                        "{}({})",
+                        self.operator.to_polar(),
+                        format_args(self.operator, &self.args, ", ")
+                    ),
                 },
                 // n-ary operators
                 And => format_args(
