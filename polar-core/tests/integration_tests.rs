@@ -74,7 +74,7 @@ where
             message_handler(&msg)
         }
         match event {
-            QueryEvent::Done => break,
+            QueryEvent::Done { .. } => break,
             QueryEvent::Result { bindings, trace } => {
                 results.push((
                     bindings
@@ -106,16 +106,24 @@ where
                 call_id,
                 instance,
                 class_tag,
-            } => query.question_result(call_id, external_isa_handler(instance, class_tag)),
+            } => query
+                .question_result(call_id, external_isa_handler(instance, class_tag))
+                .unwrap(),
             QueryEvent::ExternalIsSubSpecializer {
                 call_id,
                 instance_id,
                 left_class_tag,
                 right_class_tag,
-            } => query.question_result(
-                call_id,
-                external_is_subspecializer_handler(instance_id, left_class_tag, right_class_tag),
-            ),
+            } => query
+                .question_result(
+                    call_id,
+                    external_is_subspecializer_handler(
+                        instance_id,
+                        left_class_tag,
+                        right_class_tag,
+                    ),
+                )
+                .unwrap(),
             QueryEvent::Debug { ref message } => {
                 query.debug_command(&debug_handler(message)).unwrap();
             }
@@ -1164,6 +1172,7 @@ fn test_singleton_vars() {
 
 #[test]
 fn test_print() {
+    // TODO: If polar_log is on this test will fail.
     let polar = Polar::new();
     polar.load_str("f(x,y,z) if print(x, y, z);").unwrap();
     let message_handler = |output: &Message| {

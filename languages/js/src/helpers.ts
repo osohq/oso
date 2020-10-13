@@ -49,9 +49,10 @@ export function repr(x: any): string {
  */
 export function parseQueryEvent(event: string | obj): QueryEvent {
   try {
-    if (event === 'Done') return { kind: QueryEventKind.Done };
     if (typeof event === 'string') throw new Error();
     switch (true) {
+      case event['Done'] !== undefined:
+        return { kind: QueryEventKind.Done };
       case event['Result'] !== undefined:
         return parseResult(event['Result']);
       case event['MakeExternal'] !== undefined:

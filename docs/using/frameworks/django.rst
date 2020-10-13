@@ -158,6 +158,24 @@ View Decorators
 
 .. autofunction:: django_oso.decorators.skip_authorization
 
+List endpoint authorization
+---------------------------
+
+.. note::
+
+    These features are in preview and will be stabilized in a
+    future release. Please `join our Slack`_ to provide feedback or discuss with
+    the engineering team.
+
+.. autofunction:: django_oso.auth.authorize_model
+
+.. autoclass:: django_oso.models.AuthorizedModel
+
+.. autoclass:: django_oso.models.AuthorizedQuerySet
+
+
+.. _`join our Slack`: http://join-slack.osohq.com/
+
 Oso
 ---
 

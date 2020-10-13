@@ -13,6 +13,8 @@ from .exceptions import (
 )
 from .variable import Variable
 from .predicate import Predicate
+from .partial import Partial
+from .expression import Expression, Pattern
 
 
 class Host:
@@ -83,6 +85,12 @@ class Host:
         cls = self.get_class(class_tag)
         return isinstance(instance, cls)
 
+    def is_subclass(self, left_tag, right_tag) -> bool:
+        """Return true if left is a subclass (or the same class) as right."""
+        left = self.get_class(left_tag)
+        right = self.get_class(right_tag)
+        return issubclass(left, right)
+
     def is_subspecializer(self, instance_id, left_tag, right_tag) -> bool:
         """Return true if the left class is more specific than the right class
         with respect to the given instance."""
@@ -148,6 +156,8 @@ class Host:
             }
         elif isinstance(v, Variable):
             val = {"Variable": v}
+        elif isinstance(v, Partial):
+            val = {"Partial": v.to_polar()}
         else:
             val = {
                 "ExternalInstance": {
@@ -192,5 +202,20 @@ class Host:
             )
         elif tag == "Variable":
             return Variable(value[tag])
+        elif tag == "Expression":
+            args = list(map(self.to_python, value[tag]["args"]))
+            operator = value[tag]["operator"]
+
+            return Expression(operator, args)
+        elif tag == "Pattern":
+            pattern_tag = [*value[tag]][0]
+            if pattern_tag == "Instance":
+                instance = value[tag]["Instance"]
+                return Pattern(instance["tag"], instance["fields"]["fields"])
+            elif pattern_tag == "Dictionary":
+                dictionary = value[tag]["Dictionary"]
+                return Pattern(None, dictionary["fields"])
+            else:
+                raise UnexpectedPolarTypeError("Pattern: " + value[tag])
 
         raise UnexpectedPolarTypeError(tag)
