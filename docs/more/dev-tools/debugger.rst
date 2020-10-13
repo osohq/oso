@@ -101,7 +101,7 @@ Continue evaluation after the ``debug()`` predicate.
 ``s[tep]`` or ``into``
 ----------------------
 Step to the next query. This is the lowest-level step of Polar's logical evaluation process.
-After each step, the debugger prints the currently query, relevant bindings, and context from the policy file.
+After each step, the debugger prints the current query, relevant bindings, and context from the policy file.
 
 .. code-block:: oso
 

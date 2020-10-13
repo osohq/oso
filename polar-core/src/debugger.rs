@@ -133,7 +133,7 @@ impl Debugger {
     }
 
     /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
-    /// This is used to implement the `step`, `over`, and `out` debug commands
+    /// This is used to implement the `step`, `over`, and `out` debug commands.
     pub fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
         let message = vm.trace.last().and_then(|trace| {
             if let Trace {
