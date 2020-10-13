@@ -211,6 +211,7 @@ impl Debugger {
                 let mut level = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
                 let mut trace_stack = vm.trace_stack.clone();
 
+                // Walk up the trace stack to get the query at the requested level.
                 let mut term = vm.trace.last().and_then(|t| t.term());
                 while level > 0 {
                     if let Some(trace) = trace_stack.pop().map(|ts| ts.as_ref().clone()) {
@@ -240,6 +241,7 @@ impl Debugger {
                 let mut trace_stack = vm.trace_stack.clone();
                 let mut trace = vm.trace.clone();
 
+                // Walk up the trace stack so we can print out the current query at each level.
                 let mut stack = vec![];
                 while let Some(t) = trace.last() {
                     stack.push(t.clone());
@@ -251,6 +253,7 @@ impl Debugger {
 
                 stack.reverse();
 
+                // Only index queries, not rules. Rule nodes are just used as context for where the query comes from.
                 let mut i = stack.iter().filter(|t| t.term().is_some()).count();
 
                 let mut st = String::new();
@@ -268,7 +271,7 @@ impl Debugger {
 
 
                             let _ = write!(st, "{}: {}", i-1, vm.term_source(t, false));
-                            i-= 1;
+                            i -= 1;
                             let _ = write!(st, "\n  ");
                             if let Some(source) = vm.source(t) {
                                 if let Some(rule) = &rule {
