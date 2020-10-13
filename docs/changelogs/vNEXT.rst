@@ -20,29 +20,17 @@ Breaking change 1
 
 Link to migration guide
 
-
 New features
 ============
 
-List filtering in ``django-oso`` (preview)
--------------------------------------------
+Feature 1
+---------
 
-oso can now respond to some queries with a set of constraints instead of a
-yes or no decision.  In the ``django-oso`` library, the
-:py:meth:`django_oso.auth.authorize_model` function and
-:py:class:`django_oso.models.AuthorizedModel` class have been added to use this
-functionality to authorize a **collection** of objects.  Instead of fetching all
-objects and evaluating a query, the relevant authorization constraints will be
-pushed down to the ORM and applied to a Django ``QuerySet``.
+- summary
+- of
+- user facing changes
 
-This feature makes implementing list endpoints with authorization more
-performant, since authorization does not need to be applied after fetching data.
-
-**This feature is currently in preview.**
-
-
-.. todo:: Link to blog post
-
+Link to relevant documentation section
 
 Other bugs & improvements
 =========================
