@@ -3,7 +3,7 @@ on:
   push:
 
 env:
-  MAKEFLAGS: "-j -O"
+  MAKEFLAGS: "-j2 -O"
 
 jobs:
   test:
