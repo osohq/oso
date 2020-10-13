@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1602544069999,
+  "lastUpdate": 1602600233164,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -8651,6 +8651,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6039,
             "range": "± 1144",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc80c4f8ed2d968b38ecc36ec0ca57b094b7e16b",
+          "message": "Debugger improvements (#469)\n\n\r\n\r\nCo-authored-by: Leina McDermott <leina05@gmail.com>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-10-13T10:33:21-04:00",
+          "tree_id": "f860ac418a23be44a273f6f571073889ce3b0cc9",
+          "url": "https://github.com/osohq/oso/commit/bc80c4f8ed2d968b38ecc36ec0ca57b094b7e16b"
+        },
+        "date": 1602600232321,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 678,
+            "range": "± 37",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2296,
+            "range": "± 69",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 61403,
+            "range": "± 1701",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 460698,
+            "range": "± 16724",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16212,
+            "range": "± 838",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16193,
+            "range": "± 626",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16238,
+            "range": "± 758",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16254,
+            "range": "± 692",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14639,
+            "range": "± 474",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4962,
+            "range": "± 184",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5151,
+            "range": "± 225",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5467,
+            "range": "± 435",
             "unit": "ns/iter"
           }
         ]
