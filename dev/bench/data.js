@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1602605221816,
+  "lastUpdate": 1602606213343,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -8843,6 +8843,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 4969,
             "range": "± 644",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10154d0600de2bccc5f2aa60afa67e5aa01fcb58",
+          "message": "Improve post-rewrite expression formatting (#472)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-10-13T12:12:35-04:00",
+          "tree_id": "ffa1f8a4a5eb538404267719be7f8ee4c0042a33",
+          "url": "https://github.com/osohq/oso/commit/10154d0600de2bccc5f2aa60afa67e5aa01fcb58"
+        },
+        "date": 1602606212274,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 876,
+            "range": "± 67",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2620,
+            "range": "± 177",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66510,
+            "range": "± 3130",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 532608,
+            "range": "± 5804",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18646,
+            "range": "± 1068",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18678,
+            "range": "± 4032",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18530,
+            "range": "± 740",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18722,
+            "range": "± 1150",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16486,
+            "range": "± 1112",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5508,
+            "range": "± 382",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5538,
+            "range": "± 1308",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6038,
+            "range": "± 889",
             "unit": "ns/iter"
           }
         ]
