@@ -1,13 +1,26 @@
+use std::fmt::Write;
 use std::rc::Rc;
 
 use super::error::PolarResult;
 use super::formatting::{source_lines, ToPolarString};
 use super::sources::*;
 use super::terms::*;
+use super::traces::*;
 
 use super::vm::*;
 
 impl PolarVirtualMachine {
+    pub fn query_summary(&self, query: &Term) -> String {
+        let relevant_bindings = self.relevant_bindings(&[&query]);
+        let bindings_str = relevant_bindings
+            .iter()
+            .map(|(var, val)| format!("{} = {}", var.0, val.to_polar()))
+            .collect::<Vec<String>>()
+            .join(", ");
+        let query_str = query.to_polar();
+        format!("QUERY: {}, BINDINGS: {{{}}}", query_str, bindings_str)
+    }
+
     /// Drive debugger.
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         let mut debugger = self.debugger.clone();
@@ -35,89 +48,14 @@ impl PolarVirtualMachine {
 enum Step {
     /// Pause after evaluating the next [`Goal`](../vm/enum.Goal.html).
     Goal,
-    /// Step **over** goals until reaching the next sibling [`Goal::Query`](../vm/enum.Goal.html).
-    /// This is not necessarily the next [`Goal::Query`](../vm/enum.Goal.html), but rather the next
-    /// [`Goal::Query`](../vm/enum.Goal.html) where the query stack sans that query is identical to
-    /// the current query stack sans the current query. For example, when the `debug()` predicate
-    /// is evaluated in the following snippet of Polar...
-    ///
-    /// ```polar
-    /// a() if debug() and b();
-    /// b();
-    /// ?= a()
-    /// ```
-    ///
-    /// ...the query stack will look as follows:
-    ///
-    /// ```text
-    /// a()          # Head of rule a().
-    /// debug(), b() # Body of rule a().
-    /// debug()      # First term in the body of rule a().
-    /// ```
-    ///
-    /// If the user wants to jump **over** `debug()` (the current query) to arrive at `b()` (the
-    /// next query in the body of `a()`), evaluate goals until the query stack looks as follows:
-    ///
-    /// ```text
-    /// a()          # Head of rule a().
-    /// debug(), b() # Body of rule a().
-    /// b()          # Second term in the body of rule a().
-    /// ```
-    Over {
-        /// Snapshot of the current query stack sans the current query.
-        snapshot: Queries,
-    },
-    /// Step **out** of the current parent query, evaluating goals until reaching the
-    /// [`Goal::Query`](../vm/enum.Goal.html) for its next sibling.
-    ///
-    /// To illustrate this movement, let's step through the queries for the following snippet of
-    /// polar:
-    ///
-    /// ```text
-    /// a() if b() and c();
-    /// b() if debug() and d();
-    /// c();
-    /// d();
-    /// ?= a()
-    /// ```
-    ///
-    /// First we query for the head of `a()`, then the body of `a()`, and then `b()`, the first
-    /// clause in the body of `a()`. Next we query for the body of `b()` and the first clause in
-    /// the body of `b()`, a `debug()` predicate. By the time we reach that `debug()` predicate,
-    /// the query stack looks like this:
-    ///
-    /// ```text
-    /// a()          # head of a()
-    /// b(), c()     # body of a()
-    /// b()          # first clause in body of a() / head of b()
-    /// debug(), d() # body of b()
-    /// debug()      # first clause in body of b()
-    /// ```
-    ///
-    /// From our current position (evaluating the `debug()` predicate in the body of `b()`), we
-    /// would [`Step::Out`](enum.Step.html) if we wanted to continue evaluating goals until
-    /// reaching `c()` in the body of `a()`. We're stepping entirely **out** of the current parent
-    /// query, `b()`, to arrive at its next sibling, `c()`. When we arrive at the
-    /// [`Goal::Query`](../vm/enum.Goal.html) for `c()`, the query stack will look as follows:
-    ///
-    /// ```text
-    /// a()          # head of a()
-    /// b(), c()     # body of a()
-    /// c()          # second clause in body of a() / head of c()
-    /// ```
-    ///
-    /// The query stack above `c()` is identical to the previous stack snippet above `b()`, which
-    /// makes sense since they share a parent -- the query for the body of `a()`. That gives us our
-    /// test for stepping **out**:
-    ///
-    /// - Store a slice of the current query stack *without the last three queries* (current query,
-    ///   body of current rule, and head of current rule).
-    /// - Evaluate goals until the current query stack *without the current query* matches the
-    ///   stored slice.
-    Out {
-        /// Snapshot of the current query stack sans its last three queries.
-        snapshot: Queries,
-    },
+    /// Step **over** the current query. Will break on the next query where the trace stack is at the same
+    /// level as the current one.
+    Over { level: usize },
+    /// Step **out** of the current query. Will break on the next query where the trace stack is at a lower
+    /// level than the current one.
+    Out { level: usize },
+    /// Step **in**. Will break on the next query.
+    Into,
 }
 
 /// VM breakpoints.
@@ -131,6 +69,7 @@ enum Step {
 pub enum DebugEvent {
     Goal(Rc<Goal>),
     Query,
+    Pop,
 }
 
 /// Tracks internal debugger state.
@@ -172,23 +111,51 @@ impl Debugger {
     /// - `Some(Goal::Debug { message })` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
     fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
-        self.step.as_ref().and_then(|step| match (step, event) {
-            (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
-                message: goal.to_string(),
-            })),
-            (Step::Over { snapshot }, DebugEvent::Query)
-            | (Step::Out { snapshot }, DebugEvent::Query)
-                if vm.queries[..vm.queries.len() - 1] == snapshot[..] =>
-            {
-                Some(Rc::new(Goal::Debug {
-                    message: vm.queries.last().map_or_else(
-                        || "".to_string(),
-                        |query| self.query_source(&query, &vm.kb.read().unwrap().sources, 0),
-                    ),
-                }))
+        if let Some(step) = self.step.as_ref() {
+            match (step, event) {
+                (Step::Goal, DebugEvent::Goal(goal)) => Some(Rc::new(Goal::Debug {
+                    message: goal.to_string(),
+                })),
+                (Step::Into, DebugEvent::Query) => self.break_query(vm),
+                (Step::Out { level }, DebugEvent::Query)
+                    if vm.trace_stack.is_empty() || vm.trace_stack.len() < *level =>
+                {
+                    self.break_query(vm)
+                }
+                (Step::Over { level }, DebugEvent::Query) if vm.trace_stack.len() == *level => {
+                    self.break_query(vm)
+                }
+                _ => None,
             }
-            _ => None,
-        })
+        } else {
+            None
+        }
+    }
+
+    /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
+    /// This is used to implement the `step`, `over`, and `out` debug commands.
+    pub fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Rc<Goal>> {
+        let message = vm.trace.last().and_then(|trace| {
+            if let Trace {
+                node: Node::Term(q),
+                ..
+            } = &**trace
+            {
+                match q.value() {
+                    Value::Expression(Operation {
+                        operator: Operator::And,
+                        args,
+                    }) if args.len() == 1 => None,
+                    _ => {
+                        let source = self.query_source(&q, &vm.kb.read().unwrap().sources, 3);
+                        Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
+                    }
+                }
+            } else {
+                None
+            }
+        });
+        message.map(|message| Rc::new(Goal::Debug { message }))
     }
 
     /// Process debugging commands from the user.
@@ -217,9 +184,20 @@ impl Debugger {
         }
         let parts: Vec<&str> = command.split_whitespace().collect();
         match *parts.get(0).unwrap_or(&"help") {
-            "bindings" => return Some(show(&vm.bindings)),
             "c" | "continue" | "q" | "quit" => self.step = None,
-            "goals" => return Some(show(&vm.goals)),
+
+            "n" | "next" | "over" => {
+                self.step = Some(Step::Over{ level: vm.trace_stack.len() })
+            }
+            "s" | "step" | "into" => {
+                self.step = Some(Step::Into)
+            }
+            "o" | "out" => {
+                self.step = Some(Step::Out{ level: vm.trace_stack.len() })
+            }
+            "g" | "goal" => {
+                self.step = Some(Step::Goal)
+            }
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
                 return Some(Goal::Debug {
@@ -229,18 +207,97 @@ impl Debugger {
                     ),
                 });
             }
-            "n" | "next" | "over" => {
-                self.step = Some(Step::Over {
-                    snapshot: vm.queries[..vm.queries.len().saturating_sub(1)].to_vec(),
+            "query" => {
+                let mut level = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+                let mut trace_stack = vm.trace_stack.clone();
+
+                // Walk up the trace stack to get the query at the requested level.
+                let mut term = vm.trace.last().and_then(|t| t.term());
+                while level > 0 {
+                    if let Some(trace) = trace_stack.pop().map(|ts| ts.as_ref().clone()) {
+                        if let Some(t) = trace.last() {
+                            if let Trace{node: Node::Term(t), ..} = &**t {
+                                term = Some(t.clone());
+                                level-=1;
+                            }
+                        }
+                    } else {
+                        return Some(Goal::Debug {
+                            message: "Error: level is out of range".to_owned()
+                        })
+                    }
+                }
+
+                if let Some(query) = term {
+                    return Some(Goal::Debug {
+                        message: vm.query_summary(&query)});
+                } else {
+                    return Some(Goal::Debug {
+                        message: "".to_owned()
+                    })
+                }
+            }
+            "stack" | "trace" => {
+                let mut trace_stack = vm.trace_stack.clone();
+                let mut trace = vm.trace.clone();
+
+                // Walk up the trace stack so we can print out the current query at each level.
+                let mut stack = vec![];
+                while let Some(t) = trace.last() {
+                    stack.push(t.clone());
+                    trace = trace_stack
+                        .pop()
+                        .map(|ts| ts.as_ref().clone())
+                        .unwrap_or_else(Vec::new);
+                }
+
+                stack.reverse();
+
+                // Only index queries, not rules. Rule nodes are just used as context for where the query comes from.
+                let mut i = stack.iter().filter(|t| t.term().is_some()).count();
+
+                let mut st = String::new();
+                let mut rule = None;
+                for t in stack {
+                    match &t.node {
+                        Node::Rule(r) => {
+                            rule = Some(r.clone());
+                        }
+                        Node::Term(t) => {
+                            if matches!(t.value(), Value::Expression(Operation { operator: Operator::And, args}) if args.len() == 1)
+                            {
+                                continue;
+                            }
+
+
+                            let _ = write!(st, "{}: {}", i-1, vm.term_source(t, false));
+                            i -= 1;
+                            let _ = write!(st, "\n  ");
+                            if let Some(source) = vm.source(t) {
+                                if let Some(rule) = &rule {
+                                    let _ = write!(st, "in rule {} ", rule.name.to_polar());
+                                } else {
+                                    let _ = write!(st, "in query ");
+                                }
+                                let (row, column) = crate::lexer::loc_to_pos(&source.src, t.offset());
+                                let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
+                                if let Some(filename) = source.filename {
+                                    let _ = write!(st, " in file {}", filename);
+                                }
+                                let _ = writeln!(st);
+                            };
+                        }
+                    }
+                }
+
+                return Some(Goal::Debug {
+                    message: st
                 })
             }
-            "out" => {
-                self.step = Some(Step::Out {
-                    snapshot: vm.queries[..vm.queries.len().saturating_sub(3)].to_vec(),
-                })
+            "goals" => return Some(show(&vm.goals)),
+            "bindings" => {
+                return Some(show(&vm.bindings))
             }
-            "stack" | "queries" => return Some(show(&vm.queries)),
-            "s" | "step" => self.step = Some(Step::Goal),
             "var" => {
                 if parts.len() > 1 {
                     let vars: Vec<Binding> = parts[1..]
@@ -270,22 +327,20 @@ impl Debugger {
             _ => {
                 return Some(Goal::Debug {
                     message: "Debugger Commands
-  bindings                Print current binding stack.
-  c[ontinue]              Continue evaluation.
-  goals                   Print current goal stack.
   h[elp]                  Print this help documentation.
+  c[ontinue]              Continue evaluation.
+  s[tep] | into           Step to the next query (will step into rules).
+  n[ext] | over           Step to the next query at the same level of the query stack (will not step into rules).
+  o[ut]                   Step out of the current query stack level to the next query in the level above.
+  g[oal]                  Step to the next goal of the Polar VM.
   l[ine] [<n>]            Print the current line and <n> lines of context.
-  n[ext]                  Alias for 'over'.
-  out                     Evaluate goals through the end of the current parent
-                          query and stop at its next sibling (if one exists).
-  over                    Evaluate goals until reaching the next sibling of the
-                          current query (if one exists).
-  queries                 Print current query stack.
-  q[uit]                  Alias for 'continue'.
-  stack                   Alias for 'queries'.
-  s[tep]                  Evaluate one goal.
+  query [<i>]             Print the current query or the query at level <i> in the query stack.
+  stack | trace           Print the current query stack.
+  goals                   Print the current goal stack.
+  bindings                Print all bindings
   var [<name> ...]        Print available variables. If one or more arguments
-                          are provided, print the value of those variables."
+                          are provided, print the value of those variables.
+  q[uit]                  Alias for 'continue'."
                         .to_string(),
                 })
             }
