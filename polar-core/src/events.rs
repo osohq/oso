@@ -18,12 +18,12 @@ pub enum QueryEvent {
         result: bool,
     },
 
-    /// Run the runnable and place its result in `call_id` when it
-    /// completes.
+    /// Run `runnable`, and report the result to its parent using `call_id`
+    /// when it completes.
     #[serde(skip)]
     Run {
-        runnable: Box<dyn Runnable>,
         call_id: u64,
+        runnable: Box<dyn Runnable>,
     },
 
     Debug {
