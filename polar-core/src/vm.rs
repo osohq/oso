@@ -1682,7 +1682,7 @@ impl PolarVirtualMachine {
             (_, _) => {
                 return Err(self.set_error_context(
                     term,
-                    error::RuntimeError::ArithmeticError {
+                    error::RuntimeError::Unsupported {
                         msg: term.to_polar(),
                     },
                 ))
