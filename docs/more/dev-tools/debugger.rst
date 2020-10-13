@@ -51,22 +51,20 @@ Print the debugger command reference.
 
   debug> help
   Debugger Commands
-  bindings                Print current binding stack.
-  c[ontinue]              Continue evaluation.
-  goals                   Print current goal stack.
   h[elp]                  Print this help documentation.
+  c[ontinue]              Continue evaluation.
+  s[tep] | into           Step to the next query (will step into rules).
+  n[ext] | over           Step to the next query at the same level of the query stack (will not step into rules).
+  o[ut]                   Step out of the current query stack level to the next query in the level above.
+  g[oal]                  Step to the next goal of the Polar VM.
   l[ine] [<n>]            Print the current line and <n> lines of context.
-  n[ext]                  Alias for 'over'.
-  out                     Evaluate goals through the end of the current parent
-                          query and stop at its next sibling (if one exists).
-  over                    Evaluate goals until reaching the next sibling of the
-                          current query (if one exists).
-  queries                 Print current query stack.
-  q[uit]                  Alias for 'continue'.
-  stack                   Alias for 'queries'.
-  s[tep]                  Evaluate one goal.
+  query [<i>]             Print the current query or the query at level <i> in the query stack.
+  stack | trace           Print the current query stack.
+  goals                   Print the current goal stack.
+  bindings                Print all bindings
   var [<name> ...]        Print available variables. If one or more arguments
                           are provided, print the value of those variables.
+  q[uit]                  Alias for 'continue'.
 
 Navigation
 ==========
