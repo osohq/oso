@@ -284,6 +284,22 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_expressions() {
+        let mut kb = KnowledgeBase::new();
+
+        let mut term = parse_query("0 - 0 = 0");
+        assert_eq!(term.to_polar(), "0 - 0 = 0");
+        rewrite_term(&mut term, &mut kb);
+        assert_eq!(term.to_polar(), "0 - 0 = _op_1 and _op_1 = 0");
+
+        let rules = parse_rules("sum(a, b, a + b);");
+        let mut rule = rules[0].clone();
+        assert_eq!(rule.to_polar(), "sum(a, b, a + b);");
+        rewrite_rule(&mut rule, &mut kb);
+        assert_eq!(rule.to_polar(), "sum(a, b, _op_2) if a + b = _op_2;");
+    }
+
+    #[test]
     fn rewrite_nested_literal() {
         let mut kb = KnowledgeBase::new();
         let mut term = parse_query("new Foo(x: bar.y)");
