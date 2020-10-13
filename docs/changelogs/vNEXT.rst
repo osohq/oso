@@ -73,3 +73,15 @@ Other bugs & improvements
 
 - Language libraries that haven't yet implemented operations on application
   instances (Java, Node.js, Ruby, Rust) now throw a uniform error type.
+
+Improvements to the debugger
+----------------------------
+
+- Changes to the way stepping is implemented:
+    - ``step`` steps by query instead of goal.
+    - ``over`` and ``out`` are now implemented using a stack that tracks query
+      parents.
+- New ``goal`` command to step by goal (the way ``step`` used to work).
+- New ``stack`` command to show all parent queries of the current one.
+- ``query n`` command can take an integer argument ``n`` to inspect the query
+  at the nth level of the stack.

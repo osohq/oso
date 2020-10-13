@@ -96,8 +96,8 @@ pub enum Goal {
     TraceRule {
         trace: Rc<Trace>,
     },
-    TracePush,
-    TracePop,
+    TraceStackPush,
+    TraceStackPop,
     Unify {
         left: Term,
         right: Term,
@@ -339,17 +339,18 @@ impl PolarVirtualMachine {
                 inner,
                 args,
             } => self.sort_rules(rules, args, *outer, *inner)?,
-            Goal::TracePush => {
+            Goal::TraceStackPush => {
                 self.trace_stack.push(Rc::new(self.trace.clone()));
                 self.trace = vec![];
             }
-            Goal::TracePop => {
+            Goal::TraceStackPop => {
                 let mut children = self.trace.clone();
                 self.trace = self.trace_stack.pop().unwrap().as_ref().clone();
                 let mut trace = self.trace.pop().unwrap();
                 let trace = Rc::make_mut(&mut trace);
                 trace.children.append(&mut children);
                 self.trace.push(Rc::new(trace.clone()));
+                self.maybe_break(DebugEvent::Pop)?;
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
@@ -1331,13 +1332,13 @@ impl PolarVirtualMachine {
 
                 // Filter rules by applicability.
                 vec![
-                    Goal::TracePush,
+                    Goal::TraceStackPush,
                     Goal::FilterRules {
                         applicable_rules: vec![],
                         unfiltered_rules: pre_filter,
                         args: predicate.args,
                     },
-                    Goal::TracePop,
+                    Goal::TraceStackPop,
                 ]
             }
         };
@@ -1353,9 +1354,9 @@ impl PolarVirtualMachine {
         match operator {
             Operator::And => {
                 // Append a `Query` goal for each term in the args list
-                self.push_goal(Goal::TracePop)?;
+                self.push_goal(Goal::TraceStackPop)?;
                 self.append_goals(args.into_iter().map(|term| Goal::Query { term }))?;
-                self.push_goal(Goal::TracePush)?;
+                self.push_goal(Goal::TraceStackPush)?;
             }
             Operator::Or => {
                 // Create a choice point with alternatives to query for each arg, and start on the first alternative
@@ -1452,17 +1453,23 @@ impl PolarVirtualMachine {
                 }
             }
             Operator::Debug => {
-                let mut message = "Welcome to the debugger!".to_string();
+                let mut message = "".to_string();
                 if !args.is_empty() {
                     message += &format!(
-                        "\ndebug({})",
+                        "debug({})",
                         args.iter()
                             .map(|arg| self.deref(arg).to_polar())
                             .collect::<Vec<String>>()
                             .join(", ")
                     );
                 }
-                self.push_goal(Goal::Debug { message })?
+                if let Some(debug_goal) = self.debugger.break_query(&self) {
+                    self.goals.push(debug_goal);
+                } else {
+                    self.push_goal(Goal::Debug {
+                        message: "".to_owned(),
+                    })?
+                }
             }
             Operator::Print => {
                 self.print(
@@ -2249,7 +2256,7 @@ impl PolarVirtualMachine {
                         children: vec![],
                     }),
                 });
-                goals.push(Goal::TracePush);
+                goals.push(Goal::TraceStackPush);
                 let Rule { body, params, .. } = self.rename_rule_vars(rule);
 
                 // Unify the arguments with the formal parameters.
@@ -2268,7 +2275,7 @@ impl PolarVirtualMachine {
 
                 // Query for the body clauses.
                 goals.push(Goal::Query { term: body.clone() });
-                goals.push(Goal::TracePop);
+                goals.push(Goal::TraceStackPop);
 
                 alternatives.push(goals)
             }
