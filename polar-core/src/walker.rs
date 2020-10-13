@@ -1,4 +1,5 @@
 use super::partial::Constraints;
+use super::rules::*;
 use super::terms::*;
 
 pub trait Visitor<'term>: Sized {
@@ -8,14 +9,19 @@ pub trait Visitor<'term>: Sized {
     fn visit_boolean(&mut self, _b: bool) {}
     fn visit_id(&mut self, _id: u64) {}
     fn visit_name(&mut self, _tag: &'term Symbol) {}
-    fn visit_field(&mut self, _name: &'term Symbol, _value: &'term Term) {}
     fn visit_variable(&mut self, _v: &'term Symbol) {}
     fn visit_rest_variable(&mut self, _r: &'term Symbol) {}
     fn visit_operator(&mut self, _o: &'term Operator) {}
 
     // Compounds. If you override these, you must walk the children manually.
+    fn visit_rule(&mut self, r: &'term Rule) {
+        walk_rule(self, r)
+    }
     fn visit_term(&mut self, t: &'term Term) {
         walk_term(self, t)
+    }
+    fn visit_field(&mut self, k: &'term Symbol, v: &'term Term) {
+        walk_field(self, k, v)
     }
     fn visit_external_instance(&mut self, e: &'term ExternalInstance) {
         walk_external_instance(self, e)
@@ -39,9 +45,34 @@ pub trait Visitor<'term>: Sized {
     fn visit_operation(&mut self, o: &'term Operation) {
         walk_operation(self, o)
     }
+    fn visit_param(&mut self, p: &'term Parameter) {
+        walk_param(self, p)
+    }
     fn visit_partial(&mut self, c: &'term Constraints) {
         walk_partial(self, c)
     }
+}
+
+macro_rules! walk_elements {
+    ($visitor: expr, $method: ident, $list: expr) => {
+        for element in $list {
+            $visitor.$method(element)
+        }
+    };
+}
+
+macro_rules! walk_fields {
+    ($visitor: expr, $method: ident, $dict: expr) => {
+        for (k, v) in $dict {
+            $visitor.$method(k, v)
+        }
+    };
+}
+
+pub fn walk_rule<'a, V: Visitor<'a>>(visitor: &mut V, rule: &'a Rule) {
+    visitor.visit_name(&rule.name);
+    walk_elements!(visitor, visit_param, &rule.params);
+    visitor.visit_term(&rule.body);
 }
 
 pub fn walk_term<'a, V: Visitor<'a>>(visitor: &mut V, term: &'a Term) {
@@ -62,24 +93,13 @@ pub fn walk_term<'a, V: Visitor<'a>>(visitor: &mut V, term: &'a Term) {
     }
 }
 
+pub fn walk_field<'a, V: Visitor<'a>>(visitor: &mut V, key: &'a Symbol, value: &'a Term) {
+    visitor.visit_name(key);
+    visitor.visit_term(value);
+}
+
 pub fn walk_external_instance<'a, V: Visitor<'a>>(visitor: &mut V, instance: &'a ExternalInstance) {
     visitor.visit_id(instance.instance_id);
-}
-
-macro_rules! walk_elements {
-    ($visitor: expr, $method: ident, $list: expr) => {
-        for element in $list {
-            $visitor.$method(element)
-        }
-    };
-}
-
-macro_rules! walk_fields {
-    ($visitor: expr, $method: ident, $dict: expr) => {
-        for (k, v) in $dict {
-            $visitor.$method(k, v)
-        }
-    };
 }
 
 pub fn walk_instance_literal<'a, V: Visitor<'a>>(visitor: &mut V, instance: &'a InstanceLiteral) {
@@ -111,6 +131,13 @@ pub fn walk_list<'a, V: Visitor<'a>>(visitor: &mut V, list: &'a TermList) {
 pub fn walk_operation<'a, V: Visitor<'a>>(visitor: &mut V, expr: &'a Operation) {
     visitor.visit_operator(&expr.operator);
     walk_elements!(visitor, visit_term, &expr.args);
+}
+
+pub fn walk_param<'a, V: Visitor<'a>>(visitor: &mut V, param: &'a Parameter) {
+    visitor.visit_term(&param.parameter);
+    if let Some(ref specializer) = param.specializer {
+        visitor.visit_term(specializer);
+    }
 }
 
 pub fn walk_partial<'a, V: Visitor<'a>>(visitor: &mut V, partial: &'a Constraints) {
