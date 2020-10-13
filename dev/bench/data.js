@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1602600233164,
+  "lastUpdate": 1602605221816,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -8747,6 +8747,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5467,
             "range": "± 435",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a5d187d8aaca5952bbffc12e2f50f76e4d1e60c",
+          "message": "Partial Eval (#463)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\nCo-authored-by: Alex Plotnick <alex@osohq.com>",
+          "timestamp": "2020-10-13T11:57:39-04:00",
+          "tree_id": "8a66e274427b26cf72b2b595e46e51b428cd48b2",
+          "url": "https://github.com/osohq/oso/commit/3a5d187d8aaca5952bbffc12e2f50f76e4d1e60c"
+        },
+        "date": 1602605220820,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 680,
+            "range": "± 50",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2306,
+            "range": "± 131",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 58618,
+            "range": "± 5337",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 450702,
+            "range": "± 41501",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 14611,
+            "range": "± 974",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 14443,
+            "range": "± 1228",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 15817,
+            "range": "± 1248",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 14688,
+            "range": "± 982",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 12826,
+            "range": "± 781",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4426,
+            "range": "± 365",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 4363,
+            "range": "± 358",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 4969,
+            "range": "± 644",
             "unit": "ns/iter"
           }
         ]
