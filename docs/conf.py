@@ -22,6 +22,16 @@ sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 import lexer
 
+# DJANGO SETUP FOR DJANGO-OSO #
+
+import django
+from django.conf import settings
+
+settings.configure()
+django.setup()
+
+##
+
 
 # -- Project information -----------------------------------------------------
 
@@ -94,7 +104,7 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "theme/**",
-    "changelogs/vNEXT.rst",
+    #"changelogs/vNEXT.rst",
     "changelogs/vTEMPLATE.rst",
     "**.pytest_cache**",
     "ruby/README.md",

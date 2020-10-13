@@ -6,10 +6,14 @@ from django_oso.auth import authorize_model
 
 
 class AuthorizedQuerySet(models.QuerySet):
-    """Queryset with ``authorize()`` method."""
+    """``QuerySet`` with ``authorize()`` method."""
 
     def authorize(self, request, *, actor=None, action=None):
-        """Return a new queryset filtered to contain only authorized models.
+        """Return a new ``Queryset`` filtered to contain only authorized models.
+
+        .. warning::
+
+            This feature is currently in preview.
 
         :param actor: The actor making the request. Defaults to ``request.user``.
         :param action: The action to authorize the actor to perform. Defaults to
@@ -26,7 +30,12 @@ class AuthorizedQuerySet(models.QuerySet):
 
 
 class AuthorizedModel(models.Model):
-    """Use a manager based on ``AuthorizedQuerySet``, allowing the ``authorize()`` method to be used."""
+    """Use a manager based on ``AuthorizedQuerySet``, allowing the ``authorize()`` method to be used.
+
+    .. warning::
+
+        This feature is currently in preview.
+    """
 
     objects = AuthorizedQuerySet.as_manager()
 

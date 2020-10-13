@@ -41,7 +41,11 @@ def authorize(request, resource, *, actor=None, action=None):
 def authorize_model(request, model, *, actor=None, action=None) -> Q:
     """Authorize ``request`` for django model ``model``, ``actor``, and ``action``.
 
-    Partially evalutes the Polar rule allow(actor, action, Partial(model)). If
+    .. warning::
+
+        This feature is currently in preview.
+
+    Partially evaluates the Polar rule ``allow(actor, action, Partial(model))``. If
     authorization fails, raises a :py:class:`django.core.exceptions.PermissionDenied`
     exception.
 
@@ -53,6 +57,10 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
 
         post_filter = authorize_model(request, Post)
         authorized_posts = Post.objects.filter(post_filter)
+
+    See also:
+
+    - :py:class:`django_oso.models.AuthorizedModel`
 
     :param actor: The actor making the request. Defaults to ``request.user``.
     :param action: The action to authorize the actor to perform. Defaults to
