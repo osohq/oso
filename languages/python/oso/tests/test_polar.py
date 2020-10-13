@@ -3,7 +3,17 @@ from math import inf, isnan, nan
 from pathlib import Path
 
 from polar import polar_class
-from polar import exceptions, Polar, Predicate, Query, Variable
+from polar import (
+    exceptions,
+    Polar,
+    Predicate,
+    Query,
+    Variable,
+    Partial,
+    Expression,
+    Pattern,
+)
+from polar.partial import TypeConstraint
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserError, PolarRuntimeError, InvalidCallError
 
@@ -749,3 +759,79 @@ def test_method_with_kwargs(polar, qvar):
     qvar("kwargs(result)", "result") == [3, 4]
     qvar("args(result)", "result") == [5, 6]
     qvar("mixed(result)", "result") == [7, 8]
+
+
+def unwrap_and(x):
+    assert isinstance(x, Expression)
+    assert x.operator == "And"
+    if len(x.args) == 1:
+        return x.args[0]
+    else:
+        return x.args
+
+
+def test_partial(polar):
+    polar.load_str("f(1);")
+    polar.load_str("f(x) if x = 1 and x = 2;")
+
+    results = polar.query_rule("f", Partial("x"))
+    first = next(results)
+
+    x = first["bindings"]["x"]
+    assert x == 1
+
+    second = next(results)
+    x = second["bindings"]["x"]
+
+    # Top level should be and
+    and_args = unwrap_and(x)
+    assert and_args[0] == Expression("Unify", [Variable("_this"), 1])
+
+    polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
+
+    results = polar.query_rule("g", Partial("x"))
+    first = next(results)
+
+    x = first["bindings"]["x"]
+    and_args = unwrap_and(x)
+    assert len(and_args) == 2
+    assert unwrap_and(and_args[0]) == Expression(
+        "Unify", [Expression("Dot", [Variable("_this"), "bar"]), 1]
+    )
+    assert unwrap_and(and_args[1]) == Expression(
+        "Unify", [Expression("Dot", [Variable("_this"), "baz"]), 2]
+    )
+
+
+def test_partial_constraint(polar):
+    class User:
+        pass
+
+    class Post:
+        pass
+
+    polar.register_class(User)
+    polar.register_class(Post)
+
+    polar.load_str("f(x: User) if x.user = 1;")
+    polar.load_str("f(x: Post) if x.post = 1;")
+
+    partial = Partial("x", TypeConstraint("User"))
+    results = polar.query_rule("f", partial)
+
+    first = next(results)["bindings"]["x"]
+    and_args = unwrap_and(first)
+
+    assert len(and_args) == 3
+
+    # Duplicate Isa checks.
+    for isa in and_args[:2]:
+        assert isa == Expression("Isa", [Variable("_this"), Pattern("User", {})])
+
+    unify = unwrap_and(and_args[2])
+    assert unify == Expression(
+        "Unify", [Expression("Dot", [Variable("_this"), "user"]), 1]
+    )
+
+    with pytest.raises(StopIteration):
+        next(results)

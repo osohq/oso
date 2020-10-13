@@ -43,6 +43,7 @@ fn kind(err: &PolarError) -> String {
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
         Operational(Unimplemented(..)) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
+        Operational(InvalidState(..)) => "OperationalError::InvalidState",
         Parameter(ParameterError(..)) => "ParameterError::ParameterError",
     }
     .to_owned()

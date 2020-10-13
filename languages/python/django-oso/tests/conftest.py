@@ -17,4 +17,7 @@ def pytest_configure():
             "django.contrib.contenttypes",
         ],
         ROOT_URLCONF="django_oso.test_urls",
+        DATABASES={
+            "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}
+        },
     )
