@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub use super::numerics::Numeric;
 use super::partial::Constraints;
+use super::walker::{walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -466,13 +467,24 @@ impl Term {
     }
 
     /// Get a set of all the variables used within a term.
-    pub fn variables(&self, vars: &mut HashSet<Symbol>) {
-        self.cloned_map_replace(&mut |term| {
-            if let Value::Variable(s) = term.value() {
-                vars.insert(s.clone());
+    pub fn variables<'set>(&self, vars: &'set mut HashSet<Symbol>) {
+        struct VariableVisitor<'set> {
+            vars: &'set mut HashSet<Symbol>,
+        }
+
+        impl<'set> VariableVisitor<'set> {
+            fn new(vars: &'set mut HashSet<Symbol>) -> Self {
+                Self { vars }
             }
-            term.clone()
-        });
+        }
+
+        impl<'term, 'set> Visitor<'term> for VariableVisitor<'set> {
+            fn visit_variable(&mut self, v: &'term Symbol) {
+                self.vars.insert(v.clone());
+            }
+        }
+
+        walk_term(&mut VariableVisitor::new(vars), self);
     }
 
     pub fn get_source_id(&self) -> Option<u64> {
