@@ -6,8 +6,8 @@ pub trait Visitor<'term>: Sized {
     // Atoms. These may be overridden as needed.
     fn visit_number(&mut self, _n: &'term Numeric) {}
     fn visit_string(&mut self, _s: &'term str) {}
-    fn visit_boolean(&mut self, _b: bool) {}
-    fn visit_id(&mut self, _id: u64) {}
+    fn visit_boolean(&mut self, _b: &'term bool) {}
+    fn visit_id(&mut self, _id: &'term u64) {}
     fn visit_name(&mut self, _tag: &'term Symbol) {}
     fn visit_variable(&mut self, _v: &'term Symbol) {}
     fn visit_rest_variable(&mut self, _r: &'term Symbol) {}
@@ -79,7 +79,7 @@ pub fn walk_term<'a, V: Visitor<'a>>(visitor: &mut V, term: &'a Term) {
     match term.value() {
         Value::Number(n) => visitor.visit_number(n),
         Value::String(s) => visitor.visit_string(s),
-        Value::Boolean(b) => visitor.visit_boolean(*b),
+        Value::Boolean(b) => visitor.visit_boolean(b),
         Value::ExternalInstance(e) => visitor.visit_external_instance(e),
         Value::InstanceLiteral(i) => visitor.visit_instance_literal(i),
         Value::Dictionary(d) => visitor.visit_dictionary(d),
@@ -99,7 +99,7 @@ pub fn walk_field<'a, V: Visitor<'a>>(visitor: &mut V, key: &'a Symbol, value: &
 }
 
 pub fn walk_external_instance<'a, V: Visitor<'a>>(visitor: &mut V, instance: &'a ExternalInstance) {
-    visitor.visit_id(instance.instance_id);
+    visitor.visit_id(&instance.instance_id);
 }
 
 pub fn walk_instance_literal<'a, V: Visitor<'a>>(visitor: &mut V, instance: &'a InstanceLiteral) {
@@ -169,8 +169,8 @@ mod tests {
         fn visit_string(&mut self, s: &'term str) {
             self.push(Value::String(s.to_string()));
         }
-        fn visit_boolean(&mut self, b: bool) {
-            self.push(Value::Boolean(b));
+        fn visit_boolean(&mut self, b: &'term bool) {
+            self.push(Value::Boolean(*b));
         }
     }
 
