@@ -172,16 +172,119 @@ mod tests {
         fn visit_boolean(&mut self, b: &'term bool) {
             self.push(Value::Boolean(*b));
         }
+        fn visit_id(&mut self, i: &'term u64) {
+            self.push(Value::Number(Numeric::Integer(*i as i64)));
+        }
+        fn visit_name(&mut self, n: &'term Symbol) {
+            self.push(Value::Variable(n.clone()));
+        }
+        fn visit_variable(&mut self, v: &'term Symbol) {
+            self.push(Value::Variable(v.clone()));
+        }
+        fn visit_rest_variable(&mut self, r: &'term Symbol) {
+            self.push(Value::RestVariable(r.clone()));
+        }
+        fn visit_operator(&mut self, o: &'term Operator) {
+            self.push(Value::Expression(Operation {
+                operator: *o,
+                args: vec![],
+            }));
+        }
     }
 
     #[test]
-    fn test_walk_term() {
-        let t = term!([value!(1), value!("Hi there!"), value!(true)]);
+    fn test_walk_term_atomics() {
+        let number = value!(1);
+        let string = value!("Hi there!");
+        let boolean = value!(true);
+        let variable = value!(sym!("x"));
+        let rest_var = Value::RestVariable(sym!("rest"));
+        let list = Value::List(vec![
+            term!(number.clone()),
+            term!(string.clone()),
+            term!(boolean.clone()),
+            term!(variable.clone()),
+            term!(rest_var.clone()),
+        ]);
+        let term = term!(list);
         let mut v = TestVisitor::new();
-        v.visit_term(&t);
+        v.visit_term(&term);
+        assert_eq!(v.visited, vec![number, string, boolean, variable, rest_var]);
+    }
+
+    #[test]
+    fn test_walk_term_compounds() {
+        let external_instance = term!(Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        }));
+        let instance_pattern = term!(value!(Pattern::Instance(InstanceLiteral {
+            tag: sym!("d"),
+            fields: Dictionary {
+                fields: btreemap! {
+                    sym!("e") => term!(call!("f", [2])),
+                    sym!("g") => term!(op!(Add, term!(3), term!(4))),
+                }
+            }
+        })));
+        let dict_pattern = term!(Value::Pattern(Pattern::Dictionary(Dictionary {
+            fields: btreemap! {
+                sym!("i") => term!("j"),
+                sym!("k") => term!("l"),
+            },
+        })));
+        let term = term!(btreemap! {
+            sym!("a") => term!(btreemap!{
+                sym!("b") => external_instance,
+                sym!("c") => instance_pattern,
+            }),
+            sym!("h") => dict_pattern,
+        });
+        let mut v = TestVisitor::new();
+        v.visit_term(&term);
         assert_eq!(
             v.visited,
-            vec![value!(1), value!("Hi there!"), value!(true)]
+            vec![
+                value!(sym!("a")),
+                value!(sym!("b")),
+                value!(1),
+                value!(sym!("c")),
+                value!(sym!("d")),
+                value!(sym!("e")),
+                value!(sym!("f")),
+                value!(2),
+                value!(sym!("g")),
+                value!(op!(Add)),
+                value!(3),
+                value!(4),
+                value!(sym!("h")),
+                value!(sym!("i")),
+                value!("j"),
+                value!(sym!("k")),
+                value!("l"),
+            ]
         );
     }
+
+    #[test]
+    fn test_walk_rule() {
+        let rule = rule!("a", ["b"; instance!("c"), value!("d")] => call!("e", [value!("f")]));
+        let mut v = TestVisitor::new();
+        v.visit_rule(&rule);
+        assert_eq!(
+            v.visited,
+            vec![
+                value!(sym!("a")),
+                value!(sym!("b")),
+                value!(sym!("c")),
+                value!("d"),
+                value!(op!(And)),
+                value!(sym!("e")),
+                value!("f"),
+            ]
+        );
+    }
+
+    // TODO(gj): Add test for walking a partial.
 }
