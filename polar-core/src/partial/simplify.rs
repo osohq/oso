@@ -63,7 +63,7 @@ fn dot_field(op: &Value) -> usize {
 }
 
 fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
-    term.cloned_map_replace(&mut |term: &Term| {
+    term/*.cloned_map_replace(&mut |term: &Term| {
         if let Value::Partial(partial) = term.value() {
             let mut operations = vec![];
             for operation in partial.operations() {
@@ -91,7 +91,7 @@ fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
         } else {
             term.clone()
         }
-    })
+    })*/
 }
 
 fn simplify_dot_ops_helper(

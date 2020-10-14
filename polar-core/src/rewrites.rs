@@ -142,7 +142,7 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
 /// Walks the term and does an in-place rewrite.
 /// Uses `rewrites` as a buffer of new lookup terms.
 fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>) {
-    term.map_replace(&mut |term| {
+    /*term.map_replace(&mut |term| {
         // First, rewrite this term, maybe returning a lookup
         // lookup gets added to rewrites list
         let mut term = term.clone();
@@ -176,7 +176,7 @@ fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>)
             }
         }
         term
-    });
+    });*/
 }
 
 /// Rewrite the parameter term and return all new lookups as a vec.

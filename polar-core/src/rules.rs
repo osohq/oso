@@ -11,14 +11,6 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    pub fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        self.parameter.map_replace(f);
-        self.specializer.iter_mut().for_each(|p| p.map_replace(f));
-    }
-
     pub fn is_ground(&self) -> bool {
         self.specializer.is_none() && self.parameter.value().is_ground()
     }
@@ -32,14 +24,6 @@ pub struct Rule {
 }
 
 impl Rule {
-    pub fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        self.params.iter_mut().for_each(|p| p.map_replace(f));
-        self.body.map_replace(f);
-    }
-
     pub fn is_ground(&self) -> bool {
         self.params.iter().all(|p| p.is_ground())
     }

@@ -578,7 +578,8 @@ impl PolarVirtualMachine {
     }
 
     pub fn deep_deref(&self, term: &Term) -> Term {
-        term.cloned_map_replace(&mut |t| self.deref(t))
+        /*term.cloned_map_replace(&mut |t| self.deref(t))*/
+        self.deref(term)
     }
 
     /// Recursively dereference a variable.

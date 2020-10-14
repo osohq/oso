@@ -21,13 +21,6 @@ impl Dictionary {
         }
     }
 
-    fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        self.fields.iter_mut().for_each(|(_k, v)| v.map_replace(f));
-    }
-
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
     }
@@ -35,10 +28,10 @@ impl Dictionary {
     /// Convert all terms in this dictionary to patterns.
     pub fn as_pattern(&self) -> Pattern {
         let mut pattern = self.clone();
-        pattern.map_replace(&mut |t| {
+        /*pattern.map_replace(&mut |t| {
             let v = Pattern::value_as_pattern(t.value());
             t.clone_with_value(v)
-        });
+        });*/
         Pattern::Dictionary(pattern)
     }
 }
@@ -50,23 +43,13 @@ pub struct InstanceLiteral {
 }
 
 impl InstanceLiteral {
-    pub fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        self.fields
-            .fields
-            .iter_mut()
-            .for_each(|(_, v)| v.map_replace(f));
-    }
-
     /// Convert all terms in this instance literal to patterns.
     pub fn as_pattern(&self) -> Pattern {
         let mut pattern = self.clone();
-        pattern.map_replace(&mut |t| {
+        /*pattern.map_replace(&mut |t| {
             let v = Pattern::value_as_pattern(t.value());
             t.clone_with_value(v)
-        });
+        });*/
         Pattern::Instance(pattern)
     }
 }
@@ -378,71 +361,6 @@ impl Term {
     /// Replace the `value` of self
     pub fn replace_value(&mut self, value: Value) {
         self.value = Arc::new(value);
-    }
-
-    /// Convenience wrapper around map_replace that clones the
-    /// term before running `map_replace`, to return the new value
-    pub fn cloned_map_replace<F>(&self, f: &mut F) -> Self
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        let mut term = self.clone();
-        term.map_replace(f);
-        term
-    }
-
-    /// Visits every term in the tree, replaces the node with the evaluation of `f` on the node
-    /// and then recurses to the children
-    ///
-    /// Warning: this does _a lot_ of cloning.
-    pub fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        *self = f(self);
-        let mut value = self.value().clone();
-        match value {
-            Value::Number(_)
-            | Value::String(_)
-            | Value::Boolean(_)
-            | Value::Variable(_)
-            | Value::RestVariable(_) => {}
-            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_replace(f)),
-            Value::Call(Call {
-                ref mut args,
-                ref mut kwargs,
-                ..
-            }) => {
-                args.iter_mut().for_each(|term| term.map_replace(f));
-                if let Some(ref mut fields) = kwargs {
-                    fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-                }
-            }
-            Value::Expression(Operation { ref mut args, .. }) => {
-                args.iter_mut().for_each(|term| term.map_replace(f))
-            }
-            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
-                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::ExternalInstance(ExternalInstance {
-                ref mut constructor,
-                ..
-            }) => constructor.iter_mut().for_each(|t| t.map_replace(f)),
-            Value::Dictionary(Dictionary { ref mut fields }) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
-                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::Partial(ref mut partial) => partial
-                .operations_mut()
-                .iter_mut()
-                .for_each(|op| op.args.iter_mut().for_each(|arg| arg.map_replace(f))),
-        };
-        self.replace_value(value);
     }
 
     pub fn offset(&self) -> usize {
