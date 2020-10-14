@@ -6,6 +6,8 @@ use polar_core::terms::*;
 use crate::host::Host;
 use crate::PolarClass;
 
+use crate::errors::TypeError;
+
 // Should we call it something else?
 #[derive(Clone, Debug)]
 pub enum PolarValue {
@@ -53,7 +55,12 @@ impl PolarValue {
                 PolarValue::List(list)
             }
             Value::Variable(Symbol(sym)) => PolarValue::Variable(sym.clone()),
-            _ => return Err(crate::OsoError::FromPolar),
+            _ => {
+                return Err(TypeError {
+                    expected: "Unsupported Value Type".to_owned(),
+                }
+                .user())
+            }
         };
         Ok(val)
     }
@@ -111,7 +118,10 @@ macro_rules! polar_to_int {
                 if let PolarValue::Integer(i) = val {
                     <$i>::try_from(i).map_err(|_| crate::OsoError::FromPolar)
                 } else {
-                    Err(crate::OsoError::FromPolar)
+                    Err(TypeError {
+                        expected: "Integer".to_owned(),
+                    }
+                    .user())
                 }
             }
         }
@@ -134,7 +144,10 @@ where
         if let PolarValue::Instance(instance) = val {
             Ok(instance.downcast::<T>()?.clone())
         } else {
-            Err(crate::OsoError::FromPolar)
+            Err(TypeError {
+                expected: "Instance".to_owned(),
+            }
+            .user())
         }
     }
 }
@@ -144,7 +157,10 @@ impl FromPolarValue for f64 {
         if let PolarValue::Float(f) = val {
             Ok(f)
         } else {
-            Err(crate::OsoError::FromPolar)
+            Err(TypeError {
+                expected: "Float".to_owned(),
+            }
+            .user())
         }
     }
 }
@@ -154,7 +170,10 @@ impl FromPolarValue for String {
         if let PolarValue::String(s) = val {
             Ok(s)
         } else {
-            Err(crate::OsoError::FromPolar)
+            Err(TypeError {
+                expected: "String".to_owned(),
+            }
+            .user())
         }
     }
 }
@@ -164,7 +183,10 @@ impl FromPolarValue for bool {
         if let PolarValue::Boolean(b) = val {
             Ok(b)
         } else {
-            Err(crate::OsoError::FromPolar)
+            Err(TypeError {
+                expected: "Boolean".to_owned(),
+            }
+            .user())
         }
     }
 }
@@ -179,7 +201,10 @@ impl<T: FromPolarValue> FromPolarValue for HashMap<String, T> {
             }
             Ok(result)
         } else {
-            Err(crate::OsoError::FromPolar)
+            Err(TypeError {
+                expected: "Map".to_owned(),
+            }
+            .user())
         }
     }
 }
@@ -193,7 +218,10 @@ impl<T: FromPolarValue> FromPolarValue for Vec<T> {
             }
             Ok(result)
         } else {
-            Err(crate::OsoError::FromPolar)
+            Err(TypeError {
+                expected: "List".to_owned(),
+            }
+            .user())
         }
     }
 }
