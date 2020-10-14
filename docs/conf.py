@@ -22,14 +22,24 @@ sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 import lexer
 
+# DJANGO SETUP FOR DJANGO-OSO #
+
+import django
+from django.conf import settings
+
+settings.configure()
+django.setup()
+
+##
+
 
 # -- Project information -----------------------------------------------------
 
 project = "oso"
 copyright = "2020 Oso Security, Inc"
 author = "oso"
-version = "0.6"
-release = "0.6.0"
+version = "0.7"
+release = "0.7.0"
 
 
 # -- General configuration ---------------------------------------------------

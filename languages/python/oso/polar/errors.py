@@ -10,14 +10,21 @@ def get_python_error(err_str):
 
     message = err["formatted"]
     kind, body = next(iter(err["kind"].items()))
-    subkind, details = next(iter(body.items()))
+
+    try:
+        subkind, details = next(iter(body.items()))
+    except (AttributeError, TypeError, StopIteration):
+        # Not all errors have subkind and details.
+        # TODO (dhatch): This bug may exist in other libraries.
+        subkind = None
+        details = None
 
     if kind == "Parse":
         return _parse_error(subkind, message, details)
     elif kind == "Runtime":
         return _runtime_error(subkind, message, details)
     elif kind == "Operational":
-        return _operational_error(message, details)
+        return _operational_error(subkind, message, details)
     elif kind == "Parameter":
         return _api_error(message, details)
 

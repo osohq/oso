@@ -20,7 +20,6 @@ Breaking change 1
 
 Link to migration guide
 
-
 New features
 ============
 
@@ -32,7 +31,6 @@ Feature 1
 - user facing changes
 
 Link to relevant documentation section
-
 
 Other bugs & improvements
 =========================

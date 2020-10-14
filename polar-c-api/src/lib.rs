@@ -309,8 +309,13 @@ pub extern "C" fn polar_question_result(query_ptr: *mut Query, call_id: u64, res
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         let result = result != POLAR_FAILURE;
-        query.question_result(call_id, result);
-        POLAR_SUCCESS
+        match query.question_result(call_id, result) {
+            Ok(_) => POLAR_SUCCESS,
+            Err(e) => {
+                set_error(e);
+                POLAR_FAILURE
+            }
+        }
     })
 }
 
@@ -323,8 +328,14 @@ pub extern "C" fn polar_application_error(query_ptr: *mut Query, message: *mut c
         } else {
             "".to_owned()
         };
-        query.application_error(s);
-        POLAR_SUCCESS
+
+        match query.application_error(s) {
+            Ok(_) => POLAR_SUCCESS,
+            Err(e) => {
+                set_error(e);
+                POLAR_FAILURE
+            }
+        }
     })
 }
 

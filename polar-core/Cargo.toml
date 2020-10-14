@@ -5,7 +5,7 @@ authors = ["Oso Security, Inc. <support@osohq.com>"]
 license = "Apache-2.0"
 homepage = "https://github.com/osohq/oso"
 
-version = "0.6.0"
+version = "0.7.0"
 
 edition = "2018"
 
@@ -17,25 +17,26 @@ name = "bench"
 harness = false
 
 [dependencies]
-anyhow = "1.0.31"
-js-sys = "0.3"
-lalrpop-util = "0.18.1"
+anyhow = "1.0.33"
+js-sys = "0.3.45"
+lalrpop-util = "0.19.1"
 lazy_static = "1.4.0"
-regex = "1.3.7"
-serde = { version = "1.0", features = ["derive", "rc"] }
-serde_json = "1.0"
+regex = "1.4.0"
+serde = { version = "1.0.116", features = ["derive", "rc"] }
+serde_json = "1.0.58"
 
 [build_dependencies]
-lalrpop = { version = "0.18.1", features = ["lexer"] }
+serde_derive = "1.0"
+lalrpop = { version = "0.19.1", features = ["lexer"] }
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.3.3"
 permute = "0.1.0"
 pipe = "0.3.0"
-proptest = "0.9.6"
+proptest = "0.10.1"
 pretty_assertions = "0.6.1"
 maplit = "1.0.2"
-indoc = "0.3.5"
+indoc = "1.0.3"
 
 [features]
 default = []
