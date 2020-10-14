@@ -3,14 +3,10 @@
 //! Polar types back to Rust types.
 
 use impl_trait_for_tuples::*;
-use polar_core::terms::*;
-
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use polar_core::terms::{self, Term};
 
 use super::class::Instance;
 use super::Host;
-use crate::PolarClass;
 
 /// Convert Polar types to Rust types.
 ///
@@ -36,7 +32,7 @@ use crate::PolarClass;
 pub trait FromPolar: Clone + Sized + 'static {
     fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
         match term.value() {
-            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => host
+            terms::Value::ExternalInstance(terms::ExternalInstance { instance_id, .. }) => host
                 .get_instance(*instance_id)
                 .and_then(|instance| {
                     instance
@@ -49,8 +45,6 @@ pub trait FromPolar: Clone + Sized + 'static {
     }
 }
 
-impl<C: 'static + Clone + Send + Sync + PolarClass> FromPolar for C {}
-
 mod private {
     /// Prevents implementations of `FromPolarList` outside of this crate
     pub trait Sealed {}
@@ -62,84 +56,9 @@ pub trait FromPolarList: private::Sealed {
         Self: Sized;
 }
 
-impl FromPolar for bool {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        if let Value::Boolean(b) = term.value() {
-            Ok(*b)
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-macro_rules! polar_to_int {
-    ($i:ty) => {
-        impl FromPolar for $i {
-            fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-                if let Value::Number(Numeric::Integer(i)) = term.value() {
-                    <$i>::try_from(*i).map_err(|_| crate::OsoError::FromPolar)
-                } else {
-                    Err(crate::OsoError::FromPolar)
-                }
-            }
-        }
-    };
-}
-
-polar_to_int!(u8);
-polar_to_int!(i8);
-polar_to_int!(u16);
-polar_to_int!(i16);
-polar_to_int!(u32);
-polar_to_int!(i32);
-polar_to_int!(i64);
-
-impl FromPolar for f64 {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        if let Value::Number(Numeric::Float(f)) = term.value() {
-            Ok(*f)
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl FromPolar for String {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        if let Value::String(s) = term.value() {
-            Ok(s.to_string())
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl<T: FromPolar> FromPolar for Vec<T> {
+impl<T: crate::FromPolarValue> FromPolar for T {
     fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
-        if let Value::List(l) = term.value() {
-            l.iter().map(|t| T::from_polar(t, host)).collect()
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl<T: FromPolar> FromPolar for HashMap<String, T> {
-    fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
-        if let Value::Dictionary(dict) = term.value() {
-            dict.fields
-                .iter()
-                .map(|(k, v)| T::from_polar(v, host).map(|v| (k.0.clone(), v)))
-                .collect()
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl FromPolar for Value {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        Ok(term.value().clone())
+        T::from_polar_value(crate::PolarValue::from_term(term, host)?)
     }
 }
 
@@ -149,13 +68,13 @@ impl FromPolar for Instance {
         // instance so that we can use the `Class` mechanism to
         // handle methods on them
         let instance = match &term.value() {
-            Value::Boolean(b) => Instance::new(*b),
-            Value::Number(Numeric::Integer(i)) => Instance::new(*i),
-            Value::Number(Numeric::Float(f)) => Instance::new(*f),
-            Value::List(v) => Instance::new(v.clone()),
-            Value::String(s) => Instance::new(s.clone()),
-            Value::Dictionary(d) => Instance::new(d.fields.clone()),
-            Value::ExternalInstance(ExternalInstance { instance_id, .. }) => host
+            terms::Value::Boolean(b) => Instance::new(*b),
+            terms::Value::Number(terms::Numeric::Integer(i)) => Instance::new(*i),
+            terms::Value::Number(terms::Numeric::Float(f)) => Instance::new(*f),
+            terms::Value::List(v) => Instance::new(v.clone()),
+            terms::Value::String(s) => Instance::new(s.clone()),
+            terms::Value::Dictionary(d) => Instance::new(d.fields.clone()),
+            terms::Value::ExternalInstance(terms::ExternalInstance { instance_id, .. }) => host
                 .get_instance(*instance_id)
                 .expect("instance not found")
                 .clone(),

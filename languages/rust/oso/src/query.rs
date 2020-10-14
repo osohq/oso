@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use crate::host::{Host, Instance, PolarResultIter};
-use crate::FromPolar;
+use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
 use polar_core::terms::*;
@@ -235,17 +235,6 @@ impl Query {
         check_messages!(self.inner);
         Ok(())
     }
-
-    /// Covert `term` into type `T`.
-    pub fn from_polar<T: FromPolar>(&self, term: &Term) -> crate::Result<T> {
-        Ok(T::from_polar(term, &self.host)?)
-    }
-
-    // TODO (dhatch): Get rid of this when implementing value type for the library.
-    /// Convert `value` into type `T`.
-    pub fn from_polar_value<T: FromPolar>(&self, value: Value) -> crate::Result<T> {
-        Ok(T::from_polar(&Term::new_temporary(value), &self.host)?)
-    }
 }
 
 #[derive(Clone)]
@@ -268,18 +257,16 @@ impl ResultSet {
         self.bindings.is_empty()
     }
 
-    pub fn get(&self, name: &str) -> Option<crate::Value> {
+    pub fn get(&self, name: &str) -> Option<crate::PolarValue> {
         self.bindings
             .get(&Symbol(name.to_string()))
-            .map(|t| t.value().clone())
+            .map(|t| PolarValue::from_term(t, &self.host).unwrap())
     }
 
-    pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
-        // TODO (dhatch): Type error
-        self.bindings
-            .get(&Symbol(name.to_string()))
+    pub fn get_typed<T: crate::host::FromPolarValue>(&self, name: &str) -> crate::Result<T> {
+        self.get(name)
             .ok_or_else(|| crate::OsoError::FromPolar)
-            .and_then(|term| T::from_polar(term, &self.host))
+            .and_then(T::from_polar_value)
     }
 }
 
@@ -289,7 +276,7 @@ impl std::fmt::Debug for ResultSet {
     }
 }
 
-impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<S, T>>
+impl<S: AsRef<str>, T: crate::host::FromPolarValue + PartialEq<T>> PartialEq<HashMap<S, T>>
     for ResultSet
 {
     fn eq(&self, other: &HashMap<S, T>) -> bool {

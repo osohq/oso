@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use oso::{Class, Oso, OsoError, PolarClass, Value};
+use oso::{Class, FromPolarValue, Oso, OsoError, PolarClass, PolarValue};
 use polar_core::error as polar_error;
-use polar_core::terms::Symbol;
 
 use maplit::hashmap;
 
@@ -108,23 +107,20 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
     test_oso.load_str(r#"f({x: [1, "two", true], y: {z: false}});"#);
     let mut query = test_oso.oso.query("f(x)")?;
 
-    let x: HashMap<String, Value> = query.next().unwrap()?.get_typed("x")?;
+    let x: HashMap<String, PolarValue> = query.next().unwrap()?.get_typed("x")?;
 
     let v_x = x.get("x").unwrap();
 
     // TODO (dhatch): Type handling: Would be great to be able to get each index
     // out here dynamically, the same way we can with result set.
-    if let Value::List(x_vec) = v_x {
+    if let PolarValue::List(x_vec) = v_x {
+        assert_eq!(i64::from_polar_value(x_vec.get(0).unwrap().to_owned())?, 1);
         assert_eq!(
-            query.from_polar::<i64>(&x_vec.get(0).unwrap().to_owned())?,
-            1
-        );
-        assert_eq!(
-            query.from_polar::<String>(&x_vec.get(1).unwrap().to_owned())?,
+            String::from_polar_value(x_vec.get(1).unwrap().to_owned())?,
             String::from("two")
         );
         assert_eq!(
-            query.from_polar::<bool>(&x_vec.get(2).unwrap().to_owned())?,
+            bool::from_polar_value(x_vec.get(2).unwrap().to_owned())?,
             true
         );
     } else {
@@ -132,7 +128,7 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
     }
 
     let v_y = x.get("y").unwrap();
-    let y: HashMap<String, bool> = query.from_polar_value(v_y.to_owned())?;
+    let y: HashMap<String, bool> = HashMap::<String, bool>::from_polar_value(v_y.to_owned())?;
     assert_eq!(y, hashmap! {String::from("z") => false});
 
     Ok(())
@@ -782,7 +778,7 @@ fn test_variables_as_arguments() -> oso::Result<()> {
 
     let query = oso
         .oso
-        .query_rule("f", (Value::Variable(Symbol("a".to_owned())),))?;
+        .query_rule("f", (PolarValue::Variable("a".to_owned()),))?;
 
     let a_var = query
         .map(|r| r.unwrap().get_typed::<i64>("a").unwrap())
@@ -816,7 +812,7 @@ fn test_returns_unbound_variable() -> oso::Result<()> {
     let first = oso.query("rule(x, y)").pop().unwrap();
 
     assert_eq!(first.get_typed::<i64>("y")?, 1);
-    assert!(matches!(first.get_typed("x")?, Value::Variable(_)));
+    assert!(matches!(first.get_typed("x")?, PolarValue::Variable(_)));
 
     Ok(())
 }

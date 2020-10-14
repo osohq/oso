@@ -9,6 +9,8 @@ mod common;
 
 use common::OsoTest;
 
+use std::convert::TryFrom;
+
 #[test]
 fn test_anything_works() {
     common::setup();
@@ -53,18 +55,18 @@ fn test_data_conversions() {
     test.qvar_one("a(x)", "x", 1);
     test.qvar_one("b(x)", "x", "two".to_string());
     test.qvar_one("c(x)", "x", true);
-    use polar_core::terms::Value;
+
+    use oso::PolarValue;
+    //use polar_core::terms::Value;
+
     // TODO: do we want to handle hlists better?
     // e.g. https://docs.rs/hlist/0.1.2/hlist/
-    test.qvar_one(
-        "d(x)",
-        "x",
-        vec![
-            Value::Number(polar_core::terms::Numeric::Integer(1)),
-            Value::String("two".to_string()),
-            Value::Boolean(true),
-        ],
-    );
+    let mut results = test.query("d(x)");
+    let first = results.pop().unwrap();
+    let mut x = first.get_typed::<Vec<PolarValue>>("x").unwrap();
+    assert_eq!(i64::try_from(x.remove(0)).unwrap(), 1);
+    assert_eq!(String::try_from(x.remove(0)).unwrap(), "two");
+    assert_eq!(bool::try_from(x.remove(0)).unwrap(), true);
 }
 
 // This logic is changing. Updated when fixed
