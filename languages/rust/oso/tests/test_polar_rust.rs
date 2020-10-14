@@ -3,7 +3,7 @@
 /// rust class handling.
 use maplit::hashmap;
 
-use oso::{ClassBuilder, PolarClass, FromPolarValue};
+use oso::{ClassBuilder, FromPolarValue, PolarClass};
 
 mod common;
 

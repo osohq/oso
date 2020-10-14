@@ -127,7 +127,9 @@ polar_to_int!(i32);
 polar_to_int!(i64);
 
 impl<T> FromPolarValue for T
-where T: 'static + Clone + PolarClass {
+where
+    T: 'static + Clone + PolarClass,
+{
     fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
         if let PolarValue::Instance(instance) = val {
             Ok(instance.downcast::<T>()?.clone())
