@@ -5,13 +5,8 @@
 use impl_trait_for_tuples::*;
 use polar_core::terms::{self, Term};
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
-
 use super::class::Instance;
 use super::Host;
-use crate::PolarClass;
-use crate::PolarValue;
 
 /// Convert Polar types to Rust types.
 ///
@@ -50,8 +45,6 @@ pub trait FromPolar: Clone + Sized + 'static {
     }
 }
 
-impl<C: 'static + Clone + Send + Sync + PolarClass> FromPolar for C {}
-
 mod private {
     /// Prevents implementations of `FromPolarList` outside of this crate
     pub trait Sealed {}
@@ -63,84 +56,9 @@ pub trait FromPolarList: private::Sealed {
         Self: Sized;
 }
 
-impl FromPolar for bool {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        if let terms::Value::Boolean(b) = term.value() {
-            Ok(*b)
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-macro_rules! polar_to_int {
-    ($i:ty) => {
-        impl FromPolar for $i {
-            fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-                if let terms::Value::Number(terms::Numeric::Integer(i)) = term.value() {
-                    <$i>::try_from(*i).map_err(|_| crate::OsoError::FromPolar)
-                } else {
-                    Err(crate::OsoError::FromPolar)
-                }
-            }
-        }
-    };
-}
-
-polar_to_int!(u8);
-polar_to_int!(i8);
-polar_to_int!(u16);
-polar_to_int!(i16);
-polar_to_int!(u32);
-polar_to_int!(i32);
-polar_to_int!(i64);
-
-impl FromPolar for f64 {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        if let terms::Value::Number(terms::Numeric::Float(f)) = term.value() {
-            Ok(*f)
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl FromPolar for String {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        if let terms::Value::String(s) = term.value() {
-            Ok(s.to_string())
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl<T: FromPolar> FromPolar for Vec<T> {
+impl<T: crate::FromPolarValue> FromPolar for T {
     fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
-        if let terms::Value::List(l) = term.value() {
-            l.iter().map(|t| T::from_polar(t, host)).collect()
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl<T: FromPolar> FromPolar for HashMap<String, T> {
-    fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
-        if let terms::Value::Dictionary(dict) = term.value() {
-            dict.fields
-                .iter()
-                .map(|(k, v)| T::from_polar(v, host).map(|v| (k.0.clone(), v)))
-                .collect()
-        } else {
-            Err(crate::OsoError::FromPolar)
-        }
-    }
-}
-
-impl FromPolar for PolarValue {
-    fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
-        PolarValue::from_term(term, host)
+        T::from_polar_value(crate::PolarValue::from_term(term, host)?)
     }
 }
 
