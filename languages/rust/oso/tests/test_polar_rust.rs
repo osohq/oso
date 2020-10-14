@@ -3,7 +3,7 @@
 /// rust class handling.
 use maplit::hashmap;
 
-use oso::{ClassBuilder, PolarClass};
+use oso::{ClassBuilder, PolarClass, FromPolarValue};
 
 mod common;
 
@@ -59,15 +59,12 @@ fn test_data_conversions() {
 
     // TODO: do we want to handle hlists better?
     // e.g. https://docs.rs/hlist/0.1.2/hlist/
-    test.qvar_one(
-        "d(x)",
-        "x",
-        vec![
-            PolarValue::Integer(1),
-            PolarValue::String("two".to_string()),
-            PolarValue::Boolean(true),
-        ],
-    );
+    let mut results = test.query("d(x)");
+    let first = results.pop().unwrap();
+    let mut x = first.get_typed::<Vec<PolarValue>>("x").unwrap();
+    assert_eq!(i64::from_polar_value(x.remove(0)).unwrap(), 1);
+    assert_eq!(String::from_polar_value(x.remove(0)).unwrap(), "two");
+    assert_eq!(bool::from_polar_value(x.remove(0)).unwrap(), true);
 }
 
 // This logic is changing. Updated when fixed

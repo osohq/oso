@@ -1,9 +1,13 @@
-use polar_core::terms::*;
 use std::collections::hash_map::HashMap;
 use std::convert::TryFrom;
 
+use polar_core::terms::*;
+
+use crate::host::Host;
+use crate::PolarClass;
+
 // Should we call it something else?
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum PolarValue {
     Integer(i64),
     Float(f64),
@@ -12,10 +16,18 @@ pub enum PolarValue {
     Map(HashMap<String, PolarValue>),
     List(Vec<PolarValue>),
     Variable(String),
+    Instance(crate::host::class::Instance),
 }
 
 impl PolarValue {
-    pub fn from_term(term: &Term) -> crate::Result<Self> {
+    pub fn new_from_instance<T>(instance: T) -> Self
+    where
+        T: Send + Sync + 'static,
+    {
+        Self::Instance(crate::host::class::Instance::new(instance))
+    }
+
+    pub(crate) fn from_term(term: &Term, host: &Host) -> crate::Result<Self> {
         let val = match term.value() {
             Value::Number(Numeric::Integer(i)) => PolarValue::Integer(*i),
             Value::Number(Numeric::Float(f)) => PolarValue::Float(*f),
@@ -25,15 +37,18 @@ impl PolarValue {
                 let mut map = HashMap::new();
                 for (k, v) in &dict.fields {
                     let key = k.0.clone();
-                    let value = PolarValue::from_term(v)?;
+                    let value = PolarValue::from_term(v, host)?;
                     map.insert(key, value);
                 }
                 PolarValue::Map(map)
             }
+            Value::ExternalInstance(instance) => {
+                PolarValue::Instance(host.get_instance(instance.instance_id)?.clone())
+            }
             Value::List(l) => {
                 let mut list = vec![];
                 for t in l {
-                    list.push(PolarValue::from_term(t)?);
+                    list.push(PolarValue::from_term(t, host)?);
                 }
                 PolarValue::List(list)
             }
@@ -43,7 +58,7 @@ impl PolarValue {
         Ok(val)
     }
 
-    pub fn to_term(&self) -> Term {
+    pub(crate) fn to_term(&self, host: &mut Host) -> Term {
         let value = match self {
             PolarValue::Integer(i) => Value::Number(Numeric::Integer(*i)),
             PolarValue::Float(f) => Value::Number(Numeric::Float(*f)),
@@ -53,15 +68,23 @@ impl PolarValue {
                 let mut dict = Dictionary::new();
                 for (k, v) in map {
                     let key = Symbol(k.clone());
-                    let value = v.to_term();
+                    let value = v.to_term(host);
                     dict.fields.insert(key, value);
                 }
                 Value::Dictionary(dict)
             }
+            PolarValue::Instance(instance) => {
+                let id = host.cache_instance(instance.clone(), None);
+                Value::ExternalInstance(ExternalInstance {
+                    constructor: None,
+                    repr: Some(std::any::type_name::<Self>().to_owned()),
+                    instance_id: id,
+                })
+            }
             PolarValue::List(l) => {
                 let mut list = vec![];
                 for v in l {
-                    list.push(v.to_term())
+                    list.push(v.to_term(host))
                 }
                 Value::List(list)
             }
@@ -102,6 +125,17 @@ polar_to_int!(i16);
 polar_to_int!(u32);
 polar_to_int!(i32);
 polar_to_int!(i64);
+
+impl<T> FromPolarValue for T
+where T: 'static + Clone + PolarClass {
+    fn from_polar_value(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::Instance(instance) = val {
+            Ok(instance.downcast::<T>()?.clone())
+        } else {
+            Err(crate::OsoError::FromPolar)
+        }
+    }
+}
 
 impl FromPolarValue for f64 {
     fn from_polar_value(val: PolarValue) -> crate::Result<Self> {

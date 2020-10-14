@@ -271,7 +271,7 @@ impl ResultSet {
     pub fn get(&self, name: &str) -> Option<crate::PolarValue> {
         self.bindings
             .get(&Symbol(name.to_string()))
-            .map(|t| PolarValue::from_term(t).unwrap())
+            .map(|t| PolarValue::from_term(t, &self.host).unwrap())
     }
 
     pub fn get_typed<T: crate::host::FromPolarValue>(&self, name: &str) -> crate::Result<T> {

@@ -139,8 +139,8 @@ impl<T: FromPolar> FromPolar for HashMap<String, T> {
 }
 
 impl FromPolar for PolarValue {
-    fn from_polar(term: &Term, _host: &Host) -> crate::Result<Self> {
-        PolarValue::from_term(term)
+    fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
+        PolarValue::from_term(term, host)
     }
 }
 

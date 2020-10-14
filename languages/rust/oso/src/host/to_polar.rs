@@ -168,8 +168,8 @@ impl<T: ToPolar> ToPolar for HashMap<String, T> {
 }
 
 impl ToPolar for PolarValue {
-    fn to_polar_value(self, _host: &mut Host) -> Value {
-        self.to_term().value().clone()
+    fn to_polar_value(self, host: &mut Host) -> Value {
+        self.to_term(host).value().clone()
     }
 }
 
