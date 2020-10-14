@@ -235,17 +235,6 @@ impl Query {
         check_messages!(self.inner);
         Ok(())
     }
-
-    // /// Covert `term` into type `T`.
-    // pub fn from_polar<T: FromPolar>(&self, value: &PolarValue) -> crate::Result<T> {
-    //     Ok(T::from_polar, &self.host)?)
-    // }
-
-    // // TODO (dhatch): Get rid of this when implementing value type for the library.
-    // /// Convert `value` into type `T`.
-    // pub fn from_polar_value<T: FromPolar>(&self, value: Value) -> crate::Result<T> {
-    //     Ok(T::from_polar(&Term::new_temporary(value), &self.host)?)
-    // }
 }
 
 #[derive(Clone)]

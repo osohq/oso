@@ -197,3 +197,52 @@ impl<T: FromPolarValue> FromPolarValue for Vec<T> {
         }
     }
 }
+
+// well, you can't do this
+// impl<U: FromPolarValue> TryFrom<U> for PolarValue {
+//     type Error = crate::OsoError;
+
+//     fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
+//         U::from_polar_value(v)
+//     }
+// }
+
+// so I have to do this
+macro_rules! try_from_polar {
+    ($i:ty) => {
+        impl TryFrom<PolarValue> for $i {
+            type Error = crate::OsoError;
+
+            fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
+                Self::from_polar_value(v)
+            }
+        }
+    };
+}
+
+try_from_polar!(u8);
+try_from_polar!(i8);
+try_from_polar!(u16);
+try_from_polar!(i16);
+try_from_polar!(u32);
+try_from_polar!(i32);
+try_from_polar!(i64);
+try_from_polar!(f64);
+try_from_polar!(String);
+try_from_polar!(bool);
+
+impl<T: FromPolarValue> TryFrom<PolarValue> for HashMap<String, T> {
+    type Error = crate::OsoError;
+
+    fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
+        Self::from_polar_value(v)
+    }
+}
+
+impl<T: FromPolarValue> TryFrom<PolarValue> for Vec<T> {
+    type Error = crate::OsoError;
+
+    fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
+        Self::from_polar_value(v)
+    }
+}
