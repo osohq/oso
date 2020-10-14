@@ -7,8 +7,8 @@ pub trait Visitor<'term>: Sized {
     fn visit_number(&mut self, _n: &'term Numeric) {}
     fn visit_string(&mut self, _s: &'term str) {}
     fn visit_boolean(&mut self, _b: &'term bool) {}
-    fn visit_id(&mut self, _id: &'term u64) {}
-    fn visit_name(&mut self, _tag: &'term Symbol) {}
+    fn visit_id(&mut self, _i: &'term u64) {}
+    fn visit_name(&mut self, _n: &'term Symbol) {}
     fn visit_variable(&mut self, _v: &'term Symbol) {}
     fn visit_rest_variable(&mut self, _r: &'term Symbol) {}
     fn visit_operator(&mut self, _o: &'term Operator) {}
