@@ -81,7 +81,6 @@ python-test:
 	cd examples/rbac/python && pytest .
 	cd examples/context/python && pytest .
 	cd examples/user_types/python && pytest .
-	cd examples/quickstart/python && pytest .
 
 ruby-test:
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb
@@ -98,15 +97,11 @@ nodejs-test:
 	cd examples/inheritance/nodejs && yarn && yarn jest
 	cd examples/user_types/nodejs && yarn && yarn jest
 
-rust-test:
-	cd examples/quickstart/rust && cargo test
-
 test: doctest
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
 	$(MAKE) nodejs-test
-	$(MAKE) rust-test
 
 deps:
 	pip3 install -r requirements-docs.txt
