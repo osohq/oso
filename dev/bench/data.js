@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1602607630476,
+  "lastUpdate": 1602693585171,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -9035,6 +9035,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5898,
             "range": "± 1224",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b2387496512c9b4da4ffd007bb99a80979df2089",
+          "message": "Remove old quickstart files (#474)",
+          "timestamp": "2020-10-14T12:29:57-04:00",
+          "tree_id": "66a6e5ac8f796f0ee7751b93e68ba8c933bf2e14",
+          "url": "https://github.com/osohq/oso/commit/b2387496512c9b4da4ffd007bb99a80979df2089"
+        },
+        "date": 1602693583762,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 711,
+            "range": "± 82",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2040,
+            "range": "± 135",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 52630,
+            "range": "± 3580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 428102,
+            "range": "± 22059",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15054,
+            "range": "± 1239",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 14965,
+            "range": "± 1671",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 15038,
+            "range": "± 1306",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 14872,
+            "range": "± 1159",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 13083,
+            "range": "± 1303",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4649,
+            "range": "± 594",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 4547,
+            "range": "± 441",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 4981,
+            "range": "± 1326",
             "unit": "ns/iter"
           }
         ]
