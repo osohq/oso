@@ -9,6 +9,8 @@ mod common;
 
 use common::OsoTest;
 
+use std::convert::TryFrom;
+
 #[test]
 fn test_anything_works() {
     common::setup();
@@ -62,9 +64,9 @@ fn test_data_conversions() {
     let mut results = test.query("d(x)");
     let first = results.pop().unwrap();
     let mut x = first.get_typed::<Vec<PolarValue>>("x").unwrap();
-    assert_eq!(i64::from_polar_value(x.remove(0)).unwrap(), 1);
-    assert_eq!(String::from_polar_value(x.remove(0)).unwrap(), "two");
-    assert_eq!(bool::from_polar_value(x.remove(0)).unwrap(), true);
+    assert_eq!(i64::try_from(x.remove(0)).unwrap(), 1);
+    assert_eq!(String::try_from(x.remove(0)).unwrap(), "two");
+    assert_eq!(bool::try_from(x.remove(0)).unwrap(), true);
 }
 
 // This logic is changing. Updated when fixed
