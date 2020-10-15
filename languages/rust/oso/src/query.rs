@@ -129,8 +129,12 @@ impl Query {
 
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
         match constructor.value() {
-            Value::Call(Call { name, args, .. }) => {
-                self.host.make_instance(name, args.clone(), instance_id)
+            Value::Call(Call { name, args, kwargs }) => {
+                if !kwargs.is_none() {
+                    lazy_error!("keyword args for constructor not supported.")
+                } else {
+                    self.host.make_instance(name, args.clone(), instance_id)
+                }
             }
             _ => lazy_error!("invalid type for constructing an instance -- internal error"),
         }

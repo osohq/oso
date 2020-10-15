@@ -124,7 +124,10 @@ impl FromPolarList for Tuple {
     fn from_polar_list(terms: &[Term], host: &Host) -> crate::Result<Self> {
         let mut iter = terms.iter();
         let result = Ok((for_tuples!(
-            #( Tuple::from_polar(iter.next().expect("not enough arguments provided"), host)? ),*
+            #( Tuple::from_polar(iter.next().ok_or(
+                // TODO better error type
+                crate::OsoError::FromPolar
+            )?, host)? ),*
         )));
 
         if iter.len() > 0 {
