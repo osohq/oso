@@ -5,10 +5,10 @@ use common::OsoTest;
 use oso::errors::polar::{
     ErrorKind as PolarErrorKind, PolarError, RuntimeError as PolarRuntimeError,
 };
-use oso::{OsoError, errors::TypeError, PolarClass};
+use oso::{OsoError, PolarClass};
 
-use polar_core::terms::Value;
 use polar_core::terms::Symbol;
+use polar_core::terms::Value;
 
 // TODO in all tests, check type of error & message
 
@@ -79,14 +79,14 @@ fn test_unify_external_not_supported() -> oso::Result<()> {
     //let mut query = oso.oso.query_rule("unify", (EqFoo(1), 1))?;
     //let error = query.next().unwrap().unwrap_err();
     //assert!(
-        //matches!(
-            //&error,
-            //OsoError::TypeError(oso::errors::TypeError {
-                //expected,
-                //got
-            //}) if expected == "EqFoo" && got.as_deref() == Some("Integer")),
-        //"{} doesn't match expected error",
-        //error
+    //matches!(
+    //&error,
+    //OsoError::TypeError(oso::errors::TypeError {
+    //expected,
+    //got
+    //}) if expected == "EqFoo" && got.as_deref() == Some("Integer")),
+    //"{} doesn't match expected error",
+    //error
     //);
 
     Ok(())
@@ -268,15 +268,14 @@ fn test_wrong_argument_types() {
 
     // TODO test type error like this
     //if let OsoError::TypeError(TypeError {
-        //got: Some(got),
-        //expected
+    //got: Some(got),
+    //expected
     //}) = &error {
-        //assert_eq!(got, "Integer");
-        //assert_eq!(expected, "Bar");
+    //assert_eq!(got, "Integer");
+    //assert_eq!(expected, "Bar");
     //} else {
-        //panic!("Error type {} doesn't match expected", error);
+    //panic!("Error type {} doesn't match expected", error);
     //}
-
 
     // Wrong type of argument.
     let mut query = oso.oso.query_rule("bar", (Foo, Foo)).unwrap();

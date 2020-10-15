@@ -96,7 +96,7 @@ impl Query {
                     if let Err(e) = self.application_error(call_error) {
                         return Some(Err(e));
                     }
-                },
+                }
                 // All others get returned.
                 Err(err) => return Some(Err(err)),
                 // Continue on ok
@@ -185,7 +185,7 @@ impl Query {
                 Ok(r) => self.call_result(call_id, r),
                 Err(e) => {
                     self.call_result_none(call_id)?;
-                    return Err(e);
+                    Err(e)
                 }
             }
         } else {

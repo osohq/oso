@@ -88,7 +88,6 @@ impl OsoError {
     }
 }
 
-
 /// These are conditions that should never occur, and indicate a bug in oso.
 #[derive(Error, Debug)]
 pub enum InvariantError {
@@ -120,7 +119,7 @@ impl TypeError {
     pub fn expected<T: Into<String>>(expected: T) -> Self {
         Self {
             got: None,
-            expected: expected.into()
+            expected: expected.into(),
         }
     }
 

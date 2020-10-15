@@ -387,9 +387,10 @@ impl Instance {
             })
             .unwrap_or_else(|| std::any::type_name::<T>().to_owned());
 
-        self.inner.as_ref().downcast_ref().ok_or_else(|| {
-            crate::errors::TypeError::expected(expected_name).got(name)
-        })
+        self.inner
+            .as_ref()
+            .downcast_ref()
+            .ok_or_else(|| crate::errors::TypeError::expected(expected_name).got(name))
     }
 }
 

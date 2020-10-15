@@ -3,7 +3,7 @@
 //! Polar types back to Rust types.
 
 use impl_trait_for_tuples::*;
-use polar_core::terms::{self, Term, Value, Numeric};
+use polar_core::terms::{self, Numeric, Term, Value};
 
 use super::class::Instance;
 use super::Host;
@@ -33,19 +33,22 @@ use crate::errors::TypeError;
 pub trait FromPolar: Clone + Sized + 'static {
     fn from_polar(term: &Term, host: &Host) -> crate::Result<Self> {
         let wrong_value = match term.value() {
-            terms::Value::ExternalInstance(terms::ExternalInstance { instance_id, .. }) => return host
-                .get_instance(*instance_id)
-                .and_then(|instance| {
-                    instance
-                        .downcast::<Self>(Some(&host))
-                         // TODO (dhatch): This might be user.
-                        .map_err(|e| e.invariant().into())
-                })
-                .map(Clone::clone),
-            val => val
+            terms::Value::ExternalInstance(terms::ExternalInstance { instance_id, .. }) => {
+                return host
+                    .get_instance(*instance_id)
+                    .and_then(|instance| {
+                        instance
+                            .downcast::<Self>(Some(&host))
+                            // TODO (dhatch): This might be user.
+                            .map_err(|e| e.invariant().into())
+                    })
+                    .map(Clone::clone);
+            }
+            val => val,
         };
 
-        let expected = host.get_class_from_type::<Self>()
+        let expected = host
+            .get_class_from_type::<Self>()
             .map(|class| class.name.clone())
             .ok()
             .unwrap_or_else(|| std::any::type_name::<Self>().to_owned());
@@ -63,7 +66,7 @@ pub trait FromPolar: Clone + Sized + 'static {
             Value::Call(_) => Some("Predicate"),
             // Other types are unexpected and therefore do not make their
             // way into the error message.
-            _ => None
+            _ => None,
         };
 
         let mut type_error = TypeError::expected(expected);

@@ -194,8 +194,9 @@ impl<C: 'static + Sized + ToPolar> ToPolarResults for C {
 }
 
 impl<C, E> ToPolarResults for Result<C, E>
-    where C: ToPolarResults,
-          E: std::error::Error + 'static + Send + Sync
+where
+    C: ToPolarResults,
+    E: std::error::Error + 'static + Send + Sync,
 {
     fn to_polar_results(self, host: &mut Host) -> PolarResultIter {
         match self {
@@ -203,7 +204,7 @@ impl<C, E> ToPolarResults for Result<C, E>
             Err(e) => Box::new(iter::once(Err(crate::OsoError::ApplicationError {
                 source: Box::new(e),
                 type_name: None,
-                attr: None
+                attr: None,
             }))),
         }
     }
