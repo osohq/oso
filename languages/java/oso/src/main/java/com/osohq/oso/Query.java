@@ -71,6 +71,10 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       ffiQuery.applicationError(e.getMessage());
       ffiQuery.callResult(callId, null);
       return;
+    } catch (Exceptions.InvalidAttributeError e) {
+      ffiQuery.applicationError(e.getMessage());
+      ffiQuery.callResult(callId, null);
+      return;
     }
     String result;
     try {

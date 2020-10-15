@@ -301,7 +301,7 @@ impl Instance {
     pub fn class<'a>(&self, host: &'a Host) -> crate::Result<&'a Class> {
         host.get_class_by_type_id(self.inner.as_ref().type_id())
             .map_err(|_| OsoError::MissingClassError {
-                name: self.name(&host).to_owned(),
+                name: self.debug_type_name.to_string(),
             })
     }
 

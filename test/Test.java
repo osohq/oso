@@ -111,6 +111,14 @@ class Test {
     assert !o.query("builtinSpecializers(\"foo\", \"String\")").results().isEmpty();
     assert o.query("builtinSpecializers(\"bar\", \"String\")").results().isEmpty();
 
+    // Java integers do not have the denominator field
+    // assert !o.query("builtinSpecializers(1,
+    // \"IntegerWithFields\")").results().isEmpty();
+    assert o.query("builtinSpecializers(2, \"IntegerWithGarbageFields\")").results().isEmpty();
+    assert o.query("builtinSpecializers({}, \"DictionaryWithFields\")").results().isEmpty();
+    assert o.query("builtinSpecializers({z: 1}, \"DictionaryWithFields\")").results().isEmpty();
+    assert !o.query("builtinSpecializers({y: 1}, \"DictionaryWithFields\")").results().isEmpty();
+
     // Test deref behaviour
     o.loadStr("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;");
 
