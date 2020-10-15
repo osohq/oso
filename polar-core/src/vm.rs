@@ -3244,7 +3244,7 @@ mod tests {
         };
 
         let renamed_rule = vm.rename_rule_vars(&rule);
-        let renamed_terms = unwrap_and(renamed_rule.body);
+        let renamed_terms = unwrap_and(&renamed_rule.body);
         assert_eq!(renamed_terms[1].value(), renamed_terms[2].value());
         let x_value = match &renamed_terms[1].value() {
             Value::Variable(sym) => Some(sym.0.clone()),

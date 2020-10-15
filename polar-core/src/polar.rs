@@ -203,10 +203,10 @@ impl Polar {
         let mut warnings = vec![];
         while let Some(line) = lines.pop() {
             match line {
-                parser::Line::Rule(mut rule) => {
+                parser::Line::Rule(rule) => {
                     let mut rule_warnings = check_singletons(&rule, &kb);
                     warnings.append(&mut rule_warnings);
-                    rewrite_rule(&mut rule, &mut kb);
+                    let rule = rewrite_rule(rule, &mut kb);
 
                     let name = rule.name.clone();
                     let generic_rule = kb
@@ -256,11 +256,10 @@ impl Polar {
         let term = {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
-            let mut term =
+            let term =
                 parser::parse_query(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
             kb.sources.add_source(source, src_id);
-            rewrite_term(&mut term, &mut kb);
-            term
+            rewrite_term(term, &mut kb)
         };
         let query = Goal::Query { term: term.clone() };
         let vm =
@@ -271,7 +270,7 @@ impl Polar {
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
         {
             let mut kb = self.kb.write().unwrap();
-            rewrite_term(&mut term, &mut kb);
+            term = rewrite_term(term, &mut kb);
         }
         let query = Goal::Query { term: term.clone() };
         let vm =

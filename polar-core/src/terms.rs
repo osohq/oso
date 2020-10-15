@@ -135,6 +135,15 @@ impl Operator {
             Operator::And => 1,
         }
     }
+
+    pub fn temp_name(self) -> &'static str {
+        match self {
+            Operator::Add | Operator::Div | Operator::Mul | Operator::Sub => "op",
+            Operator::Dot => "value",
+            Operator::New => "instance",
+            _ => "temp",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]

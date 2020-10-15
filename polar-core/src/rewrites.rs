@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
+use super::folder::*;
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
-
-use crate::folder::Folder;
 
 pub struct Renamer<'kb> {
     kb: &'kb KnowledgeBase,
@@ -44,186 +43,132 @@ impl<'kb> Folder for Renamer<'kb> {
     }
 }
 
-/// Replace the left value by the AND of the right and the left.
-fn and_wrap(a: &mut Term, b: Term) {
-    let new_value = Value::Expression(Operation {
-        operator: Operator::And,
-        args: vec![b, a.clone()],
-    });
-
-    a.replace_value(new_value);
+pub struct ExpressionRewriter<'kb> {
+    kb: &'kb KnowledgeBase,
+    stack: Vec<Vec<Term>>,
 }
 
-#[cfg(test)]
-pub fn unwrap_and(term: Term) -> TermList {
-    match term.value() {
-        Value::Expression(Operation {
-            operator: Operator::And,
-            args,
-        }) => args.clone(),
-        _ => vec![term.clone()],
+impl<'kb> ExpressionRewriter<'kb> {
+    pub fn new(kb: &'kb KnowledgeBase) -> Self {
+        Self { kb, stack: vec![] }
+    }
+
+    fn needs_rewrite(&self, o: &Operation) -> bool {
+        match o.operator {
+            Operator::Add | Operator::Dot | Operator::Div | Operator::Mul | Operator::Sub
+                if o.args.len() == 2 =>
+            {
+                true
+            }
+            Operator::New if o.args.len() == 1 => true,
+            _ => false,
+        }
     }
 }
 
-/// Checks if the expression needs to be rewritten. If so,
-/// replaces the value in place with a temporary variable,
-/// and returns the rewritten expression.
-fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
-    match term.value() {
-        // This will be much nicer with #![feature(or_patterns)]
-        Value::Expression(Operation {
-            operator: op @ Operator::Add,
-            args,
-        })
-        | Value::Expression(Operation {
-            operator: op @ Operator::Sub,
-            args,
-        })
-        | Value::Expression(Operation {
-            operator: op @ Operator::Mul,
-            args,
-        })
-        | Value::Expression(Operation {
-            operator: op @ Operator::Div,
-            args,
-        }) if args.len() == 2 => {
-            // Rewrite op(a, b) to op(a, b, x) with x a temporary.
-            let temp = Value::Variable(kb.gensym("op"));
-            let new_op = Value::Expression(Operation {
-                operator: *op,
-                args: vec![
-                    args[0].clone(),
-                    args[1].clone(),
-                    term.clone_with_value(temp.clone()),
-                ],
-            });
-            term.replace_value(temp);
-            Some(term.clone_with_value(new_op))
+/// Replace `o(a, b)` with `_c`, where `_c = o(a, b)`.
+/// The lookup is hoisted to the nearest enclosing
+/// conjunction, creating one if necessary.
+impl<'kb> Folder for ExpressionRewriter<'kb> {
+    fn fold_rule(&mut self, rule: Rule) -> Rule {
+        self.stack.push(vec![]);
+        let mut rule = noop_fold_rule(rule, self);
+        let rewrites = self.stack.pop().unwrap();
+        if !rewrites.is_empty() {
+            let body = unwrap_and(&rule.body);
+            rule.body.replace_value(Value::Expression(Operation {
+                operator: Operator::And,
+                args: rewrites.into_iter().chain(body).collect(),
+            }));
         }
-        Value::Expression(Operation {
-            operator: Operator::Dot,
-            args,
-        }) if args.len() == 2 => {
-            // Rewrite .(a, b) to .(a, b, x) with x a temporary.
-            let temp = Value::Variable(kb.gensym("value"));
-            let lookup = Value::Expression(Operation {
-                operator: Operator::Dot,
-                args: vec![
-                    args[0].clone(),
-                    args[1].clone(),
-                    term.clone_with_value(temp.clone()),
-                ],
-            });
-            term.replace_value(temp);
-            Some(term.clone_with_value(lookup))
-        }
-        Value::Expression(Operation {
-            operator: Operator::New,
-            args,
-        }) if args.len() == 1 => {
-            // Rewrite new(Foo{}) to new(Foo{}, x) with x a temporary.
-            let temp = Value::Variable(kb.gensym("instance"));
-            let new_op = Value::Expression(Operation {
-                operator: Operator::New,
-                args: vec![args[0].clone(), args[0].clone_with_value(temp.clone())],
-            });
-            term.replace_value(temp);
-            Some(term.clone_with_value(new_op))
-        }
-        Value::Variable(Symbol(name)) if name == "_" => {
-            // Change _ in-place to a temporary, but don't rewrite it.
-            term.replace_value(Value::Variable(kb.gensym("_")));
-            None
-        }
-        _ => None,
+        rule
     }
-}
 
-/// Walks the term and does an in-place rewrite.
-/// Uses `rewrites` as a buffer of new lookup terms.
-fn do_rewrite(term: &mut Term, kb: &mut KnowledgeBase, rewrites: &mut Vec<Term>) {
-    /*term.map_replace(&mut |term| {
-        // First, rewrite this term, maybe returning a lookup
-        // lookup gets added to rewrites list
-        let mut term = term.clone();
-        if let Some(mut lookup) = rewrite(&mut term, kb) {
-            // recursively rewrite the lookup term if necesary
-            do_rewrite(&mut lookup, kb, rewrites);
-            rewrites.push(lookup);
-        } else if let Value::Expression(op) = term.value() {
-            // Next, if this is an expression, we want to immediately
-            // do the recursive rewrite in place
-            if matches!(op.operator, Operator::And | Operator::Or | Operator::Not) {
-                let args = op
+    /// Rewrite an expression as a temp, and push a rewritten
+    /// expression that binds the temp.
+    fn fold_term(&mut self, t: Term) -> Term {
+        match t.value() {
+            Value::Expression(o) if self.needs_rewrite(o) => {
+                let mut new = noop_fold_operation(o.clone(), self);
+                let mut temp = Value::Variable(self.kb.gensym(o.operator.temp_name()));
+                new.args.push(Term::new_temporary(temp.clone()));
+
+                if self.stack.is_empty() {
+                    // If there is no containing conjunction, make one.
+                    temp = Value::Expression(Operation {
+                        operator: Operator::And,
+                        args: vec![
+                            Term::new_temporary(Value::Expression(new)),
+                            Term::new_temporary(temp),
+                        ],
+                    })
+                } else {
+                    // Push the rewritten expression into the top stack frame.
+                    self.stack
+                        .last_mut()
+                        .unwrap()
+                        .push(t.clone_with_value(Value::Expression(new)));
+                }
+                t.clone_with_value(temp)
+            }
+            _ => noop_fold_term(t, self),
+        }
+    }
+
+    fn fold_operation(&mut self, o: Operation) -> Operation {
+        match o.operator {
+            Operator::And | Operator::Or | Operator::Not => {
+                let mut o = noop_fold_operation(o, self);
+                o.args = o
                     .args
-                    .iter()
+                    .into_iter()
                     .map(|arg| {
-                        let mut arg = arg.clone();
-                        let mut arg_rewrites = Vec::new();
-                        // gather all rewrites
-                        do_rewrite(&mut arg, kb, &mut arg_rewrites);
-                        // immediately rewrite the arg in place
-                        for rewrite in arg_rewrites.drain(..).rev() {
+                        self.stack.push(vec![]);
+                        let mut arg = noop_fold_term(arg, self);
+                        let mut rewrites = self.stack.pop().unwrap();
+                        for rewrite in rewrites.drain(..).rev() {
                             and_wrap(&mut arg, rewrite);
                         }
                         arg
                     })
                     .collect();
-                return term.clone_with_value(Value::Expression(Operation {
-                    operator: op.operator,
-                    args,
-                }));
+                o
             }
+            _ => noop_fold_operation(o, self),
         }
-        term
-    });*/
-}
-
-/// Rewrite the parameter term and return all new lookups as a vec.
-pub fn rewrite_parameter(parameter: &mut Term, kb: &mut KnowledgeBase) -> Vec<Term> {
-    let mut rewrites = vec![];
-    do_rewrite(parameter, kb, &mut rewrites);
-    rewrites
-}
-
-/// Rewrite the term in-place.
-pub fn rewrite_term(term: &mut Term, kb: &mut KnowledgeBase) {
-    let mut rewrites = vec![];
-
-    do_rewrite(term, kb, &mut rewrites);
-
-    // any other leftover rewrites which didn't get handled earlier
-    // (this should only happen in queries with a single clause)
-    for rewrite in rewrites.into_iter().rev() {
-        and_wrap(term, rewrite);
     }
+}
+
+/// Replace the left value with And(right, left).
+fn and_wrap(left: &mut Term, right: Term) {
+    let new_value = Value::Expression(Operation {
+        operator: Operator::And,
+        args: vec![right, left.clone()],
+    });
+    left.replace_value(new_value);
+}
+
+/// Return a cloned list of arguments from And(*args).
+pub fn unwrap_and(term: &Term) -> TermList {
+    match term.value() {
+        Value::Expression(Operation {
+            operator: Operator::And,
+            args,
+        }) => args.clone(),
+        _ => panic!("expected And, found {}", term.to_polar()),
+    }
+}
+
+/// Rewrite a term.
+pub fn rewrite_term(term: Term, kb: &mut KnowledgeBase) -> Term {
+    let mut fld = ExpressionRewriter::new(kb);
+    fld.fold_term(term)
 }
 
 /// Rewrite the rule in-place.
-pub fn rewrite_rule(rule: &mut Rule, kb: &mut KnowledgeBase) {
-    rewrite_term(&mut rule.body, kb);
-
-    let mut new_terms = vec![];
-
-    for param in &mut rule.params {
-        let mut rewrites = rewrite_parameter(&mut param.parameter, kb);
-        new_terms.append(&mut rewrites);
-    }
-
-    if let Value::Expression(Operation {
-        operator: Operator::And,
-        ref args,
-    }) = &mut rule.body.value()
-    {
-        let mut args = args.clone();
-        args.append(&mut new_terms);
-        rule.body.replace_value(Value::Expression(Operation {
-            operator: Operator::And,
-            args,
-        }));
-    } else {
-        panic!("Rule body isn't an and, something is wrong.")
-    }
+pub fn rewrite_rule(rule: Rule, kb: &mut KnowledgeBase) -> Rule {
+    let mut fld = ExpressionRewriter::new(kb);
+    fld.fold_rule(rule)
 }
 
 #[cfg(test)]
@@ -243,20 +188,22 @@ mod tests {
     #[test]
     fn rewrite_anonymous_vars() {
         let mut kb = KnowledgeBase::new();
-        let mut query = parse_query("[1, 2, 3] = [_, _, _]");
-        rewrite_term(&mut query, &mut kb);
-        assert_eq!(query.to_polar(), "[1, 2, 3] = [_1, _2, _3]");
+        let query = parse_query("[1, 2, 3] = [_, _, _]");
+        assert_eq!(
+            rewrite_term(query, &mut kb).to_polar(),
+            "[1, 2, 3] = [_1, _2, _3]"
+        );
     }
 
     #[test]
     fn rewrite_rules() {
         let mut kb = KnowledgeBase::new();
         let rules = parse_rules("f(a.b);");
-        let mut rule = rules[0].clone();
+        let rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "f(a.b);");
 
         // First rewrite
-        rewrite_rule(&mut rule, &mut kb);
+        let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(rule.to_polar(), "f(_value_1) if a.b = _value_1;");
 
         // Check we can parse the rules back again
@@ -266,9 +213,9 @@ mod tests {
 
         // Chained lookups
         let rules = parse_rules("f(a.b.c);");
-        let mut rule = rules[0].clone();
+        let rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "f(a.b.c);");
-        rewrite_rule(&mut rule, &mut kb);
+        let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
             "f(_value_2) if a.b = _value_3 and _value_3.c = _value_2;"
@@ -281,9 +228,9 @@ mod tests {
 
         // Lookups with args
         let rules = parse_rules("f(a, c) if a.b(c);");
-        let mut rule = rules[0].clone();
+        let rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "f(a, c) if a.b(c);");
-        rewrite_rule(&mut rule, &mut kb);
+        let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
             "f(a, c) if a.b(c) = _value_1 and _value_1;"
@@ -291,9 +238,9 @@ mod tests {
 
         // Nested lookups
         let rules = parse_rules("f(a, c, e) if a.b(c.d(e.f()));");
-        let mut rule = rules[0].clone();
+        let rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "f(a, c, e) if a.b(c.d(e.f()));");
-        rewrite_rule(&mut rule, &mut kb);
+        let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
             "f(a, c, e) if e.f() = _value_4 and c.d(_value_4) = _value_3 and a.b(_value_3) = _value_2 and _value_2;"
@@ -303,60 +250,65 @@ mod tests {
     #[test]
     fn rewrite_terms() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("x and a.b");
+        let term = parse_query("x and a.b");
         assert_eq!(term.to_polar(), "x and a.b");
-        rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), "x and a.b = _value_1 and _value_1");
+        assert_eq!(
+            rewrite_term(term, &mut kb).to_polar(),
+            "x and a.b = _value_1 and _value_1"
+        );
 
         let mut query = parse_query("f(a.b().c)");
         assert_eq!(query.to_polar(), "f(a.b().c)");
-        rewrite_term(&mut query, &mut kb);
         assert_eq!(
-            query.to_polar(),
+            rewrite_term(query, &mut kb).to_polar(),
             "a.b() = _value_3 and _value_3.c = _value_2 and f(_value_2)"
         );
 
-        let mut term = parse_query("a.b = 1");
-        rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), "a.b = _value_4 and _value_4 = 1");
-        let mut term = parse_query("{x: 1}.x = 1");
+        let term = parse_query("a.b = 1");
+        assert_eq!(
+            rewrite_term(term, &mut kb).to_polar(),
+            "a.b = _value_4 and _value_4 = 1"
+        );
+        let term = parse_query("{x: 1}.x = 1");
         assert_eq!(term.to_polar(), "{x: 1}.x = 1");
-        rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), "{x: 1}.x = _value_5 and _value_5 = 1");
+        assert_eq!(
+            rewrite_term(term, &mut kb).to_polar(),
+            "{x: 1}.x = _value_5 and _value_5 = 1"
+        );
     }
 
     #[test]
     fn rewrite_expressions() {
         let mut kb = KnowledgeBase::new();
 
-        let mut term = parse_query("0 - 0 = 0");
+        let term = parse_query("0 - 0 = 0");
         assert_eq!(term.to_polar(), "0 - 0 = 0");
-        rewrite_term(&mut term, &mut kb);
-        assert_eq!(term.to_polar(), "0 - 0 = _op_1 and _op_1 = 0");
+        assert_eq!(
+            rewrite_term(term, &mut kb).to_polar(),
+            "0 - 0 = _op_1 and _op_1 = 0"
+        );
 
         let rules = parse_rules("sum(a, b, a + b);");
-        let mut rule = rules[0].clone();
+        let rule = rules[0].clone();
         assert_eq!(rule.to_polar(), "sum(a, b, a + b);");
-        rewrite_rule(&mut rule, &mut kb);
+        let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(rule.to_polar(), "sum(a, b, _op_2) if a + b = _op_2;");
     }
 
     #[test]
     fn rewrite_nested_literal() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("new Foo(x: bar.y)");
+        let term = parse_query("new Foo(x: bar.y)");
         assert_eq!(term.to_polar(), "new Foo(x: bar.y)");
-        rewrite_term(&mut term, &mut kb);
         assert_eq!(
-            term.to_polar(),
+            rewrite_term(term, &mut kb).to_polar(),
             "bar.y = _value_2 and new (Foo(x: _value_2), _instance_1) and _instance_1"
         );
 
-        let mut term = parse_query("f(new Foo(x: bar.y))");
+        let term = parse_query("f(new Foo(x: bar.y))");
         assert_eq!(term.to_polar(), "f(new Foo(x: bar.y))");
-        rewrite_term(&mut term, &mut kb);
         assert_eq!(
-            term.to_polar(),
+            rewrite_term(term, &mut kb).to_polar(),
             "bar.y = _value_4 and new (Foo(x: _value_4), _instance_3) and f(_instance_3)"
         );
     }
@@ -364,13 +316,12 @@ mod tests {
     #[test]
     fn rewrite_class_constructor() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("new Foo(a: 1, b: 2)");
+        let term = parse_query("new Foo(a: 1, b: 2)");
         assert_eq!(term.to_polar(), "new Foo(a: 1, b: 2)");
 
-        rewrite_term(&mut term, &mut kb);
         // @ means external constructor
         assert_eq!(
-            term.to_polar(),
+            rewrite_term(term, &mut kb).to_polar(),
             "new (Foo(a: 1, b: 2), _instance_1) and _instance_1"
         );
     }
@@ -378,13 +329,13 @@ mod tests {
     #[test]
     fn rewrite_nested_class_constructor() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("new Foo(a: 1, b: new Foo(a: 2, b: 3))");
+        let term = parse_query("new Foo(a: 1, b: new Foo(a: 2, b: 3))");
         assert_eq!(term.to_polar(), "new Foo(a: 1, b: new Foo(a: 2, b: 3))");
 
-        rewrite_term(&mut term, &mut kb);
         assert_eq!(
-            term.to_polar(),
-            "new (Foo(a: 2, b: 3), _instance_2) and new (Foo(a: 1, b: _instance_2), _instance_1) and _instance_1"
+            rewrite_term(term, &mut kb).to_polar(),
+            "new (Foo(a: 2, b: 3), _instance_2) and \
+             new (Foo(a: 1, b: _instance_2), _instance_1) and _instance_1"
         );
     }
 
@@ -392,11 +343,13 @@ mod tests {
     fn rewrite_rules_constructor() {
         let mut kb = KnowledgeBase::new();
         let mut rules = parse_rules("rule_test(new Foo(a: 1, b: 2));");
-        assert_eq!(rules[0].to_polar(), "rule_test(new Foo(a: 1, b: 2));");
+        let rule = rules.pop().unwrap();
+        assert_eq!(rule.to_polar(), "rule_test(new Foo(a: 1, b: 2));");
+        assert!(rules.is_empty());
 
-        rewrite_rule(&mut rules[0], &mut kb);
+        let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
-            rules[0].to_polar(),
+            rule.to_polar(),
             "rule_test(_instance_1) if new (Foo(a: 1, b: 2), _instance_1);"
         )
     }
@@ -404,10 +357,12 @@ mod tests {
     #[test]
     fn rewrite_not_with_lookup() {
         let mut kb = KnowledgeBase::new();
-        let mut term = parse_query("not foo.x = 1");
+        let term = parse_query("not foo.x = 1");
         assert_eq!(term.to_polar(), "not foo.x = 1");
 
-        rewrite_term(&mut term, &mut kb);
-        pretty_assertions::assert_eq!(term.to_polar(), "not (foo.x = _value_1 and _value_1 = 1)")
+        pretty_assertions::assert_eq!(
+            rewrite_term(term, &mut kb).to_polar(),
+            "not (foo.x = _value_1 and _value_1 = 1)"
+        )
     }
 }
