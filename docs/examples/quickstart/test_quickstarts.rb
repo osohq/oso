@@ -107,7 +107,7 @@ quickstarts.each do |qs|
       ensure
         Process.kill 'INT', server
         Process.wait server
-        FileUtils.mv 'original.polar', 'expenses.polar'
+        FileUtils.mv 'original.polar', 'expenses.polar', force: true
       end
     end
   end
