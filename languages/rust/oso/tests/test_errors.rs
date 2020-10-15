@@ -504,7 +504,7 @@ fn test_class_does_not_exist() {
 
     oso.oso.register_class(foo_class).unwrap();
 
-    oso.load_str("bar(b) if b = new Bar()");
+    oso.load_str("bar(b) if b = new Bar();");
     let mut query = oso.oso.query("bar(b)").unwrap();
     assert!(query.next().unwrap().is_err());
 }
