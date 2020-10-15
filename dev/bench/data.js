@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1602768574615,
+  "lastUpdate": 1602770232811,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -9419,6 +9419,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5715,
             "range": "± 826",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "62b06af7703fccef8cf77ee44faa579335d6df00",
+          "message": "use crates for impl-trait-for-tuples (#477)",
+          "timestamp": "2020-10-15T08:45:38-05:00",
+          "tree_id": "fdf74d141e41acb26c15afb58e0fc15961321620",
+          "url": "https://github.com/osohq/oso/commit/62b06af7703fccef8cf77ee44faa579335d6df00"
+        },
+        "date": 1602770231152,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 921,
+            "range": "± 76",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2776,
+            "range": "± 242",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 72245,
+            "range": "± 6668",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 546876,
+            "range": "± 33343",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18801,
+            "range": "± 1564",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18596,
+            "range": "± 2321",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18831,
+            "range": "± 1908",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19607,
+            "range": "± 1562",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16996,
+            "range": "± 1210",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5645,
+            "range": "± 436",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5912,
+            "range": "± 719",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6799,
+            "range": "± 1328",
             "unit": "ns/iter"
           }
         ]
