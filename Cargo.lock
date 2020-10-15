@@ -509,8 +509,9 @@ dependencies = [
 
 [[package]]
 name = "impl-trait-for-tuples"
-version = "0.1.2"
-source = "git+https://github.com/bkchr/impl-trait-for-tuples?rev=c6781ff#c6781ff4c1ac963c60eefea921597243c1b59ce2"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f65a8ecf74feeacdab8d38cb129e550ca871cccaa7d1921d8636ecd75534903"
 dependencies = [
  "proc-macro2",
  "quote",
