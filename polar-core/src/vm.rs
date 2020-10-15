@@ -2909,69 +2909,73 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_dicts() {
         let mut vm = PolarVirtualMachine::default();
-        let left = term!(btreemap! {
+        let dict = term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
-        let right = Pattern::term_as_pattern(&term!(btreemap! {
+        let dict_pattern = term!(pattern!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         }));
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right,
+            left: dict.clone(),
+            right: dict_pattern.clone(),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Dicts with identical keys and different values DO NOT isa.
-        let right = Pattern::term_as_pattern(&term!(btreemap! {
+        let different_dict_pattern = term!(pattern!(btreemap! {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         }));
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right,
+            left: dict.clone(),
+            right: different_dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
+        let empty_dict = term!(btreemap! {});
+        let empty_dict_pattern = term!(pattern!(btreemap! {}));
         // {} isa {}.
         vm.push_goal(Goal::Isa {
-            left: term!(btreemap! {}),
-            right: Pattern::term_as_pattern(&term!(btreemap! {})),
+            left: empty_dict.clone(),
+            right: empty_dict_pattern.clone(),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Non-empty dicts should isa against an empty dict.
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right: Pattern::term_as_pattern(&term!(btreemap! {})),
+            left: dict.clone(),
+            right: empty_dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
-            left: term!(btreemap! {}),
-            right: Pattern::term_as_pattern(&left),
+            left: empty_dict,
+            right: dict_pattern.clone(),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
+        let subset_dict_pattern = term!(pattern!(btreemap! {sym!("x") => term!(1)}));
         // Superset dict isa subset dict.
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right: Pattern::term_as_pattern(&term!(btreemap! {sym!("x") => term!(1)})),
+            left: dict,
+            right: subset_dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Subset dict isNOTa superset dict.
+        let subset_dict = term!(btreemap! {sym!("x") => term!(1)});
         vm.push_goal(Goal::Isa {
-            left: term!(btreemap! {sym!("x") => term!(1)}),
-            right: Pattern::term_as_pattern(&left),
+            left: subset_dict,
+            right: dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);

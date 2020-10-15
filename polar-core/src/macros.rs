@@ -15,6 +15,32 @@ use crate::terms::*;
 pub const ORD: Ordering = Ordering::SeqCst;
 pub static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
+#[macro_export]
+macro_rules! value {
+    ([$($args:expr),*]) => {
+        $crate::terms::Value::List(vec![
+            $(term!(value!($args))),*
+        ])
+    };
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Value>::from($arg).0
+    };
+}
+
+#[macro_export]
+macro_rules! term {
+    ($($expr:tt)*) => {
+        $crate::macros::TestHelper::<Term>::from(value!($($expr)*)).0
+    };
+}
+
+#[macro_export]
+macro_rules! pattern {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Pattern>::from($arg).0
+    };
+}
+
 /// Special struct which is way more eager at implementing `From`
 /// for a bunch of things, so that in the macros we can use `TestHelper<Term>::from`
 /// and try and convert things as often as possible.
@@ -32,19 +58,17 @@ impl From<Value> for TestHelper<Term> {
     }
 }
 
-#[macro_export]
-macro_rules! term {
-    ($($expr:tt)*) => {
-        $crate::macros::TestHelper::<Term>::from(value!($($expr)*)).0
-    };
-}
-
 // TODO change this
 impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
+        let specializer = match arg.1.value().clone() {
+            Value::Dictionary(dict) => value!(pattern!(dict)),
+            Value::InstanceLiteral(lit) => value!(pattern!(lit)),
+            v => v,
+        };
         Self(Parameter {
             parameter: arg.1.clone_with_value(Value::Variable(arg.0)),
-            specializer: Some(Pattern::term_as_pattern(&arg.1)),
+            specializer: Some(term!(specializer)),
         })
     }
 }
@@ -222,15 +246,31 @@ impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
 }
 
 #[macro_export]
-macro_rules! value {
-    ([$($args:expr),*]) => {
-        $crate::terms::Value::List(vec![
-            $(term!(value!($args))),*
-        ])
-    };
+macro_rules! dict {
     ($arg:expr) => {
-        $crate::macros::TestHelper::<Value>::from($arg).0
+        $crate::macros::TestHelper::<Dictionary>::from($arg).0
     };
+}
+
+impl From<Dictionary> for TestHelper<Pattern> {
+    fn from(other: Dictionary) -> Self {
+        Self(Pattern::Dictionary(other))
+    }
+}
+impl From<BTreeMap<Symbol, Term>> for TestHelper<Pattern> {
+    fn from(other: BTreeMap<Symbol, Term>) -> Self {
+        Self(Pattern::Dictionary(dict!(other)))
+    }
+}
+impl From<InstanceLiteral> for TestHelper<Pattern> {
+    fn from(other: InstanceLiteral) -> Self {
+        Self(Pattern::Instance(other))
+    }
+}
+impl From<Pattern> for TestHelper<Term> {
+    fn from(other: Pattern) -> Self {
+        Self(Term::new_from_test(value!(other)))
+    }
 }
 
 /// Builds a list of arguments in reverse order

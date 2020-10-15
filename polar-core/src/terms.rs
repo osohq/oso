@@ -24,34 +24,12 @@ impl Dictionary {
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
     }
-
-    /// Convert all terms in this dictionary to patterns.
-    pub fn as_pattern(&self) -> Pattern {
-        let mut pattern = self.clone();
-        /*pattern.map_replace(&mut |t| {
-            let v = Pattern::value_as_pattern(t.value());
-            t.clone_with_value(v)
-        });*/
-        Pattern::Dictionary(pattern)
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
-}
-
-impl InstanceLiteral {
-    /// Convert all terms in this instance literal to patterns.
-    pub fn as_pattern(&self) -> Pattern {
-        let mut pattern = self.clone();
-        /*pattern.map_replace(&mut |t| {
-            let v = Pattern::value_as_pattern(t.value());
-            t.clone_with_value(v)
-        });*/
-        Pattern::Instance(pattern)
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -170,20 +148,6 @@ pub struct Operation {
 pub enum Pattern {
     Dictionary(Dictionary),
     Instance(InstanceLiteral),
-}
-
-impl Pattern {
-    pub fn value_as_pattern(value: &Value) -> Value {
-        match value.clone() {
-            Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
-            Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
-            v => v,
-        }
-    }
-
-    pub fn term_as_pattern(term: &Term) -> Term {
-        term.clone_with_value(Self::value_as_pattern(term.value()))
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
