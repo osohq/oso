@@ -1,4 +1,10 @@
+use std::fmt;
+
 use thiserror::Error;
+
+pub use polar_core::error as polar;
+
+// TODO stack traces????
 
 /// oso errors
 ///
@@ -8,7 +14,7 @@ pub enum OsoError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
-    Polar(#[from] polar_core::error::PolarError),
+    Polar(#[from] polar::PolarError),
     #[error("failed to convert type from Polar")]
     FromPolar,
     #[error("policy files must have the .polar extension. {filename} does not.")]
@@ -22,7 +28,7 @@ pub enum OsoError {
 
     /// A TypeError caused by user input.
     #[error(transparent)]
-    TypeError(#[from] TypeError),
+    TypeError(TypeError),
 
     #[error("Unsupported operation {operation} for type {type_name}.")]
     UnsupportedOperation {
@@ -32,6 +38,9 @@ pub enum OsoError {
 
     #[error("{operation} are unimplemented in the oso Rust library")]
     UnimplementedOperation { operation: String },
+
+    #[error(transparent)]
+    InvalidCallError(#[from] InvalidCallError),
 
     #[error("failed to convert type to Polar")]
     ToPolar,
@@ -48,6 +57,35 @@ pub enum OsoError {
     /// TODO: replace all these with proper variants
     #[error("{message}")]
     Custom { message: String },
+
+    /// Error that was returned from application code (method on a class or instance).
+    #[error("Error {source} returned from {}.{}",
+        type_name.as_deref().unwrap_or("UNKNOWN"),
+        attr.as_deref().unwrap_or("UNKNOWN"))]
+    ApplicationError {
+        source: Box<dyn std::error::Error + 'static + Send + Sync>,
+        type_name: Option<String>,
+        attr: Option<String>,
+    },
+    // TODO: Confusing that the above is called application error,
+    // while the application_error function actually does something
+    // totally different.
+}
+
+impl OsoError {
+    /// Add `type_name` if `self` is a variant that has one.
+    pub fn type_name(&mut self, name: String) {
+        if let Self::ApplicationError { type_name, .. } = self {
+            type_name.replace(name);
+        }
+    }
+
+    /// Add `attr` if `self` is a variant that has one.
+    pub fn attr(&mut self, name: String) {
+        if let Self::ApplicationError { attr, .. } = self {
+            attr.replace(name);
+        }
+    }
 }
 
 /// These are conditions that should never occur, and indicate a bug in oso.
@@ -61,12 +99,36 @@ pub enum InvariantError {
 }
 
 #[derive(Error, Debug)]
-#[error("Type error: expected `{expected}`")]
 pub struct TypeError {
+    pub got: Option<String>,
     pub expected: String,
 }
 
+impl fmt::Display for TypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref got) = self.got {
+            writeln!(f, "Type error: Expected {} got {}", self.expected, got)
+        } else {
+            writeln!(f, "Type error: Expected {}.", self.expected)
+        }
+    }
+}
+
 impl TypeError {
+    /// Create a type error with expected type `expected`.
+    pub fn expected<T: Into<String>>(expected: T) -> Self {
+        Self {
+            got: None,
+            expected: expected.into(),
+        }
+    }
+
+    /// Set `got` on self.
+    pub fn got<T: Into<String>>(mut self, got: T) -> Self {
+        self.got.replace(got.into());
+        self
+    }
+
     /// Convert `self` into `InvariantError`,
     /// indicating an invariant that should never occur.
     pub fn invariant(self) -> InvariantError {
@@ -76,8 +138,27 @@ impl TypeError {
     /// Convert `self` into `OsoError`, indicating a user originating type error.
     /// For example, calling a method with a paramter of an incorrect type from within Polar.
     pub fn user(self) -> OsoError {
-        OsoError::from(self)
+        OsoError::TypeError(self)
     }
+}
+
+#[derive(Error, Debug)]
+pub enum InvalidCallError {
+    #[error("Class method {method_name} not found on type {type_name}.")]
+    ClassMethodNotFound {
+        method_name: String,
+        type_name: String,
+    },
+    #[error("Method {method_name} not found on type {type_name}.")]
+    MethodNotFound {
+        method_name: String,
+        type_name: String,
+    },
+    #[error("Attribute {attribute_name} not found on type {type_name}.")]
+    AttributeNotFound {
+        attribute_name: String,
+        type_name: String,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, OsoError>;

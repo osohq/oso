@@ -2,6 +2,7 @@
 /// Tests that are unique to the Rust implementation of oso, testing things like
 /// rust class handling.
 use maplit::hashmap;
+use thiserror::Error;
 
 use oso::{ClassBuilder, PolarClass};
 
@@ -343,17 +344,21 @@ fn test_results_and_options() {
     #[derive(PolarClass)]
     struct Foo;
 
+    #[derive(Error, Debug)]
+    #[error("Test error")]
+    struct Error;
+
     impl Foo {
         fn new() -> Self {
             Self
         }
 
-        fn ok(&self) -> Result<i32, String> {
+        fn ok(&self) -> Result<i32, Error> {
             Ok(1)
         }
 
-        fn err(&self) -> Result<i32, &'static str> {
-            Err("Some sort of error")
+        fn err(&self) -> Result<i32, Error> {
+            Err(Error)
         }
 
         fn some(&self) -> Option<i32> {
@@ -379,6 +384,8 @@ fn test_results_and_options() {
         .unwrap();
 
     test.qvar_one(r#"new Foo().ok() = x"#, "x", 1);
+    // TODO (dhatch): Assert type of error
+    // TODO (dhatch): Check nested method error
     test.query_err("new Foo().err()");
     test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
 

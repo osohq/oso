@@ -50,7 +50,9 @@ impl AttributeGetter {
         R: crate::ToPolar,
     {
         Self(Arc::new(move |receiver, host: &mut Host| {
-            let receiver = receiver.downcast().map_err(|e| e.invariant().into());
+            let receiver = receiver
+                .downcast(Some(&host))
+                .map_err(|e| e.invariant().into());
             receiver.map(&f).map(|v| v.to_polar(host))
         }))
     }
@@ -73,7 +75,9 @@ impl InstanceMethod {
     {
         Self(Arc::new(
             move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
-                let receiver = receiver.downcast().map_err(|e| e.invariant().into());
+                let receiver = receiver
+                    .downcast(Some(&host))
+                    .map_err(|e| e.invariant().into());
 
                 let args = Args::from_polar_list(&args, host);
 
@@ -94,7 +98,9 @@ impl InstanceMethod {
     {
         Self(Arc::new(
             move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
-                let receiver = receiver.downcast().map_err(|e| e.invariant().into());
+                let receiver = receiver
+                    .downcast(Some(&host))
+                    .map_err(|e| e.invariant().into());
 
                 let args = Args::from_polar_list(&args, host);
 
@@ -121,7 +127,7 @@ impl InstanceMethod {
         Self(Arc::new(
             move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
                 receiver
-                    .downcast::<Class>()
+                    .downcast::<Class>(Some(&host))
                     .map_err(|e| e.invariant().into())
                     .and_then(|class| {
                         tracing::trace!(class = %class.name, method=%name, "class_method");

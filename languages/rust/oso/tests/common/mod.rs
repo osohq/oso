@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use oso::Oso;
 
 pub struct OsoTest {
@@ -13,7 +14,6 @@ impl OsoTest {
         self.oso.load_str(policy).unwrap();
     }
 
-    #[allow(dead_code)]
     pub fn load_file(&mut self, here: &str, name: &str) -> oso::Result<()> {
         // hack because `file!()` starts from workspace root
         // https://github.com/rust-lang/cargo/issues/3946
