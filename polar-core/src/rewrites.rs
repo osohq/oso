@@ -137,6 +137,14 @@ impl<'kb> Folder for ExpressionRewriter<'kb> {
             _ => noop_fold_operation(o, self),
         }
     }
+
+    fn fold_variable(&mut self, v: Symbol) -> Symbol {
+        if v.0 == "_" {
+            self.kb.gensym("_")
+        } else {
+            v
+        }
+    }
 }
 
 /// Replace the left value with And(right, left).
