@@ -104,6 +104,8 @@ quickstarts.each do |qs|
         if received != expected
           raise "#{lang.upcase} failure\n\texpected: #{expected.inspect}\n\treceived: #{received.inspect}\n"
         end
+
+        puts "[#{lang}] Success!"
       ensure
         Process.kill 'INT', server
         Process.wait server
