@@ -1,0 +1,15 @@
+[submodule "docs/examples/quickstart/oso-ruby-quickstart"]
+	path = docs/examples/quickstart/oso-ruby-quickstart
+	url = git@github.com:osohq/oso-ruby-quickstart.git
+[submodule "docs/examples/quickstart/oso-rust-quickstart"]
+	path = docs/examples/quickstart/oso-rust-quickstart
+	url = git@github.com:osohq/oso-rust-quickstart.git
+[submodule "docs/examples/quickstart/oso-python-quickstart"]
+	path = docs/examples/quickstart/oso-python-quickstart
+	url = git@github.com:osohq/oso-python-quickstart.git
+[submodule "docs/examples/quickstart/oso-nodejs-quickstart"]
+	path = docs/examples/quickstart/oso-nodejs-quickstart
+	url = git@github.com:osohq/oso-nodejs-quickstart.git
+[submodule "docs/examples/quickstart/oso-java-quickstart"]
+	path = docs/examples/quickstart/oso-java-quickstart
+	url = git@github.com:osohq/oso-java-quickstart.git

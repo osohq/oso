@@ -97,7 +97,10 @@ nodejs-test:
 	cd examples/inheritance/nodejs && yarn && yarn jest
 	cd examples/user_types/nodejs && yarn && yarn jest
 
-test: doctest
+test-quickstarts:
+	$(MAKE) -C examples/quickstart test
+
+test: doctest test-quickstarts
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
