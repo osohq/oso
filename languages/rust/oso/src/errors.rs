@@ -117,16 +117,16 @@ impl fmt::Display for TypeError {
 
 impl TypeError {
     /// Create a type error with expected type `expected`.
-    pub fn expected(expected: String) -> Self {
+    pub fn expected<T: Into<String>>(expected: T) -> Self {
         Self {
             got: None,
-            expected
+            expected: expected.into()
         }
     }
 
     /// Set `got` on self.
-    pub fn got(mut self, got: String) -> Self {
-        self.got.replace(got);
+    pub fn got<T: Into<String>>(mut self, got: T) -> Self {
+        self.got.replace(got.into());
         self
     }
 

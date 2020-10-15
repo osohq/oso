@@ -5,8 +5,9 @@ use common::OsoTest;
 use oso::errors::polar::{
     ErrorKind as PolarErrorKind, PolarError, RuntimeError as PolarRuntimeError,
 };
-use oso::{OsoError, errors::TypeError, PolarClass, Value};
+use oso::{OsoError, errors::TypeError, PolarClass};
 
+use polar_core::terms::Value;
 use polar_core::terms::Symbol;
 
 // TODO in all tests, check type of error & message
