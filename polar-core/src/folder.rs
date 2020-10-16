@@ -30,6 +30,12 @@ pub trait Folder: Sized {
     fn fold_boolean(&mut self, b: bool) -> bool {
         noop_fold_boolean(b, self)
     }
+    fn fold_id(&mut self, i: u64) -> u64 {
+        noop_fold_id(i, self)
+    }
+    fn fold_external_instance(&mut self, e: ExternalInstance) -> ExternalInstance {
+        noop_fold_external_instance(e, self)
+    }
     fn fold_instance_literal(&mut self, i: InstanceLiteral) -> InstanceLiteral {
         noop_fold_instance_literal(i, self)
     }
@@ -85,7 +91,7 @@ pub fn noop_fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::Number(n) => Value::Number(fld.fold_number(n)),
         Value::String(s) => Value::String(fld.fold_string(s)),
         Value::Boolean(b) => Value::Boolean(fld.fold_boolean(b)),
-        // Value::ExternalInstance(_) => {}
+        Value::ExternalInstance(e) => Value::ExternalInstance(fld.fold_external_instance(e)),
         Value::InstanceLiteral(i) => Value::InstanceLiteral(fld.fold_instance_literal(i)),
         Value::Dictionary(d) => Value::Dictionary(fld.fold_dictionary(d)),
         Value::Pattern(p) => Value::Pattern(fld.fold_pattern(p)),
@@ -109,6 +115,25 @@ pub fn noop_fold_string<T: Folder>(s: String, _fld: &mut T) -> String {
 
 pub fn noop_fold_boolean<T: Folder>(b: bool, _fld: &mut T) -> bool {
     b
+}
+
+pub fn noop_fold_id<T: Folder>(id: u64, _fld: &mut T) -> u64 {
+    id
+}
+
+pub fn noop_fold_external_instance<T: Folder>(
+    ExternalInstance {
+        instance_id,
+        constructor,
+        repr,
+    }: ExternalInstance,
+    fld: &mut T,
+) -> ExternalInstance {
+    ExternalInstance {
+        instance_id: fld.fold_id(instance_id),
+        constructor: constructor.map(|t| fld.fold_term(t)),
+        repr: repr.map(|r| fld.fold_string(r)),
+    }
 }
 
 pub fn noop_fold_instance_literal<T: Folder>(

@@ -88,38 +88,28 @@ impl<'kb> Folder for ExpressionRewriter<'kb> {
     /// expression that binds the temp.
     fn fold_term(&mut self, t: Term) -> Term {
         match t.value() {
-            Value::Expression(o) if self.needs_rewrite(o) => {
-                let mut new = noop_fold_operation(o.clone(), self);
-                let mut temp = Value::Variable(self.kb.gensym(o.operator.temp_name()));
-                new.args.push(Term::new_temporary(temp.clone()));
-
-                if self.stack.is_empty() {
-                    // If there is no containing conjunction, make one.
-                    temp = Value::Expression(Operation {
-                        operator: Operator::And,
-                        args: vec![
-                            Term::new_temporary(Value::Expression(new)),
-                            Term::new_temporary(temp),
-                        ],
-                    })
-                } else {
-                    // Push the rewritten expression into the top stack frame.
-                    self.stack
-                        .last_mut()
-                        .unwrap()
-                        .push(t.clone_with_value(Value::Expression(new)));
-                }
-                t.clone_with_value(temp)
-            }
             _ if self.stack.is_empty() => {
                 // If there is no containing conjunction, make one.
                 self.stack.push(vec![]);
-                let mut new = noop_fold_term(t, self);
+                let mut new = self.fold_term(t);
                 let mut rewrites = self.stack.pop().unwrap();
                 for rewrite in rewrites.drain(..).rev() {
                     and_wrap(&mut new, rewrite);
                 }
                 new
+            }
+            Value::Expression(o) if self.needs_rewrite(o) => {
+                let mut new = noop_fold_operation(o.clone(), self);
+                let temp = Value::Variable(self.kb.gensym(o.operator.temp_name()));
+                new.args.push(Term::new_temporary(temp.clone()));
+
+                // Push the rewritten expression into the top stack frame.
+                self.stack
+                    .last_mut()
+                    .unwrap()
+                    .push(t.clone_with_value(Value::Expression(new)));
+
+                t.clone_with_value(temp)
             }
             _ => noop_fold_term(t, self),
         }
@@ -319,14 +309,14 @@ mod tests {
         assert_eq!(term.to_polar(), "new Foo(x: bar.y)");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "bar.y = _value_2 and new (Foo(x: _value_2), _instance_1) and _instance_1"
+            "bar.y = _value_1 and new (Foo(x: _value_1), _instance_2) and _instance_2"
         );
 
         let term = parse_query("f(new Foo(x: bar.y))");
         assert_eq!(term.to_polar(), "f(new Foo(x: bar.y))");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "bar.y = _value_4 and new (Foo(x: _value_4), _instance_3) and f(_instance_3)"
+            "bar.y = _value_3 and new (Foo(x: _value_3), _instance_4) and f(_instance_4)"
         );
     }
 
@@ -351,8 +341,8 @@ mod tests {
 
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "new (Foo(a: 2, b: 3), _instance_2) and \
-             new (Foo(a: 1, b: _instance_2), _instance_1) and _instance_1"
+            "new (Foo(a: 2, b: 3), _instance_1) and \
+             new (Foo(a: 1, b: _instance_1), _instance_2) and _instance_2"
         );
     }
 
