@@ -10,7 +10,7 @@ CURL_ERROR = "curl: (7) Failed to connect to localhost port 5050: Connection ref
 CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
 quickstarts = [
-#   { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
+  #   { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
   { lang: 'java', setup: 'make build', server: 'make run' },
   { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'python server.py' },
   { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
@@ -47,13 +47,14 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
-          puts `lsof -i :5050`
           Process.kill 'TERM', server
           pid, status = Process.wait2 server
           puts pid, server, status
-          puts `lsof -i :5050`
           sleep 5
-          puts `lsof -i :5050`
+          `fuser 5050/tcp`.split.each do |x|
+            Process.kill 'KILL', x.to_i unless x.to_i.zero?
+          end
+          sleep 1
 
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
@@ -80,13 +81,14 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
-          puts `lsof -i :5050`
           Process.kill 'TERM', server
           pid, status = Process.wait2 server
           puts pid, server, status
-          puts `lsof -i :5050`
           sleep 5
-          puts `lsof -i :5050`
+          `fuser 5050/tcp`.split.each do |x|
+            Process.kill 'KILL', x.to_i unless x.to_i.zero?
+          end
+          sleep 1
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
 
