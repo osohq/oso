@@ -713,7 +713,6 @@ fn test_lookup_derefs() {
     let query = polar.new_query("f(1)", false).unwrap();
     let mut foo_lookups = vec![term!(1)];
     let mock_foo = |_, _, _, args: Option<Vec<Term>>, _| {
-        panic!();
         // check the argument is bound to an integer
         assert!(matches!(args.unwrap()[0].value(), Value::Number(_)));
         foo_lookups.pop()

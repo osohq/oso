@@ -5,6 +5,7 @@ use super::kb::*;
 use super::rules::*;
 use super::terms::*;
 
+/// Rename each non-constant variable in a term or rule to a fresh variable.
 pub struct Renamer<'kb> {
     kb: &'kb KnowledgeBase,
     renames: HashMap<Symbol, Symbol>,
@@ -43,16 +44,18 @@ impl<'kb> Folder for Renamer<'kb> {
     }
 }
 
-pub struct ExpressionRewriter<'kb> {
+/// Rewrite expressions, etc.
+pub struct Rewriter<'kb> {
     kb: &'kb KnowledgeBase,
     stack: Vec<Vec<Term>>,
 }
 
-impl<'kb> ExpressionRewriter<'kb> {
+impl<'kb> Rewriter<'kb> {
     pub fn new(kb: &'kb KnowledgeBase) -> Self {
         Self { kb, stack: vec![] }
     }
 
+    /// Return true if the expression should be rewritten.
     fn needs_rewrite(&self, o: &Operation) -> bool {
         match o.operator {
             Operator::Add | Operator::Dot | Operator::Div | Operator::Mul | Operator::Sub
@@ -69,7 +72,8 @@ impl<'kb> ExpressionRewriter<'kb> {
 /// Replace `o(a, b)` with `_c`, where `_c = o(a, b)`.
 /// The lookup is hoisted to the nearest enclosing
 /// conjunction, creating one if necessary.
-impl<'kb> Folder for ExpressionRewriter<'kb> {
+impl<'kb> Folder for Rewriter<'kb> {
+    /// Rewrite a rule, pushing expressions in the head into the body.
     fn fold_rule(&mut self, rule: Rule) -> Rule {
         self.stack.push(vec![]);
         let mut rule = noop_fold_rule(rule, self);
@@ -99,6 +103,7 @@ impl<'kb> Folder for ExpressionRewriter<'kb> {
                 new
             }
             Value::Expression(o) if self.needs_rewrite(o) => {
+                // Rewrite sub-expressions, then push a temp onto the args.
                 let mut new = noop_fold_operation(o.clone(), self);
                 let temp = Value::Variable(self.kb.gensym(o.operator.temp_name()));
                 new.args.push(Term::new_temporary(temp.clone()));
@@ -109,6 +114,7 @@ impl<'kb> Folder for ExpressionRewriter<'kb> {
                     .unwrap()
                     .push(t.clone_with_value(Value::Expression(new)));
 
+                // Return the temp.
                 t.clone_with_value(temp)
             }
             _ => noop_fold_term(t, self),
@@ -168,13 +174,13 @@ pub fn unwrap_and(term: &Term) -> TermList {
 
 /// Rewrite a term.
 pub fn rewrite_term(term: Term, kb: &mut KnowledgeBase) -> Term {
-    let mut fld = ExpressionRewriter::new(kb);
+    let mut fld = Rewriter::new(kb);
     fld.fold_term(term)
 }
 
-/// Rewrite the rule in-place.
+/// Rewrite a rule.
 pub fn rewrite_rule(rule: Rule, kb: &mut KnowledgeBase) -> Rule {
-    let mut fld = ExpressionRewriter::new(kb);
+    let mut fld = Rewriter::new(kb);
     fld.fold_rule(rule)
 }
 
