@@ -135,7 +135,12 @@ quickstarts.each do |qs|
           Process.kill 'TERM', server
           pid, status = Process.wait2 server
           puts pid, server, status
+          sleep 5
+          `fuser 5050/tcp`.split.each do |x|
+            Process.kill 'KILL', x.to_i unless x.to_i.zero?
+          end
           FileUtils.mv 'original.polar', 'expenses.polar', force: true
+          sleep 1
         end
       end
     end
