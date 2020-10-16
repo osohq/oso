@@ -28,11 +28,13 @@ def start_server(server, user, expense_id)
 end
 
 def kill_server(server)
+  return if server.nil?
+
   Process.kill 'TERM', server
   Process.wait2 server
-  until (server = `fuser 5050/tcp 2>&1`.split.first.to_i).zero?
-    sleep 1
-    Process.kill 'KILL', server.to_i unless server.to_i.zero?
+  until (server = `lsof -ti :5050 2>&1`.split.first.to_i).zero?
+    sleep 0.5
+    Process.kill 'KILL', server
   end
 rescue Errno::ESRCH => e
   puts "#{e}: #{server}"
