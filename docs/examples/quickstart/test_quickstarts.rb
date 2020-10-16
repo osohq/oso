@@ -17,6 +17,27 @@ quickstarts = [
   { lang: 'rust', setup: 'cargo build --target-dir ../../../../target', server: 'cargo run' }
 ]
 
+def start_server(server, user, expense_id)
+  server = spawn server, %i[out err] => '/dev/null'
+  received = CURL_ERROR
+  while [CURL_ERROR, CURL_EMPTY].include? received
+    sleep 0.5
+    received = `curl -sSH "user: #{user}" localhost:5050/expenses/#{expense_id} 2>&1`
+  end
+  [server, received]
+end
+
+def kill_server(server)
+  Process.kill 'TERM', server
+  Process.wait2 server
+  until (server = `fuser 5050/tcp 2>&1`.split.first.to_i).zero?
+    sleep 1
+    Process.kill 'KILL', server.to_i unless server.to_i.zero?
+  end
+rescue Errno::ESRCH => e
+  puts "#{e}: #{server}"
+end
+
 # rubocop:disable Metrics/BlockLength
 
 quickstarts.each do |qs|
@@ -33,12 +54,7 @@ quickstarts.each do |qs|
       Timeout.timeout 30 do
         begin
           puts "#{prefix} Starting server..."
-          server = spawn qs[:server], %i[out err] => '/dev/null'
-          received = CURL_ERROR
-          while [CURL_ERROR, CURL_EMPTY].include? received
-            sleep 0.5
-            received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/1 2>&1`
-          end
+          server, received = start_server qs[:server], 'alice@example.com', 1
           puts "#{prefix} Testing with no rules..."
           puts "#{prefix} Checking that Alice cannot see their own expense..."
           expected = "Not Authorized!\n"
@@ -47,22 +63,12 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
-          Process.kill 'TERM', server
-          Process.wait2 server
-          until `fuser 5050/tcp 2>&1`.split.first.to_i.zero?
-            sleep 1
-            Process.kill 'KILL', x.to_i unless x.to_i.zero?
-          end
+          kill_server server
 
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
 
-          server = spawn qs[:server], %i[out err] => '/dev/null'
-          received = CURL_ERROR
-          while [CURL_ERROR, CURL_EMPTY].include? received
-            sleep 0.5
-            received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/3 2>&1`
-          end
+          server, received = start_server qs[:server], 'alice@example.com', 3
           puts "#{prefix} Testing string matching rule..."
           puts "#{prefix} Checking that alice@example.com can see any expense..."
           ['Expense', '50000', 'flight', 'bhavik@example.com'].each do |text|
@@ -78,22 +84,11 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
-          Process.kill 'TERM', server
-          Process.wait2 server
-          until `fuser 5050/tcp 2>&1`.split.first.to_i.zero?
-            sleep 1
-            Process.kill 'KILL', x.to_i unless x.to_i.zero?
-          end
+          kill_server server
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
 
-          server = spawn qs[:server], %i[out err] => '/dev/null'
-          received = CURL_ERROR
-          while [CURL_ERROR, CURL_EMPTY].include? received
-            sleep 0.5
-            received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/1 2>&1`
-          end
-
+          server, received = start_server qs[:server], 'alice@example.com', 1
           puts "#{prefix} Testing application data rule..."
           puts "#{prefix} Checking that Alice can see their own expense..."
           ['Expense', '500', 'coffee', 'alice@example.com'].each do |text|
@@ -126,12 +121,7 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Success!"
         ensure
-          Process.kill 'TERM', server
-          Process.wait2 server
-          until `fuser 5050/tcp 2>&1`.split.first.to_i.zero?
-            sleep 1
-            Process.kill 'KILL', x.to_i unless x.to_i.zero?
-          end
+          kill_server server
           FileUtils.mv 'original.polar', 'expenses.polar', force: true
         end
       end
