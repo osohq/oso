@@ -577,6 +577,7 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
+    /// Recursively dereference variables in a term, including subterms.
     pub fn deep_deref(&self, term: &Term) -> Term {
         pub struct Derefer<'vm> {
             vm: &'vm PolarVirtualMachine,
@@ -592,7 +593,7 @@ impl PolarVirtualMachine {
             fn fold_term(&mut self, t: Term) -> Term {
                 match t.value() {
                     Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
-                        fold_term(self.vm.derefed(&t), self)
+                        fold_term(self.vm.deref(&t), self)
                     }
                     _ => fold_term(t, self),
                 }
@@ -602,8 +603,9 @@ impl PolarVirtualMachine {
         Derefer::new(self).fold_term(term.clone())
     }
 
-    /// Recursively dereference a variable.
-    pub fn deref(&self, term: &Term) -> Option<Term> {
+    /// Recursively dereference a variable, but do not descend into (most) subterms.
+    /// The exception is for lists, so that we can correctly handle rest variables.
+    pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::List(list) => {
                 let ends_with_rest = list
@@ -611,41 +613,31 @@ impl PolarVirtualMachine {
                     .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
 
                 // Deref all elements.
-                let mut derefed: Vec<Option<Term>> = list.iter().map(|t| self.deref(t)).collect();
-                // If none of the elements derefed, the original term is already fully derefed.
-                if derefed.iter().all(Option::is_none) {
-                    return None;
-                }
+                let mut derefed: Vec<Term> = list.iter().map(|t| self.deref(t)).collect();
 
                 // If last element was a rest variable, append the list it derefed to.
                 if ends_with_rest {
-                    if let Some(Some(last_term)) = derefed.pop() {
+                    if let Some(last_term) = derefed.pop() {
                         if let Value::List(terms) = last_term.value() {
-                            derefed.append(&mut terms.iter().cloned().map(Some).collect());
+                            derefed.append(&mut terms.clone());
                         } else {
-                            derefed.push(Some(last_term));
+                            derefed.push(last_term);
                         }
                     }
                 }
 
-                let derefed = derefed
-                    .into_iter()
-                    .zip(list.iter())
-                    .map(|(derefed, original)| derefed.unwrap_or_else(|| original.clone()))
-                    .collect();
-
-                Some(term.clone_with_value(Value::List(derefed)))
+                term.clone_with_value(Value::List(derefed))
             }
-            Value::Variable(symbol) | Value::RestVariable(symbol) => Some(
-                self.value(&symbol)
-                    .map_or_else(|| term.clone(), |value| self.derefed(value)),
-            ),
-            _ => None,
+            Value::Variable(symbol) | Value::RestVariable(symbol) => {
+                if let Some(value) = self.value(&symbol) {
+                    if value != term {
+                        return self.deref(value);
+                    }
+                }
+                term.clone()
+            }
+            _ => term.clone(),
         }
-    }
-
-    fn derefed(&self, term: &Term) -> Term {
-        self.deref(term).unwrap_or_else(|| term.clone())
     }
 
     /// Return `true` if `var` is a temporary variable.
@@ -1071,7 +1063,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
-        let field = self.derefed(field);
+        let field = self.deref(field);
         match field.value() {
             Value::Variable(_) => {
                 let mut alternatives = vec![];
@@ -1127,7 +1119,7 @@ impl PolarVirtualMachine {
             Symbol,
             Option<Vec<Term>>,
             Option<BTreeMap<Symbol, Term>>,
-        ) = match self.derefed(field).value() {
+        ) = match self.deref(field).value() {
             Value::Call(Call { name, args, kwargs }) => (
                 name.clone(),
                 Some(args.iter().map(|arg| self.deep_deref(arg)).collect()),
@@ -1295,7 +1287,7 @@ impl PolarVirtualMachine {
                 return self.query_for_operation(&term, *operator, args.clone());
             }
             _ => {
-                let term = self.derefed(term);
+                let term = self.deref(term);
                 self.query_for_value(&term)?;
             }
         }
@@ -1408,7 +1400,7 @@ impl PolarVirtualMachine {
             Operator::In => {
                 assert_eq!(args.len(), 2);
                 let item = &args[0];
-                let list = self.derefed(&args[1]);
+                let list = self.deref(&args[1]);
                 match list.value() {
                     Value::List(list) if list.is_empty() => {
                         // Nothing is in an empty list.
@@ -1416,7 +1408,7 @@ impl PolarVirtualMachine {
                     }
                     Value::List(terms) => {
                         // Unify item with each element of the list, skipping non-matching ground terms.
-                        let x = self.derefed(item);
+                        let x = self.deref(item);
                         let v = x.value();
                         let g = v.is_ground();
                         self.choose(
@@ -1446,7 +1438,7 @@ impl PolarVirtualMachine {
                     message += &format!(
                         "debug({})",
                         args.iter()
-                            .map(|arg| self.derefed(arg).to_polar())
+                            .map(|arg| self.deref(arg).to_polar())
                             .collect::<Vec<String>>()
                             .join(", ")
                     );
@@ -1463,7 +1455,7 @@ impl PolarVirtualMachine {
                 self.print(
                     &args
                         .iter()
-                        .map(|arg| self.derefed(arg).to_polar())
+                        .map(|arg| self.deref(arg).to_polar())
                         .collect::<Vec<String>>()
                         .join(", "),
                 );
@@ -1570,8 +1562,8 @@ impl PolarVirtualMachine {
     /// Push appropriate goals for lookups on Dictionaries, InstanceLiterals, and ExternalInstances
     fn dot_op_helper(&mut self, mut args: Vec<Term>) -> PolarResult<()> {
         assert_eq!(args.len(), 3);
-        let object = self.derefed(&args[0]);
-        let field = self.derefed(&args[1]);
+        let object = self.deref(&args[0]);
+        let field = self.deref(&args[1]);
         let value = &args[2];
 
         match object.value() {
@@ -1635,8 +1627,8 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 3);
-        let left_term = self.derefed(&args[0]);
-        let right_term = self.derefed(&args[1]);
+        let left_term = self.deref(&args[0]);
+        let right_term = self.deref(&args[1]);
         let result = &args[2];
         assert!(matches!(result.value(), Value::Variable(_)));
 
@@ -1686,7 +1678,10 @@ impl PolarVirtualMachine {
                 return Err(self.set_error_context(
                     term,
                     error::RuntimeError::Unsupported {
-                        msg: "numeric operation only supported on numbers".to_string(),
+                        msg: format!(
+                            "numeric operation only supported on numbers, you have {}",
+                            term.to_polar()
+                        ),
                     },
                 ))
             }
@@ -1702,8 +1697,8 @@ impl PolarVirtualMachine {
         args: Vec<Term>,
     ) -> PolarResult<QueryEvent> {
         assert_eq!(args.len(), 2);
-        let mut left_term = self.derefed(&args[0]);
-        let mut right_term = self.derefed(&args[1]);
+        let mut left_term = self.deref(&args[0]);
+        let mut right_term = self.deref(&args[1]);
 
         self.log_with(
             || {
@@ -2258,7 +2253,10 @@ impl PolarVirtualMachine {
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        rule_strs.push_str(&format!("\n  {}", self.rule_source(&rule)));
+                        rule_strs.push_str(&format!(
+                            "\n  {}",
+                            /*self.rule_source(&rule)*/ rule.to_polar()
+                        ));
                     }
                     rule_strs
                 },
@@ -2363,7 +2361,7 @@ impl PolarVirtualMachine {
         assert!(!matches!(left.value(), Value::InstanceLiteral(_)));
         assert!(!matches!(right.value(), Value::InstanceLiteral(_)));
 
-        let arg = self.derefed(&arg);
+        let arg = self.deref(&arg);
         match (arg.value(), left.value(), right.value()) {
             (
                 Value::ExternalInstance(instance),
@@ -2702,23 +2700,23 @@ mod tests {
         let term_y = term!(y.clone());
 
         // unbound var
-        assert_eq!(vm.derefed(&term_x), term_x);
+        assert_eq!(vm.deref(&term_x), term_x);
 
         // unbound var -> unbound var
         vm.bind(&x, term_y.clone());
-        assert_eq!(vm.derefed(&term_x), term_y);
+        assert_eq!(vm.deref(&term_x), term_y);
 
         // value
-        assert_eq!(vm.derefed(&value), value.clone());
+        assert_eq!(vm.deref(&value), value.clone());
 
         // unbound var -> value
         vm.bind(&x, value.clone());
-        assert_eq!(vm.derefed(&term_x), value);
+        assert_eq!(vm.deref(&term_x), value);
 
         // unbound var -> unbound var -> value
         vm.bind(&x, term_y);
         vm.bind(&y, value.clone());
-        assert_eq!(vm.derefed(&term_x), value);
+        assert_eq!(vm.deref(&term_x), value);
     }
 
     #[test]
@@ -3426,7 +3424,7 @@ mod tests {
         }
 
         assert_eq!(
-            vm.derefed(&term!(Value::Variable(answer))),
+            vm.deref(&term!(Value::Variable(answer))),
             term!(value!(true))
         );
     }
