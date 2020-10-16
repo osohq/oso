@@ -11,6 +11,7 @@ CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
 quickstarts = [
 #   { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
+  { lang: 'java', setup: 'make build', server: 'make run' },
   { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'python server.py' },
   { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
   { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
