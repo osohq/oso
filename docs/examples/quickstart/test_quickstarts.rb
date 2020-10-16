@@ -44,7 +44,7 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
-          Process.kill 'INT', server
+          Process.kill 'TERM', server
           Process.wait server
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
@@ -69,7 +69,7 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
-          Process.kill 'INT', server
+          Process.kill 'TERM', server
           Process.wait server
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
           server = spawn qs[:server], %i[out err] => '/dev/null'
@@ -111,7 +111,7 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Success!"
         ensure
-          Process.kill 'INT', server
+          Process.kill 'TERM', server
           Process.wait server
           FileUtils.mv 'original.polar', 'expenses.polar', force: true
         end
