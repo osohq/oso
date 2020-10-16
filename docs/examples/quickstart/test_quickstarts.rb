@@ -7,10 +7,11 @@ require 'timeout'
 require 'bundler'
 
 CURL_ERROR = "curl: (7) Failed to connect to localhost port 5050: Connection refused\n"
+CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
 quickstarts = [
-  { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
-  { lang: 'python', setup: 'pip install -r requirements.txt', server: 'python server.py' },
+#   { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
+  { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'python server.py' },
   { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
   { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
 ]
@@ -32,7 +33,7 @@ quickstarts.each do |qs|
           puts "#{prefix} Starting server..."
           server = spawn qs[:server], %i[out err] => '/dev/null'
           received = CURL_ERROR
-          while received == CURL_ERROR
+          while received == CURL_ERROR || received == CURL_EMPTY
             sleep 0.5
             received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/1 2>&1`
           end
@@ -53,7 +54,7 @@ quickstarts.each do |qs|
 
           server = spawn qs[:server], %i[out err] => '/dev/null'
           received = CURL_ERROR
-          while received == CURL_ERROR
+          while received == CURL_ERROR || received == CURL_EMPTY
             sleep 0.5
             received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/3 2>&1`
           end
@@ -80,7 +81,7 @@ quickstarts.each do |qs|
 
           server = spawn qs[:server], %i[out err] => '/dev/null'
           received = CURL_ERROR
-          while received == CURL_ERROR
+          while received == CURL_ERROR || received == CURL_EMPTY
             sleep 0.5
             received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/1 2>&1`
           end
