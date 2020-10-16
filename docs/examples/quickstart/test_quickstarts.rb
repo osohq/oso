@@ -32,10 +32,9 @@ quickstarts.each do |qs|
       Timeout.timeout 30 do
         begin
           puts "#{prefix} Starting server..."
-          #   server = spawn qs[:server], %i[out err] => '/dev/null'
-          server = spawn qs[:server]
+          server = spawn qs[:server], %i[out err] => '/dev/null'
           received = CURL_ERROR
-          while received == CURL_ERROR || received == CURL_EMPTY
+          while [CURL_ERROR, CURL_EMPTY].include? received
             sleep 0.5
             received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/1 2>&1`
           end
@@ -48,8 +47,7 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Restarting server..."
           Process.kill 'TERM', server
-          pid, status = Process.wait2 server
-          puts pid, server, status
+          Process.wait2 server
           sleep 5
           `fuser 5050/tcp`.split.each do |x|
             Process.kill 'KILL', x.to_i unless x.to_i.zero?
@@ -59,10 +57,9 @@ quickstarts.each do |qs|
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
 
-          #   server = spawn qs[:server], %i[out err] => '/dev/null'
-          server = spawn qs[:server]
+          server = spawn qs[:server], %i[out err] => '/dev/null'
           received = CURL_ERROR
-          while received == CURL_ERROR || received == CURL_EMPTY
+          while [CURL_ERROR, CURL_EMPTY].include? received
             sleep 0.5
             received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/3 2>&1`
           end
@@ -82,8 +79,7 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Restarting server..."
           Process.kill 'TERM', server
-          pid, status = Process.wait2 server
-          puts pid, server, status
+          Process.wait2 server
           sleep 5
           `fuser 5050/tcp`.split.each do |x|
             Process.kill 'KILL', x.to_i unless x.to_i.zero?
@@ -92,10 +88,9 @@ quickstarts.each do |qs|
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
 
-          #   server = spawn qs[:server], %i[out err] => '/dev/null'
-          server = spawn qs[:server]
+          server = spawn qs[:server], %i[out err] => '/dev/null'
           received = CURL_ERROR
-          while received == CURL_ERROR || received == CURL_EMPTY
+          while [CURL_ERROR, CURL_EMPTY].include? received
             sleep 0.5
             received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/1 2>&1`
           end
@@ -133,8 +128,7 @@ quickstarts.each do |qs|
           puts "#{prefix} Success!"
         ensure
           Process.kill 'TERM', server
-          pid, status = Process.wait2 server
-          puts pid, server, status
+          Process.wait2 server
           sleep 5
           `fuser 5050/tcp`.split.each do |x|
             Process.kill 'KILL', x.to_i unless x.to_i.zero?
