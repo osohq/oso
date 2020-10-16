@@ -9,7 +9,7 @@ use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
 use crate::events::*;
-use crate::folder::{noop_fold_term, Folder};
+use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::kb::*;
 use crate::lexer::loc_to_pos;
@@ -592,9 +592,9 @@ impl PolarVirtualMachine {
             fn fold_term(&mut self, t: Term) -> Term {
                 match t.value() {
                     Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
-                        noop_fold_term(self.vm.derefed(&t), self)
+                        fold_term(self.vm.derefed(&t), self)
                     }
-                    _ => noop_fold_term(t, self),
+                    _ => fold_term(t, self),
                 }
             }
         }

@@ -4,77 +4,70 @@ use std::collections::BTreeMap;
 use super::rules::*;
 use super::terms::*;
 
-// The interface here is that each `fold_*` method should call
-// the corresponding `noop_` function that only calls the folder
-// again, not the other `noop_* functions. This interface was
-// taken from the rustc `Folder` implementation, which says:
-//   This is a necessary API workaround to the problem of not
-//   being able to call out to the super default method
-//   in an overridden default method.
 pub trait Folder: Sized {
     fn fold_rule(&mut self, r: Rule) -> Rule {
-        noop_fold_rule(r, self)
+        fold_rule(r, self)
     }
     fn fold_term(&mut self, t: Term) -> Term {
-        noop_fold_term(t, self)
+        fold_term(t, self)
     }
     fn fold_value(&mut self, v: Value) -> Value {
-        noop_fold_value(v, self)
+        fold_value(v, self)
     }
     fn fold_number(&mut self, n: Numeric) -> Numeric {
-        noop_fold_number(n, self)
+        fold_number(n, self)
     }
     fn fold_string(&mut self, s: String) -> String {
-        noop_fold_string(s, self)
+        fold_string(s, self)
     }
     fn fold_boolean(&mut self, b: bool) -> bool {
-        noop_fold_boolean(b, self)
+        fold_boolean(b, self)
     }
     fn fold_id(&mut self, i: u64) -> u64 {
-        noop_fold_id(i, self)
+        fold_id(i, self)
     }
     fn fold_external_instance(&mut self, e: ExternalInstance) -> ExternalInstance {
-        noop_fold_external_instance(e, self)
+        fold_external_instance(e, self)
     }
     fn fold_instance_literal(&mut self, i: InstanceLiteral) -> InstanceLiteral {
-        noop_fold_instance_literal(i, self)
+        fold_instance_literal(i, self)
     }
     fn fold_dictionary(&mut self, d: Dictionary) -> Dictionary {
-        noop_fold_dictionary(d, self)
+        fold_dictionary(d, self)
     }
     fn fold_pattern(&mut self, p: Pattern) -> Pattern {
-        noop_fold_pattern(p, self)
+        fold_pattern(p, self)
     }
     fn fold_call(&mut self, c: Call) -> Call {
-        noop_fold_call(c, self)
+        fold_call(c, self)
     }
     fn fold_list(&mut self, l: TermList) -> TermList {
-        noop_fold_list(l, self)
+        fold_list(l, self)
     }
     fn fold_variable(&mut self, v: Symbol) -> Symbol {
-        noop_fold_variable(v, self)
+        fold_variable(v, self)
     }
     fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
-        noop_fold_variable(v, self)
+        fold_variable(v, self)
     }
     fn fold_operator(&mut self, o: Operator) -> Operator {
-        noop_fold_operator(o, self)
+        fold_operator(o, self)
     }
     fn fold_operation(&mut self, o: Operation) -> Operation {
-        noop_fold_operation(o, self)
+        fold_operation(o, self)
     }
     fn fold_name(&mut self, name: Symbol) -> Symbol {
-        noop_fold_name(name, self)
+        fold_name(name, self)
     }
     fn fold_param(&mut self, param: Parameter) -> Parameter {
-        noop_fold_param(param, self)
+        fold_param(param, self)
     }
     fn fold_params(&mut self, params: Vec<Parameter>) -> Vec<Parameter> {
-        noop_fold_params(params, self)
+        fold_params(params, self)
     }
 }
 
-pub fn noop_fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T) -> Rule {
+pub fn fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T) -> Rule {
     Rule {
         name: fld.fold_name(name),
         params: fld.fold_params(params),
@@ -82,11 +75,11 @@ pub fn noop_fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T)
     }
 }
 
-pub fn noop_fold_term<T: Folder>(t: Term, fld: &mut T) -> Term {
+pub fn fold_term<T: Folder>(t: Term, fld: &mut T) -> Term {
     t.clone_with_value(fld.fold_value(t.value().clone()))
 }
 
-pub fn noop_fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
+pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
     match v {
         Value::Number(n) => Value::Number(fld.fold_number(n)),
         Value::String(s) => Value::String(fld.fold_string(s)),
@@ -105,23 +98,23 @@ pub fn noop_fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
     }
 }
 
-pub fn noop_fold_number<T: Folder>(n: Numeric, _fld: &mut T) -> Numeric {
+pub fn fold_number<T: Folder>(n: Numeric, _fld: &mut T) -> Numeric {
     n
 }
 
-pub fn noop_fold_string<T: Folder>(s: String, _fld: &mut T) -> String {
+pub fn fold_string<T: Folder>(s: String, _fld: &mut T) -> String {
     s
 }
 
-pub fn noop_fold_boolean<T: Folder>(b: bool, _fld: &mut T) -> bool {
+pub fn fold_boolean<T: Folder>(b: bool, _fld: &mut T) -> bool {
     b
 }
 
-pub fn noop_fold_id<T: Folder>(id: u64, _fld: &mut T) -> u64 {
+pub fn fold_id<T: Folder>(id: u64, _fld: &mut T) -> u64 {
     id
 }
 
-pub fn noop_fold_external_instance<T: Folder>(
+pub fn fold_external_instance<T: Folder>(
     ExternalInstance {
         instance_id,
         constructor,
@@ -136,7 +129,7 @@ pub fn noop_fold_external_instance<T: Folder>(
     }
 }
 
-pub fn noop_fold_instance_literal<T: Folder>(
+pub fn fold_instance_literal<T: Folder>(
     InstanceLiteral { tag, fields }: InstanceLiteral,
     fld: &mut T,
 ) -> InstanceLiteral {
@@ -146,7 +139,7 @@ pub fn noop_fold_instance_literal<T: Folder>(
     }
 }
 
-pub fn noop_fold_dictionary<T: Folder>(
+pub fn fold_dictionary<T: Folder>(
     Dictionary { fields }: Dictionary,
     fld: &mut T,
 ) -> Dictionary {
@@ -158,14 +151,14 @@ pub fn noop_fold_dictionary<T: Folder>(
     }
 }
 
-pub fn noop_fold_pattern<T: Folder>(p: Pattern, fld: &mut T) -> Pattern {
+pub fn fold_pattern<T: Folder>(p: Pattern, fld: &mut T) -> Pattern {
     match p {
         Pattern::Dictionary(d) => Pattern::Dictionary(fld.fold_dictionary(d)),
         Pattern::Instance(i) => Pattern::Instance(fld.fold_instance_literal(i)),
     }
 }
 
-pub fn noop_fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T) -> Call {
+pub fn fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T) -> Call {
     Call {
         name: fld.fold_name(name),
         args: fld.fold_list(args),
@@ -178,21 +171,21 @@ pub fn noop_fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T)
     }
 }
 
-pub fn noop_fold_variable<T: Folder>(v: Symbol, _fld: &mut T) -> Symbol {
+pub fn fold_variable<T: Folder>(v: Symbol, _fld: &mut T) -> Symbol {
     v
 }
 
-pub fn noop_fold_list<T: Folder>(l: TermList, fld: &mut T) -> TermList {
+pub fn fold_list<T: Folder>(l: TermList, fld: &mut T) -> TermList {
     l.into_iter()
         .map(|t| fld.fold_term(t))
         .collect::<TermList>()
 }
 
-pub fn noop_fold_operator<T: Folder>(o: Operator, _fld: &mut T) -> Operator {
+pub fn fold_operator<T: Folder>(o: Operator, _fld: &mut T) -> Operator {
     o
 }
 
-pub fn noop_fold_operation<T: Folder>(
+pub fn fold_operation<T: Folder>(
     Operation { operator, args }: Operation,
     fld: &mut T,
 ) -> Operation {
@@ -202,11 +195,11 @@ pub fn noop_fold_operation<T: Folder>(
     }
 }
 
-pub fn noop_fold_name<T: Folder>(name: Symbol, _fld: &mut T) -> Symbol {
+pub fn fold_name<T: Folder>(name: Symbol, _fld: &mut T) -> Symbol {
     name
 }
 
-pub fn noop_fold_param<T: Folder>(
+pub fn fold_param<T: Folder>(
     Parameter {
         parameter,
         specializer,
@@ -219,7 +212,7 @@ pub fn noop_fold_param<T: Folder>(
     }
 }
 
-pub fn noop_fold_params<T: Folder>(params: Vec<Parameter>, fld: &mut T) -> Vec<Parameter> {
+pub fn fold_params<T: Folder>(params: Vec<Parameter>, fld: &mut T) -> Vec<Parameter> {
     params
         .into_iter()
         .map(|t| fld.fold_param(t))

@@ -76,7 +76,7 @@ impl<'kb> Folder for Rewriter<'kb> {
     /// Rewrite a rule, pushing expressions in the head into the body.
     fn fold_rule(&mut self, rule: Rule) -> Rule {
         self.stack.push(vec![]);
-        let mut rule = noop_fold_rule(rule, self);
+        let mut rule = fold_rule(rule, self);
         let rewrites = self.stack.pop().unwrap();
         if !rewrites.is_empty() {
             let body = unwrap_and(&rule.body);
@@ -104,7 +104,7 @@ impl<'kb> Folder for Rewriter<'kb> {
             }
             Value::Expression(o) if self.needs_rewrite(o) => {
                 // Rewrite sub-expressions, then push a temp onto the args.
-                let mut new = noop_fold_operation(o.clone(), self);
+                let mut new = fold_operation(o.clone(), self);
                 let temp = Value::Variable(self.kb.gensym(o.operator.temp_name()));
                 new.args.push(Term::new_temporary(temp.clone()));
 
@@ -117,14 +117,14 @@ impl<'kb> Folder for Rewriter<'kb> {
                 // Return the temp.
                 t.clone_with_value(temp)
             }
-            _ => noop_fold_term(t, self),
+            _ => fold_term(t, self),
         }
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
         match o.operator {
             Operator::And | Operator::Or | Operator::Not => Operation {
-                operator: noop_fold_operator(o.operator, self),
+                operator: fold_operator(o.operator, self),
                 args: o
                     .args
                     .into_iter()
@@ -139,7 +139,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                     })
                     .collect(),
             },
-            _ => noop_fold_operation(o, self),
+            _ => fold_operation(o, self),
         }
     }
 
