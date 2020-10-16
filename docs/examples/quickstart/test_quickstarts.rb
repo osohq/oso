@@ -18,7 +18,7 @@ quickstarts = [
 ]
 
 def start_server(server, user, expense_id)
-  server = spawn server, %i[out err] => '/dev/null'
+  server = spawn server
   received = CURL_ERROR
   while [CURL_ERROR, CURL_EMPTY].include? received
     sleep 0.5
