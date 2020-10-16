@@ -9,10 +9,10 @@ require 'bundler'
 CURL_ERROR = "curl: (7) Failed to connect to localhost port 5050: Connection refused\n"
 
 quickstarts = [
-  { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
   { lang: 'python', setup: 'pip install -r requirements.txt', server: 'python server.py' },
   { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
-  { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
+  { lang: 'rust', setup: 'cargo build', server: 'cargo run' },
+  { lang: 'nodejs', setup: 'npm i', server: 'npm start' }
 ]
 
 # TODO(gj): factor server polling into function
