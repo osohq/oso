@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-//use super::partial::Constraints;
+use super::partial::Constraints;
 use super::rules::*;
 use super::terms::*;
 
@@ -56,6 +56,9 @@ pub trait Folder: Sized {
     fn fold_operation(&mut self, o: Operation) -> Operation {
         fold_operation(o, self)
     }
+    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
+        fold_constraints(c, self)
+    }
     fn fold_name(&mut self, name: Symbol) -> Symbol {
         fold_name(name, self)
     }
@@ -93,8 +96,7 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::Variable(v) => Value::Variable(fld.fold_variable(v)),
         Value::RestVariable(r) => Value::RestVariable(fld.fold_rest_variable(r)),
         Value::Expression(o) => Value::Expression(fld.fold_operation(o)),
-        // Value::Partial(_) => {}
-        _ => todo!("Fold {:?}", v),
+        Value::Partial(c) => Value::Partial(fld.fold_constraints(c)),
     }
 }
 
@@ -139,10 +141,7 @@ pub fn fold_instance_literal<T: Folder>(
     }
 }
 
-pub fn fold_dictionary<T: Folder>(
-    Dictionary { fields }: Dictionary,
-    fld: &mut T,
-) -> Dictionary {
+pub fn fold_dictionary<T: Folder>(Dictionary { fields }: Dictionary, fld: &mut T) -> Dictionary {
     Dictionary {
         fields: fields
             .into_iter()
@@ -192,6 +191,22 @@ pub fn fold_operation<T: Folder>(
     Operation {
         operator: fld.fold_operator(operator),
         args: fld.fold_list(args),
+    }
+}
+
+pub fn fold_constraints<T: Folder>(
+    Constraints {
+        operations,
+        variable,
+    }: Constraints,
+    fld: &mut T,
+) -> Constraints {
+    Constraints {
+        operations: operations
+            .into_iter()
+            .map(|o| fld.fold_operation(o))
+            .collect(),
+        variable: fld.fold_variable(variable),
     }
 }
 
