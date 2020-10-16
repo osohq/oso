@@ -48,7 +48,8 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Restarting server..."
           Process.kill 'TERM', server
-          Process.wait server
+          pid, status = Process.wait2 server
+          puts pid, server, status
           sleep 1
 
           FileUtils.cp 'expenses.polar', 'original.polar'
@@ -77,7 +78,8 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Restarting server..."
           Process.kill 'TERM', server
-          Process.wait server
+          pid, status = Process.wait2 server
+          puts pid, server, status
           sleep 1
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
@@ -123,7 +125,8 @@ quickstarts.each do |qs|
           puts "#{prefix} Success!"
         ensure
           Process.kill 'TERM', server
-          Process.wait server
+          pid, status = Process.wait2 server
+          puts pid, server, status
           FileUtils.mv 'original.polar', 'expenses.polar', force: true
         end
       end
