@@ -14,7 +14,7 @@ quickstarts = [
   { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
   { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'python server.py' },
   { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
-  { lang: 'rust', setup: 'cargo build --target-dir ../../../../target', server: 'cargo run' }
+  { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
 ]
 
 def start_server(server, user, expense_id)
