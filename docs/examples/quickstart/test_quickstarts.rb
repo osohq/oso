@@ -32,7 +32,8 @@ quickstarts.each do |qs|
       Timeout.timeout 30 do
         begin
           puts "#{prefix} Starting server..."
-          server = spawn qs[:server], %i[out err] => '/dev/null'
+          #   server = spawn qs[:server], %i[out err] => '/dev/null'
+          server = spawn qs[:server]
           received = CURL_ERROR
           while received == CURL_ERROR || received == CURL_EMPTY
             sleep 0.5
@@ -53,7 +54,8 @@ quickstarts.each do |qs|
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
 
-          server = spawn qs[:server], %i[out err] => '/dev/null'
+          #   server = spawn qs[:server], %i[out err] => '/dev/null'
+          server = spawn qs[:server]
           received = CURL_ERROR
           while received == CURL_ERROR || received == CURL_EMPTY
             sleep 0.5
@@ -80,7 +82,8 @@ quickstarts.each do |qs|
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
 
-          server = spawn qs[:server], %i[out err] => '/dev/null'
+          #   server = spawn qs[:server], %i[out err] => '/dev/null'
+          server = spawn qs[:server]
           received = CURL_ERROR
           while received == CURL_ERROR || received == CURL_EMPTY
             sleep 0.5
