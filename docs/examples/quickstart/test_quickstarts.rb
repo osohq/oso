@@ -47,10 +47,13 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
+          puts `lsof -i :5050`
           Process.kill 'TERM', server
           pid, status = Process.wait2 server
           puts pid, server, status
-          sleep 1
+          puts `lsof -i :5050`
+          sleep 5
+          puts `lsof -i :5050`
 
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
@@ -77,10 +80,13 @@ quickstarts.each do |qs|
           end
 
           puts "#{prefix} Restarting server..."
+          puts `lsof -i :5050`
           Process.kill 'TERM', server
           pid, status = Process.wait2 server
           puts pid, server, status
-          sleep 1
+          puts `lsof -i :5050`
+          sleep 5
+          puts `lsof -i :5050`
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
 
