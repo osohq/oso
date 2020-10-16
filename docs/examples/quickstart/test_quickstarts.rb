@@ -17,12 +17,12 @@ quickstarts = [
   { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
 ]
 
-# TODO(gj): factor server polling into function
+# rubocop:disable Metrics/BlockLength
 
 quickstarts.each do |qs|
   lang = qs[:lang]
   qs_dir = "oso-#{lang}-quickstart"
-  Bundler.with_original_env do
+  Bundler.with_unbundled_env do
     Dir.chdir(qs_dir) do
       prefix = "#{Time.now.to_i} [#{lang}]"
       puts "#{prefix} Installing dependencies..."
@@ -48,11 +48,10 @@ quickstarts.each do |qs|
           puts "#{prefix} Restarting server..."
           Process.kill 'TERM', server
           Process.wait2 server
-          sleep 5
-          `fuser 5050/tcp`.split.each do |x|
+          until `fuser 5050/tcp 2>&1`.split.first.to_i.zero?
+            sleep 1
             Process.kill 'KILL', x.to_i unless x.to_i.zero?
           end
-          sleep 1
 
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
@@ -80,11 +79,10 @@ quickstarts.each do |qs|
           puts "#{prefix} Restarting server..."
           Process.kill 'TERM', server
           Process.wait2 server
-          sleep 5
-          `fuser 5050/tcp`.split.each do |x|
+          until `fuser 5050/tcp 2>&1`.split.first.to_i.zero?
+            sleep 1
             Process.kill 'KILL', x.to_i unless x.to_i.zero?
           end
-          sleep 1
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
 
@@ -129,14 +127,15 @@ quickstarts.each do |qs|
         ensure
           Process.kill 'TERM', server
           Process.wait2 server
-          sleep 5
-          `fuser 5050/tcp`.split.each do |x|
+          until `fuser 5050/tcp 2>&1`.split.first.to_i.zero?
+            sleep 1
             Process.kill 'KILL', x.to_i unless x.to_i.zero?
           end
           FileUtils.mv 'original.polar', 'expenses.polar', force: true
-          sleep 1
         end
       end
     end
   end
 end
+
+# rubocop:enable Metrics/BlockLength
