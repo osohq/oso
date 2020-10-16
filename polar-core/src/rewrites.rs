@@ -74,18 +74,24 @@ impl<'kb> Rewriter<'kb> {
 /// conjunction, creating one if necessary.
 impl<'kb> Folder for Rewriter<'kb> {
     /// Rewrite a rule, pushing expressions in the head into the body.
-    fn fold_rule(&mut self, rule: Rule) -> Rule {
+    fn fold_rule(&mut self, Rule { name, body, params }: Rule) -> Rule {
+        let mut body = self.fold_term(body);
+
         self.stack.push(vec![]);
-        let mut rule = fold_rule(rule, self);
+        let params = self.fold_params(params);
         let rewrites = self.stack.pop().unwrap();
         if !rewrites.is_empty() {
-            let body = unwrap_and(&rule.body);
-            rule.body.replace_value(Value::Expression(Operation {
+            let terms = unwrap_and(&body);
+            body.replace_value(Value::Expression(Operation {
                 operator: Operator::And,
-                args: rewrites.into_iter().chain(body).collect(),
+                args: terms.into_iter().chain(rewrites).collect(),
             }));
         }
-        rule
+        Rule {
+            name,
+            body,
+            params,
+        }
     }
 
     /// Rewrite an expression as a temp, and push a rewritten
@@ -306,6 +312,11 @@ mod tests {
         assert_eq!(rule.to_polar(), "sum(a, b, a + b);");
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(rule.to_polar(), "sum(a, b, _op_2) if a + b = _op_2;");
+
+        let rules = parse_rules("fib(n, a+b) if fib(n-1, a) and fib(n-2, b);");
+        let rule = rules[0].clone();
+        let rule = rewrite_rule(rule, &mut kb);
+        assert_eq!(rule.to_polar(), "fib(n, _op_5) if n - 1 = _op_3 and fib(_op_3, a) and n - 2 = _op_4 and fib(_op_4, b) and a + b = _op_5;");
     }
 
     #[test]
