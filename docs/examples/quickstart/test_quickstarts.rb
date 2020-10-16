@@ -14,7 +14,7 @@ quickstarts = [
   { lang: 'nodejs', setup: 'npm i', server: 'npm start' },
   { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'python server.py' },
   { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
-  { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
+  { lang: 'rust', setup: 'cargo build --target-dir ../../../../target', server: 'cargo run' }
 ]
 
 # rubocop:disable Metrics/BlockLength
@@ -26,7 +26,8 @@ quickstarts.each do |qs|
     Dir.chdir(qs_dir) do
       prefix = "#{Time.now.to_i} [#{lang}]"
       puts "#{prefix} Installing dependencies..."
-      setup_output = `#{qs[:setup]} 2>&1`
+      # setup_output = `#{qs[:setup]} 2>&1`
+      system(qs[:setup] + ' 2>&1')
       raise "Setup step failed for #{lang.upcase}:\n#{setup_output}" unless $CHILD_STATUS.exitstatus.zero?
 
       Timeout.timeout 30 do
