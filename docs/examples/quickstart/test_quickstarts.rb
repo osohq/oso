@@ -21,7 +21,7 @@ quickstarts.each do |qs|
   Dir.chdir(qs_dir) do
     puts "[#{lang}] Installing dependencies..."
     setup_output = `#{qs[:setup]} 2>&1`
-    puts 'EXIT STATUS: ' + $CHILD_STATUS.exitstatus
+    puts 'EXIT STATUS: ' + $CHILD_STATUS.exitstatus.to_s
     puts setup_output
     raise "Setup step failed for #{lang.upcase}:\n#{setup_output}" unless $CHILD_STATUS.exitstatus.zero?
 
