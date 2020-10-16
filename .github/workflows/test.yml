@@ -9,22 +9,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
+      # - uses: actions/cache@v2
+      #   with:
+      #     path: |
+      #       ~/.cargo/registry
+      #       ~/.cargo/git
+      #       target
+      #     key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Python 3.6
         uses: actions/setup-python@v1
         with:
           python-version: "3.6"
-      - name: Install Python formatter
-        run: pip install black
-      - name: Check Python formatting
-        run: black --check languages/python
+      # - name: Install Python formatter
+      #   run: pip install black
+      # - name: Check Python formatting
+      #   run: black --check languages/python
 
       - name: Install Ruby + gems
         uses: ruby/setup-ruby@v1
@@ -32,30 +32,30 @@ jobs:
           bundler-cache: true
           ruby-version: 2.4
           working-directory: "languages/ruby"
-      - name: Lint Ruby code
-        working-directory: "languages/ruby"
-        run: make lint
-      - name: Check Ruby types
-        working-directory: "languages/ruby"
-        run: make typecheck | grep '0 problems found in 0 of'
+      # - name: Lint Ruby code
+      #   working-directory: "languages/ruby"
+      #   run: make lint
+      # - name: Check Ruby types
+      #   working-directory: "languages/ruby"
+      #   run: make typecheck | grep '0 problems found in 0 of'
 
       - name: Use Node.js 10.14.2
         uses: actions/setup-node@v1
         with:
           node-version: 10.14.2
-      - name: Check formatting of JS library
-        working-directory: "languages/js"
-        run: make fmtcheck
+      # - name: Check formatting of JS library
+      #   working-directory: "languages/js"
+      #   run: make fmtcheck
 
       - name: Install Java
         uses: actions/setup-java@v1
         with:
           java-version: "11"
-      - name: Check formatting of Java library
-        uses: axel-op/googlejavaformat-action@v3
-        with:
-          skipCommit: true
-          args: "--dry-run --set-exit-if-changed"
+      # - name: Check formatting of Java library
+      #   uses: axel-op/googlejavaformat-action@v3
+      #   with:
+      #     skipCommit: true
+      #     args: "--dry-run --set-exit-if-changed"
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
@@ -64,44 +64,44 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Add WebAssembly target
-        run: rustup target add wasm32-unknown-unknown
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - name: Check Rust formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-      - name: Check clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets -- -D warnings
+      # - name: Add WebAssembly target
+      #   run: rustup target add wasm32-unknown-unknown
+      # - name: Install wasm-pack
+      #   run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      # - name: Check Rust formatting
+      #   uses: actions-rs/cargo@v1
+      #   with:
+      #     command: fmt
+      #     args: --all -- --check
+      # - name: Check clippy
+      #   uses: actions-rs/clippy-check@v1
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     args: --all-features --all-targets -- -D warnings
 
-      - name: Typecheck JS library
-        working-directory: "languages/js"
-        run: make typecheck
+      # - name: Typecheck JS library
+      #   working-directory: "languages/js"
+      #   run: make typecheck
 
-      - run: make test
-        env:
-          MVN_FLAGS: "-q"
+      # - run: make test
+      #   env:
+      #     MVN_FLAGS: "-q"
 
-      - name: Install yard (for doc build)
-        run: gem install yard
-      - name: Install spelling check
-        run: sudo apt-get install -y libenchant-dev
+      # - name: Install yard (for doc build)
+      #   run: gem install yard
+      # - name: Install spelling check
+      #   run: sudo apt-get install -y libenchant-dev
       - name: Test quickstarts
         run: make -C docs/examples/quickstart test
-      - name: Doc test
-        run: make -C docs test
-      - name: Spelling
-        run: SPHINXOPTS="-W" make -C docs spelling
-      - name: Docs build
-        run: SPHINXOPTS="-W" make -C docs build
-      - name: s3 preview publish
-        run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-        if: github.ref == 'refs/heads/main'
+      # - name: Doc test
+      #   run: make -C docs test
+      # - name: Spelling
+      #   run: SPHINXOPTS="-W" make -C docs spelling
+      # - name: Docs build
+      #   run: SPHINXOPTS="-W" make -C docs build
+      # - name: s3 preview publish
+      #   run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+      #   if: github.ref == 'refs/heads/main'
