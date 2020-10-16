@@ -26,12 +26,14 @@ quickstarts.each do |qs|
     puts setup_output
     raise "Setup step failed for #{lang.upcase}:\n#{setup_output}" unless $CHILD_STATUS.exitstatus.zero?
 
-    Timeout.timeout 60 do
+    Timeout.timeout 30 do
       begin
         puts "#{prefix} Starting server..."
         server = spawn qs[:server]
         received = CURL_ERROR
+        i = 0
         while received == CURL_ERROR
+          puts "ERROR #{i += 1}!"
           sleep 0.5
           received = `curl -sSH "user: alice@example.com" localhost:5050/expenses/1 2>&1`
         end
