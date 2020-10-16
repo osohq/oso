@@ -91,8 +91,6 @@ jobs:
         run: gem install yard
       - name: Install spelling check
         run: sudo apt-get install -y libenchant-dev
-      - name: Test quickstarts
-        run: make -C docs/examples/quickstart test
       - name: Doc test
         run: make -C docs test
       - name: Spelling
