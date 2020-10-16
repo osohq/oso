@@ -258,17 +258,11 @@ mod test {
             }
         };
 
-        // Super hacked up...
-        //
         // Each set of bindings is one possible set of constraints that must be
         // satisified for the rule to be true.  They could be OR'ed together to enter
         // into a system like SQL.
         //
         // Each constraint is emitted as a binding named (partial_SOMETHING).
-        // This is just really hacky, there should be a separate output for these.
-        // They all just be AND'd together.
-        //
-        // Really simple unification works fine...
         assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(1));
 
         assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(2));

@@ -1,7 +1,9 @@
 use std::collections::HashSet;
 
 //use crate::formatting::ToPolarString;
+use crate::folder::Folder;
 use crate::kb::Bindings;
+use crate::partial::Constraints;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 // Variable(?) <= bound value which might be a partial
@@ -37,7 +39,7 @@ pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
     let root_partials = get_roots(&bindings);
 
     for root in root_partials.iter() {
-        let simplified = simplify_partial(bindings.get(root).unwrap().clone(), &bindings);
+        let simplified = simplify_partial(bindings.get(root).unwrap().clone());
         bindings.insert(root.clone(), simplified);
     }
 
@@ -47,11 +49,17 @@ pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
     bindings
 }
 
+pub struct Simplifier;
+
+impl Folder for Simplifier {
+    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
+        c
+    }
+}
+
 #[allow(clippy::let_and_return)]
-fn simplify_partial(term: Term, bindings: &Bindings) -> Term {
-    let term = simplify_unify_partials(term, bindings);
-    let term = simplify_dot_ops(term, bindings);
-    term
+fn simplify_partial(term: Term) -> Term {
+    Simplifier {}.fold_term(term)
 }
 
 fn dot_field(op: &Value) -> usize {
@@ -62,47 +70,55 @@ fn dot_field(op: &Value) -> usize {
     }
 }
 
-fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
-    term/*.cloned_map_replace(&mut |term: &Term| {
-        if let Value::Partial(partial) = term.value() {
-            let mut operations = vec![];
-            for operation in partial.operations() {
-                if operation.args.len() == 2 {
-                    let left = operation.args.get(0).unwrap().value().clone();
-                    let right = operation.args.get(1).unwrap().value().clone();
-                    match (dot_field(&left), dot_field(&right)) {
-                        (1, 2) => {
-                            let right = simplify_dot_ops(term!(right), bindings);
-                            simplify_dot_ops_helper(&left, right.value(), &mut operations, bindings)
-                        }
-                        (2, 1) => {
-                            let left = simplify_dot_ops(term!(left), bindings);
-                            simplify_dot_ops_helper(&right, left.value(), &mut operations, bindings)
-                        }
-                        (_, _) => operations.push(operation.clone()),
-                    };
-                } else {
-                    operations.push(operation.clone());
-                }
-            }
-
-            //eprintln!("ops: {:?}", operations.iter().map(|op| op.to_polar()).collect::<Vec<String>>());
-            term.clone_with_value(Value::Partial(partial.clone_with_operations(operations)))
-        } else {
-            term.clone()
-        }
-    })*/
-}
+// fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
+//
+//
+//
+//
+//     // folder only cares about Expression(Operation { operator: Dot | Unify })
+//
+//     if let Value::Partial(partial) = term.value() {
+//
+//     term#<{(|.cloned_map_replace(&mut |term: &Term| {
+//         if let Value::Partial(partial) = term.value() {
+//             let mut operations = vec![];
+//             for operation in partial.operations() {
+//                 if operation.args.len() == 2 {
+//                     let left = operation.args.get(0).unwrap().value().clone();
+//                     let right = operation.args.get(1).unwrap().value().clone();
+//                     match (dot_field(&left), dot_field(&right)) {
+//                         (1, 2) => {
+//                             let right = simplify_dot_ops(term!(right), bindings);
+//                             simplify_dot_ops_helper(&left, right.value(), &mut operations, bindings)
+//                         }
+//                         (2, 1) => {
+//                             let left = simplify_dot_ops(term!(left), bindings);
+//                             simplify_dot_ops_helper(&right, left.value(), &mut operations, bindings)
+//                         }
+//                         (_, _) => operations.push(operation.clone()),
+//                     };
+//                 } else {
+//                     operations.push(operation.clone());
+//                 }
+//             }
+//
+//             //eprintln!("ops: {:?}", operations.iter().map(|op| op.to_polar()).collect::<Vec<String>>());
+//             term.clone_with_value(Value::Partial(partial.clone_with_operations(operations)))
+//         } else {
+//             term.clone()
+//         }
+//     })|)}>#
+// }
 
 fn simplify_dot_ops_helper(
     dot_op: &Value,
-    other: &Value,
+    partial: &Value,
     operations: &mut Vec<Operation>,
     _: &Bindings,
 ) {
     //eprintln!("dot_op: {:?}", &dot_op.to_polar());
     //eprintln!("other: {:?}", &other.to_polar());
-    if let Value::Partial(partial) = other {
+    if let Value::Partial(partial) = partial {
         // TODO: This transformation doesn't work for nested dots.
         let mut args = vec![];
         for operation in partial.operations() {
