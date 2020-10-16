@@ -7,7 +7,7 @@ require 'timeout'
 CURL_ERROR = "curl: (7) Failed to connect to localhost port 5050: Connection refused\n"
 
 quickstarts = [
-  { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
+  { lang: 'ruby', setup: 'bundle install', server: 'bundle exec ruby server.rb' },
   { lang: 'nodejs', setup: 'npm install', server: 'npm start' },
   { lang: 'python', setup: 'pip install -r requirements.txt', server: 'python server.py' },
   { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
@@ -21,12 +21,14 @@ quickstarts.each do |qs|
   Dir.chdir(qs_dir) do
     puts "[#{lang}] Installing dependencies..."
     setup_output = `#{qs[:setup]} 2>&1`
+    puts 'EXIT STATUS: ' + $CHILD_STATUS.exitstatus
+    puts setup_output
     raise "Setup step failed for #{lang.upcase}:\n#{setup_output}" unless $CHILD_STATUS.exitstatus.zero?
 
-    Timeout.timeout 60 do
+    Timeout.timeout 30 do
       begin
         puts "[#{lang}] Starting server..."
-        server = spawn qs[:server], %i[out err] => '/dev/null'
+        server = spawn qs[:server]
         received = CURL_ERROR
         while received == CURL_ERROR
           sleep 0.5
