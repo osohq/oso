@@ -111,29 +111,38 @@ impl<'kb> Folder for ExpressionRewriter<'kb> {
                 }
                 t.clone_with_value(temp)
             }
+            _ if self.stack.is_empty() => {
+                // If there is no containing conjunction, make one.
+                self.stack.push(vec![]);
+                let mut new = noop_fold_term(t, self);
+                let mut rewrites = self.stack.pop().unwrap();
+                for rewrite in rewrites.drain(..).rev() {
+                    and_wrap(&mut new, rewrite);
+                }
+                new
+            }
             _ => noop_fold_term(t, self),
         }
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
         match o.operator {
-            Operator::And | Operator::Or | Operator::Not => {
-                let mut o = noop_fold_operation(o, self);
-                o.args = o
+            Operator::And | Operator::Or | Operator::Not => Operation {
+                operator: noop_fold_operator(o.operator, self),
+                args: o
                     .args
                     .into_iter()
                     .map(|arg| {
                         self.stack.push(vec![]);
-                        let mut arg = noop_fold_term(arg, self);
+                        let mut arg = self.fold_term(arg);
                         let mut rewrites = self.stack.pop().unwrap();
                         for rewrite in rewrites.drain(..).rev() {
                             and_wrap(&mut arg, rewrite);
                         }
                         arg
                     })
-                    .collect();
-                o
-            }
+                    .collect(),
+            },
             _ => noop_fold_operation(o, self),
         }
     }
@@ -226,7 +235,7 @@ mod tests {
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_2) if a.b = _value_3 and _value_3.c = _value_2;"
+            "f(_value_3) if a.b = _value_2 and _value_2.c = _value_3;"
         );
     }
 
@@ -251,7 +260,7 @@ mod tests {
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(a, c, e) if e.f() = _value_4 and c.d(_value_4) = _value_3 and a.b(_value_3) = _value_2 and _value_2;"
+            "f(a, c, e) if e.f() = _value_2 and c.d(_value_2) = _value_3 and a.b(_value_3) = _value_4 and _value_4;"
         );
     }
 
@@ -265,11 +274,11 @@ mod tests {
             "x and a.b = _value_1 and _value_1"
         );
 
-        let mut query = parse_query("f(a.b().c)");
+        let query = parse_query("f(a.b().c)");
         assert_eq!(query.to_polar(), "f(a.b().c)");
         assert_eq!(
             rewrite_term(query, &mut kb).to_polar(),
-            "a.b() = _value_3 and _value_3.c = _value_2 and f(_value_2)"
+            "a.b() = _value_2 and _value_2.c = _value_3 and f(_value_3)"
         );
 
         let term = parse_query("a.b = 1");
