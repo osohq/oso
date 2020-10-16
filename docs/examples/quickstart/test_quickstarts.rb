@@ -27,15 +27,20 @@ def start_server(server, user, expense_id)
   [server, received]
 end
 
+def ensure_port_5050_is_open
+  until (server = `lsof -ti :5050 2>&1`.split.first.to_i).zero?
+    sleep 0.5
+    Process.kill 'TERM', server
+  end
+rescue Errno::ESRCH => e
+  puts "#{e}: #{server}"
+end
+
 def kill_server(server)
   return if server.nil?
 
   Process.kill 'TERM', server
   Process.wait2 server
-  until (server = `lsof -ti :5050 2>&1`.split.first.to_i).zero?
-    sleep 0.5
-    Process.kill 'KILL', server
-  end
 rescue Errno::ESRCH => e
   puts "#{e}: #{server}"
 end
@@ -49,12 +54,13 @@ quickstarts.each do |qs|
     Dir.chdir(qs_dir) do
       prefix = "#{Time.now.to_i} [#{lang}]"
       puts "#{prefix} Installing dependencies..."
-      # setup_output = `#{qs[:setup]} 2>&1`
-      system(qs[:setup] + ' 2>&1')
+      setup_output = `#{qs[:setup]} 2>&1`
       raise "Setup step failed for #{lang.upcase}:\n#{setup_output}" unless $CHILD_STATUS.exitstatus.zero?
 
       Timeout.timeout 30 do
         begin
+          ensure_port_5050_is_open
+
           puts "#{prefix} Starting server..."
           server, received = start_server qs[:server], 'alice@example.com', 1
           puts "#{prefix} Testing with no rules..."
@@ -66,6 +72,7 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Restarting server..."
           kill_server server
+          ensure_port_5050_is_open
 
           FileUtils.cp 'expenses.polar', 'original.polar'
           FileUtils.cp "../polar/expenses-01-#{lang}.polar", 'expenses.polar'
@@ -87,6 +94,7 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Restarting server..."
           kill_server server
+          ensure_port_5050_is_open
 
           FileUtils.cp "../polar/expenses-02-#{lang}.polar", 'expenses.polar'
 
@@ -124,6 +132,7 @@ quickstarts.each do |qs|
           puts "#{prefix} Success!"
         ensure
           kill_server server
+          ensure_port_5050_is_open
           FileUtils.mv 'original.polar', 'expenses.polar', force: true
         end
       end
