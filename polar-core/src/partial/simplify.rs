@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 //use crate::formatting::ToPolarString;
-use crate::folder::Folder;
+use crate::folder::{fold_operation, fold_term, fold_variable, Folder};
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
@@ -52,8 +52,38 @@ pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
 pub struct Simplifier;
 
 impl Folder for Simplifier {
-    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
-        c
+    fn fold_term(&mut self, t: Term) -> Term {
+        if let Value::Partial(Constraints {
+            operations,
+            variable,
+        }) = t.value()
+        {
+            let single_unify = operations.len() == 1
+                && matches!(operations.first().unwrap().operator, Operator::Unify);
+
+            if single_unify {
+                // Take partial(_this = ?) and output ?.
+                not_this_arg(operations.first().unwrap()).unwrap_or_else(|| t)
+            } else {
+                t.clone_with_value(Value::Partial(Constraints {
+                    variable: fold_variable(variable.clone(), self),
+                    operations: operations
+                        .iter()
+                        .cloned()
+                        .map(|o| self.fold_operation(o))
+                        .collect(),
+                }))
+            }
+        } else {
+            fold_term(t, self)
+        }
+    }
+
+    fn fold_operation(&mut self, o: Operation) -> Operation {
+        match o.operator {
+            Operator::Dot => o,
+            _ => fold_operation(o, self),
+        }
     }
 }
 
@@ -169,27 +199,6 @@ fn is_this_arg(value: &Value) -> bool {
 }
 
 // partial(_x_5) { partial(_value_1_6) { _this > 0, _this > 1 } = _this.a }
-
-// Take partial(_this = ?) and output ?.
-fn simplify_unify_partials(term: Term, _: &Bindings) -> Term {
-    if let Value::Partial(p) = term.value() {
-        let operator = p.operations().first().unwrap().operator;
-        let is_unify = matches!(operator, Operator::Unify);
-
-        if p.operations().len() == 1 && is_unify {
-            let op = p.operations().first().unwrap();
-
-            match not_this_arg(op) {
-                Some(term) => term,
-                None => term.clone(),
-            }
-        } else {
-            term.clone()
-        }
-    } else {
-        term.clone()
-    }
-}
 
 fn get_roots(bindings: &Bindings) -> HashSet<Symbol> {
     let mut roots = HashSet::new();

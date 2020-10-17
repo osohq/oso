@@ -268,8 +268,7 @@ mod test {
         assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(2));
 
         let next = next_binding();
-        // LOOKUPS also work.. but obviously the expression could be merged and simplified.
-        // The basic information is there though.
+        // LOOKUPS also work.
         assert_partial_expression!(next, "a", "_this.a = 3");
 
         let next = next_binding();
