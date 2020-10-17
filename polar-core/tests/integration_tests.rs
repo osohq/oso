@@ -934,6 +934,13 @@ fn test_arithmetic() {
     assert!(qeval(&mut polar, "2 * 3 == 6"));
     assert!(qeval(&mut polar, "6 / 2 == 3"));
     assert!(qeval(&mut polar, "2 / 6 == 0.3333333333333333"));
+    assert!(qeval(&mut polar, "1 % 1 == 0"));
+    assert!(qeval(&mut polar, "1 % -1 == 0"));
+    assert!(qeval(&mut polar, "1 % 2 == 1"));
+    assert!(qeval(&mut polar, "2 % 2 == 0"));
+    assert!(qeval(&mut polar, "3 % 2 == 1"));
+    assert!(qeval(&mut polar, "3.14 % 2 == 1.1400000000000001"));
+    assert!(qeval(&mut polar, "3 % 2.17 == 0.8300000000000001"));
 
     polar
         .load_str(

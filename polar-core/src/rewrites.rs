@@ -44,6 +44,10 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
         | Value::Expression(Operation {
             operator: op @ Operator::Div,
             args,
+        })
+        | Value::Expression(Operation {
+            operator: op @ Operator::Rem,
+            args,
         }) if args.len() == 2 => {
             // Rewrite op(a, b) to op(a, b, x) with x a temporary.
             let temp = Value::Variable(kb.gensym("op"));

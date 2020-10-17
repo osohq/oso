@@ -40,6 +40,7 @@ extern {
         "!" => lexer::Token::Bang,       // !
         "*" => lexer::Token::Mul,       // *
         "/" => lexer::Token::Div,       // /
+        "%" => lexer::Token::Rem,       // %
         "+" => lexer::Token::Add,       // +
         "-" => lexer::Token::Sub,       // -
         "==" => lexer::Token::Eq,       // ==
@@ -300,10 +301,11 @@ Exp8<T>: Term = {
     <Exp9<T>>,
 }
 
-// * /
+// * / %
 Op7: Operator = {
     "*" => Operator::Mul,
     "/" => Operator::Div,
+    "%" => Operator::Rem,
 }
 MulExp<T>: Value = {
     <exp7:Exp7<T>> <operator:Op7> <exp8:Exp8<T>> => {

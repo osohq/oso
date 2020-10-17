@@ -61,6 +61,7 @@ pub enum Token {
     Bang,  // !
     Mul,   // *
     Div,   // /
+    Rem,   // %
     Add,   // +
     Sub,   // -
     Eq,    // ==
@@ -108,6 +109,7 @@ impl ToString for Token {
             Token::Bang => "!".to_owned(),          // !
             Token::Mul => "*".to_owned(),           // *
             Token::Div => "/".to_owned(),           // /
+            Token::Rem => "%".to_owned(),           // %
             Token::Add => "+".to_owned(),           // +
             Token::Sub => "-".to_owned(),           // -
             Token::Eq => "==".to_owned(),           // ==
@@ -467,6 +469,7 @@ impl<'input> Iterator for Lexer<'input> {
                 '-' => self.scan_1c_op(i, Token::Sub),
                 '*' => self.scan_1c_op(i, Token::Mul),
                 '/' => self.scan_1c_op(i, Token::Div),
+                '%' => self.scan_1c_op(i, Token::Rem),
                 ';' => self.scan_1c_op(i, Token::SemiColon),
                 _ => Some(Err(ParseError::InvalidTokenCharacter {
                     token: "".to_owned(),
