@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-//use crate::formatting::ToPolarString;
 use crate::folder::{fold_constraints, fold_operation, fold_term, Folder};
+// use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::Constraints;
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 
 // Variable(?) <= bound value which might be a partial
 //
@@ -53,7 +53,6 @@ pub struct Simplifier;
 
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
-        eprintln!("TERM: {:?}", t);
         if let Value::Partial(Constraints {
             operations,
             variable,
@@ -63,12 +62,39 @@ impl Folder for Simplifier {
                 && matches!(operations.first().unwrap().operator, Operator::Unify);
 
             if single_unify {
-                // partial(_this = ?) => ?
-                eprintln!("Single unify: {:?}", operations.first().unwrap());
-                fold_term(
-                    not_this_arg(operations.first().unwrap()).unwrap_or_else(|| t),
-                    self,
-                )
+                fn sub_this(term: &Term, default: &Term) -> Term {
+                    if is_this_arg(term.value()) {
+                        default.clone()
+                    } else {
+                        term.clone()
+                    }
+                }
+
+                let mut map_ops = |ops: &[Operation], replacement: &Term| -> TermList {
+                    ops.iter()
+                        .map(|o| Operation {
+                            operator: o.operator,
+                            args: o.args.iter().map(|a| sub_this(a, replacement)).collect(),
+                        })
+                        .map(|o| {
+                            replacement.clone_with_value(Value::Expression(fold_operation(o, self)))
+                        })
+                        .collect()
+                };
+
+                let unify = operations.first().unwrap();
+                let left = unify.args.get(0).unwrap();
+                let right = unify.args.get(1).unwrap();
+                t.clone_with_value(Value::Expression(Operation {
+                    operator: Operator::And,
+                    args: match (left.value(), right.value()) {
+                        (Value::Partial(c), Value::Expression(_)) => map_ops(&c.operations, right),
+                        (Value::Expression(_), Value::Partial(c)) => map_ops(&c.operations, left),
+                        (Value::Partial(_), _) => vec![fold_term(right.clone(), self)],
+                        (_, Value::Partial(_)) => vec![fold_term(left.clone(), self)],
+                        _ => return fold_term(not_this_arg(unify).unwrap(), self),
+                    },
+                }))
             } else {
                 t.clone_with_value(Value::Partial(fold_constraints(
                     Constraints {
@@ -82,134 +108,11 @@ impl Folder for Simplifier {
             fold_term(t, self)
         }
     }
-
-    fn fold_operation(&mut self, o: Operation) -> Operation {
-        match o.operator {
-            Operator::Dot => {
-                eprintln!("DOT: {:?}", o);
-                o
-            }
-            Operator::Unify => {
-                let left = o.args.get(0).unwrap().value().clone();
-                let right_term = o.args.get(1).unwrap();
-                let right_value = right_term.value();
-                match (arg_type(&left), arg_type(right_value)) {
-                    (ArgType::Dot, ArgType::Partial) => {
-                        let right_term = fold_term(right_term.clone(), self);
-                        let operations = right_value.as_partial().unwrap().operations;
-                        simplify_dot_ops_helper(&left, right_value, &mut operations)
-                    }
-                    (ArgType::Partial, ArgType::Dot) => {
-                        let left = simplify_dot_ops(term!(left), bindings);
-                        simplify_dot_ops_helper(&right, left.value(), &mut operations, bindings)
-                    }
-                    (_, _) => operations.push(operation.clone()),
-                };
-            }
-            _ => fold_operation(o, self),
-        }
-    }
 }
 
 #[allow(clippy::let_and_return)]
 fn simplify_partial(term: Term) -> Term {
     Simplifier {}.fold_term(term)
-}
-
-enum ArgType {
-    Dot,
-    Partial,
-    Other,
-}
-
-fn arg_type(op: &Value) -> ArgType {
-    match op {
-        Value::Expression(op) if op.operator == Operator::Dot => ArgType::Dot,
-        Value::Partial(_) => ArgType::Partial,
-        _ => ArgType::Other,
-    }
-}
-
-// fn simplify_dot_ops(term: Term, bindings: &Bindings) -> Term {
-//
-//
-//
-//
-//     // folder only cares about Expression(Operation { operator: Dot | Unify })
-//
-//     if let Value::Partial(partial) = term.value() {
-//
-//     term#<{(|.cloned_map_replace(&mut |term: &Term| {
-//         if let Value::Partial(partial) = term.value() {
-//             let mut operations = vec![];
-//             for operation in partial.operations() {
-//                 if operation.args.len() == 2 {
-//                     let left = operation.args.get(0).unwrap().value().clone();
-//                     let right = operation.args.get(1).unwrap().value().clone();
-//                     match (dot_field(&left), dot_field(&right)) {
-//                         (1, 2) => {
-//                             let right = simplify_dot_ops(term!(right), bindings);
-//                             simplify_dot_ops_helper(&left, right.value(), &mut operations, bindings)
-//                         }
-//                         (2, 1) => {
-//                             let left = simplify_dot_ops(term!(left), bindings);
-//                             simplify_dot_ops_helper(&right, left.value(), &mut operations, bindings)
-//                         }
-//                         (_, _) => operations.push(operation.clone()),
-//                     };
-//                 } else {
-//                     operations.push(operation.clone());
-//                 }
-//             }
-//
-//             //eprintln!("ops: {:?}", operations.iter().map(|op| op.to_polar()).collect::<Vec<String>>());
-//             term.clone_with_value(Value::Partial(partial.clone_with_operations(operations)))
-//         } else {
-//             term.clone()
-//         }
-//     })|)}>#
-// }
-
-fn simplify_dot_ops_helper(
-    dot_op: &Value,
-    partial: &Value,
-    operations: &mut Vec<Operation>,
-) {
-    //eprintln!("dot_op: {:?}", &dot_op.to_polar());
-    //eprintln!("other: {:?}", &other.to_polar());
-    if let Value::Partial(partial) = partial {
-        // TODO: This transformation doesn't work for nested dots.
-        let mut args = vec![];
-        for operation in partial.operations() {
-            //eprintln!("op: {:?}\nargs: {:?}", operation.operator, operation.args.iter().map(|op| op.to_polar()).collect::<Vec<String>>());
-            if operation.args.len() == 2 {
-                let left = operation.args.get(0).unwrap().value();
-                let right = operation.args.get(1).unwrap().value();
-                match (is_this_arg(left), is_this_arg(right)) {
-                    (true, false) => {
-                        args.push(term!(Operation {
-                            operator: operation.operator,
-                            args: vec![term!(dot_op.clone()), term!(right.clone())]
-                        }));
-                    }
-                    (false, true) => {
-                        args.push(term!(Operation {
-                            operator: operation.operator,
-                            args: vec![term!(left.clone()), term!(dot_op.clone())]
-                        }));
-                    }
-                    (_, _) => panic!("invalid"),
-                }
-            } else {
-                args.push(term!(operation.clone()))
-            }
-        }
-
-        operations.push(Operation {
-            operator: Operator::And,
-            args,
-        });
-    }
 }
 
 fn not_this_arg(operation: &Operation) -> Option<Term> {
