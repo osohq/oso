@@ -222,7 +222,8 @@ mod test {
 
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
-    use crate::polar::Polar;
+    use crate::kb::Bindings;
+    use crate::polar::{Polar, Query};
     use crate::terms::Call;
 
     macro_rules! assert_partial_expression {
@@ -240,32 +241,33 @@ mod test {
         };
     }
 
+    fn next_binding(query: &mut Query) -> Result<Bindings, crate::error::PolarError> {
+        let event = query.next_event()?;
+        if let QueryEvent::Result { bindings, .. } = event {
+            Ok(bindings)
+        } else {
+            panic!("not bindings, {:?}", &event);
+        }
+    }
+
     #[test]
     fn basic_test() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"f(x) if x = 1;"#).unwrap();
-        polar.load_str(r#"f(x) if x = 2;"#).unwrap();
-        polar.load_str(r#"f(x) if x.a = 3 or x.b = 4;"#).unwrap();
+        polar.load_str(r#"f(x) if x = 1;"#)?;
+        polar.load_str(r#"f(x) if x = 2;"#)?;
+        polar.load_str(r#"f(x) if x.a = 3 or x.b = 4;"#)?;
 
-        let mut query =
+        let mut q =
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
 
-        let mut next_binding = || {
-            if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
-                bindings
-            } else {
-                panic!("not bindings");
-            }
-        };
+        assert_eq!(next_binding(&mut q)?.get(&sym!("a")).unwrap(), &term!(1));
+        assert_eq!(next_binding(&mut q)?.get(&sym!("a")).unwrap(), &term!(2));
 
-        assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(1));
-        assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(2));
+        let next = next_binding(&mut q)?;
+        assert_partial_expression!(next, "a", "_this.a = 3");
 
-        let next = next_binding();
-        assert_partial_expression!(next, "a", "3 = _this.a");
-
-        let next = next_binding();
-        assert_partial_expression!(next, "a", "4 = _this.b");
+        let next = next_binding(&mut q)?;
+        assert_partial_expression!(next, "a", "_this.b = 4");
 
         Ok(())
     }
@@ -273,22 +275,14 @@ mod test {
     #[test]
     fn test_partial_and() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"f(x, y, z) if x = y and x = z;"#).unwrap();
+        polar.load_str(r#"f(x, y, z) if x = y and x = z;"#)?;
 
         let mut query = polar.new_query_from_term(
             term!(call!("f", [Constraints::new(sym!("a")), 1, 2])),
             false,
         );
 
-        let mut next_binding = || {
-            if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
-                bindings
-            } else {
-                panic!("not bindings");
-            }
-        };
-
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2");
 
         Ok(())
@@ -297,32 +291,22 @@ mod test {
     #[test]
     fn test_partial_two_rule() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar
-            .load_str(r#"f(x, y, z) if x = y and x = z and g(x);"#)
-            .unwrap();
-        polar.load_str(r#"g(x) if x = 3;"#).unwrap();
-        polar.load_str(r#"g(x) if x = 4 or x = 5;"#).unwrap();
+        polar.load_str(r#"f(x, y, z) if x = y and x = z and g(x);"#)?;
+        polar.load_str(r#"g(x) if x = 3;"#)?;
+        polar.load_str(r#"g(x) if x = 4 or x = 5;"#)?;
 
         let mut query = polar.new_query_from_term(
             term!(call!("f", [Constraints::new(sym!("a")), 1, 2])),
             false,
         );
 
-        let mut next_binding = || {
-            if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
-                bindings
-            } else {
-                panic!("not bindings");
-            }
-        };
-
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 3");
 
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 4");
 
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 5");
 
         Ok(())
@@ -331,24 +315,16 @@ mod test {
     #[test]
     fn test_partial_isa() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"f(x: Post) if x.foo = 1;"#).unwrap();
-        polar.load_str(r#"f(x: User) if x.bar = 1;"#).unwrap();
+        polar.load_str(r#"f(x: Post) if x.foo = 1;"#)?;
+        polar.load_str(r#"f(x: User) if x.bar = 1;"#)?;
 
         let mut query =
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
 
-        let mut next_binding = || {
-            if let QueryEvent::Result { bindings, .. } = query.next_event().unwrap() {
-                bindings
-            } else {
-                panic!("not bindings");
-            }
-        };
-
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this matches Post{} and 1 = _this.foo");
 
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this matches User{} and 1 = _this.bar");
 
         Ok(())
@@ -357,20 +333,12 @@ mod test {
     #[test]
     fn test_partial_isa_two_rule() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar
-            .load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#)
-            .unwrap();
-        polar
-            .load_str(r#"f(x: User) if x.bar = 1 and g(x);"#)
-            .unwrap();
-        polar.load_str(r#"g(x: Post) if x.post = 1;"#).unwrap();
-        polar
-            .load_str(r#"g(x: PostSubclass) if x.post_subclass = 1;"#)
-            .unwrap();
-        polar.load_str(r#"g(x: User) if x.user = 1;"#).unwrap();
-        polar
-            .load_str(r#"g(x: UserSubclass) if x.user_subclass = 1;"#)
-            .unwrap();
+        polar.load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#)?;
+        polar.load_str(r#"f(x: User) if x.bar = 1 and g(x);"#)?;
+        polar.load_str(r#"g(x: Post) if x.post = 1;"#)?;
+        polar.load_str(r#"g(x: PostSubclass) if x.post_subclass = 1;"#)?;
+        polar.load_str(r#"g(x: User) if x.user = 1;"#)?;
+        polar.load_str(r#"g(x: UserSubclass) if x.user_subclass = 1;"#)?;
 
         let mut query =
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
@@ -420,7 +388,7 @@ mod test {
             "_this matches User{} and 1 = _this.bar and _this matches UserSubclass{} and 1 = _this.user_subclass"
         );
 
-        assert!(matches!(query.next_event().unwrap(), QueryEvent::Done { .. }));
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         Ok(())
     }
@@ -428,29 +396,18 @@ mod test {
     #[test]
     fn test_partial_comparison() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"positive(x) if x > 0;"#).unwrap();
-        polar
-            .load_str(r#"positive(x) if x > 0 and x < 0;"#)
-            .unwrap();
+        polar.load_str(r#"positive(x) if x > 0;"#)?;
+        polar.load_str(r#"positive(x) if x > 0 and x < 0;"#)?;
 
         let mut query = polar.new_query_from_term(
             term!(call!("positive", [Constraints::new(sym!("a"))])),
             false,
         );
 
-        let mut next_binding = || {
-            let event = query.next_event().unwrap();
-            if let QueryEvent::Result { bindings, .. } = event {
-                bindings
-            } else {
-                panic!("not bindings, {:?}", &event);
-            }
-        };
-
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this > 0");
 
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this > 0 and _this < 0");
 
         Ok(())
@@ -459,23 +416,14 @@ mod test {
     #[test]
     fn test_partial_comparison_dot() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
-        polar.load_str(r#"positive(x) if x.a > 0;"#).unwrap();
+        polar.load_str(r#"positive(x) if x.a > 0;"#)?;
 
         let mut query = polar.new_query_from_term(
             term!(call!("positive", [Constraints::new(sym!("a"))])),
             false,
         );
 
-        let mut next_binding = || {
-            let event = query.next_event().unwrap();
-            if let QueryEvent::Result { bindings, .. } = event {
-                bindings
-            } else {
-                panic!("not bindings, {:?}", &event);
-            }
-        };
-
-        let next = next_binding();
+        let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this.a > 0");
 
         Ok(())
