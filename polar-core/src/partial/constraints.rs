@@ -417,15 +417,23 @@ mod test {
     fn test_partial_comparison_dot() -> Result<(), crate::error::PolarError> {
         let polar = Polar::new();
         polar.load_str(r#"positive(x) if x.a > 0;"#)?;
-
         let mut query = polar.new_query_from_term(
             term!(call!("positive", [Constraints::new(sym!("a"))])),
             false,
         );
-
         let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this.a > 0");
+        Ok(())
+    }
 
+    #[test]
+    fn test_partial_nested_dot_ops() -> Result<(), crate::error::PolarError> {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x) if x.y.z > 0;"#)?;
+        let mut query =
+            polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this.y.z > 0");
         Ok(())
     }
 }
