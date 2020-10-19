@@ -322,10 +322,10 @@ mod test {
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
 
         let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "_this matches Post{} and 1 = _this.foo");
+        assert_partial_expression!(next, "a", "_this matches Post{} and _this.foo = 1");
 
         let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "_this matches User{} and 1 = _this.bar");
+        assert_partial_expression!(next, "a", "_this matches User{} and _this.bar = 1");
 
         Ok(())
     }
@@ -364,28 +364,28 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and 0 = _this.foo and _this matches Post{} and 1 = _this.post"
+            "_this matches Post{} and _this.foo = 0 and _this matches Post{} and _this.post = 1"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and 0 = _this.foo and _this matches PostSubclass{} and 1 = _this.post_subclass"
+            "_this matches Post{} and _this.foo = 0 and _this matches PostSubclass{} and _this.post_subclass = 1"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and 1 = _this.bar and _this matches User{} and 1 = _this.user"
+            "_this matches User{} and _this.bar = 1 and _this matches User{} and _this.user = 1"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and 1 = _this.bar and _this matches UserSubclass{} and 1 = _this.user_subclass"
+            "_this matches User{} and _this.bar = 1 and _this matches UserSubclass{} and _this.user_subclass = 1"
         );
 
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));

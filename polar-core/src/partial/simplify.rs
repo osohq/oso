@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::folder::{fold_constraints, fold_operation, fold_term, Folder};
-// use crate::formatting::ToPolarString;
+use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
@@ -53,6 +53,7 @@ pub struct Simplifier;
 
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
+        eprintln!("TERM: {}", t.to_polar());
         if let Value::Partial(Constraints {
             operations,
             variable,
@@ -62,15 +63,37 @@ impl Folder for Simplifier {
                 && matches!(operations.first().unwrap().operator, Operator::Unify);
 
             if single_unify {
-                fn sub_this(term: &Term, default: &Term) -> Term {
-                    if is_this_arg(term.value()) {
-                        default.clone()
-                    } else {
-                        term.clone()
+                fn sub_this(term: &Term, replacement: &Term) -> Term {
+                    match (term.value(), replacement.value()) {
+                        (
+                            Value::Expression(Operation {
+                                operator: Operator::Dot,
+                                args,
+                            }),
+                            Value::Expression(Operation {
+                                operator: Operator::Dot,
+                                ..
+                            }),
+                        ) => term.clone_with_value(Value::Expression(Operation {
+                            operator: Operator::Dot,
+                            args: vec![replacement.clone(), args.get(1).unwrap().clone()],
+                        })),
+                        _ => {
+                            if is_this_arg(term.value()) {
+                                replacement.clone()
+                            } else {
+                                term.clone()
+                            }
+                        }
                     }
                 }
 
                 let mut map_ops = |ops: &[Operation], replacement: &Term| -> TermList {
+                    eprintln!(
+                        "MAP_OPS\n\tOPS: {:?}\n\tREPLACEMENT: {}",
+                        ops.iter().map(|o| o.to_polar()).collect::<Vec<String>>(),
+                        replacement.to_polar()
+                    );
                     ops.iter()
                         .map(|o| Operation {
                             operator: o.operator,
@@ -88,11 +111,32 @@ impl Folder for Simplifier {
                 t.clone_with_value(Value::Expression(Operation {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
-                        (Value::Partial(c), Value::Expression(_)) => map_ops(&c.operations, right),
-                        (Value::Expression(_), Value::Partial(c)) => map_ops(&c.operations, left),
-                        (Value::Partial(_), _) => vec![fold_term(right.clone(), self)],
-                        (_, Value::Partial(_)) => vec![fold_term(left.clone(), self)],
-                        _ => return fold_term(not_this_arg(unify).unwrap(), self),
+                        (Value::Partial(c), Value::Expression(_)) => {
+                            eprintln!(
+                                "PARTIAL: {}\n\tEXPRESSION: {})",
+                                left.to_polar(),
+                                right.to_polar()
+                            );
+                            map_ops(&c.operations, right)
+                        }
+                        (Value::Expression(_), Value::Partial(c)) => {
+                            eprintln!("(EXPRESSION, PARTIAL)");
+                            map_ops(&c.operations, left)
+                        }
+                        (Value::Partial(_), _) => {
+                            eprintln!("PARTIAL AND SOMETHING => {}", left.to_polar());
+                            vec![fold_term(right.clone(), self)]
+                        }
+                        (_, Value::Partial(_)) => {
+                            eprintln!("SOMETHING AND PARTIAL => {}", right.to_polar());
+                            vec![fold_term(left.clone(), self)]
+                        }
+                        _ => {
+                            eprintln!("HERE! {}", unify.to_polar());
+                            let thing = fold_term(not_this_arg(unify).unwrap(), self);
+                            eprintln!("THERE! {}", thing.to_polar());
+                            return thing;
+                        }
                     },
                 }))
             } else {
@@ -108,11 +152,81 @@ impl Folder for Simplifier {
             fold_term(t, self)
         }
     }
+
+    fn fold_operation(&mut self, o: Operation) -> Operation {
+        fn sub_this(term: &Term, replacement: &Term) -> Term {
+            match (term.value(), replacement.value()) {
+                (
+                    Value::Expression(Operation {
+                        operator: Operator::Dot,
+                        args,
+                    }),
+                    Value::Expression(Operation {
+                        operator: Operator::Dot,
+                        ..
+                    }),
+                ) => term.clone_with_value(Value::Expression(Operation {
+                    operator: Operator::Dot,
+                    args: vec![replacement.clone(), args.get(1).unwrap().clone()],
+                })),
+                _ => {
+                    if is_this_arg(term.value()) {
+                        replacement.clone()
+                    } else {
+                        term.clone()
+                    }
+                }
+            }
+        }
+
+        let mut map_ops = |ops: &[Operation], replacement: &Term| -> TermList {
+            eprintln!(
+                "MAP_OPS\n\tOPS: {:?}\n\tREPLACEMENT: {}",
+                ops.iter().map(|o| o.to_polar()).collect::<Vec<String>>(),
+                replacement.to_polar()
+            );
+            ops.iter()
+                .map(|o| Operation {
+                    operator: o.operator,
+                    args: o.args.iter().map(|a| sub_this(a, replacement)).collect(),
+                })
+                .map(|o| replacement.clone_with_value(Value::Expression(fold_operation(o, self))))
+                .collect()
+        };
+
+        match o.operator {
+            Operator::Unify => {
+                let left = o.args.get(0).unwrap();
+                let right = o.args.get(1).unwrap();
+                eprintln!("LEFT: {}\nRIGHT: {}", left.to_polar(), right.to_polar());
+                Operation {
+                    operator: Operator::And,
+                    args: match (left.value(), right.value()) {
+                        (Value::Partial(c), Value::Expression(_)) => {
+                            eprintln!(
+                                "PARTIAL: {}\n\tEXPRESSION: {})",
+                                left.to_polar(),
+                                right.to_polar()
+                            );
+                            map_ops(&c.operations, right)
+                        }
+                        (Value::Expression(_), Value::Partial(c)) => {
+                            eprintln!("(EXPRESSION, PARTIAL)");
+                            map_ops(&c.operations, left)
+                        }
+                        _ => return fold_operation(o, self),
+                    },
+                }
+            }
+            _ => fold_operation(o, self),
+        }
+    }
 }
 
 #[allow(clippy::let_and_return)]
 fn simplify_partial(term: Term) -> Term {
-    Simplifier {}.fold_term(term)
+    // TODO(gj): recurse properly so this isn't needed.
+    Simplifier {}.fold_term(Simplifier {}.fold_term(term))
 }
 
 fn not_this_arg(operation: &Operation) -> Option<Term> {
@@ -127,7 +241,26 @@ fn not_this_arg(operation: &Operation) -> Option<Term> {
 }
 
 fn is_this_arg(value: &Value) -> bool {
-    matches!(value, Value::Variable(sym) if sym.0 == "_this")
+    match value {
+        Value::Expression(Operation {
+            operator: Operator::Dot,
+            args,
+        }) => {
+            eprintln!("is_this_arg({}) -> true", value.to_polar());
+            assert!(
+                matches!(args.get(0).unwrap().value(), Value::Variable(sym) if sym.0 == "_this")
+            );
+            true
+        }
+        Value::Variable(Symbol(name)) if name == "_this" => {
+            eprintln!("is_this_arg({}) -> true", value.to_polar());
+            true
+        }
+        _ => {
+            eprintln!("is_this_arg({}) -> false", value.to_polar());
+            false
+        }
+    }
 }
 
 // partial(_x_5) { partial(_value_1_6) { _this > 0, _this > 1 } = _this.a }
