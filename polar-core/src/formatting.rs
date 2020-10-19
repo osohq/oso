@@ -360,7 +360,8 @@ pub mod to_polar {
                 Not => "not",
                 Mul => "*",
                 Div => "/",
-                Rem => "%",
+                Mod => "mod",
+                Rem => "rem",
                 Add => "+",
                 Sub => "-",
                 Eq => "==",
@@ -437,8 +438,8 @@ pub mod to_polar {
                     to_polar_parens(self.operator, &self.args[0])
                 ),
                 // Binary operators
-                Rem | Mul | Div | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa | In
-                | Assign => match self.args.len() {
+                Mul | Div | Mod | Rem | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify
+                | Isa | In | Assign => match self.args.len() {
                     2 => format!(
                         "{} {} {}",
                         to_polar_parens(self.operator, &self.args[0]),

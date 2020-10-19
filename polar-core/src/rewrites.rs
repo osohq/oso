@@ -46,6 +46,10 @@ fn rewrite(term: &mut Term, kb: &KnowledgeBase) -> Option<Term> {
             args,
         })
         | Value::Expression(Operation {
+            operator: op @ Operator::Mod,
+            args,
+        })
+        | Value::Expression(Operation {
             operator: op @ Operator::Rem,
             args,
         }) if args.len() == 2 => {

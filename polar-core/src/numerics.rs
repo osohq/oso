@@ -98,21 +98,32 @@ impl Sub for Numeric {
     }
 }
 
+impl Numeric {
+    pub fn modulo(self, modulus: Self) -> Option<Self> {
+        fn modulo(a: f64, b: f64) -> f64 {
+            ((a % b) + b) % b
+        }
+
+        match (self, modulus) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => {
+                a.checked_rem(b).map(|c| (c + b) % b).map(Numeric::Integer)
+            }
+            (Numeric::Integer(a), Numeric::Float(b)) => Some(Numeric::Float(modulo(a as f64, b))),
+            (Numeric::Float(a), Numeric::Integer(b)) => Some(Numeric::Float(modulo(a, b as f64))),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(modulo(a, b))),
+        }
+    }
+}
+
 impl Rem for Numeric {
     type Output = Option<Self>;
 
     fn rem(self, other: Self) -> Option<Self> {
         match (self, other) {
-            (Numeric::Integer(a), Numeric::Integer(b)) => {
-                a.checked_rem_euclid(b).map(Numeric::Integer)
-            }
-            (Numeric::Integer(a), Numeric::Float(b)) => {
-                Some(Numeric::Float((a as f64).rem_euclid(b)))
-            }
-            (Numeric::Float(a), Numeric::Integer(b)) => {
-                Some(Numeric::Float(a.rem_euclid(b as f64)))
-            }
-            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(a.rem_euclid(b.floor()))),
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_rem(b).map(Numeric::Integer),
+            (Numeric::Integer(a), Numeric::Float(b)) => Some(Numeric::Float((a as f64) % b)),
+            (Numeric::Float(a), Numeric::Integer(b)) => Some(Numeric::Float(a % (b as f64))),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(a % b)),
         }
     }
 }
