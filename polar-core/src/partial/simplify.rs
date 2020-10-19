@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 //use crate::formatting::ToPolarString;
-use crate::folder::{fold_operation, fold_term, fold_variable, Folder};
+use crate::folder::{fold_constraints, fold_operation, fold_term, Folder};
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::terms::{Operation, Operator, Symbol, Term, Value};
@@ -53,6 +53,7 @@ pub struct Simplifier;
 
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
+        eprintln!("TERM: {:?}", t);
         if let Value::Partial(Constraints {
             operations,
             variable,
@@ -62,17 +63,20 @@ impl Folder for Simplifier {
                 && matches!(operations.first().unwrap().operator, Operator::Unify);
 
             if single_unify {
-                // Take partial(_this = ?) and output ?.
-                not_this_arg(operations.first().unwrap()).unwrap_or_else(|| t)
+                // partial(_this = ?) => ?
+                eprintln!("Single unify: {:?}", operations.first().unwrap());
+                fold_term(
+                    not_this_arg(operations.first().unwrap()).unwrap_or_else(|| t),
+                    self,
+                )
             } else {
-                t.clone_with_value(Value::Partial(Constraints {
-                    variable: fold_variable(variable.clone(), self),
-                    operations: operations
-                        .iter()
-                        .cloned()
-                        .map(|o| self.fold_operation(o))
-                        .collect(),
-                }))
+                t.clone_with_value(Value::Partial(fold_constraints(
+                    Constraints {
+                        operations: operations.clone(),
+                        variable: variable.clone(),
+                    },
+                    self,
+                )))
             }
         } else {
             fold_term(t, self)
@@ -81,7 +85,27 @@ impl Folder for Simplifier {
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
         match o.operator {
-            Operator::Dot => o,
+            Operator::Dot => {
+                eprintln!("DOT: {:?}", o);
+                o
+            }
+            Operator::Unify => {
+                let left = o.args.get(0).unwrap().value().clone();
+                let right_term = o.args.get(1).unwrap();
+                let right_value = right_term.value();
+                match (arg_type(&left), arg_type(right_value)) {
+                    (ArgType::Dot, ArgType::Partial) => {
+                        let right_term = fold_term(right_term.clone(), self);
+                        let operations = right_value.as_partial().unwrap().operations;
+                        simplify_dot_ops_helper(&left, right_value, &mut operations)
+                    }
+                    (ArgType::Partial, ArgType::Dot) => {
+                        let left = simplify_dot_ops(term!(left), bindings);
+                        simplify_dot_ops_helper(&right, left.value(), &mut operations, bindings)
+                    }
+                    (_, _) => operations.push(operation.clone()),
+                };
+            }
             _ => fold_operation(o, self),
         }
     }
@@ -92,11 +116,17 @@ fn simplify_partial(term: Term) -> Term {
     Simplifier {}.fold_term(term)
 }
 
-fn dot_field(op: &Value) -> usize {
+enum ArgType {
+    Dot,
+    Partial,
+    Other,
+}
+
+fn arg_type(op: &Value) -> ArgType {
     match op {
-        Value::Expression(op) if op.operator == Operator::Dot => 1,
-        Value::Partial(_) => 2,
-        _ => 0,
+        Value::Expression(op) if op.operator == Operator::Dot => ArgType::Dot,
+        Value::Partial(_) => ArgType::Partial,
+        _ => ArgType::Other,
     }
 }
 
@@ -144,7 +174,6 @@ fn simplify_dot_ops_helper(
     dot_op: &Value,
     partial: &Value,
     operations: &mut Vec<Operation>,
-    _: &Bindings,
 ) {
     //eprintln!("dot_op: {:?}", &dot_op.to_polar());
     //eprintln!("other: {:?}", &other.to_polar());

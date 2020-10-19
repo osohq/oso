@@ -258,26 +258,14 @@ mod test {
             }
         };
 
-        // Each set of bindings is one possible set of constraints that must be
-        // satisified for the rule to be true.  They could be OR'ed together to enter
-        // into a system like SQL.
-        //
-        // Each constraint is emitted as a binding named (partial_SOMETHING).
         assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(1));
-
         assert_eq!(next_binding().get(&sym!("a")).unwrap(), &term!(2));
 
         let next = next_binding();
-        // LOOKUPS also work.
-        assert_partial_expression!(next, "a", "_this.a = 3");
+        assert_partial_expression!(next, "a", "3 = _this.a");
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_this.b = 4");
-
-        // Print messages
-        while let Some(msg) = query.next_message() {
-            println!("{:?}", msg);
-        }
+        assert_partial_expression!(next, "a", "4 = _this.b");
 
         Ok(())
     }
@@ -358,10 +346,10 @@ mod test {
         };
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_this matches Post{} and _this.foo = 1");
+        assert_partial_expression!(next, "a", "_this matches Post{} and 1 = _this.foo");
 
         let next = next_binding();
-        assert_partial_expression!(next, "a", "_this matches User{} and _this.bar = 1");
+        assert_partial_expression!(next, "a", "_this matches User{} and 1 = _this.bar");
 
         Ok(())
     }
@@ -408,28 +396,28 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and _this.foo = 0 and _this matches Post{} and _this.post = 1"
+            "_this matches Post{} and 0 = _this.foo and _this matches Post{} and 1 = _this.post"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and _this.foo = 0 and _this matches PostSubclass{} and _this.post_subclass = 1"
+            "_this matches Post{} and 0 = _this.foo and _this matches PostSubclass{} and 1 = _this.post_subclass"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _this.bar = 1 and _this matches User{} and _this.user = 1"
+            "_this matches User{} and 1 = _this.bar and _this matches User{} and 1 = _this.user"
         );
 
         let next = next_binding();
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _this.bar = 1 and _this matches UserSubclass{} and _this.user_subclass = 1"
+            "_this matches User{} and 1 = _this.bar and _this matches UserSubclass{} and 1 = _this.user_subclass"
         );
 
         assert!(matches!(query.next_event().unwrap(), QueryEvent::Done { .. }));
