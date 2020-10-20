@@ -100,7 +100,7 @@ nodejs-test:
 test-quickstarts:
 	$(MAKE) -C examples/quickstart test
 
-test: doctest test-quickstarts
+test: doctest
 	$(MAKE) python-test
 	$(MAKE) ruby-test
 	$(MAKE) java-test
