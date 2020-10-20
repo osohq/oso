@@ -62,9 +62,9 @@ macro_rules! walk_elements {
 }
 
 macro_rules! walk_fields {
-    ($visitor: expr, $method: ident, $dict: expr) => {
+    ($visitor: expr, $dict: expr) => {
         for (k, v) in $dict {
-            $visitor.$method(k, v)
+            $visitor.visit_field(k, v)
         }
     };
 }
@@ -104,16 +104,16 @@ pub fn walk_external_instance<'a, V: Visitor<'a>>(visitor: &mut V, instance: &'a
 
 pub fn walk_instance_literal<'a, V: Visitor<'a>>(visitor: &mut V, instance: &'a InstanceLiteral) {
     visitor.visit_name(&instance.tag);
-    walk_fields!(visitor, visit_field, &instance.fields.fields);
+    walk_fields!(visitor, &instance.fields.fields);
 }
 
 pub fn walk_dictionary<'a, V: Visitor<'a>>(visitor: &mut V, dict: &'a Dictionary) {
-    walk_fields!(visitor, visit_field, &dict.fields);
+    walk_fields!(visitor, &dict.fields);
 }
 
 pub fn walk_pattern<'a, V: Visitor<'a>>(visitor: &mut V, pattern: &'a Pattern) {
     match pattern {
-        Pattern::Dictionary(dict) => walk_fields!(visitor, visit_field, &dict.fields),
+        Pattern::Dictionary(dict) => walk_fields!(visitor, &dict.fields),
         Pattern::Instance(instance) => visitor.visit_instance_literal(&instance),
     }
 }
