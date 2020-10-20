@@ -26,7 +26,7 @@ JS_FILES := $(call rwildcard ../languages/js/src, *.ts)
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile html doctest
+.PHONY: help Makefile html doctest test-quickstarts
 
 _api_docs/ruby: $(RUBY_FILES)
 	mkdir -p _api_docs
