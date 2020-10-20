@@ -75,15 +75,16 @@
 pub mod macros;
 
 pub(crate) mod builtins;
-mod errors;
+pub mod errors;
 mod host;
 mod oso;
 mod query;
 
 pub use crate::oso::Oso;
 pub use errors::{OsoError, Result};
-pub use host::{Class, ClassBuilder, FromPolar, FromPolarList, ToPolar, ToPolarList};
-pub use polar_core::terms::Value;
+pub use host::{
+    Class, ClassBuilder, FromPolar, FromPolarList, FromPolarValue, PolarValue, ToPolar, ToPolarList,
+};
 pub use query::{Query, ResultSet};
 
 use polar_core::polar::Polar;

@@ -122,6 +122,7 @@ impl Oso {
     /// ```ignore
     /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
     /// ```
+    #[must_use = "Query that is not consumed does nothing."]
     pub fn query_rule(&mut self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
         let mut query_host = self.host.clone();
         let args = args.to_polar_list(&mut query_host);

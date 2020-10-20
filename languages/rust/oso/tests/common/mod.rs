@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use oso::Oso;
 
 pub struct OsoTest {
@@ -13,7 +14,6 @@ impl OsoTest {
         self.oso.load_str(policy).unwrap();
     }
 
-    #[allow(dead_code)]
     pub fn load_file(&mut self, here: &str, name: &str) -> oso::Result<()> {
         // hack because `file!()` starts from workspace root
         // https://github.com/rust-lang/cargo/issues/3946
@@ -42,7 +42,7 @@ impl OsoTest {
         err.to_string()
     }
 
-    pub fn qvar<T: oso::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
+    pub fn qvar<T: oso::FromPolarValue>(&mut self, q: &str, var: &str) -> Vec<T> {
         let res = self.query(q);
         res.into_iter()
             .map(|set| {
@@ -74,7 +74,7 @@ impl OsoTest {
 
     pub fn qvar_one<T>(&mut self, q: &str, var: &str, expected: T)
     where
-        T: oso::FromPolar + PartialEq<T> + std::fmt::Debug,
+        T: oso::FromPolarValue + PartialEq<T> + std::fmt::Debug,
     {
         let mut res = self.qvar::<T>(q, var);
         assert_eq!(res.len(), 1, "expected exactly one result");

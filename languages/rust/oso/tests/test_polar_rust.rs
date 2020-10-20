@@ -2,12 +2,15 @@
 /// Tests that are unique to the Rust implementation of oso, testing things like
 /// rust class handling.
 use maplit::hashmap;
+use thiserror::Error;
 
 use oso::{ClassBuilder, PolarClass};
 
 mod common;
 
 use common::OsoTest;
+
+use std::convert::TryFrom;
 
 #[test]
 fn test_anything_works() {
@@ -53,18 +56,18 @@ fn test_data_conversions() {
     test.qvar_one("a(x)", "x", 1);
     test.qvar_one("b(x)", "x", "two".to_string());
     test.qvar_one("c(x)", "x", true);
-    use polar_core::terms::Value;
+
+    use oso::PolarValue;
+    //use polar_core::terms::Value;
+
     // TODO: do we want to handle hlists better?
     // e.g. https://docs.rs/hlist/0.1.2/hlist/
-    test.qvar_one(
-        "d(x)",
-        "x",
-        vec![
-            Value::Number(polar_core::terms::Numeric::Integer(1)),
-            Value::String("two".to_string()),
-            Value::Boolean(true),
-        ],
-    );
+    let mut results = test.query("d(x)");
+    let first = results.pop().unwrap();
+    let mut x = first.get_typed::<Vec<PolarValue>>("x").unwrap();
+    assert_eq!(i64::try_from(x.remove(0)).unwrap(), 1);
+    assert_eq!(String::try_from(x.remove(0)).unwrap(), "two");
+    assert_eq!(bool::try_from(x.remove(0)).unwrap(), true);
 }
 
 // This logic is changing. Updated when fixed
@@ -341,17 +344,21 @@ fn test_results_and_options() {
     #[derive(PolarClass)]
     struct Foo;
 
+    #[derive(Error, Debug)]
+    #[error("Test error")]
+    struct Error;
+
     impl Foo {
         fn new() -> Self {
             Self
         }
 
-        fn ok(&self) -> Result<i32, String> {
+        fn ok(&self) -> Result<i32, Error> {
             Ok(1)
         }
 
-        fn err(&self) -> Result<i32, &'static str> {
-            Err("Some sort of error")
+        fn err(&self) -> Result<i32, Error> {
+            Err(Error)
         }
 
         fn some(&self) -> Option<i32> {
@@ -377,6 +384,8 @@ fn test_results_and_options() {
         .unwrap();
 
     test.qvar_one(r#"new Foo().ok() = x"#, "x", 1);
+    // TODO (dhatch): Assert type of error
+    // TODO (dhatch): Check nested method error
     test.query_err("new Foo().err()");
     test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
 

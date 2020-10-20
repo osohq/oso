@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use crate::errors::OsoError;
 use crate::host::{Host, Instance, PolarResultIter};
-use crate::FromPolar;
+use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
 use polar_core::terms::*;
@@ -87,12 +88,19 @@ impl Query {
                 QueryEvent::Debug { message } => self.handle_debug(message),
                 event => unimplemented!("Unhandled event {:?}", event),
             };
-            if let Err(e) = result {
-                // TODO (dhatch): These seem to be getting swallowed
-                tracing::error!("application error {}", e);
-                if let Err(e) = self.application_error(e) {
-                    return Some(Err(e));
+
+            match result {
+                // Only call errors get passed back.
+                Err(call_error @ OsoError::InvalidCallError { .. }) => {
+                    tracing::error!("application invalid call error {}", call_error);
+                    if let Err(e) = self.application_error(call_error) {
+                        return Some(Err(e));
+                    }
                 }
+                // All others get returned.
+                Err(err) => return Some(Err(err)),
+                // Continue on ok
+                Ok(_) => {}
             }
         }
     }
@@ -109,14 +117,24 @@ impl Query {
         Ok(self.inner.call_result(call_id, None)?)
     }
 
+    /// Return an application error to Polar.
+    ///
+    /// NOTE: This should only be used for InvalidCallError.
+    /// TODO (dhatch): Refactor Polar API so this is clear.
+    ///
+    /// All other errors must be returned directly from query.
     fn application_error(&mut self, error: crate::OsoError) -> crate::Result<()> {
         Ok(self.inner.application_error(error.to_string())?)
     }
 
     fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
         match constructor.value() {
-            Value::Call(Call { name, args, .. }) => {
-                self.host.make_instance(name, args.clone(), instance_id)
+            Value::Call(Call { name, args, kwargs }) => {
+                if !kwargs.is_none() {
+                    lazy_error!("keyword args for constructor not supported.")
+                } else {
+                    self.host.make_instance(name, args.clone(), instance_id)
+                }
             }
             _ => lazy_error!("invalid type for constructing an instance -- internal error"),
         }
@@ -158,16 +176,16 @@ impl Query {
         }
         let instance = Instance::from_polar(&instance, &self.host).unwrap();
         if let Err(e) = self.register_call(call_id, instance, name, args) {
-            self.application_error(e)?;
-            return self.call_result_none(call_id);
+            self.call_result_none(call_id)?;
+            return Err(e);
         }
 
         if let Some(result) = self.next_call_result(call_id) {
             match result {
                 Ok(r) => self.call_result(call_id, r),
                 Err(e) => {
-                    self.application_error(e)?;
-                    self.call_result_none(call_id)
+                    self.call_result_none(call_id)?;
+                    Err(e)
                 }
             }
         } else {
@@ -235,17 +253,6 @@ impl Query {
         check_messages!(self.inner);
         Ok(())
     }
-
-    /// Covert `term` into type `T`.
-    pub fn from_polar<T: FromPolar>(&self, term: &Term) -> crate::Result<T> {
-        Ok(T::from_polar(term, &self.host)?)
-    }
-
-    // TODO (dhatch): Get rid of this when implementing value type for the library.
-    /// Convert `value` into type `T`.
-    pub fn from_polar_value<T: FromPolar>(&self, value: Value) -> crate::Result<T> {
-        Ok(T::from_polar(&Term::new_temporary(value), &self.host)?)
-    }
 }
 
 #[derive(Clone)]
@@ -268,18 +275,16 @@ impl ResultSet {
         self.bindings.is_empty()
     }
 
-    pub fn get(&self, name: &str) -> Option<crate::Value> {
+    pub fn get(&self, name: &str) -> Option<crate::PolarValue> {
         self.bindings
             .get(&Symbol(name.to_string()))
-            .map(|t| t.value().clone())
+            .map(|t| PolarValue::from_term(t, &self.host).unwrap())
     }
 
-    pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
-        // TODO (dhatch): Type error
-        self.bindings
-            .get(&Symbol(name.to_string()))
+    pub fn get_typed<T: crate::host::FromPolarValue>(&self, name: &str) -> crate::Result<T> {
+        self.get(name)
             .ok_or_else(|| crate::OsoError::FromPolar)
-            .and_then(|term| T::from_polar(term, &self.host))
+            .and_then(T::from_polar_value)
     }
 }
 
@@ -289,7 +294,7 @@ impl std::fmt::Debug for ResultSet {
     }
 }
 
-impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<S, T>>
+impl<S: AsRef<str>, T: crate::host::FromPolarValue + PartialEq<T>> PartialEq<HashMap<S, T>>
     for ResultSet
 {
     fn eq(&self, other: &HashMap<S, T>) -> bool {

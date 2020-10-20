@@ -9,6 +9,7 @@ use std::iter;
 
 use super::Host;
 use crate::host::Instance;
+use crate::PolarValue;
 
 /// Convert Rust types to Polar types.
 ///
@@ -166,6 +167,12 @@ impl<T: ToPolar> ToPolar for HashMap<String, T> {
     }
 }
 
+impl ToPolar for PolarValue {
+    fn to_polar_value(self, host: &mut Host) -> Value {
+        self.to_term(host).value().clone()
+    }
+}
+
 impl ToPolar for Value {
     fn to_polar_value(self, _host: &mut Host) -> Value {
         self
@@ -186,16 +193,25 @@ impl<C: 'static + Sized + ToPolar> ToPolarResults for C {
     }
 }
 
-impl<C: ToPolarResults, E: ToString> ToPolarResults for Result<C, E> {
+impl<C, E> ToPolarResults for Result<C, E>
+where
+    C: ToPolarResults,
+    E: std::error::Error + 'static + Send + Sync,
+{
     fn to_polar_results(self, host: &mut Host) -> PolarResultIter {
         match self {
             Ok(result) => result.to_polar_results(host),
-            Err(e) => Box::new(iter::once(Err(crate::OsoError::Custom {
-                message: e.to_string(),
+            Err(e) => Box::new(iter::once(Err(crate::OsoError::ApplicationError {
+                source: Box::new(e),
+                type_name: None,
+                attr: None,
             }))),
         }
     }
 }
+
+// NOTE: MISSING specialization... Want to have a variant for Result that
+// is not over an error, but alas impossible???
 
 impl<C: ToPolarResults> ToPolarResults for Option<C> {
     fn to_polar_results(self, host: &mut Host) -> PolarResultIter {

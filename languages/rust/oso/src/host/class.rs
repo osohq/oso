@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::errors::OsoError;
+use crate::errors::{InvalidCallError, OsoError};
 
 use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod};
 use super::from_polar::FromPolarList;
@@ -20,12 +20,11 @@ type ClassMethods = HashMap<&'static str, ClassMethod>;
 type InstanceMethods = HashMap<&'static str, InstanceMethod>;
 
 fn equality_not_supported(
-    type_name: String,
-) -> Box<dyn Fn(&Instance, &Instance) -> crate::Result<bool> + Send + Sync> {
-    let eq = move |_: &Instance, _: &Instance| -> crate::Result<bool> {
+) -> Box<dyn Fn(&Host, &Instance, &Instance) -> crate::Result<bool> + Send + Sync> {
+    let eq = move |host: &Host, lhs: &Instance, _: &Instance| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
-            type_name: type_name.clone(),
+            type_name: lhs.name(host).to_owned(),
         })
     };
 
@@ -53,7 +52,7 @@ pub struct Class {
 
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&Instance, &Instance) -> crate::Result<bool> + Send + Sync>,
+    equality_check: Arc<dyn Fn(&Host, &Instance, &Instance) -> crate::Result<bool> + Send + Sync>,
 }
 
 impl Class {
@@ -71,16 +70,23 @@ impl Class {
         }
     }
 
+    /// Call class method `attr` on `self` with arguments from `args`.
+    ///
+    /// Returns: An iterable of results from the method.
     pub fn call(
         &self,
         attr: &str,
         args: Vec<Term>,
         host: &mut Host,
     ) -> crate::Result<super::to_polar::PolarResultIter> {
-        let attr = self
-            .class_methods
-            .get(attr)
-            .expect("class method not found");
+        let attr =
+            self.class_methods
+                .get(attr)
+                .ok_or_else(|| InvalidCallError::ClassMethodNotFound {
+                    method_name: attr.to_owned(),
+                    type_name: self.name.clone(),
+                })?;
+
         attr.clone().invoke(args, host)
     }
 
@@ -92,6 +98,10 @@ impl Class {
         } else {
             self.instance_methods.get(name).cloned()
         }
+    }
+
+    fn equals(&self, host: &Host, lhs: &Instance, rhs: &Instance) -> crate::Result<bool> {
+        (self.equality_check)(host, lhs, rhs)
     }
 }
 
@@ -109,7 +119,7 @@ where
     /// Create a new class builder.
     fn new() -> Self {
         let fq_name = std::any::type_name::<T>().to_string();
-        let short_name = fq_name.split("::").last().expect("type has no name");
+        let short_name = fq_name.split("::").last().expect("type has invalid name");
         Self {
             class: Class {
                 name: short_name.to_string(),
@@ -118,7 +128,7 @@ where
                 instance_methods: InstanceMethods::new(),
                 class_methods: ClassMethods::new(),
                 class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
-                equality_check: Arc::from(equality_not_supported(fq_name)),
+                equality_check: Arc::from(equality_not_supported()),
                 type_id: TypeId::of::<T>(),
             },
             ty: std::marker::PhantomData,
@@ -162,11 +172,11 @@ where
     where
         F: Fn(&T, &T) -> bool + Send + Sync + 'static,
     {
-        self.class.equality_check = Arc::new(move |a, b| {
+        self.class.equality_check = Arc::new(move |host, a, b| {
             tracing::trace!("equality check");
 
-            let a = a.downcast().map_err(|e| e.user())?;
-            let b = b.downcast().map_err(|e| e.user())?;
+            let a = a.downcast(Some(host)).map_err(|e| e.user())?;
+            let b = b.downcast(Some(host)).map_err(|e| e.user())?;
 
             Ok((f)(a, b))
         });
@@ -261,12 +271,15 @@ where
 #[derive(Clone)]
 pub struct Instance {
     inner: Arc<dyn std::any::Any + Send + Sync>,
-    type_name: &'static str,
+
+    /// The type name of the Instance, to be used for debugging purposes only.
+    /// To get the registered name, use `Instance::name`.
+    debug_type_name: &'static str,
 }
 
 impl fmt::Debug for Instance {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Instance<{}>", self.type_name)
+        write!(f, "Instance<{}>", self.debug_type_name)
     }
 }
 
@@ -275,7 +288,7 @@ impl Instance {
     pub fn new<T: Send + Sync + 'static>(instance: T) -> Self {
         Self {
             inner: Arc::new(instance),
-            type_name: std::any::type_name::<T>(),
+            debug_type_name: std::any::type_name::<T>(),
         }
     }
 
@@ -288,8 +301,18 @@ impl Instance {
     pub fn class<'a>(&self, host: &'a Host) -> crate::Result<&'a Class> {
         host.get_class_by_type_id(self.inner.as_ref().type_id())
             .map_err(|_| OsoError::MissingClassError {
-                name: self.type_name.to_string(),
+                name: self.name(&host).to_owned(),
             })
+    }
+
+    /// Get the canonical name of this instance.
+    ///
+    /// The canonical name is the registered name on host *if* if it registered.
+    /// Otherwise, the debug name is returned.
+    pub fn name<'a>(&self, host: &'a Host) -> &'a str {
+        self.class(host)
+            .map(|class| class.name.as_ref())
+            .unwrap_or_else(|_| self.debug_type_name)
     }
 
     /// Lookup an attribute on the instance via the registered `Class`
@@ -298,8 +321,12 @@ impl Instance {
         let attr = self
             .class(host)
             .and_then(|c| {
-                c.attributes.get(name).ok_or_else(|| OsoError::Custom {
-                    message: format!("attribute {} not found", name),
+                c.attributes.get(name).ok_or_else(|| {
+                    InvalidCallError::AttributeNotFound {
+                        attribute_name: name.to_owned(),
+                        type_name: self.name(&host).to_owned(),
+                    }
+                    .into()
                 })
             })?
             .clone();
@@ -307,6 +334,11 @@ impl Instance {
     }
 
     /// Call the named method on the instance via the registered `Class`
+    ///
+    /// Returns: PolarResultIter, or an Error if the method cannot be called.
+    ///
+    /// N.B: If the method itself returns an error, this will be captured in
+    /// the PolarResultIterator (the first result will be an Error).
     pub fn call(
         &self,
         name: &str,
@@ -315,8 +347,12 @@ impl Instance {
     ) -> crate::Result<super::to_polar::PolarResultIter> {
         tracing::trace!({method = %name, ?args}, "call");
         let method = self.class(host).and_then(|c| {
-            c.get_method(name).ok_or_else(|| OsoError::Custom {
-                message: format!("method {} not found", name),
+            c.get_method(name).ok_or_else(|| {
+                InvalidCallError::MethodNotFound {
+                    method_name: name.to_owned(),
+                    type_name: self.name(&host).to_owned(),
+                }
+                .into()
             })
         })?;
         method.invoke(self, args, host)
@@ -326,18 +362,35 @@ impl Instance {
     pub fn equals(&self, other: &Self, host: &Host) -> crate::Result<bool> {
         tracing::trace!("equals");
         self.class(host)
-            .and_then(|c| (c.equality_check)(&self, &other))
+            .and_then(|class| class.equals(host, &self, other))
     }
 
     /// Attempt to downcast the inner type of the instance to a reference to the type `T`
     /// This should be the _only_ place using downcast to avoid mistakes.
-    pub fn downcast<T: 'static>(&self) -> Result<&T, crate::errors::TypeError> {
+    ///
+    /// # Arguments
+    ///
+    /// * `host`: Pass host if possible to improve error handling.
+    pub fn downcast<T: 'static>(
+        &self,
+        host: Option<&Host>,
+    ) -> Result<&T, crate::errors::TypeError> {
+        let name = host
+            .map(|h| self.name(h).to_owned())
+            .unwrap_or_else(|| self.debug_type_name.to_owned());
+
+        let expected_name = host
+            .and_then(|h| {
+                h.get_class_by_type_id(std::any::TypeId::of::<T>())
+                    .map(|class| class.name.clone())
+                    .ok()
+            })
+            .unwrap_or_else(|| std::any::type_name::<T>().to_owned());
+
         self.inner
             .as_ref()
             .downcast_ref()
-            .ok_or_else(|| crate::errors::TypeError {
-                expected: String::from(std::any::type_name::<T>()),
-            })
+            .ok_or_else(|| crate::errors::TypeError::expected(expected_name).got(name))
     }
 }
 
