@@ -75,7 +75,7 @@ data.
 
 **This feature is currently in preview.**
 
-.. todo:: Link to blog post
+Learn more in our `blog post <https://www.osohq.com/post/django-list-view>`_.
 
 Other bugs & improvements
 =========================
