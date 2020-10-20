@@ -121,6 +121,9 @@ pub fn walk_pattern<'a, V: Visitor<'a>>(visitor: &mut V, pattern: &'a Pattern) {
 pub fn walk_call<'a, V: Visitor<'a>>(visitor: &mut V, call: &'a Call) {
     visitor.visit_name(&call.name);
     walk_elements!(visitor, visit_term, &call.args);
+    if let Some(kwargs) = call.kwargs.as_ref() {
+        walk_fields!(visitor, kwargs);
+    }
 }
 
 #[allow(clippy::ptr_arg)]
