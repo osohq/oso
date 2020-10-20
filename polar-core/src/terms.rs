@@ -71,6 +71,10 @@ impl Symbol {
     pub fn is_namespaced_var(&self) -> bool {
         self.0.find("::").is_some()
     }
+
+    pub fn is_this_var(&self) -> bool {
+        self.0 == "_this"
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]

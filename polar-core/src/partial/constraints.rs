@@ -351,7 +351,6 @@ mod test {
                     left_class_tag,
                     right_class_tag,
                 } => {
-                    eprintln!("left: {:?}, right: {:?}", &left_class_tag, &right_class_tag);
                     query
                         .question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))
                         .unwrap();

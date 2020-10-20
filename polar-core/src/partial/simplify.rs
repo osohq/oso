@@ -1,7 +1,9 @@
 use std::collections::HashSet;
 
-use crate::folder::{fold_operation, Folder};
-use crate::formatting::ToPolarString;
+use super::Constraints;
+
+use crate::folder::{fold_operation, fold_term, Folder};
+//use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
 
@@ -50,15 +52,40 @@ pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
 
 pub struct Simplifier;
 
-// Unify(Partial(Gt(_this, 0), Lt(_this, 4)), Dot(_this, a))
-
-//
-
-// And(Comparison(Dot, Number), Comparison(Dot, Number))
-// And(Gt(_this.a, 0), Lt(_this.a, 4))
-
 // partial(_this = ?) => ?
 impl Folder for Simplifier {
+    fn fold_term(&mut self, t: Term) -> Term {
+        match t.value() {
+            Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
+                fn is_this_arg(t: &Term) -> bool {
+                    matches!(t.value(), Value::Variable(v) if v.is_this_var())
+                }
+
+                match operations.get(0).unwrap() {
+                    Operation {
+                        operator: Operator::And,
+                        args,
+                    } if args.len() == 1 => fold_term(args.get(0).unwrap().clone(), self),
+
+                    Operation {
+                        operator: Operator::Unify,
+                        args,
+                    } if args.iter().any(is_this_arg) => {
+                        let mut args = args
+                            .iter()
+                            .filter(|arg| !is_this_arg(arg))
+                            .cloned()
+                            .collect::<TermList>();
+                        assert_eq!(args.len(), 1);
+                        args.pop().unwrap()
+                    }
+                    _ => fold_term(t, self),
+                }
+            }
+            _ => fold_term(t, self),
+        }
+    }
+
     fn fold_operation(&mut self, o: Operation) -> Operation {
         fn sub_this(term: &Term, replacement: &Term) -> Term {
             match (term.value(), replacement.value()) {
@@ -86,11 +113,6 @@ impl Folder for Simplifier {
         }
 
         let mut map_ops = |ops: &[Operation], replacement: &Term| -> TermList {
-            eprintln!(
-                "MAP_OPS\n\tOPS: {:?}\n\tREPLACEMENT: {}",
-                ops.iter().map(|o| o.to_polar()).collect::<Vec<String>>(),
-                replacement.to_polar()
-            );
             ops.iter()
                 .map(|o| Operation {
                     operator: o.operator,
@@ -104,22 +126,11 @@ impl Folder for Simplifier {
             Operator::Unify => {
                 let left = o.args.get(0).unwrap();
                 let right = o.args.get(1).unwrap();
-                eprintln!("LEFT: {}\nRIGHT: {}", left.to_polar(), right.to_polar());
                 Operation {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
-                        (Value::Partial(c), Value::Expression(_)) => {
-                            eprintln!(
-                                "PARTIAL: {}\n\tEXPRESSION: {})",
-                                left.to_polar(),
-                                right.to_polar()
-                            );
-                            map_ops(&c.operations, right)
-                        }
-                        (Value::Expression(_), Value::Partial(c)) => {
-                            eprintln!("(EXPRESSION, PARTIAL)");
-                            map_ops(&c.operations, left)
-                        }
+                        (Value::Partial(c), Value::Expression(_)) => map_ops(&c.operations, right),
+                        (Value::Expression(_), Value::Partial(c)) => map_ops(&c.operations, left),
                         _ => return fold_operation(o, self),
                     },
                 }
@@ -148,20 +159,13 @@ fn is_this_arg(value: &Value) -> bool {
             operator: Operator::Dot,
             args,
         }) => {
-            eprintln!("is_this_arg({}) -> true", value.to_polar());
             assert!(
-                matches!(args.get(0).unwrap().value(), Value::Variable(sym) if sym.0 == "_this")
+                matches!(args.get(0).unwrap().value(), Value::Variable(name) if name.is_this_var())
             );
             true
         }
-        Value::Variable(Symbol(name)) if name == "_this" => {
-            eprintln!("is_this_arg({}) -> true", value.to_polar());
-            true
-        }
-        _ => {
-            eprintln!("is_this_arg({}) -> false", value.to_polar());
-            false
-        }
+        Value::Variable(name) if name.is_this_var() => true,
+        _ => false,
     }
 }
 
