@@ -461,6 +461,8 @@ jobs:
     name: Test Quickstarts
     runs-on: ubuntu-latest
     steps:
+      - name: Clone submodules
+        run: git submodule update --init --remote
       - uses: actions/cache@v2
         with:
           path: |
