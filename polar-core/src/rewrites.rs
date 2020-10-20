@@ -87,11 +87,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                 args: terms.into_iter().chain(rewrites).collect(),
             }));
         }
-        Rule {
-            name,
-            body,
-            params,
-        }
+        Rule { name, body, params }
     }
 
     /// Rewrite an expression as a temp, and push a rewritten
