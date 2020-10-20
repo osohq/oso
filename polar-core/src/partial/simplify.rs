@@ -129,10 +129,17 @@ impl Folder for Simplifier {
     }
 }
 
-#[allow(clippy::let_and_return)]
-fn simplify_partial(term: Term) -> Term {
-    // TODO(gj): recurse properly so this isn't needed.
-    Simplifier {}.fold_term(Simplifier {}.fold_term(term))
+fn simplify_partial(mut term: Term) -> Term {
+    let mut simplifier = Simplifier {};
+    let mut new;
+    loop {
+        new = simplifier.fold_term(term.clone());
+        if new == term {
+            break;
+        }
+        term = new;
+    }
+    new
 }
 
 fn is_this_arg(value: &Value) -> bool {
