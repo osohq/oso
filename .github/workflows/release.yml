@@ -463,7 +463,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Clone submodules
-        run: git submodule update --init --remote
+        run: make update-submodules
+      - name: Check that submodules are all up-to-date
+        run: make check-submodules
       - uses: actions/cache@v2
         with:
           path: |
@@ -496,7 +498,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Run quickstart tests
-        run: make -C docs test-quickstarts
+        run: make -C docs/examples/quickstart test-ci
 
   release:
     name: Create release

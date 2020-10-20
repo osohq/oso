@@ -1,6 +1,6 @@
 .PHONY: test rust-test rust-build python-build python-test python-flask-build \
 	python-flask-test python-django-test ruby-test java-test docs-test fmt \
-	clippy lint wasm-build wasm-test js-test
+	clippy lint wasm-build wasm-test js-test check-submodules update-submodules
 
 test: rust-test python-test ruby-test java-test python-flask-test \
 	python-django-test wasm-test js-test
@@ -77,3 +77,9 @@ wasm-test:
 js-test:
 	$(MAKE) -C languages/js parity
 	$(MAKE) -C languages/js test
+
+check-submodules:
+	git submodule --quiet foreach 'git --no-pager diff origin/main main | wc -l | tr -d "[:blank:]" | (read code; exit $$code)'
+
+update-submodules:
+	git submodule update --init --remote
