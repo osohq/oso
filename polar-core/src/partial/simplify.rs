@@ -1,58 +1,32 @@
-use std::collections::HashSet;
-
 use super::Constraints;
 
 use crate::folder::{fold_operation, fold_term, Folder};
-//use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
-use crate::terms::{Operation, Operator, Symbol, Term, TermList, Value};
+use crate::terms::{Operation, Operator, Term, TermList, Value};
 
-// Variable(?) <= bound value which might be a partial
-//
-// Top level unify
-//
-// a: _this = ?
-// ?
-//
-// Dot op and comparison or unify
-//
-// a: (_this.foo = _temp)
-// _temp: this = ?
-//
-// a: _this.foo = _temp
-// _temp: this > 0
-//
-// a: _this.foo = _temp
-// _temp: this > 0, this = 1, this < 0
-//
-// _this.foo > 0 and _this.foo = 1 and _this.foo < 0
-//
-// a: _this.a = _value_2_8
-// _value_2_8: _this.b = _value_1_9
-// _value_1_9: _this > 0
-//
-// a: _this.a.b = _value_1_9
-// _value_1_9: _this > 0
-//
-// a: _this.a.b > 0
-
-pub fn simplify_bindings(mut bindings: Bindings) -> Bindings {
-    let root_partials = get_roots(&bindings);
-
-    for root in root_partials.iter() {
-        let simplified = simplify_partial(bindings.get(root).unwrap().clone());
-        bindings.insert(root.clone(), simplified);
-    }
-
-    to_expressions(&mut bindings);
-    remove_temporaries(&mut bindings);
-
+/// Simplify the values of the bindings to be returned to the host language.
+///
+/// - For partials, simplify the constraint expressions.
+/// - For non-partials, deep deref.
+pub fn simplify_bindings(bindings: Bindings) -> Bindings {
     bindings
+        .into_iter()
+        .filter(|(v, _)| !v.is_temporary_var())
+        .map(|(var, value)| match value.value() {
+            Value::Partial(_) => {
+                let mut simplified = simplify_partial(value);
+                if let Value::Partial(partial) = simplified.value() {
+                    simplified = partial.clone().into_expression();
+                }
+                (var, simplified)
+            }
+            _ => (var, value),
+        })
+        .collect()
 }
 
 pub struct Simplifier;
 
-// partial(_this = ?) => ?
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
         match t.value() {
@@ -87,8 +61,11 @@ impl Folder for Simplifier {
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
+        /// Given `_this` and `x`, return `x`.
+        /// Given `_this.x` and `_this.y`, return `_this.x.y`.
         fn sub_this(term: &Term, replacement: &Term) -> Term {
             match (term.value(), replacement.value()) {
+                (Value::Variable(v), _) if v.is_this_var() => replacement.clone(),
                 (
                     Value::Expression(Operation {
                         operator: Operator::Dot,
@@ -102,16 +79,11 @@ impl Folder for Simplifier {
                     operator: Operator::Dot,
                     args: vec![replacement.clone(), args.get(1).unwrap().clone()],
                 })),
-                _ => {
-                    if is_this_arg(term.value()) {
-                        replacement.clone()
-                    } else {
-                        term.clone()
-                    }
-                }
+                _ => term.clone(),
             }
         }
 
+        // Optionally sub `replacement` into each of the arguments of the operations.
         let mut map_ops = |ops: &[Operation], replacement: &Term| -> TermList {
             ops.iter()
                 .map(|o| Operation {
@@ -129,6 +101,7 @@ impl Folder for Simplifier {
                 Operation {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
+                        // Distribute expression over the partial.
                         (Value::Partial(c), Value::Expression(_)) => map_ops(&c.operations, right),
                         (Value::Expression(_), Value::Partial(c)) => map_ops(&c.operations, left),
                         _ => return fold_operation(o, self),
@@ -140,6 +113,7 @@ impl Folder for Simplifier {
     }
 }
 
+/// Simplify a partial until quiescence.
 fn simplify_partial(mut term: Term) -> Term {
     let mut simplifier = Simplifier {};
     let mut new;
@@ -151,63 +125,4 @@ fn simplify_partial(mut term: Term) -> Term {
         term = new;
     }
     new
-}
-
-fn is_this_arg(value: &Value) -> bool {
-    match value {
-        Value::Expression(Operation {
-            operator: Operator::Dot,
-            args,
-        }) => {
-            assert!(
-                matches!(args.get(0).unwrap().value(), Value::Variable(name) if name.is_this_var())
-            );
-            true
-        }
-        Value::Variable(name) if name.is_this_var() => true,
-        _ => false,
-    }
-}
-
-// partial(_x_5) { partial(_value_1_6) { _this > 0, _this > 1 } = _this.a }
-
-fn get_roots(bindings: &Bindings) -> HashSet<Symbol> {
-    let mut roots = HashSet::new();
-    for (symbol, val) in bindings.iter() {
-        if !symbol.is_temporary_var() {
-            if let Value::Partial(_) = val.value() {
-                roots.insert(symbol.clone());
-            }
-        }
-    }
-
-    roots
-}
-
-fn to_expressions(bindings: &mut Bindings) {
-    let mut new_bindings = Bindings::new();
-
-    for (name, val) in bindings.iter() {
-        if let Value::Partial(partial) = val.value() {
-            let name = name.clone();
-            let partial = partial.clone().into_expression();
-            new_bindings.insert(name, partial);
-        }
-    }
-
-    bindings.extend(new_bindings.into_iter());
-}
-
-fn remove_temporaries(bindings: &mut Bindings) {
-    let mut remove = HashSet::new();
-
-    for (name, _) in bindings.iter() {
-        if name.is_temporary_var() {
-            remove.insert(name.clone());
-        }
-    }
-
-    for name in remove.iter() {
-        bindings.remove(name);
-    }
 }

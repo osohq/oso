@@ -87,6 +87,7 @@ impl Constraints {
 
     /// Return the expression represented by this partial's constraints.
     pub fn into_expression(self) -> Term {
+        // TODO(gj): Ensure we aren't double-wrapping in an And here.
         Term::new_temporary(Value::Expression(Operation {
             operator: Operator::And,
             args: self
