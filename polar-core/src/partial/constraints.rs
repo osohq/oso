@@ -452,6 +452,23 @@ mod test {
     }
 
     #[test]
+    fn test_multiple_partials() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x, y) if x = 1 and y = 2;"#)?;
+        let mut query = polar.new_query_from_term(
+            term!(call!(
+                "f",
+                [Constraints::new(sym!("a")), Constraints::new(sym!("b"))]
+            )),
+            false,
+        );
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(1));
+        assert_eq!(next[&sym!("b")], term!(2));
+        Ok(())
+    }
+
+    #[test]
     fn test_unsupported_ops_on_partial() -> TestResult {
         let polar = Polar::new();
 
