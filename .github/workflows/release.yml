@@ -462,10 +462,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Clone submodules
-        run: make update-submodules
+      - name: Initialize submodules
+        working-directory: docs/examples/quickstart
+        run: git submodule update --init -- oso-java-quickstart oso-nodejs-quickstart oso-python-quickstart oso-ruby-quickstart oso-rust-quickstart
       - name: Check that submodules are all up-to-date
-        run: make check-submodules
+        run: |
+          git submodule foreach git remote update
+          git submodule foreach '[[ -z $(git --no-pager diff origin/main main) ]]'
       - uses: actions/cache@v2
         with:
           path: |
