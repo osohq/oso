@@ -5,15 +5,6 @@ use super::rules::*;
 use super::terms::*;
 
 pub trait Folder: Sized {
-    fn fold_rule(&mut self, r: Rule) -> Rule {
-        fold_rule(r, self)
-    }
-    fn fold_term(&mut self, t: Term) -> Term {
-        fold_term(t, self)
-    }
-    fn fold_value(&mut self, v: Value) -> Value {
-        fold_value(v, self)
-    }
     fn fold_number(&mut self, n: Numeric) -> Numeric {
         fold_number(n, self)
     }
@@ -25,6 +16,27 @@ pub trait Folder: Sized {
     }
     fn fold_id(&mut self, i: u64) -> u64 {
         fold_id(i, self)
+    }
+    fn fold_name(&mut self, n: Symbol) -> Symbol {
+        fold_name(n, self)
+    }
+    fn fold_variable(&mut self, v: Symbol) -> Symbol {
+        fold_variable(v, self)
+    }
+    fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
+        fold_variable(v, self)
+    }
+    fn fold_operator(&mut self, o: Operator) -> Operator {
+        fold_operator(o, self)
+    }
+    fn fold_rule(&mut self, r: Rule) -> Rule {
+        fold_rule(r, self)
+    }
+    fn fold_term(&mut self, t: Term) -> Term {
+        fold_term(t, self)
+    }
+    fn fold_value(&mut self, v: Value) -> Value {
+        fold_value(v, self)
     }
     fn fold_external_instance(&mut self, e: ExternalInstance) -> ExternalInstance {
         fold_external_instance(e, self)
@@ -44,36 +56,21 @@ pub trait Folder: Sized {
     fn fold_list(&mut self, l: TermList) -> TermList {
         fold_list(l, self)
     }
-    fn fold_variable(&mut self, v: Symbol) -> Symbol {
-        fold_variable(v, self)
-    }
-    fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
-        fold_variable(v, self)
-    }
-    fn fold_operator(&mut self, o: Operator) -> Operator {
-        fold_operator(o, self)
-    }
     fn fold_operation(&mut self, o: Operation) -> Operation {
         fold_operation(o, self)
-    }
-    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
-        fold_constraints(c, self)
-    }
-    fn fold_name(&mut self, n: Symbol) -> Symbol {
-        fold_name(n, self)
     }
     fn fold_param(&mut self, p: Parameter) -> Parameter {
         fold_param(p, self)
     }
-    fn fold_params(&mut self, p: Vec<Parameter>) -> Vec<Parameter> {
-        fold_params(p, self)
+    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
+        fold_constraints(c, self)
     }
 }
 
 pub fn fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T) -> Rule {
     Rule {
         name: fld.fold_name(name),
-        params: fld.fold_params(params),
+        params: params.into_iter().map(|p| fld.fold_param(p)).collect(),
         body: fld.fold_term(body),
     }
 }
@@ -225,13 +222,6 @@ pub fn fold_param<T: Folder>(
         parameter: fld.fold_term(parameter),
         specializer: specializer.map(|t| fld.fold_term(t)),
     }
-}
-
-pub fn fold_params<T: Folder>(params: Vec<Parameter>, fld: &mut T) -> Vec<Parameter> {
-    params
-        .into_iter()
-        .map(|t| fld.fold_param(t))
-        .collect::<Vec<Parameter>>()
 }
 
 #[cfg(test)]

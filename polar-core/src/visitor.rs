@@ -48,8 +48,8 @@ pub trait Visitor: Sized {
     fn visit_param(&mut self, p: &Parameter) {
         walk_param(self, p)
     }
-    fn visit_partial(&mut self, c: &Constraints) {
-        walk_partial(self, c)
+    fn visit_constraints(&mut self, c: &Constraints) {
+        walk_constraints(self, c)
     }
 }
 
@@ -89,7 +89,7 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::Variable(v) => visitor.visit_variable(v),
         Value::RestVariable(r) => visitor.visit_rest_variable(r),
         Value::Expression(o) => visitor.visit_operation(o),
-        Value::Partial(p) => visitor.visit_partial(p),
+        Value::Partial(p) => visitor.visit_constraints(p),
     }
 }
 
@@ -104,7 +104,7 @@ pub fn walk_external_instance<V: Visitor>(visitor: &mut V, instance: &ExternalIn
 
 pub fn walk_instance_literal<V: Visitor>(visitor: &mut V, instance: &InstanceLiteral) {
     visitor.visit_name(&instance.tag);
-    walk_fields!(visitor, &instance.fields.fields);
+    visitor.visit_dictionary(&instance.fields);
 }
 
 pub fn walk_dictionary<V: Visitor>(visitor: &mut V, dict: &Dictionary) {
@@ -113,7 +113,7 @@ pub fn walk_dictionary<V: Visitor>(visitor: &mut V, dict: &Dictionary) {
 
 pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
     match pattern {
-        Pattern::Dictionary(dict) => walk_fields!(visitor, &dict.fields),
+        Pattern::Dictionary(dict) => visitor.visit_dictionary(&dict),
         Pattern::Instance(instance) => visitor.visit_instance_literal(&instance),
     }
 }
@@ -143,9 +143,9 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
     }
 }
 
-pub fn walk_partial<V: Visitor>(visitor: &mut V, partial: &Constraints) {
-    visitor.visit_name(&partial.variable);
-    walk_elements!(visitor, visit_operation, &partial.operations);
+pub fn walk_constraints<V: Visitor>(visitor: &mut V, constraints: &Constraints) {
+    visitor.visit_name(&constraints.variable);
+    walk_elements!(visitor, visit_operation, &constraints.operations);
 }
 
 #[cfg(test)]

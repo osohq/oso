@@ -84,7 +84,7 @@ impl<'kb> Folder for Rewriter<'kb> {
         let mut body = self.fold_term(body);
 
         self.stack.push(vec![]);
-        let params = self.fold_params(params);
+        let params = params.into_iter().map(|p| self.fold_param(p)).collect();
         let rewrites = self.stack.pop().unwrap();
         if !rewrites.is_empty() {
             let terms = unwrap_and(&body);
