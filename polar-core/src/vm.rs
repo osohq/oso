@@ -2727,6 +2727,29 @@ mod tests {
     }
 
     #[test]
+    fn deep_deref() {
+        let mut vm = PolarVirtualMachine::default();
+        let one = term!(1);
+        let two = term!(1);
+        let one_var = sym!("one");
+        let two_var = sym!("two");
+        vm.bind(&one_var, one.clone());
+        vm.bind(&two_var, two.clone());
+        let dict = btreemap! {
+            sym!("x") => term!(one_var),
+            sym!("y") => term!(two_var),
+        };
+        let list = term!([dict]);
+        assert_eq!(
+            vm.deep_deref(&list).value().clone(),
+            Value::List(vec![term!(btreemap! {
+                sym!("x") => one,
+                sym!("y") => two,
+            })])
+        );
+    }
+
+    #[test]
     #[allow(clippy::cognitive_complexity)]
     fn and_expression() {
         let f1 = rule!("f", [1]);
