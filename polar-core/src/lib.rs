@@ -23,6 +23,6 @@ mod runnable;
 mod sources;
 pub mod terms;
 pub mod traces;
-mod vm;
 mod visitor;
+mod vm;
 mod warnings;
