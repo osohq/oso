@@ -1597,10 +1597,17 @@ impl PolarVirtualMachine {
                 })?;
             }
             Value::Partial(partial) => {
+                if matches!(field.value(), Value::Call(_)) {
+                    return Err(self.set_error_context(
+                        &object,
+                        error::RuntimeError::Unsupported {
+                            msg: format!("cannot call method on partial {}", object.to_polar()),
+                        },
+                    ));
+                }
+
                 let mut partial = partial.clone();
-
                 let value_partial = partial.lookup(field, value.clone());
-
                 let lookup_result_var = value.value().as_symbol().unwrap();
                 self.bind(lookup_result_var, value_partial);
                 self.bind(partial.name(), partial.clone().into_term());
@@ -1679,10 +1686,7 @@ impl PolarVirtualMachine {
                 return Err(self.set_error_context(
                     term,
                     error::RuntimeError::Unsupported {
-                        msg: format!(
-                            "numeric operation only supported on numbers, you have {}",
-                            term.to_polar()
-                        ),
+                        msg: format!("unsupported arithmetic operands: {}", term.to_polar()),
                     },
                 ))
             }

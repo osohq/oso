@@ -221,6 +221,7 @@ impl Runnable for IsaConstraintCheck {
 mod test {
     use super::*;
 
+    use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
     use crate::kb::Bindings;
@@ -242,7 +243,7 @@ mod test {
         };
     }
 
-    fn next_binding(query: &mut Query) -> Result<Bindings, crate::error::PolarError> {
+    fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
         let event = query.next_event()?;
         if let QueryEvent::Result { bindings, .. } = event {
             Ok(bindings)
@@ -251,8 +252,10 @@ mod test {
         }
     }
 
+    type TestResult = Result<(), PolarError>;
+
     #[test]
-    fn basic_test() -> Result<(), crate::error::PolarError> {
+    fn basic_test() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"f(x) if x = 1;"#)?;
         polar.load_str(r#"f(x) if x = 2;"#)?;
@@ -274,7 +277,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_and() -> Result<(), crate::error::PolarError> {
+    fn test_partial_and() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"f(x, y, z) if x = y and x = z;"#)?;
 
@@ -290,7 +293,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_two_rule() -> Result<(), crate::error::PolarError> {
+    fn test_partial_two_rule() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"f(x, y, z) if x = y and x = z and g(x);"#)?;
         polar.load_str(r#"g(x) if x = 3;"#)?;
@@ -314,7 +317,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_isa() -> Result<(), crate::error::PolarError> {
+    fn test_partial_isa() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"f(x: Post) if x.foo = 1;"#)?;
         polar.load_str(r#"f(x: User) if x.bar = 1;"#)?;
@@ -332,7 +335,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_isa_two_rule() -> Result<(), crate::error::PolarError> {
+    fn test_partial_isa_two_rule() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#)?;
         polar.load_str(r#"f(x: User) if x.bar = 1 and g(x);"#)?;
@@ -394,7 +397,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_comparison() -> Result<(), crate::error::PolarError> {
+    fn test_partial_comparison() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"positive(x) if x > 0;"#)?;
         polar.load_str(r#"positive(x) if x > 0 and x < 0;"#)?;
@@ -414,7 +417,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_comparison_dot() -> Result<(), crate::error::PolarError> {
+    fn test_partial_comparison_dot() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"positive(x) if x.a > 0;"#)?;
         let mut query = polar.new_query_from_term(
@@ -427,7 +430,7 @@ mod test {
     }
 
     #[test]
-    fn test_partial_nested_dot_ops() -> Result<(), crate::error::PolarError> {
+    fn test_partial_nested_dot_ops() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"f(x) if x.y.z > 0;"#)?;
         let mut query =
@@ -444,6 +447,29 @@ mod test {
             "a",
             "_this.y = 0 and _this.y > 1 and _this.y.z > 1 and _this = 2"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_unsupported_ops_on_partial() -> TestResult {
+        let polar = Polar::new();
+
+        // Arithmetic ops.
+        polar.load_str(r#"f(x) if x = x + 0;"#)?;
+        let mut query =
+            polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+
+        // Method calls.
+        polar.load_str(r#"g(x) if x.foo();"#)?;
+        let mut query =
+            polar.new_query_from_term(term!(call!("g", [Constraints::new(sym!("a"))])), false);
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
 
         Ok(())
     }
