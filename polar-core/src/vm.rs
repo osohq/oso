@@ -892,6 +892,8 @@ impl PolarVirtualMachine {
         );
 
         match (&left.value(), &right.value()) {
+            (_, Value::Partial(_)) => unreachable!("cannot match against a partial"),
+
             (Value::List(left), Value::List(right)) => {
                 self.unify_lists(left, right, |(left, right)| Goal::Isa {
                     left: left.clone(),
