@@ -1779,6 +1779,12 @@ impl PolarVirtualMachine {
                     args: vec![left_term, right_term],
                 })
             }
+            (Value::Partial(_), Value::Partial(_)) => Err(self.set_error_context(
+                &term,
+                error::RuntimeError::Unsupported {
+                    msg: "cannot compare partials".to_string(),
+                },
+            )),
             (Value::Partial(partial), _) => {
                 let mut partial = partial.clone();
                 partial.compare(op, right_term.clone());
@@ -2011,14 +2017,16 @@ impl PolarVirtualMachine {
     /// This is sort of a "sub-goal" of `Unify`.
     fn unify_partial(&mut self, partial: &partial::Constraints, right: &Term) -> PolarResult<()> {
         let mut partial = partial.clone();
-        if let Value::Partial(right_partial) = right.value() {
-            partial.unify(Term::new_temporary(Value::Variable(
-                right_partial.name().clone(),
-            )));
-        } else {
-            partial.unify(right.clone());
+        if matches!(right.value(), Value::Partial(_)) {
+            return Err(self.set_error_context(
+                &right,
+                error::RuntimeError::Unsupported {
+                    msg: "cannot unify partials".to_string(),
+                },
+            ));
         }
 
+        partial.unify(right.clone());
         let name = partial.name().clone();
         self.bind(&name, partial.into_term());
 

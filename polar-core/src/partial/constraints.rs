@@ -488,6 +488,32 @@ mod test {
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
 
+        // Multiple interacting query partials.
+        // Unification.
+        polar.load_str(r#"h(x, y) if x = y;"#)?;
+        let mut query = polar.new_query_from_term(
+            term!(call!(
+                "h",
+                [Constraints::new(sym!("a")), Constraints::new(sym!("b"))]
+            )),
+            false,
+        );
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+
+        // Comparison.
+        polar.load_str(r#"i(x, y) if x > y;"#)?;
+        let mut query = polar.new_query_from_term(
+            term!(call!(
+                "i",
+                [Constraints::new(sym!("a")), Constraints::new(sym!("b"))]
+            )),
+            false,
+        );
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
         Ok(())
     }
 }
