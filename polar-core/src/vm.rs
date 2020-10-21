@@ -146,12 +146,6 @@ impl GoalStack {
     }
 }
 
-// impl From<Vec<Goal>> for GoalStack {
-//     fn from(other: Vec<Goal>) -> Self {
-//         Self(other.into_iter().map(Rc::new).collect())
-//     }
-// }
-
 impl std::ops::Deref for GoalStack {
     type Target = Vec<Rc<Goal>>;
 
