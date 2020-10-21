@@ -923,6 +923,58 @@ fn test_comparisons() {
     assert!(qeval(&mut polar, "0.0 == 0"));
 }
 
+fn check_arithmetic_error(p: &mut Polar, query: &str) {
+    let mut query = p.new_query(query, false).unwrap();
+    let error = query.next_event().unwrap_err();
+    assert!(matches!(
+        error.kind,
+        ErrorKind::Runtime(RuntimeError::ArithmeticError { .. })
+    ));
+}
+
+#[test]
+fn test_modulo_and_remainder() {
+    let mut polar = Polar::new();
+    assert!(qeval(&mut polar, "1 mod 1 == 0"));
+    assert!(qeval(&mut polar, "1 rem 1 == 0"));
+    assert!(qeval(&mut polar, "1 mod -1 == 0"));
+    assert!(qeval(&mut polar, "1 rem -1 == 0"));
+    assert!(qeval(&mut polar, "0 mod 1 == 0"));
+    assert!(qeval(&mut polar, "0 rem 1 == 0"));
+    assert!(qeval(&mut polar, "0 mod -1 == 0"));
+    assert!(qeval(&mut polar, "0 rem -1 == 0"));
+    check_arithmetic_error(&mut polar, "1 mod 0 = x");
+    check_arithmetic_error(&mut polar, "1 rem 0 = x");
+    let res = qvar(&mut polar, "1 mod 0.0 = x", "x")[0].clone();
+    if let Value::Number(Numeric::Float(x)) = res {
+        assert!(x.is_nan());
+    } else {
+        panic!();
+    }
+    let res = qvar(&mut polar, "1 rem 0.0 = x", "x")[0].clone();
+    if let Value::Number(Numeric::Float(x)) = res {
+        assert!(x.is_nan());
+    } else {
+        panic!();
+    }
+
+    // From http://www.lispworks.com/documentation/lw50/CLHS/Body/f_mod_r.htm.
+    assert!(qeval(&mut polar, "-1 rem 5 == -1"));
+    assert!(qeval(&mut polar, "-1 mod 5 == 4"));
+    assert!(qeval(&mut polar, "13 mod 4 == 1"));
+    assert!(qeval(&mut polar, "13 rem 4 == 1"));
+    assert!(qeval(&mut polar, "-13 mod 4 == 3"));
+    assert!(qeval(&mut polar, "-13 rem 4 == -1"));
+    assert!(qeval(&mut polar, "13 mod -4 == -3"));
+    assert!(qeval(&mut polar, "13 rem -4 == 1"));
+    assert!(qeval(&mut polar, "-13 mod -4 == -1"));
+    assert!(qeval(&mut polar, "-13 rem -4 == -1"));
+    assert!(qeval(&mut polar, "13.4 mod 1 == 0.40000000000000036"));
+    assert!(qeval(&mut polar, "13.4 rem 1 == 0.40000000000000036"));
+    assert!(qeval(&mut polar, "-13.4 mod 1 == 0.5999999999999996"));
+    assert!(qeval(&mut polar, "-13.4 rem 1 == -0.40000000000000036"));
+}
+
 #[test]
 fn test_arithmetic() {
     let mut polar = Polar::new();
@@ -956,16 +1008,8 @@ fn test_arithmetic() {
     assert!(qeval(&mut polar, "odd(3)"));
     assert!(qnull(&mut polar, "odd(4)"));
 
-    let check_arithmetic_error = |query: &str| {
-        let mut query = polar.new_query(query, false).unwrap();
-        let error = query.next_event().unwrap_err();
-        assert!(matches!(
-            error.kind,
-            ErrorKind::Runtime(RuntimeError::ArithmeticError { .. })
-        ));
-    };
-    check_arithmetic_error("9223372036854775807 + 1 > 0");
-    check_arithmetic_error("-9223372036854775807 - 2 < 0");
+    check_arithmetic_error(&mut polar, "9223372036854775807 + 1 > 0");
+    check_arithmetic_error(&mut polar, "-9223372036854775807 - 2 < 0");
 
     // x / 0 = ∞
     assert_eq!(qvar(&mut polar, "x=1/0", "x"), vec![value!(f64::INFINITY)]);

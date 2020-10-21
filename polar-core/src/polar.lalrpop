@@ -27,42 +27,44 @@ extern {
         "String" => lexer::Token::String(<String>),
         "Boolean" => lexer::Token::Boolean(<bool>),
         "Symbol" => lexer::Token::Symbol(<Symbol>),
-        ":" => lexer::Token::Colon,     // :
-        "," => lexer::Token::Comma,     // ,
-        "[" => lexer::Token::LB,        // [
-        "]" => lexer::Token::RB,        // ]
-        "(" => lexer::Token::LP,        // (
-        ")" => lexer::Token::RP,        // )
-        "{" => lexer::Token::LCB,       // {
-        "}" => lexer::Token::RCB,       // }
-        "." => lexer::Token::Dot,       // .
-        "new" => lexer::Token::New,     // new
-        "!" => lexer::Token::Bang,       // !
-        "*" => lexer::Token::Mul,       // *
-        "/" => lexer::Token::Div,       // /
-        "+" => lexer::Token::Add,       // +
-        "-" => lexer::Token::Sub,       // -
-        "==" => lexer::Token::Eq,       // ==
-        "!=" => lexer::Token::Neq,      // !=
-        "<=" => lexer::Token::Leq,      // <=
-        ">=" => lexer::Token::Geq,      // >=
-        "<" => lexer::Token::Lt,        // <
-        ">" => lexer::Token::Gt,        // >
-        "=" => lexer::Token::Unify,     // =
-        ":=" => lexer::Token::Assign,    // :=
-        "|" => lexer::Token::Pipe,      // |
-        ";" => lexer::Token::SemiColon, // ;
-        "?=" => lexer::Token::Query,    // ?=
-        "cut" => lexer::Token::Cut,
-        "debug" => lexer::Token::Debug,
-        "print" => lexer::Token::Print,
-        "in" => lexer::Token::In,       // in
-        "forall" => lexer::Token::ForAll,     // forall
-        "if" => lexer::Token::If,       // if
-        "and" => lexer::Token::And,     // and
-        "or" => lexer::Token::Or,       // or
-        "not" => lexer::Token::Not,       // not
-        "matches" => lexer::Token::Matches,   // matches
+        ":" => lexer::Token::Colon,         // :
+        "," => lexer::Token::Comma,         // ,
+        "[" => lexer::Token::LB,            // [
+        "]" => lexer::Token::RB,            // ]
+        "(" => lexer::Token::LP,            // (
+        ")" => lexer::Token::RP,            // )
+        "{" => lexer::Token::LCB,           // {
+        "}" => lexer::Token::RCB,           // }
+        "." => lexer::Token::Dot,           // .
+        "new" => lexer::Token::New,         // new
+        "!" => lexer::Token::Bang,          // !
+        "*" => lexer::Token::Mul,           // *
+        "/" => lexer::Token::Div,           // /
+        "mod" => lexer::Token::Mod,         // mod
+        "rem" => lexer::Token::Rem,         // rem
+        "+" => lexer::Token::Add,           // +
+        "-" => lexer::Token::Sub,           // -
+        "==" => lexer::Token::Eq,           // ==
+        "!=" => lexer::Token::Neq,          // !=
+        "<=" => lexer::Token::Leq,          // <=
+        ">=" => lexer::Token::Geq,          // >=
+        "<" => lexer::Token::Lt,            // <
+        ">" => lexer::Token::Gt,            // >
+        "=" => lexer::Token::Unify,         // =
+        ":=" => lexer::Token::Assign,       // :=
+        "|" => lexer::Token::Pipe,          // |
+        ";" => lexer::Token::SemiColon,     // ;
+        "?=" => lexer::Token::Query,        // ?=
+        "cut" => lexer::Token::Cut,         // cut
+        "debug" => lexer::Token::Debug,     // debug
+        "print" => lexer::Token::Print,     // print
+        "in" => lexer::Token::In,           // in
+        "forall" => lexer::Token::ForAll,   // forall
+        "if" => lexer::Token::If,           // if
+        "and" => lexer::Token::And,         // and
+        "or" => lexer::Token::Or,           // or
+        "not" => lexer::Token::Not,         // not
+        "matches" => lexer::Token::Matches, // matches
     }
 }
 
@@ -300,10 +302,12 @@ Exp8<T>: Term = {
     <Exp9<T>>,
 }
 
-// * /
+// * / mod rem
 Op7: Operator = {
     "*" => Operator::Mul,
     "/" => Operator::Div,
+    "mod" => Operator::Mod,
+    "rem" => Operator::Rem,
 }
 MulExp<T>: Value = {
     <exp7:Exp7<T>> <operator:Op7> <exp8:Exp8<T>> => {

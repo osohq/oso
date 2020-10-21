@@ -61,6 +61,8 @@ pub enum Token {
     Bang,  // !
     Mul,   // *
     Div,   // /
+    Mod,   // mod
+    Rem,   // rem
     Add,   // +
     Sub,   // -
     Eq,    // ==
@@ -108,6 +110,8 @@ impl ToString for Token {
             Token::Bang => "!".to_owned(),          // !
             Token::Mul => "*".to_owned(),           // *
             Token::Div => "/".to_owned(),           // /
+            Token::Mod => "mod".to_owned(),         // mod
+            Token::Rem => "rem".to_owned(),         // rem
             Token::Add => "+".to_owned(),           // +
             Token::Sub => "-".to_owned(),           // -
             Token::Eq => "==".to_owned(),           // ==
@@ -234,6 +238,10 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Not, last + 1)))
         } else if &self.buf == "matches" {
             Some(Ok((start, Token::Matches, last + 1)))
+        } else if &self.buf == "mod" {
+            Some(Ok((start, Token::Mod, last + 1)))
+        } else if &self.buf == "rem" {
+            Some(Ok((start, Token::Rem, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }
