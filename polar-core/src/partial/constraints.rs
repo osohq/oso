@@ -469,27 +469,32 @@ mod test {
     }
 
     #[test]
-    fn test_unsupported_ops_on_partial() -> TestResult {
+    fn test_partial_in_arithmetic_op() -> TestResult {
         let polar = Polar::new();
-
-        // Arithmetic ops.
         polar.load_str(r#"f(x) if x = x + 0;"#)?;
         let mut query =
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
         let error = query.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        Ok(())
+    }
 
-        // Method calls.
+    #[test]
+    fn test_method_call_on_partial() -> TestResult {
+        let polar = Polar::new();
         polar.load_str(r#"g(x) if x.foo();"#)?;
         let mut query =
             polar.new_query_from_term(term!(call!("g", [Constraints::new(sym!("a"))])), false);
         let error = query.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        Ok(())
+    }
 
-        // Multiple interacting query partials.
-        // Unification.
+    #[test]
+    fn test_unifying_partials() -> TestResult {
+        let polar = Polar::new();
         polar.load_str(r#"h(x, y) if x = y;"#)?;
         let mut query = polar.new_query_from_term(
             term!(call!(
@@ -501,12 +506,16 @@ mod test {
         let error = query.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        Ok(())
+    }
 
-        // Comparison.
-        polar.load_str(r#"i(x, y) if x > y;"#)?;
+    #[test]
+    fn test_comparing_partials() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x, y) if x > y;"#)?;
         let mut query = polar.new_query_from_term(
             term!(call!(
-                "i",
+                "f",
                 [Constraints::new(sym!("a")), Constraints::new(sym!("b"))]
             )),
             false,
@@ -514,6 +523,18 @@ mod test {
         let error = query.next_event().unwrap_err();
         assert!(matches!(error, PolarError {
             kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        Ok(())
+    }
+
+    #[test]
+    fn test_dot_lookup_with_partial_as_field() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x) if {}.(x);"#)?;
+        let mut query =
+            polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
         Ok(())
     }
 }
