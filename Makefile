@@ -79,7 +79,7 @@ js-test:
 	$(MAKE) -C languages/js test
 
 check-submodules:
-	git submodule --quiet foreach 'git --no-pager diff origin/main main | wc -l | tr -d "[:blank:]" | (read code; exit $$code)'
+	git submodule --quiet foreach 'git --no-pager diff origin/main main | wc -l | tr -d "[:blank:]" | (read code; if [ "$$code" = "0" ]; then exit 0; else exit 1; fi)'
 
 update-submodules:
 	git submodule update --init --remote
