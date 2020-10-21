@@ -37,8 +37,6 @@ rescue Errno::ESRCH => e
 end
 
 def kill_server(server)
-  return if server.nil?
-
   Process.kill 'TERM', server
   Process.wait2 server
 rescue Errno::ESRCH => e
@@ -131,7 +129,7 @@ quickstarts.each do |qs|
 
           puts "#{prefix} Success!"
         ensure
-          kill_server server
+          kill_server server unless server.nil?
           ensure_port_5050_is_open
           FileUtils.mv 'original.polar', 'expenses.polar', force: true
         end
