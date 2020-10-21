@@ -537,4 +537,45 @@ mod test {
             kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
         Ok(())
     }
+
+    #[test]
+    fn test_cut_with_partial() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(
+            r#"
+            f(x) if x = 1;
+            f(x) if x = 2 and cut;
+            f(x) if x = 3;
+        "#,
+        )?;
+        let mut query =
+            polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(1));
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(2));
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+        Ok(())
+    }
+
+    #[test]
+    fn test_method_sorting_with_cut_and_partial() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(
+            r#"
+            f(x, y) if cut and x = 1;
+            f(x, y: 2) if x = 2;
+        "#,
+        )?;
+        let mut query = polar.new_query_from_term(
+            term!(call!("f", [Constraints::new(sym!("a")), value!(2)])),
+            false,
+        );
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(2));
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(1));
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+        Ok(())
+    }
 }
