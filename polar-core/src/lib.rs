@@ -24,5 +24,5 @@ mod sources;
 pub mod terms;
 pub mod traces;
 mod vm;
-mod walker;
+mod visitor;
 mod warnings;

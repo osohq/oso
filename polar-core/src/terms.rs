@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 pub use super::numerics::Numeric;
 use super::partial::Constraints;
-use super::walker::{walk_term, Visitor};
+use super::visitor::{walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {

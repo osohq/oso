@@ -2,7 +2,7 @@ use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
-use super::walker::{walk_rule, walk_term, Visitor};
+use super::visitor::{walk_rule, walk_term, Visitor};
 
 use std::collections::{hash_map::Entry, HashMap};
 
