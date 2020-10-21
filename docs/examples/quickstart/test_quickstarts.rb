@@ -47,7 +47,7 @@ end
 
 quickstarts.each do |qs|
   lang = qs[:lang]
-  qs_dir = "oso-#{lang}-quickstart"
+  qs_dir = File.join(File.expand_path(__dir__), "oso-#{lang}-quickstart")
   Bundler.with_unbundled_env do
     Dir.chdir(qs_dir) do
       prefix = "#{Time.now.to_i} [#{lang}]"
