@@ -1394,7 +1394,12 @@ impl PolarVirtualMachine {
             | op @ Operator::Neq => {
                 return self.comparison_op_helper(term, op, args);
             }
-            op @ Operator::Add | op @ Operator::Sub | op @ Operator::Mul | op @ Operator::Div => {
+            op @ Operator::Add
+            | op @ Operator::Sub
+            | op @ Operator::Mul
+            | op @ Operator::Div
+            | op @ Operator::Mod
+            | op @ Operator::Rem => {
                 return self.arithmetic_op_helper(term, op, args);
             }
             Operator::In => {
@@ -1652,6 +1657,8 @@ impl PolarVirtualMachine {
                     Operator::Sub => *left - *right,
                     Operator::Mul => *left * *right,
                     Operator::Div => *left / *right,
+                    Operator::Mod => (*left).modulo(*right),
+                    Operator::Rem => *left % *right,
                     _ => {
                         return Err(self.set_error_context(
                             term,

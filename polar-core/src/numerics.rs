@@ -5,7 +5,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem::discriminant;
 use std::num::FpCategory;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub enum Numeric {
@@ -94,6 +94,36 @@ impl Sub for Numeric {
             (Numeric::Integer(a), Numeric::Float(b)) => Some(Numeric::Float(a as f64 - b)),
             (Numeric::Float(a), Numeric::Integer(b)) => Some(Numeric::Float(a - b as f64)),
             (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(a - b)),
+        }
+    }
+}
+
+impl Numeric {
+    pub fn modulo(self, modulus: Self) -> Option<Self> {
+        fn modulo(a: f64, b: f64) -> f64 {
+            ((a % b) + b) % b
+        }
+
+        match (self, modulus) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => {
+                a.checked_rem(b).map(|c| (c + b) % b).map(Numeric::Integer)
+            }
+            (Numeric::Integer(a), Numeric::Float(b)) => Some(Numeric::Float(modulo(a as f64, b))),
+            (Numeric::Float(a), Numeric::Integer(b)) => Some(Numeric::Float(modulo(a, b as f64))),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(modulo(a, b))),
+        }
+    }
+}
+
+impl Rem for Numeric {
+    type Output = Option<Self>;
+
+    fn rem(self, other: Self) -> Option<Self> {
+        match (self, other) {
+            (Numeric::Integer(a), Numeric::Integer(b)) => a.checked_rem(b).map(Numeric::Integer),
+            (Numeric::Integer(a), Numeric::Float(b)) => Some(Numeric::Float((a as f64) % b)),
+            (Numeric::Float(a), Numeric::Integer(b)) => Some(Numeric::Float(a % (b as f64))),
+            (Numeric::Float(a), Numeric::Float(b)) => Some(Numeric::Float(a % b)),
         }
     }
 }

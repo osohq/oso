@@ -58,7 +58,13 @@ impl<'kb> Rewriter<'kb> {
     /// Return true if the expression should be rewritten.
     fn needs_rewrite(&self, o: &Operation) -> bool {
         match o.operator {
-            Operator::Add | Operator::Dot | Operator::Div | Operator::Mul | Operator::Sub
+            Operator::Add
+            | Operator::Dot
+            | Operator::Div
+            | Operator::Mul
+            | Operator::Sub
+            | Operator::Mod
+            | Operator::Rem
                 if o.args.len() == 2 =>
             {
                 true
