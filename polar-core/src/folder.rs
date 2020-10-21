@@ -59,14 +59,14 @@ pub trait Folder: Sized {
     fn fold_constraints(&mut self, c: Constraints) -> Constraints {
         fold_constraints(c, self)
     }
-    fn fold_name(&mut self, name: Symbol) -> Symbol {
-        fold_name(name, self)
+    fn fold_name(&mut self, n: Symbol) -> Symbol {
+        fold_name(n, self)
     }
-    fn fold_param(&mut self, param: Parameter) -> Parameter {
-        fold_param(param, self)
+    fn fold_param(&mut self, p: Parameter) -> Parameter {
+        fold_param(p, self)
     }
-    fn fold_params(&mut self, params: Vec<Parameter>) -> Vec<Parameter> {
-        fold_params(params, self)
+    fn fold_params(&mut self, p: Vec<Parameter>) -> Vec<Parameter> {
+        fold_params(p, self)
     }
 }
 
