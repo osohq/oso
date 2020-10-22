@@ -12,11 +12,12 @@ use crate::error::{self, PolarResult};
 use crate::events::*;
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
+use crate::inverter::Inverter;
 use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial;
+use crate::partial::{simplify_bindings, Constraints};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -127,7 +128,7 @@ pub struct Binding(pub Symbol, pub Term);
 #[derive(Clone, Debug)]
 pub struct Choice {
     pub alternatives: Vec<GoalStack>,
-    bsp: usize,            // binding stack pointer
+    pub bsp: usize,        // binding stack pointer
     pub goals: GoalStack,  // goal stack snapshot
     queries: Queries,      // query stack snapshot
     trace: Vec<Rc<Trace>>, // trace snapshot
@@ -165,11 +166,12 @@ impl std::ops::DerefMut for GoalStack {
 
 pub type Queries = TermList;
 
+#[derive(Clone)]
 pub struct PolarVirtualMachine {
     /// Stacks.
     pub goals: GoalStack,
     pub bindings: BindingStack,
-    choices: Choices,
+    pub choices: Choices,
     pub queries: Queries,
 
     pub tracing: bool,
@@ -234,7 +236,7 @@ fn query_contains_partial(goals: &Goals) -> bool {
     }
 
     impl Visitor for PartialVisitor {
-        fn visit_constraints(&mut self, _: &partial::Constraints) {
+        fn visit_constraints(&mut self, _: &Constraints) {
             self.has_partial = true;
         }
     }
@@ -256,7 +258,7 @@ impl PolarVirtualMachine {
     /// Reverse the goal list for the sanity of callers.
     pub fn new(
         kb: Arc<RwLock<KnowledgeBase>>,
-        trace: bool,
+        tracing: bool,
         goals: Goals,
         messages: MessageQueue,
     ) -> Self {
@@ -275,7 +277,7 @@ impl PolarVirtualMachine {
             csp: 0,
             choices: vec![],
             queries: vec![],
-            tracing: trace,
+            tracing,
             trace_stack: vec![],
             trace: vec![],
             external_error: None,
@@ -292,8 +294,14 @@ impl PolarVirtualMachine {
         vm
     }
 
-    pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, trace: bool, goals: Goals) -> Self {
-        PolarVirtualMachine::new(kb, trace, goals, MessageQueue::new())
+    pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, tracing: bool, goals: Goals) -> Self {
+        PolarVirtualMachine::new(kb, tracing, goals, MessageQueue::new())
+    }
+
+    pub fn clone_with_bindings(&self, goals: Goals) -> Self {
+        let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
+        vm.bindings.clone_from(&self.bindings);
+        vm
     }
 
     #[cfg(test)]
@@ -1340,17 +1348,12 @@ impl PolarVirtualMachine {
                 // Push a choice point that queries for the term; if the query succeeds cut and backtrack
                 assert_eq!(args.len(), 1);
                 let term = args.pop().unwrap();
-                let alternatives = vec![
-                    vec![
-                        Goal::Query { term },
-                        Goal::Cut {
-                            choice_index: self.choices.len(),
-                        },
-                        Goal::Backtrack,
-                    ],
+                let inverter = Box::new(Inverter::new(self, vec![Goal::Query { term }]));
+                self.choose_conditional(
+                    vec![Goal::Run { runnable: inverter }],
                     vec![Goal::Noop],
-                ];
-                self.choose(alternatives)?;
+                    vec![Goal::Backtrack],
+                )?;
             }
             Operator::Assign => {
                 assert_eq!(args.len(), 2);
@@ -2032,7 +2035,7 @@ impl PolarVirtualMachine {
 
     /// Unify a partial `left` with a term `right`.
     /// This is sort of a "sub-goal" of `Unify`.
-    fn unify_partial(&mut self, partial: &partial::Constraints, right: &Term) -> PolarResult<()> {
+    fn unify_partial(&mut self, partial: &Constraints, right: &Term) -> PolarResult<()> {
         let mut partial = partial.clone();
         if matches!(right.value(), Value::Partial(_)) {
             return Err(self.set_error_context(
@@ -2534,7 +2537,12 @@ impl Runnable for PolarVirtualMachine {
     /// pop them off and execute them one at a time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
-    fn run(&mut self, _: Counter) -> PolarResult<QueryEvent> {
+    fn run(
+        &mut self,
+        _: Option<&mut BindingStack>,
+        _: Option<&mut usize>,
+        _: Option<&mut Counter>,
+    ) -> PolarResult<QueryEvent> {
         if self.query_start_time.is_none() {
             #[cfg(not(target_arch = "wasm32"))]
             let query_start_time = Some(std::time::Instant::now());
@@ -2581,7 +2589,8 @@ impl Runnable for PolarVirtualMachine {
             None
         };
 
-        let bindings = partial::simplify_bindings(self.bindings(true));
+        // TODO: Do we need temps in the bindings below?
+        let bindings = simplify_bindings(self.bindings(true));
 
         Ok(QueryEvent::Result { bindings, trace })
     }
@@ -2646,7 +2655,7 @@ impl Runnable for PolarVirtualMachine {
     }
 
     fn clone_runnable(&self) -> Box<dyn Runnable> {
-        unimplemented!("Make Goal::Run take a closure Fn -> Runnable");
+        Box::new(self.clone())
     }
 }
 
@@ -2697,19 +2706,19 @@ mod tests {
             assert!($vm.is_halted());
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}]) => {
-            assert!(matches!($vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
+            assert!(matches!($vm.run(None, None, None).unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, []);
         };
         ($vm:ident, [QueryEvent::Result{$result:expr}, $($tail:tt)*]) => {
-            assert!(matches!($vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
+            assert!(matches!($vm.run(None, None, None).unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, [$($tail)*]);
         };
         ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?]) => {
-            assert!(matches!($vm.run(Counter::default()).unwrap(), $($pattern)|+ $(if $guard)?));
+            assert!(matches!($vm.run(None, None, None).unwrap(), $($pattern)|+ $(if $guard)?));
             assert_query_events!($vm, []);
         };
         ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?, $($tail:tt)*]) => {
-            assert!(matches!($vm.run(Counter::default()).unwrap(), $($pattern)|+ $(if $guard)?));
+            assert!(matches!($vm.run(None, None, None).unwrap(), $($pattern)|+ $(if $guard)?));
             assert_query_events!($vm, [$($tail)*]);
         };
         // TODO (dhatch) Be able to use btreemap! to match on specific bindings.
@@ -2859,10 +2868,10 @@ mod tests {
         })
         .unwrap();
         assert!(
-            matches!(vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+            matches!(vm.run(None, None, None).unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2874,10 +2883,10 @@ mod tests {
         })
         .unwrap();
         assert!(
-            matches!(vm.run(Counter::default()).unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
+            matches!(vm.run(None, None, None).unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2889,7 +2898,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2901,7 +2910,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2913,7 +2922,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2925,7 +2934,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2937,7 +2946,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2949,7 +2958,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -2961,7 +2970,7 @@ mod tests {
         })
         .unwrap();
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Done { result: true }
         ));
         assert!(vm.is_halted());
@@ -3189,7 +3198,7 @@ mod tests {
             }],
         );
         assert!(matches!(
-            vm.run(Counter::default()).unwrap(),
+            vm.run(None, None, None).unwrap(),
             QueryEvent::Debug { message } if &message[..] == "Hello"
         ));
     }
@@ -3201,7 +3210,7 @@ mod tests {
             false,
             vec![Goal::Halt],
         );
-        let _ = vm.run(Counter::default()).unwrap();
+        let _ = vm.run(None, None, None).unwrap();
         assert_eq!(vm.goals.len(), 0);
         assert_eq!(vm.bindings.len(), 0);
     }
@@ -3222,7 +3231,7 @@ mod tests {
                 right: vals,
             }],
         );
-        let _ = vm.run(Counter::default()).unwrap();
+        let _ = vm.run(None, None, None).unwrap();
         assert_eq!(vm.value(&x), Some(&Term::new_from_test(zero)));
         assert_eq!(vm.value(&y), Some(&Term::new_from_test(one)));
     }
@@ -3244,7 +3253,7 @@ mod tests {
             right: term!(y),
         }])
         .unwrap();
-        let _ = vm.run(Counter::default()).unwrap();
+        let _ = vm.run(None, None, None).unwrap();
         assert_eq!(vm.value(&sym!("x")), Some(&one));
         vm.backtrack().unwrap();
 
@@ -3255,7 +3264,7 @@ mod tests {
             right: one.clone(),
         }])
         .unwrap();
-        let _ = vm.run(Counter::default()).unwrap();
+        let _ = vm.run(None, None, None).unwrap();
         assert_eq!(vm.value(&z), Some(&one));
 
         // Left variable bound to value
@@ -3265,7 +3274,7 @@ mod tests {
             right: two,
         }])
         .unwrap();
-        let _ = vm.run(Counter::default()).unwrap();
+        let _ = vm.run(None, None, None).unwrap();
         assert_eq!(vm.value(&z), Some(&one));
     }
 
@@ -3331,7 +3340,7 @@ mod tests {
         let mut external_isas = vec![];
 
         loop {
-            match vm.run(Counter::default()).unwrap() {
+            match vm.run(None, None, None).unwrap() {
                 QueryEvent::Done { .. } => break,
                 QueryEvent::ExternalIsa {
                     call_id, class_tag, ..
@@ -3356,7 +3365,7 @@ mod tests {
 
         let mut results = vec![];
         loop {
-            match vm.run(Counter::default()).unwrap() {
+            match vm.run(None, None, None).unwrap() {
                 QueryEvent::Done { .. } => break,
                 QueryEvent::ExternalIsa { .. } => (),
                 QueryEvent::Result { bindings, .. } => results.push(bindings),
@@ -3407,7 +3416,7 @@ mod tests {
 
         let mut results = Vec::new();
         loop {
-            match vm.run(Counter::default()).unwrap() {
+            match vm.run(None, None, None).unwrap() {
                 QueryEvent::Done { .. } => break,
                 QueryEvent::Result { bindings, .. } => results.push(bindings),
                 QueryEvent::ExternalIsSubSpecializer {
@@ -3491,7 +3500,7 @@ mod tests {
                 right_instance_id: 1,
             })
             .unwrap();
-            let result = vm.run(Counter::default());
+            let result = vm.run(None, None, None);
             match result {
                 Ok(event) => assert!(matches!(event, QueryEvent::ExternalUnify { .. })),
                 Err(err) => {
@@ -3522,7 +3531,7 @@ mod tests {
 
         let mut vm = PolarVirtualMachine::new_test(Arc::new(RwLock::new(kb)), false, vec![]);
         vm.bind(&sym!("x"), term!(1));
-        let _ = vm.run(Counter::default());
+        let _ = vm.run(None, None, None);
         let _ = vm.next(Rc::new(query!(call!("bar", [value!([sym!("x")])]))));
         // After calling the query goal we should be left with the
         // prefiltered rules
