@@ -148,12 +148,6 @@ impl GoalStack {
     }
 }
 
-// impl From<Vec<Goal>> for GoalStack {
-//     fn from(other: Vec<Goal>) -> Self {
-//         Self(other.into_iter().map(Rc::new).collect())
-//     }
-// }
-
 impl std::ops::Deref for GoalStack {
     type Target = Vec<Rc<Goal>>;
 
@@ -1817,16 +1811,14 @@ impl PolarVirtualMachine {
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         match (&left.value(), &right.value()) {
-            // Unify variables.
             (Value::Variable(var), _) => self.unify_var(var, right)?,
             (_, Value::Variable(var)) => self.unify_var(var, left)?,
 
             (Value::Partial(partial), _) => self.unify_partial(partial, right)?,
             (_, Value::Partial(partial)) => self.unify_partial(partial, left)?,
 
-            // Unify rest-variables with list tails.
             (Value::RestVariable(var), _) => self.unify_var(var, right)?,
-            (Value::List(_), Value::RestVariable(var)) => self.unify_var(var, left)?,
+            (_, Value::RestVariable(var)) => self.unify_var(var, left)?,
 
             // Unify lists by recursively unifying their elements.
             (Value::List(left), Value::List(right)) => {

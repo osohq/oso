@@ -38,8 +38,8 @@ For example::
 
 are all parsed as numbers.
 
-You can also perform basic arithmetic on numbers with the operators
-``+``, ``-``, ``*``, and ``/``.
+You can also perform basic arithmetic on numbers with the operators ``+``,
+``-``, ``*``, ``/``, ``mod``, and ``rem``.
 
 .. _booleans:
 
