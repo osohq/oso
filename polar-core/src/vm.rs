@@ -1335,17 +1335,17 @@ impl PolarVirtualMachine {
     ) -> PolarResult<QueryEvent> {
         match operator {
             Operator::And => {
-                // Append a `Query` goal for each term in the args list
+                // Query for each conjunct.
                 self.push_goal(Goal::TraceStackPop)?;
                 self.append_goals(args.into_iter().map(|term| Goal::Query { term }))?;
                 self.push_goal(Goal::TraceStackPush)?;
             }
             Operator::Or => {
-                // Create a choice point with alternatives to query for each arg, and start on the first alternative
+                // Make an alternative Query for each disjunct.
                 self.choose(args.into_iter().map(|term| vec![Goal::Query { term }]))?;
             }
             Operator::Not => {
-                // Push a choice point that queries for the term; if the query succeeds cut and backtrack
+                // Query in a sub-VM and invert the results.
                 assert_eq!(args.len(), 1);
                 let term = args.pop().unwrap();
                 let inverter = Box::new(Inverter::new(self, vec![Goal::Query { term }]));
