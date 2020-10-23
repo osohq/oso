@@ -2260,10 +2260,7 @@ impl PolarVirtualMachine {
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        rule_strs.push_str(&format!(
-                            "\n  {}",
-                            /*self.rule_source(&rule)*/ rule.to_polar()
-                        ));
+                        rule_strs.push_str(&format!("\n  {}", self.rule_source(&rule)));
                     }
                     rule_strs
                 },
