@@ -47,30 +47,28 @@ class Query:
             kind = [*event][0]
             data = event[kind]
 
+            call_map = {
+                "MakeExternal": self.handle_make_external,
+                "ExternalCall": self.handle_external_call,
+                "ExternalOp": self.handle_external_op,
+                "ExternalIsa": self.handle_external_isa,
+                "ExternalUnify": self.handle_external_unify,
+                "ExternalIsSubSpecializer": self.handle_external_is_subspecializer,
+                "ExternalIsSubclass": self.handle_external_is_subclass,
+                "Next": self.handle_next,
+                "Debug": self.handle_debug,
+            }
+
             if kind == "Done":
                 break
-            elif kind == "MakeExternal":
-                self.handle_make_external(data)
-            elif kind == "ExternalCall":
-                self.handle_external_call(data)
-            elif kind == "ExternalOp":
-                self.handle_external_op(data)
-            elif kind == "ExternalIsa":
-                self.handle_external_isa(data)
-            elif kind == "ExternalUnify":
-                self.handle_external_unify(data)
-            elif kind == "ExternalIsSubSpecializer":
-                self.handle_external_is_subspecializer(data)
-            elif kind == "ExternalIsSubclass":
-                self.handle_external_is_subclass(data)
-            elif kind == "Debug":
-                self.handle_debug(data)
             elif kind == "Result":
                 bindings = {
                     k: self.host.to_python(v) for k, v in data["bindings"].items()
                 }
                 trace = data["trace"]
                 yield {"bindings": bindings, "trace": trace}
+            elif kind in call_map:
+                call_map[kind](data)
             else:
                 raise PolarRuntimeError(f"Unhandled event: {json.dumps(event)}")
 
@@ -88,47 +86,33 @@ class Query:
 
     def handle_external_call(self, data):
         call_id = data["call_id"]
-        if call_id not in self.calls:
-            value = data["instance"]["value"]
-            instance = self.host.to_python(data["instance"])
+        instance = self.host.to_python(data["instance"])
 
-            attribute = data["attribute"]
+        attribute = data["attribute"]
 
-            # Lookup the attribute on the instance.
-            try:
-                attr = getattr(instance, attribute)
-            except AttributeError as e:
-                self.ffi_query.application_error(str(e))
-                self.ffi_query.call_result(call_id, None)
-                return
-            if (
-                callable(attr) and not data["args"] is None
-            ):  # If it's a function, call it with the args.
-                args = [self.host.to_python(arg) for arg in data["args"]]
-                kwargs = data["kwargs"] or {}
-                kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
-                result = attr(*args, **kwargs)
-            elif not data["args"] is None:
-                raise InvalidCallError(
-                    f"tried to call '{attribute}' but it is not callable"
-                )
-            else:  # If it's just an attribute, it's the result.
-                result = attr
-
-            # We now have either a generator or a result.
-            # Call must be a generator so we turn anything else into one.
-            if type(result) in NATIVE_TYPES or not isinstance(result, Iterable):
-                call = (i for i in [result])
-            else:
-                call = iter(result)
-            self.calls[call_id] = call
-
-        # Return the next result of the call.
+        # Lookup the attribute on the instance.
         try:
-            value = next(self.calls[call_id])
-            self.ffi_query.call_result(call_id, self.host.to_polar(value))
-        except StopIteration:
+            attr = getattr(instance, attribute)
+        except AttributeError as e:
+            self.ffi_query.application_error(str(e))
             self.ffi_query.call_result(call_id, None)
+            return
+        if (
+            callable(attr) and not data["args"] is None
+        ):  # If it's a function, call it with the args.
+            args = [self.host.to_python(arg) for arg in data["args"]]
+            kwargs = data["kwargs"] or {}
+            kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
+            result = attr(*args, **kwargs)
+        elif not data["args"] is None:
+            raise InvalidCallError(
+                f"tried to call '{attribute}' but it is not callable"
+            )
+        else:  # If it's just an attribute, it's the result.
+            result = attr
+
+        # Return the result of the call.
+        self.ffi_query.call_result(call_id, self.host.to_polar(result))
 
     def handle_external_op(self, data):
         op = data["operator"]
@@ -160,6 +144,21 @@ class Query:
         right_tag = data["right_class_tag"]
         answer = self.host.is_subclass(left_tag, right_tag)
         self.ffi_query.question_result(data["call_id"], answer)
+
+    def handle_next(self, data):
+        call_id = data["call_id"]
+        term = data["term"]
+
+        if call_id not in self.calls:
+            value = self.host.to_python(term)
+            self.calls[call_id] = iter(value)
+
+        # Return the next result of the call.
+        try:
+            value = next(self.calls[call_id])
+            self.ffi_query.call_result(call_id, self.host.to_polar(value))
+        except StopIteration:
+            self.ffi_query.call_result(call_id, None)
 
     def handle_debug(self, data):
         if data["message"]:

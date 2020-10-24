@@ -21,10 +21,10 @@ actors = {"guest": "1", "president": "1"}
 class Actor:
     name: str = ""
 
-    def __init__(self, name: ""):
+    def __init__(self, name=""):
         self.name = name
 
-    def company(self):
+    def companies(self):
         yield Company(id="0")  # fake, will fail
         yield Company(id=actors[self.name])  # real, will pass
 
@@ -58,9 +58,9 @@ class Company:
 
     def role(self, actor: Actor):
         if actor.name == "president":
-            yield "admin"
+            return "admin"
         else:
-            yield "guest"
+            return "guest"
 
 
 @pytest.fixture(scope="module")

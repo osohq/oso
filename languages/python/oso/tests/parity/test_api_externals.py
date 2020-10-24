@@ -34,12 +34,12 @@ class Widget:
         self.name = name
 
     def company(self):
-        yield Company(id=self.id)
+        return Company(id=self.id)
 
     def frob(self, what):
         global frobbed
         frobbed.append(what)
-        yield self
+        return self
 
 
 @polar_class
@@ -54,11 +54,11 @@ class Actor:
     id: int = 0
     widget: Widget = None
 
-    def company(self):
+    def companies(self):
         yield Company(id="0")  # fake, will fail
         yield Company(id=actors[self.name])  # real, will pass
 
-    def group(self):
+    def groups(self):
         return ["social", "dev", "product"]
 
     def companies_iter(self):
@@ -74,9 +74,9 @@ class Company:
 
     def role(self, actor: Actor):
         if actor.name == "president":
-            yield "admin"
+            return "admin"
         else:
-            yield "guest"
+            return "guest"
 
     def roles(self):
         yield "guest"

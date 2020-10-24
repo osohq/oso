@@ -29,7 +29,7 @@ impl Trace {
             if matches!(term.value(), Value::Expression(Operation { operator: Operator::And, ..})))
         {
             for c in &self.children {
-                c.draw_trace(vm, nest + 1, res);
+                c.draw_trace(vm, nest, res);
             }
         } else {
             let polar_str = match self.node {

@@ -38,8 +38,9 @@ allow(actor: User, "view", resource: Expense) if
     employee matches User{ name: resource.submitted_by };
 
 manages(manager: User, employee) if
-    employee = manager.employees() or
-    manages(manager.employees(), employee);
+    report in manager.employees() and
+    report = employee or
+    manages(report, employee);
 
 # Now Cora can view the expense because Cora manager Bhavik who manager Alice
 ?= allow(User.by_name("cora"), "view", Expense.id(0));

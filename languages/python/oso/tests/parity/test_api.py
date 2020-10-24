@@ -1,4 +1,5 @@
 """Tests the Polar API as an external consumer"""
+from contextlib import contextmanager
 import os
 import pytest
 
@@ -22,7 +23,7 @@ try:
 except ImportError:
     pass
 
-from polar.test_helpers import tell, qvar, query, oso_monkeypatch as polar_monkeypatch
+from polar.test_helpers import tell, qvar, query
 
 # Set if running tests against old code
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
@@ -41,16 +42,25 @@ default_company = Company(id="1", default_role="admin")
 
 
 @pytest.fixture
-def widget_in_company(polar_monkeypatch):
-    return polar_monkeypatch.patch(Widget, "company", default_company)
+def widget_in_company(monkeypatch):
+    @contextmanager
+    def patch():
+        with monkeypatch.context() as m:
+            m.setattr(Widget, "company", lambda *args: default_company)
+            yield
+
+    return patch
 
 
 @pytest.fixture
-def actor_in_role(polar_monkeypatch):
-    def _patch(role):
-        return polar_monkeypatch.patch(Company, "role", role)
+def actor_in_role(monkeypatch):
+    @contextmanager
+    def patch(role):
+        with monkeypatch.context() as m:
+            m.setattr(Company, "role", lambda *args: role)
+            yield
 
-    return _patch
+    return patch
 
 
 ## TESTS ##
@@ -170,7 +180,7 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
     assert not query(
         Predicate(name="actorInRole", args=[user, "admin", Widget(id="1")])
     )
-    with widget_in_company:
+    with widget_in_company():
         with actor_in_role("admin"):
             assert query(
                 Predicate(name="actorInRole", args=[user, "admin", Widget(id="1")])
@@ -244,6 +254,8 @@ def test_iter_fields(polar, load_policy, query):
     resource = Widget(id=1, name="stapler")
     actor = Actor(name="milton", id=1)
     assert query(Predicate(name="allow", args=[actor, "can_have", resource]))
+    with pytest.raises(TypeError):
+        query(Predicate(name="allow", args=[actor, "tries_to_get", resource]))
 
 
 @pytest.mark.xfail(EXPECT_XFAIL_PASS, reason="Test relies on internal classes.")

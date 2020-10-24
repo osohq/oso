@@ -1,8 +1,5 @@
 """Set of test helpers to match test helpers from Python Polar."""
-from pathlib import Path
-from contextlib import contextmanager
 import pytest
-import os
 
 from polar import Polar
 
@@ -80,49 +77,6 @@ def qvar(polar, query):
         return [env[v] for env in results]
 
     return _qvar
-
-
-@pytest.fixture
-def oso_monkeypatch(monkeypatch):
-    """Wraps the pytest.monkeypatch fixture to return an oso-specific one,
-    which provides a single
-    method `patch`.
-
-    The patch method can be used to override a specific
-    method on a class. The return type is a context manager.
-    For the duration of the context, all calls to the
-    class method will return the given value.
-
-    For example::
-        def test_foo_bar(oso_monkeypatch):
-            assert Foo.bar() != Bar(123)
-            with oso_monkeypatch.patch(Foo, "bar", Bar(123)):
-                assert Foo.bar() == Bar(123)
-            assert Foo.bar() != Bar(123)
-    """
-    return OsoMonkeyPatch(monkeypatch)
-
-
-class OsoMonkeyPatch:
-    """Convenience class to shortcut creating a context-based
-    monkeypatch method. Create using the above `oso_monkeypatch`
-    fixture.
-    """
-
-    def __init__(self, monkeypatch):
-        self._mp = monkeypatch
-
-    @contextmanager
-    def patch(self, cls, function, output):
-        """Return a context manager which overrides the `cls.function`
-        method to always return a generator which just yields `output`."""
-
-        def _override(*args):
-            yield output
-
-        with self._mp.context() as m:
-            m.setattr(cls, function, _override)
-            yield
 
 
 private_key = """-----BEGIN RSA PRIVATE KEY-----

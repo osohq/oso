@@ -95,7 +95,7 @@ def test_external(polar, qvar, qeval):
             self.a = a
 
         def b(self):
-            yield "b"
+            return "b"
 
         @classmethod
         def c(cls):
@@ -135,7 +135,8 @@ def test_external(polar, qvar, qeval):
     assert qvar("new Foo() = f and f.a = x", "x", one=True) == "a"
     assert qvar("new Foo().bar().y() = x", "x", one=True) == "y"
     assert qvar("new Foo().e() = x", "x", one=True) == [1, 2, 3]
-    assert qvar("new Foo().f() = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
+    assert qvar("x in new Foo().e()", "x") == [1, 2, 3]
+    assert qvar("x in new Foo().f()", "x") == [[1, 2, 3], [4, 5, 6], 7]
     assert qvar("new Foo().g().hello = x", "x", one=True) == "world"
     assert qvar("new Foo().h() = x", "x", one=True) is True
 
