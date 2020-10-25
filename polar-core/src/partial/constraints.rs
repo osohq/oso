@@ -20,6 +20,11 @@ impl Constraints {
         }
     }
 
+    pub fn merge_constraints(&mut self, other: Self) {
+        assert_eq!(self.variable, other.variable);
+        self.operations.extend(other.operations);
+    }
+
     pub fn operations(&self) -> &Vec<Operation> {
         &self.operations
     }

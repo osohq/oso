@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::{hash_map::Entry, HashSet};
+use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
 use crate::counter::Counter;
@@ -9,7 +9,7 @@ use crate::folder::Folder;
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
@@ -90,102 +90,77 @@ impl Folder for ConstraintInverter {
     }
 }
 
-/// If there are no partials, and you get no results, return true
-/// If there are no partials, and you get at least one result, return false
-/// If there's a partial, return `true` with the partial.
-///     - what if the partial has no operations?
+/// Invert constraints on all partials in `bindings` and return them.
+fn invert_constraints(bindings: BindingStack) -> BindingStack {
+    let mut inverter = ConstraintInverter::new();
+    for Binding(_, value) in bindings.iter() {
+        inverter.fold_term(value.clone());
+    }
+    inverter.new_bindings
+}
+
+/// Only keep latest bindings.
+fn reduce_bindings(bindings: BindingStack) -> Bindings {
+    bindings
+        .into_iter()
+        .fold(Bindings::new(), |mut acc, Binding(var, value)| {
+            acc.insert(var, value);
+            acc
+        })
+}
+
+/// Reduce + merge constraints.
+fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
+    reduce_bindings(bindings)
+        .drain()
+        .for_each(|(var, value)| match acc.entry(var) {
+            Entry::Occupied(mut o) => {
+                let mut old = o.get().value().as_partial().expect("Partial").clone();
+                let new = value.value().as_partial().expect("Partial").clone();
+                old.merge_constraints(new);
+                let conjunction = value.clone_with_value(Value::Partial(old));
+                o.insert(conjunction);
+            }
+            Entry::Vacant(v) => {
+                v.insert(value);
+            }
+        });
+    acc
+}
+
 impl Runnable for Inverter {
+    /// - If no results are emitted, return true.
+    /// - If at least one result is emitted containing a partial, invert the partial's constraints
+    ///   and return true.
+    /// - Otherwise, return false.
     fn run(&mut self, _: Option<&mut Counter>) -> PolarResult<QueryEvent> {
         loop {
             // Pass most events through, but collect results and invert them.
-            if let Ok(event) = self.vm.run(None) {
-                match event {
-                    QueryEvent::Done { .. } => {
-                        let mut result = self.results.is_empty();
-                        if !result {
-                            self.bindings.borrow_mut().extend(
-                                self.results
-                                    .iter()
-                                    .map(|result| {
-                                        let mut inverter = ConstraintInverter::new();
-                                        result.iter().for_each(|Binding(_, value)| {
-                                            inverter.fold_term(value.clone());
-                                        });
-                                        inverter.new_bindings
-                                    })
-                                    .fold(Bindings::new(), |mut acc, bindings| {
-                                        // Accumulate inverted partials.
-                                        let mut seen = HashSet::<Symbol>::new();
-                                        for Binding(var, value) in bindings.into_iter().rev() {
-                                            if seen.contains(&var) {
-                                                continue;
-                                            } else {
-                                                seen.insert(var.clone());
-                                            }
+            match self.vm.run(None)? {
+                QueryEvent::Done { .. } => {
+                    let mut result = self.results.is_empty();
+                    if !result {
+                        self.bindings.borrow_mut().extend(
+                            self.results
+                                .drain(..)
+                                .map(invert_constraints)
+                                .fold(Bindings::new(), reduce_constraints)
+                                .drain()
+                                .map(|(var, value)| {
+                                    // We have at least one partial to return, so succeed.
+                                    result = true;
 
-                                            match acc.entry(var) {
-                                                Entry::Occupied(mut o) => {
-                                                    let existing = o.get();
-                                                    if let Value::Partial(existing) =
-                                                        existing.value()
-                                                    {
-                                                        if let Ok(new) = value.value().as_partial()
-                                                        {
-                                                            assert_eq!(
-                                                                existing.variable,
-                                                                new.variable
-                                                            );
-                                                            let conjunction = value
-                                                                .clone_with_value(Value::Partial(
-                                                                    Constraints {
-                                                                        variable: existing
-                                                                            .variable
-                                                                            .clone(),
-                                                                        operations: existing
-                                                                            .operations
-                                                                            .iter()
-                                                                            .cloned()
-                                                                            .chain(
-                                                                                new.operations
-                                                                                    .iter()
-                                                                                    .cloned(),
-                                                                            )
-                                                                            .collect(),
-                                                                    },
-                                                                ));
-                                                            o.insert(conjunction);
-                                                            break;
-                                                        } else {
-                                                            unreachable!();
-                                                        }
-                                                    } else {
-                                                        unreachable!();
-                                                    }
-                                                }
-                                                Entry::Vacant(v) => {
-                                                    v.insert(value);
-                                                }
-                                            }
-                                        }
-                                        acc
-                                    })
-                                    .drain()
-                                    .map(|(var, value)| {
-                                        // We have at least one partial to return, so succeed.
-                                        result = true;
-
-                                        Binding(var, value)
-                                    }),
-                            );
-                        }
-                        return Ok(QueryEvent::Done { result });
+                                    Binding(var, value)
+                                }),
+                        );
                     }
-                    QueryEvent::Result { .. } => {
-                        let bindings = self.vm.bindings[self.bsp..].to_owned();
-                        self.results.push(bindings);
-                    }
-                    event => return Ok(event),
+                    return Ok(QueryEvent::Done { result });
                 }
+                QueryEvent::Result { .. } => {
+                    let bindings = self.vm.bindings[self.bsp..].to_owned();
+                    self.results.push(bindings);
+                }
+                event => return Ok(event),
             }
         }
     }
