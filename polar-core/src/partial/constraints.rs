@@ -178,12 +178,7 @@ impl IsaConstraintCheck {
 }
 
 impl Runnable for IsaConstraintCheck {
-    fn run(
-        &mut self,
-        _: Option<&mut BindingStack>,
-        _: Option<&mut usize>,
-        counter: Option<&mut Counter>,
-    ) -> PolarResult<QueryEvent> {
+    fn run(&mut self, counter: Option<&mut Counter>) -> PolarResult<QueryEvent> {
         if self.proposed_tag.is_none() {
             return Ok(QueryEvent::Done { result: true });
         }
@@ -527,7 +522,7 @@ mod test {
     }
 
     #[test]
-    fn test_not_partial() -> TestResult {
+    fn test_inverter() -> TestResult {
         let polar = Polar::new();
         polar.load_str(
             r#"f(x) if not x = 1;

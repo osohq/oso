@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::{hash_map::Entry, HashSet};
+use std::rc::Rc;
 
 use crate::counter::Counter;
 use crate::error::PolarResult;
@@ -13,13 +15,22 @@ use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 #[derive(Clone)]
 pub struct Inverter {
     vm: PolarVirtualMachine,
+    bindings: Rc<RefCell<BindingStack>>,
+    bsp: usize,
     results: Vec<BindingStack>,
 }
 
 impl Inverter {
-    pub fn new(vm: &PolarVirtualMachine, goals: Goals) -> Self {
+    pub fn new(
+        vm: &PolarVirtualMachine,
+        goals: Goals,
+        bindings: Rc<RefCell<BindingStack>>,
+        bsp: usize,
+    ) -> Self {
         Self {
             vm: vm.clone_with_bindings(goals),
+            bindings,
+            bsp,
             results: vec![],
         }
     }
@@ -84,92 +95,93 @@ impl Folder for ConstraintInverter {
 /// If there's a partial, return `true` with the partial.
 ///     - what if the partial has no operations?
 impl Runnable for Inverter {
-    fn run(
-        &mut self,
-        bindings: Option<&mut BindingStack>,
-        bsp: Option<&mut usize>,
-        _: Option<&mut Counter>,
-    ) -> PolarResult<QueryEvent> {
-        let bsp = bsp.expect("Inverter needs a BSP");
+    fn run(&mut self, _: Option<&mut Counter>) -> PolarResult<QueryEvent> {
         loop {
             // Pass most events through, but collect results and invert them.
-            if let Ok(event) = self.vm.run(None, None, None) {
+            if let Ok(event) = self.vm.run(None) {
                 match event {
                     QueryEvent::Done { .. } => {
                         let mut result = self.results.is_empty();
                         if !result {
-                            let new_bindings: BindingStack = self
-                                .results
-                                .iter()
-                                .map(|result| {
-                                    let mut inverter = ConstraintInverter::new();
-                                    result.iter().for_each(|Binding(_, value)| {
-                                        inverter.fold_term(value.clone());
-                                    });
-                                    inverter.new_bindings
-                                })
-                                .fold(Bindings::new(), |mut acc, bindings| {
-                                    let mut seen = HashSet::<Symbol>::new();
-                                    for Binding(var, value) in bindings.into_iter().rev() {
-                                        if seen.contains(&var) {
-                                            continue;
-                                        } else {
-                                            seen.insert(var.clone());
-                                        }
+                            self.bindings.borrow_mut().extend(
+                                self.results
+                                    .iter()
+                                    .map(|result| {
+                                        let mut inverter = ConstraintInverter::new();
+                                        result.iter().for_each(|Binding(_, value)| {
+                                            inverter.fold_term(value.clone());
+                                        });
+                                        inverter.new_bindings
+                                    })
+                                    .fold(Bindings::new(), |mut acc, bindings| {
+                                        // Accumulate inverted partials.
+                                        let mut seen = HashSet::<Symbol>::new();
+                                        for Binding(var, value) in bindings.into_iter().rev() {
+                                            if seen.contains(&var) {
+                                                continue;
+                                            } else {
+                                                seen.insert(var.clone());
+                                            }
 
-                                        match acc.entry(var) {
-                                            Entry::Occupied(mut o) => {
-                                                let existing = o.get();
-                                                if let Value::Partial(existing) = existing.value() {
-                                                    if let Ok(new) = value.value().as_partial() {
-                                                        assert_eq!(existing.variable, new.variable);
-                                                        let conjunction = value.clone_with_value(
-                                                            Value::Partial(Constraints {
-                                                                variable: existing.variable.clone(),
-                                                                operations: existing
-                                                                    .operations
-                                                                    .iter()
-                                                                    .cloned()
-                                                                    .chain(
-                                                                        new.operations
+                                            match acc.entry(var) {
+                                                Entry::Occupied(mut o) => {
+                                                    let existing = o.get();
+                                                    if let Value::Partial(existing) =
+                                                        existing.value()
+                                                    {
+                                                        if let Ok(new) = value.value().as_partial()
+                                                        {
+                                                            assert_eq!(
+                                                                existing.variable,
+                                                                new.variable
+                                                            );
+                                                            let conjunction = value
+                                                                .clone_with_value(Value::Partial(
+                                                                    Constraints {
+                                                                        variable: existing
+                                                                            .variable
+                                                                            .clone(),
+                                                                        operations: existing
+                                                                            .operations
                                                                             .iter()
-                                                                            .cloned(),
-                                                                    )
-                                                                    .collect(),
-                                                            }),
-                                                        );
-                                                        o.insert(conjunction);
-                                                        break;
+                                                                            .cloned()
+                                                                            .chain(
+                                                                                new.operations
+                                                                                    .iter()
+                                                                                    .cloned(),
+                                                                            )
+                                                                            .collect(),
+                                                                    },
+                                                                ));
+                                                            o.insert(conjunction);
+                                                            break;
+                                                        } else {
+                                                            unreachable!();
+                                                        }
                                                     } else {
                                                         unreachable!();
                                                     }
-                                                } else {
-                                                    unreachable!();
+                                                }
+                                                Entry::Vacant(v) => {
+                                                    v.insert(value);
                                                 }
                                             }
-                                            Entry::Vacant(v) => {
-                                                v.insert(value);
-                                            }
                                         }
-                                    }
-                                    acc
-                                })
-                                .drain()
-                                .map(|(var, value)| Binding(var, value))
-                                .collect();
+                                        acc
+                                    })
+                                    .drain()
+                                    .map(|(var, value)| {
+                                        // We have at least one partial to return, so succeed.
+                                        result = true;
 
-                            if let Some(bindings) = bindings {
-                                if !new_bindings.is_empty() {
-                                    *bsp += new_bindings.len();
-                                    bindings.extend(new_bindings);
-                                    result = true;
-                                }
-                            }
+                                        Binding(var, value)
+                                    }),
+                            );
                         }
                         return Ok(QueryEvent::Done { result });
                     }
                     QueryEvent::Result { .. } => {
-                        let bindings = self.vm.bindings[*bsp..].to_owned();
+                        let bindings = self.vm.bindings[self.bsp..].to_owned();
                         self.results.push(bindings);
                     }
                     event => return Ok(event),

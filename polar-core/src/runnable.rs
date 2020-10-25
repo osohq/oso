@@ -2,22 +2,14 @@ use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
 use crate::terms::Term;
-use crate::vm::BindingStack;
 
 /// Trait for something that produces query events and accepts answers.
 ///
 /// Runnable must be clone so that the VM can re-execute runnables when
 /// backtracking & retrying alternatives.
 pub trait Runnable {
-    /// Run the Runnable until a Error or QueryEvent is obtained.
-    ///
-    /// Returns: The next query event or an error.
-    fn run(
-        &mut self,
-        bindings: Option<&mut BindingStack>,
-        bsp: Option<&mut usize>,
-        counter: Option<&mut Counter>,
-    ) -> PolarResult<QueryEvent>;
+    /// Run the Runnable until an Error or QueryEvent is obtained.
+    fn run(&mut self, _counter: Option<&mut Counter>) -> PolarResult<QueryEvent>;
 
     fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
         Err(OperationalError::InvalidState("Unexpected query answer".to_string()).into())

@@ -41,16 +41,10 @@ impl Query {
     pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
         let mut counter = self.vm.id_counter();
         let runnable = self.runnable_stack.last_mut();
-        let bindings = &mut self.vm.bindings;
         let result = if let Some(runnable) = runnable {
-            let i = self.vm.choices.len() - 2; // Noop for Not
-            let bsp = self.vm.choices.get_mut(i).map(|c| &mut c.bsp);
-            runnable
-                .0
-                .as_mut()
-                .run(Some(bindings), bsp, Some(&mut counter))
+            runnable.0.as_mut().run(Some(&mut counter))
         } else {
-            self.vm.run(None, None, None)
+            self.vm.run(None)
         };
 
         match result? {
