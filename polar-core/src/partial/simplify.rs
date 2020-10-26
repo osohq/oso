@@ -36,11 +36,14 @@ impl Folder for Simplifier {
                 }
 
                 match operations.get(0).unwrap() {
+                    // If we have a single And operation, unwrap it and fold the inner term.
                     Operation {
                         operator: Operator::And,
                         args,
                     } if args.len() == 1 => fold_term(args.get(0).unwrap().clone(), self),
 
+                    // If we have a single Unify operation where one operand is _this and the other
+                    // is not _this, unwrap the operation and return the non-_this operand.
                     Operation {
                         operator: Operator::Unify,
                         args,
@@ -50,7 +53,7 @@ impl Folder for Simplifier {
                             .filter(|arg| !is_this_arg(arg))
                             .cloned()
                             .collect::<TermList>();
-                        assert_eq!(args.len(), 1);
+                        assert_eq!(args.len(), 1, "should have exactly 1 non-_this operand");
                         args.pop().unwrap()
                     }
                     _ => fold_term(t, self),
