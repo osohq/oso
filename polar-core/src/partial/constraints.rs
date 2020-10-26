@@ -399,19 +399,25 @@ mod test {
     #[test]
     fn test_partial_comparison() -> TestResult {
         let polar = Polar::new();
-        polar.load_str(r#"positive(x) if x > 0;"#)?;
-        polar.load_str(r#"positive(x) if x > 0 and x < 0;"#)?;
+        polar.load_str(
+            r#"positive(x) if x > 0;
+               positive(x) if x > 0 and x < 0;
+               zero(x) if x == 0;"#,
+        )?;
 
         let mut query = polar.new_query_from_term(
             term!(call!("positive", [Constraints::new(sym!("a"))])),
             false,
         );
 
-        let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "_this > 0");
+        assert_partial_expression!(next_binding(&mut query)?, "a", "_this > 0");
+        assert_partial_expression!(next_binding(&mut query)?, "a", "_this > 0 and _this < 0");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
-        let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "_this > 0 and _this < 0");
+        let mut query =
+            polar.new_query_from_term(term!(call!("zero", [Constraints::new(sym!("a"))])), false);
+        assert_partial_expression!(next_binding(&mut query)?, "a", "_this == 0");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         Ok(())
     }
