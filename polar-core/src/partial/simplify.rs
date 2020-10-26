@@ -66,9 +66,9 @@ impl Folder for Simplifier {
     fn fold_operation(&mut self, o: Operation) -> Operation {
         /// Given `_this` and `x`, return `x`.
         /// Given `_this.x` and `_this.y`, return `_this.x.y`.
-        fn sub_this(term: &Term, replacement: &Term) -> Term {
-            match (term.value(), replacement.value()) {
-                (Value::Variable(v), _) if v.is_this_var() => replacement.clone(),
+        fn sub_this(arg: &Term, expr: &Term) -> Term {
+            match (arg.value(), expr.value()) {
+                (Value::Variable(v), _) if v.is_this_var() => expr.clone(),
                 (
                     Value::Expression(Operation {
                         operator: Operator::Dot,
@@ -78,22 +78,23 @@ impl Folder for Simplifier {
                         operator: Operator::Dot,
                         ..
                     }),
-                ) => term.clone_with_value(Value::Expression(Operation {
+                ) => arg.clone_with_value(Value::Expression(Operation {
                     operator: Operator::Dot,
-                    args: vec![replacement.clone(), args.get(1).unwrap().clone()],
+                    args: vec![expr.clone(), args.get(1).unwrap().clone()],
                 })),
-                _ => term.clone(),
+                _ => arg.clone(),
             }
         }
 
-        // Optionally sub `replacement` into each of the arguments of the operations.
-        let mut map_ops = |ops: &[Operation], replacement: &Term| -> TermList {
-            ops.iter()
+        // Optionally sub `expr` into each of the arguments of the partial's operations.
+        let mut map_ops = |partial_ops: &[Operation], expr: &Term| -> TermList {
+            partial_ops
+                .iter()
                 .map(|o| Operation {
                     operator: o.operator,
-                    args: o.args.iter().map(|a| sub_this(a, replacement)).collect(),
+                    args: o.args.iter().map(|arg| sub_this(arg, expr)).collect(),
                 })
-                .map(|o| replacement.clone_with_value(Value::Expression(fold_operation(o, self))))
+                .map(|o| expr.clone_with_value(Value::Expression(fold_operation(o, self))))
                 .collect()
         };
 
