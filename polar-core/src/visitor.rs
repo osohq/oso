@@ -1,4 +1,6 @@
-//! Inspiration: https://docs.rs/rustc-ap-syntax/645.0.0/src/rustc_ap_syntax/visit.rs.html
+//! Inspiration:
+//! - https://github.com/rust-unofficial/patterns/blob/607fcb00c4ecb9c6317e4e101e16dc15717758bd/patterns/visitor.md
+//! - https://docs.rs/rustc-ap-syntax/645.0.0/src/rustc_ap_syntax/visit.rs.html
 //!
 //! Paraphrasing the above, this is an AST walker. Each overridden visit method has full control
 //! over what happens with its node: it can do its own traversal of the node's children, call

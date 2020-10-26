@@ -1,7 +1,9 @@
-//! Inspiration: https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html
+//! Inspiration:
+//! - https://github.com/rust-unofficial/patterns/blob/607fcb00c4ecb9c6317e4e101e16dc15717758bd/patterns/fold.md
+//! - https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html
 //!
-//! Quoting the above, a Folder represents an AST->AST fold; it accepts an AST piece and returns a
-//! piece of the same type.
+//! Paraphrasing the above, a Folder represents an AST->AST fold; it consumes an AST and returns an
+//! AST of the same type.
 
 // TODO(gj): Consider transitioning to a MutVisitor like
 //           https://docs.rs/rustc-ap-syntax/645.0.0/src/rustc_ap_syntax/mut_visit.rs.html
@@ -12,7 +14,7 @@ use super::partial::Constraints;
 use super::rules::*;
 use super::terms::*;
 
-/// Quoting from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
+/// Paraphrasing from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
 ///
 /// Any additions to this trait should happen in form of a call to a public `fold_*` function that
 /// only calls out to the folder again, not other `fold_*` functions. This is a necessary API
