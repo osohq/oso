@@ -13,7 +13,7 @@ use std::rc::Rc;
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
-use crate::folder::Folder;
+use crate::folder::{fold_list, fold_operation, Folder};
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::runnable::Runnable;
@@ -57,6 +57,7 @@ impl ConstraintInverter {
 }
 
 impl Folder for ConstraintInverter {
+    /// Invert operators.
     fn fold_operation(&mut self, o: Operation) -> Operation {
         Operation {
             operator: match o.operator {
@@ -70,31 +71,41 @@ impl Folder for ConstraintInverter {
                 Operator::Leq => Operator::Gt,
                 _ => todo!("negate {:?}", o.operator),
             },
-            args: self.fold_list(o.args),
+            args: fold_list(o.args, self),
         }
     }
 
-    // If there are any constraints to invert, invert 'em.
+    /// Invert constraints.
     fn fold_constraints(&mut self, c: Constraints) -> Constraints {
-        if !c.operations.is_empty() {
-            let new_binding = Binding(
-                c.variable.clone(),
-                Term::new_temporary(Value::Partial(Constraints {
-                    variable: c.variable.clone(),
-                    operations: vec![Operation {
-                        operator: Operator::Or,
-                        args: c
-                            .operations
-                            .iter()
-                            .cloned()
-                            .map(|o| Term::new_temporary(Value::Expression(self.fold_operation(o))))
-                            .collect(),
-                    }],
-                })),
-            );
-            self.new_bindings.push(new_binding);
-        }
-        c
+        let partial = match c.operations.len() {
+            // Do nothing to an empty partial.
+            0 => return c,
+
+            // Invert a single constraint.
+            1 => Constraints {
+                variable: c.variable.clone(),
+                operations: vec![fold_operation(c.operations[0].clone(), self)],
+            },
+
+            // Invert the conjunction of multiple constraints, yielding a disjunction of their
+            // inverted selves. (De Morgan's Law)
+            _ => Constraints {
+                variable: c.variable.clone(),
+                operations: vec![Operation {
+                    operator: Operator::Or,
+                    args: c
+                        .operations
+                        .into_iter()
+                        .map(|o| Term::new_temporary(Value::Expression(fold_operation(o, self))))
+                        .collect(),
+                }],
+            },
+        };
+        self.new_bindings.push(Binding(
+            partial.variable.clone(),
+            Term::new_temporary(Value::Partial(partial.clone())),
+        ));
+        partial
     }
 }
 
