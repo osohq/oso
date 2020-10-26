@@ -577,15 +577,19 @@ mod test {
         let polar = Polar::new();
         polar.load_str(
             r#"lhs(x) if x in [1, 2];
+               not_lhs(x) if not x in [1, 2];
                rhs(x) if 1 in x;"#,
         )?;
 
         // Partials on the LHS of `in` accumulate constraints disjunctively.
         let mut query = polar.new_query_from_term(term!(call!("lhs", [partial!("a")])), false);
-        let next = next_binding(&mut query)?;
-        assert_eq!(next[&sym!("a")], term!(1));
-        let next = next_binding(&mut query)?;
-        assert_eq!(next[&sym!("a")], term!(2));
+        assert_eq!(next_binding(&mut query)?[&sym!("a")], term!(1));
+        assert_eq!(next_binding(&mut query)?[&sym!("a")], term!(2));
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        // Inverting an `in` produces a conjunction of the inverted disjunctive constraints.
+        let mut query = polar.new_query_from_term(term!(call!("not_lhs", [partial!("a")])), false);
+        assert_partial_expression!(next_binding(&mut query)?, "a", "_this != 1 and _this != 2");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         // Partials are not allowed on the RHS of `in`.
