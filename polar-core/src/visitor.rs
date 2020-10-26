@@ -26,7 +26,7 @@ pub trait Visitor: Sized {
     fn visit_number(&mut self, _n: &Numeric) {}
     fn visit_string(&mut self, _s: &str) {}
     fn visit_boolean(&mut self, _b: &bool) {}
-    fn visit_id(&mut self, _i: &u64) {}
+    fn visit_instance_id(&mut self, _i: &u64) {}
     fn visit_symbol(&mut self, _s: &Symbol) {}
     fn visit_variable(&mut self, _v: &Symbol) {}
     fn visit_rest_variable(&mut self, _r: &Symbol) {}
@@ -118,7 +118,7 @@ pub fn walk_field<V: Visitor>(visitor: &mut V, key: &Symbol, value: &Term) {
 }
 
 pub fn walk_external_instance<V: Visitor>(visitor: &mut V, instance: &ExternalInstance) {
-    visitor.visit_id(&instance.instance_id);
+    visitor.visit_instance_id(&instance.instance_id);
 }
 
 pub fn walk_instance_literal<V: Visitor>(visitor: &mut V, instance: &InstanceLiteral) {
@@ -194,7 +194,7 @@ mod tests {
         fn visit_boolean(&mut self, b: &bool) {
             self.push(Value::Boolean(*b));
         }
-        fn visit_id(&mut self, i: &u64) {
+        fn visit_instance_id(&mut self, i: &u64) {
             self.push(Value::Number(Numeric::Integer(*i as i64)));
         }
         fn visit_symbol(&mut self, s: &Symbol) {

@@ -34,8 +34,8 @@ pub trait Folder: Sized {
     fn fold_boolean(&mut self, b: bool) -> bool {
         fold_boolean(b, self)
     }
-    fn fold_id(&mut self, i: u64) -> u64 {
-        fold_id(i, self)
+    fn fold_instance_id(&mut self, i: u64) -> u64 {
+        fold_instance_id(i, self)
     }
     fn fold_symbol(&mut self, s: Symbol) -> Symbol {
         fold_symbol(s, self)
@@ -129,7 +129,7 @@ pub fn fold_boolean<T: Folder>(b: bool, _fld: &mut T) -> bool {
     b
 }
 
-pub fn fold_id<T: Folder>(id: u64, _fld: &mut T) -> u64 {
+pub fn fold_instance_id<T: Folder>(id: u64, _fld: &mut T) -> u64 {
     id
 }
 
@@ -142,7 +142,7 @@ pub fn fold_external_instance<T: Folder>(
     fld: &mut T,
 ) -> ExternalInstance {
     ExternalInstance {
-        instance_id: fld.fold_id(instance_id),
+        instance_id: fld.fold_instance_id(instance_id),
         constructor: constructor.map(|t| fld.fold_term(t)),
         repr: repr.map(|r| fld.fold_string(r)),
     }
