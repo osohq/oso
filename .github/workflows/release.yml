@@ -5,6 +5,7 @@ on:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
       - main
+      - gj/posix
 
 jobs:
   version:
@@ -468,7 +469,7 @@ jobs:
       - name: Check that submodules are all up-to-date
         run: |
           git submodule foreach git remote update
-          git submodule foreach '[[ -z $(git --no-pager diff origin/main main) ]]'
+          git submodule foreach '[ -z $(git --no-pager diff origin/main main) ]'
       - uses: actions/cache@v2
         with:
           path: |
