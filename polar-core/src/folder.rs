@@ -1,3 +1,11 @@
+//! Inspiration: https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html
+//!
+//! Quoting the above, a Folder represents an AST->AST fold; it accepts an AST piece and returns a
+//! piece of the same type.
+
+// TODO(gj): Consider transitioning to a MutVisitor like
+//           https://docs.rs/rustc-ap-syntax/645.0.0/src/rustc_ap_syntax/mut_visit.rs.html
+
 use std::collections::BTreeMap;
 
 use super::partial::Constraints;
@@ -5,6 +13,13 @@ use super::rules::*;
 use super::terms::*;
 
 pub trait Folder: Sized {
+    // Quoting from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
+    //
+    // Any additions to this trait should happen in form of a call to a public `fold_*` function
+    // that only calls out to the folder again, not other `fold_*` functions.
+    //
+    // This is a necessary API workaround to the problem of not being able to call out to the super
+    // default method in an overridden default method.
     fn fold_number(&mut self, n: Numeric) -> Numeric {
         fold_number(n, self)
     }
