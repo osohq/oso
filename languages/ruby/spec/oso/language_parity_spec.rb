@@ -101,11 +101,11 @@ raise unless oso.query('builtinSpecializers({foo: "bar"}, "Dictionary")').to_a.e
 oso.query('builtinSpecializers("foo", "String")').next
 raise unless oso.query('builtinSpecializers("bar", "String")').to_a.empty?
 
-oso.query('builtinSpecializers(1, "IntegerWithFields")')
+oso.query('builtinSpecializers(1, "IntegerWithFields")').next
 raise unless oso.query('builtinSpecializers(2, "IntegerWithGarbageFields")').to_a.empty?
 raise unless oso.query('builtinSpecializers({}, "DictionaryWithFields")').to_a.empty?
 raise unless oso.query('builtinSpecializers({z: 1}, "DictionaryWithFields")').to_a.empty?
-oso.query('builtinSpecializers({y: 1}, "DictionaryWithFields")')
+oso.query('builtinSpecializers({y: 1}, "DictionaryWithFields")').next
 
 # Test deref behaviour
 oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'
