@@ -75,14 +75,12 @@ impl<'kb> Rewriter<'kb> {
     }
 }
 
-impl Operator {
-    pub fn temp_name(self) -> &'static str {
-        match self {
-            Operator::Add | Operator::Div | Operator::Mul | Operator::Sub => "op",
-            Operator::Dot => "value",
-            Operator::New => "instance",
-            _ => "temp",
-        }
+fn temp_name(o: &Operator) -> &'static str {
+    match o {
+        Operator::Add | Operator::Div | Operator::Mul | Operator::Sub => "op",
+        Operator::Dot => "value",
+        Operator::New => "instance",
+        _ => "temp",
     }
 }
 
@@ -124,7 +122,7 @@ impl<'kb> Folder for Rewriter<'kb> {
             Value::Expression(o) if self.needs_rewrite(o) => {
                 // Rewrite sub-expressions, then push a temp onto the args.
                 let mut new = fold_operation(o.clone(), self);
-                let temp = Value::Variable(self.kb.gensym(o.operator.temp_name()));
+                let temp = Value::Variable(self.kb.gensym(temp_name(&o.operator)));
                 new.args.push(Term::new_temporary(temp.clone()));
 
                 // Push the rewritten expression into the top stack frame.

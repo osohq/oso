@@ -118,35 +118,33 @@ pub fn format_rules(rules: &Rules, sep: &str) -> String {
         .join(sep)
 }
 
-impl Operator {
-    pub fn precedence(self) -> i32 {
-        match self {
-            Operator::Print => 11,
-            Operator::Debug => 11,
-            Operator::New => 10,
-            Operator::Cut => 10,
-            Operator::ForAll => 10,
-            Operator::Dot => 9,
-            Operator::In => 8,
-            Operator::Isa => 8,
-            Operator::Mul => 7,
-            Operator::Div => 7,
-            Operator::Mod => 7,
-            Operator::Rem => 7,
-            Operator::Add => 6,
-            Operator::Sub => 6,
-            Operator::Eq => 5,
-            Operator::Geq => 5,
-            Operator::Leq => 5,
-            Operator::Neq => 5,
-            Operator::Gt => 5,
-            Operator::Lt => 5,
-            Operator::Unify => 4,
-            Operator::Assign => 4,
-            Operator::Not => 3,
-            Operator::Or => 2,
-            Operator::And => 1,
-        }
+fn precedence(o: &Operator) -> i32 {
+    match o {
+        Operator::Print => 11,
+        Operator::Debug => 11,
+        Operator::New => 10,
+        Operator::Cut => 10,
+        Operator::ForAll => 10,
+        Operator::Dot => 9,
+        Operator::In => 8,
+        Operator::Isa => 8,
+        Operator::Mul => 7,
+        Operator::Div => 7,
+        Operator::Mod => 7,
+        Operator::Rem => 7,
+        Operator::Add => 6,
+        Operator::Sub => 6,
+        Operator::Eq => 5,
+        Operator::Geq => 5,
+        Operator::Leq => 5,
+        Operator::Neq => 5,
+        Operator::Gt => 5,
+        Operator::Lt => 5,
+        Operator::Unify => 4,
+        Operator::Assign => 4,
+        Operator::Not => 3,
+        Operator::Or => 2,
+        Operator::And => 1,
     }
 }
 
@@ -156,7 +154,7 @@ fn has_lower_pred(op: Operator, t: &Term) -> bool {
     match t.value() {
         Value::Expression(Operation {
             operator: other, ..
-        }) => op.precedence() > other.precedence(),
+        }) => precedence(&op) > precedence(&other),
         _ => false,
     }
 }
