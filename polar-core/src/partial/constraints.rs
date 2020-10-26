@@ -528,13 +528,25 @@ mod test {
     #[test]
     fn test_in_with_partial() -> TestResult {
         let polar = Polar::new();
-        polar.load_str(r#"f(x) if x in [1, 2];"#)?;
-        let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        polar.load_str(
+            r#"lhs(x) if x in [1, 2];
+               rhs(x) if 1 in x;"#,
+        )?;
+
+        // Partials on the LHS of `in` accumulate constraints disjunctively.
+        let mut query = polar.new_query_from_term(term!(call!("lhs", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
         assert_eq!(next[&sym!("a")], term!(1));
         let next = next_binding(&mut query)?;
         assert_eq!(next[&sym!("a")], term!(2));
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        // Partials are not allowed on the RHS of `in`.
+        let mut query = polar.new_query_from_term(term!(call!("rhs", [partial!("a")])), false);
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
+
         Ok(())
     }
 
