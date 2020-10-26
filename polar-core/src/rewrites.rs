@@ -75,6 +75,17 @@ impl<'kb> Rewriter<'kb> {
     }
 }
 
+impl Operator {
+    pub fn temp_name(self) -> &'static str {
+        match self {
+            Operator::Add | Operator::Div | Operator::Mul | Operator::Sub => "op",
+            Operator::Dot => "value",
+            Operator::New => "instance",
+            _ => "temp",
+        }
+    }
+}
+
 /// Replace `o(a, b)` with `_c`, where `_c = o(a, b)`.
 /// The lookup is hoisted to the nearest enclosing
 /// conjunction, creating one if necessary.
