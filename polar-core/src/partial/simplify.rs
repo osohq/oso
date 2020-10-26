@@ -54,7 +54,7 @@ impl Folder for Simplifier {
                             .cloned()
                             .collect::<TermList>();
                         assert_eq!(args.len(), 1, "should have exactly 1 non-_this operand");
-                        args.pop().unwrap()
+                        fold_term(args.pop().unwrap(), self)
                     }
                     _ => fold_term(t, self),
                 }
