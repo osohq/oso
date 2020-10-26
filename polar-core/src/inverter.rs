@@ -1,3 +1,11 @@
+//! A Runnable that runs a query and inverts the results in three ways:
+//!
+//! 1. If no results are emitted (indicating failure), return true.
+//! 2. If at least one result is emitted containing a partial, invert the partial's constraints,
+//!    pass the inverted partials back to the parent Runnable via a shared BindingStack, and return
+//!    true.
+//! 3. In all other cases, return false.
+
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::rc::Rc;
@@ -129,10 +137,6 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
 }
 
 impl Runnable for Inverter {
-    /// - If no results are emitted, return true.
-    /// - If at least one result is emitted containing a partial, invert the partial's constraints
-    ///   and return true.
-    /// - Otherwise, return false.
     fn run(&mut self, _: Option<&mut Counter>) -> PolarResult<QueryEvent> {
         loop {
             // Pass most events through, but collect results and invert them.

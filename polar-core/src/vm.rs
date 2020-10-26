@@ -304,6 +304,7 @@ impl PolarVirtualMachine {
         PolarVirtualMachine::new(kb, tracing, goals, MessageQueue::new())
     }
 
+    /// Clone self, replacing the goal stack and retaining only the current bindings.
     pub fn clone_with_bindings(&self, goals: Goals) -> Self {
         let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
         vm.bindings.clone_from(&self.bindings);
