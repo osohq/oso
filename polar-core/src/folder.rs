@@ -37,8 +37,8 @@ pub trait Folder: Sized {
     fn fold_id(&mut self, i: u64) -> u64 {
         fold_id(i, self)
     }
-    fn fold_name(&mut self, n: Symbol) -> Symbol {
-        fold_name(n, self)
+    fn fold_symbol(&mut self, s: Symbol) -> Symbol {
+        fold_symbol(s, self)
     }
     fn fold_variable(&mut self, v: Symbol) -> Symbol {
         fold_variable(v, self)
@@ -89,7 +89,7 @@ pub trait Folder: Sized {
 
 pub fn fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T) -> Rule {
     Rule {
-        name: fld.fold_name(name),
+        name: fld.fold_symbol(name),
         params: params.into_iter().map(|p| fld.fold_param(p)).collect(),
         body: fld.fold_term(body),
     }
@@ -153,7 +153,7 @@ pub fn fold_instance_literal<T: Folder>(
     fld: &mut T,
 ) -> InstanceLiteral {
     InstanceLiteral {
-        tag: fld.fold_name(tag),
+        tag: fld.fold_symbol(tag),
         fields: fld.fold_dictionary(fields),
     }
 }
@@ -162,7 +162,7 @@ pub fn fold_dictionary<T: Folder>(Dictionary { fields }: Dictionary, fld: &mut T
     Dictionary {
         fields: fields
             .into_iter()
-            .map(|(k, v)| (fld.fold_name(k), fld.fold_term(v)))
+            .map(|(k, v)| (fld.fold_symbol(k), fld.fold_term(v)))
             .collect::<BTreeMap<Symbol, Term>>(),
     }
 }
@@ -176,12 +176,12 @@ pub fn fold_pattern<T: Folder>(p: Pattern, fld: &mut T) -> Pattern {
 
 pub fn fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T) -> Call {
     Call {
-        name: fld.fold_name(name),
+        name: fld.fold_symbol(name),
         args: fld.fold_list(args),
         kwargs: kwargs.map(|kwargs| {
             kwargs
                 .into_iter()
-                .map(|(k, v)| (fld.fold_name(k), fld.fold_term(v)))
+                .map(|(k, v)| (fld.fold_symbol(k), fld.fold_term(v)))
                 .collect::<BTreeMap<Symbol, Term>>()
         }),
     }
@@ -227,8 +227,8 @@ pub fn fold_constraints<T: Folder>(
     }
 }
 
-pub fn fold_name<T: Folder>(name: Symbol, _fld: &mut T) -> Symbol {
-    name
+pub fn fold_symbol<T: Folder>(s: Symbol, _fld: &mut T) -> Symbol {
+    s
 }
 
 pub fn fold_param<T: Folder>(

@@ -27,7 +27,7 @@ pub trait Visitor: Sized {
     fn visit_string(&mut self, _s: &str) {}
     fn visit_boolean(&mut self, _b: &bool) {}
     fn visit_id(&mut self, _i: &u64) {}
-    fn visit_name(&mut self, _n: &Symbol) {}
+    fn visit_symbol(&mut self, _s: &Symbol) {}
     fn visit_variable(&mut self, _v: &Symbol) {}
     fn visit_rest_variable(&mut self, _r: &Symbol) {}
     fn visit_operator(&mut self, _o: &Operator) {}
@@ -89,7 +89,7 @@ macro_rules! walk_fields {
 }
 
 pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule) {
-    visitor.visit_name(&rule.name);
+    visitor.visit_symbol(&rule.name);
     walk_elements!(visitor, visit_param, &rule.params);
     visitor.visit_term(&rule.body);
 }
@@ -113,7 +113,7 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
 }
 
 pub fn walk_field<V: Visitor>(visitor: &mut V, key: &Symbol, value: &Term) {
-    visitor.visit_name(key);
+    visitor.visit_symbol(key);
     visitor.visit_term(value);
 }
 
@@ -122,7 +122,7 @@ pub fn walk_external_instance<V: Visitor>(visitor: &mut V, instance: &ExternalIn
 }
 
 pub fn walk_instance_literal<V: Visitor>(visitor: &mut V, instance: &InstanceLiteral) {
-    visitor.visit_name(&instance.tag);
+    visitor.visit_symbol(&instance.tag);
     visitor.visit_dictionary(&instance.fields);
 }
 
@@ -138,7 +138,7 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
 }
 
 pub fn walk_call<V: Visitor>(visitor: &mut V, call: &Call) {
-    visitor.visit_name(&call.name);
+    visitor.visit_symbol(&call.name);
     walk_elements!(visitor, visit_term, &call.args);
     if let Some(kwargs) = call.kwargs.as_ref() {
         walk_fields!(visitor, kwargs);
@@ -163,7 +163,7 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
 }
 
 pub fn walk_constraints<V: Visitor>(visitor: &mut V, constraints: &Constraints) {
-    visitor.visit_name(&constraints.variable);
+    visitor.visit_symbol(&constraints.variable);
     walk_elements!(visitor, visit_operation, &constraints.operations);
 }
 
@@ -197,8 +197,8 @@ mod tests {
         fn visit_id(&mut self, i: &u64) {
             self.push(Value::Number(Numeric::Integer(*i as i64)));
         }
-        fn visit_name(&mut self, n: &Symbol) {
-            self.push(Value::Variable(n.clone()));
+        fn visit_symbol(&mut self, s: &Symbol) {
+            self.push(Value::Variable(s.clone()));
         }
         fn visit_variable(&mut self, v: &Symbol) {
             self.push(Value::Variable(v.clone()));
