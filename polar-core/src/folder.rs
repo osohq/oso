@@ -254,9 +254,63 @@ mod tests {
     impl Folder for TrivialFolder {}
 
     #[test]
-    fn test_fold_term() {
-        let t = term!([value!(1), value!("Hi there!"), value!(true)]);
+    fn test_fold_term_atomics() {
+        let number = value!(1);
+        let string = value!("Hi there!");
+        let boolean = value!(true);
+        let variable = value!(sym!("x"));
+        let rest_var = Value::RestVariable(sym!("rest"));
+        let list = Value::List(vec![
+            term!(number),
+            term!(string),
+            term!(boolean),
+            term!(variable),
+            term!(rest_var),
+        ]);
+        let term = term!(list);
         let mut fld = TrivialFolder {};
-        assert_eq!(fld.fold_term(t.clone()), t);
+        assert_eq!(fld.fold_term(term.clone()), term);
     }
+
+    #[test]
+    fn test_fold_term_compounds() {
+        let external_instance = term!(Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        }));
+        let instance_pattern = term!(value!(Pattern::Instance(InstanceLiteral {
+            tag: sym!("d"),
+            fields: Dictionary {
+                fields: btreemap! {
+                    sym!("e") => term!(call!("f", [2])),
+                    sym!("g") => term!(op!(Add, term!(3), term!(4))),
+                }
+            }
+        })));
+        let dict_pattern = term!(Value::Pattern(Pattern::Dictionary(Dictionary {
+            fields: btreemap! {
+                sym!("i") => term!("j"),
+                sym!("k") => term!("l"),
+            },
+        })));
+        let term = term!(btreemap! {
+            sym!("a") => term!(btreemap!{
+                sym!("b") => external_instance,
+                sym!("c") => instance_pattern,
+            }),
+            sym!("h") => dict_pattern,
+        });
+        let mut fld = TrivialFolder {};
+        assert_eq!(fld.fold_term(term.clone()), term);
+    }
+
+    #[test]
+    fn test_fold_rule() {
+        let rule = rule!("a", ["b"; instance!("c"), value!("d")] => call!("e", [value!("f")]));
+        let mut fld = TrivialFolder {};
+        assert_eq!(fld.fold_rule(rule.clone()), rule);
+    }
+
+    // TODO(gj): Add test for folding a partial.
 }
