@@ -980,10 +980,23 @@ impl PolarVirtualMachine {
             }
 
             (Value::Partial(partial), _) => {
+                if matches!(right.value(), Value::Pattern(Pattern::Instance(InstanceLiteral {
+                    fields,
+                    ..
+                })) if !fields.is_empty())
+                {
+                    return Err(self.set_error_context(
+                        &right,
+                        error::RuntimeError::Unsupported {
+                            msg:
+                                "cannot yet match a partial against an instance pattern with fields"
+                                    .to_string(),
+                        },
+                    ));
+                }
+
                 let mut partial = partial.clone();
-
                 let compatibility = partial.isa(right.clone());
-
                 let name = partial.name().clone();
 
                 // Run compatibility check

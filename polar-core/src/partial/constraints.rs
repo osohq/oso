@@ -327,6 +327,18 @@ mod test {
     }
 
     #[test]
+    fn test_partial_isa_with_fields() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x: Post{id: 1});"#)?;
+
+        let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        Ok(())
+    }
+
+    #[test]
     fn test_partial_isa_two_rule() -> TestResult {
         let polar = Polar::new();
         polar.load_str(r#"f(x: Post) if x.foo = 0 and g(x);"#)?;
