@@ -597,4 +597,25 @@ mod test {
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
         Ok(())
     }
+
+    #[test]
+    fn test_assignment_to_partial() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(
+            r#"f(x) if x := 1;
+               g(x) if x = 1 and y := x;"#,
+        )?;
+        let mut query =
+            polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
+
+        let mut query =
+            polar.new_query_from_term(term!(call!("g", [Constraints::new(sym!("a"))])), false);
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(1));
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+        Ok(())
+    }
 }
