@@ -434,6 +434,17 @@ mod test {
             polar.new_query_from_term(term!(call!("f", [Constraints::new(sym!("a"))])), false);
         let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "_this.y.z > 0");
+
+        polar.load_str(r#"g(x) if x.y = 0 and x.y > 1 and x.y.z > 1 and x = 2;"#)?;
+        let mut query =
+            polar.new_query_from_term(term!(call!("g", [Constraints::new(sym!("a"))])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this.y = 0 and _this.y > 1 and _this.y.z > 1 and _this = 2"
+        );
+
         Ok(())
     }
 }
