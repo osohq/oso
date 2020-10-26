@@ -526,6 +526,18 @@ mod test {
     }
 
     #[test]
+    fn test_that_cut_with_partial_errors() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(r#"f(x) if cut;"#)?;
+        let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let error = query.next_event().unwrap_err();
+        assert!(matches!(error, PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "cut not yet implemented with partials"]
     fn test_cut_with_partial() -> TestResult {
         let polar = Polar::new();
         polar.load_str(
@@ -545,6 +557,33 @@ mod test {
     }
 
     #[test]
+    #[ignore = "cut not yet implemented with partials"]
+    fn test_conditional_cut_with_partial() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(
+            r#"
+            f(x) if x = 1 or x = 2 and cut and x = 2;
+            g(1) if cut;
+            g(2);
+        "#,
+        )?;
+        let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this = 1 and _this = 2");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(1));
+        let next = next_binding(&mut query)?;
+        assert_eq!(next[&sym!("a")], term!(2));
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "cut not yet implemented with partials"]
     fn test_method_sorting_with_cut_and_partial() -> TestResult {
         let polar = Polar::new();
         polar.load_str(

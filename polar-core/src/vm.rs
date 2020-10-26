@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
+use super::visitor::{walk_term, Visitor};
 use crate::counter::Counter;
 use crate::debugger::{DebugEvent, Debugger};
 use crate::error::{self, PolarResult};
@@ -207,6 +208,9 @@ pub struct PolarVirtualMachine {
     polar_log: bool,
     polar_log_mute: bool,
 
+    // Other flags.
+    query_contains_partial: bool,
+
     /// Output messages.
     pub messages: MessageQueue,
 }
@@ -220,6 +224,31 @@ impl Default for PolarVirtualMachine {
             // Messages will not be exposed, only use default() for testing.
             MessageQueue::new(),
         )
+    }
+}
+
+#[allow(clippy::ptr_arg)]
+fn query_contains_partial(goals: &Goals) -> bool {
+    if goals.len() == 1 {
+        if let Goal::Query { term } = &goals[0] {
+            struct PartialVisitor {
+                has_partial: bool,
+            }
+
+            impl Visitor for PartialVisitor {
+                fn visit_constraints(&mut self, _: &partial::Constraints) {
+                    self.has_partial = true;
+                }
+            }
+
+            let mut visitor = PartialVisitor { has_partial: false };
+            walk_term(&mut visitor, &term);
+            visitor.has_partial
+        } else {
+            false
+        }
+    } else {
+        false
     }
 }
 
@@ -238,6 +267,7 @@ impl PolarVirtualMachine {
             .expect("cannot acquire KB read lock")
             .constants
             .clone();
+        let query_contains_partial = query_contains_partial(&goals);
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             bindings: vec![],
@@ -257,6 +287,7 @@ impl PolarVirtualMachine {
             log: std::env::var("RUST_LOG").is_ok(),
             polar_log: std::env::var("POLAR_LOG").is_ok(),
             polar_log_mute: false,
+            query_contains_partial,
             messages,
         };
         vm.bind_constants(constants);
@@ -1492,6 +1523,15 @@ impl PolarVirtualMachine {
                 ])?;
             }
             Operator::Cut => {
+                if self.query_contains_partial {
+                    return Err(self.set_error_context(
+                        &term,
+                        error::RuntimeError::Unsupported {
+                            msg: "cannot use cut with a partial".to_string(),
+                        },
+                    ));
+                }
+
                 // Remove all choices created before this cut that are in the
                 // current rule body.
                 let mut choice_index = self.choices.len();
