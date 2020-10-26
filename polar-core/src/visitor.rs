@@ -1,7 +1,26 @@
+//! Inspiration: https://docs.rs/rustc-ap-syntax/645.0.0/src/rustc_ap_syntax/visit.rs.html
+//!
+//! Paraphrasing the above, this is an AST walker. Each overridden visit method has full control
+//! over what happens with its node: it can do its own traversal of the node's children, call
+//! `visitor::walk_*` to apply the default traversal algorithm, or prevent deeper traversal by
+//! doing nothing.
+
 use super::partial::Constraints;
 use super::rules::*;
 use super::terms::*;
 
+/// Paraphrasing from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
+///
+/// Any additions to this trait should happen in form of a call to a public `walk_*` function that
+/// only calls out to the visitor again, not other `walk_*` functions. This is a necessary API
+/// workaround to the problem of not being able to call out to the super default method in an
+/// overridden default method.
+///
+/// Paraphrasing from https://docs.rs/rustc-ap-syntax/645.0.0/src/rustc_ap_syntax/visit.rs.html:
+///
+/// Each method of the Visitor trait is a hook to be potentially overridden. Each method's default
+/// implementation recursively visits the substructure of the input via the corresponding `walk_*`
+/// method; e.g., the `visit_rule` method by default calls `visitor::walk_rule`.
 pub trait Visitor: Sized {
     // Atoms. These may be overridden as needed.
     fn visit_number(&mut self, _n: &Numeric) {}

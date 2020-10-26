@@ -12,14 +12,19 @@ use super::partial::Constraints;
 use super::rules::*;
 use super::terms::*;
 
+/// Quoting from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
+///
+/// Any additions to this trait should happen in form of a call to a public `fold_*` function that
+/// only calls out to the folder again, not other `fold_*` functions. This is a necessary API
+/// workaround to the problem of not being able to call out to the super default method in an
+/// overridden default method.
+///
+/// Paraphrasing from https://docs.rs/rustc-ap-syntax/645.0.0/src/rustc_ap_syntax/visit.rs.html:
+///
+/// Each method of the Folder trait is a hook to be potentially overridden. Each method's default
+/// implementation recursively visits the substructure of the input via the corresponding `fold_*`
+/// method; e.g., the `fold_rule` method by default calls `folder::fold_rule`.
 pub trait Folder: Sized {
-    // Quoting from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
-    //
-    // Any additions to this trait should happen in form of a call to a public `fold_*` function
-    // that only calls out to the folder again, not other `fold_*` functions.
-    //
-    // This is a necessary API workaround to the problem of not being able to call out to the super
-    // default method in an overridden default method.
     fn fold_number(&mut self, n: Numeric) -> Numeric {
         fold_number(n, self)
     }
