@@ -457,6 +457,52 @@ jobs:
           node dist/test/parity.js
         working-directory: oso_js_node
 
+  test_quickstarts:
+    name: Test Quickstarts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Initialize submodules
+        working-directory: docs/examples/quickstart
+        run: git submodule update --init -- oso-java-quickstart oso-nodejs-quickstart oso-python-quickstart oso-ruby-quickstart oso-rust-quickstart
+      - name: Check that submodules are all up-to-date
+        run: |
+          git submodule foreach git remote update
+          git submodule foreach '[[ -z $(git --no-pager diff origin/main main) ]]'
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
+      - name: Use Python 3.6
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.6
+      - name: Use Ruby 2.4.0
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.4.0
+          working-directory: "docs/examples/quickstart/oso-ruby-quickstart"
+      - name: Use Node.js 10.0.0
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.0.0
+      - name: Use Java 10
+        uses: actions/setup-java@v1
+        with:
+          java-version: 10
+      - name: Use stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Run quickstart tests
+        run: make -C docs/examples/quickstart test-ci
+
   release:
     name: Create release
     runs-on: ubuntu-latest
@@ -472,6 +518,7 @@ jobs:
         validate_ruby,
         validate_java,
         validate_js,
+        test_quickstarts,
       ]
     steps:
       - name: Set version env
@@ -608,6 +655,7 @@ jobs:
         validate_ruby,
         validate_java,
         validate_js,
+        test_quickstarts,
       ]
     steps:
       - uses: rtCamp/action-slack-notify@master
