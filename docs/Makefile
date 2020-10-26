@@ -26,7 +26,7 @@ JS_FILES := $(call rwildcard ../languages/js/src, *.ts)
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile html doctest
+.PHONY: help Makefile html doctest test-quickstarts
 
 _api_docs/ruby: $(RUBY_FILES)
 	mkdir -p _api_docs
@@ -96,6 +96,9 @@ nodejs-test:
 	cd examples/context/nodejs && yarn && yarn jest
 	cd examples/inheritance/nodejs && yarn && yarn jest
 	cd examples/user_types/nodejs && yarn && yarn jest
+
+test-quickstarts:
+	$(MAKE) -C examples/quickstart test
 
 test: doctest
 	$(MAKE) python-test

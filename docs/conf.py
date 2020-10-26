@@ -112,6 +112,7 @@ exclude_patterns = [
     "more/language/polar-classes.rst",  # we don't currently have classes
     "**/venv/**",
     "**/node_modules/**",
+    "examples/quickstart/oso-*-quickstart",
 ]
 
 # Don't copy the source or show a link
