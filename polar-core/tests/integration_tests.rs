@@ -593,6 +593,14 @@ fn test_not() -> TestResult {
     qnull(&mut p, "h(3)");
 
     qeval(&mut p, "d = {x: 1} and not d.x = 2");
+
+    // Negate And with unbound variable.
+    p.load_str("i(x,y) if not (y = 2 and x = 1);")?;
+    qvar(&mut p, "i(2,y)", "y", values![sym!("_y_44")]);
+
+    // Negate Or with unbound variable.
+    p.load_str("j(x,y) if not (y = 2 or x = 1);")?;
+    qnull(&mut p, "j(2, y)");
     Ok(())
 }
 
