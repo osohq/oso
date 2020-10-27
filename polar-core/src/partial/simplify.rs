@@ -11,7 +11,6 @@ use crate::terms::{Operation, Operator, Term, TermList, Value};
 pub fn simplify_bindings(bindings: Bindings) -> Bindings {
     bindings
         .into_iter()
-        .filter(|(v, _)| !v.is_temporary_var())
         .map(|(var, value)| match value.value() {
             Value::Partial(_) => {
                 let mut simplified = simplify_partial(value);

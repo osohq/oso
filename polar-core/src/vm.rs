@@ -2603,8 +2603,7 @@ impl Runnable for PolarVirtualMachine {
             None
         };
 
-        // TODO: Do we need temps in the bindings below?
-        let bindings = simplify_bindings(self.bindings(true));
+        let bindings = simplify_bindings(self.bindings(false));
 
         Ok(QueryEvent::Result { bindings, trace })
     }
