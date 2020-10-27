@@ -16,11 +16,11 @@ builtinSpecializers(x: List, "List") if x = ["foo", *_rest];
 builtinSpecializers(x: Dictionary, "Dictionary") if x.foo = "foo";
 builtinSpecializers(x: String, "String") if x = "foo";
 # This should not match
-builtinSpecializers(x: Integer { garbage: 2 }, "IntegerWithGarbageFields");
+builtinSpecializers(_x: Integer { garbage: 2 }, "IntegerWithGarbageFields");
 # This should match in some languages
-builtinSpecializers(x: Integer { denominator: 1 }, "IntegerWithFields");
+builtinSpecializers(_x: Integer { denominator: 1 }, "IntegerWithFields");
 # This should match
-builtinSpecializers(x: Dictionary { y: 1 }, "DictionaryWithFields");
+builtinSpecializers(_x: Dictionary { y: 1 }, "DictionaryWithFields");
 
 floatLists() if 3.14159 in ["pi", 3.14159];
 
