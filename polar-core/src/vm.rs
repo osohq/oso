@@ -924,8 +924,9 @@ impl PolarVirtualMachine {
 
         match (&left.value(), &right.value()) {
             (_, Value::Partial(_)) => unreachable!("cannot match against a partial"),
-            (Value::Variable(symbol), _) => {
-                if let Some(value) = self.value(&symbol).cloned() {
+
+            (Value::Variable(v), _) | (Value::RestVariable(v), _) => {
+                if let Some(value) = self.value(&v).cloned() {
                     self.push_goal(Goal::Isa {
                         left: value,
                         right: right.clone(),
@@ -938,8 +939,8 @@ impl PolarVirtualMachine {
                 }
             }
 
-            (_, Value::Variable(symbol)) => {
-                if let Some(value) = self.value(&symbol).cloned() {
+            (_, Value::Variable(v)) | (_, Value::RestVariable(v)) => {
+                if let Some(value) = self.value(&v).cloned() {
                     self.push_goal(Goal::Isa {
                         left: left.clone(),
                         right: value,
@@ -983,34 +984,6 @@ impl PolarVirtualMachine {
                     }],
                     vec![Goal::Backtrack],
                 )?;
-            }
-
-            (Value::RestVariable(symbol), _) => {
-                if let Some(value) = self.value(&symbol).cloned() {
-                    self.push_goal(Goal::Isa {
-                        left: value,
-                        right: right.clone(),
-                    })?;
-                } else {
-                    self.push_goal(Goal::Unify {
-                        left: left.clone(),
-                        right: right.clone(),
-                    })?;
-                }
-            }
-
-            (_, Value::RestVariable(symbol)) => {
-                if let Some(value) = self.value(&symbol).cloned() {
-                    self.push_goal(Goal::Isa {
-                        left: left.clone(),
-                        right: value,
-                    })?;
-                } else {
-                    self.push_goal(Goal::Unify {
-                        left: left.clone(),
-                        right: right.clone(),
-                    })?;
-                }
             }
 
             (Value::InstanceLiteral(_), _) => {
