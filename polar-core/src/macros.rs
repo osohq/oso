@@ -15,21 +15,16 @@ use crate::terms::*;
 pub const ORD: Ordering = Ordering::SeqCst;
 pub static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
-/// Special struct which is way more eager at implementing `From`
-/// for a bunch of things, so that in the macros we can use `TestHelper<Term>::from`
-/// and try and convert things as often as possible.
-pub struct TestHelper<T>(pub T);
-
-impl<T> From<T> for TestHelper<T> {
-    fn from(other: T) -> Self {
-        Self(other)
-    }
-}
-
-impl From<Value> for TestHelper<Term> {
-    fn from(other: Value) -> Self {
-        Self(Term::new_from_test(other))
-    }
+#[macro_export]
+macro_rules! value {
+    ([$($args:expr),*]) => {
+        $crate::terms::Value::List(vec![
+            $(term!(value!($args))),*
+        ])
+    };
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Value>::from($arg).0
+    };
 }
 
 #[macro_export]
@@ -39,26 +34,11 @@ macro_rules! term {
     };
 }
 
-// TODO change this
-impl From<(Symbol, Term)> for TestHelper<Parameter> {
-    fn from(arg: (Symbol, Term)) -> Self {
-        Self(Parameter {
-            parameter: arg.1.clone_with_value(Value::Variable(arg.0)),
-            specializer: Some(Pattern::term_as_pattern(&arg.1)),
-        })
-    }
-}
-
-impl From<Value> for TestHelper<Parameter> {
-    /// Convert a Value to a parameter.  If the value is a symbol,
-    /// it is used as the parameter name. Otherwise it is assumed to be
-    /// a specializer.
-    fn from(name: Value) -> Self {
-        Self(Parameter {
-            parameter: Term::new_from_test(name),
-            specializer: None,
-        })
-    }
+#[macro_export]
+macro_rules! pattern {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Pattern>::from($arg).0
+    };
 }
 
 #[macro_export]
@@ -82,18 +62,6 @@ macro_rules! instance {
             fields: $crate::macros::TestHelper::<Dictionary>::from($fields).0,
         }
     };
-}
-
-impl<S: AsRef<str>> From<S> for TestHelper<Symbol> {
-    fn from(other: S) -> Self {
-        Self(Symbol(other.as_ref().to_string()))
-    }
-}
-
-impl From<BTreeMap<Symbol, Term>> for TestHelper<Dictionary> {
-    fn from(other: BTreeMap<Symbol, Term>) -> Self {
-        Self(Dictionary { fields: other })
-    }
 }
 
 #[macro_export]
@@ -154,6 +122,114 @@ macro_rules! op {
             args: vec![]
         }
     };
+}
+
+#[macro_export]
+macro_rules! dict {
+    ($arg:expr) => {
+        $crate::macros::TestHelper::<Dictionary>::from($arg).0
+    };
+}
+
+/// Builds a list of arguments in reverse order
+/// Arguments of the form `foo; bar` get built into foo specialized on bar
+/// Otherwise, the argument is built depending on the type (symbols become names,
+/// terms become specializers).
+#[macro_export]
+macro_rules! args {
+    () => {
+        vec![]
+    };
+    // this is gross: maybe match a <comma plus trailing tokens>
+    ($name:expr $(, $($tt:tt)*)?) => {{
+        let mut v = args!($($($tt)*)?);
+        v.push(param!(value!($name)));
+        v
+    }};
+    ($name:expr ; $spec:expr $(, $($tt:tt)*)?) => {{
+        let mut v = args!($($($tt)*)?);
+        v.push(param!((sym!($name), term!($spec))));
+        v
+    }};
+}
+
+#[macro_export]
+macro_rules! rule {
+    ($name:expr, [$($args:tt)*] => $($body:expr),+) => {{
+        let mut params = args!($($args)*);
+        params.reverse();
+        Rule {
+            name: sym!($name),
+            params,
+            body: term!(op!(And, $(term!($body)),+)),
+        }}
+    };
+    ($name:expr, [$($args:tt)*]) => {{
+        let mut params = args!($($args)*);
+        params.reverse();
+        Rule {
+            name: sym!($name),
+            params,
+            body: term!(op!(And)),
+        }
+    }};
+}
+
+/// Special struct which is way more eager at implementing `From`
+/// for a bunch of things, so that in the macros we can use `TestHelper<Term>::from`
+/// and try and convert things as often as possible.
+pub struct TestHelper<T>(pub T);
+
+impl<T> From<T> for TestHelper<T> {
+    fn from(other: T) -> Self {
+        Self(other)
+    }
+}
+
+impl From<Value> for TestHelper<Term> {
+    fn from(other: Value) -> Self {
+        Self(Term::new_from_test(other))
+    }
+}
+
+// TODO change this
+// TODO(gj): TODONE?
+impl From<(Symbol, Term)> for TestHelper<Parameter> {
+    fn from(arg: (Symbol, Term)) -> Self {
+        let specializer = match arg.1.value().clone() {
+            Value::Dictionary(dict) => value!(pattern!(dict)),
+            Value::InstanceLiteral(lit) => value!(pattern!(lit)),
+            v => v,
+        };
+        Self(Parameter {
+            parameter: arg.1.clone_with_value(Value::Variable(arg.0)),
+            specializer: Some(term!(specializer)),
+        })
+    }
+}
+
+impl From<Value> for TestHelper<Parameter> {
+    /// Convert a Value to a parameter.  If the value is a symbol,
+    /// it is used as the parameter name. Otherwise it is assumed to be
+    /// a specializer.
+    fn from(name: Value) -> Self {
+        Self(Parameter {
+            parameter: Term::new_from_test(name),
+            specializer: None,
+        })
+    }
+}
+
+impl<S: AsRef<str>> From<S> for TestHelper<Symbol> {
+    fn from(other: S) -> Self {
+        Self(Symbol(other.as_ref().to_string()))
+    }
+}
+
+impl From<BTreeMap<Symbol, Term>> for TestHelper<Dictionary> {
+    fn from(other: BTreeMap<Symbol, Term>) -> Self {
+        Self(Dictionary { fields: other })
+    }
 }
 
 impl From<i64> for TestHelper<Value> {
@@ -221,58 +297,23 @@ impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
     }
 }
 
-#[macro_export]
-macro_rules! value {
-    ([$($args:expr),*]) => {
-        $crate::terms::Value::List(vec![
-            $(term!(value!($args))),*
-        ])
-    };
-    ($arg:expr) => {
-        $crate::macros::TestHelper::<Value>::from($arg).0
-    };
+impl From<Dictionary> for TestHelper<Pattern> {
+    fn from(other: Dictionary) -> Self {
+        Self(Pattern::Dictionary(other))
+    }
 }
-
-/// Builds a list of arguments in reverse order
-/// Arguments of the form `foo; bar` get built into foo specialized on bar
-/// Otherwise, the argument is built depending on the type (symbols become names,
-/// terms become specializers).
-#[macro_export]
-macro_rules! args {
-    () => {
-        vec![]
-    };
-    // this is gross: maybe match a <comma plus trailing tokens>
-    ($name:expr $(, $($tt:tt)*)?) => {{
-        let mut v = args!($($($tt)*)?);
-        v.push(param!(value!($name)));
-        v
-    }};
-    ($name:expr ; $spec:expr $(, $($tt:tt)*)?) => {{
-        let mut v = args!($($($tt)*)?);
-        v.push(param!((sym!($name), term!($spec))));
-        v
-    }};
+impl From<BTreeMap<Symbol, Term>> for TestHelper<Pattern> {
+    fn from(other: BTreeMap<Symbol, Term>) -> Self {
+        Self(Pattern::Dictionary(dict!(other)))
+    }
 }
-
-#[macro_export]
-macro_rules! rule {
-    ($name:expr, [$($args:tt)*] => $($body:expr),+) => {{
-        let mut params = args!($($args)*);
-        params.reverse();
-        Rule {
-            name: sym!($name),
-            params,
-            body: term!(op!(And, $(term!($body)),+)),
-        }}
-    };
-    ($name:expr, [$($args:tt)*]) => {{
-        let mut params = args!($($args)*);
-        params.reverse();
-        Rule {
-            name: sym!($name),
-            params,
-            body: term!(op!(And)),
-        }
-    }};
+impl From<InstanceLiteral> for TestHelper<Pattern> {
+    fn from(other: InstanceLiteral) -> Self {
+        Self(Pattern::Instance(other))
+    }
+}
+impl From<Pattern> for TestHelper<Term> {
+    fn from(other: Pattern) -> Self {
+        Self(Term::new_from_test(value!(other)))
+    }
 }

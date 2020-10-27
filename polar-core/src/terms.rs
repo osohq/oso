@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub use super::numerics::Numeric;
 use super::partial::Constraints;
+use super::visitor::{walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -20,25 +21,8 @@ impl Dictionary {
         }
     }
 
-    fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        self.fields.iter_mut().for_each(|(_k, v)| v.map_replace(f));
-    }
-
     pub fn is_empty(&self) -> bool {
         self.fields.is_empty()
-    }
-
-    /// Convert all terms in this dictionary to patterns.
-    pub fn as_pattern(&self) -> Pattern {
-        let mut pattern = self.clone();
-        pattern.map_replace(&mut |t| {
-            let v = Pattern::value_as_pattern(t.value());
-            t.clone_with_value(v)
-        });
-        Pattern::Dictionary(pattern)
     }
 }
 
@@ -46,28 +30,6 @@ impl Dictionary {
 pub struct InstanceLiteral {
     pub tag: Symbol,
     pub fields: Dictionary,
-}
-
-impl InstanceLiteral {
-    pub fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        self.fields
-            .fields
-            .iter_mut()
-            .for_each(|(_, v)| v.map_replace(f));
-    }
-
-    /// Convert all terms in this instance literal to patterns.
-    pub fn as_pattern(&self) -> Pattern {
-        let mut pattern = self.clone();
-        pattern.map_replace(&mut |t| {
-            let v = Pattern::value_as_pattern(t.value());
-            t.clone_with_value(v)
-        });
-        Pattern::Instance(pattern)
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -104,6 +66,14 @@ impl Symbol {
 
     pub fn is_temporary_var(&self) -> bool {
         self.0.starts_with('_')
+    }
+
+    pub fn is_namespaced_var(&self) -> bool {
+        self.0.find("::").is_some()
+    }
+
+    pub fn is_this_var(&self) -> bool {
+        self.0 == "_this"
     }
 }
 
@@ -143,38 +113,6 @@ pub enum Operator {
     Assign,
 }
 
-impl Operator {
-    pub fn precedence(self) -> i32 {
-        match self {
-            Operator::Print => 11,
-            Operator::Debug => 11,
-            Operator::New => 10,
-            Operator::Cut => 10,
-            Operator::ForAll => 10,
-            Operator::Dot => 9,
-            Operator::In => 8,
-            Operator::Isa => 8,
-            Operator::Mul => 7,
-            Operator::Div => 7,
-            Operator::Mod => 7,
-            Operator::Rem => 7,
-            Operator::Add => 6,
-            Operator::Sub => 6,
-            Operator::Eq => 5,
-            Operator::Geq => 5,
-            Operator::Leq => 5,
-            Operator::Neq => 5,
-            Operator::Gt => 5,
-            Operator::Lt => 5,
-            Operator::Unify => 4,
-            Operator::Assign => 4,
-            Operator::Not => 3,
-            Operator::Or => 2,
-            Operator::And => 1,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Operation {
     pub operator: Operator,
@@ -186,20 +124,6 @@ pub struct Operation {
 pub enum Pattern {
     Dictionary(Dictionary),
     Instance(InstanceLiteral),
-}
-
-impl Pattern {
-    pub fn value_as_pattern(value: &Value) -> Value {
-        match value.clone() {
-            Value::InstanceLiteral(lit) => Value::Pattern(lit.as_pattern()),
-            Value::Dictionary(dict) => Value::Pattern(dict.as_pattern()),
-            v => v,
-        }
-    }
-
-    pub fn term_as_pattern(term: &Term) -> Term {
-        term.clone_with_value(Self::value_as_pattern(term.value()))
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -379,71 +303,6 @@ impl Term {
         self.value = Arc::new(value);
     }
 
-    /// Convenience wrapper around map_replace that clones the
-    /// term before running `map_replace`, to return the new value
-    pub fn cloned_map_replace<F>(&self, f: &mut F) -> Self
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        let mut term = self.clone();
-        term.map_replace(f);
-        term
-    }
-
-    /// Visits every term in the tree, replaces the node with the evaluation of `f` on the node
-    /// and then recurses to the children
-    ///
-    /// Warning: this does _a lot_ of cloning.
-    pub fn map_replace<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&Term) -> Term,
-    {
-        *self = f(self);
-        let mut value = self.value().clone();
-        match value {
-            Value::Number(_)
-            | Value::String(_)
-            | Value::Boolean(_)
-            | Value::Variable(_)
-            | Value::RestVariable(_) => {}
-            Value::List(ref mut terms) => terms.iter_mut().for_each(|t| t.map_replace(f)),
-            Value::Call(Call {
-                ref mut args,
-                ref mut kwargs,
-                ..
-            }) => {
-                args.iter_mut().for_each(|term| term.map_replace(f));
-                if let Some(ref mut fields) = kwargs {
-                    fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-                }
-            }
-            Value::Expression(Operation { ref mut args, .. }) => {
-                args.iter_mut().for_each(|term| term.map_replace(f))
-            }
-            Value::InstanceLiteral(InstanceLiteral { ref mut fields, .. }) => {
-                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::ExternalInstance(ExternalInstance {
-                ref mut constructor,
-                ..
-            }) => constructor.iter_mut().for_each(|t| t.map_replace(f)),
-            Value::Dictionary(Dictionary { ref mut fields }) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::Pattern(Pattern::Dictionary(Dictionary { ref mut fields })) => {
-                fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::Pattern(Pattern::Instance(InstanceLiteral { ref mut fields, .. })) => {
-                fields.fields.iter_mut().for_each(|(_, v)| v.map_replace(f))
-            }
-            Value::Partial(ref mut partial) => partial
-                .operations_mut()
-                .iter_mut()
-                .for_each(|op| op.args.iter_mut().for_each(|arg| arg.map_replace(f))),
-        };
-        self.replace_value(value);
-    }
-
     pub fn offset(&self) -> usize {
         if let SourceInfo::Parser { left, .. } = self.source_info {
             left
@@ -470,13 +329,24 @@ impl Term {
     }
 
     /// Get a set of all the variables used within a term.
-    pub fn variables(&self, vars: &mut HashSet<Symbol>) {
-        self.cloned_map_replace(&mut |term| {
-            if let Value::Variable(s) = term.value() {
-                vars.insert(s.clone());
+    pub fn variables<'set>(&self, vars: &'set mut HashSet<Symbol>) {
+        struct VariableVisitor<'set> {
+            vars: &'set mut HashSet<Symbol>,
+        }
+
+        impl<'set> VariableVisitor<'set> {
+            fn new(vars: &'set mut HashSet<Symbol>) -> Self {
+                Self { vars }
             }
-            term.clone()
-        });
+        }
+
+        impl<'set> Visitor for VariableVisitor<'set> {
+            fn visit_variable(&mut self, v: &Symbol) {
+                self.vars.insert(v.clone());
+            }
+        }
+
+        walk_term(&mut VariableVisitor::new(vars), self);
     }
 
     pub fn get_source_id(&self) -> Option<u64> {

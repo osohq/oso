@@ -5,21 +5,23 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
-use super::debugger::{DebugEvent, Debugger};
-use super::error::{self, PolarResult};
-use super::events::*;
-use super::formatting::ToPolarString;
-use super::kb::*;
-use super::lexer::loc_to_pos;
-use super::messages::*;
-use super::numerics::*;
-use super::rules::*;
-use super::sources::*;
-use super::terms::*;
-use super::traces::*;
 use crate::counter::Counter;
+use crate::debugger::{DebugEvent, Debugger};
+use crate::error::{self, PolarResult};
+use crate::events::*;
+use crate::folder::{fold_term, Folder};
+use crate::formatting::ToPolarString;
+use crate::kb::*;
+use crate::lexer::loc_to_pos;
+use crate::messages::*;
+use crate::numerics::*;
 use crate::partial;
+use crate::rewrites::Renamer;
+use crate::rules::*;
 use crate::runnable::Runnable;
+use crate::sources::*;
+use crate::terms::*;
+use crate::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 #[cfg(not(target_arch = "wasm32"))]
@@ -569,25 +571,46 @@ impl PolarVirtualMachine {
             .map(|binding| &binding.1)
     }
 
+    /// Recursively dereference variables in a term, including subterms.
     pub fn deep_deref(&self, term: &Term) -> Term {
-        term.cloned_map_replace(&mut |t| self.deref(t))
+        pub struct Derefer<'vm> {
+            vm: &'vm PolarVirtualMachine,
+        }
+
+        impl<'vm> Derefer<'vm> {
+            pub fn new(vm: &'vm PolarVirtualMachine) -> Self {
+                Self { vm }
+            }
+        }
+
+        impl<'vm> Folder for Derefer<'vm> {
+            fn fold_term(&mut self, t: Term) -> Term {
+                match t.value() {
+                    Value::List(_) | Value::Variable(_) | Value::RestVariable(_) => {
+                        fold_term(self.vm.deref(&t), self)
+                    }
+                    _ => fold_term(t, self),
+                }
+            }
+        }
+
+        Derefer::new(self).fold_term(term.clone())
     }
 
-    /// Recursively dereference a variable.
+    /// Recursively dereference a variable, but do not descend into (most) subterms.
+    /// The exception is for lists, so that we can correctly handle rest variables.
     pub fn deref(&self, term: &Term) -> Term {
         match &term.value() {
             Value::List(list) => {
-                // Check if last element in list is a rest variable.
-                let mut rest = false;
-                if let Some(last) = list.last() {
-                    if matches!(last.value(), Value::RestVariable(_)) {
-                        rest = true;
-                    }
-                }
+                let ends_with_rest = list
+                    .last()
+                    .map_or(false, |el| matches!(el.value(), Value::RestVariable(_)));
+
                 // Deref all elements.
                 let mut derefed: Vec<Term> = list.iter().map(|t| self.deref(t)).collect();
+
                 // If last element was a rest variable, append the list it derefed to.
-                if rest {
+                if ends_with_rest {
                     if let Some(last_term) = derefed.pop() {
                         if let Value::List(terms) = last_term.value() {
                             derefed.append(&mut terms.clone());
@@ -596,16 +619,16 @@ impl PolarVirtualMachine {
                         }
                     }
                 }
+
                 term.clone_with_value(Value::List(derefed))
             }
             Value::Variable(symbol) | Value::RestVariable(symbol) => {
-                self.value(&symbol).map_or(term.clone(), |t| {
-                    if t == term {
-                        t.clone()
-                    } else {
-                        self.deref(t)
+                if let Some(value) = self.value(&symbol) {
+                    if value != term {
+                        return self.deref(value);
                     }
-                })
+                }
+                term.clone()
             }
             _ => term.clone(),
         }
@@ -616,41 +639,11 @@ impl PolarVirtualMachine {
         name.is_temporary_var()
     }
 
-    /// Return `true` if `var` is a constant variable.
-    fn is_constant_var(&self, name: &Symbol) -> bool {
-        self.bindings
-            .iter()
-            .take(self.csp)
-            .any(|binding| binding.0 == *name)
-    }
-
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
-        let mut renames = HashMap::<Symbol, Symbol>::new();
-        let mut rule = rule.clone();
-        rule.map_replace(&mut move |term| match term.value() {
-            Value::Variable(sym) if !self.is_constant_var(sym) => {
-                if let Some(new) = renames.get(sym) {
-                    term.clone_with_value(Value::Variable(new.clone()))
-                } else {
-                    let new = self.kb.read().unwrap().gensym(&sym.0);
-                    renames.insert(sym.clone(), new.clone());
-                    term.clone_with_value(Value::Variable(new))
-                }
-            }
-            Value::Partial(_) => unimplemented!("partials should not be in rules"),
-            Value::RestVariable(sym) => {
-                if let Some(new) = renames.get(sym) {
-                    term.clone_with_value(Value::RestVariable(new.clone()))
-                } else {
-                    let new = self.kb.read().unwrap().gensym(&sym.0);
-                    renames.insert(sym.clone(), new.clone());
-                    term.clone_with_value(Value::RestVariable(new))
-                }
-            }
-            _ => term.clone(),
-        });
-        rule
+        let kb = &*self.kb.read().unwrap();
+        let mut renamer = Renamer::new(&kb);
+        renamer.fold_rule(rule.clone())
     }
 
     /// Print a message to the output stream.
@@ -1064,8 +1057,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
-        // check if field is a variable
-        let field = self.deref(&field);
+        let field = self.deref(field);
         match field.value() {
             Value::Variable(_) => {
                 let mut alternatives = vec![];
@@ -1687,7 +1679,10 @@ impl PolarVirtualMachine {
                 return Err(self.set_error_context(
                     term,
                     error::RuntimeError::Unsupported {
-                        msg: "numeric operation only supported on numbers".to_string(),
+                        msg: format!(
+                            "numeric operation only supported on numbers, you have {}",
+                            term.to_polar()
+                        ),
                     },
                 ))
             }
@@ -2721,6 +2716,29 @@ mod tests {
     }
 
     #[test]
+    fn deep_deref() {
+        let mut vm = PolarVirtualMachine::default();
+        let one = term!(1);
+        let two = term!(1);
+        let one_var = sym!("one");
+        let two_var = sym!("two");
+        vm.bind(&one_var, one.clone());
+        vm.bind(&two_var, two.clone());
+        let dict = btreemap! {
+            sym!("x") => term!(one_var),
+            sym!("y") => term!(two_var),
+        };
+        let list = term!([dict]);
+        assert_eq!(
+            vm.deep_deref(&list).value().clone(),
+            Value::List(vec![term!(btreemap! {
+                sym!("x") => one,
+                sym!("y") => two,
+            })])
+        );
+    }
+
+    #[test]
     #[allow(clippy::cognitive_complexity)]
     fn and_expression() {
         let f1 = rule!("f", [1]);
@@ -2935,69 +2953,73 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn isa_on_dicts() {
         let mut vm = PolarVirtualMachine::default();
-        let left = term!(btreemap! {
+        let dict = term!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
-        let right = Pattern::term_as_pattern(&term!(btreemap! {
+        let dict_pattern = term!(pattern!(btreemap! {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         }));
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right,
+            left: dict.clone(),
+            right: dict_pattern.clone(),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Dicts with identical keys and different values DO NOT isa.
-        let right = Pattern::term_as_pattern(&term!(btreemap! {
+        let different_dict_pattern = term!(pattern!(btreemap! {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         }));
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right,
+            left: dict.clone(),
+            right: different_dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
+        let empty_dict = term!(btreemap! {});
+        let empty_dict_pattern = term!(pattern!(btreemap! {}));
         // {} isa {}.
         vm.push_goal(Goal::Isa {
-            left: term!(btreemap! {}),
-            right: Pattern::term_as_pattern(&term!(btreemap! {})),
+            left: empty_dict.clone(),
+            right: empty_dict_pattern.clone(),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Non-empty dicts should isa against an empty dict.
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right: Pattern::term_as_pattern(&term!(btreemap! {})),
+            left: dict.clone(),
+            right: empty_dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Empty dicts should NOT isa against a non-empty dict.
         vm.push_goal(Goal::Isa {
-            left: term!(btreemap! {}),
-            right: Pattern::term_as_pattern(&left),
+            left: empty_dict,
+            right: dict_pattern.clone(),
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
+        let subset_dict_pattern = term!(pattern!(btreemap! {sym!("x") => term!(1)}));
         // Superset dict isa subset dict.
         vm.push_goal(Goal::Isa {
-            left: left.clone(),
-            right: Pattern::term_as_pattern(&term!(btreemap! {sym!("x") => term!(1)})),
+            left: dict,
+            right: subset_dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Subset dict isNOTa superset dict.
+        let subset_dict = term!(btreemap! {sym!("x") => term!(1)});
         vm.push_goal(Goal::Isa {
-            left: term!(btreemap! {sym!("x") => term!(1)}),
-            right: Pattern::term_as_pattern(&left),
+            left: subset_dict,
+            right: dict_pattern,
         })
         .unwrap();
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);
@@ -3239,7 +3261,7 @@ mod tests {
         };
 
         let renamed_rule = vm.rename_rule_vars(&rule);
-        let renamed_terms = unwrap_and(renamed_rule.body);
+        let renamed_terms = unwrap_and(&renamed_rule.body);
         assert_eq!(renamed_terms[1].value(), renamed_terms[2].value());
         let x_value = match &renamed_terms[1].value() {
             Value::Variable(sym) => Some(sym.0.clone()),

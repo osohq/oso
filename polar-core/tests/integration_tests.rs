@@ -719,6 +719,7 @@ fn test_lookup_derefs() {
     };
 
     let results = query_results!(query, mock_foo);
+    assert!(foo_lookups.is_empty());
     assert_eq!(results.len(), 1);
 
     let mut foo_lookups = vec![term!(1)];
