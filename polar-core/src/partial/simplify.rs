@@ -136,3 +136,29 @@ fn simplify_partial(mut term: Term) -> Term {
     }
     new
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::terms::*;
+
+    #[test]
+    fn test_simplify_non_partial() {
+        let nonpartial = term!(btreemap! {
+            sym!("a") => term!(1),
+            sym!("b") => term!([
+                value!("hello")
+            ]),
+        });
+        assert_eq!(simplify_partial(nonpartial.clone()), nonpartial);
+    }
+
+    #[test]
+    fn test_simplify_partial() {
+        let partial = term!(Constraints {
+            variable: sym!("a"),
+            operations: vec![op!(And, term!(op!(Unify, term!(sym!("_this")), term!(1))))],
+        });
+        assert_eq!(simplify_partial(partial), term!(1));
+    }
+}
