@@ -2,7 +2,7 @@
 NEXT
 ====
 
-**Release date:** 2020-10-27
+**Release date:** XXXX-XX-XX
 
 Breaking changes
 ================
@@ -23,18 +23,14 @@ Link to migration guide
 New features
 ============
 
-Modulo and remainder operators
-------------------------------
+Feature 1
+---------
 
-The new ``mod`` and ``rem`` arithmetic operators can calculate moduli and
-remainders, respectively:
+- summary
+- of
+- user facing changes
 
-.. code-block:: polar
-
-  1 mod 3 == 1
-  1 rem 3 == 1
-  -1 mod 3 == 2
-  -1 rem 3 == -1
+Link to relevant documentation section
 
 Other bugs & improvements
 =========================
