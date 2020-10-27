@@ -89,10 +89,10 @@ describe('#registerClass', () => {
     new Foo(\"A\").a()
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
-    expect(await qvar(p, 'new Foo("A").b = x', 'x', true)).not.toStrictEqual(
+    expect(await qvar(p, 'x i nnew Foo("A").b', 'x', true)).not.toStrictEqual(
       'b'
     );
-    expect(await qvar(p, 'new Foo("A").b() = x', 'x', true)).toStrictEqual('b');
+    expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual('b');
     expect(await qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual(
       'c'
     );
@@ -106,7 +106,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     expect(await qvar(p, 'new Foo("A").e() = x', 'x')).toStrictEqual([
       [1, 2, 3],
     ]);
-    expect(await qvar(p, 'new Foo("A").f() = x', 'x')).toStrictEqual([
+    expect(await qvar(p, 'x in new Foo("A").f()', 'x')).toStrictEqual([
       [1, 2, 3],
       [4, 5, 6],
       7,

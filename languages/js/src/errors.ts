@@ -48,6 +48,14 @@ export class InvalidCallError extends PolarError {
   }
 }
 
+export class InvalidIteratorError extends PolarError {
+  constructor(term: any) {
+    super(`${term} is not iterable`);
+    Object.setPrototypeOf(this, InvalidIteratorError.prototype);
+  }
+}
+
+
 export class InvalidConstructorError extends PolarError {
   constructor(ctor: any) {
     super(`${repr(ctor)} is not a constructor`);

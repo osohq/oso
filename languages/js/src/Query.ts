@@ -3,7 +3,7 @@ import type { Query as FfiQuery } from './polar_wasm_api';
 import { createInterface } from 'readline';
 
 import { parseQueryEvent } from './helpers';
-import { DuplicateInstanceRegistrationError, InvalidCallError } from './errors';
+import { DuplicateInstanceRegistrationError, InvalidCallError, InvalidIteratorError } from './errors';
 import { Host } from './Host';
 import type {
   Debug,
@@ -12,6 +12,7 @@ import type {
   ExternalIsSubspecializer,
   ExternalUnify,
   MakeExternal,
+  NextExternal,
   PolarTerm,
   QueryEvent,
   QueryResult,
@@ -60,53 +61,6 @@ export class Query {
     this.#ffiQuery.questionResult(callId, result);
   }
 
-  /**
-   * Register a JavaScript method call or property lookup, wrapping the call
-   * result in an `AsyncGenerator` if it isn't already one.
-   *
-   * @param field The field to look up.
-   * @param callId The Polar VM-assigned ID of the call.
-   * @param instance The instance on which to perform the field lookup.
-   * @param args If it's a method call (as opposed to a field lookup), the
-   * method will be called with these arguments.
-   *
-   * @internal
-   */
-  private async registerCall(
-    field: string,
-    callId: number,
-    instance: PolarTerm,
-    args?: PolarTerm[]
-  ): Promise<void> {
-    if (this.#calls.has(callId)) return;
-    const receiver = await this.#host.toJs(instance);
-    let value = receiver[field];
-    if (args !== undefined) {
-      if (typeof value === 'function') {
-        // If value is a function, call it with the provided args.
-        const jsArgs = args!.map(async a => await this.#host.toJs(a));
-        value = receiver[field](...(await Promise.all(jsArgs)));
-      } else {
-        // Error on attempt to call non-function.
-        throw new InvalidCallError(receiver, field);
-      }
-    }
-    const generator = (async function* () {
-      if (isIterableIterator(value)) {
-        // If the call result is an iterable iterator, yield from it.
-        yield* value;
-      } else if (isAsyncIterator(value)) {
-        // Same for async iterators.
-        for await (const result of value) {
-          yield result;
-        }
-      } else {
-        // Otherwise, yield it.
-        yield value;
-      }
-    })();
-    this.#calls.set(callId, generator);
-  }
 
   /**
    * Send next result of JavaScript method call or property lookup to the Polar
@@ -140,8 +94,7 @@ export class Query {
   }
 
   /**
-   * Coordinate between [[`registerCall`]], [[`nextCallResult`]], and
-   * [[`callResult`]] to handle an application call.
+   * Handle an application call.
    *
    * @internal
    */
@@ -151,10 +104,24 @@ export class Query {
     instance: PolarTerm,
     args?: PolarTerm[]
   ): Promise<void> {
-    let result;
+    let value;
     try {
-      await this.registerCall(attr, callId, instance, args);
-      result = await this.nextCallResult(callId);
+      const receiver = await this.#host.toJs(instance);
+      const fn = receiver[attr];
+      if (args !== undefined) {
+        if (typeof fn === 'function') {
+          // If value is a function, call it with the provided args.
+          const jsArgs = args!.map(async a => await this.#host.toJs(a));
+          value = receiver[attr](...(await Promise.all(jsArgs)));
+          value = await Promise.resolve(value);
+          if (value !== undefined || value !== null) {
+            value = JSON.stringify(this.#host.toPolar(value));
+          }
+        } else {
+          // Error on attempt to call non-function.
+          throw new InvalidCallError(receiver, attr);
+        }
+      }
     } catch (e) {
       if (e instanceof TypeError || e instanceof InvalidCallError) {
         this.applicationError(e.message);
@@ -162,8 +129,31 @@ export class Query {
         throw e;
       }
     } finally {
-      this.callResult(callId, result);
+      this.callResult(callId, value);
     }
+  }
+
+  private async handleNextExternal(callId: number, term: PolarTerm) {
+    if (!this.#calls.has(callId)) {
+      const value = await this.#host.toJs(term);
+      const generator = (async function* () {
+        if (isIterableIterator(value)) {
+          // If the call result is an iterable iterator, yield from it.
+          yield* value;
+        } else if (isAsyncIterator(value)) {
+          // Same for async iterators.
+          for await (const result of value) {
+            yield result;
+          }
+        } else {
+          // Otherwise, error
+          throw new InvalidIteratorError(term);
+        }
+      })();
+      this.#calls.set(callId, generator);
+    }
+    const result = await this.nextCallResult(callId);
+    this.callResult(callId, result);
   }
 
   /**
@@ -230,6 +220,11 @@ export class Query {
             const { leftId, rightId, callId } = event.data as ExternalUnify;
             const answer = await this.#host.unify(leftId, rightId);
             this.questionResult(answer, callId);
+            break;
+          }
+          case QueryEventKind.NextExternal: {
+            const { callId, term } = event.data as NextExternal;
+            this.handleNextExternal(callId, term);
             break;
           }
           case QueryEventKind.Debug:

@@ -112,7 +112,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     }
   }
 
-  /** Helper for `ExternalCall` query events */
+  /** Helper for `NextExternal` query events */
   private void handleNextExternal(long callId, JSONObject term) throws Exceptions.OsoException {
     if (!calls.containsKey(callId)) {
       Object result = host.toJava(term);
