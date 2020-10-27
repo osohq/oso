@@ -30,6 +30,10 @@ pub struct Simplifier;
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
         match t.value() {
+            Value::Partial(Constraints { operations, .. }) if operations.is_empty() => {
+                t.clone_with_value(Value::Boolean(true))
+            }
+
             Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
                 fn is_this_arg(t: &Term) -> bool {
                     matches!(t.value(), Value::Variable(v) if v.is_this_var())
@@ -56,9 +60,11 @@ impl Folder for Simplifier {
                         assert_eq!(args.len(), 1, "should have exactly 1 non-_this operand");
                         fold_term(args.pop().unwrap(), self)
                     }
+
                     _ => fold_term(t, self),
                 }
             }
+
             _ => fold_term(t, self),
         }
     }

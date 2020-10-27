@@ -65,6 +65,16 @@ macro_rules! instance {
 }
 
 #[macro_export]
+macro_rules! partial {
+    ($arg:expr) => {
+        Value::Partial(Constraints {
+            variable: sym!($arg),
+            operations: vec![],
+        })
+    };
+}
+
+#[macro_export]
 macro_rules! sym {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Symbol>::from($arg).0

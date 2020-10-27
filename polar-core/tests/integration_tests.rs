@@ -517,12 +517,7 @@ fn test_not() {
     assert!(qnull(&mut polar, "h(2)"));
     assert!(qnull(&mut polar, "h(3)"));
 
-    assert!(qeval(
-        &mut polar,
-        "
-        d = {x: 1} and not d.x = 2
-    "
-    ));
+    assert!(qeval(&mut polar, "d = {x: 1} and not d.x = 2"));
 }
 
 #[test]
@@ -1449,19 +1444,16 @@ fn test_unify_rule_head() {
 #[test]
 fn test_cut() {
     let mut polar = Polar::new();
-    polar.load_str("a(x) if x = 1 or x = 2;").unwrap();
-    polar.load_str("b(x) if x = 3 or x = 4;").unwrap();
     polar
-        .load_str("bcut(x) if x = 3 or x = 4 and cut;")
-        .unwrap();
-
-    polar.load_str("c(a, b) if a(a) and b(b) and cut;").unwrap();
-    polar.load_str("c_no_cut(a, b) if a(a) and b(b);").unwrap();
-    polar
-        .load_str("c_partial_cut(a, b) if a(a) and bcut(b);")
-        .unwrap();
-    polar
-        .load_str("c_another_partial_cut(a, b) if a(a) and cut and b(b);")
+        .load_str(
+            r#"a(x) if x = 1 or x = 2;
+               b(x) if x = 3 or x = 4;
+               bcut(x) if x = 3 or x = 4 and cut;
+               c(a, b) if a(a) and b(b) and cut;
+               c_no_cut(a, b) if a(a) and b(b);
+               c_partial_cut(a, b) if a(a) and bcut(b);
+               c_another_partial_cut(a, b) if a(a) and cut and b(b);"#,
+        )
         .unwrap();
 
     // Ensure we return multiple results without a cut.
