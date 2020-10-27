@@ -40,26 +40,15 @@ impl Query {
     ///    an answer to Runnable A.
     pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
         let mut counter = self.vm.id_counter();
-        let runnable = self.runnable_stack.last_mut();
-        let result = if let Some(runnable) = runnable {
-            runnable.0.as_mut().run(Some(&mut counter))
-        } else {
-            self.vm.run(None)
-        };
-
-        match result? {
+        match self.top_runnable().run(Some(&mut counter))? {
             QueryEvent::Run { runnable, call_id } => {
                 self.push_runnable(runnable, call_id)?;
                 self.next_event()
             }
             QueryEvent::Done { result } => {
                 if let Some((_, result_call_id)) = self.pop_runnable() {
-                    let runnable = if let Some(runnable) = self.top_runnable() {
-                        runnable
-                    } else {
-                        &mut self.vm
-                    };
-                    runnable.external_question_result(result_call_id, result)?;
+                    self.top_runnable()
+                        .external_question_result(result_call_id, result)?;
                     self.next_event()
                 } else {
                     // VM is done.
@@ -71,8 +60,11 @@ impl Query {
         }
     }
 
-    fn top_runnable(&mut self) -> Option<&mut (dyn Runnable + 'static)> {
-        self.runnable_stack.last_mut().map(|b| b.0.as_mut())
+    fn top_runnable(&mut self) -> &mut (dyn Runnable) {
+        self.runnable_stack
+            .last_mut()
+            .map(|b| b.0.as_mut())
+            .unwrap_or(&mut self.vm)
     }
 
     fn push_runnable(&mut self, runnable: Box<dyn Runnable>, call_id: u64) -> PolarResult<()> {
@@ -85,24 +77,16 @@ impl Query {
     }
 
     pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
-        if let Some(runnable) = self.top_runnable() {
-            return runnable.external_call_result(call_id, value);
-        }
-        self.vm.external_call_result(call_id, value)
+        self.top_runnable().external_call_result(call_id, value)
     }
 
     pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
-        if let Some(runnable) = self.top_runnable() {
-            return runnable.external_question_result(call_id, result);
-        }
-        self.vm.external_question_result(call_id, result)
+        self.top_runnable()
+            .external_question_result(call_id, result)
     }
 
     pub fn application_error(&mut self, message: String) -> PolarResult<()> {
-        if let Some(runnable) = self.top_runnable() {
-            return runnable.external_error(message);
-        }
-        self.vm.external_error(message)
+        self.top_runnable().external_error(message)
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
