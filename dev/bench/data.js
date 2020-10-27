@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603749518442,
+  "lastUpdate": 1603757398047,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -9995,6 +9995,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6155,
             "range": "± 588",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "05b202cf3eebce90d838100b3b5d5c6772b615ba",
+          "message": "Posix-compliant square bracket syntax in Test Quickstarts step (#486)",
+          "timestamp": "2020-10-26T20:02:18-04:00",
+          "tree_id": "8ecd432dd93d53d18bbf68543f1d3700cbc80218",
+          "url": "https://github.com/osohq/oso/commit/05b202cf3eebce90d838100b3b5d5c6772b615ba"
+        },
+        "date": 1603757396498,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 810,
+            "range": "± 56",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2412,
+            "range": "± 913",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 59532,
+            "range": "± 3864",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 458659,
+            "range": "± 26936",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 16698,
+            "range": "± 2451",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17703,
+            "range": "± 1667",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18143,
+            "range": "± 1337",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17999,
+            "range": "± 1363",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15156,
+            "range": "± 1789",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4935,
+            "range": "± 378",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5352,
+            "range": "± 652",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6069,
+            "range": "± 2057",
             "unit": "ns/iter"
           }
         ]
