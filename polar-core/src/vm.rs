@@ -134,7 +134,7 @@ pub struct Binding(pub Symbol, pub Term);
 #[derive(Clone, Debug)]
 pub struct Choice {
     pub alternatives: Vec<GoalStack>,
-    pub bsp: usize,        // binding stack pointer
+    bsp: usize,            // binding stack pointer
     pub goals: GoalStack,  // goal stack snapshot
     queries: Queries,      // query stack snapshot
     trace: Vec<Rc<Trace>>, // trace snapshot
@@ -177,7 +177,7 @@ pub struct PolarVirtualMachine {
     /// Stacks.
     pub goals: GoalStack,
     pub bindings: BindingStack,
-    pub choices: Choices,
+    choices: Choices,
     pub queries: Queries,
 
     pub tracing: bool,
@@ -605,7 +605,7 @@ impl PolarVirtualMachine {
     }
 
     /// Return the current binding stack pointer.
-    pub fn bsp(&self) -> usize {
+    fn bsp(&self) -> usize {
         self.bindings.len()
     }
 
