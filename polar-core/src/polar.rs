@@ -90,7 +90,7 @@ impl Query {
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
-        self.vm.debug_command(command)
+        self.top_runnable().debug_command(command)
     }
 
     pub fn next_message(&self) -> Option<Message> {

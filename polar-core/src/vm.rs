@@ -2668,6 +2668,17 @@ impl Runnable for PolarVirtualMachine {
         Ok(())
     }
 
+    /// Drive debugger.
+    fn debug_command(&mut self, command: &str) -> PolarResult<()> {
+        let mut debugger = self.debugger.clone();
+        let maybe_goal = debugger.debug_command(command, self);
+        if let Some(goal) = maybe_goal {
+            self.push_goal(goal)?;
+        }
+        self.debugger = debugger;
+        Ok(())
+    }
+
     fn clone_runnable(&self) -> Box<dyn Runnable> {
         Box::new(self.clone())
     }

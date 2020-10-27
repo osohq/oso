@@ -23,6 +23,10 @@ pub trait Runnable {
         Err(OperationalError::InvalidState("Unexpected external call".to_string()).into())
     }
 
+    fn debug_command(&mut self, _command: &str) -> PolarResult<()> {
+        Err(OperationalError::InvalidState("Unexpected debug command".to_string()).into())
+    }
+
     // TODO Alternative?: Goal::Run takes a Runnable constructor function.
     /// Create a new runnable that when run will perform the same operation as
     /// this one.
