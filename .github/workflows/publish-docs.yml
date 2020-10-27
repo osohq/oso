@@ -55,7 +55,7 @@ jobs:
         run: aws s3 sync --delete docs/_build/html s3://${{ github.event.inputs.url }}
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
-        if: ${{ github.event.inputs.url == 'docs-preview.oso.dev' }}
+        if: github.event.inputs.url == 'docs-preview.oso.dev'
       - name: cloudfront invalidate docs
         run: aws cloudfront create-invalidation --distribution-id E1MY35FKBOYAV1 --paths "/*"
-        if: ${{ github.event.inputs.url == 'docs.oso.dev' }}
+        if: github.event.inputs.url == 'docs.oso.dev'
