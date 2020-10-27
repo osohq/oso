@@ -468,7 +468,7 @@ jobs:
       - name: Check that submodules are all up-to-date
         run: |
           git submodule foreach git remote update
-          git submodule foreach '[[ -z $(git --no-pager diff origin/main main) ]]'
+          git submodule foreach '[ -z $(git --no-pager diff origin/main main) ]'
       - uses: actions/cache@v2
         with:
           path: |
@@ -501,7 +501,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Run quickstart tests
-        run: make -C docs/examples/quickstart test-ci
+        run: make -C docs test-quickstarts
 
   release:
     name: Create release
