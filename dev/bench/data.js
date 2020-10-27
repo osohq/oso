@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603760626538,
+  "lastUpdate": 1603818753960,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -10283,6 +10283,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 4572,
             "range": "± 418",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cde08ab510da8d24574f4437ef449d97c67ad2cc",
+          "message": "Changelog for 0.7.1. (#489)\n\n* Changelog for 0.7.1.\r\n\r\n* add - to polar lexer for docs\r\n\r\nCo-authored-by: Leina McDermott <leina05@gmail.com>",
+          "timestamp": "2020-10-27T13:04:35-04:00",
+          "tree_id": "b320cb88f4e1ddd641c9397777d7338f8d48bcd5",
+          "url": "https://github.com/osohq/oso/commit/cde08ab510da8d24574f4437ef449d97c67ad2cc"
+        },
+        "date": 1603818752405,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 846,
+            "range": "± 49",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2585,
+            "range": "± 60",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66603,
+            "range": "± 2470",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 531217,
+            "range": "± 13620",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18337,
+            "range": "± 683",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18242,
+            "range": "± 807",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18068,
+            "range": "± 733",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18545,
+            "range": "± 629",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15962,
+            "range": "± 748",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5489,
+            "range": "± 167",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5634,
+            "range": "± 214",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6011,
+            "range": "± 498",
             "unit": "ns/iter"
           }
         ]
