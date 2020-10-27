@@ -169,8 +169,12 @@ impl Runnable for Inverter {
                     return Ok(QueryEvent::Done { result });
                 }
                 QueryEvent::Result { .. } => {
-                    let bindings = self.vm.bindings[self.bsp..].to_owned();
-                    self.results.push(bindings);
+                    if self.vm.query_contains_partial {
+                        let bindings = self.vm.bindings[self.bsp..].to_owned();
+                        self.results.push(bindings);
+                    } else {
+                        return Ok(QueryEvent::Done { result: false });
+                    }
                 }
                 event => return Ok(event),
             }

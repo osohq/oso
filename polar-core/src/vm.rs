@@ -217,7 +217,7 @@ pub struct PolarVirtualMachine {
     polar_log_mute: bool,
 
     // Other flags.
-    query_contains_partial: bool,
+    pub query_contains_partial: bool,
 
     /// Output messages.
     pub messages: MessageQueue,
@@ -309,6 +309,7 @@ impl PolarVirtualMachine {
     pub fn clone_with_bindings(&self, goals: Goals) -> Self {
         let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
         vm.bindings.clone_from(&self.bindings);
+        vm.query_contains_partial = self.query_contains_partial;
         vm
     }
 
