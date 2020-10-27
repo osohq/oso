@@ -55,7 +55,7 @@ class Query:
                 "ExternalUnify": self.handle_external_unify,
                 "ExternalIsSubSpecializer": self.handle_external_is_subspecializer,
                 "ExternalIsSubclass": self.handle_external_is_subclass,
-                "Next": self.handle_next,
+                "NextExternal": self.handle_next_external,
                 "Debug": self.handle_debug,
             }
 
@@ -145,7 +145,7 @@ class Query:
         answer = self.host.is_subclass(left_tag, right_tag)
         self.ffi_query.question_result(data["call_id"], answer)
 
-    def handle_next(self, data):
+    def handle_next_external(self, data):
         call_id = data["call_id"]
         term = data["term"]
 

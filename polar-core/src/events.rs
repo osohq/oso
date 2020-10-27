@@ -89,7 +89,7 @@ pub enum QueryEvent {
         args: TermList,
     },
 
-    Next {
+    NextExternal {
         call_id: u64,
         term: Term,
     },

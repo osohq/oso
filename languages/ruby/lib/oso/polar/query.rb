@@ -36,33 +36,6 @@ module Oso
         ffi_query.question_result(result, call_id: call_id)
       end
 
-      # Register a Ruby method call, wrapping the call result in a generator if
-      # it isn't already one.
-      #
-      # @param method [#to_sym]
-      # @param call_id [Integer]
-      # @param instance [Hash<String, Object>]
-      # @param args [Array<Hash>]
-      # @raise [InvalidCallError] if the method doesn't exist on the instance or
-      #   the args passed to the method are invalid.
-      def register_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        return if calls.key?(call_id)
-
-        instance = host.to_ruby(instance)
-        args = args.map { |a| host.to_ruby(a) }
-        kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
-        # The kwargs.empty? check is for Ruby < 2.7.
-        result = if kwargs.empty?
-                   instance.__send__(attribute, *args)
-                 else
-                   instance.__send__(attribute, *args, **kwargs)
-                 end
-        result = [result].to_enum unless result.is_a? Enumerator # Call must be a generator.
-        calls[call_id] = result.lazy
-      rescue ArgumentError, NoMethodError
-        raise InvalidCallError
-      end
-
       # Send next result of Ruby method call across FFI boundary.
       #
       # @param result [String]
@@ -98,12 +71,30 @@ module Oso
       # @param instance [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
       def handle_call(attribute, call_id:, instance:, args:, kwargs:)
-        register_call(attribute, call_id: call_id, instance: instance, args: args, kwargs: kwargs)
-        result = JSON.dump(next_call_result(call_id))
+        instance = host.to_ruby(instance)
+        args = args.map { |a| host.to_ruby(a) }
+        kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
+        # The kwargs.empty? check is for Ruby < 2.7.
+        result = if kwargs.empty?
+                   instance.__send__(attribute, *args)
+                 else
+                   instance.__send__(attribute, *args, **kwargs)
+                 end
+        result = JSON.dump(host.to_polar(result))
         call_result(result, call_id: call_id)
-      rescue InvalidCallError => e
+      rescue ArgumentError, NoMethodError => e
         application_error(e.message)
         call_result(nil, call_id: call_id)
+      end
+      
+      def handle_next_external(call_id, term)
+        if not calls.key? call_id
+          value = host.to_ruby term
+          calls[call_id] = value.lazy
+        end
+
+        result = JSON.dump(next_call_result(call_id))
+        call_result(result, call_id: call_id)      
       rescue StopIteration
         call_result(nil, call_id: call_id)
       end
@@ -173,6 +164,10 @@ module Oso
               ffi_query.debug_command(command)
             when 'ExternalOp'
               raise UnimplementedOperationError, 'comparison operators'
+            when 'NextExternal'
+              call_id = event.data['call_id']
+              term = event.data['term']
+              handle_next_external(call_id, term)
             else
               raise "Unhandled event: #{JSON.dump(event.inspect)}"
             end
