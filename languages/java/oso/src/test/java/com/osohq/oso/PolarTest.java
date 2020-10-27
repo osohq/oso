@@ -50,9 +50,7 @@ public class PolarTest {
 
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof MyClass
-          && ((MyClass) obj).name.equals(this.name)
-          && ((MyClass) obj).id.equals(this.id);
+      return obj instanceof MyClass && ((MyClass) obj).name.equals(this.name) && ((MyClass) obj).id.equals(this.id);
     }
 
     @Override
@@ -96,9 +94,7 @@ public class PolarTest {
   @Test
   public void testInlineQueries() throws Exception {
     p.loadStr("f(1); ?= f(1);");
-    assertThrows(
-        Exceptions.InlineQueryFailedError.class,
-        () -> p.loadStr("?= f(2);"),
+    assertThrows(Exceptions.InlineQueryFailedError.class, () -> p.loadStr("?= f(2);"),
         "Expected inline query to fail but it didn't.");
   }
 
@@ -107,20 +103,16 @@ public class PolarTest {
     // test basic query
     p.loadStr("f(a, b) if a = b;");
     assertFalse(p.queryRule("f", 1, 1).results().isEmpty(), "Basic predicate query failed.");
-    assertTrue(
-        p.queryRule("f", 1, 2).results().isEmpty(),
-        "Basic predicate query expected to fail but didn't.");
+    assertTrue(p.queryRule("f", 1, 2).results().isEmpty(), "Basic predicate query expected to fail but didn't.");
   }
 
   @Test
   public void testQueryPredWithObject() throws Exception {
     // test query with Java Object
     p.loadStr("g(x) if x.id = 1;");
-    assertFalse(
-        p.queryRule("g", new MyClass("test", 1)).results().isEmpty(),
+    assertFalse(p.queryRule("g", new MyClass("test", 1)).results().isEmpty(),
         "Predicate query with Java Object failed.");
-    assertTrue(
-        p.queryRule("g", new MyClass("test", 2)).results().isEmpty(),
+    assertTrue(p.queryRule("g", new MyClass("test", 2)).results().isEmpty(),
         "Predicate query with Java Object expected to fail but didn't.");
   }
 
@@ -128,8 +120,7 @@ public class PolarTest {
   public void testQueryPredWithVariable() throws Exception {
     // test query with Variable
     p.loadStr("f(a, b) if a = b;");
-    assertTrue(
-        p.queryRule("f", 1, new Variable("result")).results().equals(List.of(Map.of("result", 1))),
+    assertTrue(p.queryRule("f", 1, new Variable("result")).results().equals(List.of(Map.of("result", 1))),
         "Predicate query with Variable failed.");
   }
 
@@ -169,18 +160,18 @@ public class PolarTest {
 
   @Test
   public void testArrayFFIRoundTrip() throws Exception {
-    int[] a1 = {1, 2, 3, 4};
+    int[] a1 = { 1, 2, 3, 4 };
     JSONObject polar = p.host.toPolarTerm(a1);
     Object java = p.host.toJava(polar);
     assertEquals(List.of(1, 2, 3, 4), java);
 
-    double[] a2 = {1.2, 3.5};
+    double[] a2 = { 1.2, 3.5 };
     polar = p.host.toPolarTerm(a2);
     java = p.host.toJava(polar);
 
     assertEquals(List.of(1.2, 3.5), java);
 
-    String[] a3 = {"hello", "world"};
+    String[] a3 = { "hello", "world" };
     polar = p.host.toPolarTerm(a3);
     java = p.host.toJava(polar);
     assertEquals(List.of("hello", "world"), java);
@@ -253,8 +244,7 @@ public class PolarTest {
 
   @Test
   public void testRegisterAndMakeClass() throws Exception {
-    MyClass instance =
-        (MyClass) p.host.makeInstance("MyClass", Arrays.asList("testName", 1), Long.valueOf(0));
+    MyClass instance = (MyClass) p.host.makeInstance("MyClass", Arrays.asList("testName", 1), Long.valueOf(0));
     assertEquals("testName", instance.name);
     assertEquals(Integer.valueOf(1), instance.id);
     // TODO: test that errors when given invalid constructor
@@ -265,8 +255,7 @@ public class PolarTest {
 
   @Test
   public void testDuplicateRegistration() throws Exception {
-    assertThrows(
-        Exceptions.DuplicateClassAliasError.class, () -> p.registerClass(MyClass.class, "MyClass"));
+    assertThrows(Exceptions.DuplicateClassAliasError.class, () -> p.registerClass(MyClass.class, "MyClass"));
   }
 
   @Test
@@ -281,36 +270,21 @@ public class PolarTest {
   @Test
   public void testNoKeywordArgs() throws Exception {
     p.registerConstant(true, "MyClass");
-    assertThrows(
-        Exceptions.InstantiationError.class, () -> p.query("x = new MyClass(\"test\", id: 1)"));
-    assertThrows(
-        Exceptions.InvalidCallError.class,
+    assertThrows(Exceptions.InstantiationError.class, () -> p.query("x = new MyClass(\"test\", id: 1)"));
+    assertThrows(Exceptions.InvalidCallError.class,
         () -> p.query("x = (new MyClass(\"test\", 1)).foo(\"test\", id: 1)"));
-  }
-
-  @Test
-  public void testRegisterCall() throws Exception {
-    MyClass instance = new MyClass("test", 1);
-    p.host.cacheInstance(instance, Long.valueOf(1));
-    JSONObject polarInstance = p.host.toPolarTerm(instance);
-    Query query = p.query("f(x)");
-    query.registerCall("myMethod", Optional.of(List.of("hello world")), 1, polarInstance);
-    JSONObject res = query.nextCallResult(1);
-    assertTrue(p.host.toJava(res).equals("hello world"));
   }
 
   @Test
   public void testExternalCall() throws Exception {
     // Test get attribute
     p.loadStr("id(x) if x = new MyClass(\"test\", 1).id;");
-    assertTrue(
-        p.query("id(x)").results().equals(List.of(Map.of("x", 1))),
+    assertTrue(p.query("id(x)").results().equals(List.of(Map.of("x", 1))),
         "Failed to get attribute on external instance.");
 
     // Test call method
     p.loadStr("method(x) if x = new MyClass(\"test\", 1).myMethod(\"hello world\");");
-    assertTrue(
-        p.query("method(x)").results().equals(List.of(Map.of("x", "hello world"))),
+    assertTrue(p.query("method(x)").results().equals(List.of(Map.of("x", "hello world"))),
         "Failed to get attribute on external instance.");
   }
 
@@ -324,7 +298,7 @@ public class PolarTest {
   @Test
   public void testEnumerationCallResults() throws Exception {
     MyClass c = new MyClass("test", 1);
-    p.loadStr("test(c: MyClass, x) if x = c.myEnumeration();");
+    p.loadStr("test(c: MyClass, x) if x in c.myEnumeration();");
     List<HashMap<String, Object>> results = p.queryRule("test", c, new Variable("x")).results();
     assertTrue(results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world"))));
   }
@@ -342,15 +316,14 @@ public class PolarTest {
     assertFalse(p.queryRule("f", new ArrayList(Arrays.asList(1, 2, 3))).results().isEmpty());
     assertTrue(p.queryRule("f", new ArrayList(Arrays.asList(1, 2, 3, 4))).results().isEmpty());
 
-    assertFalse(p.queryRule("f", new int[] {1, 2, 3}).results().isEmpty());
-    assertTrue(p.queryRule("f", new int[] {1, 2, 3, 4}).results().isEmpty());
+    assertFalse(p.queryRule("f", new int[] { 1, 2, 3 }).results().isEmpty());
+    assertTrue(p.queryRule("f", new int[] { 1, 2, 3, 4 }).results().isEmpty());
   }
 
   @Test
   public void testExternalIsa() throws Exception {
     p.loadStr("f(a: MyClass, x) if x = a.id;");
-    List<HashMap<String, Object>> result =
-        p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
+    List<HashMap<String, Object>> result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
     assertTrue(result.equals(List.of(Map.of("x", 1))));
     p.clearRules();
 
@@ -360,8 +333,7 @@ public class PolarTest {
     p.clearRules();
 
     p.loadStr("f(a: OtherClass, x) if x = a.id;");
-    assertThrows(
-        Exceptions.UnregisteredClassError.class,
+    assertThrows(Exceptions.UnregisteredClassError.class,
         () -> p.queryRule("f", new MyClass("test", 1), new Variable("x")).results());
   }
 
@@ -369,15 +341,11 @@ public class PolarTest {
   public void testExternalIsSubSpecializer() throws Exception {
     p.loadStr("f(_: MySubClass, x) if x = 1;");
     p.loadStr("f(_: MyClass, x) if x = 2;");
-    List<HashMap<String, Object>> result =
-        p.queryRule("f", new MySubClass("test", 1), new Variable("x")).results();
-    assertTrue(
-        result.equals(List.of(Map.of("x", 1), Map.of("x", 2))),
-        "Failed to order rules based on specializers.");
+    List<HashMap<String, Object>> result = p.queryRule("f", new MySubClass("test", 1), new Variable("x")).results();
+    assertTrue(result.equals(List.of(Map.of("x", 1), Map.of("x", 2))), "Failed to order rules based on specializers.");
 
     result = p.queryRule("f", new MyClass("test", 1), new Variable("x")).results();
-    assertTrue(
-        result.equals(List.of(Map.of("x", 2))), "Failed to order rules based on specializers.");
+    assertTrue(result.equals(List.of(Map.of("x", 2))), "Failed to order rules based on specializers.");
   }
 
   @Test
@@ -405,10 +373,7 @@ public class PolarTest {
   @Test
   public void testExternalOp() throws Exception {
     p.registerClass(Foo.class, "Foo");
-    assertThrows(
-        Exceptions.UnimplementedOperation.class,
-        () -> p.query("new Foo() == new Foo()"),
-        "Expected error.");
+    assertThrows(Exceptions.UnimplementedOperation.class, () -> p.query("new Foo() == new Foo()"), "Expected error.");
   }
 
   /**** TEST PARSING ****/
@@ -416,28 +381,22 @@ public class PolarTest {
   @Test
   public void testIntegerOverFlowError() throws Exception {
     String rule = "f(x) if x = 18446744073709551616;";
-    Exceptions.IntegerOverflow e =
-        assertThrows(Exceptions.IntegerOverflow.class, () -> p.loadStr(rule));
-    assertEquals(
-        "'18446744073709551616' caused an integer overflow at line 1, column 13", e.getMessage());
+    Exceptions.IntegerOverflow e = assertThrows(Exceptions.IntegerOverflow.class, () -> p.loadStr(rule));
+    assertEquals("'18446744073709551616' caused an integer overflow at line 1, column 13", e.getMessage());
   }
 
   @Test
   public void testInvalidTokenCharacter() throws Exception {
     String rule = "f(x) if x = \"This is not\n allowed\"";
-    Exceptions.InvalidTokenCharacter e =
-        assertThrows(Exceptions.InvalidTokenCharacter.class, () -> p.loadStr(rule));
+    Exceptions.InvalidTokenCharacter e = assertThrows(Exceptions.InvalidTokenCharacter.class, () -> p.loadStr(rule));
     // TODO: this is a wacky message
-    assertEquals(
-        "'\\n' is not a valid character. Found in This is not at line 1, column 25",
-        e.getMessage());
+    assertEquals("'\\n' is not a valid character. Found in This is not at line 1, column 25", e.getMessage());
   }
 
   @Test
   public void testUnrecognizedTokenError() throws Exception {
     String rule = "1";
-    Exceptions.UnrecognizedToken e =
-        assertThrows(Exceptions.UnrecognizedToken.class, () -> p.loadStr(rule));
+    Exceptions.UnrecognizedToken e = assertThrows(Exceptions.UnrecognizedToken.class, () -> p.loadStr(rule));
     assertEquals("did not expect to find the token '1' at line 1, column 1", e.getMessage());
   }
 
@@ -446,15 +405,12 @@ public class PolarTest {
   @Test
   public void testLoadFile() throws Exception {
     p.loadFile("src/test/java/com/osohq/oso/test.polar");
-    assertTrue(
-        p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+    assertTrue(p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
   }
 
   @Test
   public void testLoadNonPolarFile() throws Exception {
-    assertThrows(
-        Exceptions.PolarFileExtensionError.class,
-        () -> p.loadFile("wrong.txt"),
+    assertThrows(Exceptions.PolarFileExtensionError.class, () -> p.loadFile("wrong.txt"),
         "Failed to catch incorrect Polar file extension.");
   }
 
@@ -464,9 +420,7 @@ public class PolarTest {
     FileWriter w = new FileWriter(tempFile);
     w.write(";");
     w.close();
-    assertThrows(
-        Exceptions.ParseError.class,
-        () -> p.loadFile(tempFile.getPath()),
+    assertThrows(Exceptions.ParseError.class, () -> p.loadFile(tempFile.getPath()),
         "Failed to pass filename across FFI boundary.");
     tempFile.deleteOnExit();
   }
@@ -474,11 +428,8 @@ public class PolarTest {
   @Test
   public void testLoadFileIdempotent() throws Exception {
     p.loadFile("src/test/java/com/osohq/oso/test.polar");
-    assertThrows(
-        Exceptions.PolarRuntimeException.class,
-        () -> p.loadFile("src/test/java/com/osohq/oso/test.polar"));
-    assertTrue(
-        p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))),
+    assertThrows(Exceptions.PolarRuntimeException.class, () -> p.loadFile("src/test/java/com/osohq/oso/test.polar"));
+    assertTrue(p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))),
         "loadFile behavior is not idempotent.");
   }
 
@@ -486,17 +437,14 @@ public class PolarTest {
   public void testLoadMultipleFiles() throws Exception {
     p.loadFile("src/test/java/com/osohq/oso/test.polar");
     p.loadFile("src/test/java/com/osohq/oso/test2.polar");
-    assertTrue(
-        p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
-    assertTrue(
-        p.query("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+    assertTrue(p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+    assertTrue(p.query("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
   }
 
   @Test
   public void testClearRules() throws Exception {
     p.loadFile("src/test/java/com/osohq/oso/test.polar");
-    assertEquals(
-        List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)), p.query("f(x)").results());
+    assertEquals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)), p.query("f(x)").results());
     p.clearRules();
     assertTrue(p.query("f(x)").results().isEmpty());
 
@@ -516,10 +464,7 @@ public class PolarTest {
   public void testLookupErrors() throws Exception {
     p.registerClass(Foo.class, "Foo");
     assertEquals(List.of(), p.query("new Foo() = {bar: \"bar\"}").results());
-    assertThrows(
-        Exceptions.PolarRuntimeException.class,
-        () -> p.query("new Foo().bar = \"bar\""),
-        "Expected error.");
+    assertThrows(Exceptions.PolarRuntimeException.class, () -> p.query("new Foo().bar = \"bar\""), "Expected error.");
   }
 
   @Test
@@ -537,9 +482,7 @@ public class PolarTest {
     assertTrue(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
 
     p.loadStr("f(x) if x.myReturnNull().badCall = 1;");
-    assertThrows(
-        Exceptions.PolarRuntimeException.class,
-        () -> p.queryRule("f", new MyClass("test", 1)).results());
+    assertThrows(Exceptions.PolarRuntimeException.class, () -> p.queryRule("f", new MyClass("test", 1)).results());
   }
 
   /*** TEST OSO ***/
@@ -548,13 +491,11 @@ public class PolarTest {
     Oso oso = new Oso();
     // Extracts matches into a hash
     PathMapper mapper = new PathMapper("/widget/{id}");
-    assertTrue(
-        mapper.map("/widget/12").equals(Map.of("id", "12")), "Failed to extract matches to a hash");
+    assertTrue(mapper.map("/widget/12").equals(Map.of("id", "12")), "Failed to extract matches to a hash");
     // maps HTTP resources
     oso.registerClass(MyClass.class, "MyClass");
     oso.loadStr(
-        "allow(actor, \"get\", _: Http{path: path}) if "
-            + "new PathMapper(\"/myclass/{id}\").map(path) = {id: id} and "
+        "allow(actor, \"get\", _: Http{path: path}) if " + "new PathMapper(\"/myclass/{id}\").map(path) = {id: id} and "
             + "allow(actor, \"get\", new MyClass(\"test\", new Integer(id)));\n"
             + "allow(_actor, \"get\", myclass: MyClass) if myclass.id = 12;");
     Http http12 = new Http(null, "/myclass/12", null);
