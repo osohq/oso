@@ -263,21 +263,16 @@ mod test {
     #[test]
     fn basic_test() -> TestResult {
         let polar = Polar::new();
-        polar.load_str(r#"f(x) if x = 1;"#)?;
-        polar.load_str(r#"f(x) if x = 2;"#)?;
-        polar.load_str(r#"f(x) if x.a = 3 or x.b = 4;"#)?;
-
+        polar.load_str(
+            r#"f(x) if x = 1;
+               f(x) if x = 2;
+               f(x) if x.a = 3 or x.b = 4;"#,
+        )?;
         let mut q = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
-
-        assert_eq!(next_binding(&mut q)?.get(&sym!("a")).unwrap(), &term!(1));
-        assert_eq!(next_binding(&mut q)?.get(&sym!("a")).unwrap(), &term!(2));
-
-        let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this.a = 3");
-
-        let next = next_binding(&mut q)?;
-        assert_partial_expression!(next, "a", "_this.b = 4");
-
+        assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
+        assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a = 3");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.b = 4");
         Ok(())
     }
 
