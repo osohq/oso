@@ -558,9 +558,7 @@ mod test {
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         let mut query = polar.new_query_from_term(term!(call!("j", [partial!("a")])), false);
-        // TODO(gj): Simplify And(Or(And(_this = 1))) -> 1.
-        let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "(_this = 1)");
+        assert_eq!(next_binding(&mut query)?[&sym!("a")], term!(1));
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         Ok(())
