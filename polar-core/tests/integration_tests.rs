@@ -1253,6 +1253,34 @@ fn test_debug() -> TestResult {
 }
 
 #[test]
+fn test_debug_in_inverter() {
+    let polar = Polar::new();
+    polar.load_str("a() if not debug();").unwrap();
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: a() if not debug();
+                                    ^
+                    "#
+                );
+                assert_eq!(s, expected);
+                "over"
+            }
+            _ => panic!("Too many calls: {}", s),
+        };
+        call_num += 1;
+        rt.to_string()
+    };
+    let query = polar.new_query("a()", false).unwrap();
+    let _results = query_results!(query, no_results, no_externals, debug_handler);
+}
+
+#[test]
 fn test_anonymous_vars() {
     let mut p = Polar::new();
     qeval(&mut p, "[1,2,3] = [_,_,_]");

@@ -193,6 +193,10 @@ impl Runnable for Inverter {
         self.vm.external_call_result(call_id, term)
     }
 
+    fn debug_command(&mut self, command: &str) -> PolarResult<()> {
+        self.vm.debug_command(command)
+    }
+
     fn clone_runnable(&self) -> Box<dyn Runnable> {
         Box::new(self.clone())
     }
