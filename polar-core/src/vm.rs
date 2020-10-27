@@ -300,6 +300,7 @@ impl PolarVirtualMachine {
         vm
     }
 
+    #[cfg(test)]
     pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, tracing: bool, goals: Goals) -> Self {
         PolarVirtualMachine::new(kb, tracing, goals, MessageQueue::new())
     }
