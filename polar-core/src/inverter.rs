@@ -13,7 +13,7 @@ use std::rc::Rc;
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
-use crate::folder::{fold_list, fold_operation, Folder};
+use crate::folder::{fold_operation, Folder};
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::runnable::Runnable;
@@ -58,20 +58,17 @@ impl ConstraintInverter {
 
 impl Folder for ConstraintInverter {
     /// Invert operators.
-    fn fold_operation(&mut self, o: Operation) -> Operation {
-        Operation {
-            operator: match o.operator {
-                Operator::And => Operator::Or,
-                Operator::Or => Operator::And,
-                Operator::Unify | Operator::Eq => Operator::Neq,
-                Operator::Neq => Operator::Unify,
-                Operator::Gt => Operator::Leq,
-                Operator::Geq => Operator::Lt,
-                Operator::Lt => Operator::Geq,
-                Operator::Leq => Operator::Gt,
-                _ => todo!("negate {:?}", o.operator),
-            },
-            args: fold_list(o.args, self),
+    fn fold_operator(&mut self, o: Operator) -> Operator {
+        match o {
+            Operator::And => Operator::Or,
+            Operator::Or => Operator::And,
+            Operator::Unify | Operator::Eq => Operator::Neq,
+            Operator::Neq => Operator::Unify,
+            Operator::Gt => Operator::Leq,
+            Operator::Geq => Operator::Lt,
+            Operator::Lt => Operator::Geq,
+            Operator::Leq => Operator::Gt,
+            _ => todo!("negate {:?}", o),
         }
     }
 
