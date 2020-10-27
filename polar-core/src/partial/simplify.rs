@@ -26,43 +26,56 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
 }
 
 pub struct Simplifier;
-
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
+        fn is_this_arg(t: &Term) -> bool {
+            matches!(t.value(), Value::Variable(v) if v.is_this_var())
+        }
+
+        fn not_this_arg(terms: &[Term]) -> Term {
+            assert_eq!(terms.len(), 2, "should have 2 operands");
+            let terms = terms
+                .iter()
+                .filter(|t| !is_this_arg(t))
+                .collect::<Vec<&Term>>();
+            assert_eq!(terms.len(), 1, "should have exactly 1 non-this operand");
+            terms[0].clone()
+        }
+
+        fn maybe_unwrap_operation(o: &Operation) -> Option<Term> {
+            match o {
+                // If we have a single And or Or operation, unwrap it and fold the inner term.
+                Operation {
+                    operator: Operator::And,
+                    args,
+                }
+                | Operation {
+                    operator: Operator::Or,
+                    args,
+                } if args.len() == 1 => Some(args[0].clone()),
+
+                // If we have a single Unify operation where one operand is `this` and the other is
+                // not `this`, unwrap the operation and return the non-`this` operand.
+                Operation {
+                    operator: Operator::Unify,
+                    args,
+                } if args.iter().any(is_this_arg) => Some(not_this_arg(&args)),
+
+                _ => None,
+            }
+        }
+
         match t.value() {
+            Value::Expression(o) => fold_term(maybe_unwrap_operation(o).unwrap_or(t), self),
+
+            // An unconstrained partial is true.
             Value::Partial(Constraints { operations, .. }) if operations.is_empty() => {
                 t.clone_with_value(Value::Boolean(true))
             }
 
+            // Elide partial when its constraints are trivial.
             Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
-                fn is_this_arg(t: &Term) -> bool {
-                    matches!(t.value(), Value::Variable(v) if v.is_this_var())
-                }
-
-                match operations.get(0).unwrap() {
-                    // If we have a single And operation, unwrap it and fold the inner term.
-                    Operation {
-                        operator: Operator::And,
-                        args,
-                    } if args.len() == 1 => fold_term(args.get(0).unwrap().clone(), self),
-
-                    // If we have a single Unify operation where one operand is _this and the other
-                    // is not _this, unwrap the operation and return the non-_this operand.
-                    Operation {
-                        operator: Operator::Unify,
-                        args,
-                    } if args.iter().any(is_this_arg) => {
-                        let mut args = args
-                            .iter()
-                            .filter(|arg| !is_this_arg(arg))
-                            .cloned()
-                            .collect::<TermList>();
-                        assert_eq!(args.len(), 1, "should have exactly 1 non-_this operand");
-                        fold_term(args.pop().unwrap(), self)
-                    }
-
-                    _ => fold_term(t, self),
-                }
+                fold_term(maybe_unwrap_operation(&operations[0]).unwrap_or(t), self)
             }
 
             _ => fold_term(t, self),
@@ -70,8 +83,8 @@ impl Folder for Simplifier {
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
-        /// Given `_this` and `x`, return `x`.
-        /// Given `_this.x` and `_this.y`, return `_this.x.y`.
+        /// Given `this` and `x`, return `x`.
+        /// Given `this.x` and `this.y`, return `this.x.y`.
         fn sub_this(arg: &Term, expr: &Term) -> Term {
             match (arg.value(), expr.value()) {
                 (Value::Variable(v), _) if v.is_this_var() => expr.clone(),
@@ -86,7 +99,7 @@ impl Folder for Simplifier {
                     }),
                 ) => arg.clone_with_value(Value::Expression(Operation {
                     operator: Operator::Dot,
-                    args: vec![expr.clone(), args.get(1).unwrap().clone()],
+                    args: vec![expr.clone(), args[1].clone()],
                 })),
                 _ => arg.clone(),
             }
@@ -106,8 +119,8 @@ impl Folder for Simplifier {
 
         match o.operator {
             Operator::Unify => {
-                let left = o.args.get(0).unwrap();
-                let right = o.args.get(1).unwrap();
+                let left = &o.args[0];
+                let right = &o.args[1];
                 Operation {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
