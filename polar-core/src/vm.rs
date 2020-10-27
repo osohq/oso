@@ -904,25 +904,16 @@ impl PolarVirtualMachine {
 
     /// Comparison operator that essentially performs partial unification.
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
-        // TODO (dhatch): These errors could potentially be caused by the user.
-        // rule(foo) if
-        //    x = {a: 1} and
-        //    foo matches x
-        assert!(
-            !matches!(&right.value(), Value::InstanceLiteral(_)),
-            "Called isa with bare instance lit!"
-        );
-        assert!(
-            !matches!(&right.value(), Value::Dictionary(_)),
-            "Called isa with bare dictionary!"
-        );
-
         self.log_with(
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
         );
 
         match (&left.value(), &right.value()) {
+            (Value::InstanceLiteral(_), _) => unreachable!("unparseable"),
+            (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
+                unreachable!("parsed as pattern")
+            }
             (_, Value::Partial(_)) => unreachable!("cannot match against a partial"),
 
             (Value::Variable(v), _) | (Value::RestVariable(v), _) => {
@@ -984,10 +975,6 @@ impl PolarVirtualMachine {
                     }],
                     vec![Goal::Backtrack],
                 )?;
-            }
-
-            (Value::InstanceLiteral(_), _) => {
-                panic!("How did an instance literal get here???");
             }
 
             (Value::List(left), Value::List(right)) => {
