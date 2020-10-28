@@ -1405,7 +1405,11 @@ fn test_in_op() -> TestResult {
 
     qeval(&mut p, "f({a:1}, [{a:1}, b, c])");
 
-    qruntime!("a in {a:1}", RuntimeError::TypeError { .. });
+    let mut query = polar.new_query("a in {a:1}", false).unwrap();
+    assert!(matches!(
+        query.next_event().unwrap(),
+        QueryEvent::NextExternal { term ,.. } if term == term!(btreemap!{sym!("a") => term!(1)})
+    ));
 
     // Negation.
     qeval(&mut p, "not (4 in [1,2,3])");

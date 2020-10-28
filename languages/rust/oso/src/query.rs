@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use crate::errors::OsoError;
-use crate::host::{Host, Instance, PolarResultIter};
+use crate::host::{Host, Instance, PolarIterator};
 use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
@@ -17,7 +17,7 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<u64, PolarResultIter>,
+    calls: HashMap<u64, PolarIterator>,
     host: Host,
 }
 
@@ -52,6 +52,9 @@ impl Query {
                     instance_id,
                     constructor,
                 } => self.handle_make_external(instance_id, constructor),
+                QueryEvent::NextExternal { call_id, term } => {
+                    self.handle_next_external(call_id, term)
+                }
                 QueryEvent::ExternalCall {
                     call_id,
                     instance,
@@ -140,27 +143,33 @@ impl Query {
         }
     }
 
-    fn register_call(
-        &mut self,
-        call_id: u64,
-        instance: Instance,
-        name: Symbol,
-        args: Option<Vec<Term>>,
-    ) -> crate::Result<()> {
-        if self.calls.get(&call_id).is_none() {
-            tracing::trace!(call_id, name = %name, args = ?args, "register_call");
-            let results = if let Some(args) = args {
-                instance.call(&name.0, args, &mut self.host)?
-            } else {
-                Box::new(std::iter::once(instance.get_attr(&name.0, &mut self.host)))
-            };
-            self.calls.insert(call_id, results);
-        }
-        Ok(())
+    fn next_call_result(&mut self, call_id: u64) -> Option<crate::Result<Term>> {
+        let Self {
+            ref mut calls,
+            ref mut host,
+            ..
+        } = self;
+        calls.get_mut(&call_id).and_then(|c| c.next(host))
     }
 
-    fn next_call_result(&mut self, call_id: u64) -> Option<Result<Term, crate::OsoError>> {
-        self.calls.get_mut(&call_id).and_then(|c| c.next())
+    fn handle_next_external(&mut self, call_id: u64, term: Term) -> crate::Result<()> {
+        if self.calls.get(&call_id).is_none() {
+            let instance = Instance::from_polar(&term, &self.host)?;
+            let iter = instance
+                .downcast::<crate::host::PolarIterator>(Some(&self.host))
+                .map(|i| Ok(i.clone()))
+                .unwrap_or_else(|_| instance.as_iter(&self.host))?;
+            self.calls.insert(call_id, iter);
+        }
+
+        match self.next_call_result(call_id) {
+            Some(Ok(result)) => self.call_result(call_id, result),
+            Some(Err(e)) => {
+                self.call_result_none(call_id)?;
+                Err(e)
+            }
+            None => self.call_result_none(call_id),
+        }
     }
 
     fn handle_external_call(
@@ -174,22 +183,22 @@ impl Query {
         if kwargs.is_some() {
             return lazy_error!("Invalid call error: kwargs not supported in Rust.");
         }
+        tracing::trace!(call_id, name = %name, args = ?args, "call");
         let instance = Instance::from_polar(&instance, &self.host).unwrap();
-        if let Err(e) = self.register_call(call_id, instance, name, args) {
-            self.call_result_none(call_id)?;
-            return Err(e);
-        }
-
-        if let Some(result) = self.next_call_result(call_id) {
-            match result {
-                Ok(r) => self.call_result(call_id, r),
-                Err(e) => {
-                    self.call_result_none(call_id)?;
-                    Err(e)
-                }
-            }
+        let result = if let Some(args) = args {
+            instance.call(&name.0, args, &mut self.host)
         } else {
-            self.call_result_none(call_id)
+            instance.get_attr(&name.0, &mut self.host)
+        };
+        match result {
+            Ok(t) => {
+                self.call_result(call_id, t)?;
+                Ok(())
+            }
+            Err(e) => {
+                self.call_result_none(call_id)?;
+                Err(e)
+            }
         }
     }
 

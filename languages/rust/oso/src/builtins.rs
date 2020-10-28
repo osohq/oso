@@ -22,6 +22,15 @@ fn list() -> ClassBuilder<Vec<Value>> {
     ClassBuilder::<Vec<Value>>::with_default().name("List")
 }
 
+fn option() -> ClassBuilder<Option<Value>> {
+    ClassBuilder::<Option<Value>>::with_default()
+        .name("Option")
+        .set_into_iter(|value| value.clone().into_iter())
+        .add_method("unwrap", |v: &Option<Value>| v.clone().unwrap())
+        .add_method("is_some", Option::is_some)
+        .add_method("is_none", Option::is_none)
+}
+
 fn dictionary() -> ClassBuilder<HashMap<Symbol, Value>> {
     ClassBuilder::<HashMap<Symbol, Value>>::with_default().name("Dictionary")
 }
@@ -148,5 +157,6 @@ pub fn classes() -> Vec<Class> {
         list().build(),
         dictionary().build(),
         string().build(),
+        option().build(),
     ]
 }

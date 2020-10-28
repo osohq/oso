@@ -3,9 +3,8 @@ use polar_core::terms::Term;
 
 use std::sync::Arc;
 
-use super::to_polar::ToPolarResults;
 use crate::host::from_polar::FromPolarList;
-use crate::host::to_polar::{PolarIter, PolarResultIter};
+use crate::host::to_polar::{PolarIterator, ToPolar, ToPolarResult};
 
 use super::class::{Class, Instance};
 use super::method::{Function, Method};
@@ -47,13 +46,13 @@ impl AttributeGetter {
     where
         T: 'static,
         F: Fn(&T) -> R + Send + Sync + 'static,
-        R: crate::ToPolar,
+        R: ToPolarResult,
     {
         Self(Arc::new(move |receiver, host: &mut Host| {
             let receiver = receiver
                 .downcast(Some(&host))
                 .map_err(|e| e.invariant().into());
-            receiver.map(&f).map(|v| v.to_polar(host))
+            receiver.map(&f).and_then(|v| v.to_polar_result(host))
         }))
     }
 
@@ -63,14 +62,14 @@ impl AttributeGetter {
 }
 
 #[derive(Clone)]
-pub struct InstanceMethod(TypeErasedMethod<PolarResultIter>);
+pub struct InstanceMethod(TypeErasedMethod<Term>);
 
 impl InstanceMethod {
     pub fn new<T, F, Args>(f: F) -> Self
     where
         Args: FromPolarList,
         F: Method<T, Args>,
-        F::Result: ToPolarResults,
+        F::Result: ToPolarResult,
         T: 'static,
     {
         Self(Arc::new(
@@ -82,7 +81,7 @@ impl InstanceMethod {
                 let args = Args::from_polar_list(&args, host);
 
                 join(receiver, args)
-                    .map(|(receiver, args)| f.invoke(receiver, args).to_polar_results(host))
+                    .and_then(|(receiver, args)| f.invoke(receiver, args).to_polar_result(host))
             },
         ))
     }
@@ -92,8 +91,9 @@ impl InstanceMethod {
         Args: FromPolarList,
         F: Method<T, Args>,
         F::Result: IntoIterator<Item = I>,
-        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Sized + 'static,
-        I: ToPolarResults + 'static,
+        I: ToPolarResult + 'static,
+        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter:
+            Iterator<Item = I> + Clone + Send + Sync + 'static,
         T: 'static,
     {
         Self(Arc::new(
@@ -104,12 +104,11 @@ impl InstanceMethod {
 
                 let args = Args::from_polar_list(&args, host);
 
-                join(receiver, args).map(|(receiver, args)| {
-                    let polar_values = PolarIter {
-                        iter: f.invoke(receiver, args).into_iter(),
-                    };
-                    polar_values.to_polar_results(host)
-                })
+                join(receiver, args)
+                    .map(|(receiver, args)| {
+                        PolarIterator::new(f.invoke(receiver, args).into_iter())
+                    })
+                    .map(|results| results.to_polar(host))
             },
         ))
     }
@@ -119,7 +118,7 @@ impl InstanceMethod {
         receiver: &Instance,
         args: Vec<Term>,
         host: &mut Host,
-    ) -> crate::Result<PolarResultIter> {
+    ) -> crate::Result<Term> {
         self.0(receiver, args, host)
     }
 
@@ -139,21 +138,21 @@ impl InstanceMethod {
 }
 
 #[derive(Clone)]
-pub struct ClassMethod(TypeErasedFunction<PolarResultIter>);
+pub struct ClassMethod(TypeErasedFunction<Term>);
 
 impl ClassMethod {
     pub fn new<F, Args>(f: F) -> Self
     where
         Args: FromPolarList,
         F: Function<Args> + 'static,
-        F::Result: ToPolarResults + 'static,
+        F::Result: ToPolarResult + 'static,
     {
         Self(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            Args::from_polar_list(&args, host).map(|args| f.invoke(args).to_polar_results(host))
+            Args::from_polar_list(&args, host).and_then(|args| f.invoke(args).to_polar_result(host))
         }))
     }
 
-    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<PolarResultIter> {
+    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Term> {
         self.0(args, host)
     }
 }
