@@ -96,5 +96,5 @@ setup(
     project_urls={
         "Source": "https://github.com/osohq/oso/tree/main/languages/python/django-oso",
         # "Docs": "...",
-    },  # Optional
+    },
 )
