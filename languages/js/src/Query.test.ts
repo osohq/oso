@@ -53,7 +53,11 @@ describe('#registerCall', () => {
     expect(await qvar(p, 'sync.generator = x', 'x', true)).toStrictEqual(
       sync.generator
     );
-    expect(await qvar(p, 'x in sync.generator()', 'x')).toStrictEqual([1, 2, 3]);
+    expect(await qvar(p, 'x in sync.generator()', 'x')).toStrictEqual([
+      1,
+      2,
+      3,
+    ]);
 
     expect(await qvar(p, 'sync.function = x', 'x', true)).toStrictEqual(
       sync.function
@@ -79,7 +83,9 @@ describe('#registerCall', () => {
       await qvar(p, 'x in sync.arrowFnReturningIterator()', 'x')
     ).toStrictEqual([1, 2, 3]);
 
-    expect(await qvar(p, 'sync.array = x', 'x', true)).toStrictEqual(sync.array);
+    expect(await qvar(p, 'sync.array = x', 'x', true)).toStrictEqual(
+      sync.array
+    );
     expect(await qvar(p, 'x in sync.array', 'x')).toStrictEqual(sync.array);
     expect(query(p, 'sync.array()')).rejects.toThrow(
       '.array is not a function at line 1, column 1'

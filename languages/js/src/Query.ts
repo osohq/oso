@@ -3,7 +3,11 @@ import type { Query as FfiQuery } from './polar_wasm_api';
 import { createInterface } from 'readline';
 
 import { parseQueryEvent } from './helpers';
-import { DuplicateInstanceRegistrationError, InvalidCallError, InvalidIteratorError } from './errors';
+import {
+  DuplicateInstanceRegistrationError,
+  InvalidCallError,
+  InvalidIteratorError,
+} from './errors';
 import { Host } from './Host';
 import type {
   Debug,
@@ -60,7 +64,6 @@ export class Query {
   private questionResult(result: boolean, callId: number): void {
     this.#ffiQuery.questionResult(callId, result);
   }
-
 
   /**
    * Send next result of JavaScript method call or property lookup to the Polar

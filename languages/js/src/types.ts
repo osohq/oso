@@ -272,7 +272,6 @@ export interface NextExternal {
   term: PolarTerm;
 }
 
-
 /**
  * The `ExternalCall` [[`QueryEvent`]] is how Polar invokes JavaScript
  * functions registered as constants, methods on built-in types, and methods on
@@ -390,15 +389,15 @@ export enum QueryEventKind {
 export interface QueryEvent {
   kind: QueryEventKind;
   data?:
-  | Debug
-  | ExternalCall
-  | ExternalIsa
-  | ExternalIsSubspecializer
-  | ExternalOp
-  | ExternalUnify
-  | MakeExternal
-  | NextExternal
-  | Result;
+    | Debug
+    | ExternalCall
+    | ExternalIsa
+    | ExternalIsSubspecializer
+    | ExternalOp
+    | ExternalUnify
+    | MakeExternal
+    | NextExternal
+    | Result;
 }
 
 /**

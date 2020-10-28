@@ -92,7 +92,9 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
       '[object Object] is not iterable'
     );
-    expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual('b');
+    expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual(
+      'b'
+    );
     expect(await qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual(
       'c'
     );

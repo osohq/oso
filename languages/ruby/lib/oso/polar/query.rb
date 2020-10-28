@@ -70,7 +70,7 @@ module Oso
       # @param call_id [Integer]
       # @param instance [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
-      def handle_call(attribute, call_id:, instance:, args:, kwargs:)
+      def handle_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         instance = host.to_ruby(instance)
         args = args.map { |a| host.to_ruby(a) }
         kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
@@ -86,7 +86,7 @@ module Oso
         application_error(e.message)
         call_result(nil, call_id: call_id)
       end
-      
+
       def handle_next_external(call_id, term)
         unless calls.key? call_id
           value = host.to_ruby term
@@ -94,7 +94,7 @@ module Oso
         end
 
         result = JSON.dump(next_call_result(call_id))
-        call_result(result, call_id: call_id)      
+        call_result(result, call_id: call_id)
       rescue StopIteration
         call_result(nil, call_id: call_id)
       end

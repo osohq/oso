@@ -55,7 +55,6 @@ export class InvalidIteratorError extends PolarError {
   }
 }
 
-
 export class InvalidConstructorError extends PolarError {
   constructor(ctor: any) {
     super(`${repr(ctor)} is not a constructor`);
