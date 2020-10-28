@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603908464001,
+  "lastUpdate": 1603909436525,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -10763,6 +10763,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6061,
             "range": "± 1536",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jamie@ivyleav.es",
+            "name": "Jamie Bliss",
+            "username": "AstraLuma"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9d9d044d395fee6ce8cb6f38c6a9ac06b6ee46a",
+          "message": "setup.py: Add some URLs (#488)\n\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-10-28T14:16:03-04:00",
+          "tree_id": "287ebccfea09a9f90c4a9a2e93f8dd43bec366df",
+          "url": "https://github.com/osohq/oso/commit/d9d9d044d395fee6ce8cb6f38c6a9ac06b6ee46a"
+        },
+        "date": 1603909434754,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 883,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2612,
+            "range": "± 56",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 67676,
+            "range": "± 3862",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 538724,
+            "range": "± 8388",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18602,
+            "range": "± 508",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18626,
+            "range": "± 597",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18632,
+            "range": "± 535",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18674,
+            "range": "± 544",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16461,
+            "range": "± 1330",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5627,
+            "range": "± 122",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5757,
+            "range": "± 171",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6198,
+            "range": "± 502",
             "unit": "ns/iter"
           }
         ]
