@@ -133,16 +133,24 @@ def test_route_authorization(client, settings, simple_policy):
 def test_partial(rf, settings, partial_policy):
     from test_app.models import Post
 
-    Post(name="test", is_private=False, timestamp=1).save()
-    Post(name="test_past", is_private=False, timestamp=-1).save()
-    Post(name="test_public", is_private=False, timestamp=1).save()
-    Post(name="test_private", is_private=True, timestamp=1).save()
-    Post(name="test_private_2", is_private=True, timestamp=1).save()
+    posts = [
+        Post(name="test", is_private=False, timestamp=1).save(),
+        Post(name="test_past", is_private=False, timestamp=-1).save(),
+        Post(name="test_public", is_private=False, timestamp=1).save(),
+        Post(name="test_private", is_private=True, timestamp=1).save(),
+        Post(name="test_private_2", is_private=True, timestamp=1).save(),
+        Post(name="test_option", is_private=True, timestamp=0, option=True).save(),
+    ]
 
     request = rf.get("/")
     request.user = "test_user"
 
     authorize_filter = authorize_model(request, action="get", model="test_app::Post")
+    assert (
+        str(authorize_filter)
+        == "(AND: ('is_private', False), ('timestamp__gt', 0), ('option', None))"
+    )
+
     q = Post.objects.filter(authorize_filter)
     assert q.count() == 2
 
@@ -150,11 +158,13 @@ def test_partial(rf, settings, partial_policy):
     request.user = "test_admin"
 
     authorize_filter = authorize_model(request, action="get", model=Post)
+    assert str(authorize_filter) == "(AND: )"
+
     q = Post.objects.filter(authorize_filter)
-    assert q.count() == 5
+    assert q.count() == len(posts)
 
     q = Post.objects.authorize(request, action="get")
-    assert q.count() == 5
+    assert q.count() == len(posts)
 
 
 @pytest.mark.django_db
