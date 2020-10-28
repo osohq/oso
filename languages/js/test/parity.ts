@@ -15,7 +15,7 @@ class A {
 }
 oso.registerClass(A);
 
-class D extends A { }
+class D extends A {}
 
 namespace B {
   export class C {
@@ -137,11 +137,28 @@ oso.registerClass(E);
       (await oso.query('builtinSpecializers("foo", "String")').next()).done,
       !(await oso.query('builtinSpecializers("bar", "String")').next()).done,
 
-      !(await oso.query('builtinSpecializers(1, "IntegerWithFields")').next()).done,
-      !(await oso.query('builtinSpecializers(2, "IntegerWithGarbageFields")').next()).done,
-      !(await oso.query('builtinSpecializers({}, "DictionaryWithFields")').next()).done,
-      !(await oso.query('builtinSpecializers({z: 1}, "DictionaryWithFields")').next()).done,
-      (await oso.query('builtinSpecializers({y: 1}, "DictionaryWithFields")').next()).done,
+      !(await oso.query('builtinSpecializers(1, "IntegerWithFields")').next())
+        .done,
+      !(
+        await oso
+          .query('builtinSpecializers(2, "IntegerWithGarbageFields")')
+          .next()
+      ).done,
+      !(
+        await oso
+          .query('builtinSpecializers({}, "DictionaryWithFields")')
+          .next()
+      ).done,
+      !(
+        await oso
+          .query('builtinSpecializers({z: 1}, "DictionaryWithFields")')
+          .next()
+      ).done,
+      (
+        await oso
+          .query('builtinSpecializers({y: 1}, "DictionaryWithFields")')
+          .next()
+      ).done,
     ].some(v => v)
   )
     throw new Error();
