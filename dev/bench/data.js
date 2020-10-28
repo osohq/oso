@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603909436525,
+  "lastUpdate": 1603922843999,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -10859,6 +10859,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6198,
             "range": "± 502",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c7647c50f5226b6dbb865a98a43f8b03ae6e7cf2",
+          "message": "Check native Polar types match against fields (#455)\n\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-10-28T17:59:41-04:00",
+          "tree_id": "f440f5ef692d8845fb713e4489c7d00ab21b4131",
+          "url": "https://github.com/osohq/oso/commit/c7647c50f5226b6dbb865a98a43f8b03ae6e7cf2"
+        },
+        "date": 1603922842418,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 868,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2598,
+            "range": "± 51",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 67563,
+            "range": "± 1203",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 554089,
+            "range": "± 13016",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18781,
+            "range": "± 510",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18843,
+            "range": "± 553",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18904,
+            "range": "± 602",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18856,
+            "range": "± 505",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16523,
+            "range": "± 435",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5558,
+            "range": "± 126",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5704,
+            "range": "± 218",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6039,
+            "range": "± 542",
             "unit": "ns/iter"
           }
         ]
