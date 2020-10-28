@@ -88,7 +88,7 @@ module Oso
       end
       
       def handle_next_external(call_id, term)
-        if not calls.key? call_id
+        unless calls.key? call_id
           value = host.to_ruby term
           calls[call_id] = value.lazy
         end

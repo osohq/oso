@@ -79,8 +79,8 @@ describe('#registerCall', () => {
       await qvar(p, 'x in sync.arrowFnReturningIterator()', 'x')
     ).toStrictEqual([1, 2, 3]);
 
-    expect(await qvar(p, 'sync.array = x', 'x')).toStrictEqual([sync.array]);
-    expect(await qvar(p, 'x in sync.array', 'x')).toStrictEqual([sync.array]);
+    expect(await qvar(p, 'sync.array = x', 'x', true)).toStrictEqual(sync.array);
+    expect(await qvar(p, 'x in sync.array', 'x')).toStrictEqual(sync.array);
     expect(query(p, 'sync.array()')).rejects.toThrow(
       '.array is not a function at line 1, column 1'
     );
@@ -90,7 +90,7 @@ describe('#registerCall', () => {
       '.object is not a function at line 1, column 1'
     );
 
-    expect(await qvar(p, 'sync.validCustomIterator = x', 'x')).toStrictEqual([
+    expect(await qvar(p, 'x in sync.validCustomIterator', 'x')).toStrictEqual([
       1,
       2,
       3,

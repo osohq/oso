@@ -89,8 +89,8 @@ describe('#registerClass', () => {
     new Foo(\"A\").a()
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
-    expect(await qvar(p, 'x i nnew Foo("A").b', 'x', true)).not.toStrictEqual(
-      'b'
+    expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
+      '[object Object] is not iterable'
     );
     expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual('b');
     expect(await qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual(
@@ -321,7 +321,7 @@ describe('conversions between JS + Polar values', () => {
   test('handles Generator external call results', async () => {
     const actor = new Actor('sam');
     const p = new Polar();
-    await p.loadStr('widgets(actor, x) if x = actor.widgets().id;');
+    await p.loadStr('widgets(actor, x) if w in actor.widgets() and x = w.id;');
     const result = await queryRule(p, 'widgets', actor, new Variable('x'));
     expect(result).toStrictEqual([map({ x: '2' }), map({ x: '3' })]);
   });

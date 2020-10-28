@@ -57,6 +57,8 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
         return parseResult(event['Result']);
       case event['MakeExternal'] !== undefined:
         return parseMakeExternal(event['MakeExternal']);
+      case event['NextExternal'] !== undefined:
+        return parseNextExternal(event['NextExternal']);
       case event['ExternalCall'] !== undefined:
         return parseExternalCall(event['ExternalCall']);
       case event['ExternalIsSubSpecializer'] !== undefined:
@@ -118,6 +120,26 @@ function parseMakeExternal(d: obj): QueryEvent {
   return {
     kind: QueryEventKind.MakeExternal,
     data: { fields, instanceId, tag },
+  };
+}
+
+/**
+ * Try to parse a JSON payload received from across the WebAssembly boundary as
+ * a [[`NextExternal`]].
+ *
+ * @hidden
+ */
+function parseNextExternal(d: obj): QueryEvent {
+  const callId = d.call_id;
+  const term = d.term
+  if (
+    !Number.isSafeInteger(callId) ||
+    !isPolarTerm(term)
+  )
+    throw new Error();
+  return {
+    kind: QueryEventKind.NextExternal,
+    data: { callId, term },
   };
 }
 

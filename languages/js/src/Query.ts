@@ -107,16 +107,12 @@ export class Query {
     let value;
     try {
       const receiver = await this.#host.toJs(instance);
-      const fn = receiver[attr];
+      value = receiver[attr];
       if (args !== undefined) {
-        if (typeof fn === 'function') {
+        if (typeof value === 'function') {
           // If value is a function, call it with the provided args.
           const jsArgs = args!.map(async a => await this.#host.toJs(a));
           value = receiver[attr](...(await Promise.all(jsArgs)));
-          value = await Promise.resolve(value);
-          if (value !== undefined || value !== null) {
-            value = JSON.stringify(this.#host.toPolar(value));
-          }
         } else {
           // Error on attempt to call non-function.
           throw new InvalidCallError(receiver, attr);
@@ -129,6 +125,10 @@ export class Query {
         throw e;
       }
     } finally {
+      // resolve promise if necessary
+      // convert result to JSON and return
+      value = await Promise.resolve(value);
+      value = JSON.stringify(this.#host.toPolar(value));
       this.callResult(callId, value);
     }
   }
@@ -224,7 +224,7 @@ export class Query {
           }
           case QueryEventKind.NextExternal: {
             const { callId, term } = event.data as NextExternal;
-            this.handleNextExternal(callId, term);
+            await this.handleNextExternal(callId, term);
             break;
           }
           case QueryEventKind.Debug:
