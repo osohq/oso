@@ -134,4 +134,11 @@ fn test() {
     res!(@not oso.query(r#"builtinSpecializers({foo: "bar"}, "Dictionary")"#));
     res!(oso.query(r#"builtinSpecializers("foo", "String")"#));
     res!(@not oso.query(r#"builtinSpecializers("bar", "String")"#));
+
+    // Rust ints do not have the denominator field
+    // res!(oso.query(r#"builtinSpecializers(1, "IntegerWithFields")"#));
+    res!(@not oso.query(r#"builtinSpecializers(2, "IntegerWithGarbageFields")"#));
+    res!(@not oso.query(r#"builtinSpecializers({}, "DictionaryWithFields")"#));
+    res!(@not oso.query(r#"builtinSpecializers({z: 1}, "DictionaryWithFields")"#));
+    res!(oso.query(r#"builtinSpecializers({y: 1}, "DictionaryWithFields")"#));
 }

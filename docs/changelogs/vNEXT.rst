@@ -35,7 +35,8 @@ Link to relevant documentation section
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- We now check fields in the case of a ``matches`` against a built-in type. E.g.:
+
+  .. code-block:: polar
+
+    2 matches Integer { numerator: 2, denominator: 1 }
