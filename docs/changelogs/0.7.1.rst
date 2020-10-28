@@ -1,0 +1,31 @@
+=====
+0.7.1
+=====
+
+**Release date:** 2020-10-27
+
+New features
+============
+
+Modulo and remainder operators
+------------------------------
+
+The new ``mod`` and ``rem`` arithmetic operators can calculate moduli and
+remainders, respectively:
+
+.. code-block:: polar
+
+  1 mod 3 == 1
+  1 rem 3 == 1
+  -1 mod 3 == 2
+  -1 rem 3 == -1
+
+Other bugs & improvements
+=========================
+
+- Improved Rust library API for converting between oso Values and native Rust
+  types.
+- More detailed error messages in the Rust library for type errors.
+- The preview list filtering feature in ``django-oso`` now handles more policies
+  correctly, and consistently raises errors for policies that cannot yet be
+  converted to a Django Query filter.

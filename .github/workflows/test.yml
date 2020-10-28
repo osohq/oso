@@ -103,3 +103,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
         if: github.ref == 'refs/heads/main'
+      - name: cloudfront invalidate docs preview
+        run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
+        if: github.ref == 'refs/heads/main'
