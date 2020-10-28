@@ -97,11 +97,11 @@ jobs:
       - name: Docs build
         run: SPHINXOPTS="-W" make -C docs build
       - name: s3 preview publish
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-        if: github.ref == 'refs/heads/main'
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         if: github.ref == 'refs/heads/main'
