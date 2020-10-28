@@ -13,8 +13,6 @@ check out [the documentation][docs] or [join us on Slack][slack] to ask
 questions.
 
 [docs]: https://docs.osohq.com
-<!-- NOTE: the Slack invite link must be recreated every 30 days or every 2000
-invites, whichever comes first. -->
 [slack]: https://join-slack.osohq.com
 
 ## Reporting issues
@@ -30,5 +28,11 @@ sample.
 [issues]: https://github.com/osohq/oso/issues
 [new-issue]: https://github.com/osohq/oso/issues/new
 
-<!-- TODO: 'Contributing code' section once we have a CLA set up. -->
+## Contributing code
 
+If you would like to contribute to this project, please open a pull request
+with your changes. If you haven't already read and signed our [Contributor
+License Agreement][cla], you will be asked to do so upon opening your first PR.
+Thank you for contributing!
+
+[cla]: https://github.com/osohq/cla/blob/main/individual.md

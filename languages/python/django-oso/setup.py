@@ -49,6 +49,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: Apache Software License",
     ],
+    url="https://www.osohq.com/",
     packages=find_packages(),
     python_requires=">=3.6",
     install_requires=install_requires,
@@ -92,5 +93,8 @@ setup(
     # issues, where the source is hosted, where to say thanks to the package
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
-    project_urls={},  # Optional
+    project_urls={
+        "Source": "https://github.com/osohq/oso/tree/main/languages/python/django-oso",
+        # "Docs": "...",
+    },
 )
