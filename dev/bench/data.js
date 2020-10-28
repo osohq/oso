@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603828571114,
+  "lastUpdate": 1603859970488,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -10571,6 +10571,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6101,
             "range": "± 2266",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09a7df6332a9a5fae337f2641c5817ac6702464d",
+          "message": "Add CLA Assistant (#493)",
+          "timestamp": "2020-10-28T00:31:56-04:00",
+          "tree_id": "256a5d0a664cbe279f4e2b759e319c190d84ab6f",
+          "url": "https://github.com/osohq/oso/commit/09a7df6332a9a5fae337f2641c5817ac6702464d"
+        },
+        "date": 1603859968935,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 813,
+            "range": "± 47",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2406,
+            "range": "± 79",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 62912,
+            "range": "± 2305",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 504130,
+            "range": "± 12502",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 17284,
+            "range": "± 692",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17320,
+            "range": "± 555",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17349,
+            "range": "± 586",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 17317,
+            "range": "± 617",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15219,
+            "range": "± 523",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5234,
+            "range": "± 149",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5306,
+            "range": "± 242",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5687,
+            "range": "± 468",
             "unit": "ns/iter"
           }
         ]
