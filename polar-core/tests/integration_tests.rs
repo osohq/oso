@@ -221,15 +221,17 @@ fn qnull(p: &mut Polar, query_str: &str) {
 }
 
 #[track_caller]
-#[must_use = "test results need to be asserted"]
-fn qext(p: &mut Polar, query_str: &str, external_results: Vec<Value>) -> QueryResults {
+fn qext(p: &mut Polar, query_str: &str, external_results: Vec<Value>, expected_len: usize) {
     let mut external_results: Vec<Term> = external_results
         .into_iter()
         .map(Term::new_from_test)
         .rev()
         .collect();
     let q = p.new_query(query_str, false).unwrap();
-    query_results!(q, |_, _, _, _, _| external_results.pop())
+    assert_eq!(
+        query_results!(q, |_, _, _, _, _| external_results.pop()).len(),
+        expected_len
+    );
 }
 
 #[track_caller]
@@ -591,10 +593,7 @@ fn test_lookup() {
 fn test_instance_lookup() {
     // Q: Not sure if this should be allowed? I can't get (new a{x: 1}).x to parse, but that might
     // be the only thing we should permit
-    assert_eq!(
-        qext(&mut Polar::new(), "new a(x: 1).x = 1", vec![value!(1)]).len(),
-        1
-    );
+    qext(&mut Polar::new(), "new a(x: 1).x = 1", vec![value!(1)], 1);
 }
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
@@ -715,16 +714,15 @@ fn test_dict_specializers() -> TestResult {
 
     // Test unifying & isa-ing instances against our rules.
     qnull(&mut p, "f(new a(x: 1))");
-    assert_eq!(
-        qext(&mut p, "g(new a(x: 1))", vec![value!(1), value!(1)]).len(),
-        1
-    );
+    qext(&mut p, "g(new a(x: 1))", vec![value!(1), value!(1)], 1);
     qnull(&mut p, "f(new a())");
     qnull(&mut p, "f(new a(x: {}))");
-    assert!(qext(&mut p, "g(new a(x: 2))", vec![value!(2), value!(2)]).is_empty());
-    assert_eq!(
-        qext(&mut p, "g(new a(y: 2, x: 1))", vec![value!(1), value!(1)]).len(),
-        1
+    qext(&mut p, "g(new a(x: 2))", vec![value!(2), value!(2)], 0);
+    qext(
+        &mut p,
+        "g(new a(y: 2, x: 1))",
+        vec![value!(1), value!(1)],
+        1,
     );
     Ok(())
 }
