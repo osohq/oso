@@ -1612,7 +1612,7 @@ fn test_assignment() -> TestResult {
     qeval(&mut p, "x := y and y = 6 and x = 6");
 
     // confirm old syntax -> parse error
-    let e = p.load_str("f(x) := g(x)").unwrap_err();
+    let e = p.load_str("f(x) := g(x);").unwrap_err();
     assert!(matches!(
         e.kind,
         ErrorKind::Parse(ParseError::UnrecognizedToken { .. })
