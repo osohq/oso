@@ -196,10 +196,9 @@ fn query_results_with_externals(q: Query) -> (QueryResults, MockExternal) {
 }
 
 #[track_caller]
-#[must_use = "test results need to be asserted"]
-fn qeval(p: &mut Polar, query_str: &str) -> bool {
+fn qeval(p: &mut Polar, query_str: &str) {
     let q = p.new_query(query_str, false).unwrap();
-    !query_results!(q).is_empty()
+    assert!(!query_results!(q).is_empty());
 }
 
 #[track_caller]
@@ -262,7 +261,7 @@ fn test_functions() -> TestResult {
            k(x) if f(x) and h(x) and g(x);"#,
     )?;
     qnull(&mut p, "k(1)");
-    assert!(qeval(&mut p, "k(2)"));
+    qeval(&mut p, "k(2)");
     qnull(&mut p, "k(3)");
     assert_eq!(qvar(&mut p, "k(a)", "a"), vec![value!(2)]);
     Ok(())
@@ -341,10 +340,10 @@ fn test_nested_rule() -> TestResult {
            g(x) if j(x);
            j(4);"#,
     )?;
-    assert!(qeval(&mut p, "f(2)"));
+    qeval(&mut p, "f(2)");
     qnull(&mut p, "f(3)");
-    assert!(qeval(&mut p, "f(4)"));
-    assert!(qeval(&mut p, "j(4)"));
+    qeval(&mut p, "f(4)");
+    qeval(&mut p, "j(4)");
     Ok(())
 }
 
@@ -389,8 +388,9 @@ fn test_functions_reorder() -> TestResult {
             "k(1) was true for permutation {:?}",
             &permutation
         );
+        let q = p.new_query("k(2)", false)?;
         assert!(
-            qeval(&mut p, "k(2)"),
+            !query_results!(q).is_empty(),
             "k(2) failed for permutation {:?}",
             &permutation
         );
@@ -487,7 +487,7 @@ fn test_ait_kaci_34() -> TestResult {
            f(2);
            g(1);"#,
     )?;
-    assert!(qeval(&mut p, "a()"));
+    qeval(&mut p, "a()");
     Ok(())
 }
 
@@ -505,11 +505,11 @@ fn test_constants() -> TestResult {
            two(x) if one < x and two = two and two = x and two < three;
            three(x) if three = three and three = x;"#,
     )?;
-    assert!(qeval(&mut p, "one(1)"));
+    qeval(&mut p, "one(1)");
     qnull(&mut p, "two(1)");
-    assert!(qeval(&mut p, "two(2)"));
+    qeval(&mut p, "two(2)");
     qnull(&mut p, "three(2)");
-    assert!(qeval(&mut p, "three(3)"));
+    qeval(&mut p, "three(3)");
     Ok(())
 }
 
@@ -517,16 +517,16 @@ fn test_constants() -> TestResult {
 fn test_not() -> TestResult {
     let mut p = Polar::new();
     p.load_str("odd(1); even(2);")?;
-    assert!(qeval(&mut p, "odd(1)"));
+    qeval(&mut p, "odd(1)");
     qnull(&mut p, "not odd(1)");
     qnull(&mut p, "even(1)");
-    assert!(qeval(&mut p, "not even(1)"));
+    qeval(&mut p, "not even(1)");
     qnull(&mut p, "odd(2)");
-    assert!(qeval(&mut p, "not odd(2)"));
-    assert!(qeval(&mut p, "even(2)"));
+    qeval(&mut p, "not odd(2)");
+    qeval(&mut p, "even(2)");
     qnull(&mut p, "not even(2)");
     qnull(&mut p, "even(3)");
-    assert!(qeval(&mut p, "not even(3)"));
+    qeval(&mut p, "not even(3)");
 
     p.load_str(
         r#"f(x) if not a(x);
@@ -536,20 +536,20 @@ fn test_not() -> TestResult {
     )?;
 
     qnull(&mut p, "f(1)");
-    assert!(qeval(&mut p, "f(2)"));
+    qeval(&mut p, "f(2)");
 
     qnull(&mut p, "g(1)");
     qnull(&mut p, "g(2)");
-    assert!(qeval(&mut p, "g(3)"));
+    qeval(&mut p, "g(3)");
     qnull(&mut p, "g(x) and x=3"); // this should fail because unbound x means g(x) always fails
-    assert!(qeval(&mut p, "x=3 and g(x)"));
+    qeval(&mut p, "x=3 and g(x)");
 
     p.load_str("h(x) if not (not (x = 1 or x = 3) or x = 3);")?;
-    assert!(qeval(&mut p, "h(1)"));
+    qeval(&mut p, "h(1)");
     qnull(&mut p, "h(2)");
     qnull(&mut p, "h(3)");
 
-    assert!(qeval(&mut p, "d = {x: 1} and not d.x = 2"));
+    qeval(&mut p, "d = {x: 1} and not d.x = 2");
     Ok(())
 }
 
@@ -560,7 +560,7 @@ fn test_and() -> TestResult {
         r#"f(1);
            f(2);"#,
     )?;
-    assert!(qeval(&mut p, "f(1) and f(2)"));
+    qeval(&mut p, "f(1) and f(2)");
     qnull(&mut p, "f(1) and f(2) and f(3)");
     Ok(())
 }
@@ -568,13 +568,13 @@ fn test_and() -> TestResult {
 #[test]
 fn test_equality() {
     let mut p = Polar::new();
-    assert!(qeval(&mut p, "1 = 1"));
+    qeval(&mut p, "1 = 1");
     qnull(&mut p, "1 = 2");
 }
 
 #[test]
 fn test_lookup() {
-    assert!(qeval(&mut Polar::new(), "{x: 1}.x = 1"));
+    qeval(&mut Polar::new(), "{x: 1}.x = 1");
 }
 
 #[test]
@@ -601,9 +601,9 @@ fn test_retries() -> TestResult {
            k(3);"#,
     )?;
     qnull(&mut p, "k(1)");
-    assert!(qeval(&mut p, "k(2)"));
+    qeval(&mut p, "k(2)");
     assert_eq!(qvar(&mut p, "k(a)", "a"), vec![value!(2), value!(3)]);
-    assert!(qeval(&mut p, "k(3)"));
+    qeval(&mut p, "k(3)");
     Ok(())
 }
 
@@ -662,9 +662,9 @@ fn test_or() -> TestResult {
            b(3);"#,
     )?;
     assert_eq!(qvar(&mut p, "f(x)", "x"), vec![value!(1), value!(3)]);
-    assert!(qeval(&mut p, "f(1)"));
+    qeval(&mut p, "f(1)");
     qnull(&mut p, "f(2)");
-    assert!(qeval(&mut p, "f(3)"));
+    qeval(&mut p, "f(3)");
 
     p.load_str(
         r#"g(x) if a(x) or b(x) or c(x);
@@ -674,10 +674,10 @@ fn test_or() -> TestResult {
         qvar(&mut p, "g(x)", "x"),
         vec![value!(1), value!(3), value!(5)]
     );
-    assert!(qeval(&mut p, "g(1)"));
+    qeval(&mut p, "g(1)");
     qnull(&mut p, "g(2)");
-    assert!(qeval(&mut p, "g(3)"));
-    assert!(qeval(&mut p, "g(5)"));
+    qeval(&mut p, "g(3)");
+    qeval(&mut p, "g(5)");
     Ok(())
 }
 
@@ -689,15 +689,15 @@ fn test_dict_specializers() -> TestResult {
            g(_: {x: 1});"#,
     )?;
     // Test unifying dicts against our rules.
-    assert!(qeval(&mut p, "f({x: 1})"));
+    qeval(&mut p, "f({x: 1})");
     qnull(&mut p, "f({x: 1, y: 2})");
     qnull(&mut p, "f(1)");
     qnull(&mut p, "f({})");
     qnull(&mut p, "f({x: 2})");
     qnull(&mut p, "f({y: 1})");
 
-    assert!(qeval(&mut p, "g({x: 1})"));
-    assert!(qeval(&mut p, "g({x: 1, y: 2})"));
+    qeval(&mut p, "g({x: 1})");
+    qeval(&mut p, "g({x: 1, y: 2})");
     qnull(&mut p, "g(1)");
     qnull(&mut p, "g({})");
     qnull(&mut p, "g({x: 2})");
@@ -723,15 +723,15 @@ fn test_dict_specializers() -> TestResult {
 fn test_non_instance_specializers() -> TestResult {
     let mut p = Polar::new();
     p.load_str("f(x: 1) if x = 1;")?;
-    assert!(qeval(&mut p, "f(1)"));
+    qeval(&mut p, "f(1)");
     qnull(&mut p, "f(2)");
 
     p.load_str("g(x: 1, y: [x]) if y = [1];")?;
-    assert!(qeval(&mut p, "g(1, [1])"));
+    qeval(&mut p, "g(1, [1])");
     qnull(&mut p, "g(1, [2])");
 
     p.load_str("h(x: {y: y}, x.y) if y = 1;")?;
-    assert!(qeval(&mut p, "h({y: 1}, 1)"));
+    qeval(&mut p, "h({y: 1}, 1)");
     qnull(&mut p, "h({y: 1}, 2)");
     Ok(())
 }
@@ -789,9 +789,9 @@ fn unify_predicates() -> TestResult {
            k(x) if h(g(x), g(x));
            h(g(1), g(1));"#,
     )?;
-    assert!(qeval(&mut p, "f(g(1))"));
+    qeval(&mut p, "f(g(1))");
     qnull(&mut p, "f(1)");
-    assert!(qeval(&mut p, "k(1)"));
+    qeval(&mut p, "k(1)");
     Ok(())
 }
 
@@ -874,7 +874,7 @@ fn test_external_call() -> TestResult {
 fn test_infinite_loop() {
     let mut p = Polar::new();
     p.load_str("f(x) if f(x);").unwrap();
-    assert!(qeval(&mut p, "f(1)"));
+    qeval(&mut p, "f(1)");
 }
 
 #[test]
@@ -884,95 +884,95 @@ fn test_comparisons() -> TestResult {
     // <
     p.load_str("lt(x, y) if x < y;")?;
     qnull(&mut p, "lt(1,1)");
-    assert!(qeval(&mut p, "lt(1,2)"));
+    qeval(&mut p, "lt(1,2)");
     qnull(&mut p, "lt(2,1)");
     qnull(&mut p, "lt(+1,-1)");
-    assert!(qeval(&mut p, "lt(-1,+1)"));
+    qeval(&mut p, "lt(-1,+1)");
     qnull(&mut p, "lt(-1,-1)");
-    assert!(qeval(&mut p, "lt(-2,-1)"));
-    assert!(qeval(&mut p, "lt(1019,1e19)"));
+    qeval(&mut p, "lt(-2,-1)");
+    qeval(&mut p, "lt(1019,1e19)");
     qnull(&mut p, "lt(1e19,1019)");
     qnull(&mut p, "lt(9007199254740992,9007199254740992)"); // identical
     qnull(&mut p, "lt(9007199254740992,9007199254740992.0)"); // equal
     qnull(&mut p, "lt(9007199254740992,9007199254740993.0)"); // indistinguishable
-    assert!(qeval(&mut p, "lt(9007199254740992,9007199254740994.0)")); // distinguishable
-    assert!(qeval(&mut p, "lt(\"aa\",\"ab\")"));
+    qeval(&mut p, "lt(9007199254740992,9007199254740994.0)"); // distinguishable
+    qeval(&mut p, "lt(\"aa\",\"ab\")");
     qnull(&mut p, "lt(\"aa\",\"aa\")");
 
     // <=
     p.load_str("leq(x, y) if x <= y;")?;
-    assert!(qeval(&mut p, "leq(1,1)"));
-    assert!(qeval(&mut p, "leq(1,2)"));
+    qeval(&mut p, "leq(1,1)");
+    qeval(&mut p, "leq(1,2)");
     qnull(&mut p, "leq(2,1)");
     qnull(&mut p, "leq(+1,-1)");
-    assert!(qeval(&mut p, "leq(-1,+1)"));
-    assert!(qeval(&mut p, "leq(-1,-1)"));
-    assert!(qeval(&mut p, "leq(-2,-1)"));
-    assert!(qeval(&mut p, "leq(\"aa\",\"aa\")"));
-    assert!(qeval(&mut p, "leq(\"aa\",\"ab\")"));
+    qeval(&mut p, "leq(-1,+1)");
+    qeval(&mut p, "leq(-1,-1)");
+    qeval(&mut p, "leq(-2,-1)");
+    qeval(&mut p, "leq(\"aa\",\"aa\")");
+    qeval(&mut p, "leq(\"aa\",\"ab\")");
     qnull(&mut p, "leq(\"ab\",\"aa\")");
 
     // >
     p.load_str("gt(x, y) if x > y;")?;
     qnull(&mut p, "gt(1,1)");
     qnull(&mut p, "gt(1,2)");
-    assert!(qeval(&mut p, "gt(2,1)"));
-    assert!(qeval(&mut p, "gt(+1,-1)"));
+    qeval(&mut p, "gt(2,1)");
+    qeval(&mut p, "gt(+1,-1)");
     qnull(&mut p, "gt(-1,+1)");
     qnull(&mut p, "gt(-1,-1)");
-    assert!(qeval(&mut p, "gt(-1,-2)"));
-    assert!(qeval(&mut p, "gt(\"ab\",\"aa\")"));
+    qeval(&mut p, "gt(-1,-2)");
+    qeval(&mut p, "gt(\"ab\",\"aa\")");
     qnull(&mut p, "gt(\"aa\",\"aa\")");
 
     // >=
     p.load_str("geq(x, y) if x >= y;")?;
-    assert!(qeval(&mut p, "geq(1,1)"));
+    qeval(&mut p, "geq(1,1)");
     qnull(&mut p, "geq(1,2)");
-    assert!(qeval(&mut p, "geq(2,1)"));
-    assert!(qeval(&mut p, "geq(2,1)"));
-    assert!(qeval(&mut p, "geq(+1,-1)"));
+    qeval(&mut p, "geq(2,1)");
+    qeval(&mut p, "geq(2,1)");
+    qeval(&mut p, "geq(+1,-1)");
     qnull(&mut p, "geq(-1,+1)");
-    assert!(qeval(&mut p, "geq(-1,-1)"));
-    assert!(qeval(&mut p, "geq(-1,-1.0)"));
-    assert!(qeval(&mut p, "geq(\"ab\",\"aa\")"));
-    assert!(qeval(&mut p, "geq(\"aa\",\"aa\")"));
+    qeval(&mut p, "geq(-1,-1)");
+    qeval(&mut p, "geq(-1,-1.0)");
+    qeval(&mut p, "geq(\"ab\",\"aa\")");
+    qeval(&mut p, "geq(\"aa\",\"aa\")");
 
     // ==
     p.load_str("eq(x, y) if x == y;")?;
-    assert!(qeval(&mut p, "eq(1,1)"));
+    qeval(&mut p, "eq(1,1)");
     qnull(&mut p, "eq(1,2)");
     qnull(&mut p, "eq(2,1)");
     qnull(&mut p, "eq(-1,+1)");
-    assert!(qeval(&mut p, "eq(-1,-1)"));
-    assert!(qeval(&mut p, "eq(-1,-1.0)"));
+    qeval(&mut p, "eq(-1,-1)");
+    qeval(&mut p, "eq(-1,-1.0)");
     qnull(&mut p, "eq(1019,1e19)");
     qnull(&mut p, "eq(1e19,1019)");
-    assert!(qeval(&mut p, "eq(9007199254740992,9007199254740992)")); // identical
-    assert!(qeval(&mut p, "eq(9007199254740992,9007199254740992.0)")); // equal
-    assert!(qeval(&mut p, "eq(9007199254740992,9007199254740993.0)")); // indistinguishable
+    qeval(&mut p, "eq(9007199254740992,9007199254740992)"); // identical
+    qeval(&mut p, "eq(9007199254740992,9007199254740992.0)"); // equal
+    qeval(&mut p, "eq(9007199254740992,9007199254740993.0)"); // indistinguishable
     qnull(&mut p, "eq(9007199254740992,9007199254740994.0)"); // distinguishable
-    assert!(qeval(&mut p, "eq(\"aa\", \"aa\")"));
+    qeval(&mut p, "eq(\"aa\", \"aa\")");
     qnull(&mut p, "eq(\"ab\", \"aa\")");
 
     // !=
     p.load_str("neq(x, y) if x != y;")?;
     qnull(&mut p, "neq(1,1)");
-    assert!(qeval(&mut p, "neq(1,2)"));
-    assert!(qeval(&mut p, "neq(2,1)"));
-    assert!(qeval(&mut p, "neq(-1,+1)"));
+    qeval(&mut p, "neq(1,2)");
+    qeval(&mut p, "neq(2,1)");
+    qeval(&mut p, "neq(-1,+1)");
     qnull(&mut p, "neq(-1,-1)");
     qnull(&mut p, "neq(-1,-1.0)");
     qnull(&mut p, "neq(\"aa\", \"aa\")");
-    assert!(qeval(&mut p, "neq(\"ab\", \"aa\")"));
+    qeval(&mut p, "neq(\"ab\", \"aa\")");
 
     let mut q = p.new_query("eq(bob, bob)", false)?;
     q.next_event().expect_err("can't compare unbound variables");
 
-    assert!(qeval(&mut p, "1.0 == 1"));
-    assert!(qeval(&mut p, "0.99 < 1"));
-    assert!(qeval(&mut p, "1.0 <= 1"));
-    assert!(qeval(&mut p, "1 == 1"));
-    assert!(qeval(&mut p, "0.0 == 0"));
+    qeval(&mut p, "1.0 == 1");
+    qeval(&mut p, "0.99 < 1");
+    qeval(&mut p, "1.0 <= 1");
+    qeval(&mut p, "1 == 1");
+    qeval(&mut p, "0.0 == 0");
     Ok(())
 }
 
@@ -988,14 +988,14 @@ fn check_arithmetic_error(p: &mut Polar, query_str: &str) {
 #[test]
 fn test_modulo_and_remainder() -> TestResult {
     let mut p = Polar::new();
-    assert!(qeval(&mut p, "1 mod 1 == 0"));
-    assert!(qeval(&mut p, "1 rem 1 == 0"));
-    assert!(qeval(&mut p, "1 mod -1 == 0"));
-    assert!(qeval(&mut p, "1 rem -1 == 0"));
-    assert!(qeval(&mut p, "0 mod 1 == 0"));
-    assert!(qeval(&mut p, "0 rem 1 == 0"));
-    assert!(qeval(&mut p, "0 mod -1 == 0"));
-    assert!(qeval(&mut p, "0 rem -1 == 0"));
+    qeval(&mut p, "1 mod 1 == 0");
+    qeval(&mut p, "1 rem 1 == 0");
+    qeval(&mut p, "1 mod -1 == 0");
+    qeval(&mut p, "1 rem -1 == 0");
+    qeval(&mut p, "0 mod 1 == 0");
+    qeval(&mut p, "0 rem 1 == 0");
+    qeval(&mut p, "0 mod -1 == 0");
+    qeval(&mut p, "0 rem -1 == 0");
     check_arithmetic_error(&mut p, "1 mod 0 = x");
     check_arithmetic_error(&mut p, "1 rem 0 = x");
     let res = qvar(&mut p, "1 mod 0.0 = x", "x")[0].clone();
@@ -1012,34 +1012,34 @@ fn test_modulo_and_remainder() -> TestResult {
     }
 
     // From http://www.lispworks.com/documentation/lw50/CLHS/Body/f_mod_r.htm.
-    assert!(qeval(&mut p, "-1 rem 5 == -1"));
-    assert!(qeval(&mut p, "-1 mod 5 == 4"));
-    assert!(qeval(&mut p, "13 mod 4 == 1"));
-    assert!(qeval(&mut p, "13 rem 4 == 1"));
-    assert!(qeval(&mut p, "-13 mod 4 == 3"));
-    assert!(qeval(&mut p, "-13 rem 4 == -1"));
-    assert!(qeval(&mut p, "13 mod -4 == -3"));
-    assert!(qeval(&mut p, "13 rem -4 == 1"));
-    assert!(qeval(&mut p, "-13 mod -4 == -1"));
-    assert!(qeval(&mut p, "-13 rem -4 == -1"));
-    assert!(qeval(&mut p, "13.4 mod 1 == 0.40000000000000036"));
-    assert!(qeval(&mut p, "13.4 rem 1 == 0.40000000000000036"));
-    assert!(qeval(&mut p, "-13.4 mod 1 == 0.5999999999999996"));
-    assert!(qeval(&mut p, "-13.4 rem 1 == -0.40000000000000036"));
+    qeval(&mut p, "-1 rem 5 == -1");
+    qeval(&mut p, "-1 mod 5 == 4");
+    qeval(&mut p, "13 mod 4 == 1");
+    qeval(&mut p, "13 rem 4 == 1");
+    qeval(&mut p, "-13 mod 4 == 3");
+    qeval(&mut p, "-13 rem 4 == -1");
+    qeval(&mut p, "13 mod -4 == -3");
+    qeval(&mut p, "13 rem -4 == 1");
+    qeval(&mut p, "-13 mod -4 == -1");
+    qeval(&mut p, "-13 rem -4 == -1");
+    qeval(&mut p, "13.4 mod 1 == 0.40000000000000036");
+    qeval(&mut p, "13.4 rem 1 == 0.40000000000000036");
+    qeval(&mut p, "-13.4 mod 1 == 0.5999999999999996");
+    qeval(&mut p, "-13.4 rem 1 == -0.40000000000000036");
     Ok(())
 }
 
 #[test]
 fn test_arithmetic() -> TestResult {
     let mut p = Polar::new();
-    assert!(qeval(&mut p, "1 + 1 == 2"));
-    assert!(qeval(&mut p, "1 + 1 < 3 and 1 + 1 > 1"));
-    assert!(qeval(&mut p, "2 - 1 == 1"));
-    assert!(qeval(&mut p, "1 - 2 == -1"));
-    assert!(qeval(&mut p, "1.23 - 3.21 == -1.98"));
-    assert!(qeval(&mut p, "2 * 3 == 6"));
-    assert!(qeval(&mut p, "6 / 2 == 3"));
-    assert!(qeval(&mut p, "2 / 6 == 0.3333333333333333"));
+    qeval(&mut p, "1 + 1 == 2");
+    qeval(&mut p, "1 + 1 < 3 and 1 + 1 > 1");
+    qeval(&mut p, "2 - 1 == 1");
+    qeval(&mut p, "1 - 2 == -1");
+    qeval(&mut p, "1.23 - 3.21 == -1.98");
+    qeval(&mut p, "2 * 3 == 6");
+    qeval(&mut p, "6 / 2 == 3");
+    qeval(&mut p, "2 / 6 == 0.3333333333333333");
 
     p.load_str(
         r#"even(0) if cut;
@@ -1048,16 +1048,16 @@ fn test_arithmetic() -> TestResult {
            odd(x) if x > 0 and even(x - 1);"#,
     )?;
 
-    assert!(qeval(&mut p, "even(0)"));
+    qeval(&mut p, "even(0)");
     qnull(&mut p, "even(1)");
-    assert!(qeval(&mut p, "even(2)"));
+    qeval(&mut p, "even(2)");
     qnull(&mut p, "even(3)");
-    assert!(qeval(&mut p, "even(4)"));
+    qeval(&mut p, "even(4)");
 
     qnull(&mut p, "odd(0)");
-    assert!(qeval(&mut p, "odd(1)"));
+    qeval(&mut p, "odd(1)");
     qnull(&mut p, "odd(2)");
-    assert!(qeval(&mut p, "odd(3)"));
+    qeval(&mut p, "odd(3)");
     qnull(&mut p, "odd(4)");
 
     check_arithmetic_error(&mut p, "9223372036854775807 + 1 > 0");
@@ -1065,10 +1065,10 @@ fn test_arithmetic() -> TestResult {
 
     // x / 0 = ∞
     assert_eq!(qvar(&mut p, "x=1/0", "x"), vec![value!(f64::INFINITY)]);
-    assert!(qeval(&mut p, "1/0 = 2/0"));
+    qeval(&mut p, "1/0 = 2/0");
     qnull(&mut p, "1/0 < 0");
-    assert!(qeval(&mut p, "1/0 > 0"));
-    assert!(qeval(&mut p, "1/0 > 1e100"));
+    qeval(&mut p, "1/0 > 0");
+    qeval(&mut p, "1/0 > 1e100");
     Ok(())
 }
 
@@ -1232,7 +1232,7 @@ fn test_debug() -> TestResult {
 #[test]
 fn test_anonymous_vars() {
     let mut p = Polar::new();
-    assert!(qeval(&mut p, "[1,2,3] = [_,_,_]"));
+    qeval(&mut p, "[1,2,3] = [_,_,_]");
     qnull(&mut p, "[1,2,3] = [__,__,__]");
 }
 
@@ -1315,9 +1315,9 @@ fn test_rest_vars() -> TestResult {
         r#"member(x, [x, *_rest]);
            member(x, [_first, *rest]) if member(x, rest);"#,
     )?;
-    assert!(qeval(&mut p, "member(1, [1,2,3])"));
-    assert!(qeval(&mut p, "member(3, [1,2,3])"));
-    assert!(qeval(&mut p, "not member(4, [1,2,3])"));
+    qeval(&mut p, "member(1, [1,2,3])");
+    qeval(&mut p, "member(3, [1,2,3])");
+    qeval(&mut p, "not member(4, [1,2,3])");
     assert_eq!(
         qvar(&mut p, "member(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
@@ -1327,12 +1327,12 @@ fn test_rest_vars() -> TestResult {
         r#"append([], x, x);
            append([first, *rest], x, [first, *tail]) if append(rest, x, tail);"#,
     )?;
-    assert!(qeval(&mut p, "append([], [], [])"));
-    assert!(qeval(&mut p, "append([], [1,2,3], [1,2,3])"));
-    assert!(qeval(&mut p, "append([1], [2,3], [1,2,3])"));
-    assert!(qeval(&mut p, "append([1,2], [3], [1,2,3])"));
-    assert!(qeval(&mut p, "append([1,2,3], [], [1,2,3])"));
-    assert!(qeval(&mut p, "not append([1,2,3], [4], [1,2,3])"));
+    qeval(&mut p, "append([], [], [])");
+    qeval(&mut p, "append([], [1,2,3], [1,2,3])");
+    qeval(&mut p, "append([1], [2,3], [1,2,3])");
+    qeval(&mut p, "append([1,2], [3], [1,2,3])");
+    qeval(&mut p, "append([1,2,3], [], [1,2,3])");
+    qeval(&mut p, "not append([1,2,3], [4], [1,2,3])");
     Ok(())
 }
 
@@ -1340,7 +1340,7 @@ fn test_rest_vars() -> TestResult {
 fn test_in_op() -> TestResult {
     let mut p = Polar::new();
     p.load_str("f(x, y) if x in y;")?;
-    assert!(qeval(&mut p, "f(1, [1,2,3])"));
+    qeval(&mut p, "f(1, [1,2,3])");
     assert_eq!(
         qvar(&mut p, "f(x, [1,2,3])", "x"),
         vec![value!(1), value!(2), value!(3)]
@@ -1348,7 +1348,7 @@ fn test_in_op() -> TestResult {
 
     // Failure.
     qnull(&mut p, "4 in [1,2,3]");
-    assert!(qeval(&mut p, "4 in [1,2,3] or 1 in [1,2,3]"));
+    qeval(&mut p, "4 in [1,2,3] or 1 in [1,2,3]");
 
     // Make sure we scan the whole list.
     let q = p.new_query("1 in [1, 2, x, 1]", false)?;
@@ -1369,7 +1369,7 @@ fn test_in_op() -> TestResult {
     assert_eq!(results[1].0[&sym!("y")], value!(1));
     assert_eq!(results[2].0[&sym!("z")], value!(1));
 
-    assert!(qeval(&mut p, "f({a:1}, [{a:1}, b, c])"));
+    qeval(&mut p, "f({a:1}, [{a:1}, b, c])");
 
     let mut q = p.new_query("a in {a:1}", false)?;
     let e = q.next_event().unwrap_err();
@@ -1379,7 +1379,7 @@ fn test_in_op() -> TestResult {
     ));
 
     // Negation.
-    assert!(qeval(&mut p, "not (4 in [1,2,3])"));
+    qeval(&mut p, "not (4 in [1,2,3])");
     qnull(&mut p, "not (1 in [1,2,3])");
     qnull(&mut p, "not (2 in [1,2,3])");
     qnull(&mut p, "not (3 in [1,2,3])");
@@ -1389,10 +1389,10 @@ fn test_in_op() -> TestResult {
     qnull(&mut p, "1 in []");
     qnull(&mut p, "\"foo\" in []");
     qnull(&mut p, "[] in []");
-    assert!(qeval(&mut p, "not x in []"));
-    assert!(qeval(&mut p, "not 1 in []"));
-    assert!(qeval(&mut p, "not \"foo\" in []"));
-    assert!(qeval(&mut p, "not [] in []"));
+    qeval(&mut p, "not x in []");
+    qeval(&mut p, "not 1 in []");
+    qeval(&mut p, "not \"foo\" in []");
+    qeval(&mut p, "not [] in []");
     Ok(())
 }
 
@@ -1400,11 +1400,11 @@ fn test_in_op() -> TestResult {
 fn test_matches() -> TestResult {
     let mut p = Polar::new();
     qnull(&mut p, "1 matches 2");
-    assert!(qeval(&mut p, "1 matches 1"));
+    qeval(&mut p, "1 matches 1");
     // This doesn't fail because `y` is parsed as an unknown specializer
     // qnull(&mut p, "x = 1 and y = 2 and x matches y");
-    assert!(qeval(&mut p, "x = {foo: 1} and x matches {foo: 1}"));
-    assert!(qeval(&mut p, "x = {foo: 1, bar: 2} and x matches {foo: 1}"));
+    qeval(&mut p, "x = {foo: 1} and x matches {foo: 1}");
+    qeval(&mut p, "x = {foo: 1, bar: 2} and x matches {foo: 1}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 2}");
     Ok(())
@@ -1525,8 +1525,8 @@ fn test_cut() -> TestResult {
 
     p.load_str("f(x) if (x = 1 and cut) or x = 2;")?;
     assert_eq!(qvar(&mut p, "f(x)", "x"), vec![value!(1)]);
-    assert!(qeval(&mut p, "f(1)"));
-    assert!(qeval(&mut p, "f(2)"));
+    qeval(&mut p, "f(1)");
+    qeval(&mut p, "f(2)");
     Ok(())
 }
 
@@ -1535,36 +1535,36 @@ fn test_forall() -> TestResult {
     let mut p = Polar::new();
     p.load_str("all_ones(l) if forall(item in l, item = 1);")?;
 
-    assert!(qeval(&mut p, "all_ones([1])"));
-    assert!(qeval(&mut p, "all_ones([1, 1, 1])"));
+    qeval(&mut p, "all_ones([1])");
+    qeval(&mut p, "all_ones([1, 1, 1])");
     qnull(&mut p, "all_ones([1, 2, 1])");
 
     p.load_str("not_ones(l) if forall(item in l, item != 1);")?;
     qnull(&mut p, "not_ones([1])");
-    assert!(qeval(&mut p, "not_ones([2, 3, 4])"));
+    qeval(&mut p, "not_ones([2, 3, 4])");
 
     qnull(&mut p, "forall(x = 2 or x = 3, x != 2)");
     qnull(&mut p, "forall(x = 2 or x = 3, x != 3)");
-    assert!(qeval(&mut p, "forall(x = 2 or x = 3, x = 2 or x = 3)"));
-    assert!(qeval(&mut p, "forall(x = 1, x = 1)"));
-    assert!(qeval(&mut p, "forall(x in [2, 3, 4], x > 1)"));
+    qeval(&mut p, "forall(x = 2 or x = 3, x = 2 or x = 3)");
+    qeval(&mut p, "forall(x = 1, x = 1)");
+    qeval(&mut p, "forall(x in [2, 3, 4], x > 1)");
 
     p.load_str(
         r#"g(1);
            g(2);
            g(3);"#,
     )?;
-    assert!(qeval(&mut p, "forall(g(x), x in [1, 2, 3])"));
+    qeval(&mut p, "forall(g(x), x in [1, 2, 3])");
 
     p.load_str(
         r#"allow(_: {x: 1}, y) if y = 1;
            allow(_: {y: 1}, y) if y = 2;
            allow(_: {z: 1}, y) if y = 3;"#,
     )?;
-    assert!(qeval(
+    qeval(
         &mut p,
-        "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])"
-    ));
+        "forall(allow({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])",
+    );
     Ok(())
 }
 
@@ -1577,7 +1577,7 @@ fn test_emoji_policy() -> TestResult {
                     allow(👩, "🛠", "🚙") if 👩‍🔧(👩);
                 "#,
     )?;
-    assert!(qeval(&mut p, r#"allow("👩‍🦰","🛠","🚙")"#));
+    qeval(&mut p, r#"allow("👩‍🦰","🛠","🚙")"#);
     qnull(&mut p, r#"allow("🧟","🛠","🚙")"#);
     Ok(())
 }
@@ -1587,17 +1587,17 @@ fn test_emoji_policy() -> TestResult {
 fn test_boolean_expression() -> TestResult {
     let mut p = Polar::new();
     // Succeeds because t is true.
-    assert!(qeval(&mut p, "a = {t: true, f: false} and a.t"));
+    qeval(&mut p, "a = {t: true, f: false} and a.t");
     // Fails because `f` is not true.
     qnull(&mut p, "a = {t: true, f: false} and a.f");
     // Fails because `f` is not true.
     qnull(&mut p, "a = {t: true, f: false} and a.f and a.t");
     // Succeeds because `t` is true.
-    assert!(qeval(&mut p, "a = {t: true, f: false} and (a.f or a.t)"));
+    qeval(&mut p, "a = {t: true, f: false} and (a.f or a.t)");
 
-    assert!(qeval(&mut p, "true"));
+    qeval(&mut p, "true");
     qnull(&mut p, "false");
-    assert!(qeval(&mut p, "a = true and a"));
+    qeval(&mut p, "a = true and a");
     qnull(&mut p, "a = false and a");
     Ok(())
 }
@@ -1620,7 +1620,7 @@ fn test_float_parsing() {
 #[test]
 fn test_assignment() -> TestResult {
     let mut p = Polar::new();
-    assert!(qeval(&mut p, "x := 5 and x == 5"));
+    qeval(&mut p, "x := 5 and x == 5");
     let mut q = p.new_query("x := 5 and x := 6", false)?;
     let e = q.next_event().unwrap_err();
     assert!(matches!(
@@ -1631,7 +1631,7 @@ fn test_assignment() -> TestResult {
         }) if s == "Can only assign to unbound variables, x is bound to value 5."
     ));
     qnull(&mut p, "x := 5 and x > 6");
-    assert!(qeval(&mut p, "x := y and y = 6 and x = 6"));
+    qeval(&mut p, "x := y and y = 6 and x = 6");
 
     // confirm old syntax -> parse error
     let e = p.load_str("f(x) := g(x)").unwrap_err();
@@ -1653,16 +1653,16 @@ fn test_rule_index() -> TestResult {
            f(1, 3, {c: "z"});"#,
     )?;
     // Exercise the index.
-    assert!(qeval(&mut p, r#"f(1, 1, "x")"#));
-    assert!(qeval(&mut p, r#"f(1, 1, "y")"#));
+    qeval(&mut p, r#"f(1, 1, "x")"#);
+    qeval(&mut p, r#"f(1, 1, "y")"#);
     assert_eq!(
         qvar(&mut p, r#"f(1, x, "y")"#, "x"),
         vec![value!(1), value!(2)]
     );
     qnull(&mut p, r#"f(1, 1, "z")"#);
     qnull(&mut p, r#"f(1, 2, "x")"#);
-    assert!(qeval(&mut p, r#"f(1, 2, {b: "y"})"#));
-    assert!(qeval(&mut p, r#"f(1, 3, {c: "z"})"#));
+    qeval(&mut p, r#"f(1, 2, {b: "y"})"#);
+    qeval(&mut p, r#"f(1, 3, {c: "z"})"#);
     Ok(())
 }
 
@@ -1714,21 +1714,21 @@ fn test_numeric_applicability() -> TestResult {
            f(9223372036854776000.0); # i64::MAX as f64
            f(nan1); # NaN"#,
     )?;
-    assert!(qeval(&mut p, "f(0)"));
-    assert!(qeval(&mut p, "f(0.0)"));
+    qeval(&mut p, "f(0)");
+    qeval(&mut p, "f(0.0)");
     qnull(&mut p, "f(eps)");
-    assert!(qeval(&mut p, "f(1)"));
-    assert!(qeval(&mut p, "f(1.0)"));
+    qeval(&mut p, "f(1)");
+    qeval(&mut p, "f(1.0)");
     qnull(&mut p, "f(1.0000000000000002)");
     qnull(&mut p, "f(9007199254740990)");
     qnull(&mut p, "f(9007199254740990.0)");
-    assert!(qeval(&mut p, "f(9007199254740991)"));
-    assert!(qeval(&mut p, "f(9007199254740991.0)"));
-    assert!(qeval(&mut p, "f(9007199254740992)"));
-    assert!(qeval(&mut p, "f(9007199254740992.0)"));
-    assert!(qeval(&mut p, "f(9223372036854775807)"));
-    assert!(qeval(&mut p, "f(-9223372036854775807)"));
-    assert!(qeval(&mut p, "f(9223372036854776000.0)"));
+    qeval(&mut p, "f(9007199254740991)");
+    qeval(&mut p, "f(9007199254740991.0)");
+    qeval(&mut p, "f(9007199254740992)");
+    qeval(&mut p, "f(9007199254740992.0)");
+    qeval(&mut p, "f(9223372036854775807)");
+    qeval(&mut p, "f(-9223372036854775807)");
+    qeval(&mut p, "f(9223372036854776000.0)");
     qnull(&mut p, "f(nan1)");
     qnull(&mut p, "f(nan2)");
     Ok(())
@@ -1761,7 +1761,7 @@ fn test_list_results() -> TestResult {
                x != z and delete(xs, z, ys);
            delete([], _, []);"#,
     )?;
-    assert!(qeval(&mut p, "delete([1,2,3,2,1],2,[1,3,1])"));
+    qeval(&mut p, "delete([1,2,3,2,1],2,[1,3,1])");
     assert_eq!(
         qvar(&mut p, "delete([1,2,3,2,1],2,result)", "result"),
         vec![value!([value!(1), value!(3), value!(1)])]
@@ -1783,7 +1783,7 @@ fn test_list_results() -> TestResult {
         qvar(&mut p, "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]", "ys"),
         vec![value!([value!(2), value!(3)])]
     );
-    assert!(qeval(&mut p, "xs = [2] and [1,2] = [1, *xs]"));
+    qeval(&mut p, "xs = [2] and [1,2] = [1, *xs]");
     qnull(&mut p, "[1, 2] = [2, *ys]");
     Ok(())
 }
@@ -1795,10 +1795,10 @@ fn test_expressions_in_lists() -> TestResult {
         r#"scope(actor: Dictionary, "read", "Person", filters) if
                filters = ["id", "=", actor.id];"#,
     )?;
-    assert!(qeval(
+    qeval(
         &mut p,
-        r#"scope({id: 1}, "read", "Person", ["id", "=", 1])"#
-    ));
+        r#"scope({id: 1}, "read", "Person", ["id", "=", 1])"#,
+    );
     qnull(
         &mut p,
         r#"scope({id: 2}, "read", "Person", ["id", "=", 1])"#,
@@ -1807,7 +1807,7 @@ fn test_expressions_in_lists() -> TestResult {
         &mut p,
         r#"scope({id: 1}, "read", "Person", ["not_id", "=", 1])"#,
     );
-    assert!(qeval(&mut p, r#"d = {x: 1} and [d.x, 1+1] = [1, 2]"#));
+    qeval(&mut p, r#"d = {x: 1} and [d.x, 1+1] = [1, 2]"#);
     assert_eq!(
         qvar(&mut p, r#"d = {x: 1} and [d.x, 1+1] = [1, *rest]"#, "rest"),
         vec![value!([value!(2)])]
@@ -1818,12 +1818,12 @@ fn test_expressions_in_lists() -> TestResult {
 #[test]
 fn test_list_matches() -> TestResult {
     let mut p = Polar::new();
-    assert!(qeval(&mut p, "[] matches []"));
+    qeval(&mut p, "[] matches []");
     qnull(&mut p, "[1] matches []");
     qnull(&mut p, "[] matches [1]");
     qnull(&mut p, "[1, 2] matches [1, 2, 3]");
     qnull(&mut p, "[2, 1] matches [1, 2]");
-    assert!(qeval(&mut p, "[1, 2, 3] matches [1, 2, 3]"));
+    qeval(&mut p, "[1, 2, 3] matches [1, 2, 3]");
     qnull(&mut p, "[1, 2, 3] matches [1, 2]");
 
     qnull(&mut p, "[x] matches []");
@@ -1841,7 +1841,7 @@ fn test_list_matches() -> TestResult {
     assert_eq!(qvar(&mut p, "[*xs] matches []", "xs"), vec![value!([])]);
     assert_eq!(qvar(&mut p, "[*xs] matches [1]", "xs"), vec![value!([1])]);
     assert_eq!(qvar(&mut p, "[1] matches [*ys]", "ys"), vec![value!([1])]);
-    assert!(qeval(&mut p, "[*xs] matches [*ys]"));
+    qeval(&mut p, "[*xs] matches [*ys]");
     assert_eq!(
         qvar(&mut p, "[1, 2, 3] matches [1, 2, *rest]", "rest"),
         vec![value!([3])]
