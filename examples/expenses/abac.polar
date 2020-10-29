@@ -39,8 +39,7 @@ allow(actor: User, "view", resource: Expense) if
 
 manages(manager: User, employee) if
     report in manager.employees() and
-    report = employee or
-    manages(report, employee);
+    (report = employee or manages(report, employee));
 
 # Now Cora can view the expense because Cora manager Bhavik who manager Alice
 ?= allow(User.by_name("cora"), "view", Expense.id(0));
