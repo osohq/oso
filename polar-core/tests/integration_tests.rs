@@ -1424,30 +1424,22 @@ fn test_keyword_bug() -> TestResult {
 fn test_unify_rule_head() -> TestResult {
     let p = Polar::new();
     assert!(matches!(
-        p
-            .load_str("f(Foo{a: 1});")
-            .expect_err("Must have a parser error"),
+        p.load_str("f(Foo{a: 1});").expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
-        p
-            .load_str("f(new Foo(a: Foo{a: 1}));")
-            .expect_err("Must have a parser error"),
+        p.load_str("f(new Foo(a: Foo{a: 1}));").expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
-        p
-            .load_str("f(x: new Foo(a: 1));")
-            .expect_err("Must have a parser error"),
+        p.load_str("f(x: new Foo(a: 1));").expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
     assert!(matches!(
-        p
-            .load_str("f(x: Foo{a: new Foo(a: 1)});")
-            .expect_err("Must have a parser error"),
+        p.load_str("f(x: Foo{a: new Foo(a: 1)});").expect_err("Must have a parser error"),
         PolarError { kind: ErrorKind::Parse(_), .. }
     ));
 
