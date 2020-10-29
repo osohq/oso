@@ -197,15 +197,27 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
 }
 
 #[track_caller]
-fn qeval(p: &mut Polar, query_str: &str) {
+#[must_use = "test results need to be asserted"]
+fn eval(p: &mut Polar, query_str: &str) -> bool {
     let q = p.new_query(query_str, false).unwrap();
-    assert!(!query_results!(q).is_empty());
+    !query_results!(q).is_empty()
+}
+
+#[track_caller]
+fn qeval(p: &mut Polar, query_str: &str) {
+    assert!(eval(p, query_str));
+}
+
+#[track_caller]
+#[must_use = "test results need to be asserted"]
+fn null(p: &mut Polar, query_str: &str) -> bool {
+    let q = p.new_query(query_str, false).unwrap();
+    query_results!(q).is_empty()
 }
 
 #[track_caller]
 fn qnull(p: &mut Polar, query_str: &str) {
-    let q = p.new_query(query_str, false).unwrap();
-    assert!(query_results!(q).is_empty());
+    assert!(null(p, query_str));
 }
 
 #[track_caller]
@@ -383,19 +395,16 @@ fn test_functions_reorder() -> TestResult {
         joined.push(';');
         p.load_str(&joined)?;
 
-        let q = p.new_query("k(1)", false)?;
         assert!(
-            query_results!(q).is_empty(),
+            null(&mut p, "k(1)"),
             "k(1) was true for permutation {:?}",
             &permutation
         );
-        let q = p.new_query("k(2)", false)?;
         assert!(
-            !query_results!(q).is_empty(),
+            eval(&mut p, "k(2)"),
             "k(2) failed for permutation {:?}",
             &permutation
         );
-
         assert_eq!(
             qvar(&mut p, "k(a)", "a"),
             vec![value!(2)],
