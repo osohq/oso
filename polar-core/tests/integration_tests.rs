@@ -16,7 +16,7 @@ use polar_core::{
     sym, term,
     terms::*,
     traces::*,
-    value,
+    value, values,
 };
 
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
@@ -286,7 +286,7 @@ fn test_functions() -> TestResult {
     qnull(&mut p, "k(1)");
     qeval(&mut p, "k(2)");
     qnull(&mut p, "k(3)");
-    qvar(&mut p, "k(a)", "a", vec![value!(2)]);
+    qvar(&mut p, "k(a)", "a", values![2]);
     Ok(())
 }
 
@@ -382,7 +382,7 @@ fn test_bad_functions() -> TestResult {
            h(2);
            k(x) if f(x) and h(x) and g(x);"#,
     )?;
-    qvar(&mut p, "k(a)", "a", vec![value!(2)]);
+    qvar(&mut p, "k(a)", "a", values![2]);
     Ok(())
 }
 
@@ -417,7 +417,7 @@ fn test_functions_reorder() -> TestResult {
         );
         assert_eq!(
             var(&mut p, "k(a)", "a"),
-            vec![value!(2)],
+            values![2],
             "k(a) failed for permutation {:?}",
             &permutation
         );
@@ -435,7 +435,7 @@ fn test_results() -> TestResult {
            foo(2);
            foo(3);"#,
     )?;
-    qvar(&mut p, "foo(a)", "a", vec![value!(1), value!(2), value!(3)]);
+    qvar(&mut p, "foo(a)", "a", values![1, 2, 3]);
     Ok(())
 }
 
@@ -476,12 +476,7 @@ fn test_multi_arg_method_ordering() -> TestResult {
         &mut p,
         "bar(a, b)",
         &["a", "b"],
-        vec![
-            vec![value!(2), value!(1)],
-            vec![value!(1), value!(1)],
-            vec![value!(1), value!(2)],
-            vec![value!(2), value!(2)],
-        ],
+        values![[2, 1], [1, 1], [1, 2], [2, 2]],
     );
     Ok(())
 }
@@ -602,7 +597,7 @@ fn test_lookup() {
 fn test_instance_lookup() {
     // Q: Not sure if this should be allowed? I can't get (new a{x: 1}).x to parse, but that might
     // be the only thing we should permit
-    qext(&mut Polar::new(), "new a(x: 1).x = 1", vec![value!(1)], 1);
+    qext(&mut Polar::new(), "new a(x: 1).x = 1", values![1], 1);
 }
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
@@ -620,7 +615,7 @@ fn test_retries() -> TestResult {
     )?;
     qnull(&mut p, "k(1)");
     qeval(&mut p, "k(2)");
-    qvar(&mut p, "k(a)", "a", vec![value!(2), value!(3)]);
+    qvar(&mut p, "k(a)", "a", values![2, 3]);
     qeval(&mut p, "k(3)");
     Ok(())
 }
@@ -632,7 +627,7 @@ fn test_two_rule_bodies_not_nested() -> TestResult {
         r#"f(x) if a(x);
            f(1);"#,
     )?;
-    qvar(&mut p, "f(x)", "x", vec![value!(1)]);
+    qvar(&mut p, "f(x)", "x", values![1]);
     Ok(())
 }
 
@@ -644,7 +639,7 @@ fn test_two_rule_bodies_nested() -> TestResult {
            f(1);
            a(x) if g(x);"#,
     )?;
-    qvar(&mut p, "f(x)", "x", vec![value!(1)]);
+    qvar(&mut p, "f(x)", "x", values![1]);
     Ok(())
 }
 
@@ -656,21 +651,16 @@ fn test_unify_and() -> TestResult {
            a(1);
            a(3);"#,
     )?;
-    qvar(&mut p, "f(x, y)", "x", vec![value!(1), value!(3)]);
-    qvar(&mut p, "f(x, y)", "y", vec![value!(2), value!(2)]);
+    qvar(&mut p, "f(x, y)", "x", values![1, 3]);
+    qvar(&mut p, "f(x, y)", "y", values![2, 2]);
     Ok(())
 }
 
 #[test]
 fn test_symbol_lookup() {
     let mut p = Polar::new();
-    qvar(&mut p, "{x: 1}.x = result", "result", vec![value!(1)]);
-    qvar(
-        &mut p,
-        "{x: 1} = dict and dict.x = result",
-        "result",
-        vec![value!(1)],
-    );
+    qvar(&mut p, "{x: 1}.x = res", "res", values![1]);
+    qvar(&mut p, "{x: 1} = d and d.x = res", "res", values![1]);
 }
 
 #[test]
@@ -681,7 +671,7 @@ fn test_or() -> TestResult {
            a(1);
            b(3);"#,
     )?;
-    qvar(&mut p, "f(x)", "x", vec![value!(1), value!(3)]);
+    qvar(&mut p, "f(x)", "x", values![1, 3]);
     qeval(&mut p, "f(1)");
     qnull(&mut p, "f(2)");
     qeval(&mut p, "f(3)");
@@ -690,7 +680,7 @@ fn test_or() -> TestResult {
         r#"g(x) if a(x) or b(x) or c(x);
            c(5);"#,
     )?;
-    qvar(&mut p, "g(x)", "x", vec![value!(1), value!(3), value!(5)]);
+    qvar(&mut p, "g(x)", "x", values![1, 3, 5]);
     qeval(&mut p, "g(1)");
     qnull(&mut p, "g(2)");
     qeval(&mut p, "g(3)");
@@ -722,16 +712,11 @@ fn test_dict_specializers() -> TestResult {
 
     // Test unifying & isa-ing instances against our rules.
     qnull(&mut p, "f(new a(x: 1))");
-    qext(&mut p, "g(new a(x: 1))", vec![value!(1), value!(1)], 1);
+    qext(&mut p, "g(new a(x: 1))", values![1, 1], 1);
     qnull(&mut p, "f(new a())");
     qnull(&mut p, "f(new a(x: {}))");
-    qext(&mut p, "g(new a(x: 2))", vec![value!(2), value!(2)], 0);
-    qext(
-        &mut p,
-        "g(new a(y: 2, x: 1))",
-        vec![value!(1), value!(1)],
-        1,
-    );
+    qext(&mut p, "g(new a(x: 2))", values![2, 2], 0);
+    qext(&mut p, "g(new a(y: 2, x: 1))", values![1, 1], 1);
     Ok(())
 }
 
@@ -755,15 +740,15 @@ fn test_non_instance_specializers() -> TestResult {
 #[test]
 fn test_bindings() -> TestResult {
     let mut p = Polar::new();
-    qvar(&mut p, "x=1", "x", vec![value!(1)]);
-    qvar(&mut p, "x=x", "x", vec![value!(sym!("x"))]);
-    qvar(&mut p, "x=y and y=x", "x", vec![value!(sym!("y"))]);
+    qvar(&mut p, "x=1", "x", values![1]);
+    qvar(&mut p, "x=x", "x", values![sym!("x")]);
+    qvar(&mut p, "x=y and y=x", "x", values![sym!("y")]);
 
     p.load_str(
         r#"f(x) if x = y and g(y);
            g(y) if y = 1;"#,
     )?;
-    qvar(&mut p, "f(x)", "x", vec![value!(1)]);
+    qvar(&mut p, "f(x)", "x", values![1]);
     Ok(())
 }
 
@@ -820,12 +805,7 @@ fn test_rule_order() -> TestResult {
            a("bar");
            a("baz");"#,
     )?;
-    qvar(
-        &mut p,
-        "a(x)",
-        "x",
-        vec![value!("foo"), value!("bar"), value!("baz")],
-    );
+    qvar(&mut p, "a(x)", "x", values!["foo", "bar", "baz"]);
     Ok(())
 }
 
@@ -1082,7 +1062,7 @@ fn test_arithmetic() -> TestResult {
     check_arithmetic_error(&mut p, "-9223372036854775807 - 2 < 0");
 
     // x / 0 = ∞
-    qvar(&mut p, "x=1/0", "x", vec![value!(f64::INFINITY)]);
+    qvar(&mut p, "x=1/0", "x", values![f64::INFINITY]);
     qeval(&mut p, "1/0 = 2/0");
     qnull(&mut p, "1/0 < 0");
     qeval(&mut p, "1/0 > 0");
@@ -1311,31 +1291,11 @@ fn test_unknown_specializer_suggestions() -> TestResult {
 #[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
-    qvar(
-        &mut p,
-        "[1,2,3] = [*rest]",
-        "rest",
-        vec![value!([value!(1), value!(2), value!(3)])],
-    );
-    qvar(
-        &mut p,
-        "[1,2,3] = [1, *rest]",
-        "rest",
-        vec![value!([value!(2), value!(3)])],
-    );
-    qvar(
-        &mut p,
-        "[1,2,3] = [1,2, *rest]",
-        "rest",
-        vec![value!([value!(3)])],
-    );
-    qvar(
-        &mut p,
-        "([1,2,3] = [1,2,3, *rest])",
-        "rest",
-        vec![value!([])],
-    );
-    qnull(&mut p, "[1,2,3] = [1,2,3,4, *_rest]");
+    qvar(&mut p, "[1,2,3] = [*rest]", "rest", vec![value!([1, 2, 3])]);
+    qvar(&mut p, "[1,2,3] = [1,*rest]", "rest", vec![value!([2, 3])]);
+    qvar(&mut p, "[1,2,3] = [1,2,*rest]", "rest", vec![value!([3])]);
+    qvar(&mut p, "[1,2,3] = [1,2,3,*rest]", "rest", vec![value!([])]);
+    qnull(&mut p, "[1,2,3] = [1,2,3,4,*_rest]");
 
     p.load_str(
         r#"member(x, [x, *_rest]);
@@ -1344,12 +1304,7 @@ fn test_rest_vars() -> TestResult {
     qeval(&mut p, "member(1, [1,2,3])");
     qeval(&mut p, "member(3, [1,2,3])");
     qeval(&mut p, "not member(4, [1,2,3])");
-    qvar(
-        &mut p,
-        "member(x, [1,2,3])",
-        "x",
-        vec![value!(1), value!(2), value!(3)],
-    );
+    qvar(&mut p, "member(x, [1,2,3])", "x", values![1, 2, 3]);
 
     p.load_str(
         r#"append([], x, x);
@@ -1369,12 +1324,7 @@ fn test_in_op() -> TestResult {
     let mut p = Polar::new();
     p.load_str("f(x, y) if x in y;")?;
     qeval(&mut p, "f(1, [1,2,3])");
-    qvar(
-        &mut p,
-        "f(x, [1,2,3])",
-        "x",
-        vec![value!(1), value!(2), value!(3)],
-    );
+    qvar(&mut p, "f(x, [1,2,3])", "x", values![1, 2, 3]);
 
     // Failure.
     qnull(&mut p, "4 in [1,2,3]");
@@ -1536,21 +1486,11 @@ fn test_cut() -> TestResult {
         &mut p,
         "c_no_cut(a, b)",
         &["a", "b"],
-        vec![
-            vec![value!(1), value!(3)],
-            vec![value!(1), value!(4)],
-            vec![value!(2), value!(3)],
-            vec![value!(2), value!(4)],
-        ],
+        values![[1, 3], [1, 4], [2, 3], [2, 4]],
     );
 
     // Ensure that only one result is returned when cut is at the end.
-    qvars(
-        &mut p,
-        "c(a, b)",
-        &["a", "b"],
-        vec![vec![value!(1), value!(3)]],
-    );
+    qvars(&mut p, "c(a, b)", &["a", "b"], values![[1, 3]]);
 
     // Make sure that cut in `bcut` does not affect `c_partial_cut`.
     // If it did, only one result would be returned, [1, 3].
@@ -1558,7 +1498,7 @@ fn test_cut() -> TestResult {
         &mut p,
         "c_partial_cut(a, b)",
         &["a", "b"],
-        vec![vec![value!(1), value!(3)], vec![value!(2), value!(3)]],
+        values![[1, 3], [2, 3]],
     );
 
     // Make sure cut only affects choice points before it.
@@ -1566,11 +1506,11 @@ fn test_cut() -> TestResult {
         &mut p,
         "c_another_partial_cut(a, b)",
         &["a", "b"],
-        vec![vec![value!(1), value!(3)], vec![value!(1), value!(4)]],
+        values![[1, 3], [1, 4]],
     );
 
     p.load_str("f(x) if (x = 1 and cut) or x = 2;")?;
-    qvar(&mut p, "f(x)", "x", vec![value!(1)]);
+    qvar(&mut p, "f(x)", "x", values![1]);
     qeval(&mut p, "f(1)");
     qeval(&mut p, "f(2)");
     Ok(())
@@ -1651,16 +1591,16 @@ fn test_boolean_expression() -> TestResult {
 #[test]
 fn test_float_parsing() {
     let mut p = Polar::new();
-    qvar(&mut p, "x=1+1", "x", vec![value!(2)]);
-    qvar(&mut p, "x=1+1.5", "x", vec![value!(2.5)]);
-    qvar(&mut p, "x=1.e+5", "x", vec![value!(1e5)]);
-    qvar(&mut p, "x=1e+5", "x", vec![value!(1e5)]);
-    qvar(&mut p, "x=1e5", "x", vec![value!(1e5)]);
-    qvar(&mut p, "x=1e-5", "x", vec![value!(1e-5)]);
-    qvar(&mut p, "x=1.e-5", "x", vec![value!(1e-5)]);
-    qvar(&mut p, "x=1.0e+15", "x", vec![value!(1e15)]);
-    qvar(&mut p, "x=1.0E+15", "x", vec![value!(1e15)]);
-    qvar(&mut p, "x=1.0e-15", "x", vec![value!(1e-15)]);
+    qvar(&mut p, "x=1+1", "x", values![2]);
+    qvar(&mut p, "x=1+1.5", "x", values![2.5]);
+    qvar(&mut p, "x=1.e+5", "x", values![1e5]);
+    qvar(&mut p, "x=1e+5", "x", values![1e5]);
+    qvar(&mut p, "x=1e5", "x", values![1e5]);
+    qvar(&mut p, "x=1e-5", "x", values![1e-5]);
+    qvar(&mut p, "x=1.e-5", "x", values![1e-5]);
+    qvar(&mut p, "x=1.0e+15", "x", values![1e15]);
+    qvar(&mut p, "x=1.0E+15", "x", values![1e15]);
+    qvar(&mut p, "x=1.0e-15", "x", values![1e-15]);
 }
 
 #[test]
@@ -1701,7 +1641,7 @@ fn test_rule_index() -> TestResult {
     // Exercise the index.
     qeval(&mut p, r#"f(1, 1, "x")"#);
     qeval(&mut p, r#"f(1, 1, "y")"#);
-    qvar(&mut p, r#"f(1, x, "y")"#, "x", vec![value!(1), value!(2)]);
+    qvar(&mut p, r#"f(1, x, "y")"#, "x", values![1, 2]);
     qnull(&mut p, r#"f(1, 1, "z")"#);
     qnull(&mut p, r#"f(1, 2, "x")"#);
     qeval(&mut p, r#"f(1, 2, {b: "y"})"#);
@@ -1717,12 +1657,12 @@ fn test_fib() -> TestResult {
            fib(1, 1) if cut;
            fib(n, a+b) if fib(n-1, a) and fib(n-2, b);"#,
     )?;
-    qvar(&mut p, r#"fib(0, x)"#, "x", vec![value!(1)]);
-    qvar(&mut p, r#"fib(1, x)"#, "x", vec![value!(1)]);
-    qvar(&mut p, r#"fib(2, x)"#, "x", vec![value!(2)]);
-    qvar(&mut p, r#"fib(3, x)"#, "x", vec![value!(3)]);
-    qvar(&mut p, r#"fib(4, x)"#, "x", vec![value!(5)]);
-    qvar(&mut p, r#"fib(5, x)"#, "x", vec![value!(8)]);
+    qvar(&mut p, r#"fib(0, x)"#, "x", values![1]);
+    qvar(&mut p, r#"fib(1, x)"#, "x", values![1]);
+    qvar(&mut p, r#"fib(2, x)"#, "x", values![2]);
+    qvar(&mut p, r#"fib(3, x)"#, "x", values![3]);
+    qvar(&mut p, r#"fib(4, x)"#, "x", values![5]);
+    qvar(&mut p, r#"fib(5, x)"#, "x", values![8]);
     Ok(())
 }
 
@@ -1733,7 +1673,7 @@ fn test_duplicated_rule() -> TestResult {
         r#"f(1);
            f(1);"#,
     )?;
-    qvar(&mut p, "f(x)", "x", vec![value!(1), value!(1)]);
+    qvar(&mut p, "f(x)", "x", values![1, 1]);
     Ok(())
 }
 
@@ -1809,27 +1749,27 @@ fn test_list_results() -> TestResult {
         &mut p,
         "delete([1,2,3,2,1],2,result)",
         "result",
-        vec![value!([value!(1), value!(3), value!(1)])],
+        vec![value!([1, 3, 1])],
     );
 
-    qvar(&mut p, "[1,2] = [1, *ys]", "ys", vec![value!([value!(2)])]);
+    qvar(&mut p, "[1,2] = [1,*ys]", "ys", vec![value!([2])]);
     qvar(
         &mut p,
-        "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+        "[1,2,*xs] = [1,*ys] and [1,2,3] = [1,*ys]",
         "xs",
-        vec![value!([value!(3)])],
+        vec![value!([3])],
     );
     qvar(
         &mut p,
-        "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+        "[1,2,*xs] = [1,*ys] and [1,2,3] = [1,*ys]",
         "ys",
-        vec![value!([value!(2), value!(3)])],
+        vec![value!([2, 3])],
     );
     qvar(
         &mut p,
-        "[1,2,*xs] = [1, *ys] and [1,2,3] = [1,*ys]",
+        "[1,2,*xs] = [1,*ys] and [1,2,3] = [1,*ys]",
         "ys",
-        vec![value!([value!(2), value!(3)])],
+        vec![value!([2, 3])],
     );
     qeval(&mut p, "xs = [2] and [1,2] = [1, *xs]");
     qnull(&mut p, "[1, 2] = [2, *ys]");
@@ -1860,7 +1800,7 @@ fn test_expressions_in_lists() -> TestResult {
         &mut p,
         r#"d = {x: 1} and [d.x, 1+1] = [1, *rest]"#,
         "rest",
-        vec![value!([value!(2)])],
+        vec![value!([2])],
     );
     Ok(())
 }
@@ -1881,7 +1821,7 @@ fn test_list_matches() -> TestResult {
     qnull(&mut p, "[1, 2, x] matches [1, 2]");
     qnull(&mut p, "[1, x] matches [1, 2, 3]");
     qnull(&mut p, "[2, x] matches [1, 2]");
-    qvar(&mut p, "[1, 2, x] matches [1, 2, 3]", "x", vec![value!(3)]);
+    qvar(&mut p, "[1, 2, x] matches [1, 2, 3]", "x", values![3]);
     qnull(&mut p, "[1, 2, 3] matches [1, x]");
 
     qvar(&mut p, "[] matches [*ys]", "ys", vec![value!([])]);
@@ -1889,15 +1829,10 @@ fn test_list_matches() -> TestResult {
     qvar(&mut p, "[*xs] matches [1]", "xs", vec![value!([1])]);
     qvar(&mut p, "[1] matches [*ys]", "ys", vec![value!([1])]);
     qeval(&mut p, "[*xs] matches [*ys]");
+    qvar(&mut p, "[1,2,3] matches [1,2,*xs]", "xs", vec![value!([3])]);
     qvar(
         &mut p,
-        "[1, 2, 3] matches [1, 2, *rest]",
-        "rest",
-        vec![value!([3])],
-    );
-    qvar(
-        &mut p,
-        "[1, 2, *xs] matches [1, 2, 3, *ys]",
+        "[1,2,*xs] matches [1,2,3,*ys]",
         "xs",
         vec![value!([3, Value::RestVariable(Symbol::new("ys"))])],
     );
