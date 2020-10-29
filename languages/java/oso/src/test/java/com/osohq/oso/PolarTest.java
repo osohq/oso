@@ -249,6 +249,18 @@ public class PolarTest {
     assertFalse(p.query("neg_inf < inf").results().isEmpty(), "-Infinity < Infinity");
   }
 
+  @Test
+  public void testNil() throws Exception {
+    p.loadStr("null(nil);");
+
+    // Map.of() can't handle a null value.
+    HashMap<String, Object> expected = new HashMap<String, Object>();
+    expected.put("x", null);
+    assertEquals(p.query("null(x)").results(), List.of(expected));
+    assertTrue(p.queryRule("null", (Object) null).results().equals(List.of(Map.of())));
+    assertTrue(p.queryRule("null", List.of()).results().isEmpty());
+  }
+
   /*** TEST EXTERNALS ***/
 
   @Test
@@ -531,15 +543,14 @@ public class PolarTest {
     assertEquals(result.get("y"), 1);
   }
 
-  /** TODO(gj): Test this when NULL is handled. */
+  @Test
   public void testReturnNull() throws Exception {
-    p.loadStr("f(x) if x.myReturnNull() = 1;");
-    assertTrue(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
+    p.loadStr("f(x) if x.myReturnNull() = nil;");
+    assertFalse(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
 
-    p.loadStr("f(x) if x.myReturnNull().badCall = 1;");
+    p.loadStr("g(x) if x.myReturnNull().badCall() = 1;");
     assertThrows(
-        Exceptions.PolarRuntimeException.class,
-        () -> p.queryRule("f", new MyClass("test", 1)).results());
+        NullPointerException.class, () -> p.queryRule("g", new MyClass("test", 1)).results());
   }
 
   /*** TEST OSO ***/

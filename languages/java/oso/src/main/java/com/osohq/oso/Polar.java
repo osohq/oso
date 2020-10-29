@@ -18,6 +18,10 @@ public class Polar {
   public Polar() throws Exceptions.OsoException {
     ffiPolar = Ffi.get().polarNew();
     host = new Host(ffiPolar);
+
+    // Register global constants.
+    registerConstant(null, "nil");
+
     // Register built-in classes.
     registerClass(Boolean.class, "Boolean");
     registerClass(Integer.class, "Integer");
