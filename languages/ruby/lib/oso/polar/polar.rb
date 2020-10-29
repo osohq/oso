@@ -38,6 +38,9 @@ module Oso
         @ffi_polar = FFI::Polar.create
         @host = Host.new(ffi_polar)
 
+        # Register global constants.
+        register_constant nil, name: 'nil'
+
         # Register built-in classes.
         register_class PolarBoolean, name: 'Boolean'
         register_class Integer

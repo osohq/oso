@@ -251,6 +251,15 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  context 'nil is pre-registered' do
+    it 'as nil' do
+      subject.load_str('null(nil);')
+      expect(subject.query('null(x)').to_a).to eq [{ 'x' => nil }]
+      expect(subject.query_rule('null', nil).to_a).to eq [{}]
+      expect(subject.query_rule('null', []).to_a).to eq []
+    end
+  end
+
   context '#register_constant' do
     # test_register_constant
     it 'works' do
@@ -295,11 +304,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end)
 
       subject.register_class(Foo)
-      subject.load_str 'f(x) if x.this_is_nil = 1;'
-      expect(subject.query_rule('f', Foo.new).to_a).to eq([])
+      subject.load_str 'f(x) if x.this_is_nil = nil;'
+      expect(subject.query_rule('f', Foo.new).to_a).to eq([{}])
 
-      subject.load_str 'f(x) if x.this_is_nil.bad_call = 1;'
-      expect { subject.query_rule('f', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
+      subject.load_str 'g(x) if x.this_is_nil.bad_call = 1;'
+      expect { subject.query_rule('g', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
     end
   end
 
