@@ -51,7 +51,7 @@ fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
 }
 
 fn query_results<F, G, H, I, J, K>(
-    mut q: Query,
+    mut query: Query,
     mut external_call_handler: F,
     mut make_external_handler: H,
     mut external_isa_handler: I,
@@ -69,8 +69,8 @@ where
 {
     let mut results = vec![];
     loop {
-        let event = q.next_event().unwrap();
-        while let Some(msg) = q.next_message() {
+        let event = query.next_event().unwrap();
+        while let Some(msg) = query.next_message() {
             message_handler(&msg)
         }
         match event {
@@ -91,11 +91,12 @@ where
                 args,
                 kwargs,
             } => {
-                q.call_result(
-                    call_id,
-                    external_call_handler(call_id, instance, attribute, args, kwargs),
-                )
-                .unwrap();
+                query
+                    .call_result(
+                        call_id,
+                        external_call_handler(call_id, instance, attribute, args, kwargs),
+                    )
+                    .unwrap();
             }
             QueryEvent::MakeExternal {
                 instance_id,
@@ -105,7 +106,7 @@ where
                 call_id,
                 instance,
                 class_tag,
-            } => q
+            } => query
                 .question_result(call_id, external_isa_handler(instance, class_tag))
                 .unwrap(),
             QueryEvent::ExternalIsSubSpecializer {
@@ -113,7 +114,7 @@ where
                 instance_id,
                 left_class_tag,
                 right_class_tag,
-            } => q
+            } => query
                 .question_result(
                     call_id,
                     external_is_subspecializer_handler(
@@ -124,7 +125,7 @@ where
                 )
                 .unwrap(),
             QueryEvent::Debug { ref message } => {
-                q.debug_command(&debug_handler(message)).unwrap();
+                query.debug_command(&debug_handler(message)).unwrap();
             }
             _ => {}
         }
@@ -179,11 +180,11 @@ macro_rules! query_results {
     };
 }
 
-fn query_results_with_externals(q: Query) -> (QueryResults, MockExternal) {
+fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
     let mock = RefCell::new(MockExternal::new());
     (
         query_results(
-            q,
+            query,
             |a, b, c, d, e| mock.borrow_mut().external_call(a, b, c, d, e),
             |a, b| mock.borrow_mut().make_external(a, b),
             |a, b| mock.borrow_mut().external_isa(a, b),
