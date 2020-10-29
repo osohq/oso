@@ -269,6 +269,41 @@ fn qvars(p: &mut Polar, query_str: &str, variables: &[&str], expected: Vec<Vec<V
     assert_eq!(vars(p, query_str, variables), expected);
 }
 
+fn _qruntime(p: &mut Polar, query_str: &str) -> ErrorKind {
+    p.new_query(query_str, false)
+        .unwrap()
+        .next_event()
+        .unwrap_err()
+        .kind
+}
+
+macro_rules! qruntime {
+    ($query:tt, $err:pat) => {
+        assert!(matches!(_qruntime(&mut Polar::new(), $query), ErrorKind::Runtime($err)));
+    };
+
+    ($query:tt, $err:pat, $cond:expr) => {
+        assert!(matches!(_qruntime(&mut Polar::new(), $query), ErrorKind::Runtime($err) if $cond));
+    };
+
+    ($polar:expr, $query:tt, $err:pat) => {
+        assert!(matches!(_qruntime($polar, $query), ErrorKind::Runtime($err)));
+    };
+
+    ($polar:expr, $query:tt, $err:pat, $cond:expr) => {
+        assert!(matches!(_qruntime($polar, $query), ErrorKind::Runtime($err) if $cond));
+    };
+}
+
+macro_rules! qparse {
+    ($query:expr, $err:pat) => {
+        assert!(matches!(
+            Polar::new().load_str($query).unwrap_err().kind,
+            ErrorKind::Parse($err)
+        ));
+    };
+}
+
 type TestResult = Result<(), PolarError>;
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
@@ -974,15 +1009,6 @@ fn test_comparisons() -> TestResult {
     Ok(())
 }
 
-fn check_arithmetic_error(p: &mut Polar, query_str: &str) {
-    let mut q = p.new_query(query_str, false).unwrap();
-    let error = q.next_event().unwrap_err();
-    assert!(matches!(
-        error.kind,
-        ErrorKind::Runtime(RuntimeError::ArithmeticError { .. })
-    ));
-}
-
 #[test]
 fn test_modulo_and_remainder() -> TestResult {
     let mut p = Polar::new();
@@ -994,8 +1020,8 @@ fn test_modulo_and_remainder() -> TestResult {
     qeval(&mut p, "0 rem 1 == 0");
     qeval(&mut p, "0 mod -1 == 0");
     qeval(&mut p, "0 rem -1 == 0");
-    check_arithmetic_error(&mut p, "1 mod 0 = x");
-    check_arithmetic_error(&mut p, "1 rem 0 = x");
+    qruntime!("1 mod 0 = x", RuntimeError::ArithmeticError { .. });
+    qruntime!("1 rem 0 = x", RuntimeError::ArithmeticError { .. });
     let res = var(&mut p, "1 mod 0.0 = x", "x")[0].clone();
     if let Value::Number(Numeric::Float(x)) = res {
         assert!(x.is_nan());
@@ -1058,8 +1084,8 @@ fn test_arithmetic() -> TestResult {
     qeval(&mut p, "odd(3)");
     qnull(&mut p, "odd(4)");
 
-    check_arithmetic_error(&mut p, "9223372036854775807 + 1 > 0");
-    check_arithmetic_error(&mut p, "-9223372036854775807 - 2 < 0");
+    qruntime!("9223372036854775807 + 1 > 0", RuntimeError::ArithmeticError { .. });
+    qruntime!("-9223372036854775807 - 2 < 0", RuntimeError::ArithmeticError { .. });
 
     // x / 0 = ∞
     qvar(&mut p, "x=1/0", "x", values![f64::INFINITY]);
@@ -1351,12 +1377,7 @@ fn test_in_op() -> TestResult {
 
     qeval(&mut p, "f({a:1}, [{a:1}, b, c])");
 
-    let mut q = p.new_query("a in {a:1}", false)?;
-    let e = q.next_event().unwrap_err();
-    assert!(matches!(
-        e.kind,
-        ErrorKind::Runtime(RuntimeError::TypeError { .. })
-    ));
+    qruntime!("a in {a:1}", RuntimeError::TypeError { .. });
 
     // Negation.
     qeval(&mut p, "not (4 in [1,2,3])");
@@ -1391,58 +1412,22 @@ fn test_matches() -> TestResult {
 }
 
 #[test]
-fn test_keyword_bug() -> TestResult {
-    let p = Polar::new();
-    let result = p.load_str("g(a) if a.new(b);").unwrap_err();
-    assert!(matches!(
-        result.kind,
-        ErrorKind::Parse(ParseError::ReservedWord { .. })
-    ));
-
-    let result = p.load_str("f(a) if a.in(b);").unwrap_err();
-    assert!(matches!(
-        result.kind,
-        ErrorKind::Parse(ParseError::ReservedWord { .. })
-    ));
-
-    let result = p.load_str("cut(a) if a;").unwrap_err();
-    assert!(matches!(
-        result.kind,
-        ErrorKind::Parse(ParseError::ReservedWord { .. })
-    ));
-
-    let result = p.load_str("debug(a) if a;").unwrap_err();
-    assert!(matches!(
-        result.kind,
-        ErrorKind::Parse(ParseError::ReservedWord { .. })
-    ));
-    Ok(())
+fn test_keyword_bug() {
+    qparse!("g(a) if a.new(b);", ParseError::ReservedWord { .. });
+    qparse!("f(a) if a.in(b);", ParseError::ReservedWord { .. });
+    qparse!("cut(a) if a;", ParseError::ReservedWord { .. });
+    qparse!("debug(a) if a;", ParseError::ReservedWord { .. });
 }
 
 /// Test that rule heads work correctly when unification or specializers are used.
 #[test]
 fn test_unify_rule_head() -> TestResult {
+    qparse!("f(Foo{a: 1});", ParseError::UnrecognizedToken { .. });
+    qparse!("f(new Foo(a: Foo{a: 1}));", ParseError::UnrecognizedToken { .. });
+    qparse!("f(x: new Foo(a: 1));", ParseError::ReservedWord { .. });
+    qparse!("f(x: Foo{a: new Foo(a: 1)});", ParseError::ReservedWord { .. });
+
     let p = Polar::new();
-    assert!(matches!(
-        p.load_str("f(Foo{a: 1});").expect_err("Must have a parser error"),
-        PolarError { kind: ErrorKind::Parse(_), .. }
-    ));
-
-    assert!(matches!(
-        p.load_str("f(new Foo(a: Foo{a: 1}));").expect_err("Must have a parser error"),
-        PolarError { kind: ErrorKind::Parse(_), .. }
-    ));
-
-    assert!(matches!(
-        p.load_str("f(x: new Foo(a: 1));").expect_err("Must have a parser error"),
-        PolarError { kind: ErrorKind::Parse(_), .. }
-    ));
-
-    assert!(matches!(
-        p.load_str("f(x: Foo{a: new Foo(a: 1)});").expect_err("Must have a parser error"),
-        PolarError { kind: ErrorKind::Parse(_), .. }
-    ));
-
     p.register_constant(sym!("Foo"), term!(true));
     p.load_str(
         r#"f(_: Foo{a: 1}, x) if x = 1;
@@ -1599,24 +1584,13 @@ fn test_float_parsing() {
 fn test_assignment() -> TestResult {
     let mut p = Polar::new();
     qeval(&mut p, "x := 5 and x == 5");
-    let mut q = p.new_query("x := 5 and x := 6", false)?;
-    let e = q.next_event().unwrap_err();
-    assert!(matches!(
-        e.kind,
-        ErrorKind::Runtime(RuntimeError::TypeError {
-            msg: s,
-            ..
-        }) if s == "Can only assign to unbound variables, x is bound to value 5."
-    ));
+    qruntime!("x := 5 and x := 6", RuntimeError::TypeError { msg: s, .. },
+        s == "Can only assign to unbound variables, x is bound to value 5.");
     qnull(&mut p, "x := 5 and x > 6");
     qeval(&mut p, "x := y and y = 6 and x = 6");
 
     // confirm old syntax -> parse error
-    let e = p.load_str("f(x) := g(x);").unwrap_err();
-    assert!(matches!(
-        e.kind,
-        ErrorKind::Parse(ParseError::UnrecognizedToken { .. })
-    ));
+    qparse!("f(x) := g(x);", ParseError::UnrecognizedToken { .. });
     Ok(())
 }
 
