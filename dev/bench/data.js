@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603922843999,
+  "lastUpdate": 1603934543915,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -10955,6 +10955,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 6039,
             "range": "± 542",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "789c5cd867b7b56463cac4f81cb494345951ec04",
+          "message": "Lint JS tests, too (#496)\n\nLint all the [JT]S things, not just those in src.\r\nAlso lint before formatting.",
+          "timestamp": "2020-10-28T19:14:37-06:00",
+          "tree_id": "c6fd1f40cb2296e6c12ceb7897eda8969e6debbf",
+          "url": "https://github.com/osohq/oso/commit/789c5cd867b7b56463cac4f81cb494345951ec04"
+        },
+        "date": 1603934542334,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 853,
+            "range": "± 35",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2531,
+            "range": "± 58",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 66154,
+            "range": "± 1830",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 538906,
+            "range": "± 10809",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18241,
+            "range": "± 620",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18880,
+            "range": "± 1859",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18510,
+            "range": "± 667",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18446,
+            "range": "± 390",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16124,
+            "range": "± 455",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5622,
+            "range": "± 519",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5707,
+            "range": "± 259",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5966,
+            "range": "± 434",
             "unit": "ns/iter"
           }
         ]
