@@ -64,9 +64,10 @@ fmt: java-fmt
 clippy:
 	cargo clippy --all-features --all-targets -- -D warnings
 
-lint: fmt clippy
+lint: clippy
 	$(MAKE) -C languages/ruby lint typecheck
 	$(MAKE) -C languages/js lint
+	$(MAKE) fmt
 
 wasm-build:
 	$(MAKE) -C polar-wasm-api build
