@@ -5,7 +5,7 @@
 # - representing hierachies
 
 allow(actor: User, "view", resource: Expense) if
-    employee = actor.employees() and
+    employee in actor.employees() and
     employee.name = resource.submitted_by;
 
 # start-manages-rule
@@ -17,8 +17,9 @@ allow(actor: User, "view", resource: Expense) if
 # start-hierarchy-rule
 # Management hierarchies
 manages(manager: User, employee) if
-    employee = manager.employees()
-    or manages(manager.employees(), employee);
+    report in manager.employees()
+    and (report = employee
+      or manages(report, employee));
 # end-hierarchy-rule
 
 

@@ -6,4 +6,4 @@ from oso import polar_class
 class Env:
     @staticmethod
     def var(variable):
-        yield os.environ[variable]
+        return os.environ[variable]

@@ -405,10 +405,11 @@ arguments must come before keyword arguments::
 In (List Membership)
 ^^^^^^^^^^^^^^^^^^^^
 
-The ``in`` operator can be used to iterate over a list. If the second operand is a list, the first operand will
-be unified with each element of the list. If the
-second operand is not a list (or variable bound to a list),
-the operation will fail.
+The ``in`` operator can be used to iterate over a list or
+an iterable application instance.
+
+The first operand will be unified with each element of the list. If the
+second operand is not iterable, the operation will fail.
 
 For example::
 
@@ -416,8 +417,13 @@ For example::
 
 Will bind ``x`` to ``1``, ``2``, ``3``, in turn, and check that ``x = 1``
 for each. This expression will only succeed for the first item (``1``).
+The left-hand side does not need to be a variable, for example::
 
-The ``in`` operator generates *alternatives* for each element of the list.
+    1 in [1, 2, 3, 1]
+
+Will succeed *twice*: 1 is in the first and fourth position.
+
+The ``in`` operator generates *alternatives* for each element.
 
 .. _operator-forall:
 
