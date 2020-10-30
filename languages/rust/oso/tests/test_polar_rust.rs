@@ -4,7 +4,8 @@
 use maplit::hashmap;
 use thiserror::Error;
 
-use oso::{ClassBuilder, PolarClass};
+use oso::{ClassBuilder, OsoError, PolarClass};
+use polar_core::error::{ErrorKind, PolarError, RuntimeError};
 
 mod common;
 
@@ -454,11 +455,11 @@ fn test_unify_externals() {
     test.oso.register_class(bar_class).unwrap();
 
     let mut query = test.oso.query("x = new Bar(1) = new Bar(2)").unwrap();
-    let result = query.next();
-
-    // TODO: (dhatch) Currently this query silently fails (no results).
-    // Instead, this should return UnsupportedOperation error.
-    assert!(result.is_none());
+    let err = query.next().unwrap().unwrap_err();
+    assert!(matches!(err,
+        OsoError::Polar(PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::TypeError { msg: m, .. }), .. })
+        if m == "cannot bind expression 'x = new Bar(1)' to '_instance_21'"));
 
     #[derive(PartialEq, Clone, Debug)]
     struct Baz {
@@ -481,11 +482,11 @@ fn test_unify_externals() {
     test.oso.register_class(baz_class).unwrap();
 
     let mut query = test.oso.query("x = new Foo(1) = new Baz(1)").unwrap();
-    let result = query.next();
-
-    // TODO: (dhatch) Currently this query silently fails (no results).
-    // Instead, this should return TypeError.
-    assert!(result.is_none());
+    let err = query.next().unwrap().unwrap_err();
+    assert!(matches!(err,
+        OsoError::Polar(PolarError {
+            kind: ErrorKind::Runtime(RuntimeError::TypeError { msg: m, .. }), .. })
+        if m == "cannot bind expression 'x = new Foo(1)' to '_instance_23'"));
 }
 
 #[test]
