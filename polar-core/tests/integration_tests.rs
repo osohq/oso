@@ -1002,7 +1002,7 @@ fn test_comparisons() -> TestResult {
 }
 
 #[test]
-fn test_modulo_and_remainder() -> TestResult {
+fn test_modulo_and_remainder() {
     let mut p = Polar::new();
     qeval(&mut p, "1 mod 1 == 0");
     qeval(&mut p, "1 rem 1 == 0");
@@ -1042,7 +1042,6 @@ fn test_modulo_and_remainder() -> TestResult {
     qeval(&mut p, "13.4 rem 1 == 0.40000000000000036");
     qeval(&mut p, "-13.4 mod 1 == 0.5999999999999996");
     qeval(&mut p, "-13.4 rem 1 == -0.40000000000000036");
-    Ok(())
 }
 
 #[test]
@@ -1390,7 +1389,7 @@ fn test_in_op() -> TestResult {
 }
 
 #[test]
-fn test_matches() -> TestResult {
+fn test_matches() {
     let mut p = Polar::new();
     qnull(&mut p, "1 matches 2");
     qeval(&mut p, "1 matches 1");
@@ -1400,7 +1399,6 @@ fn test_matches() -> TestResult {
     qeval(&mut p, "x = {foo: 1, bar: 2} and x matches {foo: 1}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 2}");
-    Ok(())
 }
 
 #[test]
@@ -1539,7 +1537,7 @@ fn test_emoji_policy() -> TestResult {
 
 #[test]
 /// Check that boolean expressions evaluate without requiring "= true".
-fn test_boolean_expression() -> TestResult {
+fn test_boolean_expression() {
     let mut p = Polar::new();
     // Succeeds because t is true.
     qeval(&mut p, "a = {t: true, f: false} and a.t");
@@ -1554,7 +1552,6 @@ fn test_boolean_expression() -> TestResult {
     qnull(&mut p, "false");
     qeval(&mut p, "a = true and a");
     qnull(&mut p, "a = false and a");
-    Ok(())
 }
 
 #[test]
@@ -1573,7 +1570,7 @@ fn test_float_parsing() {
 }
 
 #[test]
-fn test_assignment() -> TestResult {
+fn test_assignment() {
     let mut p = Polar::new();
     qeval(&mut p, "x := 5 and x == 5");
     qruntime!("x := 5 and x := 6", RuntimeError::TypeError { msg: s, .. },
@@ -1583,7 +1580,6 @@ fn test_assignment() -> TestResult {
 
     // confirm old syntax -> parse error
     qparse!("f(x) := g(x);", ParseError::UnrecognizedToken { .. });
-    Ok(())
 }
 
 #[test]
@@ -1764,7 +1760,7 @@ fn test_expressions_in_lists() -> TestResult {
 }
 
 #[test]
-fn test_list_matches() -> TestResult {
+fn test_list_matches() {
     let mut p = Polar::new();
     qeval(&mut p, "[] matches []");
     qnull(&mut p, "[1] matches []");
@@ -1794,5 +1790,4 @@ fn test_list_matches() -> TestResult {
         "xs",
         vec![value!([3, Value::RestVariable(Symbol::new("ys"))])],
     );
-    Ok(())
 }
