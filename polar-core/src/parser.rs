@@ -1,6 +1,13 @@
 use crate::lexer::Token;
 use lalrpop_util::{lalrpop_mod, ParseError};
 
+/// Used to denote whether an enclosed value is a value or a logical operator
+pub enum ValueOrLogical {
+    Value(Term),
+    Logical(Term),
+    Either(Term),
+}
+
 lalrpop_mod!(
     #[allow(clippy::all, dead_code, unused_imports, unused_mut)]
     polar
@@ -330,5 +337,27 @@ mod tests {
             parse_query(q),
             term!(op!(Dot, term!(sym!("x")), term!("invalid-key"))),
         );
+    }
+
+    #[test]
+    fn test_catching_wrong_types() {
+        for bad_query in &[
+            "f(x=1)",
+            "x in [1, 2] < 2",
+            "{x: 1 < 2}",
+            "{x: 1 < 2}",
+            "not 1",
+            "1 and 2",
+            "1 + print(\"x\")",
+            "forall([1, 2, 3], x < 1)",
+        ] {
+            assert!(matches!(
+                super::parse_query(0, bad_query).expect_err("parse error"),
+                error::PolarError {
+                    kind: error::ErrorKind::Parse(error::ParseError::WrongValueType { .. }),
+                    ..
+                }
+            ));
+        }
     }
 }

@@ -32,6 +32,7 @@ fn kind(err: &PolarError) -> String {
         Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
         Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
         Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
+        Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",

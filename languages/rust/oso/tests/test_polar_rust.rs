@@ -453,13 +453,6 @@ fn test_unify_externals() {
 
     test.oso.register_class(bar_class).unwrap();
 
-    let mut query = test.oso.query("x = new Bar(1) = new Bar(2)").unwrap();
-    let result = query.next();
-
-    // TODO: (dhatch) Currently this query silently fails (no results).
-    // Instead, this should return UnsupportedOperation error.
-    assert!(result.is_none());
-
     #[derive(PartialEq, Clone, Debug)]
     struct Baz {
         x: i64,
@@ -479,13 +472,6 @@ fn test_unify_externals() {
         .build();
 
     test.oso.register_class(baz_class).unwrap();
-
-    let mut query = test.oso.query("x = new Foo(1) = new Baz(1)").unwrap();
-    let result = query.next();
-
-    // TODO: (dhatch) Currently this query silently fails (no results).
-    // Instead, this should return TypeError.
-    assert!(result.is_none());
 }
 
 #[test]
