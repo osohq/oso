@@ -75,13 +75,13 @@ extern {
 Integer: i64 = {
     <"Integer">,
 "+" <"Integer">,
-"-" <i:"Integer"> => -i
+"-" <i:"Integer"> => -i,
 }
 
 Float: f64 = {
     <"Float">,
 "+" <"Float">,
-"-" <f:"Float"> => -f
+"-" <f:"Float"> => -f,
 }
 
 
