@@ -3,7 +3,7 @@ on: [push, pull_request_target]
 
 jobs:
   benchmark:
-    if: github.event_name == 'pull_request_target' || contains(github.event.head_commit.message, '[bench]')
+    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[bench]')
     name: Run Rust benchmark example
     runs-on: ubuntu-latest
     steps:
@@ -29,6 +29,6 @@ jobs:
           alert-comment-cc-users: "@osohq/eng"
           alert-threshold: "150%"
           # Only push, save + comment on main
-          auto-push: ${{ github.ref == 'refs/heads/main' }}
-          comment-always: ${{ github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[showbench]') }}
-          save-data-file: ${{ github.ref == 'refs/heads/main' }}
+          auto-push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          comment-always: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.head_commit.message, '[showbench]') }}
+          save-data-file: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
