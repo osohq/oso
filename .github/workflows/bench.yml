@@ -29,6 +29,6 @@ jobs:
           alert-comment-cc-users: "@osohq/eng"
           alert-threshold: "150%"
           # Only push, save + comment on main
-          auto-push: ${{ github.ref == 'refs/heads/main' }}
-          comment-always: ${{ github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[showbench]') }}
-          save-data-file: ${{ github.ref == 'refs/heads/main' }}
+          auto-push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          comment-always: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.head_commit.message, '[showbench]') }}
+          save-data-file: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
