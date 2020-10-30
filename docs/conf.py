@@ -151,8 +151,6 @@ html_theme_options = {
     "master_doc": False,
     # Set the name of the project to appear in the navigation.
     "nav_title": "oso Documentation",
-    # Set you GA account ID to enable tracking
-    "google_analytics_account": "UA-139858805-1" if release_mode else "",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
     "base_url": "https://docs.osohq.com/",
