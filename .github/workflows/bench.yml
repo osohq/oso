@@ -3,7 +3,7 @@ on: [push, pull_request_target]
 
 jobs:
   benchmark:
-    if: github.event_name == 'pull_request_target' || contains(github.event.head_commit.message, '[bench]')
+    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[bench]')
     name: Run Rust benchmark example
     runs-on: ubuntu-latest
     steps:
