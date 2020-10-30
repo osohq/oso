@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604081059192,
+  "lastUpdate": 1604086383525,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -11243,6 +11243,98 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 4951,
             "range": "± 771",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "osohq",
+            "username": "osohq"
+          },
+          "committer": {
+            "name": "osohq",
+            "username": "osohq"
+          },
+          "id": "9e543d7725a21c3885de7deb9b8410fe005b764a",
+          "message": "Run workflows on pushes to main",
+          "timestamp": "2020-10-30T19:20:17Z",
+          "url": "https://github.com/osohq/oso/pull/502/commits/9e543d7725a21c3885de7deb9b8410fe005b764a"
+        },
+        "date": 1604086381657,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 768,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2288,
+            "range": "± 191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 59002,
+            "range": "± 3176",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 455710,
+            "range": "± 18284",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15702,
+            "range": "± 3084",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16235,
+            "range": "± 1103",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16225,
+            "range": "± 1324",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 15732,
+            "range": "± 1031",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14026,
+            "range": "± 1056",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4870,
+            "range": "± 314",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5031,
+            "range": "± 268",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5345,
+            "range": "± 512",
             "unit": "ns/iter"
           }
         ]
