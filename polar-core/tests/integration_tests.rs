@@ -278,20 +278,12 @@ fn _qruntime(p: &mut Polar, query_str: &str) -> ErrorKind {
 }
 
 macro_rules! qruntime {
-    ($query:tt, $err:pat) => {
-        assert!(matches!(_qruntime(&mut Polar::new(), $query), ErrorKind::Runtime($err)));
+    ($query:tt, $err:pat $(, $cond:expr)?) => {
+        assert!(matches!(_qruntime(&mut Polar::new(), $query), ErrorKind::Runtime($err) $(if $cond)?));
     };
 
-    ($query:tt, $err:pat, $cond:expr) => {
-        assert!(matches!(_qruntime(&mut Polar::new(), $query), ErrorKind::Runtime($err) if $cond));
-    };
-
-    ($polar:expr, $query:tt, $err:pat) => {
-        assert!(matches!(_qruntime($polar, $query), ErrorKind::Runtime($err)));
-    };
-
-    ($polar:expr, $query:tt, $err:pat, $cond:expr) => {
-        assert!(matches!(_qruntime($polar, $query), ErrorKind::Runtime($err) if $cond));
+    ($polar:expr, $query:tt, $err:pat $(, $cond:expr)?) => {
+        assert!(matches!(_qruntime($polar, $query), ErrorKind::Runtime($err) $(if $cond)?));
     };
 }
 
