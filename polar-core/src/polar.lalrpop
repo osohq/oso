@@ -128,6 +128,14 @@ Call: Value = {
     }
 };
 
+New: Value = {
+    "new" <call:Spanned<Call>> => {
+        let args = vec![call];
+        let op = Operation{operator: Operator::New, args};
+        Value::Expression(op)
+    },
+};
+
 Fields<T>: BTreeMap<Symbol, Term> = {
     <name:Name> ":" <value:T> => {
         let mut fields = BTreeMap::new();
@@ -173,13 +181,6 @@ BuiltinOperator: Operator = {
     "print" => Operator::Print,
 };
 
-New: Value = {
-    "new" <call:Spanned<Call>> => {
-        let args = vec![call];
-        let op = Operation{operator: Operator::New, args};
-        Value::Expression(op)
-    },
-};
 
 BuiltinOperation: Value = {
     <op:BuiltinOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
@@ -189,8 +190,6 @@ BuiltinOperation: Value = {
         };
         Value::Expression(Operation{operator: op, args: args})
     },
-    // A pattern cannot contain a new operator
-    <New>,
     "cut" => {
         let args = vec![];
         let op = Operation{operator: Operator::Cut, args};
@@ -484,6 +483,7 @@ pub Value: Value = {
     <BuiltinOperation>,
     <RewrittenOperation>,
     <Call>,
+    <New>,
     <List<"Term">>,
 };
 
