@@ -1,10 +1,9 @@
 name: Rust benchmark
-on:
-  push:
-    branches:
+on: [push, pull_request_target]
 
 jobs:
   benchmark:
+    if: github.event_name == 'pull_request_target' || contains(github.event.head_commit.message, '[bench]')
     name: Run Rust benchmark example
     runs-on: ubuntu-latest
     steps:
@@ -25,12 +24,11 @@ jobs:
           name: Rust Benchmark
           tool: "cargo"
           output-file-path: output.txt
-          # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t5/GitHub-Actions/Github-action-not-triggering-gh-pages-upon-push/td-p/26869/highlight/false
           github-token: ${{ secrets.GITHUB_TOKEN }}
           comment-on-alert: true
           alert-comment-cc-users: "@osohq/eng"
           alert-threshold: "150%"
           # Only push, save + comment on main
           auto-push: ${{ github.ref == 'refs/heads/main' }}
-          comment-always: ${{ github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[bench]') }}
+          comment-always: ${{ github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[showbench]') }}
           save-data-file: ${{ github.ref == 'refs/heads/main' }}
