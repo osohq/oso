@@ -1,7 +1,5 @@
 name: Rust benchmark
-on:
-  push:
-    branches:
+on: [pull_request_target]
 
 jobs:
   benchmark:
