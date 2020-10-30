@@ -172,8 +172,7 @@ html_theme_options = {
     "nav_links": False,
 }
 html_show_sphinx = False
-version_dropdown = True
-version_info = {"release": "/", "devel": "/devel"}
+version_dropdown = False
 html_sidebars = {"**": ["globaltoc.html", "localtoc.html"]}
 
 html_logo = "oso_logo_trimmed.png"
