@@ -28,6 +28,16 @@ macro_rules! value {
 }
 
 #[macro_export]
+macro_rules! values {
+    ($([$($args:expr),*]),*) => {
+        vec![$(values!($($args),*)),*]
+    };
+    ($($args:expr),*) => {
+        vec![$(value!($args)),*]
+    };
+}
+
+#[macro_export]
 macro_rules! term {
     ($($expr:tt)*) => {
         $crate::macros::TestHelper::<Term>::from(value!($($expr)*)).0
