@@ -350,6 +350,10 @@ mod tests {
             "1 and 2",
             "1 + print(\"x\")",
             "forall([1, 2, 3], x < 1)",
+            "x = (1 or 2)",
+            "x = (1 = 2)",
+            "foo.bar(x or y)",
+            "foo.bar(z: x or y)",
         ] {
             assert!(matches!(
                 super::parse_query(0, bad_query).expect_err("parse error"),
