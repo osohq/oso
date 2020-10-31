@@ -1791,8 +1791,9 @@ fn test_list_matches() {
 #[test]
 fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
     qruntime!("x = (1 and 2)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind expression '1 and 2' to 'x'");
+    qruntime!("(1 or 2) = x", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind expression '1 or 2' to 'x'");
     qruntime!("x = (not x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind expression 'not x' to 'x'");
-    qruntime!("x = y matches z", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind expression 'y matches z' to 'x'");
+    qruntime!("y matches z = x", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind expression 'y matches z' to 'x'");
     qruntime!("x matches y", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern 'y' to 'x'");
     let mut p = Polar::new();
     p.load_str(
