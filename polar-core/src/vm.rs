@@ -1950,11 +1950,19 @@ impl PolarVirtualMachine {
     /// Unify a symbol `left` with a term `right`.
     /// This is sort of a "sub-goal" of `Unify`.
     fn unify_var(&mut self, left: &Symbol, right: &Term) -> PolarResult<()> {
+        let right_value = match right.value() {
+            Value::Variable(v) | Value::RestVariable(v) => self.value(v).cloned(),
+            v @ Value::Expression(_) | v @ Value::Pattern(_) => {
+                let src = (self.term_source(right, false), left);
+                let msg = match v {
+                    Value::Pattern(_) => format!("cannot bind pattern '{}' to '{}'", src.0, src.1),
+                    _ => format!("cannot bind expression '{}' to '{}'", src.0, src.1),
+                };
+                return Err(self.type_error(&right, msg));
+            }
+            _ => None,
+        };
         let left_value = self.value(&left).cloned();
-        let mut right_value = None;
-        if let Value::Variable(ref right_sym) | Value::RestVariable(ref right_sym) = right.value() {
-            right_value = self.value(right_sym).cloned();
-        }
 
         // Rebind the previous name of `term` to a variable pointing to
         // `var`. `term` must be a partial.
