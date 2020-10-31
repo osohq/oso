@@ -20,10 +20,10 @@
 {%- endblock %}
 
 {% block body_tag %}
+  {{ super() }}
+
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MK29QFG"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-
-  {{ super() }}
 {% endblock %}
 
 {% block footer %}
