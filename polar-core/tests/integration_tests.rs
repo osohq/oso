@@ -1804,3 +1804,9 @@ fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
     qruntime!(&mut p, "g(x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern '{}' to '_x_2'");
     Ok(())
 }
+
+#[test]
+fn identity_monad() {
+    let mut p = Polar::new();
+    qvar(&mut p, "x = [y for y in 1]", "x", vec![value!([1])]);
+}

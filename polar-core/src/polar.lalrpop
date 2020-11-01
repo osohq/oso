@@ -12,6 +12,7 @@ use crate::terms::*;
 use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
+use crate::monad::{Id, Monad};
 
 use lalrpop_util::ParseError;
 
@@ -65,6 +66,7 @@ extern {
         "or" => lexer::Token::Or,           // or
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
+        "for" => lexer::Token::For,         // for
     }
 }
 
@@ -461,6 +463,10 @@ List<T>: Value = {
     "[" <mut terms:ListTerms<T>> "," <rest:Spanned<RestVar>> "]" => {
         terms.push(rest);
         Value::List(terms)
+    },
+    // "[" <exp:Exp7<T>> "for" <var:Variable> "in" <new:New> "]" => {
+    "[" <exp:Exp7<T>> "for" <var:Variable> "in" <num:Number> "]" => {
+        Value::Monad(Box::new(Id::new(num)))
     }
 }
 

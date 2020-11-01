@@ -48,31 +48,31 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(Symbol),
-    Colon, // :
-    Comma, // ,
-    LB,    // [
-    RB,    // ]
-    LP,    // (
-    RP,    // )
-    LCB,   // {
-    RCB,   // }
-    Dot,   // .
-    New,   // new
-    Bang,  // !
-    Mul,   // *
-    Div,   // /
-    Mod,   // mod
-    Rem,   // rem
-    Add,   // +
-    Sub,   // -
-    Eq,    // ==
-    Neq,   // !=
-    Leq,   // <=
-    Geq,   // >=
-    Lt,    // <
-    Gt,    // >
-    Unify, // =
-    Assign,
+    Colon,     // :
+    Comma,     // ,
+    LB,        // [
+    RB,        // ]
+    LP,        // (
+    RP,        // )
+    LCB,       // {
+    RCB,       // }
+    Dot,       // .
+    New,       // new
+    Bang,      // !
+    Mul,       // *
+    Div,       // /
+    Mod,       // mod
+    Rem,       // rem
+    Add,       // +
+    Sub,       // -
+    Eq,        // ==
+    Neq,       // !=
+    Leq,       // <=
+    Geq,       // >=
+    Lt,        // <
+    Gt,        // >
+    Unify,     // =
+    Assign,    // :=
     Pipe,      // |
     SemiColon, // ;
     Query,     // ?=
@@ -87,6 +87,7 @@ pub enum Token {
     Or,        // or
     Not,       // not
     Matches,   // matches
+    For,       // for
 }
 
 impl ToString for Token {
@@ -136,6 +137,7 @@ impl ToString for Token {
             Token::Or => "or".to_owned(),           // or
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
+            Token::For => "for".to_owned(),         // for
         }
     }
 }
@@ -242,6 +244,8 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Mod, last + 1)))
         } else if &self.buf == "rem" {
             Some(Ok((start, Token::Rem, last + 1)))
+        } else if &self.buf == "for" {
+            Some(Ok((start, Token::For, last + 1)))
         } else {
             Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
         }

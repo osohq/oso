@@ -4,6 +4,8 @@ use std::mem::discriminant;
 
 use dyn_clone::DynClone;
 
+use crate::terms::Value;
+
 pub trait Monad<T>: DynClone {
     // unit / of
     fn new(item: T) -> Self
@@ -43,6 +45,23 @@ impl<T: Hash> Hash for Box<dyn Monad<T>> {
         H: Hasher,
     {
         discriminant(self).hash(state)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Id(Value);
+
+impl Monad<Value> for Id {
+    fn new(item: Value) -> Self {
+        Self(item)
+    }
+
+    fn join(self, other: Self) -> Self {
+        other
+    }
+
+    fn map(self, f: Box<dyn FnOnce(&Self) -> Self>) -> Self {
+        f(&self)
     }
 }
 
