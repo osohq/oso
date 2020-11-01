@@ -1,13 +1,15 @@
-use super::sources::SourceInfo;
-pub use super::{error, formatting::ToPolarString};
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
+use super::monad::Monad;
 pub use super::numerics::Numeric;
 use super::partial::Constraints;
+use super::sources::SourceInfo;
 use super::visitor::{walk_term, Visitor};
+pub use super::{error, formatting::ToPolarString};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -126,7 +128,7 @@ pub enum Pattern {
     Instance(InstanceLiteral),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Hash)]
 pub enum Value {
     Number(Numeric),
     String(String),
@@ -141,6 +143,18 @@ pub enum Value {
     RestVariable(Symbol),
     Expression(Operation),
     Partial(Constraints),
+    #[serde(skip)]
+    Monad(Box<dyn Monad<Value>>),
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Monad(_), _) => false,
+            (_, Self::Monad(_)) => false,
+            (a, b) => a == b,
+        }
+    }
 }
 
 impl Value {
@@ -219,6 +233,7 @@ impl Value {
             Value::Expression(Operation { operator: _, args }) => {
                 args.iter().all(|t| t.is_ground())
             }
+            Value::Monad(_) => false,
         }
     }
 }

@@ -10,6 +10,7 @@
 
 use std::collections::BTreeMap;
 
+use super::monad::Monad;
 use super::partial::Constraints;
 use super::rules::*;
 use super::terms::*;
@@ -87,6 +88,9 @@ pub trait Folder: Sized {
     fn fold_constraints(&mut self, c: Constraints) -> Constraints {
         fold_constraints(c, self)
     }
+    fn fold_monad(&mut self, m: Box<dyn Monad<Value>>) -> Box<dyn Monad<Value>> {
+        fold_monad(m, self)
+    }
 }
 
 pub fn fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T) -> Rule {
@@ -116,6 +120,7 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::RestVariable(r) => Value::RestVariable(fld.fold_rest_variable(r)),
         Value::Expression(o) => Value::Expression(fld.fold_operation(o)),
         Value::Partial(c) => Value::Partial(fld.fold_constraints(c)),
+        Value::Monad(m) => Value::Monad(fld.fold_monad(m)),
     }
 }
 
@@ -227,6 +232,10 @@ pub fn fold_constraints<T: Folder>(
             .collect(),
         variable: fld.fold_variable(variable),
     }
+}
+
+pub fn fold_monad<T: Folder>(m: Box<dyn Monad<Value>>, _fld: &mut T) -> Box<dyn Monad<Value>> {
+    m
 }
 
 pub fn fold_symbol<T: Folder>(s: Symbol, _fld: &mut T) -> Symbol {

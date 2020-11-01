@@ -13,6 +13,7 @@ pub mod events;
 mod folder;
 pub mod kb;
 pub mod messages;
+mod monad;
 mod numerics;
 pub mod parser;
 mod partial;

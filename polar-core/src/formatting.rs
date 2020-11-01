@@ -612,6 +612,7 @@ pub mod to_polar {
                     p.name().0,
                     p.clone().into_expression().to_polar()
                 ),
+                Value::Monad(_) => "MONAD".to_string(),
             }
         }
     }

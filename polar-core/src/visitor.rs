@@ -7,6 +7,7 @@
 //! `visitor::walk_*` to apply the default traversal algorithm, or prevent deeper traversal by
 //! doing nothing.
 
+use super::monad::Monad;
 use super::partial::Constraints;
 use super::rules::*;
 use super::terms::*;
@@ -72,6 +73,9 @@ pub trait Visitor: Sized {
     fn visit_constraints(&mut self, c: &Constraints) {
         walk_constraints(self, c)
     }
+    fn visit_monad(&mut self, m: &Box<dyn Monad<Value>>) {
+        walk_monad(self, m)
+    }
 }
 
 macro_rules! walk_elements {
@@ -111,6 +115,7 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::RestVariable(r) => visitor.visit_rest_variable(r),
         Value::Expression(o) => visitor.visit_operation(o),
         Value::Partial(p) => visitor.visit_constraints(p),
+        Value::Monad(m) => visitor.visit_monad(m),
     }
 }
 
@@ -168,6 +173,8 @@ pub fn walk_constraints<V: Visitor>(visitor: &mut V, constraints: &Constraints) 
     visitor.visit_symbol(&constraints.variable);
     walk_elements!(visitor, visit_operation, &constraints.operations);
 }
+
+pub fn walk_monad<V: Visitor>(_visitor: &mut V, _m: &Box<dyn Monad<Value>>) {}
 
 #[cfg(test)]
 mod tests {
