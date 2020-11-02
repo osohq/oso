@@ -46,6 +46,9 @@ jobs:
       - name: Check formatting of JS library
         working-directory: "languages/js"
         run: make fmtcheck
+      - name: Typecheck JS library
+        working-directory: "languages/js"
+        run: make typecheck
 
       - name: Install Java
         uses: actions/setup-java@v1
@@ -78,10 +81,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -- -D warnings
-
-      - name: Typecheck JS library
-        working-directory: "languages/js"
-        run: make typecheck
 
       - run: make test
         env:
