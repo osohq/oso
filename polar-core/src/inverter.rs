@@ -79,24 +79,23 @@ impl Folder for ConstraintInverter {
             0 => return c,
 
             // Invert a single constraint.
-            1 => Constraints {
-                variable: c.variable.clone(),
-                operations: vec![fold_operation(c.operations[0].clone(), self)],
-            },
+            1 => c.clone_with_operations(vec![fold_operation(c.operations[0].clone(), self)]),
 
             // Invert the conjunction of multiple constraints, yielding a disjunction of their
             // inverted selves. (De Morgan's Law)
-            _ => Constraints {
-                variable: c.variable.clone(),
-                operations: vec![Operation {
+            _ => {
+                let conjuncts = c
+                    .operations
+                    .iter()
+                    .cloned()
+                    .map(|o| Term::new_temporary(Value::Expression(fold_operation(o, self))))
+                    .collect();
+                let disjunction = vec![Operation {
                     operator: Operator::Or,
-                    args: c
-                        .operations
-                        .into_iter()
-                        .map(|o| Term::new_temporary(Value::Expression(fold_operation(o, self))))
-                        .collect(),
-                }],
-            },
+                    args: conjuncts,
+                }];
+                c.clone_with_operations(disjunction)
+            }
         };
         self.new_bindings.push(Binding(
             partial.variable.clone(),
