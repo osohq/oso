@@ -912,7 +912,14 @@ impl PolarVirtualMachine {
             (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
                 unreachable!("parsed as pattern")
             }
-            (_, Value::Partial(_)) => unreachable!("cannot match against a partial"),
+            (_, Value::Partial(_)) => {
+                return Err(self.set_error_context(
+                    &right,
+                    error::RuntimeError::Unsupported {
+                        msg: "cannot match against a partial".to_string(),
+                    },
+                ));
+            }
 
             (Value::Variable(v), _) | (Value::RestVariable(v), _) => {
                 if let Some(value) = self.value(&v).cloned() {
