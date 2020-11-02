@@ -125,7 +125,7 @@ fn invert_constraints(bindings: BindingStack) -> BindingStack {
 }
 
 /// Only keep latest bindings.
-fn reduce_bindings(bindings: BindingStack) -> Bindings {
+fn dedupe_bindings(bindings: BindingStack) -> Bindings {
     bindings
         .into_iter()
         .fold(Bindings::new(), |mut acc, Binding(var, value)| {
@@ -136,7 +136,7 @@ fn reduce_bindings(bindings: BindingStack) -> Bindings {
 
 /// Reduce + merge constraints.
 fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
-    reduce_bindings(bindings)
+    dedupe_bindings(bindings)
         .drain()
         .for_each(|(var, value)| match acc.entry(var) {
             Entry::Occupied(mut o) => {
