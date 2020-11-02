@@ -9,7 +9,7 @@ use crate::folder::{fold_value, Folder};
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Term, Value};
+use crate::terms::{Term, Value};
 use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
@@ -47,29 +47,8 @@ impl ConstraintInverter {
         }
     }
 
-    fn invert_constraint(&mut self, c: &Constraints) -> Constraints {
-        let partial = match c.operations.len() {
-            // Do nothing to an empty partial.
-            0 => return c.clone(),
-
-            // Invert a single constraint.
-            1 => c.clone_with_operations(vec![invert_operation(&c.operations[0])]),
-
-            // Invert the conjunction of multiple constraints, yielding a disjunction of their
-            // inverted selves. (De Morgan's Law)
-            _ => {
-                let conjuncts = c
-                    .operations
-                    .iter()
-                    .map(|o| Term::new_temporary(Value::Expression(invert_operation(o))))
-                    .collect();
-                let disjunction = vec![Operation {
-                    operator: Operator::Or,
-                    args: conjuncts,
-                }];
-                c.clone_with_operations(disjunction)
-            }
-        };
+    fn invert_constraints(&mut self, c: &Constraints) -> Constraints {
+        let partial = c.clone_with_operations(c.inverted_operations());
         self.new_bindings.push(Binding(
             partial.variable.clone(),
             Term::new_temporary(Value::Partial(partial.clone())),
@@ -78,30 +57,11 @@ impl ConstraintInverter {
     }
 }
 
-/// Invert operators.
-fn invert_operation(o: &Operation) -> Operation {
-    Operation {
-        operator: match o.operator {
-            Operator::And => Operator::Or,
-            Operator::Or => Operator::And,
-            Operator::Unify | Operator::Eq => Operator::Neq,
-            Operator::Neq => Operator::Unify,
-            Operator::Gt => Operator::Leq,
-            Operator::Geq => Operator::Lt,
-            Operator::Lt => Operator::Geq,
-            Operator::Leq => Operator::Gt,
-            Operator::Debug | Operator::Print | Operator::New | Operator::Dot => o.operator,
-            _ => todo!("negate {:?}", o),
-        },
-        args: o.args.clone(),
-    }
-}
-
 impl Folder for ConstraintInverter {
     /// Invert top-level constraints.
     fn fold_term(&mut self, t: Term) -> Term {
         t.clone_with_value(match t.value() {
-            Value::Partial(c) => Value::Partial(self.invert_constraint(c)),
+            Value::Partial(c) => Value::Partial(self.invert_constraints(c)),
             v => fold_value(v.clone(), self),
         })
     }
@@ -170,7 +130,7 @@ impl Runnable for Inverter {
                                     // We have at least one partial to return, so succeed.
                                     result = true;
 
-                                    Binding(var, self.vm.deep_deref(&value))
+                                    Binding(var, value)
                                 }),
                         );
                     }
@@ -179,7 +139,11 @@ impl Runnable for Inverter {
                 QueryEvent::Result { .. } => {
                     if self.vm.query_contains_partial {
                         let bindings = self.vm.bindings[self.bsp..].to_owned();
-                        self.results.push(bindings);
+                        let derefed = bindings
+                            .into_iter()
+                            .map(|Binding(var, value)| Binding(var, self.vm.deep_deref(&value)))
+                            .collect();
+                        self.results.push(derefed);
                     } else {
                         return Ok(QueryEvent::Done { result: false });
                     }

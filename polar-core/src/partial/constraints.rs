@@ -12,6 +12,25 @@ pub struct Constraints {
     pub variable: Symbol,
 }
 
+/// Invert operators.
+fn invert_operation(Operation { operator, args }: Operation) -> Operation {
+    Operation {
+        operator: match operator {
+            Operator::And => Operator::Or,
+            Operator::Or => Operator::And,
+            Operator::Unify | Operator::Eq => Operator::Neq,
+            Operator::Neq => Operator::Unify,
+            Operator::Gt => Operator::Leq,
+            Operator::Geq => Operator::Lt,
+            Operator::Lt => Operator::Geq,
+            Operator::Leq => Operator::Gt,
+            Operator::Debug | Operator::Print | Operator::New | Operator::Dot => operator,
+            _ => todo!("negate {:?}", operator),
+        },
+        args,
+    }
+}
+
 impl Constraints {
     pub fn new(variable: Symbol) -> Self {
         Self {
@@ -23,6 +42,31 @@ impl Constraints {
     pub fn merge_constraints(&mut self, other: Self) {
         assert_eq!(self.variable, other.variable);
         self.operations.extend(other.operations);
+    }
+
+    pub fn inverted_operations(&self) -> Vec<Operation> {
+        match self.operations.len() {
+            // Do nothing to an empty partial.
+            0 => vec![],
+
+            // Invert a single constraint.
+            1 => vec![invert_operation(self.operations[0].clone())],
+
+            // Invert the conjunction of multiple constraints, yielding a disjunction of their
+            // inverted selves. (De Morgan's Law)
+            _ => {
+                let conjuncts = self
+                    .operations
+                    .iter()
+                    .cloned()
+                    .map(|o| Term::new_temporary(Value::Expression(invert_operation(o))))
+                    .collect();
+                vec![Operation {
+                    operator: Operator::Or,
+                    args: conjuncts,
+                }]
+            }
+        }
     }
 
     pub fn operations(&self) -> &Vec<Operation> {
@@ -564,16 +608,40 @@ mod test {
         let polar = Polar::new();
         polar.load_str(
             r#"f(x) if not (y = 1 and x.foo = y);
-               g(x) if not (x.foo = y and y = 1);"#,
+               g(x) if not (x.foo = y and y = 1);
+               h(x) if not (x.foo = 1 or x.foo = 2);
+               i(x) if not (x = 1 or x = 2);
+               j(x) if not (y = 1 and x.foo.bar = y);
+               k(x) if not (x.foo.bar = 1 or x.foo.bar = 2);"#,
         )?;
         let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "1 != _this.foo");
+        assert_partial_expression!(next, "a", "_this.foo != 1");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         let mut query = polar.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "1 != _this.foo");
+        assert_partial_expression!(next, "a", "_this.foo != 1");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this.foo != 1 and _this.foo != 2");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("i", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this != 1 and _this != 2");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("j", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "1 != _this.foo.bar");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("k", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "1 != _this.foo.bar and 2 != _this.foo.bar");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
         Ok(())
     }

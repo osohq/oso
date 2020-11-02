@@ -117,7 +117,24 @@ impl Folder for Simplifier {
         };
 
         match o.operator {
-            Operator::Unify => {
+            Operator::Neq => {
+                let left = &o.args[0];
+                let right = &o.args[1];
+                Operation {
+                    operator: Operator::And,
+                    args: match (left.value(), right.value()) {
+                        // Distribute **inverted** expression over the partial.
+                        (Value::Partial(c), Value::Expression(_)) => {
+                            map_ops(&c.inverted_operations(), right)
+                        }
+                        (Value::Expression(_), Value::Partial(c)) => {
+                            map_ops(&c.inverted_operations(), left)
+                        }
+                        _ => return fold_operation(o, self),
+                    },
+                }
+            }
+            Operator::Eq | Operator::Unify => {
                 let left = &o.args[0];
                 let right = &o.args[1];
                 Operation {
