@@ -229,27 +229,25 @@ impl Default for PolarVirtualMachine {
 
 #[allow(clippy::ptr_arg)]
 fn query_contains_partial(goals: &Goals) -> bool {
-    if goals.len() == 1 {
-        if let Goal::Query { term } = &goals[0] {
-            struct PartialVisitor {
-                has_partial: bool,
-            }
+    struct PartialVisitor {
+        has_partial: bool,
+    }
 
-            impl Visitor for PartialVisitor {
-                fn visit_constraints(&mut self, _: &partial::Constraints) {
-                    self.has_partial = true;
-                }
-            }
+    impl Visitor for PartialVisitor {
+        fn visit_constraints(&mut self, _: &partial::Constraints) {
+            self.has_partial = true;
+        }
+    }
 
-            let mut visitor = PartialVisitor { has_partial: false };
+    let mut visitor = PartialVisitor { has_partial: false };
+    goals.iter().any(|goal| {
+        if let Goal::Query { term } = goal {
             walk_term(&mut visitor, &term);
             visitor.has_partial
         } else {
             false
         }
-    } else {
-        false
-    }
+    })
 }
 
 // Methods which aren't goals/instructions.
