@@ -1,3 +1,6 @@
+.. meta::
+  :description: Explore common authorization use cases using oso, including customer-facing applications, internal applications, and more.
+
 Use Cases
 =========
 

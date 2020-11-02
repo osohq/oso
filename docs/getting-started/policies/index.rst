@@ -1,3 +1,6 @@
+.. meta::
+   :description: Learn the basic structure of policies in oso.
+
 ================
 Writing Policies
 ================

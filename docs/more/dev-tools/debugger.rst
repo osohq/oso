@@ -1,3 +1,6 @@
+.. meta::
+  :description: The Polar debugger is a tool you can use when a rule is behaving differently than expected. It acts like a break point.
+
 ########
 Debugger
 ########

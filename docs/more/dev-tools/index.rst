@@ -1,3 +1,6 @@
+.. meta::
+  :description: oso offers several developer tools to make it easier to write and understand policies, like a debugger and a REPL.
+
 ===============
 Developer Tools
 ===============

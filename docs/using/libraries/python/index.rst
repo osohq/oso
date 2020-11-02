@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn how to use oso with Python to add authorization to your application.
+
 ============================
 Python Authorization Library
 ============================

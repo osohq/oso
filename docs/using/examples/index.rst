@@ -1,3 +1,6 @@
+.. meta::
+  :description: Discover common authorization patterns, and how you can represent them in oso.
+
 ===============
 Policy Examples
 ===============

@@ -44,6 +44,7 @@ release = "0.7.1"
 
 # -- General configuration ---------------------------------------------------
 
+html_title = "oso Documentation"
 release_mode = os.environ.get("DOCS_RELEASE", "") == "1"
 
 master_doc = "index"

@@ -1,3 +1,6 @@
+.. meta::
+   :description: Learn about how to control access at different levels of access -- at the model, record and field level.
+
 ===============
 Access Patterns
 ===============

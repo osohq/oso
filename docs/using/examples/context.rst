@@ -1,3 +1,6 @@
+.. meta::
+  :description: Often you want to make an authorization decision using context separate from the action, actor, and resource. Learn how to do that with oso.
+
 ========
 Context
 ========
