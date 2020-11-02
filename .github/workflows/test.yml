@@ -3,7 +3,8 @@ on: [push, pull_request_target]
 
 jobs:
   preview-docs:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: "ubuntu-latest"
     steps:
     - name: Install yard (for doc build)
       run: gem install yard
