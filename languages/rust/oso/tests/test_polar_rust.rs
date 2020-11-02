@@ -4,7 +4,8 @@
 use maplit::hashmap;
 use thiserror::Error;
 
-use oso::{ClassBuilder, PolarClass};
+use oso::{ClassBuilder, OsoError, PolarClass};
+use polar_core::error::{ErrorKind, PolarError, RuntimeError};
 
 mod common;
 
