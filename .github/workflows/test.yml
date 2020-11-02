@@ -46,6 +46,10 @@ jobs:
       - name: Check formatting of JS library
         working-directory: "languages/js"
         run: make fmtcheck
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Typecheck JS library
         working-directory: "languages/js"
         run: make typecheck
@@ -67,10 +71,6 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Add WebAssembly target
-        run: rustup target add wasm32-unknown-unknown
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Check Rust formatting
         uses: actions-rs/cargo@v1
         with:
