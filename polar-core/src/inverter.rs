@@ -13,7 +13,7 @@ use std::rc::Rc;
 use crate::counter::Counter;
 use crate::error::PolarResult;
 use crate::events::QueryEvent;
-use crate::folder::{fold_operation, Folder};
+use crate::folder::{fold_value, Folder};
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::runnable::Runnable;
@@ -54,32 +54,14 @@ impl ConstraintInverter {
             new_bindings: vec![],
         }
     }
-}
 
-impl Folder for ConstraintInverter {
-    /// Invert operators.
-    fn fold_operator(&mut self, o: Operator) -> Operator {
-        match o {
-            Operator::And => Operator::Or,
-            Operator::Or => Operator::And,
-            Operator::Unify | Operator::Eq => Operator::Neq,
-            Operator::Neq => Operator::Unify,
-            Operator::Gt => Operator::Leq,
-            Operator::Geq => Operator::Lt,
-            Operator::Lt => Operator::Geq,
-            Operator::Leq => Operator::Gt,
-            _ => todo!("negate {:?}", o),
-        }
-    }
-
-    /// Invert constraints.
-    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
+    fn invert_constraint(&mut self, c: &Constraints) -> Constraints {
         let partial = match c.operations.len() {
             // Do nothing to an empty partial.
-            0 => return c,
+            0 => return c.clone(),
 
             // Invert a single constraint.
-            1 => c.clone_with_operations(vec![fold_operation(c.operations[0].clone(), self)]),
+            1 => c.clone_with_operations(vec![invert_operation(&c.operations[0])]),
 
             // Invert the conjunction of multiple constraints, yielding a disjunction of their
             // inverted selves. (De Morgan's Law)
@@ -87,8 +69,7 @@ impl Folder for ConstraintInverter {
                 let conjuncts = c
                     .operations
                     .iter()
-                    .cloned()
-                    .map(|o| Term::new_temporary(Value::Expression(fold_operation(o, self))))
+                    .map(|o| Term::new_temporary(Value::Expression(invert_operation(o))))
                     .collect();
                 let disjunction = vec![Operation {
                     operator: Operator::Or,
@@ -102,6 +83,35 @@ impl Folder for ConstraintInverter {
             Term::new_temporary(Value::Partial(partial.clone())),
         ));
         partial
+    }
+}
+
+/// Invert operators.
+fn invert_operation(o: &Operation) -> Operation {
+    Operation {
+        operator: match o.operator {
+            Operator::And => Operator::Or,
+            Operator::Or => Operator::And,
+            Operator::Unify | Operator::Eq => Operator::Neq,
+            Operator::Neq => Operator::Unify,
+            Operator::Gt => Operator::Leq,
+            Operator::Geq => Operator::Lt,
+            Operator::Lt => Operator::Geq,
+            Operator::Leq => Operator::Gt,
+            Operator::Debug | Operator::Print | Operator::New | Operator::Dot => o.operator,
+            _ => todo!("negate {:?}", o),
+        },
+        args: o.args.clone(),
+    }
+}
+
+impl Folder for ConstraintInverter {
+    /// Invert top-level constraints.
+    fn fold_term(&mut self, t: Term) -> Term {
+        t.clone_with_value(match t.value() {
+            Value::Partial(c) => Value::Partial(self.invert_constraint(c)),
+            v => fold_value(v.clone(), self),
+        })
     }
 }
 
@@ -161,7 +171,7 @@ impl Runnable for Inverter {
                                     // We have at least one partial to return, so succeed.
                                     result = true;
 
-                                    Binding(var, value)
+                                    Binding(var, self.vm.deep_deref(&value))
                                 }),
                         );
                     }

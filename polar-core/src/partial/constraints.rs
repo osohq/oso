@@ -560,6 +560,25 @@ mod test {
     }
 
     #[test]
+    fn test_negate_conjunction_1() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(
+            r#"f(x) if not (y = 1 and x.foo = y);
+               g(x) if not (x.foo = y and y = 1);"#,
+        )?;
+        let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "1 != _this.foo");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "1 != _this.foo");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+        Ok(())
+    }
+
+    #[test]
     fn test_trivial_partials() -> TestResult {
         let polar = Polar::new();
         polar.load_str(
