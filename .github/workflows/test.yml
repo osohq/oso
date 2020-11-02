@@ -2,27 +2,6 @@ name: Development
 on: [push, pull_request_target]
 
 jobs:
-  preview-docs:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: "ubuntu-latest"
-    steps:
-    - name: Install yard (for doc build)
-      run: gem install yard
-    - name: Install spelling check
-      run: sudo apt-get install -y libenchant-dev
-    - name: Docs build
-      run: SPHINXOPTS="-W" make -C docs build
-    - name: s3 preview publish
-      run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-    - name: cloudfront invalidate docs preview
-      run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-
   check:
     if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[test]')
     runs-on: "ubuntu-latest"
@@ -171,3 +150,21 @@ jobs:
         run: SPHINXOPTS="-W" make -C docs spelling
       - name: Doc test
         run: make -C docs test
+      - name: Docs build
+        run: SPHINXOPTS="-W" make -C docs build
+
+      ## Publish docs
+      ## Also easier to do here with above deps installed
+      - name: s3 preview publish
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+      - name: cloudfront invalidate docs preview
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
+
