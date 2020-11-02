@@ -36,7 +36,7 @@ impl Inverter {
         bsp: usize,
     ) -> Self {
         Self {
-            vm: vm.clone_with_bindings(goals),
+            vm: vm.clone_with_goals(goals),
             bindings,
             bsp,
             results: vec![],

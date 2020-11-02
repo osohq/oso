@@ -306,7 +306,7 @@ impl PolarVirtualMachine {
     }
 
     /// Clone self, replacing the goal stack and retaining only the current bindings.
-    pub fn clone_with_bindings(&self, goals: Goals) -> Self {
+    pub fn clone_with_goals(&self, goals: Goals) -> Self {
         let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
         vm.bindings.clone_from(&self.bindings);
         vm.query_contains_partial = self.query_contains_partial;
