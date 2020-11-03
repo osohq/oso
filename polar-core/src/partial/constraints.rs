@@ -409,7 +409,7 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches Post{} and _this.foo = 0 and _this matches Post{} and _this.post = 1"
+            "_this matches Post{} and _this.foo = 0 and _this.post = 1"
         );
 
         let next = next_binding();
@@ -423,7 +423,7 @@ mod test {
         assert_partial_expression!(
             next,
             "a",
-            "_this matches User{} and _this.bar = 1 and _this matches User{} and _this.user = 1"
+            "_this matches User{} and _this.bar = 1 and _this.user = 1"
         );
 
         let next = next_binding();
@@ -634,7 +634,7 @@ mod test {
     }
 
     #[test]
-    fn failing_inverter_cases() -> TestResult {
+    fn partially_negated_constraints() -> TestResult {
         let p = Polar::new();
         p.load_str(
             r#"f(x) if x = 3 and not (x = 1 and (not x = 2));
@@ -653,12 +653,7 @@ mod test {
 
         let mut query = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
-        // TODO(gj): Remove redundant unification.
-        assert_partial_expression!(
-            next,
-            "a",
-            "_this = 1 and _this != 2 and _this = 1 and _this != 3"
-        );
+        assert_partial_expression!(next, "a", "_this = 1 and _this != 2 and _this != 3");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         Ok(())

@@ -822,13 +822,11 @@ def test_partial_constraint(polar):
     first = next(results)["bindings"]["x"]
     and_args = unwrap_and(first)
 
-    assert len(and_args) == 3
+    assert len(and_args) == 2
 
-    # Duplicate Isa checks.
-    for isa in and_args[:2]:
-        assert isa == Expression("Isa", [Variable("_this"), Pattern("User", {})])
+    assert and_args[0] == Expression("Isa", [Variable("_this"), Pattern("User", {})])
 
-    unify = unwrap_and(and_args[2])
+    unify = unwrap_and(and_args[1])
     assert unify == Expression(
         "Unify", [Expression("Dot", [Variable("_this"), "user"]), 1]
     )

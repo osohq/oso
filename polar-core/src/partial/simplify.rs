@@ -1,8 +1,10 @@
-use super::Constraints;
+use std::collections::HashSet;
 
-use crate::folder::{fold_operation, fold_term, Folder};
+use crate::folder::{fold_constraints, fold_operation, fold_term, Folder};
 use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Term, TermList, Value};
+
+use super::Constraints;
 
 /// Simplify the values of the bindings to be returned to the host language.
 ///
@@ -52,6 +54,18 @@ impl Folder for Simplifier {
 
             _ => fold_term(t, self),
         }
+    }
+
+    /// Deduplicate constraints.
+    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
+        let mut seen: HashSet<&Operation> = HashSet::new();
+        let ops = c
+            .operations
+            .iter()
+            .filter(|o| seen.insert(o))
+            .cloned()
+            .collect();
+        fold_constraints(c.clone_with_operations(ops), self)
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
