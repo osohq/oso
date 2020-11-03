@@ -1,3 +1,5 @@
+.. meta::
+  :description: Learn how oso handles variants of the N+1 problem when applying a search algorithm to evaluate policies.
 
 The "N+1 Problem"
 -----------------

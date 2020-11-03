@@ -1,3 +1,6 @@
+.. meta::
+  :description: oso's design is based on 3 core engineering principles: separation of concerns, right tool for the job, and freedom to extend.
+
 .. role:: polar(code)
    :language: prolog
 

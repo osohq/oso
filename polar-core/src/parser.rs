@@ -24,13 +24,6 @@ pub enum Line {
     Query(Term),
 }
 
-lazy_static::lazy_static! {
-    static ref LINES_PARSER: polar::LinesParser = polar::LinesParser::new();
-    static ref QUERY_PARSER: polar::TermExpParser = polar::TermExpParser::new();
-    static ref RULES_PARSER: polar::RulesParser = polar::RulesParser::new();
-    static ref TERM_PARSER: polar::TermParser = polar::TermParser::new();
-}
-
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
     match e {
         ParseError::InvalidToken { location: loc } => error::ParseError::InvalidToken { loc },
@@ -58,26 +51,26 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
 }
 
 pub fn parse_term(src: &str) -> PolarResult<Term> {
-    TERM_PARSER
+    polar::TermParser::new()
         .parse(0, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
 
 pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
-    LINES_PARSER
+    polar::LinesParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
 
 pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
-    QUERY_PARSER
+    polar::TermExpParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
 
 #[cfg(test)]
 pub fn parse_rules(src_id: u64, src: &str) -> PolarResult<Vec<Rule>> {
-    RULES_PARSER
+    polar::RulesParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }

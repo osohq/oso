@@ -1,3 +1,5 @@
+.. meta::
+   :description: Learn how you can use application types natively in oso.
 
 .. JAVA EXAMPLES
 

@@ -1,3 +1,6 @@
+.. meta::
+  :description: Polar tracing shows logs of how a query is evaluated.
+
 ########
 Tracing
 ########

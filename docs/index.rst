@@ -1,3 +1,6 @@
+.. meta::
+  :description: Explore our guides and reference articles for learning oso and adding it to your application.
+
 oso Documentation
 =================
 
@@ -92,6 +95,6 @@ Using oso, you can:
 .. ifconfig:: todo_include_todos
 
     (Internal) List of TODOS
-    ------------------------
+
 
 .. todolist::

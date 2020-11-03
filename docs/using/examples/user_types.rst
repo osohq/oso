@@ -1,3 +1,6 @@
+.. meta::
+  :description: oso policies can recognize different user types & apply different rules when necessary, avoiding the need for multiple authorization systems.
+
 ====================
 Multiple Actor Types
 ====================

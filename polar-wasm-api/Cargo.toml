@@ -11,9 +11,9 @@ bench = false
 [dependencies]
 console_error_panic_hook = "0.1.6"
 js-sys = "0.3.45"
-polar-core = { path = "../polar-core", version="0.7.1"}
-serde = { version = "1.0.116", features = ["rc"] }
-serde_json = "1.0.58"
+polar-core = { path = "../polar-core", version = "0.7.1" }
+serde = { version = "1.0.117", features = ["rc"] }
+serde_json = "1.0.59"
 serde-wasm-bindgen = "0.1.3"
 wasm-bindgen = "0.2.68"
 

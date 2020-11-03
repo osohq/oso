@@ -1,3 +1,6 @@
+.. meta::
+  :description: Explore oso's performance across typical workloads, microbenchmarks, scaling, and more.
+
 ===========
 Performance
 ===========
