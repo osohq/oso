@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn about the variety of frameworks that integrate directly with oso's policy engine.
+
 ======================
 Framework Integrations
 ======================

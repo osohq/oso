@@ -1,3 +1,6 @@
+.. meta::
+  :description: Role-based access control (RBAC) is a common entrypoint for authorization. Learn how to build it in oso.
+
 ====
 RBAC
 ====

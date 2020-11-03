@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn about the variety of languages that oso supports.
+
 =========
 Libraries
 =========

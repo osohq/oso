@@ -1,3 +1,6 @@
+.. meta::
+  :description: oso's IDE (Integrated Development Environment) integrations provide syntax highlighting for .polar files.
+
 ============
 IDE Support
 ============

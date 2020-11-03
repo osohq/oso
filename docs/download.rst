@@ -1,3 +1,6 @@
+.. meta::
+   :description: Download the latest release of oso, an open source policy engine for authorization.
+
 :orphan:
 
 ============

@@ -1,3 +1,8 @@
+.. title:: 0.0.2 Changelog
+.. meta::
+  :description: Check out our changelog for oso 0.0.2 to learn about new features, bug fixes, and more. 
+
+
 ======
 0.0.2
 ======

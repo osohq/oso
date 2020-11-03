@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn how to model inheritance patterns in authorization, when rules that apply to many different types of resources, with exceptions that you define.
+
 .. _inheritance:
 
 ========================================

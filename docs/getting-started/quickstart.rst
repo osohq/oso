@@ -1,3 +1,6 @@
+.. meta::
+   :description: Ready to get started? See oso in action, and walk through our quick tutorial for adding authorization to a simple web server.
+
 ==========
 Quickstart
 ==========

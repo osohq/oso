@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn about Polar, a declarative programming language purpose-built for writing modern authorization code in oso.
+
 ============
 Polar Syntax
 ============
