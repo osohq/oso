@@ -39,6 +39,9 @@ impl Constraints {
         }
     }
 
+    /// Augment our constraints with those on `other`.
+    ///
+    /// Invariant: both partials must have the same variable.
     pub fn merge_constraints(&mut self, other: Self) {
         assert_eq!(self.variable, other.variable);
         self.operations.extend(other.operations);
