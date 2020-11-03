@@ -81,8 +81,8 @@ impl ConstraintInverter {
     }
 
     fn invert_constraints(&mut self, c: &Constraints) -> Constraints {
-        let csp = self.csps[&c.variable];
-        let partial = c.clone_with_operations(c.inverted_operations(csp));
+        let csp = self.csps.get(&c.variable).unwrap_or(&0);
+        let partial = c.clone_with_operations(c.inverted_operations(*csp));
         self.new_bindings.push(Binding(
             partial.variable.clone(),
             Term::new_temporary(Value::Partial(partial.clone())),

@@ -778,7 +778,7 @@ def test_partial(polar):
     first = next(results)
 
     x = first["bindings"]["x"]
-    assert x == 1
+    assert unwrap_and(x) == Expression("Unify", [Variable("_this"), 1])
 
     second = next(results)
     x = second["bindings"]["x"]

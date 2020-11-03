@@ -1,7 +1,6 @@
 use super::Constraints;
 
 use crate::folder::{fold_operation, fold_term, Folder};
-use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Term, TermList, Value};
 
@@ -28,23 +27,9 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
 pub struct Simplifier;
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
-        fn is_this_arg(t: &Term) -> bool {
-            matches!(t.value(), Value::Variable(v) if v.is_this_var())
-        }
-
-        fn not_this_arg(terms: &[Term]) -> Term {
-            assert_eq!(terms.len(), 2, "should have 2 operands");
-            let terms = terms
-                .iter()
-                .filter(|t| !is_this_arg(t))
-                .collect::<Vec<&Term>>();
-            assert_eq!(terms.len(), 1, "should have exactly 1 non-this operand");
-            terms[0].clone()
-        }
-
         fn maybe_unwrap_operation(o: &Operation) -> Option<Term> {
             match o {
-                // If we have a single And or Or operation, unwrap it and fold the inner term.
+                // Unwrap a single-arg And or Or expression and fold the inner term.
                 Operation {
                     operator: Operator::And,
                     args,
@@ -53,25 +38,12 @@ impl Folder for Simplifier {
                     operator: Operator::Or,
                     args,
                 } if args.len() == 1 => Some(args[0].clone()),
-
-                // If we have a single Unify operation where one operand is `this` and the other is
-                // not `this`, unwrap the operation and return the non-`this` operand.
-                Operation {
-                    operator: Operator::Unify,
-                    args,
-                } if args.iter().any(is_this_arg) => Some(not_this_arg(&args)),
-
                 _ => None,
             }
         }
 
         match t.value() {
             Value::Expression(o) => fold_term(maybe_unwrap_operation(o).unwrap_or(t), self),
-
-            // An unconstrained partial is true.
-            Value::Partial(Constraints { operations, .. }) if operations.is_empty() => {
-                t.clone_with_value(Value::Boolean(true))
-            }
 
             // Elide partial when its constraints are trivial.
             Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
@@ -155,7 +127,6 @@ impl Folder for Simplifier {
 
 /// Simplify a partial until quiescence.
 fn simplify_partial(mut term: Term) -> Term {
-    eprintln!("SIMPLIFIER [OLD] {}", term.to_polar());
     let mut simplifier = Simplifier {};
     let mut new;
     loop {
@@ -165,7 +136,6 @@ fn simplify_partial(mut term: Term) -> Term {
         }
         term = new;
     }
-    eprintln!("SIMPLIFIER [NEW] {}", new.to_polar());
     new
 }
 
@@ -186,11 +156,15 @@ mod test {
     }
 
     #[test]
+    // TODO(gj): Is this maybe a silly test now that we don't simplify "trivial" unifications?
     fn test_simplify_partial() {
         let partial = term!(Constraints {
             variable: sym!("a"),
             operations: vec![op!(And, term!(op!(Unify, term!(sym!("_this")), term!(1))))],
         });
-        assert_eq!(simplify_partial(partial), term!(1));
+        assert_eq!(
+            simplify_partial(partial),
+            term!(op!(Unify, term!(sym!("_this")), term!(1)))
+        );
     }
 }
