@@ -1,3 +1,6 @@
+.. meta::
+  :description: oso provides a simple REPL (Read, Evaluate, Print, Loop), so you can interactively query your oso instance.
+
 .. _repl:
 
 ========

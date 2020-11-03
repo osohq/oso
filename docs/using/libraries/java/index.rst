@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn how to use oso with Java to add authorization to your application.
+
 ============================
 Java Authorization Library
 ============================

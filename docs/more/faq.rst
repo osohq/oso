@@ -1,3 +1,6 @@
+.. meta::
+  :description: Get answers to frequently asked questions regarding oso & Polar.
+
 ===
 FAQ
 ===

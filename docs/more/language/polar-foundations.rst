@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn about oso's policy language, Polar: what it is, where it came from, how it works, and what you can do with it.
+
 ================
 Polar Background
 ================
