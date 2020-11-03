@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604332267023,
+  "lastUpdate": 1604424538327,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -11811,6 +11811,102 @@ window.BENCHMARK_DATA = {
             "name": "indexed/100",
             "value": 5863,
             "range": "± 537",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10e9e15c92f8827915f5f8f84b4c39045e63b90b",
+          "message": "Update wasm32 target dependencies section header (#506)\n\n* More parallel jobs.\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-11-03T12:22:00-05:00",
+          "tree_id": "158e0a38c01ba18231577b10dd561b795e1176fb",
+          "url": "https://github.com/osohq/oso/commit/10e9e15c92f8827915f5f8f84b4c39045e63b90b"
+        },
+        "date": 1604424536685,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 727,
+            "range": "± 29",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2176,
+            "range": "± 48",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 56650,
+            "range": "± 1265",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 454602,
+            "range": "± 5990",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15800,
+            "range": "± 438",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 15836,
+            "range": "± 493",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 15841,
+            "range": "± 420",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 15829,
+            "range": "± 479",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 13802,
+            "range": "± 408",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 4667,
+            "range": "± 107",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 4797,
+            "range": "± 158",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5170,
+            "range": "± 1477",
             "unit": "ns/iter"
           }
         ]
