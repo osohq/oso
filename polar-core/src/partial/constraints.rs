@@ -576,7 +576,8 @@ mod test {
                g(x) if not x > 1;
                h(x) if not (x = 1 and x = 2);
                i(x) if not (x = 1 or x = 2);
-               j(x) if not (not x = 1);"#,
+               j(x) if not (not x = 1);
+               k(x) if not (not (not x = 1));"#,
         )?;
 
         let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
@@ -603,19 +604,22 @@ mod test {
         assert_eq!(next_binding(&mut query)?[&sym!("a")], term!(1));
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
+        let mut query = polar.new_query_from_term(term!(call!("k", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this != 1");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
         Ok(())
     }
 
     #[test]
-    fn test_negate_conjunction_1() -> TestResult {
+    fn test_negate_conjunctions() -> TestResult {
         let polar = Polar::new();
         polar.load_str(
             r#"f(x) if not (y = 1 and x.foo = y);
-               g(x) if not (x.foo = y and y = 1);
-               h(x) if not (x.foo = 1 or x.foo = 2);
-               i(x) if not (x = 1 or x = 2);
-               j(x) if not (y = 1 and x.foo.bar = y);
-               k(x) if not (x.foo.bar = 1 or x.foo.bar = 2);"#,
+               g(x) if not (x.foo = y and 1 = y);
+               h(x) if not (y = 1 and x.foo.bar = y);
+               i(x) if not (y = x.foo.bar and 1 = y);"#,
         )?;
         let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
@@ -629,20 +633,73 @@ mod test {
 
         let mut query = polar.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "_this.foo != 1 and _this.foo != 2");
+        assert_partial_expression!(next, "a", "1 != _this.foo.bar");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         let mut query = polar.new_query_from_term(term!(call!("i", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "_this != 1 and _this != 2");
+        assert_partial_expression!(next, "a", "1 != _this.foo.bar");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn failing_inverter_cases() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(
+            r#"f(x) if x = 3 and not (x = 1 and (not x = 2));
+               g(x) if not (x = 1 and (not x = 2));
+               h(x) if x = 1 and not (x = 2 or x = 3);
+               i(x) if not (x.foo = y);
+               j(x) if not (x.foo.bar = y);"#,
+        )?;
+        let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this = 3 and (_this != 1 or _this = 2)");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this != 1 or _this = 2");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this = 1 and (x != 2 and x != 3)");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("i", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "???????????");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         let mut query = polar.new_query_from_term(term!(call!("j", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
-        assert_partial_expression!(next, "a", "1 != _this.foo.bar");
+        assert_partial_expression!(next, "a", "???????????");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+        Ok(())
+    }
+
+    #[test]
+    fn test_negate_disjunctions() -> TestResult {
+        let polar = Polar::new();
+        polar.load_str(
+            r#"f(x) if not (x.foo = 1 or 2 = x.foo);
+               g(x) if not (1 = x or x = 2);
+               h(x) if not (x.foo.bar = 1 or 2 = x.foo.bar);"#,
+        )?;
+        let mut query = polar.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this.foo != 1 and _this.foo != 2");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
-        let mut query = polar.new_query_from_term(term!(call!("k", [partial!("a")])), false);
+        let mut query = polar.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        assert_partial_expression!(next, "a", "_this != 1 and _this != 2");
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+
+        let mut query = polar.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         let next = next_binding(&mut query)?;
         assert_partial_expression!(next, "a", "1 != _this.foo.bar and 2 != _this.foo.bar");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
