@@ -651,10 +651,15 @@ mod test {
         assert_partial_expression!(next, "a", "_this != 1 or _this = 2");
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
-        // let mut query = polar.new_query_from_term(term!(call!("h", [partial!("a")])), false);
-        // let next = next_binding(&mut query)?;
-        // assert_partial_expression!(next, "a", "_this = 1 and _this != 2 and _this != 3");
-        // assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
+        let mut query = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        let next = next_binding(&mut query)?;
+        // TODO(gj): Remove redundant unification.
+        assert_partial_expression!(
+            next,
+            "a",
+            "_this = 1 and _this != 2 and _this = 1 and _this != 3"
+        );
+        assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
 
         Ok(())
     }
