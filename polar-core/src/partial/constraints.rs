@@ -47,42 +47,42 @@ impl Constraints {
         self.operations.extend(other.operations);
     }
 
-    pub fn inverted_operations(&self) -> Vec<Operation> {
-        match self.operations.len() {
+    pub fn inverted_operations(&self, csp: usize) -> Vec<Operation> {
+        let (old, new) = self.operations.split_at(csp);
+        let mut combined = old.to_vec();
+        match new.len() {
             // Do nothing to an empty partial.
-            0 => vec![],
+            0 => (),
 
             // Invert a single constraint.
-            1 => vec![invert_operation(self.operations[0].clone())],
+            1 => combined.push(invert_operation(new[0].clone())),
 
             // Invert the conjunction of multiple constraints, yielding a disjunction of their
             // inverted selves. (De Morgan's Law)
             _ => {
-                let conjuncts = self
-                    .operations
-                    .iter()
-                    .cloned()
-                    .map(|o| Term::new_temporary(Value::Expression(invert_operation(o))))
-                    .collect();
-                vec![Operation {
+                let inverted = new.iter().cloned().map(invert_operation);
+                let inverted = inverted.map(|o| Term::new_temporary(Value::Expression(o)));
+                let inverted = Operation {
                     operator: Operator::Or,
-                    args: conjuncts,
-                }]
+                    args: inverted.collect(),
+                };
+                combined.push(inverted);
             }
         }
+        combined
     }
 
     pub fn operations(&self) -> &Vec<Operation> {
         &self.operations
     }
 
-    pub fn operations_mut(&mut self) -> &mut Vec<Operation> {
-        &mut self.operations
+    pub fn add_constraint(&mut self, o: Operation) {
+        self.operations.push(o);
     }
 
     pub fn unify(&mut self, other: Term) {
         let op = op!(Unify, self.variable_term(), other);
-        self.operations.push(op);
+        self.add_constraint(op);
     }
 
     pub fn isa(&mut self, other: Term) -> Box<dyn Runnable> {
@@ -93,7 +93,7 @@ impl Constraints {
             isa_op.clone(),
         ));
 
-        self.operations.push(isa_op);
+        self.add_constraint(isa_op);
         constraint_check
     }
 
@@ -113,7 +113,7 @@ impl Constraints {
             args: vec![self.variable_term(), other],
         };
 
-        self.operations.push(op);
+        self.add_constraint(op);
     }
 
     /// Add lookup of `field` assigned to `value` on `self.
@@ -123,7 +123,7 @@ impl Constraints {
         // Note this is a 2-arg lookup (Dot) not 3-arg. (Pre rewrite).
         assert!(matches!(field.value(), Value::String(_)));
 
-        self.operations.push(op!(
+        self.add_constraint(op!(
             Unify,
             value.clone(),
             term!(op!(Dot, self.variable_term(), field))

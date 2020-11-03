@@ -1362,6 +1362,7 @@ impl PolarVirtualMachine {
                 assert_eq!(args.len(), 1);
                 let term = args.pop().unwrap();
                 let bindings = Rc::new(RefCell::new(BindingStack::new()));
+                eprintln!("NOT: {}", term.to_polar());
                 let inverter = Box::new(Inverter::new(
                     self,
                     vec![Goal::Query { term }],

@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::hash_map::Entry;
+use std::collections::hash_map::{Entry, HashMap};
 use std::rc::Rc;
 
 use crate::counter::Counter;
@@ -9,8 +9,9 @@ use crate::folder::{fold_value, Folder};
 use crate::kb::Bindings;
 use crate::partial::Constraints;
 use crate::runnable::Runnable;
-use crate::terms::{Term, Value};
-use crate::vm::{Binding, BindingStack, Goals, PolarVirtualMachine};
+use crate::terms::{Symbol, Term, Value};
+use crate::visitor::{walk_term, Visitor};
+use crate::vm::{Binding, BindingStack, Goal, Goals, PolarVirtualMachine};
 
 #[derive(Clone)]
 pub struct Inverter {
@@ -18,6 +19,7 @@ pub struct Inverter {
     bindings: Rc<RefCell<BindingStack>>,
     bsp: usize,
     results: Vec<BindingStack>,
+    csps: HashMap<Symbol, usize>,
 }
 
 impl Inverter {
@@ -27,7 +29,36 @@ impl Inverter {
         bindings: Rc<RefCell<BindingStack>>,
         bsp: usize,
     ) -> Self {
+        struct CspVisitor {
+            csps: HashMap<Symbol, usize>,
+        }
+
+        impl Visitor for CspVisitor {
+            fn visit_constraints(&mut self, c: &Constraints) {
+                let v = c.variable.clone();
+                let csp = c.operations().len();
+                if let Some(prev) = self.csps.insert(v.clone(), csp) {
+                    assert_eq!(
+                        prev, csp,
+                        "csps don't match for {}\n\told: {}\n\tnew: {}",
+                        v.0, prev, csp
+                    );
+                }
+            }
+        }
+
+        let mut visitor = CspVisitor {
+            csps: HashMap::new(),
+        };
+
+        goals.iter().for_each(|g| {
+            if let Goal::Query { term } = g {
+                walk_term(&mut visitor, &vm.deep_deref(term));
+            }
+        });
+
         Self {
+            csps: visitor.csps,
             vm: vm.clone_with_goals(goals),
             bindings,
             bsp,
@@ -38,17 +69,20 @@ impl Inverter {
 
 struct ConstraintInverter {
     pub new_bindings: BindingStack,
+    csps: HashMap<Symbol, usize>,
 }
 
 impl ConstraintInverter {
-    pub fn new() -> Self {
+    pub fn new(csps: HashMap<Symbol, usize>) -> Self {
         Self {
+            csps,
             new_bindings: vec![],
         }
     }
 
     fn invert_constraints(&mut self, c: &Constraints) -> Constraints {
-        let partial = c.clone_with_operations(c.inverted_operations());
+        let csp = self.csps[&c.variable];
+        let partial = c.clone_with_operations(c.inverted_operations(csp));
         self.new_bindings.push(Binding(
             partial.variable.clone(),
             Term::new_temporary(Value::Partial(partial.clone())),
@@ -68,8 +102,8 @@ impl Folder for ConstraintInverter {
 }
 
 /// Invert constraints on all partials in `bindings` and return them.
-fn invert_constraints(bindings: BindingStack) -> BindingStack {
-    let mut inverter = ConstraintInverter::new();
+fn invert_constraints(bindings: BindingStack, csps: HashMap<Symbol, usize>) -> BindingStack {
+    let mut inverter = ConstraintInverter::new(csps);
     for Binding(_, value) in bindings.iter() {
         inverter.fold_term(value.clone());
     }
@@ -92,6 +126,7 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
         .drain()
         .for_each(|(var, value)| match acc.entry(var) {
             Entry::Occupied(mut o) => {
+                // TODO(gj): Does this ever get hit?
                 let mut old = o.get().value().as_partial().expect("Partial").clone();
                 let new = value.value().as_partial().expect("Partial").clone();
                 old.merge_constraints(new);
@@ -120,10 +155,11 @@ impl Runnable for Inverter {
                 QueryEvent::Done { .. } => {
                     let mut result = self.results.is_empty();
                     if !result {
+                        let csps = self.csps.clone();
                         self.bindings.borrow_mut().extend(
                             self.results
                                 .drain(..)
-                                .map(invert_constraints)
+                                .map(|b| invert_constraints(b, csps.clone()))
                                 .fold(Bindings::new(), reduce_constraints)
                                 .drain()
                                 .map(|(var, value)| {

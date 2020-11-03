@@ -1,6 +1,7 @@
 use super::Constraints;
 
 use crate::folder::{fold_operation, fold_term, Folder};
+use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Term, TermList, Value};
 
@@ -125,10 +126,10 @@ impl Folder for Simplifier {
                     args: match (left.value(), right.value()) {
                         // Distribute **inverted** expression over the partial.
                         (Value::Partial(c), Value::Expression(_)) => {
-                            map_ops(&c.inverted_operations(), right)
+                            map_ops(&c.inverted_operations(0), right)
                         }
                         (Value::Expression(_), Value::Partial(c)) => {
-                            map_ops(&c.inverted_operations(), left)
+                            map_ops(&c.inverted_operations(0), left)
                         }
                         _ => return fold_operation(o, self),
                     },
@@ -141,8 +142,8 @@ impl Folder for Simplifier {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
                         // Distribute expression over the partial.
-                        (Value::Partial(c), Value::Expression(_)) => map_ops(&c.operations, right),
-                        (Value::Expression(_), Value::Partial(c)) => map_ops(&c.operations, left),
+                        (Value::Partial(c), Value::Expression(_)) => map_ops(c.operations(), right),
+                        (Value::Expression(_), Value::Partial(c)) => map_ops(c.operations(), left),
                         _ => return fold_operation(o, self),
                     },
                 }
@@ -154,6 +155,7 @@ impl Folder for Simplifier {
 
 /// Simplify a partial until quiescence.
 fn simplify_partial(mut term: Term) -> Term {
+    eprintln!("SIMPLIFIER [OLD] {}", term.to_polar());
     let mut simplifier = Simplifier {};
     let mut new;
     loop {
@@ -163,6 +165,7 @@ fn simplify_partial(mut term: Term) -> Term {
         }
         term = new;
     }
+    eprintln!("SIMPLIFIER [NEW] {}", new.to_polar());
     new
 }
 
