@@ -840,4 +840,13 @@ mod test {
         assert!(matches!(query.next_event()?, QueryEvent::Done { .. }));
         Ok(())
     }
+
+    #[test]
+    fn nonlogical_inversions() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x) if not print(x);")?;
+        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        Ok(())
+    }
 }
