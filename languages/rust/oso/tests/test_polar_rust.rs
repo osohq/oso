@@ -474,6 +474,7 @@ fn test_unify_externals() {
     test.oso.register_class(baz_class).unwrap();
 }
 
+#[ignore = "Re-enable after updating iterator implementation"]
 #[test]
 fn test_values() {
     let _ = tracing_subscriber::fmt::try_init();

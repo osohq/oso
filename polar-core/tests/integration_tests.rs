@@ -1405,10 +1405,10 @@ fn test_in_op() -> TestResult {
 
     qeval(&mut p, "f({a:1}, [{a:1}, b, c])");
 
-    let mut query = polar.new_query("a in {a:1}", false).unwrap();
+    let mut q = p.new_query("a in {a:1}", false).unwrap();
     assert!(matches!(
-        query.next_event().unwrap(),
-        QueryEvent::NextExternal { term ,.. } if term == term!(btreemap!{sym!("a") => term!(1)})
+        q.next_event().unwrap(),
+        QueryEvent::NextExternal { term, .. } if term == term!(btreemap!{sym!("a") => term!(1)})
     ));
 
     // Negation.
