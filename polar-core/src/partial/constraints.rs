@@ -296,12 +296,27 @@ mod test {
         };
     }
 
+    fn next_event(query: &mut Query) -> Result<QueryEvent, PolarError> {
+        loop {
+            match query.next_event()? {
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                } => {
+                    query.question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0)).unwrap();
+                }
+                event => return Ok(event)
+            }
+        }
+    }
+
     fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
-        let event = query.next_event()?;
-        if let QueryEvent::Result { bindings, .. } = event {
-            Ok(bindings)
-        } else {
-            panic!("not bindings, {:?}", &event);
+        match next_event(query)? {
+            QueryEvent::Result { bindings, .. } => {
+                return Ok(bindings)
+            },
+            _ => panic!("not bindings"),
         }
     }
 
@@ -611,7 +626,7 @@ mod test {
         p.load_str(
             r#"f(x) if x = 3 and not (x = 1 and (not x = 2));
                g(x) if not (x = 1 and (not x = 2));
-               h(x) if x = 1 and not (x = 2 or x = 3);"#,
+               h(x) if x = 1 and not (x = 2 or x = 3);"#
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
@@ -625,7 +640,6 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this != 2 and _this != 3");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
 
         Ok(())
     }
@@ -802,7 +816,55 @@ mod test {
         let p = Polar::new();
         p.load_str("f(x) if not print(x);")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        let next = q.next_event()?;
+        assert!(matches!(next, QueryEvent::Done { .. }), "Got {:?}.", next);
+        Ok(())
+    }
+
+    #[test]
+    /// Test an inverted query where a constraint is added inside the inversion that
+    /// is incompatible with existing constraints, but is compatible before it's inverted.
+    fn test_compatible_before_invert() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x) if x matches User{} and not (x matches NotUser{} or x.foo = 3);")?;
+
+        let mut query = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        assert_partial_expression!(next_binding(&mut query)?, "a", "_this matches User{} and _this.foo != 3");
+
+        p.load_str("g(x) if x matches User{} and not (x matches NotUser{} and x.foo = 3);")?;
+        let mut query = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        // This output only has _this matches User{}, because we immediately judge x matches NotUser{} to be
+        // incompatible (so the not fails before reaching the and).
+        assert_partial_expression!(next_binding(&mut query)?, "a", "_this matches User{}");
+
+        p.load_str("h(x) if x matches User{} and not (x.foo = 3 and x matches NotUser{});")?;
+        let mut query = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        // This output only has _this matches User{}, because we immediately judge x matches NotUser{} to be
+        // incompatible (so the not fails before reaching the and).
+        assert_partial_expression!(next_binding(&mut query)?, "a", "_this matches User{}");
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    // TODO (dhatch): remove ignore after IN can be inverted.
+    /// Test a negation where a constraint is compatible before inversion, but incompatible afterwards.
+    fn test_incompatible_after_invert() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x) if x matches User{} and not (x matches User{});")?;
+        p.load_str("g(x) if x = 1 and not (x = 1);")?;
+
+        let mut query = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+
+        // This query fails because the inversion succeeds.
+        let event = next_event(&mut query)?;
+        assert!(matches!(event, QueryEvent::Done { .. }), "Got {:?} not done.", event);
+
+        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
+        // TODO (dhatch): This test should return no bindings once we implement unification compatibility checks.
+        assert!(matches!(next_event(&mut query)?, QueryEvent::Done { .. }));
+
         Ok(())
     }
 }

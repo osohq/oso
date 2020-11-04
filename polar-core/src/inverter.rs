@@ -17,6 +17,7 @@ use crate::vm::{Binding, BindingStack, Goal, Goals, PolarVirtualMachine};
 pub struct Inverter {
     vm: PolarVirtualMachine,
     bindings: Rc<RefCell<BindingStack>>,
+    initial_partials: Bindings,
     bsp: usize,
     results: Vec<BindingStack>,
     csps: HashMap<Symbol, usize>,
@@ -57,9 +58,26 @@ impl Inverter {
             }
         });
 
+        let mut vm = vm.clone_with_goals(goals);
+        // Remove partials from vm bindings.
+        let (partials, no_partials) = partition_partials(vm.bindings.clone());
+
+        // Rebind partials to empty partial (cannot remove from bindings because that invalidates all pointers.)
+        for Binding(var, partial) in partials.iter() {
+            if partial.value().as_partial().unwrap().operations.is_empty() {
+                // Don't rebind partials that are already empty.
+                continue;
+            }
+
+            vm.bindings.push(Binding(var.clone(), partial.clone_with_value(Value::Partial(Constraints::new(var.clone())))));
+        }
+
+        let bsp = vm.bindings.len();
+
         Self {
             csps: visitor.csps,
-            vm: vm.clone_with_goals(goals),
+            initial_partials: reduce_constraints(Bindings::new(), partials),
+            vm,
             bindings,
             bsp,
             results: vec![],
@@ -81,8 +99,8 @@ impl ConstraintInverter {
     }
 
     fn invert_constraints(&mut self, c: &Constraints) -> Constraints {
-        let csp = self.csps.get(&c.variable).unwrap_or(&0);
-        let partial = c.clone_with_operations(c.inverted_operations(*csp));
+        let csp = 0;
+        let partial = c.clone_with_operations(c.inverted_operations(csp));
         self.new_bindings.push(Binding(
             partial.variable.clone(),
             Term::new_temporary(Value::Partial(partial.clone())),
@@ -118,6 +136,12 @@ fn dedupe_bindings(bindings: BindingStack) -> Bindings {
             acc.insert(var, value);
             acc
         })
+}
+
+/// Remove partials from bindings.
+fn partition_partials(bindings: BindingStack) -> (BindingStack, BindingStack) {
+    bindings.into_iter()
+        .partition(|Binding(var, term)| matches!(term.value(), Value::Partial(_)))
 }
 
 /// Reduce + merge constraints.
@@ -160,7 +184,7 @@ impl Runnable for Inverter {
                             self.results
                                 .drain(..)
                                 .map(|b| invert_constraints(b, csps.clone()))
-                                .fold(Bindings::new(), reduce_constraints)
+                                .fold(self.initial_partials.clone(), reduce_constraints)
                                 .drain()
                                 .map(|(var, value)| {
                                     // We have at least one partial to return, so succeed.
