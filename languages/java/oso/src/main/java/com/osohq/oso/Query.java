@@ -58,8 +58,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
   }
 
   /** Helper for `ExternalCall` query events */
-  private void handleCall(
-      String attrName, Optional<JSONArray> jArgs, JSONObject polarInstance, long callId)
+  private void handleCall(String attrName, Optional<JSONArray> jArgs, JSONObject polarInstance, long callId)
       throws Exceptions.OsoException {
     Optional<List<Object>> args = Optional.empty();
     if (jArgs.isPresent()) {
@@ -72,11 +71,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       try {
         Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
         if (args.isPresent()) {
-          Class<?>[] argTypes =
-              args.get().stream()
-                  .map(a -> a.getClass())
-                  .collect(Collectors.toUnmodifiableList())
-                  .toArray(new Class[0]);
+          Class<?>[] argTypes = args.get().stream().map(a -> a.getClass()).collect(Collectors.toUnmodifiableList())
+              .toArray(new Class[0]);
           Method method = MethodUtils.getMatchingAccessibleMethod(cls, attrName, argTypes);
           if (method == null) {
             throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
@@ -111,15 +107,15 @@ public class Query implements Enumeration<HashMap<String, Object>> {
   }
 
   /** Helper for `NextExternal` query events */
-  private void handleNextExternal(long callId, JSONObject term) throws Exceptions.OsoException {
+  private void handleNextExternal(long callId, JSONObject iterable) throws Exceptions.OsoException {
     if (!calls.containsKey(callId)) {
-      Object result = host.toJava(term);
+      Object result = host.toJava(iterable);
       Enumeration<Object> enumResult;
       if (result instanceof Enumeration) {
         // TODO: test this
         enumResult = (Enumeration<Object>) result;
       } else {
-        throw new Exceptions.InvalidCallError(String.format("term %s is not iterable", term));
+        throw new Exceptions.InvalidCallError(String.format("value %s is not iterable", iterable));
       }
       calls.put(callId, enumResult);
     }
@@ -214,8 +210,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           break;
         case "NextExternal":
           callId = data.getLong("call_id");
-          JSONObject term = data.getJSONObject("term");
-          handleNextExternal(callId, term);
+          JSONObject iterable = data.getJSONObject("iterable");
+          handleNextExternal(callId, iterable);
           break;
         case "Debug":
           if (data.has("message")) {
@@ -226,7 +222,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           System.out.print("debug> ");
           try {
             String input = br.readLine();
-            if (input == null) break;
+            if (input == null)
+              break;
             String command = host.toPolarTerm(input).toString();
             ffiQuery.debugCommand(command);
           } catch (IOException e) {
@@ -250,9 +247,10 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     }
   }
 
-  /** Get the next JSONified Polar result of a cached method call (enumeration). */
-  protected JSONObject nextCallResult(long callId)
-      throws NoSuchElementException, Exceptions.OsoException {
+  /**
+   * Get the next JSONified Polar result of a cached method call (enumeration).
+   */
+  protected JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
     return host.toPolarTerm(getCall(callId).nextElement());
   }
 }

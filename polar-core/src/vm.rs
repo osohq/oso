@@ -79,7 +79,7 @@ pub enum Goal {
     },
     NextExternal {
         call_id: u64,
-        term: Term,
+        iterable: Term,
     },
     UnifyExternal {
         left_instance_id: u64,
@@ -392,7 +392,9 @@ impl PolarVirtualMachine {
                 constructor,
                 instance_id,
             } => return Ok(self.make_external(constructor, *instance_id)),
-            Goal::NextExternal { call_id, term } => return self.next_external(*call_id, term),
+            Goal::NextExternal { call_id, iterable } => {
+                return self.next_external(*call_id, iterable)
+            }
             Goal::CheckError => return self.check_error(),
             Goal::Noop => {}
             Goal::Query { term } => {
@@ -1217,16 +1219,16 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn next_external(&mut self, call_id: u64, term: &Term) -> PolarResult<QueryEvent> {
+    pub fn next_external(&mut self, call_id: u64, iterable: &Term) -> PolarResult<QueryEvent> {
         // add another choice point for the next result
         self.push_choice(vec![vec![Goal::NextExternal {
             call_id,
-            term: term.clone(),
+            iterable: iterable.clone(),
         }]]);
 
         Ok(QueryEvent::NextExternal {
             call_id,
-            term: term.clone(),
+            iterable: iterable.clone(),
         })
     }
 
@@ -1429,8 +1431,8 @@ impl PolarVirtualMachine {
             Operator::In => {
                 assert_eq!(args.len(), 2);
                 let item = &args[0];
-                let list = self.deref(&args[1]);
-                match list.value() {
+                let iterable = self.deref(&args[1]);
+                match iterable.value() {
                     Value::List(list) if list.is_empty() => {
                         // Nothing is in an empty list.
                         self.backtrack()?;
@@ -1464,7 +1466,7 @@ impl PolarVirtualMachine {
                         self.append_goals(vec![
                             Goal::NextExternal {
                                 call_id,
-                                term: self.deep_deref(&list),
+                                iterable: self.deep_deref(&iterable),
                             },
                             Goal::Unify {
                                 left: next_term,
@@ -1474,8 +1476,11 @@ impl PolarVirtualMachine {
                     }
                     _ => {
                         return Err(self.type_error(
-                            &list,
-                            format!("can only use `in` on a list, this is {:?}", list.value()),
+                            &iterable,
+                            format!(
+                                "can only use `in` on an iterable value, this is {:?}",
+                                iterable.value()
+                            ),
                         ));
                     }
                 }

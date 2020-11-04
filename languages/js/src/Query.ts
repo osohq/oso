@@ -136,9 +136,9 @@ export class Query {
     }
   }
 
-  private async handleNextExternal(callId: number, term: PolarTerm) {
+  private async handleNextExternal(callId: number, iterable: PolarTerm) {
     if (!this.#calls.has(callId)) {
-      const value = await this.#host.toJs(term);
+      const value = await this.#host.toJs(iterable);
       const generator = (async function* () {
         if (isIterableIterator(value)) {
           // If the call result is an iterable iterator, yield from it.
@@ -150,7 +150,7 @@ export class Query {
           }
         } else {
           // Otherwise, error
-          throw new InvalidIteratorError(term);
+          throw new InvalidIteratorError(iterable);
         }
       })();
       this.#calls.set(callId, generator);
@@ -226,8 +226,8 @@ export class Query {
             break;
           }
           case QueryEventKind.NextExternal: {
-            const { callId, term } = event.data as NextExternal;
-            await this.handleNextExternal(callId, term);
+            const { callId, iterable } = event.data as NextExternal;
+            await this.handleNextExternal(callId, iterable);
             break;
           }
           case QueryEventKind.Debug:

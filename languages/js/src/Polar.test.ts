@@ -668,7 +668,7 @@ describe('errors', () => {
     foo(1,2)
   in rule foo at line 1, column 13
     a in b
-Type error: can only use \`in\` on a list, this is Number(Integer(2)) at line 1, column 7`
+Type error: can only use \`in\` on an iterable value, this is Number(Integer(2)) at line 1, column 7`
       );
     });
 

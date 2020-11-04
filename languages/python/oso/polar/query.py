@@ -147,10 +147,10 @@ class Query:
 
     def handle_next_external(self, data):
         call_id = data["call_id"]
-        term = data["term"]
+        iterable = data["iterable"]
 
         if call_id not in self.calls:
-            value = self.host.to_python(term)
+            value = self.host.to_python(iterable)
             self.calls[call_id] = iter(value)
 
         # Return the next result of the call.

@@ -269,7 +269,7 @@ export interface MakeExternal {
  */
 export interface NextExternal {
   callId: number;
-  term: PolarTerm;
+  iterable: PolarTerm;
 }
 
 /**
@@ -389,15 +389,15 @@ export enum QueryEventKind {
 export interface QueryEvent {
   kind: QueryEventKind;
   data?:
-    | Debug
-    | ExternalCall
-    | ExternalIsa
-    | ExternalIsSubspecializer
-    | ExternalOp
-    | ExternalUnify
-    | MakeExternal
-    | NextExternal
-    | Result;
+  | Debug
+  | ExternalCall
+  | ExternalIsa
+  | ExternalIsSubspecializer
+  | ExternalOp
+  | ExternalUnify
+  | MakeExternal
+  | NextExternal
+  | Result;
 }
 
 /**

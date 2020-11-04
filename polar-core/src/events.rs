@@ -91,6 +91,6 @@ pub enum QueryEvent {
 
     NextExternal {
         call_id: u64,
-        term: Term,
+        iterable: Term,
     },
 }

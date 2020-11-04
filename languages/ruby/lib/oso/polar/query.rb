@@ -87,9 +87,9 @@ module Oso
         call_result(nil, call_id: call_id)
       end
 
-      def handle_next_external(call_id, term)
+      def handle_next_external(call_id, iterable)
         unless calls.key? call_id
-          value = host.to_ruby term
+          value = host.to_ruby iterable
           calls[call_id] = value.lazy
         end
 
@@ -166,8 +166,8 @@ module Oso
               raise UnimplementedOperationError, 'comparison operators'
             when 'NextExternal'
               call_id = event.data['call_id']
-              term = event.data['term']
-              handle_next_external(call_id, term)
+              iterable = event.data['iterable']
+              handle_next_external(call_id, iterable)
             else
               raise "Unhandled event: #{JSON.dump(event.inspect)}"
             end

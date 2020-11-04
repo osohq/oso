@@ -1408,7 +1408,7 @@ fn test_in_op() -> TestResult {
     let mut q = p.new_query("a in {a:1}", false).unwrap();
     assert!(matches!(
         q.next_event().unwrap(),
-        QueryEvent::NextExternal { term, .. } if term == term!(btreemap!{sym!("a") => term!(1)})
+        QueryEvent::NextExternal { iterable, .. } if iterable == term!(btreemap!{sym!("a") => term!(1)})
     ));
 
     // Negation.
