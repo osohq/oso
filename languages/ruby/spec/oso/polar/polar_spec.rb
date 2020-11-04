@@ -251,6 +251,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  # test_nil
   context 'nil is pre-registered' do
     it 'as nil' do
       subject.load_str('null(nil);')

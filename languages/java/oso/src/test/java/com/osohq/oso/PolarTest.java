@@ -250,6 +250,7 @@ public class PolarTest {
   }
 
   @Test
+  // test_nil
   public void testNil() throws Exception {
     p.loadStr("null(nil);");
 
