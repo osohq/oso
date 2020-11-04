@@ -346,6 +346,13 @@ impl PolarVirtualMachine {
         call_id
     }
 
+    fn new_call_var(&mut self, var_prefix: &str, initial_value: Value) -> (u64, Term) {
+        let sym = self.kb.read().unwrap().gensym(var_prefix);
+        self.bind(&sym, Term::new_temporary(initial_value));
+        let call_id = self.new_call_id(&sym);
+        (call_id, Term::new_temporary(Value::Variable(sym)))
+    }
+
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
@@ -1040,15 +1047,15 @@ impl PolarVirtualMachine {
                 // For each field in the dict, look up the corresponding field on the instance and
                 // then isa them.
                 for (field, right_value) in right.fields.iter() {
-                    let left_value = self.kb.read().unwrap().gensym("isa_value");
-                    let call_id = self.new_call_id(&left_value);
+                    let (call_id, answer) = self.new_call_var("isa_value", Value::Boolean(false));
+
                     let lookup = Goal::LookupExternal {
                         instance: left.clone(),
                         call_id,
                         field: right_value.clone_with_value(Value::String(field.0.clone())),
                     };
                     let isa = Goal::Isa {
-                        left: left.clone_with_value(Value::Variable(left_value)),
+                        left: answer,
                         right: right_value.clone(),
                     };
                     self.append_goals(vec![lookup, isa])?;
@@ -1197,12 +1204,9 @@ impl PolarVirtualMachine {
         instance: &Term,
         literal: &InstanceLiteral,
     ) -> PolarResult<QueryEvent> {
-        let result = self.kb.read().unwrap().gensym("isa");
-        let call_id = self.new_call_id(&result);
-
-        self.bind(&result, Term::new_temporary(Value::Boolean(false)));
+        let (call_id, answer) = self.new_call_var("isa", Value::Boolean(false));
         self.push_goal(Goal::Unify {
-            left: Term::new_temporary(Value::Variable(result)),
+            left: answer,
             right: Term::new_temporary(Value::Boolean(true)),
         })?;
 
@@ -1231,12 +1235,9 @@ impl PolarVirtualMachine {
         left_instance_id: u64,
         right_instance_id: u64,
     ) -> PolarResult<QueryEvent> {
-        let result = self.kb.read().unwrap().gensym("unify");
-        let call_id = self.new_call_id(&result);
-
-        self.bind(&result, Term::new_temporary(Value::Boolean(false)));
+        let (call_id, answer) = self.new_call_var("unify", Value::Boolean(false));
         self.push_goal(Goal::Unify {
-            left: Term::new_temporary(Value::Variable(result)),
+            left: answer,
             right: Term::new_temporary(Value::Boolean(true)),
         })?;
 
@@ -1455,10 +1456,8 @@ impl PolarVirtualMachine {
                     // Push an `ExternalLookup` goal for external instances and built-ins.
                     Value::Dictionary(_) | Value::ExternalInstance(_) | Value::String(_) => {
                         // Generate symbol for next result and bind to `false` (default)
-                        let next = self.kb.read().unwrap().gensym("next_value");
-                        self.bind(&next, Term::new_temporary(Value::Boolean(false)));
-                        let next_term = Term::new_temporary(Value::Variable(next.clone()));
-                        let call_id = self.new_call_id(&next);
+                        let (call_id, next_term) =
+                            self.new_call_var("next_value", Value::Boolean(false));
 
                         // append unify goal to be evaluated after
                         // next result is fetched
@@ -1825,15 +1824,14 @@ impl PolarVirtualMachine {
             }
             (Value::ExternalInstance(_), Value::ExternalInstance(_)) => {
                 // Generate symbol for external op result and bind to `false` (default)
-                let answer = self.kb.read().unwrap().gensym("external_op_result");
-                self.bind(&answer, Term::new_temporary(Value::Boolean(false)));
+                let (call_id, answer) =
+                    self.new_call_var("external_op_result", Value::Boolean(false));
 
                 // append unify goal to be evaluated after external op result is returned & bound
                 self.push_goal(Goal::Unify {
-                    left: Term::new_temporary(Value::Variable(answer.clone())),
+                    left: answer,
                     right: Term::new_temporary(Value::Boolean(true)),
                 })?;
-                let call_id = self.new_call_id(&answer);
                 Ok(QueryEvent::ExternalOp {
                     call_id,
                     operator: op,
@@ -2569,11 +2567,9 @@ impl PolarVirtualMachine {
     }
 
     fn run_runnable(&mut self, runnable: Box<dyn Runnable>) -> PolarResult<QueryEvent> {
-        let runnable_result = self.kb.read().unwrap().gensym("runnable_result");
-        let call_id = self.new_call_id(&runnable_result);
-
+        let (call_id, answer) = self.new_call_var("runnable_result", Value::Boolean(false));
         self.push_goal(Goal::Unify {
-            left: Term::new_temporary(Value::Variable(runnable_result)),
+            left: answer,
             right: Term::new_temporary(Value::Boolean(true)),
         })?;
 
