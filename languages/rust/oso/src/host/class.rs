@@ -12,7 +12,7 @@ use crate::errors::{InvalidCallError, OsoError};
 use super::class_method::{AttributeGetter, ClassMethod, Constructor, InstanceMethod};
 use super::from_polar::FromPolarList;
 use super::method::{Function, Method};
-use super::to_polar::ToPolarResult;
+use super::to_polar::ToPolarResults;
 use super::Host;
 
 type Attributes = HashMap<&'static str, AttributeGetter>;
@@ -29,18 +29,6 @@ fn equality_not_supported(
     };
 
     Box::new(eq)
-}
-
-fn iterator_not_supported(
-) -> Box<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync> {
-    let into_iter = move |host: &Host, instance: &Instance| {
-        Err(OsoError::UnsupportedOperation {
-            operation: String::from("in"),
-            type_name: instance.name(host).to_owned(),
-        })
-    };
-
-    Box::new(into_iter)
 }
 
 #[derive(Clone)]
@@ -65,9 +53,6 @@ pub struct Class {
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
     equality_check: Arc<dyn Fn(&Host, &Instance, &Instance) -> crate::Result<bool> + Send + Sync>,
-
-    into_iter:
-        Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>,
 }
 
 impl Class {
@@ -88,7 +73,12 @@ impl Class {
     /// Call class method `attr` on `self` with arguments from `args`.
     ///
     /// Returns: An iterable of results from the method.
-    pub fn call(&self, attr: &str, args: Vec<Term>, host: &mut Host) -> crate::Result<Term> {
+    pub fn call(
+        &self,
+        attr: &str,
+        args: Vec<Term>,
+        host: &mut Host,
+    ) -> crate::Result<super::to_polar::PolarResultIter> {
         let attr =
             self.class_methods
                 .get(attr)
@@ -139,7 +129,6 @@ where
                 class_methods: ClassMethods::new(),
                 class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
                 equality_check: Arc::from(equality_not_supported()),
-                into_iter: Arc::from(iterator_not_supported()),
                 type_id: TypeId::of::<T>(),
             },
             ty: std::marker::PhantomData,
@@ -195,24 +184,6 @@ where
         self
     }
 
-    /// Set an equality function to be used for polar `==` statements.
-    pub fn set_into_iter<F, I, V>(mut self, f: F) -> Self
-    where
-        F: Fn(&T) -> I + Send + Sync + 'static,
-        I: Iterator<Item = V> + Clone + Send + Sync + 'static,
-        V: ToPolarResult,
-    {
-        self.class.into_iter = Arc::new(move |host, instance| {
-            tracing::trace!("iter check");
-
-            let instance = instance.downcast(Some(host)).map_err(|e| e.user())?;
-
-            Ok(crate::host::PolarIterator::new(f(instance)))
-        });
-
-        self
-    }
-
     /// Use PartialEq::eq as the equality check for polar `==` statements.
     pub fn with_equality_check(self) -> Self
     where
@@ -226,7 +197,7 @@ where
     pub fn add_attribute_getter<F, R>(mut self, name: &'static str, f: F) -> Self
     where
         F: Fn(&T) -> R + Send + Sync + 'static,
-        R: ToPolarResult,
+        R: crate::ToPolar,
         T: 'static,
     {
         self.class.attributes.insert(name, AttributeGetter::new(f));
@@ -245,7 +216,7 @@ where
     where
         Args: FromPolarList,
         F: Method<T, Args, Result = R>,
-        R: ToPolarResult + 'static,
+        R: ToPolarResults + 'static,
     {
         self.class
             .instance_methods
@@ -260,8 +231,8 @@ where
         Args: FromPolarList,
         F: Method<T, Args>,
         F::Result: IntoIterator<Item = I>,
-        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Clone + Send + Sync + 'static,
-        I: ToPolarResult + 'static,
+        <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter: Sized + 'static,
+        I: ToPolarResults + 'static,
         T: 'static,
     {
         self.class
@@ -276,7 +247,7 @@ where
     where
         F: Function<Args, Result = R>,
         Args: FromPolarList,
-        R: ToPolarResult + 'static,
+        R: ToPolarResults + 'static,
     {
         self.class.class_methods.insert(name, ClassMethod::new(f));
         self
@@ -368,7 +339,12 @@ impl Instance {
     ///
     /// N.B: If the method itself returns an error, this will be captured in
     /// the PolarResultIterator (the first result will be an Error).
-    pub fn call(&self, name: &str, args: Vec<Term>, host: &mut Host) -> crate::Result<Term> {
+    pub fn call(
+        &self,
+        name: &str,
+        args: Vec<Term>,
+        host: &mut Host,
+    ) -> crate::Result<super::to_polar::PolarResultIter> {
         tracing::trace!({method = %name, ?args}, "call");
         let method = self.class(host).and_then(|c| {
             c.get_method(name).ok_or_else(|| {
@@ -380,10 +356,6 @@ impl Instance {
             })
         })?;
         method.invoke(self, args, host)
-    }
-
-    pub fn as_iter(&self, host: &Host) -> crate::Result<crate::host::PolarIterator> {
-        self.class(host).and_then(|c| (c.into_iter)(host, self))
     }
 
     /// Return `true` if the `instance` of self equals the instance of `other`.

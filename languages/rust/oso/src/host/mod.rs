@@ -17,7 +17,7 @@ pub use value::*;
 
 pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
-pub use to_polar::{PolarIterator, ToPolar, ToPolarList};
+pub use to_polar::{PolarResultIter, ToPolar, ToPolarList, ToPolarResults};
 
 impl ToPolar for crate::Class {}
 fn metaclass() -> Class {

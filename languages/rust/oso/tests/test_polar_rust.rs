@@ -165,11 +165,11 @@ fn test_external() {
     let foo_class = oso::ClassBuilder::with_constructor(capital_foo)
         .name("Foo")
         .add_attribute_getter("a", |receiver: &Foo| receiver.a)
-        .add_iterator_method("b", Foo::b)
+        // .add_method("b", |receiver: &Foo| oso::host::PolarResultIter(receiver.b()))
         .add_class_method("c", Foo::c)
         .add_method::<_, _, u32>("d", Foo::d)
         .add_method("e", Foo::e)
-        .add_iterator_method("f", Foo::f)
+        // .add_method("f", |receiver: &Foo| oso::host::PolarResultIter(receiver.f()))
         .add_method("g", Foo::g)
         .add_method("h", Foo::h)
         .build();
@@ -178,21 +178,19 @@ fn test_external() {
     test.qvar_one("new Foo().a = x", "x", "A".to_string());
     test.query_err("new Foo().a() = x");
 
-    test.query_err("new Foo().b = x");
-    assert_eq!(
-        test.qvar::<String>("x in new Foo().b()", "x"),
-        vec!["b".to_string()]
-    );
+    // test.query_err("new Foo().b = x");
+    // test.qvar_one("new Foo().b() = x", "x", vec!["b".to_string()]);
 
     test.qvar_one("Foo.c() = x", "x", "c".to_string());
     test.qvar_one("new Foo().d(1) = x", "x", 1);
     test.query_err("new Foo().d(\"1\") = x");
     test.qvar_one("new Foo() = f and f.a = x", "x", "A".to_string());
     test.qvar_one("new Foo().e() = x", "x", vec![1, 2, 3]);
-    assert_eq!(
-        test.qvar::<Vec<u32>>("x in new Foo().f()", "x",),
-        vec![vec![1, 2, 3], vec![4, 5, 6], vec![7],]
-    );
+    // test.qvar_one(
+    //     "new Foo().f() = x",
+    //     "x",
+    //     vec![vec![1, 2, 3], vec![4, 5, 6], vec![7]],
+    // );
     test.qvar_one("new Foo().g().hello = x", "x", "world".to_string());
     test.qvar_one("new Foo().h() = x", "x", true);
 }
@@ -389,12 +387,12 @@ fn test_results_and_options() {
     // TODO (dhatch): Assert type of error
     // TODO (dhatch): Check nested method error
     test.query_err("new Foo().err()");
-    test.qvar_one(r#"x in new Foo().some()"#, "x", 1);
+    test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
 
-    test.qnull(r#"x in new Foo().none() and y = 1"#);
-    test.qvar_one(r#"not (x in new Foo().none()) and y = 1"#, "y", 1);
+    test.qnull(r#"new Foo().none() = x and y = 1"#);
+    test.qvar_one(r#"not (new Foo().none()) and y = 1"#, "y", 1);
 
-    let results = test.query("x in new Foo().none()");
+    let results = test.query("new Foo().none()");
     assert!(results.is_empty());
 }
 
@@ -504,7 +502,7 @@ fn test_values() {
         )
         .unwrap();
 
-    let results: Vec<i32> = test.qvar("x in new Foo().one_two_three()", "x");
+    let results: Vec<i32> = test.qvar("new Foo().one_two_three() = x", "x");
     assert!(results == vec![1, 2, 3]);
     println!("{:?}", results);
     let result: Vec<Vec<i32>> = test.qvar("new Foo().as_list() = x", "x");

@@ -487,14 +487,14 @@ mod tests {
     #[ignore]
     #[test]
     fn gen_impls() {
-        fn tuple_type(i: usize) -> (String, String) {
+        fn tuple_type(i: usize) -> (String, String, String) {
             let letters: [char; 16] = [
                 'A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
             ];
             assert!(i <= letters.len());
             match i {
-                0 => ("".to_owned(), "".to_owned()),
-                1 => ("A,".to_owned(), "args.0".to_owned()),
+                0 => ("()".to_owned(), "".to_owned(), "()".to_owned()),
+                1 => ("(A,)".to_owned(), "A, ".to_owned(), "(args.0)".to_owned()),
                 n => {
                     let letters = letters
                         .iter()
@@ -506,42 +506,111 @@ mod tests {
                         .map(|i| format!("args.{}", i))
                         .collect::<Vec<String>>()
                         .join(", ");
-                    (format!("{}, ", letters), format!("({})", args))
+                    (
+                        format!("({})", letters),
+                        format!("{}, ", letters),
+                        format!("({})", args),
+                    )
                 }
             }
         }
 
         eprintln!("// Generated Impls (see test)");
         for i in 0..=16 {
-            let (letters, args) = tuple_type(i);
+            let (t, prefix, call) = tuple_type(i);
             let imp = format!(
                 r#"
-impl<{letters}F, R: 'static> Function<({letters})> for F
+impl<{}F, R: 'static> Function<{}> for F
 where
-    F: Fn({letters}) -> R + Send + Sync + 'static,
+    F: Fn{} -> R + Send + Sync + 'static,
 {{
     type Result = R;
 
-    fn invoke(&self, args: ({letters})) -> Self::Result {{
-        (self)({args})
-    }}
-}}
-
-impl<{letters}F, R: 'static, Receiver> Method<Receiver, ({letters})> for F
-where
-    F: Fn(&Receiver, {letters}) -> R + Send + Sync + 'static,
-{{
-    type Result = R;
-
-    fn invoke(&self, receiver: &Receiver, args: ({letters})) -> Self::Result {{
-        (self)(receiver, {args})
+    fn invoke(&self, args: {}) -> Self::Result {{
+        (self){}
     }}
 }}
 "#,
-                letters = letters,
-                args = args
+                prefix, t, t, t, call
             );
             eprintln!("{}", imp);
+        }
+
+        for i in 0..=16 {
+            let (t, prefix, call) = tuple_type(i);
+            let imp = format!(
+                r#"
+impl<{}F, R: 'static, Receiver> Method<Receiver, {}> for F
+where
+    F: Fn(&Receiver, {}) -> R + Send + Sync + 'static,
+{{
+    type Result = R;
+
+    fn invoke(&self, receiver: &Receiver, args: {}) -> Self::Result {{
+        (self)(receiver, {}
+    }}
+}}
+"#,
+                prefix,
+                t,
+                prefix.trim_end_matches(", "),
+                t,
+                call.trim_start_matches('(')
+            );
+            eprintln!("{}", imp);
+        }
+
+        let letters: [char; 16] = [
+            'A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+        ];
+
+        for i in 2..=16 {
+            let (t, prefix, _call) = tuple_type(i);
+            let from_polars = {
+                let mut v = vec![];
+                for letter in letters.iter().take(i) {
+                    v.push(format!("{}: FromPolar,", letter));
+                }
+                v.join("\n")
+            };
+            let from_elements = {
+                let mut v = vec![];
+                for (n, letter) in letters.iter().enumerate().take(i) {
+                    v.push(format!(
+                        "let {} = {}::from_polar(&terms[{}], host)?;",
+                        letter.to_ascii_lowercase(),
+                        letter,
+                        n
+                    ));
+                }
+                v.join("\n")
+            };
+            let imp = format!(
+                r#"impl<{}> FromPolar for {}
+where
+    {}
+{{
+    fn from_polar(_term: &Term, _host: &mut Host) -> crate::Result<Self> {{
+        Err(crate::OsoError::FromPolar)
+    }}
+
+    fn from_polar_list(terms: &[Term], host: &mut Host) -> crate::Result<Self> {{
+        if terms.len() == {} {{
+            {}
+            Ok({})
+        }} else {{
+            Err(crate::OsoError::FromPolar)
+        }}
+    }}
+}}"#,
+                prefix.trim_end_matches(", "),
+                t,
+                from_polars,
+                i,
+                from_elements,
+                t.to_ascii_lowercase()
+            );
+            eprintln!("{}", imp)
         }
     }
 }
