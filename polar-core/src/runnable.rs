@@ -9,6 +9,9 @@ use crate::terms::Term;
 /// backtracking & retrying alternatives.
 pub trait Runnable {
     /// Run the Runnable until an Error or QueryEvent is obtained.
+    ///
+    /// The optional Counter may be used to create monotonically increasing call IDs that will not
+    /// conflict with the parent VM's call IDs.
     fn run(&mut self, _counter: Option<&mut Counter>) -> PolarResult<QueryEvent>;
 
     fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
