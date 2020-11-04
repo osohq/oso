@@ -423,8 +423,6 @@ The left-hand side does not need to be a variable, for example::
 
 Will succeed *twice*: 1 is in the first and fourth position.
 
-The ``in`` operator generates *alternatives* for each element.
-
 .. _operator-forall:
 
 For All
