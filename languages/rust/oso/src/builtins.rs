@@ -29,6 +29,7 @@ fn option() -> ClassBuilder<Option<PolarValue>> {
     ClassBuilder::<Option<PolarValue>>::with_default()
         .name("Option")
         .with_equality_check()
+        .add_method("unwrap", |v: &Option<PolarValue>| v.clone().unwrap())
         .add_method("is_none", Option::is_none)
         .add_method("is_some", Option::is_some)
 }

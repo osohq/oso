@@ -4,7 +4,6 @@
 use impl_trait_for_tuples::*;
 
 use std::collections::HashMap;
-use std::iter;
 
 use crate::PolarValue;
 
@@ -46,6 +45,27 @@ impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
             .or_insert_with(C::get_polar_class);
 
         PolarValue::new_from_instance(self)
+    }
+}
+
+pub trait ToPolarResult {
+    fn to_polar_result(self) -> crate::Result<PolarValue>;
+}
+
+impl<R: ToPolar> ToPolarResult for R {
+    fn to_polar_result(self) -> crate::Result<PolarValue> {
+        Ok(self.to_polar())
+    }
+}
+
+impl<E: std::error::Error + Send + Sync + 'static, R: ToPolar> ToPolarResult for Result<R, E> {
+    fn to_polar_result(self) -> crate::Result<PolarValue> {
+        self.map(|r| r.to_polar())
+            .map_err(|e| crate::OsoError::ApplicationError {
+                source: Box::new(e),
+                attr: None,
+                type_name: None,
+            })
     }
 }
 
@@ -158,52 +178,40 @@ impl<T: ToPolar> ToPolar for Option<T> {
     }
 }
 
-pub type PolarResultIter = Box<dyn Iterator<Item = Result<PolarValue, crate::OsoError>> + 'static>;
+pub struct PolarIterator(pub Box<dyn PolarResultIter>);
 
-// Trait for the return value of class methods.
-// This allows us to return polar values, as well as options and results of polar values.
-pub trait ToPolarResults {
-    fn to_polar_results(self) -> PolarResultIter;
-}
+impl PolarIterator {
+    pub fn new<I: PolarResultIter + 'static>(iter: I) -> Self {
+        Self(Box::new(iter))
+    }
 
-impl<C: 'static + Sized + ToPolar> ToPolarResults for C {
-    fn to_polar_results(self) -> PolarResultIter {
-        Box::new(iter::once(Ok(self.to_polar())))
+    pub fn next(&mut self) -> Option<crate::Result<PolarValue>> {
+        self.0.next()
     }
 }
 
-impl<C, E> ToPolarResults for Result<C, E>
-where
-    C: ToPolarResults,
-    E: std::error::Error + 'static + Send + Sync,
-{
-    fn to_polar_results(self) -> PolarResultIter {
-        match self {
-            Ok(result) => result.to_polar_results(),
-            Err(e) => Box::new(iter::once(Err(crate::OsoError::ApplicationError {
-                source: Box::new(e),
-                type_name: None,
-                attr: None,
-            }))),
-        }
+impl Clone for PolarIterator {
+    fn clone(&self) -> Self {
+        Self(self.0.box_clone())
     }
 }
+impl crate::PolarClass for PolarIterator {}
 
-// NOTE: MISSING specialization... Want to have a variant for Result that
-// is not over an error, but alas impossible???
-
-pub struct PolarIter<I, Iter>
-where
-    I: ToPolarResults + 'static,
-    Iter: std::iter::Iterator<Item = I> + Sized + 'static,
-{
-    pub iter: Iter,
+pub trait PolarResultIter: Send + Sync {
+    fn box_clone(&self) -> Box<dyn PolarResultIter>;
+    fn next(&mut self) -> Option<crate::Result<PolarValue>>;
 }
 
-impl<I: ToPolarResults + 'static, Iter: std::iter::Iterator<Item = I> + Sized + 'static>
-    ToPolarResults for PolarIter<I, Iter>
+impl<I, V> PolarResultIter for I
+where
+    I: Iterator<Item = V> + Clone + Send + Sync + 'static,
+    V: ToPolarResult,
 {
-    fn to_polar_results(self) -> PolarResultIter {
-        Box::new(self.iter.flat_map(|i| i.to_polar_results())) as PolarResultIter
+    fn box_clone(&self) -> Box<dyn PolarResultIter> {
+        Box::new(self.clone())
+    }
+
+    fn next(&mut self) -> Option<crate::Result<PolarValue>> {
+        Iterator::next(self).map(|v| v.to_polar_result())
     }
 }

@@ -13,7 +13,7 @@ mod value;
 
 pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
-pub use to_polar::{PolarResultIter, ToPolar, ToPolarList, ToPolarResults};
+pub use to_polar::{PolarIterator, ToPolar, ToPolarList};
 pub use value::PolarValue;
 
 impl ToPolar for crate::Class {}

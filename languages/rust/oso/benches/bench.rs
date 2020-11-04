@@ -1,8 +1,8 @@
 //! Benchmarks of blog post things
 
-use oso::{Class, Oso, ToPolar};
+use oso::{Class, Oso, PolarClass, ToPolar};
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 pub fn rust_get_attribute(c: &mut Criterion) {
     struct Foo {
@@ -35,5 +35,66 @@ pub fn rust_get_attribute(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, rust_get_attribute);
+/// Bench: Example policy showing N+1 query behaviour.
+/// The first query is to `grandparent.children`, then
+/// for every result `child`, there will be a further query to
+/// `child.children`. Implemented naively, this results in N+1
+/// database lookups.
+pub fn n_plus_one_queries(c: &mut Criterion) {
+    let policy = "
+        has_grandchild_called(grandparent: Person, name) if
+            child in grandparent.children and
+            grandchild in child.childern and
+            grandchild.name = name;
+    ";
+
+    #[derive(Clone, PolarClass)]
+    struct Person {
+        #[polar(attribute)]
+        name: &'static str,
+    }
+
+    impl Person {
+        fn new() -> Self {
+            Self { name: "alice" }
+        }
+    }
+
+    let n_array = [100, 500, 1000, 10_000];
+
+    let mut group = c.benchmark_group("n_plus_one");
+    for &n in &n_array {
+        group.bench_function(BenchmarkId::from_parameter(n), |b| {
+            b.iter_batched_ref(
+                || {
+                    let mut oso = Oso::new();
+                    let person_class = Person::get_polar_class_builder()
+                        .set_constructor(Person::new)
+                        .add_iterator_method("children", move |person: &Person| match person.name {
+                            // alice has N-1 children called bert and one called bpb
+                            "alice" => std::iter::repeat(Person { name: "bert" })
+                                .take(n - 1)
+                                .chain(Some(Person { name: "bob" }))
+                                .collect(),
+                            // berts all have 1 child called charlie
+                            "bert" => vec![Person { name: "charlie" }],
+                            // bob all have 1 child called charlie
+                            "bob" => vec![Person { name: "cora" }],
+                            _ => vec![],
+                        })
+                        .build();
+                    oso.register_class(person_class).unwrap();
+                    oso.load_str(policy).unwrap();
+                    oso.query("has_grandchild_called(new Person(), \"cora\")")
+                        .unwrap()
+                },
+                |query| assert!(query.next_result().is_some()),
+                criterion::BatchSize::SmallInput,
+            )
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, rust_get_attribute, n_plus_one_queries);
 criterion_main!(benches);
