@@ -1,13 +1,21 @@
 name: Rust benchmark
-on: [push, pull_request_target]
+on:
+  push:
+    branches:
+      - main
+  pull_request_target:
+    branches:
 
 jobs:
   benchmark:
-    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[bench]')
     name: Run Rust benchmark example
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/cache@v2
         with:
           path: |
@@ -29,6 +37,6 @@ jobs:
           alert-comment-cc-users: "@osohq/eng"
           alert-threshold: "150%"
           # Only push, save + comment on main
-          auto-push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          comment-always: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.head_commit.message, '[showbench]') }}
-          save-data-file: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          auto-push: ${{ github.event_name == 'push' }}
+          comment-always: ${{ github.event_name == 'push' || contains(github.event.head_commit.message, '[bench]') }}
+          save-data-file: ${{ github.event_name == 'push' }}

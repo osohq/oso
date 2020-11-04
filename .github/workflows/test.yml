@@ -1,13 +1,20 @@
 name: Development
-on: [push, pull_request_target]
+on:
+  push:
+    branches:
+      - main
+  pull_request_target:
+    branches:
 
 jobs:
   check:
-    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[test]')
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: actions/cache@v2
         with:
@@ -88,11 +95,13 @@ jobs:
           args: "--dry-run --set-exit-if-changed"
 
   test:
-    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[test]')
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: actions/cache@v2
         with:
@@ -156,13 +165,13 @@ jobs:
       ## Publish docs
       ## Also easier to do here with above deps installed
       - name: s3 preview publish
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ github.event_name == 'push' }}
         run: aws s3 sync --delete docs/_build/html s3://docs-preview.oso.dev
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
       - name: cloudfront invalidate docs preview
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ github.event_name == 'push' }}
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
