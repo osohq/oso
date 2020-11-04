@@ -36,6 +36,9 @@ export class Polar {
     const equalityFn = opts.equalityFn || ((x, y) => x == y);
     this.#host = new Host(this.#ffiPolar, equalityFn);
 
+    // Register global constants.
+    this.registerConstant(null, 'nil');
+
     // Register built-in classes.
     this.registerClass(Boolean);
     this.registerClass(Number, 'Integer');
