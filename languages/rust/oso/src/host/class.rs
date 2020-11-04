@@ -1,7 +1,5 @@
 //! Support for dynamic class objects in Rust
 
-use polar_core::terms::Term;
-
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt;
@@ -14,6 +12,7 @@ use super::from_polar::FromPolarList;
 use super::method::{Function, Method};
 use super::to_polar::ToPolarResults;
 use super::Host;
+use super::PolarValue;
 
 type Attributes = HashMap<&'static str, AttributeGetter>;
 type ClassMethods = HashMap<&'static str, ClassMethod>;
@@ -60,9 +59,9 @@ impl Class {
         ClassBuilder::new()
     }
 
-    pub fn init(&self, fields: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
+    pub fn init(&self, fields: Vec<PolarValue>) -> crate::Result<Instance> {
         if let Some(constructor) = &self.constructor {
-            constructor.invoke(fields, host)
+            constructor.invoke(fields)
         } else {
             Err(crate::OsoError::Custom {
                 message: format!("MissingConstructorError: {} has no constructor", self.name),
@@ -76,8 +75,7 @@ impl Class {
     pub fn call(
         &self,
         attr: &str,
-        args: Vec<Term>,
-        host: &mut Host,
+        args: Vec<PolarValue>,
     ) -> crate::Result<super::to_polar::PolarResultIter> {
         let attr =
             self.class_methods
@@ -87,7 +85,7 @@ impl Class {
                     type_name: self.name.clone(),
                 })?;
 
-        attr.clone().invoke(args, host)
+        attr.clone().invoke(args)
     }
 
     fn get_method(&self, name: &str) -> Option<InstanceMethod> {
@@ -294,7 +292,11 @@ impl Instance {
 
     /// Check whether this is an instance of `class`
     pub fn instance_of(&self, class: &Class) -> bool {
-        self.inner.as_ref().type_id() == class.type_id
+        self.type_id() == class.type_id
+    }
+
+    pub fn type_id(&self) -> std::any::TypeId {
+        self.inner.as_ref().type_id()
     }
 
     /// Looks up the `Class` for this instance on the provided `host`
@@ -316,7 +318,7 @@ impl Instance {
     }
 
     /// Lookup an attribute on the instance via the registered `Class`
-    pub fn get_attr(&self, name: &str, host: &mut Host) -> crate::Result<Term> {
+    pub fn get_attr(&self, name: &str, host: &mut Host) -> crate::Result<PolarValue> {
         tracing::trace!({ method = %name }, "get_attr");
         let attr = self
             .class(host)
@@ -342,7 +344,7 @@ impl Instance {
     pub fn call(
         &self,
         name: &str,
-        args: Vec<Term>,
+        args: Vec<PolarValue>,
         host: &mut Host,
     ) -> crate::Result<super::to_polar::PolarResultIter> {
         tracing::trace!({method = %name, ?args}, "call");

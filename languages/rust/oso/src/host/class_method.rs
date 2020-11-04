@@ -1,6 +1,4 @@
 //! Wrapper structs for the generic `Function` and `Method` traits
-use polar_core::terms::Term;
-
 use std::sync::Arc;
 
 use super::to_polar::ToPolarResults;
@@ -9,15 +7,15 @@ use crate::host::to_polar::{PolarIter, PolarResultIter};
 
 use super::class::{Class, Instance};
 use super::method::{Function, Method};
-use super::Host;
+use super::{Host, PolarValue};
 
 fn join<A, B>(left: crate::Result<A>, right: crate::Result<B>) -> crate::Result<(A, B)> {
     left.and_then(|l| right.map(|r| (l, r)))
 }
 
-type TypeErasedFunction<R> = Arc<dyn Fn(Vec<Term>, &mut Host) -> crate::Result<R> + Send + Sync>;
+type TypeErasedFunction<R> = Arc<dyn Fn(Vec<PolarValue>) -> crate::Result<R> + Send + Sync>;
 type TypeErasedMethod<R> =
-    Arc<dyn Fn(&Instance, Vec<Term>, &mut Host) -> crate::Result<R> + Send + Sync>;
+    Arc<dyn Fn(&Instance, Vec<PolarValue>, &mut Host) -> crate::Result<R> + Send + Sync>;
 
 #[derive(Clone)]
 pub struct Constructor(TypeErasedFunction<Instance>);
@@ -29,18 +27,20 @@ impl Constructor {
         F: Function<Args>,
         F::Result: Send + Sync,
     {
-        Constructor(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            Args::from_polar_list(&args, host).map(|args| Instance::new(f.invoke(args)))
+        Constructor(Arc::new(move |args: Vec<PolarValue>| {
+            Args::from_polar_list(&args).map(|args| Instance::new(f.invoke(args)))
         }))
     }
 
-    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<Instance> {
-        self.0(args, host)
+    pub fn invoke(&self, args: Vec<PolarValue>) -> crate::Result<Instance> {
+        self.0(args)
     }
 }
 
 #[derive(Clone)]
-pub struct AttributeGetter(Arc<dyn Fn(&Instance, &mut Host) -> crate::Result<Term> + Send + Sync>);
+pub struct AttributeGetter(
+    Arc<dyn Fn(&Instance, &mut Host) -> crate::Result<PolarValue> + Send + Sync>,
+);
 
 impl AttributeGetter {
     pub fn new<T, F, R>(f: F) -> Self
@@ -53,11 +53,11 @@ impl AttributeGetter {
             let receiver = receiver
                 .downcast(Some(&host))
                 .map_err(|e| e.invariant().into());
-            receiver.map(&f).map(|v| v.to_polar(host))
+            receiver.map(&f).map(|v| v.to_polar())
         }))
     }
 
-    pub fn invoke(&self, receiver: &Instance, host: &mut Host) -> crate::Result<Term> {
+    pub fn invoke(&self, receiver: &Instance, host: &mut Host) -> crate::Result<PolarValue> {
         self.0(receiver, host)
     }
 }
@@ -74,15 +74,15 @@ impl InstanceMethod {
         T: 'static,
     {
         Self(Arc::new(
-            move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
+            move |receiver: &Instance, args: Vec<PolarValue>, host: &mut Host| {
                 let receiver = receiver
                     .downcast(Some(&host))
                     .map_err(|e| e.invariant().into());
 
-                let args = Args::from_polar_list(&args, host);
+                let args = Args::from_polar_list(&args);
 
                 join(receiver, args)
-                    .map(|(receiver, args)| f.invoke(receiver, args).to_polar_results(host))
+                    .map(|(receiver, args)| f.invoke(receiver, args).to_polar_results())
             },
         ))
     }
@@ -97,18 +97,18 @@ impl InstanceMethod {
         T: 'static,
     {
         Self(Arc::new(
-            move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
+            move |receiver: &Instance, args: Vec<PolarValue>, host: &mut Host| {
                 let receiver = receiver
                     .downcast(Some(&host))
                     .map_err(|e| e.invariant().into());
 
-                let args = Args::from_polar_list(&args, host);
+                let args = Args::from_polar_list(&args);
 
                 join(receiver, args).map(|(receiver, args)| {
                     let polar_values = PolarIter {
                         iter: f.invoke(receiver, args).into_iter(),
                     };
-                    polar_values.to_polar_results(host)
+                    polar_values.to_polar_results()
                 })
             },
         ))
@@ -117,7 +117,7 @@ impl InstanceMethod {
     pub fn invoke(
         &self,
         receiver: &Instance,
-        args: Vec<Term>,
+        args: Vec<PolarValue>,
         host: &mut Host,
     ) -> crate::Result<PolarResultIter> {
         self.0(receiver, args, host)
@@ -125,13 +125,13 @@ impl InstanceMethod {
 
     pub fn from_class_method(name: String) -> Self {
         Self(Arc::new(
-            move |receiver: &Instance, args: Vec<Term>, host: &mut Host| {
+            move |receiver: &Instance, args: Vec<PolarValue>, host: &mut Host| {
                 receiver
                     .downcast::<Class>(Some(&host))
                     .map_err(|e| e.invariant().into())
                     .and_then(|class| {
                         tracing::trace!(class = %class.name, method=%name, "class_method");
-                        class.call(&name, args, host)
+                        class.call(&name, args)
                     })
             },
         ))
@@ -148,12 +148,12 @@ impl ClassMethod {
         F: Function<Args> + 'static,
         F::Result: ToPolarResults + 'static,
     {
-        Self(Arc::new(move |args: Vec<Term>, host: &mut Host| {
-            Args::from_polar_list(&args, host).map(|args| f.invoke(args).to_polar_results(host))
+        Self(Arc::new(move |args: Vec<PolarValue>| {
+            Args::from_polar_list(&args).map(|args| f.invoke(args).to_polar_results())
         }))
     }
 
-    pub fn invoke(&self, args: Vec<Term>, host: &mut Host) -> crate::Result<PolarResultIter> {
-        self.0(args, host)
+    pub fn invoke(&self, args: Vec<PolarValue>) -> crate::Result<PolarResultIter> {
+        self.0(args)
     }
 }

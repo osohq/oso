@@ -389,8 +389,8 @@ fn test_results_and_options() {
     test.query_err("new Foo().err()");
     test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
 
-    test.qnull(r#"new Foo().none() = x and y = 1"#);
-    test.qvar_one(r#"not (new Foo().none()) and y = 1"#, "y", 1);
+    // test.qnull(r#"new Foo().none() and y = 1"#);
+    test.qvar_one(r#"not (new Foo().none() != nil) and y = 1"#, "y", 1);
 
     let results = test.query("new Foo().none()");
     assert!(results.is_empty());
@@ -577,4 +577,36 @@ fn test_without_registering() {
         .next()
         .unwrap()
         .unwrap();
+}
+
+#[test]
+fn test_option() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(Clone, Default, PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn get_some(&self) -> Option<i32> {
+            Some(12)
+        }
+
+        fn get_none(&self) -> Option<i32> {
+            None
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::default)
+                .add_method("get_some", Foo::get_some)
+                .add_method("get_none", Foo::get_none)
+                .build(),
+        )
+        .unwrap();
+    test.qvar_one("new Foo().get_some() = x", "x", Some(12i32));
+    test.qvar_one("new Foo().get_none() = x", "x", Option::<i32>::None);
+    test.qeval("new Foo().get_some() = 12");
+    test.qeval("new Foo().get_none() = nil");
 }

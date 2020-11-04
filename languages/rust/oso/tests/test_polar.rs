@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use oso::{Class, FromPolarValue, Oso, OsoError, PolarClass, PolarValue};
+use oso::{Class, FromPolar, Oso, OsoError, PolarClass, PolarValue};
 use polar_core::error as polar_error;
 
 use maplit::hashmap;
@@ -114,21 +114,18 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
     // TODO (dhatch): Type handling: Would be great to be able to get each index
     // out here dynamically, the same way we can with result set.
     if let PolarValue::List(x_vec) = v_x {
-        assert_eq!(i64::from_polar_value(x_vec.get(0).unwrap().to_owned())?, 1);
+        assert_eq!(i64::from_polar(x_vec.get(0).unwrap().to_owned())?, 1);
         assert_eq!(
-            String::from_polar_value(x_vec.get(1).unwrap().to_owned())?,
+            String::from_polar(x_vec.get(1).unwrap().to_owned())?,
             String::from("two")
         );
-        assert_eq!(
-            bool::from_polar_value(x_vec.get(2).unwrap().to_owned())?,
-            true
-        );
+        assert_eq!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?, true);
     } else {
         panic!("x not list.");
     }
 
     let v_y = x.get("y").unwrap();
-    let y: HashMap<String, bool> = HashMap::<String, bool>::from_polar_value(v_y.to_owned())?;
+    let y: HashMap<String, bool> = HashMap::<String, bool>::from_polar(v_y.to_owned())?;
     assert_eq!(y, hashmap! {String::from("z") => false});
 
     Ok(())

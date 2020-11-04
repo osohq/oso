@@ -1,7 +1,6 @@
 //! Builtin types supported in Polar
 
-use polar_core::terms::{Symbol, Value};
-
+use crate::PolarValue;
 use std::collections::HashMap;
 
 use crate::{Class, ClassBuilder};
@@ -18,12 +17,20 @@ fn float() -> ClassBuilder<f64> {
     ClassBuilder::<f64>::with_default().name("Float")
 }
 
-fn list() -> ClassBuilder<Vec<Value>> {
-    ClassBuilder::<Vec<Value>>::with_default().name("List")
+fn list() -> ClassBuilder<Vec<PolarValue>> {
+    ClassBuilder::<Vec<PolarValue>>::with_default().name("List")
 }
 
-fn dictionary() -> ClassBuilder<HashMap<Symbol, Value>> {
-    ClassBuilder::<HashMap<Symbol, Value>>::with_default().name("Dictionary")
+fn dictionary() -> ClassBuilder<HashMap<String, PolarValue>> {
+    ClassBuilder::<HashMap<String, PolarValue>>::with_default().name("Dictionary")
+}
+
+fn option() -> ClassBuilder<Option<PolarValue>> {
+    ClassBuilder::<Option<PolarValue>>::with_default()
+        .name("Option")
+        .with_equality_check()
+        .add_method("is_none", Option::is_none)
+        .add_method("is_some", Option::is_some)
 }
 
 fn string() -> ClassBuilder<String> {
@@ -44,11 +51,11 @@ fn string() -> ClassBuilder<String> {
             s.char_indices()
                 .map(|(i, c)| {
                     vec![
-                        Value::Number(polar_core::terms::Numeric::Integer(i as i64)),
-                        Value::String(c.to_string()),
+                        PolarValue::Integer(i as i64),
+                        PolarValue::String(c.to_string()),
                     ]
                 })
-                .collect::<Vec<Vec<Value>>>()
+                .collect::<Vec<Vec<PolarValue>>>()
         })
         .add_method("split_whitespace", |s: &String| {
             s.split_whitespace()
@@ -114,21 +121,21 @@ fn string() -> ClassBuilder<String> {
             s.match_indices(&pat)
                 .map(|(i, c)| {
                     vec![
-                        Value::Number(polar_core::terms::Numeric::Integer(i as i64)),
-                        Value::String(c.to_string()),
+                        PolarValue::Integer(i as i64),
+                        PolarValue::String(c.to_string()),
                     ]
                 })
-                .collect::<Vec<Vec<Value>>>()
+                .collect::<Vec<Vec<PolarValue>>>()
         })
         .add_method("rmatch_indices", |s: &String, pat: String| {
             s.rmatch_indices(&pat)
                 .map(|(i, c)| {
                     vec![
-                        Value::Number(polar_core::terms::Numeric::Integer(i as i64)),
-                        Value::String(c.to_string()),
+                        PolarValue::Integer(i as i64),
+                        PolarValue::String(c.to_string()),
                     ]
                 })
-                .collect::<Vec<Vec<Value>>>()
+                .collect::<Vec<Vec<PolarValue>>>()
         })
         .add_method("trim", |s: &String| s.trim().to_string())
         .add_method("trim_start", |s: &String| s.trim_start().to_string())
@@ -148,5 +155,6 @@ pub fn classes() -> Vec<Class> {
         list().build(),
         dictionary().build(),
         string().build(),
+        option().build(),
     ]
 }
