@@ -18,8 +18,7 @@ allow(actor: User, "view", resource: Expense) if
 # Management hierarchies
 manages(manager: User, employee) if
     report in manager.employees()
-    and (report = employee
-      or manages(report, employee));
+    and (report = employee or manages(report, employee));
 # end-hierarchy-rule
 
 

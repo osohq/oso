@@ -66,17 +66,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       args = Optional.of(host.polarListToJava(jArgs.get()));
     }
     try {
-      Object instance;
-      if (polarInstance.getJSONObject("value").has("ExternalInstance")) {
-        long instanceId =
-            polarInstance
-                .getJSONObject("value")
-                .getJSONObject("ExternalInstance")
-                .getLong("instance_id");
-        instance = host.getInstance(instanceId);
-      } else {
-        instance = host.toJava(polarInstance);
-      }
+      Object instance = host.toJava(polarInstance);
       // Select a method to call based on the types of the arguments.
       Object result = null;
       try {
