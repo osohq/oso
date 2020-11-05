@@ -66,16 +66,17 @@ Execute a Polar query through the FFI event interface.
 | `ExternalOp`               | x      |      |      |         |      |
 | `ExternalUnify`            | x      | x    |      | x       |      |
 | `MakeExternal`             | x      | x    | x    | x       | x    |
+| `NextExternal`             | x      | x    | x    | x       |      |
 | `Result`                   | x      | x    | x    | x       | x    |
 
 | Method              | Python | Ruby    | Java         | Node.js | Rust   |
 | ------------------- | ------ | ------- | ------------ | ------- | ------ |
 | `question_result`   |        | x       |              | x       | x      |
-| `register_call`     |        | x       | x            | x       | x      |
 | `call_result`       |        | x       |              | x       | x      |
 | `next_call_result`  |        | x       | x            | x       | x      |
 | `application_error` |        | x       |              | x       | x      |
 | `handle_call`       |        | x       | x            | x       | x      |
+| `next_external`     |        | x       | x            | x       | x      |
 | `has_more_elements` |        |         | x            |         |        |
 | `next_element`      |        |         | x            |         |        |
 | `results`           |        |         | x            |         |        |
