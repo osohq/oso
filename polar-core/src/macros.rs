@@ -79,6 +79,15 @@ macro_rules! partial {
     ($arg:expr) => {
         Value::Partial(Constraints::new(sym!($arg)))
     };
+    ($arg:expr, [$($args:expr),*]) => {
+        {
+            let mut constraint = Constraints::new(sym!($arg));
+            $(
+                constraint.add_constraint($args);
+            )*
+            constraint
+        }
+    };
 }
 
 #[macro_export]

@@ -158,6 +158,18 @@ mod test {
     use super::*;
     use crate::terms::*;
 
+    macro_rules! assert_expr_eq {
+        ($left:expr, $right:expr) => {
+            assert_eq!(
+                $left.clone(),
+                $right.clone(),
+                "{} != {}",
+                $left.to_polar(),
+                $right.to_polar()
+            );
+        };
+    }
+
     #[test]
     fn test_simplify_non_partial() {
         let nonpartial = term!(btreemap! {
@@ -179,6 +191,47 @@ mod test {
         assert_eq!(
             simplify_partial(partial),
             term!(op!(Unify, term!(sym!("_this")), term!(1)))
+        );
+    }
+
+    #[test]
+    fn test_simplify_single_item_and() {
+        let partial = term!(partial!(
+            "a",
+            [op!(And, term!(op!(Eq, term!(1), term!(2))))]
+        ));
+        assert_eq!(
+            simplify_partial(partial),
+            term!(op!(Eq, term!(1), term!(2)))
+        );
+
+        let partial = term!(partial!(
+            "a",
+            [op!(
+                And,
+                term!(op!(And, term!(op!(Eq, term!(1), term!(2)))))
+            )]
+        ));
+        assert_eq!(
+            simplify_partial(partial),
+            term!(op!(Eq, term!(1), term!(2)))
+        );
+
+        let partial = term!(partial!(
+            "a",
+            [op!(
+                And,
+                term!(op!(Eq, term!(3), term!(4))),
+                term!(op!(And, term!(op!(Eq, term!(1), term!(2)))))
+            )]
+        ));
+
+        assert_expr_eq!(
+            simplify_partial(partial.clone()),
+            term!(partial!(
+                "a",
+                [op!(Eq, term!(3), term!(4)), op!(Eq, term!(1), term!(2))]
+            ))
         );
     }
 }
