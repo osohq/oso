@@ -41,25 +41,49 @@ def compare_expr(expression: Expression, session: Session, model) -> BinaryExpre
     left = expression.args[0]
     right = expression.args[1]
 
-    if dot_op_field(left):
-        field = dot_op_field(left)
+    if dot_op_path(left):
+        path = dot_op_path(left)
         value = right
-        # TODO non eq
-        # TODO is there a better way to do this that isn't getattr
-        return getattr(model, field) == value
     else:
-        field = dot_op_field(right)
-        assert field
+        path = dot_op_path(right)
+        assert path
         value = left
-        return getattr(model, field) == value
+
+    return translate_comparison(path, value, model)
+
+def translate_comparison(path, value, model):
+    """Translate a comparison operation of ``path`` = ``value`` on ``model``."""
+    if len(path) == 1:
+        return getattr(model, path[0]) == value
+    else:
+        # TODO this has assumes that nested relationships are always
+        # a scalar attribute... it also probably isn't as efficient as a
+        # join usually, so we may want to translate differently.
+        property = getattr(model, path[0])
+        return property.has(
+            translate_comparison(path[1:], value, property.entity.class_))
+
 
 # TODO (dhatch): Move this helper into base.
-def dot_op_field(expr):
-    """Get the field from dot op ``expr`` or return ``False``."""
-    return (
-        isinstance(expr, Expression)
-        and expr.operator == "Dot"
-        and isinstance(expr.args[0], Variable)
-        and expr.args[0] == Variable("_this")
-        and expr.args[1]
-    )
+def dot_op_path(expr):
+    """Get the path components of a lookup.
+
+    The path is returned as a list.
+
+    _this.created_by => ['created_by']
+    _this.created_by.username => ['created_by', 'username']
+
+    None is returned if input is not a dot operation.
+    """
+    if not isinstance(expr, Expression):
+        return None
+
+    if not expr.operator == "Dot":
+        return None
+
+    assert len(expr.args) == 2
+
+    if expr.args[0] == Variable('_this'):
+        return [expr.args[1]]
+
+    return dot_op_path(expr.args[0]) + [expr.args[1]]
