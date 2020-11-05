@@ -186,8 +186,6 @@ def test_authorize_scalar_attribute_condition(session, oso):
 
     admin = session.query(User).filter(User.username == "admin_user").first()
     posts = authorize_model(oso, admin, "read", session, Post)
-    print_query(posts)
-    assert False
 
     def allowed_admin(post):
         return post.created_by.is_banned
