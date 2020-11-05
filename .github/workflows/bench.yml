@@ -34,7 +34,7 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
       - env:
-          GITHUB_OUTPUT: ${{ toJson(github.event) }}
+          GITHUB_OUTPUT: ${{ contains(github.event.head_commit.message, '[bench]') }}
         run: echo "$GITHUB_OUTPUT"
       - uses: actions/cache@v2
         with:
