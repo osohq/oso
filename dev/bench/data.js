@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604605122041,
+  "lastUpdate": 1604607008597,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12309,6 +12309,120 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 2784,
             "range": "± 44",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc9d53a56227e786ca09b4da2747014934d4386b",
+          "message": "Partial-aware not operator (#487)\n\nCo-authored-by: Alex Plotnick <alex@osohq.com>",
+          "timestamp": "2020-11-05T15:01:22-05:00",
+          "tree_id": "188d554e1140a6dc5615b1aa96880a69887fe027",
+          "url": "https://github.com/osohq/oso/commit/bc9d53a56227e786ca09b4da2747014934d4386b"
+        },
+        "date": 1604607006767,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 889,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2643,
+            "range": "± 56",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 69413,
+            "range": "± 1258",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 545049,
+            "range": "± 10144",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18790,
+            "range": "± 545",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18928,
+            "range": "± 596",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18806,
+            "range": "± 576",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18838,
+            "range": "± 649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 16713,
+            "range": "± 497",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5760,
+            "range": "± 158",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5849,
+            "range": "± 191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6307,
+            "range": "± 557",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6008,
+            "range": "± 107",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11587,
+            "range": "± 157",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7273,
+            "range": "± 81",
             "unit": "ns/iter"
           }
         ]
