@@ -89,9 +89,8 @@ public class Host implements Cloneable {
             .map(arg -> arg.getClass())
             .collect(Collectors.toUnmodifiableList())
             .toArray(new Class[0]);
-    Constructor<?>[] constructors = cls.getConstructors();
     search:
-    for (Constructor<?> c : constructors) {
+    for (Constructor<?> c : cls.getConstructors()) {
       Class<?>[] paramTypes = c.getParameterTypes();
       if (argTypes.length == paramTypes.length) {
         for (int i = 0; i < paramTypes.length; i++) {
