@@ -37,6 +37,7 @@ def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
     """
     # TODO (dhatch): Check that model is a model.
     # TODO (dhatch): More robust name mapping?
+
     partial_resource = Partial("resource", TypeConstraint(model.__name__))
     results = oso.query_rule("allow", actor, action, partial_resource)
 
@@ -47,6 +48,7 @@ def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
         if combined_query is None:
             combined_query = query
         else:
+            # TODO (dhatch): Use OR here?
             combined_query = combined_query.union(query)
 
         # if query is empty?
