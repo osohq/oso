@@ -593,6 +593,14 @@ fn test_not() -> TestResult {
     qnull(&mut p, "h(3)");
 
     qeval(&mut p, "d = {x: 1} and not d.x = 2");
+
+    // Negate And with unbound variable.
+    p.load_str("i(x,y) if not (y = 2 and x = 1);")?;
+    qvar(&mut p, "i(2,y)", "y", values![sym!("_y_44")]);
+
+    // Negate Or with unbound variable.
+    p.load_str("j(x,y) if not (y = 2 or x = 1);")?;
+    qnull(&mut p, "j(2, y)");
     Ok(())
 }
 
@@ -1242,6 +1250,34 @@ fn test_debug() -> TestResult {
     let q = p.new_query("a()", false)?;
     let _results = query_results!(q, no_results, no_externals, debug_handler);
     Ok(())
+}
+
+#[test]
+fn test_debug_in_inverter() {
+    let polar = Polar::new();
+    polar.load_str("a() if not debug();").unwrap();
+    let mut call_num = 0;
+    let debug_handler = |s: &str| {
+        let rt = match call_num {
+            0 => {
+                let expected = indoc!(
+                    r#"
+                    QUERY: debug(), BINDINGS: {}
+
+                    001: a() if not debug();
+                                    ^
+                    "#
+                );
+                assert_eq!(s, expected);
+                "over"
+            }
+            _ => panic!("Too many calls: {}", s),
+        };
+        call_num += 1;
+        rt.to_string()
+    };
+    let query = polar.new_query("a()", false).unwrap();
+    let _results = query_results!(query, no_results, no_externals, debug_handler);
 }
 
 #[test]

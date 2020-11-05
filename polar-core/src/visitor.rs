@@ -166,7 +166,7 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
 
 pub fn walk_constraints<V: Visitor>(visitor: &mut V, constraints: &Constraints) {
     visitor.visit_symbol(&constraints.variable);
-    walk_elements!(visitor, visit_operation, &constraints.operations);
+    walk_elements!(visitor, visit_operation, constraints.operations());
 }
 
 #[cfg(test)]
