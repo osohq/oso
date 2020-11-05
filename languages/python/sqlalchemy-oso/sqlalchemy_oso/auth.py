@@ -47,7 +47,7 @@ def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
         if combined_query is None:
             combined_query = query
         else:
-            combined_query.union(query)
+            combined_query = combined_query.union(query)
 
         # if query is empty?
 
@@ -55,7 +55,7 @@ def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
 
         # otherwise
 
-    if query is None:
+    if combined_query is None:
         return null_query(session)
 
-    return query
+    return combined_query
