@@ -31,6 +31,30 @@ pub fn simple_queries(c: &mut Criterion) {
     });
 }
 
+pub fn not(c: &mut Criterion) {
+    c.bench_function("not", |b| {
+        b.iter_batched_ref(
+            || runner_from_query("not false"),
+            |runner| runner.run(),
+            criterion::BatchSize::SmallInput,
+        )
+    });
+    c.bench_function("double_not", |b| {
+        b.iter_batched_ref(
+            || runner_from_query("not (not true)"),
+            |runner| runner.run(),
+            criterion::BatchSize::SmallInput,
+        )
+    });
+    c.bench_function("De_Morgan_not", |b| {
+        b.iter_batched_ref(
+            || runner_from_query("not (true or false)"),
+            |runner| runner.run(),
+            criterion::BatchSize::SmallInput,
+        )
+    });
+}
+
 pub fn fib(c: &mut Criterion) {
     let policy = "
         fib(0, 1) if cut;
@@ -257,6 +281,7 @@ criterion_group!(
     fib,
     prime,
     indexed_rules,
+    not,
 );
 criterion_main!(benches);
 
