@@ -34,8 +34,12 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
       - env:
-          GITHUB_OUTPUT: ${{ contains(github.event.head_commit.message, '[bench]') }}
-        run: echo "$GITHUB_OUTPUT"
+          push: ${{ github.event_name == 'push' }}
+          main: ${{ github.ref == 'refs/heads/main' }}
+          push_main: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          message: ${{ contains(github.event.head_commit.message, '[bench]') }}
+          push_main_message: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.head_commit.message, '[bench]') }}
+        run: echo "HI"
       - uses: actions/cache@v2
         with:
           path: |
