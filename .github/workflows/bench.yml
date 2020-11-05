@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - gj/bench-not
   pull_request_target:
     branches:
 
@@ -42,6 +43,9 @@ jobs:
       - name: Run benchmark
         run: cargo bench -- --output-format bencher | tee ../output.txt
         working-directory: polar-core
+      - env:
+          GITHUB_OUTPUT: ${{ toJson(github.event) }}
+        run: echo "$GITHUB_OUTPUT"
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
