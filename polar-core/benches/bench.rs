@@ -39,14 +39,14 @@ pub fn not(c: &mut Criterion) {
             criterion::BatchSize::SmallInput,
         )
     });
-    c.bench_function("double not", |b| {
+    c.bench_function("double_not", |b| {
         b.iter_batched_ref(
             || runner_from_query("not (not true)"),
             |runner| runner.run(),
             criterion::BatchSize::SmallInput,
         )
     });
-    c.bench_function("De Morgan not", |b| {
+    c.bench_function("De_Morgan_not", |b| {
         b.iter_batched_ref(
             || runner_from_query("not (true or false)"),
             |runner| runner.run(),
