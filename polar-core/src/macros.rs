@@ -1,4 +1,3 @@
-// Uncomment these to see macro traces
 // The build will fail on stable, but traces will still be printed
 // #![feature(trace_macros)]
 // trace_macros!(true);
@@ -78,6 +77,15 @@ macro_rules! instance {
 macro_rules! partial {
     ($arg:expr) => {
         Value::Partial(Partial::new(sym!($arg)))
+    };
+    ($arg:expr, [$($args:expr),*]) => {
+        {
+            let mut constraint = Partial::new(sym!($arg));
+            $(
+                constraint.add_constraint($args);
+            )*
+            constraint
+        }
     };
 }
 
