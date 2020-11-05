@@ -8,10 +8,11 @@ use crate::terms::Term;
 /// Runnable must be clone so that the VM can re-execute runnables when
 /// backtracking & retrying alternatives.
 pub trait Runnable {
-    /// Run the Runnable until a Error or QueryEvent is obtained.
+    /// Run the Runnable until an Error or QueryEvent is obtained.
     ///
-    /// Returns: The next query event or an error.
-    fn run(&mut self, counter: Counter) -> PolarResult<QueryEvent>;
+    /// The optional Counter may be used to create monotonically increasing call IDs that will not
+    /// conflict with the parent VM's call IDs.
+    fn run(&mut self, _counter: Option<&mut Counter>) -> PolarResult<QueryEvent>;
 
     fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
         Err(OperationalError::InvalidState("Unexpected query answer".to_string()).into())
@@ -23,6 +24,10 @@ pub trait Runnable {
 
     fn external_call_result(&mut self, _call_id: u64, _term: Option<Term>) -> PolarResult<()> {
         Err(OperationalError::InvalidState("Unexpected external call".to_string()).into())
+    }
+
+    fn debug_command(&mut self, _command: &str) -> PolarResult<()> {
+        Err(OperationalError::InvalidState("Unexpected debug command".to_string()).into())
     }
 
     // TODO Alternative?: Goal::Run takes a Runnable constructor function.
