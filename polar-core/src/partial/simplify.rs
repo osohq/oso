@@ -1,8 +1,10 @@
-use super::Constraints;
+use std::collections::HashSet;
 
-use crate::folder::{fold_operation, fold_term, Folder};
+use crate::folder::{fold_constraints, fold_operation, fold_term, Folder};
 use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Term, TermList, Value};
+
+use super::Constraints;
 
 /// Simplify the values of the bindings to be returned to the host language.
 ///
@@ -11,7 +13,6 @@ use crate::terms::{Operation, Operator, Term, TermList, Value};
 pub fn simplify_bindings(bindings: Bindings) -> Bindings {
     bindings
         .into_iter()
-        .filter(|(v, _)| !v.is_temporary_var())
         .map(|(var, value)| match value.value() {
             Value::Partial(_) => {
                 let mut simplified = simplify_partial(value);
@@ -26,52 +27,50 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
 }
 
 pub struct Simplifier;
-
 impl Folder for Simplifier {
     fn fold_term(&mut self, t: Term) -> Term {
-        match t.value() {
-            Value::Partial(Constraints { operations, .. }) if operations.is_empty() => {
-                t.clone_with_value(Value::Boolean(true))
+        fn maybe_unwrap_operation(o: &Operation) -> Option<Term> {
+            match o {
+                // Unwrap a single-arg And or Or expression and fold the inner term.
+                Operation {
+                    operator: Operator::And,
+                    args,
+                }
+                | Operation {
+                    operator: Operator::Or,
+                    args,
+                } if args.len() == 1 => Some(args[0].clone()),
+                _ => None,
             }
+        }
 
+        match t.value() {
+            Value::Expression(o) => fold_term(maybe_unwrap_operation(o).unwrap_or(t), self),
+
+            // Elide partial when its constraints are trivial.
             Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
-                fn is_this_arg(t: &Term) -> bool {
-                    matches!(t.value(), Value::Variable(v) if v.is_this_var())
-                }
-
-                match operations.get(0).unwrap() {
-                    // If we have a single And operation, unwrap it and fold the inner term.
-                    Operation {
-                        operator: Operator::And,
-                        args,
-                    } if args.len() == 1 => fold_term(args.get(0).unwrap().clone(), self),
-
-                    // If we have a single Unify operation where one operand is _this and the other
-                    // is not _this, unwrap the operation and return the non-_this operand.
-                    Operation {
-                        operator: Operator::Unify,
-                        args,
-                    } if args.iter().any(is_this_arg) => {
-                        let mut args = args
-                            .iter()
-                            .filter(|arg| !is_this_arg(arg))
-                            .cloned()
-                            .collect::<TermList>();
-                        assert_eq!(args.len(), 1, "should have exactly 1 non-_this operand");
-                        fold_term(args.pop().unwrap(), self)
-                    }
-
-                    _ => fold_term(t, self),
-                }
+                fold_term(maybe_unwrap_operation(&operations[0]).unwrap_or(t), self)
             }
 
             _ => fold_term(t, self),
         }
     }
 
+    /// Deduplicate constraints.
+    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
+        let mut seen: HashSet<&Operation> = HashSet::new();
+        let ops = c
+            .operations
+            .iter()
+            .filter(|o| seen.insert(o))
+            .cloned()
+            .collect();
+        fold_constraints(c.clone_with_operations(ops), self)
+    }
+
     fn fold_operation(&mut self, o: Operation) -> Operation {
-        /// Given `_this` and `x`, return `x`.
-        /// Given `_this.x` and `_this.y`, return `_this.x.y`.
+        /// Given `this` and `x`, return `x`.
+        /// Given `this.x` and `this.y`, return `this.x.y`.
         fn sub_this(arg: &Term, expr: &Term) -> Term {
             match (arg.value(), expr.value()) {
                 (Value::Variable(v), _) if v.is_this_var() => expr.clone(),
@@ -86,7 +85,7 @@ impl Folder for Simplifier {
                     }),
                 ) => arg.clone_with_value(Value::Expression(Operation {
                     operator: Operator::Dot,
-                    args: vec![expr.clone(), args.get(1).unwrap().clone()],
+                    args: vec![expr.clone(), args[1].clone()],
                 })),
                 _ => arg.clone(),
             }
@@ -105,15 +104,32 @@ impl Folder for Simplifier {
         };
 
         match o.operator {
-            Operator::Unify => {
-                let left = o.args.get(0).unwrap();
-                let right = o.args.get(1).unwrap();
+            Operator::Neq => {
+                let left = &o.args[0];
+                let right = &o.args[1];
+                Operation {
+                    operator: Operator::And,
+                    args: match (left.value(), right.value()) {
+                        // Distribute **inverted** expression over the partial.
+                        (Value::Partial(c), Value::Expression(_)) => {
+                            map_ops(&c.inverted_operations(0), right)
+                        }
+                        (Value::Expression(_), Value::Partial(c)) => {
+                            map_ops(&c.inverted_operations(0), left)
+                        }
+                        _ => return fold_operation(o, self),
+                    },
+                }
+            }
+            Operator::Eq | Operator::Unify => {
+                let left = &o.args[0];
+                let right = &o.args[1];
                 Operation {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
                         // Distribute expression over the partial.
-                        (Value::Partial(c), Value::Expression(_)) => map_ops(&c.operations, right),
-                        (Value::Expression(_), Value::Partial(c)) => map_ops(&c.operations, left),
+                        (Value::Partial(c), Value::Expression(_)) => map_ops(c.operations(), right),
+                        (Value::Expression(_), Value::Partial(c)) => map_ops(c.operations(), left),
                         _ => return fold_operation(o, self),
                     },
                 }
@@ -135,4 +151,34 @@ fn simplify_partial(mut term: Term) -> Term {
         term = new;
     }
     new
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::terms::*;
+
+    #[test]
+    fn test_simplify_non_partial() {
+        let nonpartial = term!(btreemap! {
+            sym!("a") => term!(1),
+            sym!("b") => term!([
+                value!("hello")
+            ]),
+        });
+        assert_eq!(simplify_partial(nonpartial.clone()), nonpartial);
+    }
+
+    #[test]
+    // TODO(gj): Is this maybe a silly test now that we don't simplify "trivial" unifications?
+    fn test_simplify_partial() {
+        let partial = term!(Constraints {
+            variable: sym!("a"),
+            operations: vec![op!(And, term!(op!(Unify, term!(sym!("_this")), term!(1))))],
+        });
+        assert_eq!(
+            simplify_partial(partial),
+            term!(op!(Unify, term!(sym!("_this")), term!(1)))
+        );
+    }
 }

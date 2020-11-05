@@ -77,10 +77,7 @@ macro_rules! instance {
 #[macro_export]
 macro_rules! partial {
     ($arg:expr) => {
-        Value::Partial(Constraints {
-            variable: sym!($arg),
-            operations: vec![],
-        })
+        Value::Partial(Constraints::new(sym!($arg)))
     };
 }
 

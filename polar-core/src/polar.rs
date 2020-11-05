@@ -39,8 +39,8 @@ impl Query {
     /// 4. When Runnable B emits a Done event, pop Runnable B off the stack and return its result as
     ///    an answer to Runnable A.
     pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
-        let counter = self.vm.id_counter();
-        match self.top_runnable().run(counter)? {
+        let mut counter = self.vm.id_counter();
+        match self.top_runnable().run(Some(&mut counter))? {
             QueryEvent::Run { runnable, call_id } => {
                 self.push_runnable(runnable, call_id)?;
                 self.next_event()
@@ -90,7 +90,7 @@ impl Query {
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
-        self.vm.debug_command(command)
+        self.top_runnable().debug_command(command)
     }
 
     pub fn next_message(&self) -> Option<Message> {

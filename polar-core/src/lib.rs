@@ -11,6 +11,7 @@ pub mod macros;
 mod counter;
 pub mod events;
 mod folder;
+mod inverter;
 pub mod kb;
 pub mod messages;
 mod numerics;

@@ -21,17 +21,6 @@ impl PolarVirtualMachine {
         format!("QUERY: {}, BINDINGS: {{{}}}", query_str, bindings_str)
     }
 
-    /// Drive debugger.
-    pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
-        let mut debugger = self.debugger.clone();
-        let maybe_goal = debugger.debug_command(command, self);
-        if let Some(goal) = maybe_goal {
-            self.push_goal(goal)?;
-        }
-        self.debugger = debugger;
-        Ok(())
-    }
-
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
     /// push it onto the goal stack.
     pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<()> {
@@ -169,7 +158,7 @@ impl Debugger {
     /// For movement commands (`"continue"`, `"over"`, `"out"`, `"step"`), set the internal state
     /// of the [`Debugger`](struct.Debugger.html) to the appropriate
     /// [`Option<Step>`](struct.Debugger.html#structfield.step).
-    fn debug_command(&mut self, command: &str, vm: &PolarVirtualMachine) -> Option<Goal> {
+    pub fn debug_command(&mut self, command: &str, vm: &PolarVirtualMachine) -> Option<Goal> {
         fn show<T>(stack: &[T]) -> Goal
         where
             T: std::fmt::Display,
