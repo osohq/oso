@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn how to use oso with Ruby to add authorization to your application.
+
 ============================
 Ruby Authorization Library
 ============================

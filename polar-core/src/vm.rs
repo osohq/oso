@@ -229,27 +229,25 @@ impl Default for PolarVirtualMachine {
 
 #[allow(clippy::ptr_arg)]
 fn query_contains_partial(goals: &Goals) -> bool {
-    if goals.len() == 1 {
-        if let Goal::Query { term } = &goals[0] {
-            struct PartialVisitor {
-                has_partial: bool,
-            }
+    struct PartialVisitor {
+        has_partial: bool,
+    }
 
-            impl Visitor for PartialVisitor {
-                fn visit_constraints(&mut self, _: &partial::Constraints) {
-                    self.has_partial = true;
-                }
-            }
+    impl Visitor for PartialVisitor {
+        fn visit_constraints(&mut self, _: &partial::Constraints) {
+            self.has_partial = true;
+        }
+    }
 
-            let mut visitor = PartialVisitor { has_partial: false };
+    let mut visitor = PartialVisitor { has_partial: false };
+    goals.iter().any(|goal| {
+        if let Goal::Query { term } = goal {
             walk_term(&mut visitor, &term);
             visitor.has_partial
         } else {
             false
         }
-    } else {
-        false
-    }
+    })
 }
 
 // Methods which aren't goals/instructions.
@@ -914,7 +912,14 @@ impl PolarVirtualMachine {
             (_, Value::InstanceLiteral(_)) | (_, Value::Dictionary(_)) => {
                 unreachable!("parsed as pattern")
             }
-            (_, Value::Partial(_)) => unreachable!("cannot match against a partial"),
+            (_, Value::Partial(_)) => {
+                return Err(self.set_error_context(
+                    &right,
+                    error::RuntimeError::Unsupported {
+                        msg: "cannot match against a partial".to_string(),
+                    },
+                ));
+            }
 
             (Value::Variable(v), _) | (Value::RestVariable(v), _) => {
                 if let Some(value) = self.value(&v).cloned() {
@@ -1950,11 +1955,19 @@ impl PolarVirtualMachine {
     /// Unify a symbol `left` with a term `right`.
     /// This is sort of a "sub-goal" of `Unify`.
     fn unify_var(&mut self, left: &Symbol, right: &Term) -> PolarResult<()> {
+        let right_value = match right.value() {
+            Value::Variable(v) | Value::RestVariable(v) => self.value(v).cloned(),
+            v @ Value::Expression(_) | v @ Value::Pattern(_) => {
+                let src = (self.term_source(right, false), left);
+                let msg = match v {
+                    Value::Pattern(_) => format!("cannot bind pattern '{}' to '{}'", src.0, src.1),
+                    _ => format!("cannot bind expression '{}' to '{}'", src.0, src.1),
+                };
+                return Err(self.type_error(&right, msg));
+            }
+            _ => None,
+        };
         let left_value = self.value(&left).cloned();
-        let mut right_value = None;
-        if let Value::Variable(ref right_sym) | Value::RestVariable(ref right_sym) = right.value() {
-            right_value = self.value(right_sym).cloned();
-        }
 
         // Rebind the previous name of `term` to a variable pointing to
         // `var`. `term` must be a partial.

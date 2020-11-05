@@ -1,3 +1,5 @@
+.. meta::
+  :description: Learn about the internals of the oso policy engine and Polar language, which are underpinned by a VM built in Rust.
 
 Internals
 ---------

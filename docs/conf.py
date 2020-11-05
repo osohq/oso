@@ -44,6 +44,7 @@ release = "0.7.1"
 
 # -- General configuration ---------------------------------------------------
 
+html_title = "oso Documentation"
 release_mode = os.environ.get("DOCS_RELEASE", "") == "1"
 
 master_doc = "index"
@@ -151,8 +152,6 @@ html_theme_options = {
     "master_doc": False,
     # Set the name of the project to appear in the navigation.
     "nav_title": "oso Documentation",
-    # Set you GA account ID to enable tracking
-    "google_analytics_account": "UA-139858805-1" if release_mode else "",
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
     "base_url": "https://docs.osohq.com/",
@@ -174,8 +173,7 @@ html_theme_options = {
     "nav_links": False,
 }
 html_show_sphinx = False
-version_dropdown = True
-version_info = {"release": "/", "devel": "/devel"}
+version_dropdown = False
 html_sidebars = {"**": ["globaltoc.html", "localtoc.html"]}
 
 html_logo = "oso_logo_trimmed.png"

@@ -1,3 +1,6 @@
+.. meta::
+   :description: A detailed guide for incorporating oso's policy engine into your application.
+
 =======================
 Add To Your Application
 =======================

@@ -1,49 +1,78 @@
-{% extends "!layout.html" %} {%- block extrahead %} {{ super() }}
-<script
-  src="https://kit.fontawesome.com/2c76e395a4.js"
-  crossorigin="anonymous"
-></script>
-{% endblock %} {% block footer %} {{ super() }}
-<!-- Start of HubSpot Embed Code -->
-<script
-  type="text/javascript"
-  id="hs-script-loader"
-  async
-  defer
-  src="//js.hs-scripts.com/8091225.js"
-></script>
-<!-- End of HubSpot Embed Code -->
-{% endblock %} {%- block extrafooter %}
-<div class="subscribe-form align-right newsletter-footer w-form">
-  <form id="subscribe-form-docs" name="subscribe-form-docs">
-    <label class="matter-textfield-filled">
-      <input
-        type="email"
-        maxlength="256"
-        name="Email-Address"
-        id="Email-Address"
-        required="True"
-        placeholder="Email Address"
-      />
-    </label>
-    <button
-      type="submit"
-      data-wait="Churning..."
-      class="matter-button-contained subscribe"
-    >
-      Subscribe
-    </button>
-  </form>
-</div>
-<div class="subscribe-form">
-  <a href="https://github.com/osohq/">
-    <em class="fab fa-github" aria-hidden="true"></em>
-  </a>
-  <a href="https://join-slack.osohq.com/">
-    <em class="fab fa-slack" aria-hidden="true"></em>
-  </a>
-  <a href="https://twitter.com/osohq">
-    <em class="fab fa-twitter" aria-hidden="true"></em>
-  </a>
-</div>
-{{ super() }} {%- endblock %}
+{% extends "!layout.html" %}
+
+{%- block htmltitle %}
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-MK29QFG');</script>
+
+  {{ super() }}
+{%- endblock %}
+
+{%- block extrahead %}
+  {{ super() }}
+
+  <script
+    src="https://kit.fontawesome.com/2c76e395a4.js"
+    crossorigin="anonymous"
+  ></script>
+{%- endblock %}
+
+{% block body_tag %}
+  {{ super() }}
+
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MK29QFG"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+{% endblock %}
+
+{% block footer %}
+  {{ super() }}
+
+  <!-- Start of HubSpot Embed Code -->
+  <script
+    type="text/javascript"
+    id="hs-script-loader"
+    async
+    defer
+    src="//js.hs-scripts.com/8091225.js"
+  ></script>
+  <!-- End of HubSpot Embed Code -->
+{% endblock %}
+
+{%- block extrafooter %}
+  <div class="subscribe-form align-right newsletter-footer w-form">
+    <form id="subscribe-form-docs" name="subscribe-form-docs">
+      <label class="matter-textfield-filled">
+        <input
+          type="email"
+          maxlength="256"
+          name="Email-Address"
+          id="Email-Address"
+          required="True"
+          placeholder="Email Address"
+        />
+      </label>
+      <button
+        type="submit"
+        data-wait="Churning..."
+        class="matter-button-contained subscribe"
+      >
+        Subscribe
+      </button>
+    </form>
+  </div>
+  <div class="subscribe-form">
+    <a href="https://github.com/osohq/">
+      <em class="fab fa-github" aria-hidden="true"></em>
+    </a>
+    <a href="https://join-slack.osohq.com/">
+      <em class="fab fa-slack" aria-hidden="true"></em>
+    </a>
+    <a href="https://twitter.com/osohq">
+      <em class="fab fa-twitter" aria-hidden="true"></em>
+    </a>
+  </div>
+
+  {{ super() }}
+{%- endblock %}

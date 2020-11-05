@@ -1,3 +1,6 @@
+.. meta::
+  :description: A reference page with key terms used throughout the documentation to explain how oso works.
+
 ========
 Glossary
 ========

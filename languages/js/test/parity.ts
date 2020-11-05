@@ -1,4 +1,5 @@
 import { Oso } from '../src/Oso';
+import { Variable } from '../src/Variable';
 
 const oso = new Oso();
 
@@ -167,6 +168,20 @@ oso.registerClass(E);
   await oso.loadStr(
     '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;'
   );
+
+  // Test unspecialized rule ordering
+  const result = oso.queryRule(
+    'testUnspecializedRuleOrder',
+    'foo',
+    'bar',
+    new Variable('z')
+  );
+  if (((await result.next()).value as Map<string, any>).get('z') !== 1)
+    throw new Error();
+  if (((await result.next()).value as Map<string, any>).get('z') !== 2)
+    throw new Error();
+  if (((await result.next()).value as Map<string, any>).get('z') !== 3)
+    throw new Error();
 
   console.log('tests pass');
 })();

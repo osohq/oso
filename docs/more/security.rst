@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn about security best practices for using oso, and how we approach building a secure product.
+
 ========
 Security
 ========

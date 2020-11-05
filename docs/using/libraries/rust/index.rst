@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn how to use oso with Rust to add authorization to your application.
+
 ============================
 Rust Authorization Library
 ============================

@@ -1,6 +1,6 @@
 import com.osohq.oso.*;
 import java.io.IOException;
-import java.util.List;
+import java.util.*;
 
 class Test {
   public static class A {
@@ -121,6 +121,11 @@ class Test {
 
     // Test deref behaviour
     o.loadStr("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].indexOf(1) = 2;");
+
+    // Test unspecialized rule ordering
+    assert o.queryRule("testUnspecializedRuleOrder", "foo", "bar", new Variable("z"))
+        .results()
+        .equals(List.of(Map.of("z", 1), Map.of("z", 2), Map.of("z", 3)));
 
     System.out.println("Tests Pass");
   }

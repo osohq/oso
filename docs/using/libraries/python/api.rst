@@ -1,3 +1,6 @@
+.. meta::
+  :description: Reference page on oso's underlying integration and Python API.
+
 ==========
 Python API
 ==========

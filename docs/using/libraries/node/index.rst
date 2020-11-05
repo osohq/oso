@@ -1,3 +1,6 @@
+.. meta::
+  :description: Learn how to use oso with Node.JS to add authorization to your application.
+
 =============================
 Node.js Authorization Library
 =============================
