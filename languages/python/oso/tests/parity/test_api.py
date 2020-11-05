@@ -7,6 +7,7 @@ from pathlib import Path
 
 from polar import Polar, Predicate
 from polar.exceptions import (
+    InvalidIteratorError,
     PolarRuntimeError,
     PolarApiError,
     PolarFileExtensionError,
@@ -254,7 +255,7 @@ def test_iter_fields(polar, load_policy, query):
     resource = Widget(id=1, name="stapler")
     actor = Actor(name="milton", id=1)
     assert query(Predicate(name="allow", args=[actor, "can_have", resource]))
-    with pytest.raises(TypeError):
+    with pytest.raises(InvalidIteratorError):
         query(Predicate(name="allow", args=[actor, "tries_to_get", resource]))
 
 

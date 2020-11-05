@@ -172,3 +172,20 @@ export class X {
     return 'X';
   }
 }
+
+export class NonIterable {
+  constructor() {}
+}
+
+export class BarIterator {
+  items: number[];
+  constructor(items: number[]) {
+    this.items = items;
+  }
+  sum() {
+    return this.items.reduce((prev, curr) => prev + curr);
+  }
+  [Symbol.iterator]() {
+    return this.items.values();
+  }
+}

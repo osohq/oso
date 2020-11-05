@@ -17,12 +17,14 @@ import {
   Animal,
   B,
   Bar,
+  BarIterator,
   Belonger,
   C,
   ConstructorArgs,
   ConstructorNoArgs,
   Counter,
   Foo,
+  NonIterable,
   User,
   Widget,
   X,
@@ -35,6 +37,7 @@ import {
   PolarFileNotFoundError,
   PolarFileExtensionError,
   UnimplementedOperationError,
+  InvalidIteratorError,
 } from './errors';
 
 test('it works', async () => {
@@ -90,7 +93,7 @@ describe('#registerClass', () => {
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
     expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
-      '[object Object] is not iterable'
+      'function is not iterable'
     );
     expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual(
       'b'
@@ -730,4 +733,36 @@ test('fails gracefully on ExternalOp events', () => {
   expect(query(p, 'new X() == new X()')).rejects.toThrow(
     UnimplementedOperationError
   );
+});
+
+describe('iterators', () => {
+  test('work over builtins', async () => {
+    const p = new Polar();
+    expect(await qvar(p, 'x in "abc"', 'x')).toStrictEqual(['a', 'b', 'c']);
+    expect(
+      await qvar(p, 'x in Dictionary.entries({a: 1, b: 2})', 'x')
+    ).toStrictEqual([
+      ['a', 1],
+      ['b', 2],
+    ]);
+  });
+
+  test('fails for non iterables', async () => {
+    const p = new Polar();
+    p.registerClass(NonIterable, 'NonIterable');
+    expect(query(p, 'x in new NonIterable()')).rejects.toThrow(
+      InvalidIteratorError
+    );
+  });
+
+  test('work for custom classes', async () => {
+    const p = new Polar();
+    p.registerClass(BarIterator, 'BarIterator');
+    expect(
+      await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')
+    ).toStrictEqual([1, 2, 3]);
+    expect(
+      await qvar(p, 'x = new BarIterator([1, 2, 3]).sum()', 'x', true)
+    ).toBe(6);
+  });
 });

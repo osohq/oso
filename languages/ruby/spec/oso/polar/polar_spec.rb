@@ -747,4 +747,45 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(e).to be_an Oso::Polar::UnimplementedOperationError
     end
   end
+
+  context 'when using iterators' do # rubocop:disable Metrics/BlockLength
+    before do
+      stub_const('Foo', Class.new do
+      end)
+      subject.register_class(Foo)
+      stub_const('Bar', Class.new do
+        include Enumerable
+
+        def initialize(items)
+          @items = items
+        end
+
+        def sum
+          @items.sum
+        end
+
+        def each(&block)
+          @items.each(&block)
+        end
+      end)
+      subject.register_class(Bar)
+    end
+    it 'works over builtin types' do
+      expect(qvar(subject, 'x in {a: 1, b: 2}', 'x')).to eq([['a', 1], ['b', 2]])
+    end
+
+    it 'fails on invalid iterators' do
+      expect { query(subject, 'x in "abc"') }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::InvalidIteratorError
+      end
+      expect { query(subject, 'x in new Foo()') }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::InvalidIteratorError
+      end
+    end
+
+    it 'works over custom iterators' do
+      expect(qvar(subject, 'x in new Bar([1, 2, 3])', 'x')).to eq([1, 2, 3])
+      expect(qvar(subject, 'x = new Bar([1, 2, 3]).sum()', 'x', one: true)).to eq(6)
+    end
+  end
 end

@@ -132,7 +132,8 @@ function parseMakeExternal(d: obj): QueryEvent {
 function parseNextExternal(d: obj): QueryEvent {
   const callId = d.call_id;
   const iterable = d.iterable;
-  if (!Number.isSafeInteger(callId) || !isPolarTerm(iterable)) throw new Error();
+  if (!Number.isSafeInteger(callId) || !isPolarTerm(iterable))
+    throw new Error();
   return {
     kind: QueryEventKind.NextExternal,
     data: { callId, iterable },

@@ -834,3 +834,23 @@ def test_partial_constraint(polar):
 
     with pytest.raises(StopIteration):
         next(results)
+
+
+def test_iterators(polar, qeval, qvar):
+    assert qvar('x in "abc"', "x") == ["a", "b", "c"]
+    assert qvar("x in {a: 1, b: 2}", "x") == ["a", "b"]
+
+    class Foo:
+        pass
+
+    polar.register_class(Foo)
+    with pytest.raises(exceptions.InvalidIteratorError) as e:
+        qeval("x in new Foo()")
+
+    class Bar(list):
+        def sum(self):
+            return sum(x for x in self)
+
+    polar.register_class(Bar)
+    assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]
+    assert qvar("x = new Bar([1, 2, 3]).sum()", "x", one=True) == 6

@@ -90,6 +90,8 @@ module Oso
       def handle_next_external(call_id, iterable)
         unless calls.key? call_id
           value = host.to_ruby iterable
+          raise InvalidIteratorError unless value.is_a? Enumerable
+
           calls[call_id] = value.lazy
         end
 

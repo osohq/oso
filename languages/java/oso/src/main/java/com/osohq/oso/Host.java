@@ -81,13 +81,17 @@ public class Host implements Cloneable {
     Constructor<?> constructor = null;
     // Try to find a constructor applicable to the supplied arguments.
     Class<?> cls = classes.get(className);
+    if (cls == null) {
+      throw new Exceptions.UnregisteredClassError(className);
+    }
     Class<?>[] argTypes =
         initargs.stream()
             .map(arg -> arg.getClass())
             .collect(Collectors.toUnmodifiableList())
             .toArray(new Class[0]);
+    Constructor<?>[] constructors = cls.getConstructors();
     search:
-    for (Constructor<?> c : cls.getConstructors()) {
+    for (Constructor<?> c : constructors) {
       Class<?>[] paramTypes = c.getParameterTypes();
       if (argTypes.length == paramTypes.length) {
         for (int i = 0; i < paramTypes.length; i++) {

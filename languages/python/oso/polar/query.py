@@ -3,6 +3,7 @@ import json
 
 from _polar_lib import lib
 from .exceptions import (
+    InvalidIteratorError,
     PolarApiError,
     InvalidCallError,
     InvalidConstructorError,
@@ -151,7 +152,10 @@ class Query:
 
         if call_id not in self.calls:
             value = self.host.to_python(iterable)
-            self.calls[call_id] = iter(value)
+            if isinstance(value, Iterable):
+                self.calls[call_id] = iter(value)
+            else:
+                raise InvalidIteratorError(f"{value} is not iterable")
 
         # Return the next result of the call.
         try:

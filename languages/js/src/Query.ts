@@ -148,9 +148,13 @@ export class Query {
           for await (const result of value) {
             yield result;
           }
+        } else if (Symbol.iterator in Object(value)) {
+          for (const result of value) {
+            yield result;
+          }
         } else {
           // Otherwise, error
-          throw new InvalidIteratorError(iterable);
+          throw new InvalidIteratorError(typeof value);
         }
       })();
       this.#calls.set(callId, generator);

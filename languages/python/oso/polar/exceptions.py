@@ -114,6 +114,12 @@ class InvalidCallError(PolarRuntimeError):
     pass
 
 
+class InvalidIteratorError(PolarRuntimeError):
+    """Invalid attempt to iterate over a non-iterable value"""
+
+    pass
+
+
 class InvalidConstructorError(PolarRuntimeError):
     pass
 

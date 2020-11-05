@@ -227,6 +227,16 @@ public class Exceptions {
     }
   }
 
+  public static class InvalidIteratorError extends PolarRuntimeException {
+    public InvalidIteratorError(String msg) {
+      super(msg);
+    }
+
+    public InvalidIteratorError(String msg, Map<String, Object> details) {
+      super(msg, details);
+    }
+  }
+
   public static class InstantiationError extends PolarRuntimeException {
     public InstantiationError(String className) {
       super("constructor on class `" + className + "`");

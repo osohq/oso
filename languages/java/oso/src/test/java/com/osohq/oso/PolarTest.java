@@ -551,4 +551,50 @@ public class PolarTest {
     Http http13 = new Http(null, "/myclass/13", null);
     assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
   }
+
+  public static class NotIterable {
+    public NotIterable() {}
+  }
+
+  public static class BarIterator implements Iterable<Integer> {
+    private List<Integer> list;
+
+    public BarIterator(List<Integer> list) {
+      this.list = list;
+    }
+
+    // code for data structure
+    public Integer sum() {
+      int count = 0;
+      for (int i : list) {
+        count += i;
+      }
+      return count;
+    }
+
+    // code for data structure
+    public Iterator<Integer> iterator() {
+      return list.iterator();
+    }
+  }
+
+  @Test
+  public void testIterators() throws Exception {
+    // builtins sort of work for Java
+    p.query("x in {a: 1, b: 2}.entrySet()")
+        .results()
+        .equals(List.of(Map.of("x", "a"), Map.of("x", "b")));
+
+    // non iterables throw exception
+    p.registerClass(NotIterable.class, "NotIterable");
+    assertThrows(
+        Exceptions.InvalidIteratorError.class, () -> p.query("x in new NotIterable()").results());
+
+    // custom iterators work
+    p.registerClass(BarIterator.class, "BarIterator");
+    p.query("x in new BarIterator([1, 2, 3])")
+        .results()
+        .equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)));
+    p.query("x = new BarIterator([1, 2, 3]).sum()").results().equals(List.of(Map.of("x", 6)));
+  }
 }
