@@ -739,7 +739,11 @@ describe('iterators', () => {
   test('work over builtins', async () => {
     const p = new Polar();
     expect(
-      await qvar(p, 'd = {a: 1, b: 2} and x in Dictionary.entries({a: 1, b: 2}) and x in d', 'x')
+      await qvar(
+        p,
+        'd = {a: 1, b: 2} and x in Dictionary.entries({a: 1, b: 2}) and x in d',
+        'x'
+      )
     ).toStrictEqual([
       ['a', 1],
       ['b', 2],
