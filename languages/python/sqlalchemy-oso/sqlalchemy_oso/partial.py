@@ -1,5 +1,3 @@
-
-
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm import RelationshipProperty, ColumnProperty
@@ -136,6 +134,7 @@ def translate_in(expression, session, model):
 # TODO (dhatch): Test multiple levels w/ this function.
 
 def translate_in_path(path, sub_expression, session, model):
+    # TODO use this for dot op path, but have the sub expression be the lookup / comparison.
     """Translate an in op like (EXPR) in PATH"""
     if len(path) == 0:
         # _this.is_public = true
