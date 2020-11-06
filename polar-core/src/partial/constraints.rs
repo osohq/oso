@@ -138,16 +138,19 @@ impl Constraints {
     }
 
     /// Return the expression represented by this partial's constraints.
-    pub fn into_expression(self) -> Term {
-        // TODO(gj): Ensure we aren't double-wrapping in an And here.
-        Term::new_temporary(Value::Expression(Operation {
-            operator: Operator::And,
-            args: self
-                .operations
-                .into_iter()
-                .map(|op| Term::new_temporary(Value::Expression(op)))
-                .collect(),
-        }))
+    pub fn into_expression(mut self) -> Term {
+        if self.operations.len() == 1 {
+            Term::new_temporary(Value::Expression(self.operations.pop().unwrap()))
+        } else {
+            Term::new_temporary(Value::Expression(Operation {
+                operator: Operator::And,
+                args: self
+                    .operations
+                    .into_iter()
+                    .map(|op| Term::new_temporary(Value::Expression(op)))
+                    .collect(),
+            }))
+        }
     }
 
     pub fn clone_with_name(&self, name: Symbol) -> Self {

@@ -15,10 +15,9 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
         .into_iter()
         .map(|(var, value)| match value.value() {
             Value::Partial(_) => {
-                let mut simplified = simplify_partial(value);
-                if let Value::Partial(partial) = simplified.value() {
-                    simplified = partial.clone().into_expression();
-                }
+                let simplified = simplify_partial(value);
+                assert!(simplified.value().as_expression().is_ok());
+
                 (var, simplified)
             }
             _ => (var, value),
@@ -28,34 +27,6 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
 
 pub struct Simplifier;
 impl Folder for Simplifier {
-    fn fold_term(&mut self, t: Term) -> Term {
-        fn maybe_unwrap_operation(o: &Operation) -> Option<Term> {
-            match o {
-                // Unwrap a single-arg And or Or expression and fold the inner term.
-                Operation {
-                    operator: Operator::And,
-                    args,
-                }
-                | Operation {
-                    operator: Operator::Or,
-                    args,
-                } if args.len() == 1 => Some(args[0].clone()),
-                _ => None,
-            }
-        }
-
-        match t.value() {
-            Value::Expression(o) => fold_term(maybe_unwrap_operation(o).unwrap_or(t), self),
-
-            // Elide partial when its constraints are trivial.
-            Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
-                fold_term(maybe_unwrap_operation(&operations[0]).unwrap_or(t), self)
-            }
-
-            _ => fold_term(t, self),
-        }
-    }
-
     /// Deduplicate constraints.
     fn fold_constraints(&mut self, c: Constraints) -> Constraints {
         let mut seen: HashSet<&Operation> = HashSet::new();
@@ -68,7 +39,32 @@ impl Folder for Simplifier {
         fold_constraints(c.clone_with_operations(ops), self)
     }
 
-    fn fold_operation(&mut self, o: Operation) -> Operation {
+    fn fold_operation(&mut self, mut o: Operation) -> Operation {
+        fn maybe_unwrap_operation(o: &Operation) -> Option<Operation> {
+            match o {
+                // Unwrap a single-arg And or Or expression and fold the inner term.
+                Operation {
+                    operator: Operator::And,
+                    args,
+                }
+                | Operation {
+                    operator: Operator::Or,
+                    args,
+                } if args.len() == 1 => {
+                    if let Value::Expression(op) = args[0].value() {
+                        Some(op.clone())
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            }
+        }
+
+        if let Some(op) = maybe_unwrap_operation(&o) {
+            o = op;
+        }
+
         /// Given `this` and `x`, return `x`.
         /// Given `this.x` and `this.y`, return `this.x.y`.
         fn sub_this(arg: &Term, expr: &Term) -> Term {
@@ -139,6 +135,16 @@ impl Folder for Simplifier {
     }
 }
 
+struct PartialToExpression;
+impl Folder for PartialToExpression {
+    fn fold_term(&mut self, t: Term) -> Term {
+        match t.value() {
+            Value::Partial(partial) => fold_term(partial.clone().into_expression(), self),
+            _ => fold_term(t, self)
+        }
+    }
+}
+
 /// Simplify a partial until quiescence.
 fn simplify_partial(mut term: Term) -> Term {
     let mut simplifier = Simplifier {};
@@ -150,7 +156,11 @@ fn simplify_partial(mut term: Term) -> Term {
         }
         term = new;
     }
-    new
+
+    let mut partial_to_expr = PartialToExpression {};
+    let expression = partial_to_expr.fold_term(new);
+
+    expression
 }
 
 #[cfg(test)]
@@ -228,9 +238,10 @@ mod test {
 
         assert_expr_eq!(
             simplify_partial(partial.clone()),
-            term!(partial!(
-                "a",
-                [op!(Eq, term!(3), term!(4)), op!(Eq, term!(1), term!(2))]
+            term!(op!(
+                And,
+                term!(op!(Eq, term!(3), term!(4))),
+                term!(op!(Eq, term!(1), term!(2)))
             ))
         );
     }
