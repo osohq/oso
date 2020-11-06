@@ -405,10 +405,11 @@ arguments must come before keyword arguments::
 In (List Membership)
 ^^^^^^^^^^^^^^^^^^^^
 
-The ``in`` operator can be used to iterate over a list or
-an iterable application instance.
+The ``in`` operator can be used to iterate over elements of
+builtin and application types. Iterable builtin types are
+``List``, ``String``, and ``Dictionary``.
 
-The first operand will be unified with each element of the list. If the
+The first operand will be unified with each element. If the
 second operand is not iterable, the operation will fail.
 
 For example::
@@ -422,6 +423,30 @@ The left-hand side does not need to be a variable, for example::
     1 in [1, 2, 3, 1]
 
 Will succeed *twice*: 1 is in the first and fourth position.
+
+Iterating over a ``String`` returns each character (as another string)::
+
+    hexstring(s) if
+      forall(c in s, c in "0123456789abcdef");
+
+Iterating over  ``Dictionary`` returns a list with two elements for the key
+(as a string)
+and the value::
+
+    x in {a: 1, b: 2}
+    [key, _] in {a: 1, b: 2}
+    [_, value] in {a: 1, b: 2}
+
+The above returns::
+
+    x => ["a", 1]
+    x => ["b", 2]
+
+    key => "a"
+    key => "b"
+
+    value => 1
+    value => 2
 
 .. _operator-forall:
 

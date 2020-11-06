@@ -581,7 +581,7 @@ public class PolarTest {
   @Test
   public void testIterators() throws Exception {
     // builtins sort of work for Java
-    p.query("x in {a: 1, b: 2}.entrySet()")
+    p.query("d = {a: 1, b: 2} and x in d.entrySet() and x in d")
         .results()
         .equals(List.of(Map.of("x", "a"), Map.of("x", "b")));
 

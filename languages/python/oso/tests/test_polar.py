@@ -837,9 +837,6 @@ def test_partial_constraint(polar):
 
 
 def test_iterators(polar, qeval, qvar):
-    assert qvar('x in "abc"', "x") == ["a", "b", "c"]
-    assert qvar("x in {a: 1, b: 2}", "x") == ["a", "b"]
-
     class Foo:
         pass
 

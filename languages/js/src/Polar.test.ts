@@ -738,9 +738,8 @@ test('fails gracefully on ExternalOp events', () => {
 describe('iterators', () => {
   test('work over builtins', async () => {
     const p = new Polar();
-    expect(await qvar(p, 'x in "abc"', 'x')).toStrictEqual(['a', 'b', 'c']);
     expect(
-      await qvar(p, 'x in Dictionary.entries({a: 1, b: 2})', 'x')
+      await qvar(p, 'd = {a: 1, b: 2} and x in Dictionary.entries({a: 1, b: 2}) and x in d', 'x')
     ).toStrictEqual([
       ['a', 1],
       ['b', 2],

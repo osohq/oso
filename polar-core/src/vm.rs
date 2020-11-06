@@ -1437,6 +1437,14 @@ impl PolarVirtualMachine {
                         // Nothing is in an empty list.
                         self.backtrack()?;
                     }
+                    Value::String(s) if s.is_empty() => {
+                        // Nothing is in an empty string.
+                        self.backtrack()?;
+                    }
+                    Value::Dictionary(d) if d.is_empty() => {
+                        // Nothing is in an empty dict.
+                        self.backtrack()?;
+                    }
                     Value::List(terms) => {
                         // Unify item with each element of the list, skipping non-matching ground terms.
                         let x = self.deref(item);
@@ -1455,8 +1463,51 @@ impl PolarVirtualMachine {
                                 .collect::<Vec<Goals>>(),
                         )?;
                     }
-                    // Push an `ExternalLookup` goal for external instances and built-ins.
-                    Value::Dictionary(_) | Value::ExternalInstance(_) | Value::String(_) => {
+                    Value::Dictionary(dict) => {
+                        // Unify item with each (k, v) pair of the dict, skipping non-matching ground terms.
+                        let x = self.deref(item);
+                        let v = x.value();
+                        let g = v.is_ground();
+                        self.choose(
+                            dict.fields
+                                .iter()
+                                .map(|(k, v)| {
+                                    iterable.clone_with_value(Value::List(vec![
+                                        v.clone_with_value(Value::String(k.0.clone())),
+                                        v.clone(),
+                                    ]))
+                                })
+                                .filter(|term| !g || !term.is_ground() || term.value() == v)
+                                .map(|term| {
+                                    vec![Goal::Unify {
+                                        left: item.clone(),
+                                        right: term,
+                                    }]
+                                })
+                                .collect::<Vec<Goals>>(),
+                        )?;
+                    }
+                    Value::String(s) => {
+                        // Unify item with each element of the string
+                        let x = self.deref(item);
+                        let v = x.value();
+                        let g = v.is_ground();
+                        self.choose(
+                            s.chars()
+                                .map(|c| c.to_string())
+                                .map(Value::String)
+                                .filter(|c| !g || term.value() == c)
+                                .map(|c| {
+                                    vec![Goal::Unify {
+                                        left: item.clone(),
+                                        right: iterable.clone_with_value(c),
+                                    }]
+                                })
+                                .collect::<Vec<Goals>>(),
+                        )?;
+                    }
+                    // Push an `ExternalLookup` goal for external instances
+                    Value::ExternalInstance(_) => {
                         // Generate symbol for next result and bind to `false` (default)
                         let (call_id, next_term) =
                             self.new_call_var("next_value", Value::Boolean(false));

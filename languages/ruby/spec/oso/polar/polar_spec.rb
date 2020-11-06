@@ -770,14 +770,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end)
       subject.register_class(Bar)
     end
-    it 'works over builtin types' do
-      expect(qvar(subject, 'x in {a: 1, b: 2}', 'x')).to eq([['a', 1], ['b', 2]])
-    end
-
     it 'fails on invalid iterators' do
-      expect { query(subject, 'x in "abc"') }.to raise_error do |e|
-        expect(e).to be_an Oso::Polar::InvalidIteratorError
-      end
       expect { query(subject, 'x in new Foo()') }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::InvalidIteratorError
       end
