@@ -32,6 +32,7 @@ fn option() -> ClassBuilder<Option<PolarValue>> {
         .add_method("unwrap", |v: &Option<PolarValue>| v.clone().unwrap())
         .add_method("is_none", Option::is_none)
         .add_method("is_some", Option::is_some)
+        .with_iter()
 }
 
 fn string() -> ClassBuilder<String> {

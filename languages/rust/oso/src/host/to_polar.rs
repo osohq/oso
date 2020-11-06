@@ -171,10 +171,7 @@ impl ToPolar for PolarValue {
 
 impl<T: ToPolar> ToPolar for Option<T> {
     fn to_polar(self) -> PolarValue {
-        match self {
-            Some(t) => t.to_polar(),
-            None => PolarValue::new_from_instance(Option::<PolarValue>::None),
-        }
+        PolarValue::new_from_instance(self.map(|t| t.to_polar()))
     }
 }
 

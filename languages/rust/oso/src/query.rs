@@ -52,9 +52,9 @@ impl Query {
                     instance_id,
                     constructor,
                 } => self.handle_make_external(instance_id, constructor),
-                // QueryEvent::NextExternal { call_id, term } => {
-                //     self.handle_next_external(call_id, term)
-                // }
+                QueryEvent::NextExternal { call_id, iterable } => {
+                    self.handle_next_external(call_id, iterable)
+                }
                 QueryEvent::ExternalCall {
                     call_id,
                     instance,
@@ -153,9 +153,9 @@ impl Query {
         self.calls.get_mut(&call_id).and_then(|c| c.next())
     }
 
-    fn handle_next_external(&mut self, call_id: u64, term: Term) -> crate::Result<()> {
+    fn handle_next_external(&mut self, call_id: u64, iterable: Term) -> crate::Result<()> {
         if self.calls.get(&call_id).is_none() {
-            let instance = Instance::from_polar(PolarValue::from_term(&term, &self.host)?)?;
+            let instance = Instance::from_polar(PolarValue::from_term(&iterable, &self.host)?)?;
             let iter = instance
                 .downcast::<crate::host::PolarIterator>(Some(&self.host))
                 .map(|i| Ok(i.clone()))

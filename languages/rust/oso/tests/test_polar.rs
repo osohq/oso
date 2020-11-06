@@ -836,3 +836,57 @@ fn test_nan_inf() -> oso::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_iterators() -> oso::Result<()> {
+    common::setup();
+    #[derive(Default, PolarClass)]
+    struct Foo {}
+
+    #[derive(Clone, PolarClass)]
+    struct Bar(Vec<u32>);
+
+    impl IntoIterator for Bar {
+        type Item = u32;
+        type IntoIter = std::vec::IntoIter<u32>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self.0.into_iter()
+        }
+    }
+
+    impl Bar {
+        fn new(list: Vec<u32>) -> Self {
+            Self(list)
+        }
+        fn sum(&self) -> u32 {
+            self.0.iter().sum()
+        }
+    }
+
+    let mut oso = test_oso();
+    oso.oso.register_class(
+        Foo::get_polar_class_builder()
+            .set_constructor(Foo::default)
+            .build(),
+    )?;
+    oso.oso.register_class(
+        Bar::get_polar_class_builder()
+            .set_constructor(Bar::new)
+            .add_method("sum", Bar::sum)
+            .with_iter()
+            .build(),
+    )?;
+
+    assert_eq!(
+        oso.query_err("x in new Foo()"),
+        "Unsupported operation in for type Foo."
+    );
+    assert_eq!(
+        oso.qvar::<u32>("x in new Bar([1, 2, 3])", "x"),
+        vec![1, 2, 3]
+    );
+    oso.qvar_one("x = new Bar([1, 2, 3]).sum()", "x", 6u32);
+
+    Ok(())
+}

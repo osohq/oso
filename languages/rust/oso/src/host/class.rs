@@ -215,10 +215,11 @@ where
     /// Set an equality function to be used for polar `==` statements.
     pub fn with_iter<V>(self) -> Self
     where
-        T: Iterator<Item = V> + Clone + Send + Sync + 'static,
+        T: IntoIterator<Item = V> + Clone,
+        <T as IntoIterator>::IntoIter: Clone + Send + Sync + 'static,
         V: ToPolarResult,
     {
-        self.set_into_iter(|t| t.clone())
+        self.set_into_iter(|t| t.clone().into_iter())
     }
 
     /// Use PartialEq::eq as the equality check for polar `==` statements.
