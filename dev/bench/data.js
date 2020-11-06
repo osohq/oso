@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604607008597,
+  "lastUpdate": 1604691062852,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12423,6 +12423,120 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 7273,
             "range": "± 81",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a990616a290da6c12dfcbc86121d939f8b556b2c",
+          "message": "Parser macro: value or logical (#503)\n\n* Move new to being treated like a value instead.\r\n\r\n* Add parser macros for asserting/expecting a specific term type.\r\n\r\nLogical values are queryable, i.e. expressions like x and y,\r\nboolean values, variables, or calls.\r\n\r\nValues values are concrete values that can be used in expressions\r\nlike arithmetic, in lookups, as well as bools and variables.\r\n\r\nSome values can be both, like bools, and some expressions can\r\nreturn either type, like dot lookups.\r\n\r\n* Deal with inf/nan while im here.\r\n\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-11-06T14:21:54-05:00",
+          "tree_id": "1f52fbb4c547558d961cad400bf6c76130ca7e7d",
+          "url": "https://github.com/osohq/oso/commit/a990616a290da6c12dfcbc86121d939f8b556b2c"
+        },
+        "date": 1604691054289,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 907,
+            "range": "± 32",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2626,
+            "range": "± 71",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 69263,
+            "range": "± 2792",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 546439,
+            "range": "± 7038",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18686,
+            "range": "± 652",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 18412,
+            "range": "± 744",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 18543,
+            "range": "± 779",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18787,
+            "range": "± 638",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17070,
+            "range": "± 1622",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1",
+            "value": 5688,
+            "range": "± 191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10",
+            "value": 5800,
+            "range": "± 172",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6276,
+            "range": "± 699",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5899,
+            "range": "± 132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11863,
+            "range": "± 653",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7021,
+            "range": "± 153",
             "unit": "ns/iter"
           }
         ]
