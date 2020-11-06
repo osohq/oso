@@ -40,8 +40,7 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - name: Run benchmark
-        run: cargo bench -- --output-format bencher | tee ../output.txt
-        working-directory: polar-core
+        run: cargo bench -- --output-format bencher | tee output.txt
       - name: Get HEAD commit message
         id: head_commit
         run: echo "::set-output name=message::$(git log -1 --format=%B | tr -d '\n')"
