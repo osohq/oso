@@ -495,14 +495,22 @@ def test_constructor(polar, qvar):
     polar.register_class(Foo)
 
     # test positional args
-    instance = qvar("instance = new Foo(1,2,3,4)", "instance", one=True,)
+    instance = qvar(
+        "instance = new Foo(1,2,3,4)",
+        "instance",
+        one=True,
+    )
     assert instance.a == 1
     assert instance.b == 2
     assert instance.bar == 3
     assert instance.baz == 4
 
     # test positional and kwargs
-    instance = qvar("instance = new Foo(1, 2, bar: 3, baz: 4)", "instance", one=True,)
+    instance = qvar(
+        "instance = new Foo(1, 2, bar: 3, baz: 4)",
+        "instance",
+        one=True,
+    )
     assert instance.a == 1
     assert instance.b == 2
     assert instance.bar == 3
@@ -510,7 +518,9 @@ def test_constructor(polar, qvar):
 
     # test kwargs
     instance = qvar(
-        "instance = new Foo(bar: 3, a: 1, baz: 4, b: 2)", "instance", one=True,
+        "instance = new Foo(bar: 3, a: 1, baz: 4, b: 2)",
+        "instance",
+        one=True,
     )
     assert instance.a == 1
     assert instance.b == 2

@@ -149,7 +149,10 @@ class Host:
             }
         elif isinstance(v, Predicate):
             val = {
-                "Call": {"name": v.name, "args": [self.to_polar(v) for v in v.args],}
+                "Call": {
+                    "name": v.name,
+                    "args": [self.to_polar(v) for v in v.args],
+                }
             }
         elif isinstance(v, Variable):
             val = {"Variable": v}
