@@ -153,8 +153,6 @@ impl Partial {
     ///
     /// `other` must be a partial or a variable.
     ///
-    /// OTHER in THIS
-    ///
     /// Returns: A new partial to use for additional constraints on `other`.
     pub fn in_unbound(&mut self, other: Term) -> Term {
         let name = match other.value() {

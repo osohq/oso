@@ -17,25 +17,37 @@ def partial_to_query(expression: Expression, session: Session, model) -> Query:
 
     print(expression)
 
-    expr = and_expr(expression, session, model)
-    return query.filter(expr)
+    expr = translate_expr(expression, session, model)
+    if expr is not None:
+        return query.filter(expr)
 
-def and_expr(expression: Expression, session: Session, model) -> BinaryExpression:
+    return query
+
+# Returns None or the translated expression.
+def translate_expr(expression: Expression, session: Session, model):
+    assert isinstance(expression, Expression)
+    if expression.operator == 'Eq' or expression.operator == 'Unify':
+        return compare_expr(expression, session, model)
+    elif expression.operator == 'Isa':
+        assert expression.args[1].tag == model.__name__
+        return None
+    elif expression.operator == 'In':
+        return translate_in(expression, session, model)
+    elif expression.operator == 'And':
+        return translate_and_expr(expression, session, model)
+    else:
+        raise UnsupportedError(f"Unsupported {expression}")
+
+def translate_and_expr(expression: Expression, session: Session, model) -> BinaryExpression:
     expr = and_()
     assert expression.operator == "And"
     for expression in expression.args:
-        assert isinstance(expression, Expression)
-        if expression.operator == 'Eq' or expression.operator == 'Unify':
-            expr = expr & compare_expr(expression, session, model)
-        elif expression.operator == 'Isa':
-            assert expression.args[1].tag == model.__name__
-        elif expression.operator == 'And':
-            expr = expr & and_expr(expression, session, model)
-        else:
-            raise UnsupportedError(f"Unsupported {expression}")
+        translated = translate_expr(expression, session, model)
+        if translated is None:
+            continue
 
-    # TODO (dhatch) Maybe this just returns the where part ? But we may need to
-    # add joins.
+        expr = expr & translated
+
     return expr
 
 def compare_expr(expression: Expression, session: Session, model) -> BinaryExpression:
@@ -51,6 +63,7 @@ def compare_expr(expression: Expression, session: Session, model) -> BinaryExpre
         value = left
 
     return translate_comparison(path, value, model)
+
 
 def translate_comparison(path, value, model):
     """Translate a comparison operation of ``path`` = ``value`` on ``model``."""
@@ -69,6 +82,8 @@ def translate_comparison(path, value, model):
             return property.has(
                 translate_comparison(path[1:], value, property.entity.class_))
         else:
+            # TODO (dhatch): Should this assert? This would come from comparing
+            # something against a multi-valued property
             return property.any(
                 translate_comparison(path[1:], value, property.entity.class_))
 
@@ -96,3 +111,47 @@ def dot_op_path(expr):
         return [expr.args[1]]
 
     return dot_op_path(expr.args[0]) + [expr.args[1]]
+
+def translate_in(expression, session, model):
+    assert expression.operator == 'In'
+    left = expression.args[0]
+    right = expression.args[1]
+
+    # IN means at least something must be contained in the property.
+
+    # There are two possible types of in operations. In both, the right hand side
+    # should be a dot op.
+
+    # Partial In: LHS is an expression
+    if isinstance(left, Expression):
+        path = dot_op_path(right)
+        assert path
+
+        # (_this.is_public = true) in (_this.tags)
+        # [tags], model = Post
+        return translate_in_path(path, left, session, model)
+
+    # Contains: LHS is not an expression.
+
+# TODO (dhatch): Test multiple levels w/ this function.
+
+def translate_in_path(path, sub_expression, session, model):
+    """Translate an in op like (EXPR) in PATH"""
+    if len(path) == 0:
+        # _this.is_public = true
+        # model: Tag
+        return translate_expr(sub_expression, session, model)
+    else:
+        property = getattr(model, path[0])
+        assert isinstance(property.property, RelationshipProperty)
+        relationship = property.property
+        model = property.entity.class_
+
+        # model = Tag
+
+        if not relationship.uselist:
+            return property.has(
+                translate_in_path(path[1:], sub_expression, session, model))
+        else:
+            # post.tags.any()
+            return property.any(translate_in_path(path[1:], sub_expression, session, model))

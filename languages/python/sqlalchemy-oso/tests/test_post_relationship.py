@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.orm.session import Session
+from sqlalchemy.schema import Table
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey
@@ -20,6 +21,24 @@ ModelBase = declarative_base(name='ModelBase')
 
 def print_query(query):
     print(query.statement.compile(), query.statement.compile().params)
+
+class Tag(ModelBase):
+    __tablename__ = 'tags'
+
+    name = Column(String, primary_key=True)
+
+    # If provided, posts in this tag always have the public access level.
+    is_public = Column(Boolean, default=False, nullable=False)
+
+post_tags = Table('post_tags', ModelBase.metadata,
+    Column('post_id', Integer, ForeignKey('posts.id')),
+    Column('tag_id', Integer, ForeignKey('tags.name'))
+)
+
+user_tags = Table('user_tags', ModelBase.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('tag_id', Integer, ForeignKey("tags.name"))
+)
 
 class Post(ModelBase):
     __tablename__ = 'posts'
@@ -33,6 +52,8 @@ class Post(ModelBase):
 
     needs_moderation = Column(Boolean, nullable=False, default=False)
 
+    tags = relationship('Tag', secondary=post_tags)
+
 class User(ModelBase):
     __tablename__ = 'users'
 
@@ -41,6 +62,13 @@ class User(ModelBase):
 
     is_moderator = Column(Boolean, nullable=False, default=False)
     is_banned = Column(Boolean, nullable=False, default=False)
+
+    # Single tag
+    tag = relationship('Tag')
+    tag_name = Column(Integer, ForeignKey('tags.name'))
+
+    # Many tags
+    tags = relationship('Tag', secondary=user_tags)
 
 @pytest.fixture
 def post_fixtures():
@@ -80,18 +108,14 @@ def post_fixtures():
     return create
 
 @pytest.fixture
-def fixture_data(post_fixtures):
-    return post_fixtures
-
-@pytest.fixture
-def engine(fixture_data):
-    engine = create_engine('sqlite:///:memory:')
-    ModelBase.metadata.create_all(engine)
-
-    session = Session(bind=engine)
-    fixture_data(session)
+def fixture_data(session, post_fixtures):
+    post_fixtures(session)
     session.commit()
 
+@pytest.fixture
+def engine():
+    engine = create_engine('sqlite:///:memory:')
+    ModelBase.metadata.create_all(engine)
     return engine
 
 @pytest.fixture
@@ -104,7 +128,7 @@ def oso():
     register_models(oso, ModelBase)
     return oso
 
-def test_authorize_model_basic(session, oso):
+def test_authorize_model_basic(session, oso, fixture_data):
     """Test that a simple policy with checks on non-relationship attributes is correct."""
     oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
     oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
@@ -136,7 +160,7 @@ def test_authorize_model_basic(session, oso):
     posts = authorize_model(oso, "guest", "read", session, Post)
     assert posts.count() == 0
 
-def test_authorize_scalar_attribute_eq(session, oso):
+def test_authorize_scalar_attribute_eq(session, oso, fixture_data):
     """Test authorization rules on a relationship with one object equaling another."""
     # Object equals another object
     oso.load_str('allow(actor: User, "read", post: Post) if post.created_by = actor and '
@@ -159,7 +183,7 @@ def test_authorize_scalar_attribute_eq(session, oso):
     assert posts.count() == 8
     assert all(allowed(post) for post in posts)
 
-def test_authorize_scalar_attribute_condition(session, oso):
+def test_authorize_scalar_attribute_condition(session, oso, fixture_data):
     """Scalar attribute condition checks."""
     # Object equals another object
 
@@ -194,4 +218,55 @@ def test_authorize_scalar_attribute_condition(session, oso):
     for post in posts:
         assert allowed(post, admin) or allowed_admin(post)
 
+
+@pytest.fixture
+def tag_test_fixture(session):
+    """Test data for tests with tags."""
+    user = User(username='user')
+    other_user = User(username='other_user')
+    moderator = User(username='moderator', is_moderator=True)
+
+    eng = Tag(name="eng")
+    random = Tag(name="random", is_public=True)
+
+    user_public_post = Post(contents="public post", created_by=user, access_level="public")
+    user_private_post = Post(contents="private user post", created_by=user, access_level="private")
+
+    other_user_public_post = Post(contents="other user public", created_by=other_user,
+                                  access_level="public")
+    other_user_private_post = Post(contents="other user private", created_by=other_user,
+                                  access_level="private")
+    other_user_random_post = Post(contents="other user random", created_by=other_user,
+                                  access_level="private",
+                                  tags=[random])
+
+    # HACK!
+    objects = {}
+    for (name, local) in locals().items():
+        if name != "session" and name != "objects":
+            session.add(local)
+
+        objects[name] = local
+
+    session.commit()
+
+    return objects
+
+def test_in_multiple_attribute_relationship(session, oso, tag_test_fixture):
+    oso.load_str("""
+        allow(user, "read", post: Post) if post.access_level = "public";
+        allow(user, "read", post: Post) if post.access_level = "private" and post.created_by = user;
+        allow(user, "read", post: Post) if tag in post.tags and tag.is_public = true;
+    """)
+
+    posts = authorize_model(oso, tag_test_fixture['user'], "read", session, Post)
+    print(str(posts.statement.compile()))
+    import pdb; pdb.set_trace()
+    assert tag_test_fixture['user_public_post'] in posts
+    assert tag_test_fixture['user_private_post'] in posts
+    assert not tag_test_fixture['other_user_public_post'] in posts
+    assert not tag_test_fixture['other_user_private_post'] in posts
+    assert tag_test_fixture['other_user_random_post'] in posts
+
+# TODO test non Eq conditions
 # TODO test f(x) if not x.boolean_attr;
