@@ -555,6 +555,20 @@ see the :doc:`/using/libraries/index` guides.
   Literals in Polar are constant, and any changes made to such objects
   by calling a method will not be persisted.
 
+``nil``
+-------
+In addition to the built-in types, Polar pre-registers a constant named
+``nil`` that maps to an application-language-specific "null" value:
+
++---------+----------+---------+----------+------------+-----------------------+----------+
+| Polar   | Python   | Ruby    | Java     | JavaScript | Rust                  | SQL      |
++=========+==========+=========+==========+============+=======================+==========+
+| ``nil`` | ``None`` | ``nil`` | ``null`` | ``null``   | ``Option::<T>::None`` | ``NULL`` |
++---------+----------+---------+----------+------------+-----------------------+----------+
+
+The Polar value ``nil`` is not equal to either the empty list ``[]``
+or the boolean value ``false``. It is intended to be used with application
+methods that return a null value.
 
 Summary
 =======

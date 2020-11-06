@@ -23,14 +23,21 @@ Link to migration guide
 New features
 ============
 
-Feature 1
----------
+``nil``
+-------
 
-- summary
-- of
-- user facing changes
+Polar now pre-defines `a constant named ``nil``
+<https://docs.osohq.com/getting-started/policies/application-types.html#nil>`_
+whose value is an application-language-specific "null" value;
+e.g., ``None`` in Python, ``nil`` in Ruby, ``null`` for Java & JS, etc.
+Explicit comparisons with ``nil`` are particularly useful in the
+context of application-language methods that may return ``None``, etc.
 
-Link to relevant documentation section
+In the (still experimental) context of list filtering via partial
+evaluation, ``nil`` is intended to map to ``NULL`` in SQL. For instance,
+partially evaluating the Polar expression ``x = nil`` with respect
+to ``x`` yields a constraint that is translated into a check like
+``X IS NULL``.
 
 Other bugs & improvements
 =========================
