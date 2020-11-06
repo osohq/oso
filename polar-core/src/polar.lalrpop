@@ -12,6 +12,7 @@ use crate::terms::*;
 use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
+use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
 
@@ -74,13 +75,13 @@ extern {
 Integer: i64 = {
     <"Integer">,
 "+" <"Integer">,
-"-" <i:"Integer"> => -i
+"-" <i:"Integer"> => -i,
 }
 
 Float: f64 = {
     <"Float">,
 "+" <"Float">,
-"-" <f:"Float"> => -f
+"-" <f:"Float"> => -f,
 }
 
 
@@ -116,16 +117,24 @@ Call: Value = {
         Value::Call(Call{name, args, kwargs})
     },
     // Positional args only.
-    <name:Name> "(" <mut args:(<TermExp> ",")*> <arg:TermExp> ")" => {
+    <name:Name> "(" <mut args:(<ValExp> ",")*> <arg:ValExp> ")" => {
         args.push(arg);
         let kwargs = None;
         Value::Call(Call{name, args, kwargs})
     },
     // Positional args + kwargs.
-    <name:Name> "(" <mut args:(<TermExp> ",")*> <fields:(<Fields<Exp5<"Term">>>)>")" => {
+    <name:Name> "(" <mut args:(<ValExp> ",")*> <fields:(<Fields<ValExp>>)>")" => {
         let kwargs = Some(fields);
         Value::Call(Call{name, args, kwargs})
     }
+};
+
+New: Value = {
+    "new" <call:Spanned<Call>> => {
+        let args = vec![call];
+        let op = Operation{operator: Operator::New, args};
+        Value::Expression(op)
+    },
 };
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -153,15 +162,15 @@ Object<T>: Dictionary = {
 
 // ****** Dicts and literals ******* //
 
-DictionaryTerm: Value = <fields:Object<Exp5<"Term">>> => {
+DictionaryTerm: Value = <fields:Object<ExpectValue<Exp5<"Term">>>> => {
     Value::Dictionary(fields)
 };
 // Pattern dictionaries cannot contain any operators.
-DictionaryPattern: Value = <fields:Object<Exp9<"Pattern">>> => {
+DictionaryPattern: Value = <fields:Object<ExpectValue<Exp9<"Pattern">>>> => {
     Value::Pattern(Pattern::Dictionary(fields))
 };
 
-InstanceLiteralPattern: Value = <tag:Name> <fields:Object<Exp9<"Pattern">>> => {
+InstanceLiteralPattern: Value = <tag:Name> <fields:Object<ExpectValue<Exp9<"Pattern">>>> => {
     let instance = InstanceLiteral{tag, fields};
     Value::Pattern(Pattern::Instance(instance))
 };
@@ -173,30 +182,21 @@ BuiltinOperator: Operator = {
     "print" => Operator::Print,
 };
 
-New: Value = {
-    "new" <call:Spanned<Call>> => {
-        let args = vec![call];
-        let op = Operation{operator: Operator::New, args};
-        Value::Expression(op)
-    },
-};
 
 BuiltinOperation: Value = {
-    <op:BuiltinOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
+    <op:BuiltinOperator> "(" <mut args:(<ValExp> ",")*> <arg:ValExp?> ")" => {
         match arg {
             Some(arg) => args.push(arg),
             None => ()
         };
         Value::Expression(Operation{operator: op, args: args})
     },
-    // A pattern cannot contain a new operator
-    <New>,
     "cut" => {
         let args = vec![];
         let op = Operation{operator: Operator::Cut, args};
         Value::Expression(op)
     },
-    "forall" "(" <arg1:TermExp> "," <arg2:TermExp> ")" => {
+    "forall" "(" <arg1:LogExp> "," <arg2:LogExp> ")" => {
         let args = vec![arg1, arg2];
         let op = Operation{operator: Operator::ForAll, args};
         Value::Expression(op)
@@ -229,33 +229,77 @@ RewrittenOperation: Value = {
 // on the parameter type, and LALRPOP does not allow conditional macros on anything
 // other than a string.
 
-Exp<T>: Term = {
-    <Exp1<T>>
+// Any term expression
+pub TermExp: Term = {
+    <t:Exp1<"Term">> => match t {
+        ValueOrLogical::Value(t) | ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => {
+            t
+        }
+    }
 }
 
-pub TermExp: Term = {
-    <Exp<"Term">>
-};
+// A value expression
+ValExp: Term = {
+    <ExpectValue<Exp1<"Term">>>
+}
 
-pub PatternExp: Term = {
-    <Exp9<"Pattern">>
-};
+// A logical expression
+LogExp: Term = {
+    <ExpectLogical<Exp1<"Term">>>
+}
+
+IsValue<T>: ValueOrLogical = {
+    <Spanned<T>> => ValueOrLogical::Value(<>)
+}
+
+IsLogical<T>: ValueOrLogical = {
+    <Spanned<T>> => ValueOrLogical::Logical(<>)
+}
+
+IsAny<T>: ValueOrLogical = {
+    <Spanned<T>> => ValueOrLogical::Either(<>)
+}
 
 
-Exp10<T>: Term = {
-    <Spanned<Pattern>> if T == "Pattern",
-    <Spanned<Value>> if T == "Term",
-    "(" <Exp<T>> ")", // "resets" the parsing
+ExpectValue<T>: Term = {
+    <loc:@L> <term:T> =>? {
+        match term {
+            ValueOrLogical::Logical(term) => {
+                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "value".to_string() } })
+            },
+            ValueOrLogical::Value(t) | ValueOrLogical::Either(t) => Ok(t)
+        }
+    }
+}
+
+ExpectLogical<T>: Term = {
+    <loc:@L> <term:T> =>? {
+        match term {
+            ValueOrLogical::Value(term) => {
+                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical".to_string() } })
+            },
+            ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => Ok(t)
+        }
+    }
+}
+
+Exp10<T>: ValueOrLogical = {
+    <IsValue<Pattern>> if T == "Pattern",
+    <Value> if T == "Term",
+    "(" <Exp1<T>> ")", // "resets" the parsing
 }
 
 CallTerm: Value = {
     <Call>,
     <s:"Symbol"> => Value::String(s.0),
-    "(" <Value> ")",
+    // These provide ways to get keys that aren't
+    // expressable as `foo.bar`
+    "(" <Variable> ")",
+    "(" <PolarString> ")",
 }
 
 DotOp<T>: Value = {
-    <head:Exp9<T>> "." <call_term:Spanned<CallTerm>> => {
+    <head:ExpectValue<Exp9<T>>> "." <call_term:Spanned<CallTerm>> => {
         let args = vec![head, call_term];
         let op = Operation{operator: Operator::Dot, args};
         Value::Expression(op)
@@ -263,14 +307,14 @@ DotOp<T>: Value = {
 }
 
 // .
-Exp9<T>: Term = {
-    <Spanned<DotOp<T>>>,
+Exp9<T>: ValueOrLogical = {
+    <IsAny<DotOp<T>>>,
     <Exp10<T>>,
 };
 
 // in
 InExp<T>: Value = {
-    <left:Exp8<T>> "in" <right:Exp9<T>> => {
+    <left:ExpectValue<Exp8<T>>> "in" <right:ExpectValue<Exp9<T>>> => {
         let args = vec![left, right];
         let op = Operation{operator: Operator::In, args};
         Value::Expression(op)
@@ -281,7 +325,7 @@ Matches = {"matches"};
 // matches
 MatchExp<T>: Value = {
     // Symbols on the RHS are treated as class names, just like in a specializers
-    <left:Exp8<T>> Matches <right:PatternExp> => {
+    <left:ExpectValue<Exp8<T>>> Matches <right:Spanned<Pattern>> => {
         let right = if let Value::Variable(ref sym) = right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
@@ -296,9 +340,9 @@ MatchExp<T>: Value = {
     },
 }
 
-Exp8<T>: Term = {
-    <Spanned<InExp<T>>>,
-    <Spanned<MatchExp<T>>>,
+Exp8<T>: ValueOrLogical = {
+    <IsLogical<InExp<T>>>,
+    <IsLogical<MatchExp<T>>>,
     <Exp9<T>>,
 }
 
@@ -310,14 +354,14 @@ Op7: Operator = {
     "rem" => Operator::Rem,
 }
 MulExp<T>: Value = {
-    <exp7:Exp7<T>> <operator:Op7> <exp8:Exp8<T>> => {
+    <exp7:ExpectValue<Exp7<T>>> <operator:Op7> <exp8:ExpectValue<Exp8<T>>> => {
         let args = vec![exp7, exp8];
         let op = Operation{operator, args};
         Value::Expression(op)
     },
 }
-Exp7<T>: Term = {
-    <Spanned<MulExp<T>>>,
+Exp7<T>: ValueOrLogical = {
+    <IsValue<MulExp<T>>>,
     <Exp8<T>>,
 }
 
@@ -327,15 +371,15 @@ Op6: Operator = {
     "-" => Operator::Sub,
 }
 AddExp<T>: Value = {
-    <exp6:Exp6<T>> <operator:Op6> <exp7:Exp7<T>> => {
+    <exp6:ExpectValue<Exp6<T>>> <operator:Op6> <exp7:ExpectValue<Exp7<T>>> => {
         let args = vec![exp6, exp7];
         let op = Operation{operator, args};
         Value::Expression(op)
     },
 }
 
-Exp6<T>: Term = {
-    <Spanned<AddExp<T>>>,
+Exp6<T>: ValueOrLogical = {
+    <IsValue<AddExp<T>>>,
     <Exp7<T>>,
 }
 
@@ -350,34 +394,34 @@ Op5: Operator = {
 }
 
 CmpExp<T>: Value = {
-    <exp5:Exp5<T>> <operator:Op5> <exp6:Exp6<T>> => {
+    <exp5:ExpectValue<Exp5<T>>> <operator:Op5> <exp6:ExpectValue<Exp6<T>>> => {
         let args = vec![exp5, exp6];
         let op = Operation{operator, args};
         Value::Expression(op)
     },
 }
 
-Exp5<T>: Term = {
-    <Spanned<CmpExp<T>>>,
+Exp5<T>: ValueOrLogical = {
+    <IsLogical<CmpExp<T>>>,
     <Exp6<T>>,
 }
 
 // =, :=
 UnifyExp<T>: Value = {
-    <exp4:Exp4<T>> "=" <exp5:Exp5<T>> => {
+    <exp4:ExpectValue<Exp4<T>>> "=" <exp5:ExpectValue<Exp5<T>>> => {
         let args = vec![exp4, exp5];
         let op = Operation{operator: Operator::Unify, args};
         Value::Expression(op)
     },
-    <variable:Spanned<Variable>> ":=" <exp5:Exp5<T>> => {
+    <variable:Spanned<Variable>> ":=" <exp5:ExpectValue<Exp5<T>>> => {
         let args = vec![variable, exp5];
         let op = Operation{operator: Operator::Assign, args};
         Value::Expression(op)
     },
 }
 
-Exp4<T>: Term = {
-    <Spanned<UnifyExp<T>>>,
+Exp4<T>: ValueOrLogical = {
+    <IsLogical<UnifyExp<T>>>,
     <Exp5<T>>,
 }
 
@@ -386,22 +430,22 @@ Exp4<T>: Term = {
  // !
 Not = {"not"};
 NotExp<T>: Value = {
-    Not <exp4:Exp4<T>> => {
+    Not <exp4:ExpectLogical<Exp4<T>>> => {
         let args = vec![exp4];
         let op = Operation{operator: Operator::Not, args};
         Value::Expression(op)
     },
 }
 
-Exp3<T>: Term = {
-    <Spanned<NotExp<T>>>,
+Exp3<T>: ValueOrLogical = {
+    <IsLogical<NotExp<T>>>,
     <Exp4<T>>,
 }
 
 
 Or = {"or"};
 OrExp<T>: Value = {
-    <head:Exp3<T>> Or <mut tail:Exp2<T>> => {
+    <head:ExpectLogical<Exp3<T>>> Or <mut tail:ExpectLogical<Exp2<T>>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
                 let mut args = vec![head];
@@ -417,15 +461,15 @@ OrExp<T>: Value = {
     },
 }
 
-Exp2<T>: Term = {
-    <Spanned<OrExp<T>>>,
+Exp2<T>: ValueOrLogical = {
+    <IsLogical<OrExp<T>>>,
     <Exp3<T>>,
 }
 
 
 And = {"and"};
 AndExp<T>: Value = {
-    <head:Exp2<T>> And <mut tail:Exp1<T>> => {
+    <head:ExpectLogical<Exp2<T>>> And <mut tail:ExpectLogical<Exp1<T>>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::And, args: tail_args}) => {
                 let mut args = vec![head];
@@ -441,14 +485,14 @@ AndExp<T>: Value = {
     },
 }
 
-Exp1<T>: Term = {
-    <Spanned<AndExp<T>>>,
+Exp1<T>: ValueOrLogical = {
+    <IsLogical<AndExp<T>>>,
     <Exp2<T>>,
 }
 
 ListTerms<T>: Vec<Term> = {
-    <Exp6<T>> => vec![<>],
-    <mut list:ListTerms<T>> "," <tail:Exp6<T>> => {
+    <ExpectValue<Exp6<T>>> => vec![<>],
+    <mut list:ListTerms<T>> "," <tail:ExpectValue<Exp6<T>>> => {
         list.push(tail);
         list
     },
@@ -475,16 +519,18 @@ pub Pattern: Value = {
     <List<"Pattern">>,
 };
 
-pub Value: Value = {
-    <Number>,
-    <PolarString>,
-    <Boolean>,
-    <Variable>,
-    <DictionaryTerm>,
-    <BuiltinOperation>,
-    <RewrittenOperation>,
-    <Call>,
-    <List<"Term">>,
+
+pub Value: ValueOrLogical = {
+    <IsLogical<BuiltinOperation>>,
+    <IsAny<Boolean>>,
+    <IsAny<Variable>>,
+    <IsAny<Call>>,
+    <IsValue<New>>,
+    <IsValue<List<"Term">>>,
+    <IsValue<Number>>,
+    <IsValue<PolarString>>,
+    <IsValue<DictionaryTerm>>,
+    <IsLogical<RewrittenOperation>>,
 };
 
 
@@ -509,7 +555,7 @@ ParameterList: Vec<Parameter> = {
 
 
 Parameter: Parameter = {
-    <parameter:Exp6<"Term">> => {
+    <parameter:ExpectValue<Exp6<"Term">>> => {
         Parameter{parameter, specializer: None}
     },
     // parenthesized specializers do not have symbol translation to class names applied

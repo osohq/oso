@@ -1,6 +1,13 @@
 use crate::lexer::Token;
 use lalrpop_util::{lalrpop_mod, ParseError};
 
+/// Used to denote whether an enclosed value is a value or a logical operator
+pub enum ValueOrLogical {
+    Value(Term),
+    Logical(Term),
+    Either(Term),
+}
+
 lalrpop_mod!(
     #[allow(clippy::all, dead_code, unused_imports, unused_mut)]
     polar
@@ -177,6 +184,11 @@ mod tests {
         assert_eq!(parse_query("-1.234"), term!(-1.234));
         assert_eq!(parse_query("-1.234e-56"), term!(-1.234e-56));
         assert_eq!(parse_query("-1.234e56"), term!(-1.234e56));
+        assert_eq!(parse_query("inf"), term!(f64::INFINITY));
+        assert_eq!(parse_query("-inf"), term!(f64::NEG_INFINITY));
+        assert!(
+            matches!(parse_query("nan").value(), Value::Number(crate::numerics::Numeric::Float(f)) if f.is_nan())
+        );
     }
 
     #[test]
@@ -323,5 +335,39 @@ mod tests {
             parse_query(q),
             term!(op!(Dot, term!(sym!("x")), term!("invalid-key"))),
         );
+    }
+
+    #[test]
+    fn test_catching_wrong_types() {
+        for bad_query in &[
+            "f(x=1)",
+            "x in [1, 2] < 2",
+            "{x: 1 < 2}",
+            "{x: 1 < 2}",
+            "not 1",
+            "1 and 2",
+            "1 + print(\"x\")",
+            "forall([1, 2, 3], x < 1)",
+            "x = (1 or 2)",
+            "x = (1 = 2)",
+            "foo.bar(x or y)",
+            "foo.bar(z: x or y)",
+            "x = y = z",
+            "x = y = 1",
+            "x = 1 = z",
+            "1 = y = z",
+            "x = (1 and 2)",
+            "(1 or 2) = x",
+            "x = (not x)",
+            "y matches z = x",
+        ] {
+            assert!(matches!(
+                super::parse_query(0, bad_query).expect_err("parse error"),
+                error::PolarError {
+                    kind: error::ErrorKind::Parse(error::ParseError::WrongValueType { .. }),
+                    ..
+                }
+            ));
+        }
     }
 }

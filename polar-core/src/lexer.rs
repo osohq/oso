@@ -214,6 +214,10 @@ impl<'input> Lexer<'input> {
             Some(Ok((start, Token::Boolean(true), last + 1)))
         } else if &self.buf == "false" {
             Some(Ok((start, Token::Boolean(false), last + 1)))
+        } else if &self.buf == "inf" {
+            Some(Ok((start, Token::Float(f64::INFINITY), last + 1)))
+        } else if &self.buf == "nan" {
+            Some(Ok((start, Token::Float(f64::NAN), last + 1)))
         } else if &self.buf == "new" {
             Some(Ok((start, Token::New, last + 1)))
         } else if &self.buf == "in" {
