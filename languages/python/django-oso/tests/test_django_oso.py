@@ -139,7 +139,7 @@ def test_partial(rf, settings, partial_policy):
         Post(name="test_public", is_private=False, timestamp=1).save(),
         Post(name="test_private", is_private=True, timestamp=1).save(),
         Post(name="test_private_2", is_private=True, timestamp=1).save(),
-        Post(name="test_option", is_private=True, timestamp=0, option=True).save(),
+        Post(name="test_option", is_private=False, timestamp=1, option=True).save(),
     ]
 
     request = rf.get("/")
