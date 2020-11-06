@@ -51,7 +51,8 @@ impl PolarError {
                 | ParseError::InvalidToken { loc, .. }
                 | ParseError::UnrecognizedEOF { loc }
                 | ParseError::UnrecognizedToken { loc, .. }
-                | ParseError::ExtraToken { loc, .. } => {
+                | ParseError::ExtraToken { loc, .. }
+                | ParseError::WrongValueType { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -132,14 +133,42 @@ impl fmt::Display for PolarError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
-    IntegerOverflow { token: String, loc: usize },
-    InvalidTokenCharacter { token: String, c: char, loc: usize },
-    InvalidToken { loc: usize },
-    UnrecognizedEOF { loc: usize },
-    UnrecognizedToken { token: String, loc: usize },
-    ExtraToken { token: String, loc: usize },
-    ReservedWord { token: String, loc: usize },
-    InvalidFloat { token: String, loc: usize },
+    IntegerOverflow {
+        token: String,
+        loc: usize,
+    },
+    InvalidTokenCharacter {
+        token: String,
+        c: char,
+        loc: usize,
+    },
+    InvalidToken {
+        loc: usize,
+    },
+    UnrecognizedEOF {
+        loc: usize,
+    },
+    UnrecognizedToken {
+        token: String,
+        loc: usize,
+    },
+    ExtraToken {
+        token: String,
+        loc: usize,
+    },
+    ReservedWord {
+        token: String,
+        loc: usize,
+    },
+    InvalidFloat {
+        token: String,
+        loc: usize,
+    },
+    WrongValueType {
+        loc: usize,
+        term: Term,
+        expected: String,
+    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -189,6 +218,9 @@ impl fmt::Display for ParseError {
                 "{} was parsed as a float, but is invalid",
                 token.escape_debug()
             ),
+            Self::WrongValueType { term, expected, .. } => {
+                write!(f, "Wrong value type: {}. Expected a {}", term, expected)
+            }
         }
     }
 }
