@@ -140,7 +140,7 @@ impl Folder for PartialToExpression {
     fn fold_term(&mut self, t: Term) -> Term {
         match t.value() {
             Value::Partial(partial) => fold_term(partial.clone().into_expression(), self),
-            _ => fold_term(t, self)
+            _ => fold_term(t, self),
         }
     }
 }
