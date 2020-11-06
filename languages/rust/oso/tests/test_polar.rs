@@ -890,3 +890,29 @@ fn test_iterators() -> oso::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_nil() {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.load_str("null(nil);");
+
+    oso.qvar_one("null(x)", "x", Option::<PolarValue>::None);
+    assert_eq!(
+        oso.oso
+            .query_rule("null", (Option::<PolarValue>::None,))
+            .unwrap()
+            .count(),
+        1
+    );
+    assert_eq!(
+        oso.oso
+            .query_rule("null", (Vec::<PolarValue>::new(),))
+            .unwrap()
+            .count(),
+        0
+    );
+    oso.qeval("nil.is_none()");
+    oso.qnull("x in nil");
+}
