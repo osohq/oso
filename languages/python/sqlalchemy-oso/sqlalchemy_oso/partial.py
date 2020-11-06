@@ -2,6 +2,7 @@
 
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
+from sqlalchemy.orm import RelationshipProperty, ColumnProperty
 from sqlalchemy.sql.expression import ClauseElement, BinaryExpression, and_
 
 from polar.partial import Partial
@@ -54,14 +55,22 @@ def compare_expr(expression: Expression, session: Session, model) -> BinaryExpre
 def translate_comparison(path, value, model):
     """Translate a comparison operation of ``path`` = ``value`` on ``model``."""
     if len(path) == 1:
-        return getattr(model, path[0]) == value
+        property = getattr(model, path[0])
+        return property == value
     else:
         # TODO this has assumes that nested relationships are always
         # a scalar attribute... it also probably isn't as efficient as a
         # join usually, so we may want to translate differently.
         property = getattr(model, path[0])
-        return property.has(
-            translate_comparison(path[1:], value, property.entity.class_))
+        assert isinstance(property.property, RelationshipProperty)
+        relationship = property.property
+
+        if not relationship.uselist:
+            return property.has(
+                translate_comparison(path[1:], value, property.entity.class_))
+        else:
+            return property.any(
+                translate_comparison(path[1:], value, property.entity.class_))
 
 
 # TODO (dhatch): Move this helper into base.
