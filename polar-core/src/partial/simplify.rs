@@ -145,6 +145,24 @@ impl Folder for PartialToExpression {
     }
 }
 
+fn and_wrap(term: Term) -> Term {
+    let op = if let Ok(op) = term.value().as_expression() {
+        op.clone()
+    } else {
+        return term
+    };
+
+    if op.operator == Operator::And {
+        return term;
+    }
+
+    let inner = term.clone();
+    term.clone_with_value(Value::Expression(Operation {
+        operator: Operator::And,
+        args: vec![inner]
+    }))
+}
+
 /// Simplify a partial until quiescence.
 fn simplify_partial(mut term: Term) -> Term {
     let mut simplifier = Simplifier {};
@@ -159,6 +177,10 @@ fn simplify_partial(mut term: Term) -> Term {
 
     let mut partial_to_expr = PartialToExpression {};
     let expression = partial_to_expr.fold_term(new);
+
+    // Ensure top level expressions always have a single AND.
+    // (This assumption makes writing adapters easier).
+    let expression = and_wrap(expression);
 
     expression
 }
@@ -192,7 +214,6 @@ mod test {
     }
 
     #[test]
-    // TODO(gj): Is this maybe a silly test now that we don't simplify "trivial" unifications?
     fn test_simplify_partial() {
         let partial = term!(Constraints {
             variable: sym!("a"),
@@ -200,7 +221,11 @@ mod test {
         });
         assert_eq!(
             simplify_partial(partial),
-            term!(op!(Unify, term!(sym!("_this")), term!(1)))
+            term!(
+                op!(And,
+                    term!(op!(Unify, term!(sym!("_this")), term!(1)))
+                )
+            )
         );
     }
 
@@ -212,7 +237,7 @@ mod test {
         ));
         assert_eq!(
             simplify_partial(partial),
-            term!(op!(Eq, term!(1), term!(2)))
+            term!(op!(And, term!(op!(Eq, term!(1), term!(2)))))
         );
 
         let partial = term!(partial!(
@@ -224,7 +249,7 @@ mod test {
         ));
         assert_eq!(
             simplify_partial(partial),
-            term!(op!(Eq, term!(1), term!(2)))
+            term!(op!(And, term!(op!(Eq, term!(1), term!(2)))))
         );
 
         let partial = term!(partial!(
