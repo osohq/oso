@@ -35,7 +35,7 @@ the ``#register_class`` method. An example of this can be found :ref:`here <appl
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
 Polar supports integer and floating point real numbers, as well as booleans (see :ref:`basic-types`).
-These map to the Ruby ``Integer``, ``Float``, ``TrueClass``, and ``FalseClass`` types.
+These map to the Ruby ``Integer``, ``Float``, and ``TrueClass``/``FalseClass`` types.
 
 Strings
 ^^^^^^^
@@ -116,8 +116,9 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
 
 There is currently no syntax for random access to a list element within a policy;
 i.e., there is no Polar equivalent of the Ruby expression ``user.groups[1]``.
-To access the elements of a list, you may iterate over it with :ref:`operator-in`
-or destructure it with :ref:`pattern matching <patterns-and-matching>`.
+To access the elements of a list, you may iterate over it with :ref:`operator-in`,
+destructure it with :ref:`pattern matching <patterns-and-matching>`,
+or use the ``Array#at`` method.
 
 Hashes
 ^^^^^^
@@ -144,9 +145,9 @@ Ruby hashes are mapped to Polar :ref:`dictionaries`:
 
 Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
 
-Enumerators
-^^^^^^^^^^^^
-You may iterate over a Ruby `enumerator <https://ruby-doc.org/core/Enumerator.html>`_
+Enumerables
+^^^^^^^^^^^
+You may iterate over any Ruby `enumerable <https://ruby-doc.org/core/Enumerable.html>`_
 using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
@@ -159,7 +160,7 @@ using the Polar :ref:`operator-in` operator:
 
   class User
     def get_groups(self)
-      ["HR", "payroll"].to_enum
+      ["HR", "payroll"]
     end
   end
 
