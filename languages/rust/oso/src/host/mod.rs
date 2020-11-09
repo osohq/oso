@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use crate::errors::OsoError;
 use crate::Polar;
@@ -15,6 +15,13 @@ pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
 pub use to_polar::{PolarIterator, ToPolar, ToPolarList};
 pub use value::PolarValue;
+
+lazy_static::lazy_static! {
+    /// Map of classes that have been globally registered
+    ///
+    /// These will be used as a fallback, and cached on the host when an unknown instance is seen
+    static ref DEFAULT_CLASSES: Arc<RwLock<HashMap<std::any::TypeId, super::Class>>> = Default::default();
+}
 
 impl crate::PolarClass for Class {}
 
@@ -72,10 +79,6 @@ impl Host {
             .and_then(|name| self.get_class(name))
     }
 
-    pub fn get_class_from_type<C: 'static>(&self) -> crate::Result<&Class> {
-        self.get_class_by_type_id(std::any::TypeId::of::<C>())
-    }
-
     pub fn get_class_mut(&mut self, name: &str) -> crate::Result<&mut Class> {
         self.classes
             .get_mut(name)
@@ -88,6 +91,14 @@ impl Host {
     ///
     /// Returns an instance of `Type` for this class.
     pub fn cache_class(&mut self, class: Class, name: String) -> crate::Result<String> {
+        // Insert into default classes here so that we don't repeat this the first
+        // time we see an instance.
+        DEFAULT_CLASSES
+            .write()
+            .unwrap()
+            .entry(class.type_id)
+            .or_insert_with(|| class.clone());
+
         if self.classes.contains_key(&name) {
             Err(OsoError::DuplicateClassError { name })
         } else {
@@ -105,6 +116,18 @@ impl Host {
     }
 
     pub fn cache_instance(&mut self, instance: class::Instance, id: Option<u64>) -> u64 {
+        // Lookup the class for this instance
+        let type_id = instance.type_id();
+        let class = self.get_class_by_type_id(type_id);
+        if class.is_err() {
+            // if its not found, try and use the default class implementation
+            let default_class = DEFAULT_CLASSES.read().unwrap().get(&type_id).cloned();
+            if let Some(class) = default_class {
+                let name = class.name.clone();
+                let _ = self.cache_class(class, name);
+            }
+        }
+
         let id = id.unwrap_or_else(|| self.polar.get_external_id());
         tracing::trace!(
             "insert instance {:?} {:?}, instances: {:?}",

@@ -1,7 +1,6 @@
 use polar_core::terms::*;
 use std::collections::hash_map::HashMap;
 
-use super::to_polar::DEFAULT_CLASSES;
 use crate::host::{Host, Instance};
 
 /// An enum of the possible value types that can be
@@ -99,14 +98,6 @@ impl PolarValue {
             }
             PolarValue::Instance(instance) => {
                 let id = host.cache_instance(instance.clone(), None);
-                if instance.class(host).is_err() {
-                    if let Some(class) = DEFAULT_CLASSES.lock().unwrap().get(&instance.type_id()) {
-                        let name = class.name.clone();
-                        host.cache_class(class.clone(), name).expect(
-                    "failed to register a class that we thought was previously unregistered",
-                        );
-                    }
-                }
                 Value::ExternalInstance(ExternalInstance {
                     constructor: None,
                     repr: Some(std::any::type_name::<Self>().to_owned()),

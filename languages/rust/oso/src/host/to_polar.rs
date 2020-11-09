@@ -5,11 +5,8 @@ use impl_trait_for_tuples::*;
 
 use std::collections::HashMap;
 
+use super::DEFAULT_CLASSES;
 use crate::PolarValue;
-
-lazy_static::lazy_static! {
-    pub static ref DEFAULT_CLASSES: std::sync::Arc<std::sync::Mutex<HashMap<std::any::TypeId, super::Class>>> = Default::default();
-}
 
 /// Convert Rust types to Polar types.
 ///
@@ -38,11 +35,19 @@ pub trait ToPolar {
 
 impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
     fn to_polar(self) -> PolarValue {
-        DEFAULT_CLASSES
-            .lock()
+        let registered = DEFAULT_CLASSES
+            .read()
             .unwrap()
-            .entry(std::any::TypeId::of::<C>())
-            .or_insert_with(C::get_polar_class);
+            .get(&std::any::TypeId::of::<C>())
+            .is_some();
+
+        if !registered {
+            DEFAULT_CLASSES
+                .write()
+                .unwrap()
+                .entry(std::any::TypeId::of::<C>())
+                .or_insert_with(C::get_polar_class);
+        }
 
         PolarValue::new_from_instance(self)
     }
