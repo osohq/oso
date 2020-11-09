@@ -1,6 +1,6 @@
 //! Code for showing blog progress
 
-use oso::{Class, Oso, ToPolar};
+use oso::{Oso, PolarClass};
 use tracing::{info, instrument};
 
 #[instrument]
@@ -37,15 +37,14 @@ fn example_one() -> anyhow::Result<()> {
 fn example_two() -> anyhow::Result<()> {
     let mut oso = Oso::new();
 
+    #[derive(PolarClass)]
     struct Foo {
         x: u32,
     }
-    impl ToPolar for Foo {}
 
     oso.load_str("foo_x_is_one(foo: Foo) if foo.x = 1;")?;
     oso.register_class(
-        Class::builder::<Foo>()
-            .name("Foo")
+        Foo::get_polar_class_builder()
             .add_attribute_getter("x", |f| f.x)
             .build(),
     )?;
@@ -61,7 +60,7 @@ fn example_two() -> anyhow::Result<()> {
 #[instrument]
 fn example_three() -> anyhow::Result<()> {
     let mut oso = Oso::new();
-
+    #[derive(PolarClass)]
     struct Foo {
         x: u32,
     }
@@ -72,12 +71,9 @@ fn example_three() -> anyhow::Result<()> {
         }
     }
 
-    impl ToPolar for Foo {}
-
     oso.load_str("x_plus_y_is_two(foo: Foo) if foo.x_plus_y(1) = 2;")?;
     oso.register_class(
-        Class::builder::<Foo>()
-            .name("Foo")
+        Foo::get_polar_class_builder()
             .add_attribute_getter("x", |f| f.x)
             .add_method("x_plus_y", Foo::x_plus_y)
             .build(),
@@ -95,6 +91,7 @@ fn example_three() -> anyhow::Result<()> {
 fn example_four() -> anyhow::Result<()> {
     let mut oso = Oso::new();
 
+    #[derive(PolarClass)]
     struct Foo {
         x: u32,
     }
@@ -109,12 +106,9 @@ fn example_four() -> anyhow::Result<()> {
         }
     }
 
-    impl ToPolar for Foo {}
-
     oso.load_str("x_plus_y_plus_z_is_five(foo: Foo) if foo.x_plus_y(1) + Foo.get_z() = 5;")?;
     oso.register_class(
-        Class::builder::<Foo>()
-            .name("Foo")
+        Foo::get_polar_class_builder()
             .add_attribute_getter("x", |f| f.x)
             .add_method("x_plus_y", Foo::x_plus_y)
             .add_class_method("get_z", Foo::get_z)
