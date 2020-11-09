@@ -62,7 +62,7 @@ constructable
 precommit
 args
 moduli
-pre
+enumerables
 
 ## Product names
 sqlite
