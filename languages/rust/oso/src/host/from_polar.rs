@@ -33,7 +33,7 @@ use crate::PolarClass;
 ///
 /// `FromPolar` implementors must also be concrete, sized types without
 /// any borrows.
-pub trait FromPolar: Clone + Sized + 'static {
+pub trait FromPolar: Clone {
     fn from_polar(val: PolarValue) -> crate::Result<Self>;
 }
 

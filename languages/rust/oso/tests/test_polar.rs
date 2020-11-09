@@ -426,8 +426,8 @@ fn test_register_class() -> oso::Result<()> {
     struct Bar;
 
     impl Bar {
-        pub fn y(&self) -> String {
-            "y".to_owned()
+        pub fn y(&self) -> &'static str {
+            "y"
         }
     }
 
@@ -447,12 +447,12 @@ fn test_register_class() -> oso::Result<()> {
             Self { a }
         }
 
-        pub fn b(&self) -> Vec<String> {
-            vec!["b".to_owned()]
+        pub fn b(&self) -> Vec<&'static str> {
+            vec!["b"]
         }
 
-        pub fn c(&self) -> String {
-            "c".to_owned()
+        pub fn c(&self) -> &'static str {
+            "c"
         }
 
         pub fn d(&self, x: String) -> String {
@@ -474,8 +474,8 @@ fn test_register_class() -> oso::Result<()> {
             vec![vec![1, 2, 3], vec![4, 5, 6]]
         }
 
-        pub fn g(&self) -> HashMap<String, String> {
-            hashmap! {"hello".to_owned() => "world".to_owned()}
+        pub fn g(&self) -> HashMap<&'static str, &'static str> {
+            hashmap! {"hello" => "world"}
         }
 
         pub fn h(&self) -> bool {

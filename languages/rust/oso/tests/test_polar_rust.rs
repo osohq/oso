@@ -147,8 +147,8 @@ fn test_external() {
             vec![vec![1, 2, 3], vec![4, 5, 6], vec![7]].into_iter()
         }
 
-        fn g(&self) -> std::collections::HashMap<String, &'static str> {
-            hashmap!("hello".to_string() => "world")
+        fn g(&self) -> std::collections::HashMap<&'static str, &'static str> {
+            hashmap!("hello" => "world")
         }
 
         fn h(&self) -> bool {

@@ -30,10 +30,8 @@ lazy_static::lazy_static! {
 ///
 /// `ToPolar` implementors must also be concrete, sized types without
 /// any borrows.
-pub trait ToPolar: Send + Sync + Sized + 'static {
-    fn to_polar(self) -> PolarValue {
-        PolarValue::new_from_instance(self)
-    }
+pub trait ToPolar {
+    fn to_polar(self) -> PolarValue;
 }
 
 impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
@@ -81,7 +79,7 @@ pub trait ToPolarList: private::Sealed {
 }
 
 #[impl_for_tuples(16)]
-#[tuple_types_custom_trait_bound(ToPolar + 'static)]
+#[tuple_types_custom_trait_bound(ToPolar)]
 impl private::Sealed for Tuple {}
 
 impl ToPolarList for () {
@@ -91,7 +89,7 @@ impl ToPolarList for () {
 }
 
 #[impl_for_tuples(1, 16)]
-#[tuple_types_custom_trait_bound(ToPolar + 'static)]
+#[tuple_types_custom_trait_bound(ToPolar)]
 impl ToPolarList for Tuple {
     fn to_polar_list(self) -> Vec<PolarValue> {
         let mut result = Vec::new();
@@ -145,7 +143,7 @@ impl ToPolar for String {
     }
 }
 
-impl ToPolar for &'static str {
+impl<'a> ToPolar for &'a str {
     fn to_polar(self) -> PolarValue {
         PolarValue::String(self.to_string())
     }
@@ -157,9 +155,25 @@ impl<T: ToPolar> ToPolar for Vec<T> {
     }
 }
 
+impl<'a, T: Clone + ToPolar> ToPolar for &'a [T] {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.iter().cloned().map(|v| v.to_polar()).collect())
+    }
+}
+
 impl<T: ToPolar> ToPolar for HashMap<String, T> {
     fn to_polar(self) -> PolarValue {
         PolarValue::Map(self.into_iter().map(|(k, v)| (k, v.to_polar())).collect())
+    }
+}
+
+impl<T: ToPolar> ToPolar for HashMap<&str, T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::Map(
+            self.into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_polar()))
+                .collect(),
+        )
     }
 }
 

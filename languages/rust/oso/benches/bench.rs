@@ -1,14 +1,14 @@
 //! Benchmarks of blog post things
 
-use oso::{Class, Oso, PolarClass, ToPolar};
+use oso::{Class, Oso, PolarClass};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 pub fn rust_get_attribute(c: &mut Criterion) {
+    #[derive(PolarClass)]
     struct Foo {
         x: u32,
     }
-    impl ToPolar for Foo {}
 
     c.bench_function("rust_get_attribute", |b| {
         b.iter_batched_ref(

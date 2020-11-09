@@ -39,7 +39,7 @@ fn string() -> ClassBuilder<String> {
     ClassBuilder::<String>::with_default()
         .name("String")
         .add_method("len", |s: &String| s.len() as i64)
-        .add_method("is_empty", |s: &String| s.is_empty())
+        .add_method("is_empty", String::is_empty)
         .add_method("is_char_boundary", |s: &String, index: i64| {
             s.is_char_boundary(index as usize)
         })
