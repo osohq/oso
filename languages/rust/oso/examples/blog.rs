@@ -19,11 +19,11 @@ fn example_zero() -> anyhow::Result<()> {
 fn example_one() -> anyhow::Result<()> {
     let mut oso = Oso::new();
 
+    #[derive(PolarClass)]
     struct Foo {}
-    impl ToPolar for Foo {}
 
     oso.load_str("is_a_foo(_x: Foo);")?;
-    oso.register_class(Class::builder::<Foo>().name("Foo").build())?;
+    oso.register_class(Foo::get_polar_class())?;
 
     let example_foo = Foo {};
     let mut query = oso.query_rule("is_a_foo", (example_foo,))?;
