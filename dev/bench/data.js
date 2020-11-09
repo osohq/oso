@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604691062852,
+  "lastUpdate": 1604937648849,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12537,6 +12537,126 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 7021,
             "range": "± 153",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "398b602974b02e39c4a7b256a44ae88b69ab1d4c",
+          "message": "No longer automatically iterate on lookups (#485)\n\n* Change lookups to return one value only; use `in` for iterating.\r\n\r\n* Ruby changes.\r\n\r\n* Java changes.\r\n\r\n* WIP on JS changes.\r\n\r\n* Finish JS support.\r\n\r\n* Rust support.\r\n\r\n* Formatting and linting.\r\n\r\n* Update documentation.\r\n\r\n* Add changelog entry.\r\n\r\n* Another sweep for policies.\r\n\r\n* [bench]\r\n\r\n* Back out Rust oso changes.\r\n\r\n* Ignore failing oso-rust test case for now.\r\n\r\n* Apply suggestions from code review\r\n\r\nCo-authored-by: Leina McDermott <leina05@gmail.com>\r\n\r\n* Remove confusing sentence.\r\n\r\n* Pull out helper method to create a new call var.\r\n\r\n* rename term to iterable.\r\n\r\n* Tests for everything! And better error handling.\r\n\r\n* Update FFI guide.\r\n\r\n* Revert accidental change.\r\n\r\n* Support iterating over strings + dictionaries in polar-core.\r\n\r\n* formatting\r\n\r\n* Revert Python changes.\r\n\r\nCo-authored-by: Leina McDermott <leina05@gmail.com>",
+          "timestamp": "2020-11-09T10:54:51-05:00",
+          "tree_id": "7cdf4c4288fc77754a5f1d9484b722e108030f64",
+          "url": "https://github.com/osohq/oso/commit/398b602974b02e39c4a7b256a44ae88b69ab1d4c"
+        },
+        "date": 1604937647070,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 820,
+            "range": "± 33",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2505,
+            "range": "± 79",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 65611,
+            "range": "± 2576",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 515899,
+            "range": "± 16595",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 18199,
+            "range": "± 829",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 17815,
+            "range": "± 1074",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 17910,
+            "range": "± 974",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 18110,
+            "range": "± 746",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 15568,
+            "range": "± 822",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5784,
+            "range": "± 1179",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6884,
+            "range": "± 1431",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 8379,
+            "range": "± 363",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 15100,
+            "range": "± 1752",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5792,
+            "range": "± 188",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 11217,
+            "range": "± 488",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 6969,
+            "range": "± 304",
             "unit": "ns/iter"
           }
         ]
