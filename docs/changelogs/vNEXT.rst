@@ -42,7 +42,7 @@ New features
 ``nil``
 -------
 
-Polar now pre-defines `a constant named ``nil``
+Polar now defines `a constant named ``nil``
 <https://docs.osohq.com/getting-started/policies/application-types.html#nil>`_
 whose value is an application-language-specific "null" value;
 e.g., ``None`` in Python, ``nil`` in Ruby, ``null`` for Java & JS, etc.

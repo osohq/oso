@@ -559,7 +559,7 @@ see the :doc:`/using/libraries/index` guides.
 
 ``nil``
 -------
-In addition to the built-in types, Polar pre-registers a constant named
+In addition to the built-in types, Polar registers a constant named
 ``nil`` that maps to an application-language-specific "null" value:
 
 +---------+----------+---------+----------+------------+-----------------------+----------+
