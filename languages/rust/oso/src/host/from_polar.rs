@@ -23,16 +23,14 @@ use crate::PolarClass;
 ///
 /// ## Trait bounds
 ///
-/// Currently `FromPolar` requires `Clone` because we can only
+/// `FromPolar` requires `Clone` because we can only
 /// get a borrowed value back from oso. In the future, this could
 /// be updated to return borrowed data instead.
 ///
-/// `FromPolar` also requires types to be `Send + Sync`, since it
+/// The default implementation for `PolarClass`
+/// also requires types to be `Send + Sync`, since it
 /// is possible to store a `FromPolar` value on an `Oso` instance
 /// which can be shared between threads
-///
-/// `FromPolar` implementors must also be concrete, sized types without
-/// any borrows.
 pub trait FromPolar: Clone {
     fn from_polar(val: PolarValue) -> crate::Result<Self>;
 }

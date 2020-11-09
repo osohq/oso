@@ -22,9 +22,11 @@ lazy_static::lazy_static! {
 ///
 /// For non-primitive types, the instance will be stored
 /// on the provided `Host`.
+///
 /// ## Trait bounds
 ///
-/// `ToPolar` requires types to be `Send + Sync`, since it
+/// The default implementation for `PolarClass`
+/// requires types to be `Send + Sync`, since it
 /// is possible to store a `ToPolar` value on an `Oso` instance
 /// which can be shared between threads.
 ///

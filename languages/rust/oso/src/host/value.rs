@@ -4,7 +4,14 @@ use std::collections::hash_map::HashMap;
 use super::to_polar::DEFAULT_CLASSES;
 use crate::host::{Host, Instance};
 
-// Should we call it something else?
+/// An enum of the possible value types that can be
+/// sent to/from Polar.
+///
+/// All variants except `Instance` represent types that can
+/// be used natively in Polar.
+/// Any other types can be wrapped using `PolarValue::new_from_instance`.
+/// If the instance has a registered `Class`, then this can be used
+/// from the policy too.
 #[derive(Clone, Debug)]
 pub enum PolarValue {
     Integer(i64),
@@ -32,6 +39,7 @@ impl PartialEq for PolarValue {
 }
 
 impl PolarValue {
+    /// Create a `PolarValue::Instance` from any type.
     pub fn new_from_instance<T>(instance: T) -> Self
     where
         T: Send + Sync + 'static,

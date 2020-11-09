@@ -47,11 +47,11 @@ pub struct Class {
     /// The class name. Defaults to the `std::any::type_name`
     pub name: String,
     pub type_id: TypeId,
-    /// A wrapped method that constructs an instance of `T` from Polar terms
+    /// A wrapped method that constructs an instance of `T` from `PolarValue`s
     constructor: Option<Constructor>,
     /// Methods that return simple attribute lookups on an instance of `T`
     attributes: Attributes,
-    /// Instance methods on `T` that expect Polar terms, and an instance of `&T`
+    /// Instance methods on `T` that expect a list of `PolarValue`s, and an instance of `&T`
     instance_methods: InstanceMethods,
     /// Class methods on `T`
     class_methods: ClassMethods,
@@ -86,7 +86,7 @@ impl Class {
 
     /// Call class method `attr` on `self` with arguments from `args`.
     ///
-    /// Returns: An iterable of results from the method.
+    /// Returns: The result as a `PolarValue`
     pub fn call(&self, attr: &str, args: Vec<PolarValue>) -> crate::Result<PolarValue> {
         let attr =
             self.class_methods
@@ -194,7 +194,7 @@ where
         self
     }
 
-    /// Set an equality function to be used for polar `==` statements.
+    /// Set a method to convert instances into iterators
     pub fn set_into_iter<F, I, V>(mut self, f: F) -> Self
     where
         F: Fn(&T) -> I + Send + Sync + 'static,
@@ -212,7 +212,7 @@ where
         self
     }
 
-    /// Set an equality function to be used for polar `==` statements.
+    /// Use the existing `IntoIterator` implementation to convert instances into iterators
     pub fn with_iter<V>(self) -> Self
     where
         T: IntoIterator<Item = V> + Clone,
@@ -378,10 +378,7 @@ impl Instance {
 
     /// Call the named method on the instance via the registered `Class`
     ///
-    /// Returns: PolarResultIter, or an Error if the method cannot be called.
-    ///
-    /// N.B: If the method itself returns an error, this will be captured in
-    /// the PolarResultIterator (the first result will be an Error).
+    /// Returns: A PolarValue, or an Error if the method cannot be called.
     pub fn call(
         &self,
         name: &str,
