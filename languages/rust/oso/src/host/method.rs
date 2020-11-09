@@ -6,7 +6,7 @@
 /// which encodes the types of the arguments
 /// in a single type - a tuple.
 pub trait Function<Args = ()>: Send + Sync + 'static {
-    type Result: 'static;
+    type Result;
 
     fn invoke(&self, args: Args) -> Self::Result;
 }
@@ -14,14 +14,14 @@ pub trait Function<Args = ()>: Send + Sync + 'static {
 /// Similar to a `Function` but also takes an explicit `receiver`
 /// parameter than is the first argument of the call (i.e. the `self` param);
 pub trait Method<Receiver, Args = ()>: Send + Sync + 'static {
-    type Result: 'static;
+    type Result;
 
     fn invoke(&self, receiver: &Receiver, args: Args) -> Self::Result;
 }
 
 // Generated Impls (see test)
 
-impl<F, R: 'static> Function<()> for F
+impl<F, R> Function<()> for F
 where
     F: Fn() -> R + Send + Sync + 'static,
 {
@@ -32,7 +32,7 @@ where
     }
 }
 
-impl<A, F, R: 'static> Function<(A,)> for F
+impl<A, F, R> Function<(A,)> for F
 where
     F: Fn(A) -> R + Send + Sync + 'static,
 {
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<A, B, F, R: 'static> Function<(A, B)> for F
+impl<A, B, F, R> Function<(A, B)> for F
 where
     F: Fn(A, B) -> R + Send + Sync + 'static,
 {
@@ -54,7 +54,7 @@ where
     }
 }
 
-impl<A, B, C, F, R: 'static> Function<(A, B, C)> for F
+impl<A, B, C, F, R> Function<(A, B, C)> for F
 where
     F: Fn(A, B, C) -> R + Send + Sync + 'static,
 {
@@ -65,7 +65,7 @@ where
     }
 }
 
-impl<A, B, C, D, F, R: 'static> Function<(A, B, C, D)> for F
+impl<A, B, C, D, F, R> Function<(A, B, C, D)> for F
 where
     F: Fn(A, B, C, D) -> R + Send + Sync + 'static,
 {
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, F, R: 'static> Function<(A, B, C, D, E)> for F
+impl<A, B, C, D, E, F, R> Function<(A, B, C, D, E)> for F
 where
     F: Fn(A, B, C, D, E) -> R + Send + Sync + 'static,
 {
@@ -87,7 +87,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, F, R: 'static> Function<(A, B, C, D, E, G)> for F
+impl<A, B, C, D, E, G, F, R> Function<(A, B, C, D, E, G)> for F
 where
     F: Fn(A, B, C, D, E, G) -> R + Send + Sync + 'static,
 {
@@ -98,7 +98,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, F, R: 'static> Function<(A, B, C, D, E, G, H)> for F
+impl<A, B, C, D, E, G, H, F, R> Function<(A, B, C, D, E, G, H)> for F
 where
     F: Fn(A, B, C, D, E, G, H) -> R + Send + Sync + 'static,
 {
@@ -109,7 +109,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, F, R: 'static> Function<(A, B, C, D, E, G, H, I)> for F
+impl<A, B, C, D, E, G, H, I, F, R> Function<(A, B, C, D, E, G, H, I)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I) -> R + Send + Sync + 'static,
 {
@@ -122,7 +122,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, F, R: 'static> Function<(A, B, C, D, E, G, H, I, J)> for F
+impl<A, B, C, D, E, G, H, I, J, F, R> Function<(A, B, C, D, E, G, H, I, J)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J) -> R + Send + Sync + 'static,
 {
@@ -135,7 +135,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, F, R: 'static> Function<(A, B, C, D, E, G, H, I, J, K)> for F
+impl<A, B, C, D, E, G, H, I, J, K, F, R> Function<(A, B, C, D, E, G, H, I, J, K)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync + 'static,
 {
@@ -148,8 +148,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, F, R: 'static> Function<(A, B, C, D, E, G, H, I, J, K, L)>
-    for F
+impl<A, B, C, D, E, G, H, I, J, K, L, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync + 'static,
 {
@@ -162,8 +161,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R: 'static>
-    Function<(A, B, C, D, E, G, H, I, J, K, L, M)> for F
+impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L, M)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync + 'static,
 {
@@ -177,8 +175,8 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R: 'static>
-    Function<(A, B, C, D, E, G, H, I, J, K, L, M, N)> for F
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R> Function<(A, B, C, D, E, G, H, I, J, K, L, M, N)>
+    for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync + 'static,
 {
@@ -192,7 +190,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R: 'static>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R>
     Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync + 'static,
@@ -207,7 +205,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R: 'static>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R>
     Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync + 'static,
@@ -222,7 +220,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R: 'static>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R>
     Function<(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)> for F
 where
     F: Fn(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync + 'static,
@@ -237,7 +235,7 @@ where
     }
 }
 
-impl<F, R: 'static, Receiver> Method<Receiver, ()> for F
+impl<F, R, Receiver> Method<Receiver, ()> for F
 where
     F: Fn(&Receiver) -> R + Send + Sync + 'static,
 {
@@ -248,7 +246,7 @@ where
     }
 }
 
-impl<A, F, R: 'static, Receiver> Method<Receiver, (A,)> for F
+impl<A, F, R, Receiver> Method<Receiver, (A,)> for F
 where
     F: Fn(&Receiver, A) -> R + Send + Sync + 'static,
 {
@@ -259,7 +257,7 @@ where
     }
 }
 
-impl<A, B, F, R: 'static, Receiver> Method<Receiver, (A, B)> for F
+impl<A, B, F, R, Receiver> Method<Receiver, (A, B)> for F
 where
     F: Fn(&Receiver, A, B) -> R + Send + Sync + 'static,
 {
@@ -270,7 +268,7 @@ where
     }
 }
 
-impl<A, B, C, F, R: 'static, Receiver> Method<Receiver, (A, B, C)> for F
+impl<A, B, C, F, R, Receiver> Method<Receiver, (A, B, C)> for F
 where
     F: Fn(&Receiver, A, B, C) -> R + Send + Sync + 'static,
 {
@@ -281,7 +279,7 @@ where
     }
 }
 
-impl<A, B, C, D, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D)> for F
+impl<A, B, C, D, F, R, Receiver> Method<Receiver, (A, B, C, D)> for F
 where
     F: Fn(&Receiver, A, B, C, D) -> R + Send + Sync + 'static,
 {
@@ -292,7 +290,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E)> for F
+impl<A, B, C, D, E, F, R, Receiver> Method<Receiver, (A, B, C, D, E)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E) -> R + Send + Sync + 'static,
 {
@@ -303,7 +301,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E, G)> for F
+impl<A, B, C, D, E, G, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G) -> R + Send + Sync + 'static,
 {
@@ -314,7 +312,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E, G, H)> for F
+impl<A, B, C, D, E, G, H, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H) -> R + Send + Sync + 'static,
 {
@@ -327,8 +325,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, F, R: 'static, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I)>
-    for F
+impl<A, B, C, D, E, G, H, I, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I) -> R + Send + Sync + 'static,
 {
@@ -341,8 +338,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, F, R: 'static, Receiver>
-    Method<Receiver, (A, B, C, D, E, G, H, I, J)> for F
+impl<A, B, C, D, E, G, H, I, J, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I, J)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J) -> R + Send + Sync + 'static,
 {
@@ -355,8 +351,8 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, F, R: 'static, Receiver>
-    Method<Receiver, (A, B, C, D, E, G, H, I, J, K)> for F
+impl<A, B, C, D, E, G, H, I, J, K, F, R, Receiver> Method<Receiver, (A, B, C, D, E, G, H, I, J, K)>
+    for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K) -> R + Send + Sync + 'static,
 {
@@ -370,7 +366,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, F, R: 'static, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, F, R, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L) -> R + Send + Sync + 'static,
@@ -385,7 +381,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R: 'static, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, F, R, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M) -> R + Send + Sync + 'static,
@@ -404,7 +400,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R: 'static, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, F, R, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N) -> R + Send + Sync + 'static,
@@ -423,7 +419,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R: 'static, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, F, R, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O) -> R + Send + Sync + 'static,
@@ -442,7 +438,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R: 'static, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, F, R, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P) -> R + Send + Sync + 'static,
@@ -461,7 +457,7 @@ where
     }
 }
 
-impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R: 'static, Receiver>
+impl<A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, F, R, Receiver>
     Method<Receiver, (A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q)> for F
 where
     F: Fn(&Receiver, A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q) -> R + Send + Sync + 'static,
@@ -516,7 +512,7 @@ mod tests {
             let (letters, args) = tuple_type(i);
             let imp = format!(
                 r#"
-impl<{letters}F, R: 'static> Function<({letters})> for F
+impl<{letters}F, R> Function<({letters})> for F
 where
     F: Fn({letters}) -> R + Send + Sync + 'static,
 {{
@@ -527,7 +523,7 @@ where
     }}
 }}
 
-impl<{letters}F, R: 'static, Receiver> Method<Receiver, ({letters})> for F
+impl<{letters}F, R, Receiver> Method<Receiver, ({letters})> for F
 where
     F: Fn(&Receiver, {letters}) -> R + Send + Sync + 'static,
 {{

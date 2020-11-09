@@ -24,7 +24,7 @@ impl Constructor {
     where
         Args: FromPolarList,
         F: Function<Args>,
-        F::Result: Send + Sync,
+        F::Result: Send + Sync + 'static,
     {
         Constructor(Arc::new(move |args: Vec<PolarValue>| {
             Args::from_polar_list(&args).map(|args| Instance::new(f.invoke(args)))
@@ -93,7 +93,7 @@ impl InstanceMethod {
         F::Result: IntoIterator<Item = I>,
         <<F as Method<T, Args>>::Result as IntoIterator>::IntoIter:
             Iterator<Item = I> + Clone + Send + Sync + 'static,
-        I: ToPolarResult + 'static,
+        I: ToPolarResult,
         T: 'static,
     {
         Self(Arc::new(
@@ -144,8 +144,8 @@ impl ClassMethod {
     pub fn new<F, Args>(f: F) -> Self
     where
         Args: FromPolarList,
-        F: Function<Args> + 'static,
-        F::Result: ToPolarResult + 'static,
+        F: Function<Args>,
+        F::Result: ToPolarResult,
     {
         Self(Arc::new(move |args: Vec<PolarValue>| {
             Args::from_polar_list(&args).and_then(|args| f.invoke(args).to_polar_result())
