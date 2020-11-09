@@ -195,8 +195,11 @@ impl PolarIterator {
     pub fn new<I: PolarResultIter + 'static>(iter: I) -> Self {
         Self(Box::new(iter))
     }
+}
 
-    pub fn next(&mut self) -> Option<crate::Result<PolarValue>> {
+impl Iterator for PolarIterator {
+    type Item = crate::Result<PolarValue>;
+    fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
 }
@@ -206,7 +209,11 @@ impl Clone for PolarIterator {
         Self(self.0.box_clone())
     }
 }
-impl crate::PolarClass for PolarIterator {}
+impl crate::PolarClass for PolarIterator {
+    fn get_polar_class_builder() -> crate::ClassBuilder<Self> {
+        crate::Class::builder::<Self>().with_iter()
+    }
+}
 
 pub trait PolarResultIter: Send + Sync {
     fn box_clone(&self) -> Box<dyn PolarResultIter>;

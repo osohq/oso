@@ -17,14 +17,15 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<u64, PolarIterator>,
+    /// Stores a map from call_id to the iterator the call iterates through
+    iterators: HashMap<u64, PolarIterator>,
     host: Host,
 }
 
 impl Query {
     pub fn new(inner: polar_core::polar::Query, host: Host) -> Self {
         Self {
-            calls: HashMap::new(),
+            iterators: HashMap::new(),
             inner,
             host,
         }
@@ -150,17 +151,15 @@ impl Query {
     }
 
     fn next_call_result(&mut self, call_id: u64) -> Option<crate::Result<PolarValue>> {
-        self.calls.get_mut(&call_id).and_then(|c| c.next())
+        self.iterators.get_mut(&call_id).and_then(|c| c.next())
     }
 
     fn handle_next_external(&mut self, call_id: u64, iterable: Term) -> crate::Result<()> {
-        if self.calls.get(&call_id).is_none() {
-            let instance = Instance::from_polar(PolarValue::from_term(&iterable, &self.host)?)?;
-            let iter = instance
-                .downcast::<crate::host::PolarIterator>(Some(&self.host))
-                .map(|i| Ok(i.clone()))
-                .unwrap_or_else(|_| instance.as_iter(&self.host))?;
-            self.calls.insert(call_id, iter);
+        if self.iterators.get(&call_id).is_none() {
+            let iterable_instance =
+                Instance::from_polar(PolarValue::from_term(&iterable, &self.host)?)?;
+            let iter = iterable_instance.as_iter(&self.host)?;
+            self.iterators.insert(call_id, iter);
         }
 
         match self.next_call_result(call_id) {
