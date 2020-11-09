@@ -153,6 +153,31 @@ using the Polar :ref:`operator-in` operator:
    user = User()
    assert(oso.is_allowed(user, "foo", "bar))
 
+``None``
+^^^^^^^^
+The Python value ``None`` is registered as the Polar constant :ref:`nil`.
+If a Python method can return ``None``, you may want to compare the result
+to ``nil``:
+
+.. code-block:: polar
+   :caption: :fa:`oso` policy.polar
+
+   allow(actor, action, resource) if actor.get_optional() != nil;
+
+.. code-block:: python
+   :caption: :fab:`python` app.py
+
+   class User:
+      def get_optional(self):
+         """Return something or None."""
+         if self.some_condition():
+             return self.some_thing
+         else:
+             return None
+
+   user = User()
+   assert(oso.is_allowed(user, "foo", "bar))
+
 Summary
 ^^^^^^^
 

@@ -172,6 +172,29 @@ oso will ``await`` any `Promise
 <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise>`_
 and then use the resolved value during evaluation of a policy.
 
+``null``
+^^^^^^^^
+The JavaScript ``null`` value is registered as the Polar constant :ref:`nil`.
+If a JavaScript function can return ``null``, you may want to compare the
+result to ``nil``:
+
+.. code-block:: polar
+  :caption: :fa:`oso` policy.polar
+
+  allow(actor, action, resource) if actor.getOptional() != nil;
+
+.. code-block:: javascript
+  :caption: :fab:`node-js` app.js
+
+  class User {
+    getOptional() {
+      if someCondition() {
+        return someThing;
+      } else {
+        return null;
+      }
+   }
+
 Summary
 ^^^^^^^
 

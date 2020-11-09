@@ -237,6 +237,32 @@ using the Polar :ref:`operator-in` operator:
          assert oso.isAllowed(user, "foo", "bar");
       }
 
+``null``
+^^^^^^^^
+The Java ``null`` reference is registered as the Polar constant :ref:`nil`.
+If a Java method can return ``null``, you may want to compare the result
+to ``nil``:
+
+.. code-block:: polar
+  :caption: :fa:`oso` policy.polar
+
+  allow(actor, action, resource) if actor.getOptional() != nil;
+
+.. code-block:: ruby
+  :caption: :fab:`java` User.java
+
+  public class User {
+      ...
+
+      public Thing getOptional() {
+          if someCondition() {
+              return new Thing();
+          } else {
+              return null;
+          }
+      }
+   }
+
 Summary
 ^^^^^^^
 

@@ -555,6 +555,8 @@ see the :doc:`/using/libraries/index` guides.
   Literals in Polar are constant, and any changes made to such objects
   by calling a method will not be persisted.
 
+.. _nil:
+
 ``nil``
 -------
 In addition to the built-in types, Polar pre-registers a constant named

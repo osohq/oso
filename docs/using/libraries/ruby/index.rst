@@ -166,6 +166,32 @@ using the Polar :ref:`operator-in` operator:
   user = User.new
   raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
+``nil``
+^^^^^^^
+The Ruby value ``nil`` is registered as the Polar constant :ref:`nil`.
+If a Ruby method can return ``None``, you may want to compare the result
+to ``nil``:
+
+.. code-block:: polar
+  :caption: :fa:`oso` policy.polar
+
+  allow(actor, action, resource) if actor.get_optional? != nil;
+
+.. code-block:: ruby
+  :caption: :fas:`gem` app.rb
+
+  class User
+     def get_optional(self)
+        if some_condition?
+          some_thing
+        else
+          nil
+     end
+  end
+
+  user = User.new
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+
 Summary
 ^^^^^^^
 
