@@ -107,6 +107,9 @@ raise unless oso.query('builtinSpecializers({}, "DictionaryWithFields")').to_a.e
 raise unless oso.query('builtinSpecializers({z: 1}, "DictionaryWithFields")').to_a.empty?
 oso.query('builtinSpecializers({y: 1}, "DictionaryWithFields")').next
 
+# test iterables work
+oso.query_rule('testIterables').next
+
 # Test deref behaviour
 oso.load_str '?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;'
 

@@ -17,12 +17,14 @@ import {
   Animal,
   B,
   Bar,
+  BarIterator,
   Belonger,
   C,
   ConstructorArgs,
   ConstructorNoArgs,
   Counter,
   Foo,
+  NonIterable,
   User,
   Widget,
   X,
@@ -35,6 +37,7 @@ import {
   PolarFileNotFoundError,
   PolarFileExtensionError,
   UnimplementedOperationError,
+  InvalidIteratorError,
 } from './errors';
 
 test('it works', async () => {
@@ -89,10 +92,12 @@ describe('#registerClass', () => {
     new Foo(\"A\").a()
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
-    expect(await qvar(p, 'new Foo("A").b = x', 'x', true)).not.toStrictEqual(
+    expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
+      'function is not iterable'
+    );
+    expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual(
       'b'
     );
-    expect(await qvar(p, 'new Foo("A").b() = x', 'x', true)).toStrictEqual('b');
     expect(await qvar(p, 'new Foo("A").c = x', 'x', true)).not.toStrictEqual(
       'c'
     );
@@ -106,7 +111,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     expect(await qvar(p, 'new Foo("A").e() = x', 'x')).toStrictEqual([
       [1, 2, 3],
     ]);
-    expect(await qvar(p, 'new Foo("A").f() = x', 'x')).toStrictEqual([
+    expect(await qvar(p, 'x in new Foo("A").f()', 'x')).toStrictEqual([
       [1, 2, 3],
       [4, 5, 6],
       7,
@@ -321,7 +326,7 @@ describe('conversions between JS + Polar values', () => {
   test('handles Generator external call results', async () => {
     const actor = new Actor('sam');
     const p = new Polar();
-    await p.loadStr('widgets(actor, x) if x = actor.widgets().id;');
+    await p.loadStr('widgets(actor, x) if w in actor.widgets() and x = w.id;');
     const result = await queryRule(p, 'widgets', actor, new Variable('x'));
     expect(result).toStrictEqual([map({ x: '2' }), map({ x: '3' })]);
   });
@@ -689,7 +694,7 @@ describe('errors', () => {
     foo(1,2)
   in rule foo at line 1, column 13
     a in b
-Type error: can only use \`in\` on a list, this is Number(Integer(2)) at line 1, column 7`
+Type error: can only use \`in\` on an iterable value, this is Number(Integer(2)) at line 1, column 7`
       );
     });
 
@@ -751,4 +756,39 @@ test('fails gracefully on ExternalOp events', () => {
   expect(query(p, 'new X() == new X()')).rejects.toThrow(
     UnimplementedOperationError
   );
+});
+
+describe('iterators', () => {
+  test('work over builtins', async () => {
+    const p = new Polar();
+    expect(
+      await qvar(
+        p,
+        'd = {a: 1, b: 2} and x in Dictionary.entries({a: 1, b: 2}) and x in d',
+        'x'
+      )
+    ).toStrictEqual([
+      ['a', 1],
+      ['b', 2],
+    ]);
+  });
+
+  test('fails for non iterables', async () => {
+    const p = new Polar();
+    p.registerClass(NonIterable, 'NonIterable');
+    expect(query(p, 'x in new NonIterable()')).rejects.toThrow(
+      InvalidIteratorError
+    );
+  });
+
+  test('work for custom classes', async () => {
+    const p = new Polar();
+    p.registerClass(BarIterator, 'BarIterator');
+    expect(
+      await qvar(p, 'x in new BarIterator([1, 2, 3])', 'x')
+    ).toStrictEqual([1, 2, 3]);
+    expect(
+      await qvar(p, 'x = new BarIterator([1, 2, 3]).sum()', 'x', true)
+    ).toBe(6);
+  });
 });

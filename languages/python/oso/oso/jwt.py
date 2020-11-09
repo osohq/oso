@@ -33,4 +33,4 @@ class Jwt:
 
     def attributes(self):
         if self.attribs:
-            yield self.attribs
+            return self.attribs

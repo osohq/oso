@@ -71,7 +71,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     it 'handles enumerator external call results' do
       actor = Actor.new('sam')
-      subject.load_str('widgets(actor, x) if x = actor.widgets.id;')
+      subject.load_str('widgets(actor, x) if widget in actor.widgets and print(widget) and x = widget.id;')
       result = subject.query_rule('widgets', actor, Oso::Polar::Variable.new('x')).to_a
       expect(result).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
@@ -390,14 +390,15 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.register_class(Foo)
       expect(qvar(subject, 'new Foo("A").a = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'new Foo("A").a() = x', 'x', one: true)).to eq('A')
-      expect(qvar(subject, 'new Foo("A").b = x', 'x', one: true)).to eq('b')
-      expect(qvar(subject, 'new Foo("A").b() = x', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'x in new Foo("A").b', 'x', one: true)).to eq('b')
+      expect(qvar(subject, 'x in new Foo("A").b()', 'x', one: true)).to eq('b')
       expect(qvar(subject, 'new Foo("A").c = x', 'x', one: true)).to eq('c')
       expect(qvar(subject, 'new Foo("A").c() = x', 'x', one: true)).to eq('c')
       expect(qvar(subject, 'new Foo("A").a() = x', 'x', one: true)).to eq('A')
       expect(qvar(subject, 'new Foo("A").bar().y() = x', 'x', one: true)).to eq('y')
-      expect(qvar(subject, 'new Foo("A").e = x', 'x')).to eq([[1, 2, 3]])
-      expect(qvar(subject, 'new Foo("A").f = x', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
+      expect(qvar(subject, 'x in new Foo("A").e', 'x')).to eq([1, 2, 3])
+      expect(qvar(subject, 'x = new Foo("A").e', 'x', one: true)).to eq([1, 2, 3])
+      expect(qvar(subject, 'x in new Foo("A").f', 'x')).to eq([[1, 2, 3], [4, 5, 6], 7])
       expect(qvar(subject, 'new Foo("A").g.hello = x', 'x', one: true)).to eq('world')
       expect(qvar(subject, 'new Foo("A").h = x', 'x', one: true)).to be true
     end
@@ -694,7 +695,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
               foo(1,2)
             in rule foo at line 1, column 13
               a in b
-          Type error: can only use `in` on a list, this is Number(Integer(2)) at line 1, column 7
+          Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7
         TRACE
         expect(e.message).to eq(error)
       end
@@ -754,6 +755,40 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     subject.register_class(Foo)
     expect { query(subject, 'new Foo() == new Foo()') }.to raise_error do |e|
       expect(e).to be_an Oso::Polar::UnimplementedOperationError
+    end
+  end
+
+  context 'when using iterators' do # rubocop:disable Metrics/BlockLength
+    before do
+      stub_const('Foo', Class.new do
+      end)
+      subject.register_class(Foo)
+      stub_const('Bar', Class.new do
+        include Enumerable
+
+        def initialize(items)
+          @items = items
+        end
+
+        def sum
+          @items.sum
+        end
+
+        def each(&block)
+          @items.each(&block)
+        end
+      end)
+      subject.register_class(Bar)
+    end
+    it 'fails on invalid iterators' do
+      expect { query(subject, 'x in new Foo()') }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::InvalidIteratorError
+      end
+    end
+
+    it 'works over custom iterators' do
+      expect(qvar(subject, 'x in new Bar([1, 2, 3])', 'x')).to eq([1, 2, 3])
+      expect(qvar(subject, 'x = new Bar([1, 2, 3]).sum()', 'x', one: true)).to eq(6)
     end
   end
 end

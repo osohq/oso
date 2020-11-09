@@ -38,6 +38,7 @@ module Oso
     # TODO: I think this should probably have some arguments to say what the call is
     class InvalidCallError < PolarRuntimeError; end
     class InvalidConstructorError < PolarRuntimeError; end
+    class InvalidIteratorError < PolarRuntimeError; end
     class InvalidQueryTypeError < PolarRuntimeError; end
     class NullByteInPolarFileError < PolarRuntimeError; end
     class UnexpectedPolarTypeError < PolarRuntimeError; end

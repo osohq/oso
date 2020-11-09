@@ -81,3 +81,5 @@ testUnifyClass(A);
 testUnspecializedRuleOrder(_x, _y, z) if z = 3;
 testUnspecializedRuleOrder(_x, _y: String, z) if z = 2;
 testUnspecializedRuleOrder(_x: String, _y, z) if z = 1;
+
+testIterables() if 1 in new List([3, 2, 1]);

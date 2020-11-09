@@ -302,17 +302,6 @@ public class PolarTest {
   }
 
   @Test
-  public void testRegisterCall() throws Exception {
-    MyClass instance = new MyClass("test", 1);
-    p.host.cacheInstance(instance, Long.valueOf(1));
-    JSONObject polarInstance = p.host.toPolarTerm(instance);
-    Query query = p.query("f(x)");
-    query.registerCall("myMethod", Optional.of(List.of("hello world")), 1, polarInstance);
-    JSONObject res = query.nextCallResult(1);
-    assertTrue(p.host.toJava(res).equals("hello world"));
-  }
-
-  @Test
   public void testExternalCall() throws Exception {
     // Test get attribute
     p.loadStr("id(x) if x = new MyClass(\"test\", 1).id;");
@@ -337,7 +326,7 @@ public class PolarTest {
   @Test
   public void testEnumerationCallResults() throws Exception {
     MyClass c = new MyClass("test", 1);
-    p.loadStr("test(c: MyClass, x) if x = c.myEnumeration();");
+    p.loadStr("test(c: MyClass, x) if x in c.myEnumeration();");
     List<HashMap<String, Object>> results = p.queryRule("test", c, new Variable("x")).results();
     assertTrue(results.equals(List.of(Map.of("x", "hello"), Map.of("x", "world"))));
   }
@@ -573,5 +562,51 @@ public class PolarTest {
     assertTrue(oso.isAllowed("sam", "get", http12), "Failed to correctly map HTTP resource");
     Http http13 = new Http(null, "/myclass/13", null);
     assertFalse(oso.isAllowed("sam", "get", http13), "Failed to correctly map HTTP resource");
+  }
+
+  public static class NotIterable {
+    public NotIterable() {}
+  }
+
+  public static class BarIterator implements Iterable<Integer> {
+    private List<Integer> list;
+
+    public BarIterator(List<Integer> list) {
+      this.list = list;
+    }
+
+    // code for data structure
+    public Integer sum() {
+      int count = 0;
+      for (int i : list) {
+        count += i;
+      }
+      return count;
+    }
+
+    // code for data structure
+    public Iterator<Integer> iterator() {
+      return list.iterator();
+    }
+  }
+
+  @Test
+  public void testIterators() throws Exception {
+    // builtins sort of work for Java
+    p.query("d = {a: 1, b: 2} and x in d.entrySet() and x in d")
+        .results()
+        .equals(List.of(Map.of("x", "a"), Map.of("x", "b")));
+
+    // non iterables throw exception
+    p.registerClass(NotIterable.class, "NotIterable");
+    assertThrows(
+        Exceptions.InvalidIteratorError.class, () -> p.query("x in new NotIterable()").results());
+
+    // custom iterators work
+    p.registerClass(BarIterator.class, "BarIterator");
+    p.query("x in new BarIterator([1, 2, 3])")
+        .results()
+        .equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)));
+    p.query("x = new BarIterator([1, 2, 3]).sum()").results().equals(List.of(Map.of("x", 6)));
   }
 }

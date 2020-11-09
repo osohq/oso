@@ -262,6 +262,17 @@ export interface MakeExternal {
 }
 
 /**
+ * The `NextExternal` [[`QueryEvent`]] is how Polar iterates
+ * through iterable host values.
+ *
+ * @internal
+ */
+export interface NextExternal {
+  callId: number;
+  iterable: PolarTerm;
+}
+
+/**
  * The `ExternalCall` [[`QueryEvent`]] is how Polar invokes JavaScript
  * functions registered as constants, methods on built-in types, and methods on
  * registered application classes during the evaluation of a query.
@@ -366,6 +377,7 @@ export enum QueryEventKind {
   ExternalOp,
   ExternalUnify,
   MakeExternal,
+  NextExternal,
   Result,
 }
 
@@ -384,6 +396,7 @@ export interface QueryEvent {
     | ExternalOp
     | ExternalUnify
     | MakeExternal
+    | NextExternal
     | Result;
 }
 

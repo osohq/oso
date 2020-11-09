@@ -367,7 +367,7 @@ def test_comparisons(tell, qeval, qvar, query):
 def test_bool_from_external_call(polar, qeval, qvar, query):
     class Booler:
         def whats_up(self):
-            yield True
+            return True
 
     polar.register_class(Booler)
 
@@ -378,10 +378,10 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
 def test_numbers_from_external_call(polar, qeval, qvar, query):
     class Numberer:
         def give_me_an_int(self):
-            yield 1
+            return 1
 
         def give_me_a_float(self):
-            yield 1.234
+            return 1.234
 
     polar.register_class(Numberer)
 

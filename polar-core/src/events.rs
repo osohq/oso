@@ -88,4 +88,9 @@ pub enum QueryEvent {
         operator: Operator,
         args: TermList,
     },
+
+    NextExternal {
+        call_id: u64,
+        iterable: Term,
+    },
 }

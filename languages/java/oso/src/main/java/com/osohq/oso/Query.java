@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.beanutils.MethodUtils;
+import org.apache.commons.collections4.IteratorUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -66,7 +67,39 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       args = Optional.of(host.polarListToJava(jArgs.get()));
     }
     try {
-      registerCall(attrName, args, callId, polarInstance);
+      Object instance = host.toJava(polarInstance);
+      // Select a method to call based on the types of the arguments.
+      Object result = null;
+      try {
+        Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
+        if (args.isPresent()) {
+          Class<?>[] argTypes =
+              args.get().stream()
+                  .map(a -> a.getClass())
+                  .collect(Collectors.toUnmodifiableList())
+                  .toArray(new Class[0]);
+          Method method = MethodUtils.getMatchingAccessibleMethod(cls, attrName, argTypes);
+          if (method == null) {
+            throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
+          }
+          result = method.invoke(instance, args.get().toArray());
+        } else {
+          // Look for a field with the given name.
+          try {
+            Field field = cls.getField(attrName);
+            result = field.get(instance);
+          } catch (NoSuchFieldException f) {
+            throw new Exceptions.InvalidAttributeError(cls.getName(), attrName);
+          }
+        }
+        String term = host.toPolarTerm(result).toString();
+        ffiQuery.callResult(callId, term);
+
+      } catch (IllegalAccessException e) {
+        throw new Exceptions.InvalidCallError("Caused by: " + e.toString());
+      } catch (InvocationTargetException e) {
+        throw new Exceptions.InvalidCallError("Caused by: " + e.toString());
+      }
     } catch (Exceptions.InvalidCallError e) {
       ffiQuery.applicationError(e.getMessage());
       ffiQuery.callResult(callId, null);
@@ -76,7 +109,27 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       ffiQuery.callResult(callId, null);
       return;
     }
+  }
+
+  /** Helper for `NextExternal` query events */
+  private void handleNextExternal(long callId, JSONObject iterable) throws Exceptions.OsoException {
+    if (!calls.containsKey(callId)) {
+      Object result = host.toJava(iterable);
+      Enumeration<Object> enumResult;
+      if (result instanceof Enumeration<?>) {
+        enumResult = (Enumeration<Object>) result;
+      } else if (result instanceof Collection<?>) {
+        enumResult = java.util.Collections.enumeration((Collection<Object>) result);
+      } else if (result instanceof Iterable<?>) {
+        enumResult = IteratorUtils.asEnumeration(((Iterable<?>) result).iterator());
+      } else {
+        throw new Exceptions.InvalidIteratorError(
+            String.format("value %s of type %s is not iterable", result, result.getClass()));
+      }
+      calls.put(callId, enumResult);
+    }
     String result;
+
     try {
       result = nextCallResult(callId).toString();
     } catch (NoSuchElementException e) {
@@ -164,6 +217,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           answer = host.unify(leftId, rightId) ? 1 : 0;
           ffiQuery.questionResult(callId, answer);
           break;
+        case "NextExternal":
+          callId = data.getLong("call_id");
+          JSONObject iterable = data.getJSONObject("iterable");
+          handleNextExternal(callId, iterable);
+          break;
         case "Debug":
           if (data.has("message")) {
             String message = data.getString("message");
@@ -186,72 +244,6 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           throw new Exceptions.PolarRuntimeException("Unhandled event type: " + kind);
       }
     }
-  }
-
-  /**
-   * Register a Java method call, wrapping the result in an enumeration if it isn't already done.
-   *
-   * @param attrName Name of the method/attribute.
-   * @param args Method arguments.
-   * @param callId Call ID under which to register the call.
-   * @param polarInstance JSONObject containing either an instance_id or an instance of a built-in
-   *     type.
-   */
-  public void registerCall(
-      String attrName, Optional<List<Object>> args, long callId, JSONObject polarInstance)
-      throws Exceptions.InvalidAttributeError, Exceptions.InvalidCallError, Exceptions.OsoException,
-          Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError {
-    if (calls.containsKey(callId)) {
-      return;
-    }
-    Object instance;
-    if (polarInstance.getJSONObject("value").has("ExternalInstance")) {
-      long instanceId =
-          polarInstance
-              .getJSONObject("value")
-              .getJSONObject("ExternalInstance")
-              .getLong("instance_id");
-      instance = host.getInstance(instanceId);
-    } else {
-      instance = host.toJava(polarInstance);
-    }
-    // Select a method to call based on the types of the arguments.
-    Object result = null;
-    try {
-      Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
-      if (args.isPresent()) {
-        Class<?>[] argTypes =
-            args.get().stream()
-                .map(a -> a.getClass())
-                .collect(Collectors.toUnmodifiableList())
-                .toArray(new Class[0]);
-        Method method = MethodUtils.getMatchingAccessibleMethod(cls, attrName, argTypes);
-        if (method == null) {
-          throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
-        }
-        result = method.invoke(instance, args.get().toArray());
-      } else {
-        // Look for a field with the given name.
-        try {
-          Field field = cls.getField(attrName);
-          result = field.get(instance);
-        } catch (NoSuchFieldException f) {
-          throw new Exceptions.InvalidAttributeError(cls.getName(), attrName);
-        }
-      }
-    } catch (IllegalAccessException e) {
-      throw new Exceptions.InvalidCallError("Caused by: " + e.toString());
-    } catch (InvocationTargetException e) {
-      throw new Exceptions.InvalidCallError("Caused by: " + e.toString());
-    }
-    Enumeration<Object> enumResult;
-    if (result instanceof Enumeration) {
-      // TODO: test this
-      enumResult = (Enumeration<Object>) result;
-    } else {
-      enumResult = Collections.enumeration(new ArrayList<Object>(Arrays.asList(result)));
-    }
-    calls.put(callId, enumResult);
   }
 
   /** Get cached Java method call result. */

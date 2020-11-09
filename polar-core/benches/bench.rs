@@ -2,8 +2,6 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-use std::iter::{once, repeat};
-
 use polar_core::*;
 use polar_core::{events::*, kb::Bindings, polar::Polar, polar::Query, terms::*};
 
@@ -149,7 +147,7 @@ pub fn indexed_rules(c: &mut Criterion) {
         runner
     }
 
-    let n_array = [1, 10, 100];
+    let n_array = [100, 500, 1000, 10_000];
 
     let mut group = c.benchmark_group("indexed");
     for n in &n_array {
@@ -193,91 +191,10 @@ pub fn many_rules(c: &mut Criterion) {
     });
 }
 
-/// Bench: Example policy showing N+1 query behaviour.
-/// The first query is to `grandparent.children`, then
-/// for every result `child`, there will be a further query to
-/// `child.children`. Implemented naively, this results in N+1
-/// database lookups.
-pub fn n_plus_one_queries(c: &mut Criterion) {
-    let policy = "
-        has_grandchild_called(grandparent: Person, name) if
-            child in grandparent.children and
-            grandchild in child.childern and
-            grandchild.name = name;
-    ";
-
-    /// Constructs `N` external results
-    fn n_results(runner: &mut Runner, n: usize) {
-        runner.register_pseudo_class("Person");
-
-        // Make some instances. The literals dont change anything, but is convenient for
-        // us to track things.
-        let child = runner.make_external(call!("Person"));
-        let grandchild = runner.make_external(call!("Person"));
-
-        let n_children = term!(vec![child; n]); // n children in a list
-        let one_grandchild = term!(vec![grandchild]);
-
-        let grandchild_alice = vec![
-            Some(one_grandchild.clone()),
-            Some(term!("alice")),
-            None,
-            None,
-        ];
-        let grandchild_bert = vec![Some(one_grandchild), Some(term!("bert")), None, None];
-
-        // List of n children (one term)
-        // then n-1 times grandchild -> name = Alice
-        // then once grandchild -> name = Bert
-        // then None (no more children)
-        let external_calls = once(Some(n_children))
-            .chain(repeat(grandchild_alice).take(n - 1).flatten())
-            .chain(grandchild_bert.into_iter())
-            .chain(once(None))
-            .collect();
-
-        runner.external_calls(external_calls);
-        runner.expected_result(Bindings::new());
-    }
-
-    let n_array = [1, 5];
-    let delays = [10_000];
-
-    let mut group = c.benchmark_group("n_plus_one");
-    for delay in &delays {
-        for n in &n_array {
-            group.bench_function(
-                BenchmarkId::from_parameter(format!("{}, cost={}ns", n, delay)),
-                |b| {
-                    b.iter_batched_ref(
-                        || {
-                            let mut runner =
-                                runner_from_query("has_grandchild_called(new Person(), \"bert\")");
-                            runner.register_pseudo_class("Person");
-                            runner.load_str(policy).unwrap();
-                            n_results(&mut runner, *n);
-                            runner.external_cost = Some(std::time::Duration::new(0, *delay));
-                            runner
-                        },
-                        |runner| {
-                            runner.run();
-                            // check: we do actually run N+1 queries
-                            assert_eq!(runner.calls_count, 1 + *n);
-                        },
-                        criterion::BatchSize::SmallInput,
-                    )
-                },
-            );
-        }
-    }
-    group.finish();
-}
-
 criterion_group!(
     benches,
     simple_queries,
     many_rules,
-    n_plus_one_queries,
     fib,
     prime,
     indexed_rules,
@@ -289,10 +206,7 @@ criterion_main!(benches);
 struct Runner {
     polar: Polar,
     expected_result: Option<Bindings>,
-    external_calls: Vec<Option<Term>>,
     query: Query,
-    external_cost: Option<std::time::Duration>,
-    calls_count: usize,
 }
 
 impl Runner {
@@ -300,20 +214,12 @@ impl Runner {
         Self {
             polar,
             expected_result: None,
-            external_calls: Vec::new(),
             query,
-            external_cost: None,
-            calls_count: 0,
         }
     }
 
     fn expected_result(&mut self, bindings: Bindings) {
         self.expected_result = Some(bindings);
-    }
-
-    fn external_calls(&mut self, calls: Vec<Option<Term>>) {
-        self.external_calls = calls;
-        self.external_calls.reverse();
     }
 
     fn next(&mut self) -> QueryEvent {
@@ -329,11 +235,6 @@ impl Runner {
                     panic!("Result expected")
                 }
                 QueryEvent::Done { .. } => break,
-                QueryEvent::MakeExternal { .. } => {}
-                QueryEvent::ExternalIsa { call_id, .. } => self.handle_external_isa(call_id),
-                QueryEvent::ExternalCall { call_id, .. } => {
-                    self.handle_external_call(call_id);
-                }
                 QueryEvent::Debug { message } => self.handle_debug(message),
                 event => todo!("{:?}", event),
             }
@@ -346,37 +247,7 @@ impl Runner {
         }
     }
 
-    fn handle_external_isa(&mut self, call_id: u64) {
-        self.query.question_result(call_id, true).unwrap();
-    }
-
-    fn handle_external_call(&mut self, call_id: u64) {
-        let result = self.external_calls.pop().expect("more results");
-        if matches!(result.as_ref().map(Term::value), Some(Value::ExternalInstance { .. }) | Some(Value::List { .. }))
-        {
-            self.calls_count += 1;
-            if let Some(cost) = self.external_cost {
-                std::thread::sleep(cost);
-            }
-        }
-        self.query.call_result(call_id, result).unwrap();
-    }
-
     fn handle_debug(&mut self, _: String) {}
-
-    fn make_external(&mut self, constructor: Call) -> Term {
-        let instance_id = self.polar.get_external_id();
-        Term::new_from_test(Value::ExternalInstance(ExternalInstance {
-            instance_id,
-            constructor: Some(Term::new_from_test(Value::Call(constructor))),
-            repr: None,
-        }))
-    }
-
-    pub fn register_pseudo_class(&mut self, name: &str) {
-        self.polar
-            .register_constant(Symbol::new(name), Term::new_temporary(Value::Boolean(true)));
-    }
 }
 
 impl std::ops::Deref for Runner {
