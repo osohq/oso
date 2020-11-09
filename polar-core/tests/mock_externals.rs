@@ -1,5 +1,5 @@
 /// Utils for mocking externals in tests.
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
 use polar_core::terms::{ExternalInstance, Symbol, Term, Value};
 
@@ -8,7 +8,6 @@ use polar_core::terms::{ExternalInstance, Symbol, Term, Value};
 /// lookups of attributes on them.
 pub struct MockExternal {
     externals: HashMap<u64, Term>,
-    calls: HashSet<u64>,
 }
 
 impl MockExternal {
@@ -25,7 +24,7 @@ impl MockExternal {
 
     pub fn external_call(
         &mut self,
-        call_id: u64,
+        _call_id: u64,
         instance: Term,
         attribute: Symbol,
         args: Option<Vec<Term>>,
@@ -36,12 +35,6 @@ impl MockExternal {
             "Only support field lookups."
         );
 
-        if self.calls.remove(&call_id) {
-            // Calls only return one result, so we have none if the call is in progress.
-            return None;
-        }
-
-        self.calls.insert(call_id);
         let instance_id = match instance.value() {
             Value::ExternalInstance(ExternalInstance { instance_id, .. }) => *instance_id,
             _ => panic!("expected external instance"),

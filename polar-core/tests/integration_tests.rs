@@ -1405,8 +1405,6 @@ fn test_in_op() -> TestResult {
 
     qeval(&mut p, "f({a:1}, [{a:1}, b, c])");
 
-    qruntime!("a in {a:1}", RuntimeError::TypeError { .. });
-
     // Negation.
     qeval(&mut p, "not (4 in [1,2,3])");
     qnull(&mut p, "not (1 in [1,2,3])");
@@ -1836,4 +1834,38 @@ fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
     qruntime!(&mut p, "f(x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern 'y' to '_x_1'");
     qruntime!(&mut p, "g(x)", RuntimeError::TypeError { msg: m, .. }, m == "cannot bind pattern '{}' to '_x_2'");
     Ok(())
+}
+
+#[test]
+fn test_builtin_iterables() {
+    let mut p = Polar::new();
+
+    qnull(&mut p, r#"x in """#);
+    qvar(
+        &mut p,
+        "x in \"abc\"",
+        "x",
+        vec![value!("a"), value!("b"), value!("c")],
+    );
+    qnull(&mut p, "x in {}");
+    qvar(
+        &mut p,
+        "x in {a: 1, b: 2}",
+        "x",
+        vec![value!(["a", 1]), value!(["b", 2])],
+    );
+    qeval(&mut p, r#"["a", 1] in {a: 1, b: 2}"#);
+    qvar(
+        &mut p,
+        "[x, _] in {a: 1, b: 2}",
+        "x",
+        vec![value!("a"), value!("b")],
+    );
+    qeval(&mut p, r#"["a", 1] in {a: 1, b: 2}"#);
+    qvar(
+        &mut p,
+        "[_, x] in {a: 1, b: 2}",
+        "x",
+        vec![value!(1), value!(2)],
+    );
 }

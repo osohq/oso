@@ -42,4 +42,4 @@ class PathMapper:
     def map(self, string):
         match = self.pattern.match(string)
         if match:
-            yield match.groupdict()
+            return match.groupdict()

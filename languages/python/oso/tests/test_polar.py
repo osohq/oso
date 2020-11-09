@@ -95,7 +95,7 @@ def test_external(polar, qvar, qeval):
             self.a = a
 
         def b(self):
-            yield "b"
+            return "b"
 
         @classmethod
         def c(cls):
@@ -135,7 +135,8 @@ def test_external(polar, qvar, qeval):
     assert qvar("new Foo() = f and f.a = x", "x", one=True) == "a"
     assert qvar("new Foo().bar().y() = x", "x", one=True) == "y"
     assert qvar("new Foo().e() = x", "x", one=True) == [1, 2, 3]
-    assert qvar("new Foo().f() = x", "x") == [[1, 2, 3], [4, 5, 6], 7]
+    assert qvar("x in new Foo().e()", "x") == [1, 2, 3]
+    assert qvar("x in new Foo().f()", "x") == [[1, 2, 3], [4, 5, 6], 7]
     assert qvar("new Foo().g().hello = x", "x", one=True) == "world"
     assert qvar("new Foo().h() = x", "x", one=True) is True
 
@@ -428,7 +429,7 @@ def test_runtime_errors(polar, query):
     foo(1,2)
   in rule foo at line 2, column 17
     a in b
-Type error: can only use `in` on a list, this is Number(Integer(2)) at line 1, column 7"""
+Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7"""
     )
 
 
@@ -833,3 +834,20 @@ def test_partial_constraint(polar):
 
     with pytest.raises(StopIteration):
         next(results)
+
+
+def test_iterators(polar, qeval, qvar):
+    class Foo:
+        pass
+
+    polar.register_class(Foo)
+    with pytest.raises(exceptions.InvalidIteratorError) as e:
+        qeval("x in new Foo()")
+
+    class Bar(list):
+        def sum(self):
+            return sum(x for x in self)
+
+    polar.register_class(Bar)
+    assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]
+    assert qvar("x = new Bar([1, 2, 3]).sum()", "x", one=True) == 6

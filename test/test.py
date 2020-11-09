@@ -107,6 +107,10 @@ assert not list(oso.query_rule("builtinSpecializers", {}, "DictionaryWithFields"
 assert not list(oso.query_rule("builtinSpecializers", {"z": 1}, "DictionaryWithFields"))
 assert list(oso.query_rule("builtinSpecializers", {"y": 1}, "DictionaryWithFields"))
 
+# test iterables work
+assert list(oso.query_rule("testIterables"))
+
+
 # Test deref works
 oso.load_str("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;")
 

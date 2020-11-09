@@ -33,9 +33,7 @@ allow_with_cut(actor, "get", resource: DooDad) if cut and resource.frob("DooDad"
 allowRole("admin", "create", resource: Widget);
 
 allow(actor: Actor, "frob", resource: Widget) if
-    actor.company().id = resource.company().id and
-    actor.company().default_role = resource.company().default_role and
-    actor.company().roles() = resource.company().roles();
+    resource.company() in actor.companies();
 
 # for testing resource mappings with query parameters
 allow(actor, "parameterised_get", resource: Widget) if
@@ -55,12 +53,17 @@ checkResource("1", resource: Widget); # which to prioritise
 
 # for testing lists
 allow(actor: Actor, "invite", resource: Widget) if
-    actor.group = "social";
+    "social" in actor.groups;
 
 allow(actor: Actor, "keep", resource: Widget) if
-    actor.widget.id = resource.id and
+    actor.widget = resource and
     actor.widget.name = resource.name;
 
 # for testing iter
 allow(actor: Actor, "can_have", _: Widget{name: "stapler"}) if
-    actor.companies_iter() matches Company{id: "Initech"};
+    company in actor.companies_iter() and
+    company matches Company{id: "Initech"};
+
+# test fails on not iterable iter
+allow(actor: Actor, "tries_to_get", _) if
+    1 in actor;

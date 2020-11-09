@@ -81,6 +81,9 @@ public class Host implements Cloneable {
     Constructor<?> constructor = null;
     // Try to find a constructor applicable to the supplied arguments.
     Class<?> cls = classes.get(className);
+    if (cls == null) {
+      throw new Exceptions.UnregisteredClassError(className);
+    }
     Class<?>[] argTypes =
         initargs.stream()
             .map(arg -> arg.getClass())

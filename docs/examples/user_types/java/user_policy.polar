@@ -22,5 +22,5 @@ allow(actor: AccountManager, "view", "accounts_dashboard");
 # Account managers can access account data for the accounts
 # that they manage
 allow(actor: AccountManager, "view", resource: AccountData) if
-    resource.accountId = actor.customerAccounts();
+    resource.accountId in actor.customerAccounts();
 # manager-end

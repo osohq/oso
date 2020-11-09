@@ -6,12 +6,12 @@ class Foo:
         self.name = name
 
     def foo(self):
-        yield "Foo!"
+        return "Foo!"
 
 
 class Bar(Foo):
     def foo(self):
-        yield "Bar!"
+        return "Bar!"
 
 
 class Qux:
