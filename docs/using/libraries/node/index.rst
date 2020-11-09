@@ -48,7 +48,7 @@ this can be found :ref:`here <application-types>`.
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
 
-Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`).
+Polar supports integer and floating point real numbers, as well as booleans (see :ref:`basic-types`).
 
 Strings
 ^^^^^^^
@@ -130,24 +130,31 @@ Likewise, lists constructed in Polar may be passed into JavaScript methods:
     result => assert(result)
   );
 
+There is currently no syntax for random access to a list element within a policy;
+i.e., there is no Polar equivalent of the JavaScript expression ``user.groups[1]``.
+To access the elements of a list, you may iterate over it with :ref:`operator-in`
+or destructure it with :ref:`pattern matching <patterns-and-matching>`.
+
 .. todo:: Mention no dictionary type conversion?
 
 Iterators
 ^^^^^^^^^
 
-oso handles JavaScript `iterators <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols>`_
-by evaluating the yielded values one at a time.
+You may iterate over a (synchronous or `asynchronous
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator>`_) JavaScript
+`iterator <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols>`_
+using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
 
-  allow(actor, action, resource) if actor.getGroup() = "payroll";
+  allow(actor, action, resource) if "payroll" in actor.getGroups();
 
 .. code-block:: javascript
   :caption: :fab:`node-js` app.js
 
   class User {
-    getGroup() {
+    getGroups() {
       return ["HR", "payroll"].values();
     }
   }
@@ -157,19 +164,6 @@ by evaluating the yielded values one at a time.
     result => assert(result)
   );
 
-In the policy above, the body of the ``allow`` rule will first evaluate ``"HR" =
-"payroll"`` and then ``"payroll" = "payroll"``. Because the latter evaluation
-succeeds, the call to ``Oso.isAllowed`` will succeed. Note that if
-``getGroup`` returned an array instead of an iterator, the rule would fail
-because it would be comparing an array (``["HR", "payroll"]``) against a string
-(``"payroll"``).
-
-Asynchronous Iterators
-^^^^^^^^^^^^^^^^^^^^^^
-
-oso handles `async iterators
-<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator>`_
-in the same manner as synchronous iterators.
 
 Promises
 ^^^^^^^^
@@ -181,7 +175,7 @@ and then use the resolved value during evaluation of a policy.
 Summary
 ^^^^^^^
 
-.. list-table:: JavaScript -> Polar Types Summary
+.. list-table:: JavaScript → Polar Types Summary
   :width: 500 px
   :header-rows: 1
 
@@ -193,7 +187,7 @@ Summary
     - Float
   * - boolean
     - Boolean
-  * - string
-    - String
   * - Array
     - List
+  * - string
+    - String
