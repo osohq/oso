@@ -218,6 +218,7 @@ Likewise, dictionaries constructed in Polar may be passed into Java methods.
 Enumerations
 ^^^^^^^^^^^^
 You may iterate over a Java `Enumeration <https://docs.oracle.com/javase/10/docs/api/java/util/Enumeration.html>`_
+(or anything that can be converted to one, such as a ``Collection`` or ``Iterable``)
 using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
@@ -228,8 +229,8 @@ using the Polar :ref:`operator-in` operator:
 .. code-block:: java
    :caption: :fab:`java` User.java
 
-      public Enumeration<String> getGroups() {
-         return Collections.enumeration(List.of("HR", "payroll"));
+      public List<String> getGroups() {
+         return List.of("HR", "payroll");
       }
 
       public static void main(String[] args) {
