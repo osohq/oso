@@ -34,7 +34,8 @@ the ``#register_class`` method. An example of this can be found :ref:`here <appl
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
-Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`).
+Polar supports integer and floating point real numbers, as well as booleans (see :ref:`basic-types`).
+These map to the Ruby ``Integer``, ``Float``, ``TrueClass``, and ``FalseClass`` types.
 
 Strings
 ^^^^^^^
@@ -113,6 +114,11 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
   user = User.new(["HR", "payroll"])
   raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
+There is currently no syntax for random access to a list element within a policy;
+i.e., there is no Polar equivalent of the Ruby expression ``user.groups[1]``.
+To access the elements of a list, you may iterate over it with :ref:`operator-in`
+or destructure it with :ref:`pattern matching <patterns-and-matching>`.
+
 Hashes
 ^^^^^^
 Ruby hashes are mapped to Polar :ref:`dictionaries`:
@@ -140,19 +146,19 @@ Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
 
 Enumerators
 ^^^^^^^^^^^^
-oso handles Ruby `enumerators <https://ruby-doc.org/core/Enumerator.html>`_ by evaluating the
-yielded values one at a time.
+You may iterate over a Ruby `enumerator <https://ruby-doc.org/core/Enumerator.html>`_
+using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
 
-  allow(actor, action, resource) if actor.get_group() = "payroll";
+  allow(actor, action, resource) if "payroll" in actor.get_groups();
 
 .. code-block:: ruby
   :caption: :fas:`gem` app.rb
 
   class User
-    def get_group(self)
+    def get_groups(self)
       ["HR", "payroll"].to_enum
     end
   end
@@ -160,23 +166,19 @@ yielded values one at a time.
   user = User.new
   raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
-In the policy above, the body of the `allow` rule will first evaluate ``"HR" = "payroll"`` and then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``Oso#allowed?`` will succeed.
-Note that if ``#get_group`` returned an array instead of an enumerator, the rule would fail because it would be comparing an array (``["HR", "payroll"]``) against a string (``"payroll"``).
-
 Summary
 ^^^^^^^
 
-.. list-table:: Ruby -> Polar Types Summary
+.. list-table:: Ruby → Polar Types Summary
   :width: 500 px
   :header-rows: 1
 
   * - Ruby type
     - Polar type
   * - Integer
-    - Number (Integer)
+    - Integer
   * - Float
-    - Number (Float)
+    - Float
   * - TrueClass
     - Boolean
   * - FalseClass
@@ -185,3 +187,5 @@ Summary
     - List
   * - Hash
     - Dictionary
+  * - String
+    - String
