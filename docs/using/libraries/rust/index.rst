@@ -33,7 +33,7 @@ Rust structs can also be constructed from inside an oso policy using the :ref:`o
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
-Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`).
+Polar supports integer and floating point real numbers, as well as booleans (see :ref:`basic-types`).
 
 Strings
 ^^^^^^^
@@ -90,6 +90,10 @@ Currently, no methods on ``Vec`` are exposed to Polar.
 .. warning::
   Polar does not support methods that mutate lists in place, unless the list is also returned from the method.
 
+There is currently no syntax for random access to a vector element within a policy;
+i.e., there is no Polar equivalent of the JavaScript expression ``user.groups[1]``.
+To access the elements of a list, you may iterate over it with :ref:`operator-in`
+or destructure it with :ref:`pattern matching <patterns-and-matching>`.
 
 HashMaps
 ^^^^^^^^ 
@@ -121,14 +125,13 @@ Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
 Iterators
 ^^^^^^^^^
 
-oso handles Rust `iterators <https://doc.rust-lang.org/std/iter/index.html>`_ by evaluating the
-yielded values one at a time. To register methods returning iterators, you need to use the
-``Class::add_iterator_method`` call.
+You may iterate over a Rust `iterator <https://doc.rust-lang.org/std/iter/index.html>`_
+using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
 
-  allow(actor, action, resource) if actor.get_group() = "payroll";
+  allow(actor, action, resource) if "payroll" in actor.get_groups();
 
 .. code-block:: rust
   :caption: :fab:`rust` main.rs
@@ -140,7 +143,7 @@ yielded values one at a time. To register methods returning iterators, you need 
 
     oso.register_class(
         User::get_polar_class_builder()
-            .add_iterator_method("get_group", |u: &User| u.groups.clone().into_iter())
+            .add_iterator_method("get_groups", |u: &User| u.groups.clone().into_iter())
             .build(),
     )
     .unwrap();
@@ -150,29 +153,24 @@ yielded values one at a time. To register methods returning iterators, you need 
     };
     assert!(oso.is_allowed(user, "foo", "bar")?);
 
-In the policy above, the body of the `allow` rule will first evaluate ``"HR" = "payroll"`` and then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``oso.is_allowed`` will succeed.
-Note that if ``get_group`` returned an array instead of an iterator, the rule would fail because it would be comparing an array (``["HR", "payroll"]``) against a string (``"payroll"``).
-
-
 Summary
 ^^^^^^^
 
-.. list-table:: Rust -> Polar Types Summary
+.. list-table:: Rust → Polar Types Summary
   :width: 500 px
   :header-rows: 1
 
   * - Rust type
     - Polar type
   * - i32, i64, usize
-    - Number (Integer)
+    - Integer
   * - f32, f64
-    - Number (Float)
+    - Float
   * - bool
     - Boolean
-  * - String, &'static str, str
-    - String
   * - Vec
     - List
   * - HashMap
     - Dictionary
+  * - String, &'static str, str
+    - String
