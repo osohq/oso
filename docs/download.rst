@@ -190,7 +190,6 @@ oso is available as a library in several languages:
 
 - JavaScript in the browser
 - Go
-- Rust
 
 Source Code
 -----------
