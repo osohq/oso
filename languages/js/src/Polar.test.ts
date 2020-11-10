@@ -331,21 +331,26 @@ describe('conversions between JS + Polar values', () => {
     expect(result).toStrictEqual([map({ x: '2' }), map({ x: '3' })]);
   });
 
-  test('caches instances and does not leak them', async () => {
-    const p = new Polar();
-    p.registerClass(Counter);
-    await p.loadStr('f(_: Counter) if Counter.count() > 0;');
-    expect(Counter.count()).toBe(0);
-    const c = new Counter();
-    expect(Counter.count()).toBe(1);
-    expect(await queryRule(p, 'f', c)).toStrictEqual([map()]);
-    expect(Counter.count()).toBe(1);
-    // There are 7 classes registered in the Polar instance cache, including
-    // the Counter class.
-    expect(p.__host().hasInstance(7)).toBe(true);
-    // The Counter instance is cached in the Query instance cache, which only
-    // lives as long as the query. It's not cached in the Polar instance cache.
-    expect(p.__host().hasInstance(8)).toBe(false);
+  describe('caches instances and does not leak them', () => {
+    test("instances created in a query don't outlive the query", async () => {
+      const p = new Polar();
+      p.registerClass(Counter);
+
+      const preLoadInstanceCount = p.__host().instances().length;
+      await p.loadStr('f(_: Counter) if Counter.count() > 0;');
+      const preQueryInstanceCount = p.__host().instances().length;
+      expect(preLoadInstanceCount).toStrictEqual(preQueryInstanceCount);
+
+      expect(Counter.count()).toBe(0);
+      const c = new Counter();
+      expect(Counter.count()).toBe(1);
+
+      expect(await queryRule(p, 'f', c)).toStrictEqual([map()]);
+      const postQueryInstanceCount = p.__host().instances().length;
+      expect(preQueryInstanceCount).toStrictEqual(postQueryInstanceCount);
+
+      expect(Counter.count()).toBe(1);
+    });
   });
 });
 
@@ -495,6 +500,16 @@ describe('#makeInstance', () => {
   });
 });
 
+// test_nil
+describe('null is pre-registered', () => {
+  test('as nil', async () => {
+    const p = new Polar();
+    await p.loadStr('null(nil);');
+    expect(await qvar(p, 'null(x)', 'x')).toStrictEqual([null]);
+    expect(await queryRule(p, 'null', [])).toStrictEqual([]);
+  });
+});
+
 describe('#registerConstant', () => {
   test('works', async () => {
     const p = new Polar();
@@ -542,6 +557,14 @@ describe('#registerConstant', () => {
         expect(await query(p, 'u.x = u.y')).toStrictEqual([map()]);
         expect(query(p, 'u.x.y')).rejects.toThrow();
       });
+    });
+
+    // test_host_method_nil
+    test('that return null', async () => {
+      const p = new Polar();
+      p.registerConstant({ x: null }, 'u');
+      expect(await query(p, 'u.x = nil')).toStrictEqual([map()]);
+      expect(query(p, 'u.x.y')).rejects.toThrow();
     });
   });
 

@@ -88,6 +88,17 @@ export class Host {
   }
 
   /**
+   * Return cached instances.
+   *
+   * Only used by the test suite.
+   *
+   * @internal
+   */
+  instances(): any[] {
+    return Array.from(this.#instances.values());
+  }
+
+  /**
    * Check if an instance exists in the [[`#instances`]] cache.
    *
    * @internal

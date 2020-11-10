@@ -34,7 +34,8 @@ the ``#register_class`` method. An example of this can be found :ref:`here <appl
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
-Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`).
+Polar supports integer and floating point real numbers, as well as booleans (see :ref:`basic-types`).
+These map to the Ruby ``Integer``, ``Float``, and ``TrueClass``/``FalseClass`` types.
 
 Strings
 ^^^^^^^
@@ -113,6 +114,17 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
   user = User.new(["HR", "payroll"])
   raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
+
+.. |array_at| replace:: ``Array#at``
+.. _array_at: https://ruby-doc.org/core/Array.html#method-i-at
+
+Ruby methods like |array_at|_ may be used for random access to
+list elements, but there is currently no Polar syntax that is
+equivalent to the Ruby expression ``user.groups[1]``. To access
+the elements of a list without using a method, you may iterate
+over it with :ref:`operator-in` or destructure it with
+:ref:`pattern matching <patterns-and-matching>`.
+
 Hashes
 ^^^^^^
 Ruby hashes are mapped to Polar :ref:`dictionaries`:
@@ -138,45 +150,67 @@ Ruby hashes are mapped to Polar :ref:`dictionaries`:
 
 Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
 
-Enumerators
-^^^^^^^^^^^^
-oso handles Ruby `enumerators <https://ruby-doc.org/core/Enumerator.html>`_ by evaluating the
-yielded values one at a time.
+Enumerables
+^^^^^^^^^^^
+You may iterate over any Ruby `enumerable <https://ruby-doc.org/core/Enumerable.html>`_
+using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
 
-  allow(actor, action, resource) if actor.get_group() = "payroll";
+  allow(actor, action, resource) if "payroll" in actor.get_groups();
 
 .. code-block:: ruby
   :caption: :fas:`gem` app.rb
 
   class User
-    def get_group(self)
-      ["HR", "payroll"].to_enum
+    def get_groups(self)
+      ["HR", "payroll"]
     end
   end
 
   user = User.new
   raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
-In the policy above, the body of the `allow` rule will first evaluate ``"HR" = "payroll"`` and then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``Oso#allowed?`` will succeed.
-Note that if ``#get_group`` returned an array instead of an enumerator, the rule would fail because it would be comparing an array (``["HR", "payroll"]``) against a string (``"payroll"``).
+``nil``
+^^^^^^^
+The Ruby value ``nil`` is registered as the Polar constant :ref:`nil`.
+If a Ruby method can return ``None``, you may want to compare the result
+to ``nil``:
+
+.. code-block:: polar
+  :caption: :fa:`oso` policy.polar
+
+  allow(actor, action, resource) if actor.get_optional? != nil;
+
+.. code-block:: ruby
+  :caption: :fas:`gem` app.rb
+
+  class User
+     def get_optional(self)
+        if some_condition?
+          some_thing
+        else
+          nil
+     end
+  end
+
+  user = User.new
+  raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
 
 Summary
 ^^^^^^^
 
-.. list-table:: Ruby -> Polar Types Summary
+.. list-table:: Ruby → Polar Types Summary
   :width: 500 px
   :header-rows: 1
 
   * - Ruby type
     - Polar type
   * - Integer
-    - Number (Integer)
+    - Integer
   * - Float
-    - Number (Float)
+    - Float
   * - TrueClass
     - Boolean
   * - FalseClass
@@ -185,3 +219,5 @@ Summary
     - List
   * - Hash
     - Dictionary
+  * - String
+    - String

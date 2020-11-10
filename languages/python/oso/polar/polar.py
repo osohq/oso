@@ -67,6 +67,9 @@ class Polar:
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
 
+        # Register global constants.
+        self.register_constant(None, name="nil")
+
         # Register built-in classes.
         self.register_class(bool, name="Boolean")
         self.register_class(int, name="Integer")

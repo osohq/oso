@@ -19,6 +19,7 @@ class Post(AuthorizedModel):
     is_private = models.BooleanField()
     name = models.CharField(max_length=256)
     timestamp = models.IntegerField()
+    option = models.BooleanField(null=True)
 
     def __str__(self):
         return f"Post(name={self.name}, is_private={self.is_private})"

@@ -43,7 +43,8 @@ An example of this can be found :ref:`here <application-types>`.
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
-Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`)
+Polar supports integer and floating point real numbers, as well as booleans (see :ref:`basic-types`).
+These map to the Python ``int``, ``float``, and ``bool`` types.
 
 Strings
 ^^^^^^^
@@ -107,6 +108,11 @@ Likewise, lists constructed in Polar may be passed into Python methods:
    user.groups = ["HR", "payroll"]
    assert(oso.is_allowed(user, "foo", "bar))
 
+There is currently no syntax for random access to a list element within a policy;
+i.e., there is no Polar equivalent of the Python expression ``user.groups[1]``.
+To access the elements of a list, you may iterate over it with :ref:`operator-in`
+or destructure it with :ref:`pattern matching <patterns-and-matching>`.
+
 Dictionaries
 ^^^^^^^^^^^^
 Python dictionaries are mapped to Polar :ref:`dictionaries`:
@@ -127,45 +133,69 @@ Likewise, dictionaries constructed in Polar may be passed into Python methods.
 
 Iterables
 ^^^^^^^^^
-Oso handles non-list/dictionary `iterable <https://docs.python.org/3/glossary.html#term-iterable>`_ Python objects by evaluating each of the
-object's elements one at a time. `Generator <https://docs.python.org/3/glossary.html#term-generator>`_ methods are a common use case for passing iterables into oso:
+You may iterate over any Python `iterable <https://docs.python.org/3/glossary.html#term-iterable>`_,
+such as those yielded by a `generator <https://docs.python.org/3/glossary.html#term-generator>`_,
+using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
    :caption: :fa:`oso` policy.polar
 
-   allow(actor, action, resource) if actor.get_group() = "payroll";
+   allow(actor, action, resource) if "payroll" in actor.get_groups();
 
 .. code-block:: python
    :caption: :fab:`python` app.py
 
    class User:
-      def get_group(self):
-         """ Generator method to yield user groups. """
-         yield from ["HR", "payroll", "]
+      def get_groups(self):
+         """Generator method to yield user groups."""
+         yield from ["HR", "payroll"]
 
    user = User()
    assert(oso.is_allowed(user, "foo", "bar))
 
-In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to :py:meth:`~oso.Oso.is_allowed` will succeed.
-Note that if :py:meth:`get_group` returned a list, the rule would fail, as the evaluation would be ``["HR", "payroll"] = "payroll"``.
+``None``
+^^^^^^^^
+The Python value ``None`` is registered as the Polar constant :ref:`nil`.
+If a Python method can return ``None``, you may want to compare the result
+to ``nil``:
+
+.. code-block:: polar
+   :caption: :fa:`oso` policy.polar
+
+   allow(actor, action, resource) if actor.get_optional() != nil;
+
+.. code-block:: python
+   :caption: :fab:`python` app.py
+
+   class User:
+      def get_optional(self):
+         """Return something or None."""
+         if self.some_condition():
+             return self.some_thing
+         else:
+             return None
+
+   user = User()
+   assert(oso.is_allowed(user, "foo", "bar))
 
 Summary
 ^^^^^^^
 
-.. list-table:: Python -> Polar Types Summary
+.. list-table:: Python → Polar Types Summary
    :width: 500 px
    :header-rows: 1
 
    * - Python type
      - Polar type
    * - int
-     - Number (Integer)
+     - Integer
    * - float
-     - Number (Float)
+     - Float
    * - bool
      - Boolean
    * - list
      - List
    * - dict
      - Dictionary
+   * - str
+     - String

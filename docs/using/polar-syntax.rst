@@ -501,6 +501,8 @@ tail]``) is invalid. Any number of elements can come before the rest operator.
 The rest operator is only useful when combined with a unification operation that
 assigns a value to it.
 
+.. _patterns-and-matching:
+
 Patterns and Matching
 ----------------------
 

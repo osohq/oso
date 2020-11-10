@@ -149,7 +149,11 @@ public class Host implements Cloneable {
   public boolean unify(long leftId, long rightId) throws Exceptions.UnregisteredInstanceError {
     Object left = getInstance(leftId);
     Object right = getInstance(rightId);
-    return left.equals(right);
+    if (left == null) {
+      return right == null;
+    } else {
+      return left.equals(right);
+    }
   }
 
   /** Convert Java Objects to Polar (JSON) terms. */

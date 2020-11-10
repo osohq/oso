@@ -79,7 +79,7 @@ of interfaces to properly match the constructor's parameter types.
 
 Numbers and Booleans
 ^^^^^^^^^^^^^^^^^^^^
-Polar supports both integer and floating point numbers, as well as booleans (see :ref:`basic-types`).
+Polar supports integer and floating point real numbers, as well as booleans (see :ref:`basic-types`).
 
 .. note::
    Java primitives may be passed into oso, but numbers and booleans created in an oso policy will be
@@ -91,16 +91,16 @@ Polar supports both integer and floating point numbers, as well as booleans (see
       :caption: :fab:`java` Foo.java
 
       class Foo {
-         public static method1(int a, int b) {
+         public static unboxed(int a, int b) {
             // ...
          }
-         public static method2(Integer a, Integer b) {
+         public static boxed(Integer a, Integer b) {
             // ...
          }
       }
 
-   ``method2()`` above may be called from a policy file, however attempting to call ``method1()`` will fail.
-
+   The ``boxed()`` method may be called from a policy,
+   but attempting to call ``unboxed()`` will fail.
 
 Strings
 ^^^^^^^
@@ -182,6 +182,16 @@ Likewise, lists constructed in Polar may be passed into Java methods:
          assert oso.isAllowed(user, "foo", "bar");
       }
 
+.. |list_get| replace:: ``List.get``
+.. _list_get: https://docs.oracle.com/javase/10/docs/api/java/util/List.html#get(int)
+
+Java methods like |list_get|_ may be used for random access to
+list elements, but there is currently no Polar syntax for that is
+equivalent to the Java expression ``user.groups[1]``. To access
+the elements of a list without using a method, you may iterate
+over it with :ref:`operator-in` or destructure it with
+:ref:`pattern matching <patterns-and-matching>`.
+
 Maps
 ^^^^
 Java objects that implement the `Map <https://docs.oracle.com/javase/10/docs/api/java/util/Map.html>`_ interface
@@ -212,19 +222,20 @@ Likewise, dictionaries constructed in Polar may be passed into Java methods.
 
 Enumerations
 ^^^^^^^^^^^^
-Oso handles Java objects that implement the `Enumeration <https://docs.oracle.com/javase/10/docs/api/java/util/Enumeration.html>`_ interface by evaluating each of the
-object's elements one at a time:
+You may iterate over a Java `Enumeration <https://docs.oracle.com/javase/10/docs/api/java/util/Enumeration.html>`_
+(or anything that can be converted to one, such as a ``Collection`` or ``Iterable``)
+using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
    :caption: :fa:`oso` policy.polar
 
-   allow(actor, action, resource) if actor.getGroup = "payroll";
+   allow(actor, action, resource) if "payroll" in actor.getGroups();
 
 .. code-block:: java
    :caption: :fab:`java` User.java
 
-      public Enumeration<String> getGroup() {
-         return Collections.enumeration(List.of("HR", "payroll"));
+      public List<String> getGroups() {
+         return List.of("HR", "payroll");
       }
 
       public static void main(String[] args) {
@@ -232,25 +243,47 @@ object's elements one at a time:
          assert oso.isAllowed(user, "foo", "bar");
       }
 
-In the policy above, the right hand side of the `allow` rule will first evaluate ``"HR" = "payroll"``, then
-``"payroll" = "payroll"``. Because the latter evaluation succeeds, the call to ``isAllowed()`` will succeed.
-Note that if ``getGroup()`` returned a list, the rule would fail, as the evaluation would be ``["HR", "payroll"] = "payroll"``.
+``null``
+^^^^^^^^
+The Java ``null`` reference is registered as the Polar constant :ref:`nil`.
+If a Java method can return ``null``, you may want to compare the result
+to ``nil``:
+
+.. code-block:: polar
+  :caption: :fa:`oso` policy.polar
+
+  allow(actor, action, resource) if actor.getOptional() != nil;
+
+.. code-block:: ruby
+  :caption: :fab:`java` User.java
+
+  public class User {
+      ...
+
+      public Thing getOptional() {
+          if someCondition() {
+              return new Thing();
+          } else {
+              return null;
+          }
+      }
+   }
 
 Summary
 ^^^^^^^
 
-.. list-table:: Java -> Polar Types Summary
+.. list-table:: Java → Polar Types Summary
    :width: 500 px
    :header-rows: 1
 
    * - Java type
      - Polar type
    * - int/Integer
-     - Number (Integer)
+     - Integer
    * - float/Float
-     - Number (Float)
+     - Float
    * - double/Double
-     - Number (Float)
+     - Float
    * - boolean/Boolean
      - Boolean
    * - List
@@ -259,3 +292,5 @@ Summary
      - List
    * - Map
      - Dictionary
+   * - String
+     - String

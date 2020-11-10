@@ -620,7 +620,16 @@ def test_datetime(polar, query):
     assert query(Predicate("timedelta", [t4, t1]))
 
 
-def test_other_constants(polar, qvar, query):
+def test_nil(polar, query, qvar):
+    """Test that nil is pre-registered as None."""
+    polar.load_str("null(nil);")
+    assert qvar("null(x)", "x") == [None]
+    assert query(Predicate("null", [None])) == [{}]
+    assert not query(Predicate("null", [[]]))
+
+
+def test_other_constants(polar, qvar):
+    """Test that other objects may be registered as constants."""
     d = {"a": 1}
     polar.register_constant(d, "d")
     assert qvar("x = d.a", "x") == [1]
@@ -694,19 +703,18 @@ def test_unbound_variable(polar, query):
     assert isinstance(first["x"], Variable)
 
 
-def test_return_none(polar, qeval):
+def test_return_none(polar):
     class Foo:
         def this_is_none(self):
             return None
 
     polar.register_class(Foo)
-    polar.load_str("f(x) if x.this_is_none = 1;")
-    assert not list(polar.query_rule("f", Foo()))
+    polar.load_str("f(x) if x.this_is_none() = nil;")
+    assert len(list(polar.query_rule("f", Foo()))) == 1
 
-    polar.load_str("f(x) if x.this_is_none.bad_call = 1;")
-
+    polar.load_str("g(x) if x.this_is_none().bad_call() = 1;")
     with pytest.raises(exceptions.PolarRuntimeError) as e:
-        list(polar.query_rule("f", Foo()))
+        list(polar.query_rule("g", Foo()))
     assert str(e.value).find(
         "Application error: 'NoneType' object has no attribute 'bad_call'"
     )
