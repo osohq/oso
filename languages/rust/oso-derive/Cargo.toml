@@ -1,6 +1,6 @@
 [package]
 name = "oso-derive"
-description = "Oso Authorization Library Macros"
+description = "macros for oso, an open source policy engine for authorization that’s embedded in your application"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 license = "Apache-2.0"
 homepage = "https://github.com/osohq/oso"
