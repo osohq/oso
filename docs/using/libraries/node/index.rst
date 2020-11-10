@@ -137,13 +137,14 @@ or destructure it with :ref:`pattern matching <patterns-and-matching>`.
 
 .. todo:: Mention no dictionary type conversion?
 
-Iterators
+Iterables
 ^^^^^^^^^
 
-You may iterate over a (synchronous or `asynchronous
-<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator>`_) JavaScript
-`iterator <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols>`_
-using the Polar :ref:`operator-in` operator:
+You may iterate over any `synchronous
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols>`_
+or `asynchronous
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator>`_)
+JavaScript iterables using the Polar :ref:`operator-in` operator:
 
 .. code-block:: polar
   :caption: :fa:`oso` policy.polar
