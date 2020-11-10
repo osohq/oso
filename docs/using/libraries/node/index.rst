@@ -156,7 +156,7 @@ JavaScript iterables using the Polar :ref:`operator-in` operator:
 
   class User {
     getGroups() {
-      return ["HR", "payroll"].values();
+      return ["HR", "payroll"];
     }
   }
 
