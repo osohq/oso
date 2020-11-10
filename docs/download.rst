@@ -188,9 +188,7 @@ oso is available as a library in several languages:
 
 **Libraries coming soon:**
 
-- JavaScript in the browser
 - Go
-- Rust
 
 Source Code
 -----------
@@ -206,6 +204,7 @@ Releases
     :maxdepth: 1
     :caption: See below for release notes:
 
+    v0.8.0 <changelogs/0.8.0>
     v0.7.1 <changelogs/0.7.1>
     v0.7.0 <changelogs/0.7.0>
     v0.6.0 <changelogs/0.6.0>
