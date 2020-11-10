@@ -118,12 +118,12 @@ Likewise, lists constructed in Polar may be passed into Ruby methods:
 .. |array_at| replace:: ``Array#at``
 .. _array_at: https://ruby-doc.org/core/Array.html#method-i-at
 
-There is currently no syntax for random access to a list element within a
-policy; i.e., there is no Polar equivalent of the Ruby expression
-``user.groups[1]``. However, you can still access a specific element via
-methods like |array_at|_. To access the elements of a list, you may iterate
-over it with :ref:`operator-in` or destructure it with :ref:`pattern matching
-<patterns-and-matching>`.
+Ruby methods like |array_at|_ may be used for random access to
+list elements, but there is currently no Polar syntax that is
+equivalent to the Ruby expression ``user.groups[1]``. To access
+the elements of a list without using a method, you may iterate
+over it with :ref:`operator-in` or destructure it with
+:ref:`pattern matching <patterns-and-matching>`.
 
 Hashes
 ^^^^^^
