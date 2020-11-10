@@ -90,10 +90,15 @@ Currently, no methods on ``Vec`` are exposed to Polar.
 .. warning::
   Polar does not support methods that mutate lists in place, unless the list is also returned from the method.
 
-There is currently no syntax for random access to a vector element within a policy;
-i.e., there is no Polar equivalent of the JavaScript expression ``user.groups[1]``.
-To access the elements of a list, you may iterate over it with :ref:`operator-in`
-or destructure it with :ref:`pattern matching <patterns-and-matching>`.
+.. |vec_get| replace:: ``Vec::get``
+.. _vec_get: https://doc.rust-lang.org/std/vec/struct.Vec.html#method.get
+
+There is currently no syntax for random access to a vector element within a
+policy; i.e., there is no Polar equivalent of the JavaScript expression
+``user.groups[1]``. However, you can still access a specific element via
+methods like |vec_get|_. To access the elements of a list, you may iterate
+over it with :ref:`operator-in` or destructure it with :ref:`pattern matching
+<patterns-and-matching>`.
 
 HashMaps
 ^^^^^^^^ 

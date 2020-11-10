@@ -182,10 +182,15 @@ Likewise, lists constructed in Polar may be passed into Java methods:
          assert oso.isAllowed(user, "foo", "bar");
       }
 
-There is currently no syntax for random access to a list element within a policy;
-i.e., there is no Polar equivalent of the Java expression ``user.groups[1]``.
-To access the elements of a list, you may iterate over it with :ref:`operator-in`
-or destructure it with :ref:`pattern matching <patterns-and-matching>`.
+.. |list_get| replace:: ``List.get``
+.. _list_get: https://docs.oracle.com/javase/10/docs/api/java/util/List.html#get(int)
+
+There is currently no syntax for random access to a list element within a
+policy; i.e., there is no Polar equivalent of the Java expression
+``user.groups[1]``. However, you can still access a specific element via
+methods like |list_get|_. To access the elements of a list, you may iterate
+over it with :ref:`operator-in` or destructure it with :ref:`pattern matching
+<patterns-and-matching>`.
 
 Maps
 ^^^^
