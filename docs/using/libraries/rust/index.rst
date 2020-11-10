@@ -158,6 +158,44 @@ using the Polar :ref:`operator-in` operator:
     };
     assert!(oso.is_allowed(user, "foo", "bar")?);
 
+
+Options
+^^^^^^^
+
+The Rust type ``Option<T>`` is registered as a class.
+You can use ``unwrap`` on an option in a policy, but the safer way
+is to use the ``in`` operator, which will return 0 or 1 values depending
+on if the value is ``None`` or ``Some(_)`` respectively.
+
+The value ``None`` is registered as the Polar constant :ref:`nil`.
+If a Rust method can return ``None``, you may want to compare the result
+to ``nil``:
+
+.. code-block:: polar
+   :caption: :fa:`oso` policy.polar
+
+   allow(actor, action, resource) if "Jimmy" in actor.nickname or actor.get_optional() != nil;
+
+.. code-block:: rust
+  :caption: :fab:`rust` main.rs
+
+    #[derive(Clone, PolarClass)]
+    struct User {
+        #[polar(attr)]
+        nickname: Option<String>,
+    }
+
+    oso.register_class(
+        User::get_polar_class_builder()
+            .add_method("get_optional", |u: &User| None)
+            .build(),
+    )
+    .unwrap();
+
+    let user = User { nickname: Some("Jimmy".to_string()), };
+    assert!(oso.is_allowed(user, "foo", "bar")?);
+
+
 Summary
 ^^^^^^^
 
