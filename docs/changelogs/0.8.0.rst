@@ -63,3 +63,32 @@ Other bugs & improvements
   .. code-block:: polar
 
     2 matches Integer { numerator: 2, denominator: 1 }
+
+- More invalid expressions are captured at parse time. For example, you cannot perform
+  arithmetic over logical operations, ``(x = 1) + (x = 2)``, nor can you
+  check an arithmetic expression for "truthiness", i.e. ``1 or 2``
+  will also fail to parse::
+
+    query> (x = 1) + (x = 2)
+    ParserError
+    Wrong value type: x = 1. Expected a value at line 1, column 1
+
+    query> 1 or 2
+    ParserError
+    Wrong value type: 1. Expected a logical at line 1, column 1
+
+- Matching an unbound variable against a pattern now results in an error. Previously
+  this would bind the variable with the pattern, resulting in unexpected behavior.
+  For example::
+
+    query> x matches String
+    PolarTypeError
+    trace (most recent evaluation last):
+      in query at line 1, column 1
+        x matches String
+    Type error: cannot bind pattern 'String' to 'x' at line 1, column 11
+
+  Versus::
+
+    query> "abc" matches String
+    True
