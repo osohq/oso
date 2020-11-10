@@ -161,9 +161,7 @@ JavaScript iterables using the Polar :ref:`operator-in` operator:
   }
 
   const user = new User();
-  oso.isAllowed(user, 'foo', 'bar').then(
-    result => assert(result)
-  );
+  oso.isAllowed(user, 'foo', 'bar').then(assert);
 
 
 Promises
