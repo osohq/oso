@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604976298258,
+  "lastUpdate": 1604982069409,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12777,6 +12777,60 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 7548,
             "range": "± 341",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "612b941377c5ff61cd35caeeb4e56aea2f96eece",
+          "message": "Implement iterator + nil for Rust (#515)\n\n* Use PolarValue more consistently - reduce use of Term throughout.",
+          "timestamp": "2020-11-09T23:14:27-05:00",
+          "tree_id": "0300b7b5a0514009c5ff1955df3d4dec9e9bc6c4",
+          "url": "https://github.com/osohq/oso/commit/612b941377c5ff61cd35caeeb4e56aea2f96eece"
+        },
+        "date": 1604982067561,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 45398,
+            "range": "± 1594",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 51106,
+            "range": "± 3424",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 51024,
+            "range": "± 3271",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 50833,
+            "range": "± 3700",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 50886,
+            "range": "± 2947",
             "unit": "ns/iter"
           }
         ]
