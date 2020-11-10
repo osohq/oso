@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604937648849,
+  "lastUpdate": 1604976298258,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12657,6 +12657,126 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 6969,
             "range": "± 304",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a20d624908b90c8b95f68f1bba77188600baa082",
+          "message": "nil (#497)\n\n* Python: nil = None\r\n\r\nDjango correctly translates `x = nil` to `X IS NULL` in SQL.\r\n\r\n* Ruby: nil = nil\r\n\r\n* Show Java stack traces\r\n\r\n* Java: nil = null\r\n\r\n* JS: nil = null\r\n\r\n* Modify flaky JS test that would've required updates on every new constant registered.\r\n\r\n* Add special comments to aid in linking tests across langlibs\r\n\r\n* Update languages/python/django-oso/tests/test_django_oso.py\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\n* Document nil\r\n\r\n* Python doc fixes\r\n\r\n* Ruby doc fixes\r\n\r\n* Java docs fixes\r\n\r\n* Node docs fixes\r\n\r\n* Rust docs fixes\r\n\r\n* Library-specific nil docs\r\n\r\n* -pre\r\n\r\n* Ruby doc tweaks from review\r\n\r\n* Java doc tweak from review\r\n\r\n* Spelling\r\n\r\n* Add index access caveats to Java, Ruby, and Rust docs\r\n\r\n* Specify that 'in' works over any JS iterable -- not iterator\r\n\r\n* Don't need to do this anymore\r\n\r\n* Simplify\r\n\r\n* Further tweaks to list syntax notes\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-11-09T19:39:17-07:00",
+          "tree_id": "eeb04a3cebc523145e58369e18cc8c371d05e87b",
+          "url": "https://github.com/osohq/oso/commit/a20d624908b90c8b95f68f1bba77188600baa082"
+        },
+        "date": 1604976296377,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "unify_once",
+            "value": 911,
+            "range": "± 40",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2693,
+            "range": "± 145",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 72193,
+            "range": "± 5225",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 583816,
+            "range": "± 13474",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 19634,
+            "range": "± 899",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 19808,
+            "range": "± 890",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 19899,
+            "range": "± 732",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19699,
+            "range": "± 892",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17311,
+            "range": "± 614",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6578,
+            "range": "± 733",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 9019,
+            "range": "± 3243",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 10700,
+            "range": "± 1219",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 29525,
+            "range": "± 2133",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6157,
+            "range": "± 170",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 12137,
+            "range": "± 408",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 7548,
+            "range": "± 341",
             "unit": "ns/iter"
           }
         ]
