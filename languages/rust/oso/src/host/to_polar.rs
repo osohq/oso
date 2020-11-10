@@ -2,13 +2,10 @@
 //! Rust types back to Polar types.
 
 use impl_trait_for_tuples::*;
-use polar_core::terms::*;
 
 use std::collections::HashMap;
-use std::iter;
 
-use super::Host;
-use crate::host::Instance;
+use super::DEFAULT_CLASSES;
 use crate::PolarValue;
 
 /// Convert Rust types to Polar types.
@@ -22,49 +19,58 @@ use crate::PolarValue;
 ///
 /// For non-primitive types, the instance will be stored
 /// on the provided `Host`.
+///
 /// ## Trait bounds
 ///
-/// `ToPolar` requires types to be `Send + Sync`, since it
+/// The default implementation for `PolarClass`
+/// requires types to be `Send + Sync`, since it
 /// is possible to store a `ToPolar` value on an `Oso` instance
 /// which can be shared between threads.
 ///
 /// `ToPolar` implementors must also be concrete, sized types without
 /// any borrows.
-pub trait ToPolar: Send + Sync + Sized + 'static {
-    fn to_polar_value(self, host: &mut Host) -> Value {
-        let instance = Instance::new(self);
-        let instance = host.cache_instance(instance, None);
-        Value::ExternalInstance(ExternalInstance {
-            constructor: None,
-            repr: Some(std::any::type_name::<Self>().to_owned()),
-            instance_id: instance,
-        })
-    }
-
-    fn to_polar(self, host: &mut Host) -> Term {
-        Term::new_from_ffi(self.to_polar_value(host))
-    }
+pub trait ToPolar {
+    fn to_polar(self) -> PolarValue;
 }
 
 impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
-    fn to_polar_value(self, host: &mut Host) -> Value {
-        let instance = Instance::new(self);
-        let instance = host.cache_instance(instance, None);
-        if host.get_class_from_type::<Self>().is_err() {
-            let class = Self::get_polar_class();
-            let name = Symbol(class.name.clone());
-            tracing::info!("class {} not previously registered, doing so now", name.0);
-            // If we hit this error its because somehow we didn't find the class, and yet
-            // we also weren't able to register the class because the name already exists.
-            // TODO: can we handle this without panicking?
-            host.cache_class(class, name)
-                .expect("failed to register a class that we thought was previously unregistered");
+    fn to_polar(self) -> PolarValue {
+        let registered = DEFAULT_CLASSES
+            .read()
+            .unwrap()
+            .get(&std::any::TypeId::of::<C>())
+            .is_some();
+
+        if !registered {
+            DEFAULT_CLASSES
+                .write()
+                .unwrap()
+                .entry(std::any::TypeId::of::<C>())
+                .or_insert_with(C::get_polar_class);
         }
-        Value::ExternalInstance(ExternalInstance {
-            constructor: None,
-            repr: Some(std::any::type_name::<Self>().to_owned()),
-            instance_id: instance,
-        })
+
+        PolarValue::new_from_instance(self)
+    }
+}
+
+pub trait ToPolarResult {
+    fn to_polar_result(self) -> crate::Result<PolarValue>;
+}
+
+impl<R: ToPolar> ToPolarResult for R {
+    fn to_polar_result(self) -> crate::Result<PolarValue> {
+        Ok(self.to_polar())
+    }
+}
+
+impl<E: std::error::Error + Send + Sync + 'static, R: ToPolar> ToPolarResult for Result<R, E> {
+    fn to_polar_result(self) -> crate::Result<PolarValue> {
+        self.map(|r| r.to_polar())
+            .map_err(|e| crate::OsoError::ApplicationError {
+                source: Box::new(e),
+                attr: None,
+                type_name: None,
+            })
     }
 }
 
@@ -74,44 +80,44 @@ mod private {
 }
 
 pub trait ToPolarList: private::Sealed {
-    fn to_polar_list(self, host: &mut Host) -> Vec<Term>
+    fn to_polar_list(self) -> Vec<PolarValue>
     where
         Self: Sized;
 }
 
 #[impl_for_tuples(16)]
-#[tuple_types_custom_trait_bound(ToPolar + 'static)]
+#[tuple_types_custom_trait_bound(ToPolar)]
 impl private::Sealed for Tuple {}
 
 impl ToPolarList for () {
-    fn to_polar_list(self, _host: &mut Host) -> Vec<Term> {
+    fn to_polar_list(self) -> Vec<PolarValue> {
         Vec::new()
     }
 }
 
 #[impl_for_tuples(1, 16)]
-#[tuple_types_custom_trait_bound(ToPolar + 'static)]
+#[tuple_types_custom_trait_bound(ToPolar)]
 impl ToPolarList for Tuple {
-    fn to_polar_list(self, host: &mut Host) -> Vec<Term> {
+    fn to_polar_list(self) -> Vec<PolarValue> {
         let mut result = Vec::new();
         for_tuples!(
-            #( result.push(self.Tuple.to_polar(host)); )*
+            #( result.push(self.Tuple.to_polar()); )*
         );
         result
     }
 }
 
 impl ToPolar for bool {
-    fn to_polar_value(self, _host: &mut Host) -> Value {
-        Value::Boolean(self)
+    fn to_polar(self) -> PolarValue {
+        PolarValue::Boolean(self)
     }
 }
 
 macro_rules! int_to_polar {
     ($i:ty) => {
         impl ToPolar for $i {
-            fn to_polar_value(self, _host: &mut Host) -> Value {
-                Value::Number(Numeric::Integer(self.into()))
+            fn to_polar(self) -> PolarValue {
+                PolarValue::Integer(self.into())
             }
         }
     };
@@ -128,8 +134,8 @@ int_to_polar!(i64);
 macro_rules! float_to_polar {
     ($i:ty) => {
         impl ToPolar for $i {
-            fn to_polar_value(self, _host: &mut Host) -> Value {
-                Value::Number(Numeric::Float(self.into()))
+            fn to_polar(self) -> PolarValue {
+                PolarValue::Float(self.into())
             }
         }
     };
@@ -139,106 +145,98 @@ float_to_polar!(f32);
 float_to_polar!(f64);
 
 impl ToPolar for String {
-    fn to_polar_value(self, _host: &mut Host) -> Value {
-        Value::String(self)
+    fn to_polar(self) -> PolarValue {
+        PolarValue::String(self)
     }
 }
 
-impl ToPolar for &'static str {
-    fn to_polar_value(self, _host: &mut Host) -> Value {
-        Value::String(self.to_string())
+impl<'a> ToPolar for &'a str {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::String(self.to_string())
     }
 }
 
 impl<T: ToPolar> ToPolar for Vec<T> {
-    fn to_polar_value(self, host: &mut Host) -> Value {
-        Value::List(self.into_iter().map(|v| v.to_polar(host)).collect())
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.into_iter().map(|v| v.to_polar()).collect())
+    }
+}
+
+impl<'a, T: Clone + ToPolar> ToPolar for &'a [T] {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.iter().cloned().map(|v| v.to_polar()).collect())
     }
 }
 
 impl<T: ToPolar> ToPolar for HashMap<String, T> {
-    fn to_polar_value(self, host: &mut Host) -> Value {
-        Value::Dictionary(Dictionary {
-            fields: self
-                .into_iter()
-                .map(|(k, v)| (Symbol(k), v.to_polar(host)))
+    fn to_polar(self) -> PolarValue {
+        PolarValue::Map(self.into_iter().map(|(k, v)| (k, v.to_polar())).collect())
+    }
+}
+
+impl<T: ToPolar> ToPolar for HashMap<&str, T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::Map(
+            self.into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_polar()))
                 .collect(),
-        })
-    }
-}
-
-impl ToPolar for PolarValue {
-    fn to_polar_value(self, host: &mut Host) -> Value {
-        self.to_term(host).value().clone()
-    }
-}
-
-impl ToPolar for Value {
-    fn to_polar_value(self, _host: &mut Host) -> Value {
-        self
-    }
-}
-
-pub type PolarResultIter = Box<dyn Iterator<Item = Result<Term, crate::OsoError>> + 'static>;
-
-// Trait for the return value of class methods.
-// This allows us to return polar values, as well as options and results of polar values.
-pub trait ToPolarResults {
-    fn to_polar_results(self, host: &mut Host) -> PolarResultIter;
-}
-
-impl<C: 'static + Sized + ToPolar> ToPolarResults for C {
-    fn to_polar_results(self, host: &mut Host) -> PolarResultIter {
-        Box::new(iter::once(Ok(self.to_polar(host))))
-    }
-}
-
-impl<C, E> ToPolarResults for Result<C, E>
-where
-    C: ToPolarResults,
-    E: std::error::Error + 'static + Send + Sync,
-{
-    fn to_polar_results(self, host: &mut Host) -> PolarResultIter {
-        match self {
-            Ok(result) => result.to_polar_results(host),
-            Err(e) => Box::new(iter::once(Err(crate::OsoError::ApplicationError {
-                source: Box::new(e),
-                type_name: None,
-                attr: None,
-            }))),
-        }
-    }
-}
-
-// NOTE: MISSING specialization... Want to have a variant for Result that
-// is not over an error, but alas impossible???
-
-impl<C: ToPolarResults> ToPolarResults for Option<C> {
-    fn to_polar_results(self, host: &mut Host) -> PolarResultIter {
-        self.map_or_else(
-            || Box::new(std::iter::empty()) as PolarResultIter,
-            |c| c.to_polar_results(host),
         )
     }
 }
 
-pub struct PolarIter<I, Iter>
-where
-    I: ToPolarResults + 'static,
-    Iter: std::iter::Iterator<Item = I> + Sized + 'static,
-{
-    pub iter: Iter,
+impl ToPolar for PolarValue {
+    fn to_polar(self) -> PolarValue {
+        self
+    }
 }
 
-impl<I: ToPolarResults + 'static, Iter: std::iter::Iterator<Item = I> + Sized + 'static>
-    ToPolarResults for PolarIter<I, Iter>
+impl<T: ToPolar> ToPolar for Option<T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::new_from_instance(self.map(|t| t.to_polar()))
+    }
+}
+
+pub struct PolarIterator(pub Box<dyn PolarResultIter>);
+
+impl PolarIterator {
+    pub fn new<I: PolarResultIter + 'static>(iter: I) -> Self {
+        Self(Box::new(iter))
+    }
+}
+
+impl Iterator for PolarIterator {
+    type Item = crate::Result<PolarValue>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+impl Clone for PolarIterator {
+    fn clone(&self) -> Self {
+        Self(self.0.box_clone())
+    }
+}
+impl crate::PolarClass for PolarIterator {
+    fn get_polar_class_builder() -> crate::ClassBuilder<Self> {
+        crate::Class::builder::<Self>().with_iter()
+    }
+}
+
+pub trait PolarResultIter: Send + Sync {
+    fn box_clone(&self) -> Box<dyn PolarResultIter>;
+    fn next(&mut self) -> Option<crate::Result<PolarValue>>;
+}
+
+impl<I, V> PolarResultIter for I
+where
+    I: Iterator<Item = V> + Clone + Send + Sync + 'static,
+    V: ToPolarResult,
 {
-    fn to_polar_results(self, host: &mut Host) -> PolarResultIter {
-        Box::new(
-            self.iter
-                .flat_map(|i| i.to_polar_results(host))
-                .collect::<Vec<crate::Result<Term>>>()
-                .into_iter(),
-        ) as PolarResultIter
+    fn box_clone(&self) -> Box<dyn PolarResultIter> {
+        Box::new(self.clone())
+    }
+
+    fn next(&mut self) -> Option<crate::Result<PolarValue>> {
+        Iterator::next(self).map(|v| v.to_polar_result())
     }
 }

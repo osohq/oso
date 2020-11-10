@@ -5,10 +5,7 @@ use common::OsoTest;
 use oso::errors::polar::{
     ErrorKind as PolarErrorKind, PolarError, RuntimeError as PolarRuntimeError,
 };
-use oso::{OsoError, PolarClass};
-
-use polar_core::terms::Symbol;
-use polar_core::terms::Value;
+use oso::{OsoError, PolarClass, PolarValue};
 
 // TODO in all tests, check type of error & message
 
@@ -108,7 +105,7 @@ fn test_attribute_does_not_exist() -> oso::Result<()> {
     // TODO dhatch: Query API for variables needs improvement.
     let mut query = oso.oso.query_rule(
         "getattr",
-        (Foo, "bar", Value::Variable(Symbol("a".to_owned()))),
+        (Foo, "bar", PolarValue::Variable("a".to_owned())),
     )?;
     let error = query.next().unwrap().unwrap_err();
 

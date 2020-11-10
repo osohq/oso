@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use crate::errors::OsoError;
-use crate::host::{Host, Instance, PolarResultIter};
+use crate::host::{Host, Instance, PolarIterator};
 use crate::{FromPolar, PolarValue};
 
 use polar_core::events::*;
@@ -17,14 +17,15 @@ impl Iterator for Query {
 
 pub struct Query {
     inner: polar_core::polar::Query,
-    calls: HashMap<u64, PolarResultIter>,
+    /// Stores a map from call_id to the iterator the call iterates through
+    iterators: HashMap<u64, PolarIterator>,
     host: Host,
 }
 
 impl Query {
     pub fn new(inner: polar_core::polar::Query, host: Host) -> Self {
         Self {
-            calls: HashMap::new(),
+            iterators: HashMap::new(),
             inner,
             host,
         }
@@ -52,6 +53,9 @@ impl Query {
                     instance_id,
                     constructor,
                 } => self.handle_make_external(instance_id, constructor),
+                QueryEvent::NextExternal { call_id, iterable } => {
+                    self.handle_next_external(call_id, iterable)
+                }
                 QueryEvent::ExternalCall {
                     call_id,
                     instance,
@@ -109,8 +113,10 @@ impl Query {
         Ok(self.inner.question_result(call_id, result)?)
     }
 
-    fn call_result(&mut self, call_id: u64, result: Term) -> crate::Result<()> {
-        Ok(self.inner.call_result(call_id, Some(result))?)
+    fn call_result(&mut self, call_id: u64, result: PolarValue) -> crate::Result<()> {
+        Ok(self
+            .inner
+            .call_result(call_id, Some(result.to_term(&mut self.host)))?)
     }
 
     fn call_result_none(&mut self, call_id: u64) -> crate::Result<()> {
@@ -133,34 +139,37 @@ impl Query {
                 if !kwargs.is_none() {
                     lazy_error!("keyword args for constructor not supported.")
                 } else {
-                    self.host.make_instance(name, args.clone(), instance_id)
+                    let args = args
+                        .iter()
+                        .map(|term| PolarValue::from_term(term, &self.host))
+                        .collect::<crate::Result<Vec<PolarValue>>>()?;
+                    self.host.make_instance(&name.0, args, instance_id)
                 }
             }
             _ => lazy_error!("invalid type for constructing an instance -- internal error"),
         }
     }
 
-    fn register_call(
-        &mut self,
-        call_id: u64,
-        instance: Instance,
-        name: Symbol,
-        args: Option<Vec<Term>>,
-    ) -> crate::Result<()> {
-        if self.calls.get(&call_id).is_none() {
-            tracing::trace!(call_id, name = %name, args = ?args, "register_call");
-            let results = if let Some(args) = args {
-                instance.call(&name.0, args, &mut self.host)?
-            } else {
-                Box::new(std::iter::once(instance.get_attr(&name.0, &mut self.host)))
-            };
-            self.calls.insert(call_id, results);
-        }
-        Ok(())
+    fn next_call_result(&mut self, call_id: u64) -> Option<crate::Result<PolarValue>> {
+        self.iterators.get_mut(&call_id).and_then(|c| c.next())
     }
 
-    fn next_call_result(&mut self, call_id: u64) -> Option<Result<Term, crate::OsoError>> {
-        self.calls.get_mut(&call_id).and_then(|c| c.next())
+    fn handle_next_external(&mut self, call_id: u64, iterable: Term) -> crate::Result<()> {
+        if self.iterators.get(&call_id).is_none() {
+            let iterable_instance =
+                Instance::from_polar(PolarValue::from_term(&iterable, &self.host)?)?;
+            let iter = iterable_instance.as_iter(&self.host)?;
+            self.iterators.insert(call_id, iter);
+        }
+
+        match self.next_call_result(call_id) {
+            Some(Ok(result)) => self.call_result(call_id, result),
+            Some(Err(e)) => {
+                self.call_result_none(call_id)?;
+                Err(e)
+            }
+            None => self.call_result_none(call_id),
+        }
     }
 
     fn handle_external_call(
@@ -174,22 +183,23 @@ impl Query {
         if kwargs.is_some() {
             return lazy_error!("Invalid call error: kwargs not supported in Rust.");
         }
-        let instance = Instance::from_polar(&instance, &self.host).unwrap();
-        if let Err(e) = self.register_call(call_id, instance, name, args) {
-            self.call_result_none(call_id)?;
-            return Err(e);
-        }
-
-        if let Some(result) = self.next_call_result(call_id) {
-            match result {
-                Ok(r) => self.call_result(call_id, r),
-                Err(e) => {
-                    self.call_result_none(call_id)?;
-                    Err(e)
-                }
-            }
+        tracing::trace!(call_id, name = %name, args = ?args, "call");
+        let instance = Instance::from_polar(PolarValue::from_term(&instance, &self.host)?)?;
+        let result = if let Some(args) = args {
+            let args = args
+                .iter()
+                .map(|v| PolarValue::from_term(v, &self.host))
+                .collect::<crate::Result<Vec<PolarValue>>>()?;
+            instance.call(&name.0, args, &mut self.host)
         } else {
-            self.call_result_none(call_id)
+            instance.get_attr(&name.0, &mut self.host)
+        };
+        match result {
+            Ok(t) => self.call_result(call_id, t),
+            Err(e) => {
+                self.call_result_none(call_id)?;
+                Err(e)
+            }
         }
     }
 
@@ -202,8 +212,8 @@ impl Query {
         assert_eq!(args.len(), 2);
         let res = {
             let args = [
-                Instance::from_polar(&args[0], &self.host).unwrap(),
-                Instance::from_polar(&args[1], &self.host).unwrap(),
+                Instance::from_polar(PolarValue::from_term(&args[0], &self.host)?)?,
+                Instance::from_polar(PolarValue::from_term(&args[1], &self.host)?)?,
             ];
             self.host.operator(operator, args)?
         };
@@ -218,7 +228,9 @@ impl Query {
         class_tag: Symbol,
     ) -> crate::Result<()> {
         tracing::debug!(instance = ?instance, class = %class_tag, "isa");
-        let res = self.host.isa(instance, &class_tag)?;
+        let res = self
+            .host
+            .isa(PolarValue::from_term(&instance, &self.host)?, &class_tag.0)?;
         self.question_result(call_id, res)?;
         Ok(())
     }
@@ -243,7 +255,7 @@ impl Query {
     ) -> crate::Result<()> {
         let res = self
             .host
-            .is_subspecializer(instance_id, &left_class_tag, &right_class_tag);
+            .is_subspecializer(instance_id, &left_class_tag.0, &right_class_tag.0);
         self.question_result(call_id, res)?;
         Ok(())
     }
@@ -281,10 +293,10 @@ impl ResultSet {
             .map(|t| PolarValue::from_term(t, &self.host).unwrap())
     }
 
-    pub fn get_typed<T: crate::host::FromPolarValue>(&self, name: &str) -> crate::Result<T> {
+    pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
         self.get(name)
             .ok_or_else(|| crate::OsoError::FromPolar)
-            .and_then(T::from_polar_value)
+            .and_then(T::from_polar)
     }
 }
 
@@ -294,7 +306,7 @@ impl std::fmt::Debug for ResultSet {
     }
 }
 
-impl<S: AsRef<str>, T: crate::host::FromPolarValue + PartialEq<T>> PartialEq<HashMap<S, T>>
+impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<S, T>>
     for ResultSet
 {
     fn eq(&self, other: &HashMap<S, T>) -> bool {

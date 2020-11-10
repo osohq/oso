@@ -10,10 +10,12 @@ impl OsoTest {
         Self { oso: Oso::new() }
     }
 
+    #[track_caller]
     pub fn load_str(&mut self, policy: &str) {
         self.oso.load_str(policy).unwrap();
     }
 
+    #[track_caller]
     pub fn load_file(&mut self, here: &str, name: &str) -> oso::Result<()> {
         // hack because `file!()` starts from workspace root
         // https://github.com/rust-lang/cargo/issues/3946
@@ -24,6 +26,7 @@ impl OsoTest {
         self.oso.load_file(file.to_str().unwrap())
     }
 
+    #[track_caller]
     pub fn query(&mut self, q: &str) -> Vec<oso::ResultSet> {
         let results = self.oso.query(q).unwrap();
         let mut result_vec = vec![];
@@ -33,6 +36,7 @@ impl OsoTest {
         result_vec
     }
 
+    #[track_caller]
     pub fn query_err(&mut self, q: &str) -> String {
         let mut results = self.oso.query(q).unwrap();
         let err = results
@@ -42,7 +46,8 @@ impl OsoTest {
         err.to_string()
     }
 
-    pub fn qvar<T: oso::FromPolarValue>(&mut self, q: &str, var: &str) -> Vec<T> {
+    #[track_caller]
+    pub fn qvar<T: oso::FromPolar>(&mut self, q: &str, var: &str) -> Vec<T> {
         let res = self.query(q);
         res.into_iter()
             .map(|set| {
@@ -59,6 +64,7 @@ impl OsoTest {
             .collect()
     }
 
+    #[track_caller]
     pub fn qeval(&mut self, q: &str) {
         let mut results = self.oso.query(q).unwrap();
         results
@@ -67,14 +73,16 @@ impl OsoTest {
             .unwrap();
     }
 
+    #[track_caller]
     pub fn qnull(&mut self, q: &str) {
         let mut results = self.oso.query(q).unwrap();
         assert!(results.next().is_none(), "Query shouldn't have any results");
     }
 
+    #[track_caller]
     pub fn qvar_one<T>(&mut self, q: &str, var: &str, expected: T)
     where
-        T: oso::FromPolarValue + PartialEq<T> + std::fmt::Debug,
+        T: oso::FromPolar + PartialEq<T> + std::fmt::Debug,
     {
         let mut res = self.qvar::<T>(q, var);
         assert_eq!(res.len(), 1, "expected exactly one result");

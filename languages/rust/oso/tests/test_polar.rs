@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use oso::{Class, FromPolarValue, Oso, OsoError, PolarClass, PolarValue};
+use oso::{Class, FromPolar, Oso, OsoError, PolarClass, PolarValue};
 use polar_core::error as polar_error;
 
 use maplit::hashmap;
@@ -114,21 +114,18 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
     // TODO (dhatch): Type handling: Would be great to be able to get each index
     // out here dynamically, the same way we can with result set.
     if let PolarValue::List(x_vec) = v_x {
-        assert_eq!(i64::from_polar_value(x_vec.get(0).unwrap().to_owned())?, 1);
+        assert_eq!(i64::from_polar(x_vec.get(0).unwrap().to_owned())?, 1);
         assert_eq!(
-            String::from_polar_value(x_vec.get(1).unwrap().to_owned())?,
+            String::from_polar(x_vec.get(1).unwrap().to_owned())?,
             String::from("two")
         );
-        assert_eq!(
-            bool::from_polar_value(x_vec.get(2).unwrap().to_owned())?,
-            true
-        );
+        assert_eq!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?, true);
     } else {
         panic!("x not list.");
     }
 
     let v_y = x.get("y").unwrap();
-    let y: HashMap<String, bool> = HashMap::<String, bool>::from_polar_value(v_y.to_owned())?;
+    let y: HashMap<String, bool> = HashMap::<String, bool>::from_polar(v_y.to_owned())?;
     assert_eq!(y, hashmap! {String::from("z") => false});
 
     Ok(())
@@ -429,8 +426,8 @@ fn test_register_class() -> oso::Result<()> {
     struct Bar;
 
     impl Bar {
-        pub fn y(&self) -> String {
-            "y".to_owned()
+        pub fn y(&self) -> &'static str {
+            "y"
         }
     }
 
@@ -450,12 +447,12 @@ fn test_register_class() -> oso::Result<()> {
             Self { a }
         }
 
-        pub fn b(&self) -> Vec<String> {
-            vec!["b".to_owned()]
+        pub fn b(&self) -> Vec<&'static str> {
+            vec!["b"]
         }
 
-        pub fn c(&self) -> String {
-            "c".to_owned()
+        pub fn c(&self) -> &'static str {
+            "c"
         }
 
         pub fn d(&self, x: String) -> String {
@@ -477,8 +474,8 @@ fn test_register_class() -> oso::Result<()> {
             vec![vec![1, 2, 3], vec![4, 5, 6]]
         }
 
-        pub fn g(&self) -> HashMap<String, String> {
-            hashmap! {"hello".to_owned() => "world".to_owned()}
+        pub fn g(&self) -> HashMap<&'static str, &'static str> {
+            hashmap! {"hello" => "world"}
         }
 
         pub fn h(&self) -> bool {
@@ -838,4 +835,84 @@ fn test_nan_inf() -> oso::Result<()> {
     assert!(oso.query("neg_inf = neg_inf").pop().is_some());
 
     Ok(())
+}
+
+#[test]
+fn test_iterators() -> oso::Result<()> {
+    common::setup();
+    #[derive(Default, PolarClass)]
+    struct Foo {}
+
+    #[derive(Clone, PolarClass)]
+    struct Bar(Vec<u32>);
+
+    impl IntoIterator for Bar {
+        type Item = u32;
+        type IntoIter = std::vec::IntoIter<u32>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self.0.into_iter()
+        }
+    }
+
+    impl Bar {
+        fn new(list: Vec<u32>) -> Self {
+            Self(list)
+        }
+        fn sum(&self) -> u32 {
+            self.0.iter().sum()
+        }
+    }
+
+    let mut oso = test_oso();
+    oso.oso.register_class(
+        Foo::get_polar_class_builder()
+            .set_constructor(Foo::default)
+            .build(),
+    )?;
+    oso.oso.register_class(
+        Bar::get_polar_class_builder()
+            .set_constructor(Bar::new)
+            .add_method("sum", Bar::sum)
+            .with_iter()
+            .build(),
+    )?;
+
+    assert_eq!(
+        oso.query_err("x in new Foo()"),
+        "Unsupported operation in for type Foo."
+    );
+    assert_eq!(
+        oso.qvar::<u32>("x in new Bar([1, 2, 3])", "x"),
+        vec![1, 2, 3]
+    );
+    oso.qvar_one("x = new Bar([1, 2, 3]).sum()", "x", 6u32);
+
+    Ok(())
+}
+
+#[test]
+fn test_nil() {
+    common::setup();
+
+    let mut oso = test_oso();
+    oso.load_str("null(nil);");
+
+    oso.qvar_one("null(x)", "x", Option::<PolarValue>::None);
+    assert_eq!(
+        oso.oso
+            .query_rule("null", (Option::<PolarValue>::None,))
+            .unwrap()
+            .count(),
+        1
+    );
+    assert_eq!(
+        oso.oso
+            .query_rule("null", (Vec::<PolarValue>::new(),))
+            .unwrap()
+            .count(),
+        0
+    );
+    oso.qeval("nil.is_none()");
+    oso.qnull("x in nil");
 }

@@ -147,8 +147,8 @@ fn test_external() {
             vec![vec![1, 2, 3], vec![4, 5, 6], vec![7]].into_iter()
         }
 
-        fn g(&self) -> std::collections::HashMap<String, &'static str> {
-            hashmap!("hello".to_string() => "world")
+        fn g(&self) -> std::collections::HashMap<&'static str, &'static str> {
+            hashmap!("hello" => "world")
         }
 
         fn h(&self) -> bool {
@@ -387,12 +387,13 @@ fn test_results_and_options() {
     // TODO (dhatch): Assert type of error
     // TODO (dhatch): Check nested method error
     test.query_err("new Foo().err()");
-    test.qvar_one(r#"new Foo().some() = x"#, "x", 1);
+    test.qvar_one(r#"new Foo().some() = x"#, "x", Some(1));
+    test.qvar_one(r#"x in new Foo().some()"#, "x", 1);
 
-    test.qnull(r#"new Foo().none() = x and y = 1"#);
-    test.qvar_one(r#"not (new Foo().none()) and y = 1"#, "y", 1);
+    // test.qnull(r#"new Foo().none() and y = 1"#);
+    test.qvar_one(r#"new Foo().none() = nil and y = 1"#, "y", 1);
 
-    let results = test.query("new Foo().none()");
+    let results = test.query("x in new Foo().none()");
     assert!(results.is_empty());
 }
 
@@ -474,7 +475,6 @@ fn test_unify_externals() {
     test.oso.register_class(baz_class).unwrap();
 }
 
-#[ignore = "Re-enable after updating iterator implementation"]
 #[test]
 fn test_values() {
     let _ = tracing_subscriber::fmt::try_init();
@@ -503,12 +503,10 @@ fn test_values() {
         )
         .unwrap();
 
-    let results: Vec<i32> = test.qvar("new Foo().one_two_three() = x", "x");
+    let results: Vec<i32> = test.qvar("x in new Foo().one_two_three()", "x");
     assert!(results == vec![1, 2, 3]);
-    println!("{:?}", results);
     let result: Vec<Vec<i32>> = test.qvar("new Foo().as_list() = x", "x");
     assert!(result == vec![vec![1, 2, 3]]);
-    println!("{:?}", result);
 }
 
 #[test]
@@ -577,4 +575,37 @@ fn test_without_registering() {
         .next()
         .unwrap()
         .unwrap();
+}
+
+#[test]
+fn test_option() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(Clone, Default, PolarClass)]
+    struct Foo;
+
+    impl Foo {
+        fn get_some(&self) -> Option<i32> {
+            Some(12)
+        }
+
+        fn get_none(&self) -> Option<i32> {
+            None
+        }
+    }
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::default)
+                .add_method("get_some", Foo::get_some)
+                .add_method("get_none", Foo::get_none)
+                .build(),
+        )
+        .unwrap();
+    test.qvar_one("new Foo().get_some() = x", "x", Some(12i32));
+    test.qvar_one("x in new Foo().get_some()", "x", 12i32);
+    test.qvar_one("new Foo().get_none() = x", "x", Option::<i32>::None);
+    test.qeval("12 in new Foo().get_some()");
+    test.qeval("new Foo().get_none() = nil");
 }

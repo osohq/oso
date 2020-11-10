@@ -36,6 +36,8 @@ impl Oso {
             oso.register_class(class)
                 .expect("failed to register builtin class");
         }
+        oso.register_constant(Option::<crate::PolarValue>::None, "nil")
+            .expect("failed to register the constant None");
         oso
     }
 
@@ -125,7 +127,11 @@ impl Oso {
     #[must_use = "Query that is not consumed does nothing."]
     pub fn query_rule(&mut self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
         let mut query_host = self.host.clone();
-        let args = args.to_polar_list(&mut query_host);
+        let args = args
+            .to_polar_list()
+            .iter()
+            .map(|value| value.to_term(&mut query_host))
+            .collect();
         let query_value = Value::Call(Call {
             name: Symbol(name.to_string()),
             args,
@@ -142,7 +148,6 @@ impl Oso {
     /// See [`oso::Class`] docs.
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
-        let name = Symbol(name);
         let class_name = self.host.cache_class(class.clone(), name)?;
         self.register_constant(class, &class_name)
     }
@@ -154,8 +159,10 @@ impl Oso {
         value: V,
         name: &str,
     ) -> crate::Result<()> {
-        self.inner
-            .register_constant(Symbol(name.to_string()), value.to_polar(&mut self.host));
+        self.inner.register_constant(
+            Symbol(name.to_string()),
+            value.to_polar().to_term(&mut self.host),
+        );
         Ok(())
     }
 }

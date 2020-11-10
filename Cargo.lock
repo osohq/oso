@@ -715,6 +715,7 @@ dependencies = [
  "anyhow",
  "criterion",
  "impl-trait-for-tuples",
+ "lazy_static",
  "maplit",
  "oso-derive",
  "polar-core",
