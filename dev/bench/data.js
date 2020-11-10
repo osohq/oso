@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605033275279,
+  "lastUpdate": 1605039943209,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12939,6 +12939,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 51100,
             "range": "± 3841",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "212209e301474b3bd6d5257ba5e876ca6090ad65",
+          "message": "Fix changelog formatting. (#519)",
+          "timestamp": "2020-11-10T15:22:11-05:00",
+          "tree_id": "257a36e8e91cb663dcc885cc1b57cf6bdeeeacd0",
+          "url": "https://github.com/osohq/oso/commit/212209e301474b3bd6d5257ba5e876ca6090ad65"
+        },
+        "date": 1605039941526,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 38936,
+            "range": "± 1525",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 43278,
+            "range": "± 3032",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 43110,
+            "range": "± 3045",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 43185,
+            "range": "± 3044",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 43045,
+            "range": "± 2966",
             "unit": "ns/iter"
           }
         ]
