@@ -188,7 +188,6 @@ oso is available as a library in several languages:
 
 **Libraries coming soon:**
 
-- JavaScript in the browser
 - Go
 
 Source Code
