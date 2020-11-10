@@ -17,11 +17,11 @@ Calling methods and accessing attributes on application instances no longer
 returns multiple values. Instead, to iterate over values of an application
 instance the explicit ``in`` operator must be used.
 
-**Old syntax**:
+**Old syntax**::
 
    amount = recipe.ingredients().quantity
 
-**New syntax**:
+**New syntax**::
 
   item in recipe.ingredients() and
   amount = item.quantity
@@ -39,8 +39,7 @@ New features
 ``nil``
 -------
 
-Polar now defines `a constant named ``nil``
-<https://docs.osohq.com/getting-started/policies/application-types.html#nil>`_
+Polar now defines a :ref:`constant named nil <nil>`,
 whose value is an application-language specific "null" value;
 e.g., ``None`` in Python, ``nil`` in Ruby, ``null`` for Java & JS, etc.
 Explicit comparisons with ``nil`` are particularly useful in the
