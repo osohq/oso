@@ -1,9 +1,10 @@
 [package]
 name = "oso"
-description = "Oso Authorization Library"
+description = "oso is an open source policy engine for authorization that’s embedded in your application"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 license = "Apache-2.0"
 homepage = "https://github.com/osohq/oso"
+readme = "README.md"
 
 version = "0.7.1"
 
