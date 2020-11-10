@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605032546802,
+  "lastUpdate": 1605033275279,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12885,6 +12885,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 44712,
             "range": "± 4260",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "beefabe32ad9c0825c23d794c2f72c2b5e30d9f6",
+          "message": "Release 0.8.0 (#516)\n\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-11-10T13:30:55-05:00",
+          "tree_id": "2653c6d30dd23059a23cca48b08d29921dfeb5cc",
+          "url": "https://github.com/osohq/oso/commit/beefabe32ad9c0825c23d794c2f72c2b5e30d9f6"
+        },
+        "date": 1605033273419,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46046,
+            "range": "± 1971",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 51133,
+            "range": "± 3416",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 50941,
+            "range": "± 3735",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 51185,
+            "range": "± 3690",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 51100,
+            "range": "± 3841",
             "unit": "ns/iter"
           }
         ]
