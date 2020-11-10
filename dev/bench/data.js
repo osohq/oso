@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1604982069409,
+  "lastUpdate": 1605032546802,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12831,6 +12831,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 50886,
             "range": "± 2947",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ee7210b3747746830d0b1c993cc4d40a68a0162d",
+          "message": "cargo description strings (#518)\n\n* cargo descriptions\r\n\r\n* core too\r\n\r\n* symlinks to readmes",
+          "timestamp": "2020-11-10T12:15:50-06:00",
+          "tree_id": "369fb16c85fddbf04d38d04504186a52958dee36",
+          "url": "https://github.com/osohq/oso/commit/ee7210b3747746830d0b1c993cc4d40a68a0162d"
+        },
+        "date": 1605032545036,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 40373,
+            "range": "± 3039",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 46943,
+            "range": "± 2856",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 47044,
+            "range": "± 4950",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 44016,
+            "range": "± 3775",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 44712,
+            "range": "± 4260",
             "unit": "ns/iter"
           }
         ]
