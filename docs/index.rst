@@ -65,7 +65,7 @@ Using oso, you can:
    getting-started/quickstart
    getting-started/application/index
    Writing Policies <getting-started/policies/index>
-   Authorization <getting-started/authorization>
+   getting-started/rbac
 
 .. toctree::
    :maxdepth: 1
