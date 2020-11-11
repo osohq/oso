@@ -1,10 +1,10 @@
 =======================================================
-Role-based Access Control for Application Authorization
+Role-Based Access Control for Application Authorization
 =======================================================
 
 When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
-known as **Role-based Access Control (RBAC).**
+known as **Role-Based Access Control (RBAC).**
 
 While there is no one way to implement RBAC, there are two types of
 relationships that must be considered in a roles system:
