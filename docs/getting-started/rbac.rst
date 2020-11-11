@@ -343,9 +343,10 @@ hardcoding the user-role-resource assignments:
     :class: no-select
 
     # Assign leina the "member" role for Project 1
-    user_in_role_for_resource(user: User{name: "leina"},
-                                                        role: "member",
-                                                        project: Project{id: 1});
+    user_in_role_for_resource(
+        user: User{name: "leina"},
+        role: "member",
+        project: Project{id: 1});
 
 To avoid hardcoding the user-role-resource assignments, the assignments can
 be stored as application data and accessed from the policy.
@@ -431,9 +432,10 @@ resources.
         group in user.teams;
 
     # Assign a role to a group
-    group_in_role_for_resource(group: Team{name: "backend_team"},
-                                                            role: "owner",
-                                                            resource: Repository{name: "backend_repo"});
+    group_in_role_for_resource(
+        group: Team{name: "backend_team"},
+        role: "owner",
+        resource: Repository{name: "backend_repo"});
 
     # Users inherit roles from their groups
     user_in_role_for_resource(user, role, resource) if
