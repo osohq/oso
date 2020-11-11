@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605109641992,
+  "lastUpdate": 1605114797129,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13101,6 +13101,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 54411,
             "range": "± 3540",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8d42fa45c2e7010f59dd0bc85648de318cb7a723",
+          "message": "New RBAC Guide (#521)\n\n* new page\r\n\r\n* new rbac docs file based on most recent draft\r\n\r\n* spelling\r\n\r\n* spelling\r\n\r\n* Update docs/getting-started/rbac.rst\r\n\r\nCo-authored-by: Stephen Olsen <dev@steve.computer>\r\n\r\n* code block formatting\r\n\r\nCo-authored-by: steve olsen <dev@steve.computer>",
+          "timestamp": "2020-11-11T12:09:56-05:00",
+          "tree_id": "3b4cddce73cee432df14a9c4302c77603eeb96d7",
+          "url": "https://github.com/osohq/oso/commit/8d42fa45c2e7010f59dd0bc85648de318cb7a723"
+        },
+        "date": 1605114795427,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 38041,
+            "range": "± 3046",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 43745,
+            "range": "± 3034",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 43091,
+            "range": "± 4267",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 42367,
+            "range": "± 2867",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 48577,
+            "range": "± 3628",
             "unit": "ns/iter"
           }
         ]
