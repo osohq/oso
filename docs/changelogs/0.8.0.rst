@@ -57,7 +57,8 @@ Other bugs & improvements
 - List filtering now supports queries involving inversion (the ``not`` operator)
   properly.
 
-- We now check fields in the case of a ``matches`` against a built-in type. E.g.:
+- Polar now checks fields in the case of a ``matches`` against a built-in
+  language type. E.g.:
 
   .. code-block:: polar
 
