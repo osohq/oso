@@ -206,7 +206,7 @@ Role-permission mappings
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As long as roles have the same permissions across all tenants, ``role_allow``
-rules can be used to specify roleRole-permission mappings permissions, as with single-tenant roles.
+rules can be used to specify role-permission mappings, as with single-tenant roles.
 
 .. code-block:: polar
     :class: no-select
