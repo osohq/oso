@@ -91,6 +91,9 @@ SaaS
 Todo
 Bhavik
 amongst
+hardcoding
+hardcoded
+pre
 
 # Release specifiers
 rc
