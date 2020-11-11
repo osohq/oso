@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605039943209,
+  "lastUpdate": 1605105549088,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -12993,6 +12993,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 43045,
             "range": "± 2966",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a00e75ee3d8a121dae1fd47fe56d5fd02b9c1c1",
+          "message": "We => Polar (#520)",
+          "timestamp": "2020-11-11T09:35:54-05:00",
+          "tree_id": "997f20781f28b211058ed2bf447590f2577517d1",
+          "url": "https://github.com/osohq/oso/commit/0a00e75ee3d8a121dae1fd47fe56d5fd02b9c1c1"
+        },
+        "date": 1605105547325,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 39155,
+            "range": "± 2328",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 45093,
+            "range": "± 3688",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 45272,
+            "range": "± 4840",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 44800,
+            "range": "± 4149",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 42849,
+            "range": "± 3769",
             "unit": "ns/iter"
           }
         ]
