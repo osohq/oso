@@ -73,11 +73,7 @@ your application, and look up the assignment in the policy:
 
     # Get role assignment from user object
     user_in_role(user: User, role) if
-        role = user.role and
-        valid_role(role);
-
-    # Declare valid roles
-    valid_role(role: String) if role in ["admin", "member"];
+        role = user.role;
 
 Role-permission mappings
 -------------------------
@@ -200,7 +196,7 @@ depending on the tenant, roles should be stored by tenant.
 
     # Per-tenant user-role mappings, looked up from application data
     user_in_role_for_tenant(user: User, role, tenant_id: Integer) if
-        role = user.get_role_by_tenant(tenant_id);
+        role in user.get_roles_by_tenant(tenant_id);
 
 Role-permission mappings
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -220,16 +216,16 @@ If the roles have different permissions depending on the tenant, the
 .. code-block:: polar
     :class: copybutton
 
-    # allow the admin role for tenant 1 to take any action on Tenant1Resource resources
+    # allow the admin role for tenant 1 to take any action on Foo resources
     role_allow_for_tenant("admin", _action, _resource: Foo, tenant_id: 1);
 
-    # allow the admin role for tenant 2 to take any action on Tenant2Resource resources
+    # allow the admin role for tenant 2 to take any action on Bar resources
     role_allow_for_tenant("admin", _action, _resource: Bar, tenant_id: 2);
 
 Enabling roles
 ^^^^^^^^^^^^^^
 
-To enable the above rules, write an allow rule that calls ``user_in_role`` to
+To enable the above rules, write an allow rule that calls ``user_in_role_for_tenant`` to
 get the relevant role, and call ``role_allow``. The tenant ID of the resource
 is used to look up the role, to make sure that the role is associated with
 the same tenant as the resource the actor is trying to access.
@@ -263,7 +259,7 @@ represented with the following structure:
         role_allow(junior_role, action, resource);
 
     # Managers inherit all permissions provided by the "engineer" role.
-    inherits_role(_senior_role: "manager", _junior_role: "programmer");
+    inherits_role("manager", "programmer");
 
 By adding the above ``role_allow``, any role hierarchies declared with
 ``inherits_role`` rules will be enforced. Permissions should be assigned to
