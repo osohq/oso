@@ -18,10 +18,10 @@ role grants to a user. In oso, permissions generally consist of an **action**
 and a **resource.**
 
 oso represents these relationships as rules in a policy file, written in our
-declarative logic programming language called **Polar**. In general, a policy
+declarative logic programming language called :doc:`Polar </using/polar-syntax>`. In general, a policy
 specifies user-role relationships with ``user_in_role`` rules and
 role-permission relationships with ``role_allow`` rules. The general form of
-an **allow rule** that calls these rules looks like this:
+an :ref:`allow rule <allow-rules>` that calls these rules looks like this:
 
 .. code-block:: polar
     :class: no-select
