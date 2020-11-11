@@ -34,6 +34,8 @@ The rest of this document explains how to implement these rules for different RB
 
 .. Benefits of RBAC (TODO)
 
+.. _global-roles:
+
 Global Roles
 ============
 
@@ -136,10 +138,10 @@ A straight-forward multi-tenant RBAC system has the following characteristics:
 - The same set of roles exists for all tenants
 - Roles have the same permissions for all tenants (e.g. ``admin`` in tenant_1 provides the same access control rights as it does in tenant_2, but users in tenant_1 cannot access resources in tenant_2).
 
-A role model that meets the above characteristics is very similar to the model for [Global Roles]().
+A role model that meets the above characteristics is very similar to the model for :ref:`global-roles`.
 
 User-role mappings and role-permission mappings can be done the same way as
-[Global Roles](), with ``user_in_role`` and ``role_allow``.
+:ref:`global-roles`, with ``user_in_role`` and ``role_allow``.
 
 All that is required to scope roles to single tenants is to check tenancy in
 the ``allow`` rule that implements the role check.
