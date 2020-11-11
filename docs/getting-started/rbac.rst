@@ -26,7 +26,7 @@ an **allow rule** that calls these rules looks like this:
     :class: no-select
 
     allow(actor, action, resource) if
-        actor_in_role(actor, resource, role) and
+        user_in_role(actor, resource, role) and
         role_allow(role, action, resource);
 
 The rest of this document explains how to implement these rules for different RBAC use cases.
