@@ -12,6 +12,7 @@ relationships that must be considered in a roles system:
 1. **User-role relationships** define what roles a user has. The relationship
 could be a direct assignment from user-to-role, but could also be an indirect
 relationship that depends on additional information.
+
 2. **Role-permission relationships** define the access permissions that a
 role grants to a user. In oso, permissions generally consist of an **action**
 and a **resource.**
@@ -133,9 +134,7 @@ A straight-forward multi-tenant RBAC system has the following characteristics:
 
 - Users and resources can only belong to a single tenant
 - The same set of roles exists for all tenants
-- Roles have the same permissions for all tenants (e.g. ``admin`` in tenant_1
-    provides the same access control rights as it does in tenant_2, but users in
-    tenant_1 cannot access resources in tenant_2).
+- Roles have the same permissions for all tenants (e.g. ``admin`` in tenant_1 provides the same access control rights as it does in tenant_2, but users in tenant_1 cannot access resources in tenant_2).
 
 A role model that meets the above characteristics is very similar to the model for [Global Roles]().
 
