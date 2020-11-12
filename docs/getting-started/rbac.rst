@@ -1,10 +1,10 @@
 =======================================================
-Role-based Access Control for Application Authorization
+Role-Based Access Control for Application Authorization
 =======================================================
 
 When managing access to resources within an application, it can be useful to
 group permissions into **roles**, and assign these roles to users. This is
-known as **Role-based Access Control (RBAC).**
+known as **Role-Based Access Control (RBAC).**
 
 While there is no one way to implement RBAC, there are two types of
 relationships that must be considered in a roles system:
@@ -12,18 +12,18 @@ relationships that must be considered in a roles system:
 1. **User-role relationships** define what roles a user has. The relationship
 could be a direct assignment from user-to-role, but could also be an indirect
 relationship that depends on additional information.
+
 2. **Role-permission relationships** define the access permissions that a
 role grants to a user. In oso, permissions generally consist of an **action**
 and a **resource.**
 
 oso represents these relationships as rules in a policy file, written in our
-declarative logic programming language called **Polar**. In general, a policy
+declarative logic programming language called :doc:`Polar </using/polar-syntax>`. In general, a policy
 specifies user-role relationships with ``user_in_role`` rules and
 role-permission relationships with ``role_allow`` rules. The general form of
-an **allow rule** that calls these rules looks like this:
+an :ref:`allow rule <allow-rules>` that calls these rules looks like this:
 
 .. code-block:: polar
-    :class: no-select
 
     allow(actor, action, resource) if
         user_in_role(actor, resource, role) and
@@ -32,6 +32,8 @@ an **allow rule** that calls these rules looks like this:
 The rest of this document explains how to implement these rules for different RBAC use cases.
 
 .. Benefits of RBAC (TODO)
+
+.. _global-roles:
 
 Global Roles
 ============
@@ -52,7 +54,7 @@ This example assumes that users are stored as a ``User`` model, but any
 object can be used to represent a user (including a simple string).
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # user_in_role defines roles for users
     user_in_role(user: User{username: "steve"}, "admin");
@@ -67,15 +69,11 @@ assign new users to roles dynamically, you can store user-role assignments in
 your application, and look up the assignment in the policy:
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Get role assignment from user object
     user_in_role(user: User, role) if
-        role = user.role and
-        valid_role(role);
-
-    # Declare valid roles
-    valid_role(role: String) if role in ["admin", "member"];
+        role = user.role;
 
 Role-permission mappings
 -------------------------
@@ -85,7 +83,7 @@ very similar to ``allow`` rules, but instead of taking an actor as the first
 argument, they take a role.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # allow the admin to take any action on any resource
     role_allow("admin", _action, _resource);
@@ -102,7 +100,7 @@ the role logic you've defined, and query it using the ``is_allowed()`` method
 in the oso library.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # allow rule to enable role checking
     allow(actor: User, action, resource) if
@@ -112,7 +110,7 @@ in the oso library.
 With the ``allow`` role defined, you can query it using the oso library:
 
 .. code-block:: python
-    :class: no-select
+    :class: copybutton
 
     @app.route('/blog_post/<int:id>', methods=["GET"])
     def get_blog_post(request) if
@@ -133,20 +131,18 @@ A straight-forward multi-tenant RBAC system has the following characteristics:
 
 - Users and resources can only belong to a single tenant
 - The same set of roles exists for all tenants
-- Roles have the same permissions for all tenants (e.g. ``admin`` in tenant_1
-    provides the same access control rights as it does in tenant_2, but users in
-    tenant_1 cannot access resources in tenant_2).
+- Roles have the same permissions for all tenants (e.g. ``admin`` in tenant_1 provides the same access control rights as it does in tenant_2, but users in tenant_1 cannot access resources in tenant_2).
 
-A role model that meets the above characteristics is very similar to the model for [Global Roles]().
+A role model that meets the above characteristics is very similar to the model for :ref:`global-roles`.
 
 User-role mappings and role-permission mappings can be done the same way as
-[Global Roles](), with ``user_in_role`` and ``role_allow``.
+:ref:`global-roles`, with ``user_in_role`` and ``role_allow``.
 
 All that is required to scope roles to single tenants is to check tenancy in
 the ``allow`` rule that implements the role check.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # User-role mappings
     user_in_role(User{username: "steve"}, "admin");
@@ -183,7 +179,7 @@ role data in the application, but does mean that role assignments are
 hardcoded for all users.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Per-tenant user-role mappings
     user_in_role_for_tenant(user: User{name: "leina"}, "admin", tenant_id: 1);
@@ -196,11 +192,11 @@ would be to store the roles on the user. Since users can have different roles
 depending on the tenant, roles should be stored by tenant.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Per-tenant user-role mappings, looked up from application data
     user_in_role_for_tenant(user: User, role, tenant_id: Integer) if
-        role = user.get_role_by_tenant(tenant_id);
+        role in user.get_roles_by_tenant(tenant_id);
 
 Role-permission mappings
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -209,7 +205,7 @@ As long as roles have the same permissions across all tenants, ``role_allow``
 rules can be used to specify role-permission mappings, as with single-tenant roles.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # allow the admin to take any action on any resource
     role_allow("admin", _action, _resource);
@@ -218,24 +214,24 @@ If the roles have different permissions depending on the tenant, the
 ``role_allow`` rule can be modified to take the tenant as an argument:
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
-    # allow the admin role for tenant 1 to take any action on Tenant1Resource resources
+    # allow the admin role for tenant 1 to take any action on Foo resources
     role_allow_for_tenant("admin", _action, _resource: Foo, tenant_id: 1);
 
-    # allow the admin role for tenant 2 to take any action on Tenant2Resource resources
+    # allow the admin role for tenant 2 to take any action on Bar resources
     role_allow_for_tenant("admin", _action, _resource: Bar, tenant_id: 2);
 
 Enabling roles
 ^^^^^^^^^^^^^^
 
-To enable the above rules, write an allow rule that calls ``user_in_role`` to
+To enable the above rules, write an allow rule that calls ``user_in_role_for_tenant`` to
 get the relevant role, and call ``role_allow``. The tenant ID of the resource
 is used to look up the role, to make sure that the role is associated with
 the same tenant as the resource the actor is trying to access.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # `allow` rule to enable role checking, with tenant scoping
     allow(actor: User, action, resource) if
@@ -255,7 +251,7 @@ With roles represented as strings in oso policies, role inheritance can be
 represented with the following structure:
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Grant a role permissions that it inherits from a more junior role
     role_allow(role, action, resource) if
@@ -263,14 +259,14 @@ represented with the following structure:
         role_allow(junior_role, action, resource);
 
     # Managers inherit all permissions provided by the "engineer" role.
-    inherits_role(_senior_role: "manager", _junior_role: "programmer");
+    inherits_role("manager", "programmer");
 
 By adding the above ``role_allow``, any role hierarchies declared with
 ``inherits_role`` rules will be enforced. Permissions should be assigned to
 roles directly using ``role_allow`` rules:
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Members can read any resource
     role_allow("programmer", _action, resource: ProgrammingResource);
@@ -286,7 +282,7 @@ example, adding an "admin" role that inherits permissions from the "manager"
 role would require adding one rule:
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     inherits_role("admin", "manager");
 
@@ -300,7 +296,7 @@ that the "manager" also inherits permissions from. Simply adding another
 ``inherits_role`` for "manager" will implement this model.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     inherits_role("manager", "test_engineer");
 
@@ -324,7 +320,7 @@ This model can be implemented in Polar by implementing
 with the following top-level ``allow`` rule.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     allow(user, action, resource) if
         user_in_role_for_resource(user, role, resource) and
@@ -340,7 +336,7 @@ resource. Users can be mapped to roles on a per-resource basis in Polar, by
 hardcoding the user-role-resource assignments:
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Assign leina the "member" role for Project 1
     user_in_role_for_resource(
@@ -356,7 +352,7 @@ following rules show how the mapping might be accessed in different ways,
 depending on the mapping implementation.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Get the user's role for a specific Project resource
     # Roles are accessed by resource on the user object
@@ -380,7 +376,7 @@ Scoping the permissions of a role to a single resource type is
 straight-forward in Polar, using rule specializers.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     role_allow("member", "view", _resource: Project);
 
@@ -396,7 +392,7 @@ for nested resources based on that role. For example, there may be
 documents within the project.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Allow a user to "read" a document if they are in the "member" role for the
     # parent Project
@@ -425,7 +421,7 @@ team members. For this example, let's say that team-level roles are scoped to
 resources.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Get the groups for a user
     user_in_group(user, group) if
@@ -451,7 +447,7 @@ Recursive ``group_in_role`` rules can be used to propagate roles through a
 group hierarchy.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     # Groups inherit roles from their parent groups
     group_in_role_for_resource(group: Team, role, resource: Repository) if
@@ -474,7 +470,7 @@ This can be implemented in Polar by adding conditions to the body of
 ``user_in_role`` rules.
 
 .. code-block:: polar
-    :class: no-select
+    :class: copybutton
 
     user_in_role_for_resource(user: User, "admin", resource: Repository) if
         user = resource.owner;
