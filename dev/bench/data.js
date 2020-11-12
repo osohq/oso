@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605114797129,
+  "lastUpdate": 1605194812033,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13155,6 +13155,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 48577,
             "range": "± 3628",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "750dd8ecad2fb916c236a8b0511f5f7a8a77e202",
+          "message": "Leina/doc fixes (#523)\n\n* fix lexer + rename doc in sidebar\r\n\r\n* fix links\r\n\r\n* add backlinks\r\n\r\n* Update docs/index.rst\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>\r\n\r\n* capitalization\r\n\r\n* remove no-select\r\n\r\n* changes from Dave\r\n\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-11-12T10:22:51-05:00",
+          "tree_id": "5d32186d68d6e4e4ce5f70832366210bbce2469d",
+          "url": "https://github.com/osohq/oso/commit/750dd8ecad2fb916c236a8b0511f5f7a8a77e202"
+        },
+        "date": 1605194810179,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 49855,
+            "range": "± 4081",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 54745,
+            "range": "± 4781",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 55313,
+            "range": "± 7687",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 55129,
+            "range": "± 5776",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 54705,
+            "range": "± 5293",
             "unit": "ns/iter"
           }
         ]
