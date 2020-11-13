@@ -29,7 +29,14 @@ an :ref:`allow rule <allow-rules>` that calls these rules looks like this:
         user_in_role(actor, resource, role) and
         role_allow(role, action, resource);
 
-The rest of this document explains how to implement these rules for different RBAC use cases.
+The rest of this document explains how to implement these rules for the following RBAC use cases:
+
+- :ref:`global-roles`: roles that apply to users and resources globally across the application
+- :ref:`multi-tenant-roles`: roles that  only apply to users and resources within a particular tenant
+- :ref:`role-hierarchies`: more senior roles inherit permissions from less senior roles
+- :ref:`resource-specific-roles`: roles that only apply to a particular resource
+- :ref:`group-roles`: roles that apply to a group of users, rather than to an individual user
+- :ref:`implied-roles`: roles that are assigned to users implicitly by the data model, rather than directly assigned
 
 .. Benefits of RBAC (TODO)
 
@@ -116,6 +123,8 @@ With the ``allow`` role defined, you can query it using the oso library:
     def get_blog_post(request) if
         post = get_blog_post(id)
         oso.is_allowed(request.user, "read", post)
+
+.. _multi-tenant-roles:
 
 Roles in a multi-tenant application
 ===================================
@@ -238,6 +247,8 @@ the same tenant as the resource the actor is trying to access.
         user_in_role_for_tenant(actor, role, resource.tenant_id) and
         role_allow(role, action, resource);
 
+.. _role-hierarchies:
+
 Role Hierarchies
 ================
 
@@ -300,6 +311,8 @@ that the "manager" also inherits permissions from. Simply adding another
 
     inherits_role("manager", "test_engineer");
 
+.. _resource-specific-roles:
+
 Resource-specific roles
 =======================
 
@@ -314,6 +327,9 @@ permissions across all ``Project`` resources, but the users assigned to the
 role will differ from project-to-project. In other words, the role-permission
 mappings are specific to the resource `type`, while the user-role mappings
 are specific to the resource `instance`.
+
+In some cases, there may be roles that should confer permissions to all
+resources of a certain type.
 
 This model can be implemented in Polar by implementing
 ``user_in_role_for_resource`` and ``role_allow`` rules, which are enabled
@@ -407,6 +423,8 @@ documents within the project.
     # Allow members to "read" documents
     role_allow("member", "read", _resource: Document);
 
+.. _group-roles:
+
 Using roles with user groups
 ============================
 
@@ -452,6 +470,8 @@ group hierarchy.
     # Groups inherit roles from their parent groups
     group_in_role_for_resource(group: Team, role, resource: Repository) if
         group_in_role_for_resource(group.parent_group, role, resource);
+
+.. _implied-roles:
 
 Implied roles
 =============
