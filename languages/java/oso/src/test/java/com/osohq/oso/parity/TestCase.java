@@ -3,6 +3,10 @@ package com.osohq.oso.parity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.osohq.oso.Oso;
+import com.osohq.oso.parity.classes.IterableClass;
+import com.osohq.oso.parity.classes.UnitClass;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -15,92 +19,88 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
-import com.osohq.oso.Oso;
-import com.osohq.oso.parity.classes.IterableClass;
-import com.osohq.oso.parity.classes.UnitClass;
-
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 
 public class TestCase implements ArgumentsProvider {
-    public static class CaseUnit {
-        public String description;
-        public String query;
-        public String err;
-        public List<HashMap<String, Object>> result;
-    }
-
-    public String name;
+  public static class CaseUnit {
     public String description;
-    public List<String> policies;
-    public List<CaseUnit> cases;
+    public String query;
+    public String err;
+    public List<HashMap<String, Object>> result;
+  }
 
-    Oso getOso() throws Exception {
-        Oso oso = new Oso();
+  public String name;
+  public String description;
+  public List<String> policies;
+  public List<CaseUnit> cases;
 
-        // TODO: Can we auto-register these from com.osohq.oso.parity.classes.* ?
-        oso.registerClass(IterableClass.class, "IterableClass");
-        oso.registerClass(UnitClass.class, "UnitClass");
+  Oso getOso() throws Exception {
+    Oso oso = new Oso();
 
-        for (String policy : policies) {
-            oso.loadFile(policy);
-        }
+    // TODO: Can we auto-register these from com.osohq.oso.parity.classes.* ?
+    oso.registerClass(IterableClass.class, "IterableClass");
+    oso.registerClass(UnitClass.class, "UnitClass");
 
-        return oso;
+    for (String policy : policies) {
+      oso.loadFile(policy);
     }
 
-    void run() throws Exception {
-        Oso oso = getOso();
-        for (CaseUnit caseUnit : cases) {
-            try {
-                assertEquals(oso.query(caseUnit.query).results(), caseUnit.result);
-            } catch (Exception e) {
-                if (caseUnit.err != "") {
-                    System.out.println(String.format("Expected: %s\nGot: %s", caseUnit.err, e.toString()));
-                    Pattern p = Pattern.compile(caseUnit.err);
-                    Matcher m = p.matcher(e.toString());
-                    // TODO: Return a better exception
-                    assertTrue(m.find());
-                } else {
-                    throw e;
-                }
-            }
-        }
-    }
+    return oso;
+  }
 
-    protected Set<Path> listFilesUsingDirectoryStream(String dir) throws IOException {
-        Set<Path> fileList = new HashSet<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dir))) {
-            for (Path path : stream) {
-                System.out.println(String.format("File: %s", path));
-                if (!Files.isDirectory(path)) {
-                    fileList.add(path);
-                }
-            }
+  void run() throws Exception {
+    Oso oso = getOso();
+    for (CaseUnit caseUnit : cases) {
+      try {
+        assertEquals(oso.query(caseUnit.query).results(), caseUnit.result);
+      } catch (Exception e) {
+        if (caseUnit.err != "") {
+          System.out.println(String.format("Expected: %s\nGot: %s", caseUnit.err, e.toString()));
+          Pattern p = Pattern.compile(caseUnit.err);
+          Matcher m = p.matcher(e.toString());
+          // TODO: Return a better exception
+          assertTrue(m.find());
+        } else {
+          throw e;
         }
-        System.out.println(String.format("Files: %s", fileList));
-        return fileList;
+      }
     }
+  }
 
-    @Override
-    public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-        System.out.println("Getting arguments");
-        YAMLMapper mapper = new YAMLMapper();
-        mapper.findAndRegisterModules();
-        return listFilesUsingDirectoryStream("../../../test/spec/").stream().map(path -> {
-            TestCase testCase = null;
-            try {
+  protected Set<Path> listFilesUsingDirectoryStream(String dir) throws IOException {
+    Set<Path> fileList = new HashSet<>();
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dir))) {
+      for (Path path : stream) {
+        System.out.println(String.format("File: %s", path));
+        if (!Files.isDirectory(path)) {
+          fileList.add(path);
+        }
+      }
+    }
+    System.out.println(String.format("Files: %s", fileList));
+    return fileList;
+  }
+
+  @Override
+  public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+    System.out.println("Getting arguments");
+    YAMLMapper mapper = new YAMLMapper();
+    mapper.findAndRegisterModules();
+    return listFilesUsingDirectoryStream("../../../test/spec/").stream()
+        .map(
+            path -> {
+              TestCase testCase = null;
+              try {
                 testCase = mapper.readValue(path.toFile(), TestCase.class);
                 System.out.println(String.format("TestCase: %s", testCase));
-            } catch (Exception e) {
+              } catch (Exception e) {
                 System.err.println(e.toString());
                 e.printStackTrace();
-            }
-            return testCase;
-        }).map(testCase -> Arguments.of(testCase));
-    }
-
+              }
+              return testCase;
+            })
+        .map(testCase -> Arguments.of(testCase));
+  }
 }
