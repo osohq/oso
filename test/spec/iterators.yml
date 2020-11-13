@@ -1,0 +1,13 @@
+name: Iterable application classes
+policies: []
+description: Application classes that extend/implement some concept of iteration
+cases:
+  - description: can be iterated over
+    query: x in new IterableClass([1, 2, 3])
+    result: [{x: 1}, {x: 2}, {x: 3}]
+  - description: can call methods on them
+    query: x = new IterableClass([1, 2, 3]).sum()
+    result: [{x: 6}]
+  - description: fail if not iterable
+    query: x in new UnitClass()
+    err: is not iterable
