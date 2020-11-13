@@ -57,7 +57,8 @@ public class TestCase implements ArgumentsProvider {
         assertEquals(oso.query(caseUnit.query).results(), caseUnit.result);
       } catch (Exception e) {
         if (caseUnit.err != "") {
-          System.out.println(String.format("Expected: %s\nGot: %s", caseUnit.err, e.toString()));
+          // System.out.println(String.format("Expected: %s\nGot: %s", caseUnit.err,
+          // e.toString()));
           Pattern p = Pattern.compile(caseUnit.err);
           Matcher m = p.matcher(e.toString());
           // TODO: Return a better exception
@@ -73,19 +74,16 @@ public class TestCase implements ArgumentsProvider {
     Set<Path> fileList = new HashSet<>();
     try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dir))) {
       for (Path path : stream) {
-        System.out.println(String.format("File: %s", path));
         if (!Files.isDirectory(path)) {
           fileList.add(path);
         }
       }
     }
-    System.out.println(String.format("Files: %s", fileList));
     return fileList;
   }
 
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-    System.out.println("Getting arguments");
     YAMLMapper mapper = new YAMLMapper();
     mapper.findAndRegisterModules();
     return listFilesUsingDirectoryStream("../../../test/spec/").stream()
@@ -94,9 +92,7 @@ public class TestCase implements ArgumentsProvider {
               TestCase testCase = null;
               try {
                 testCase = mapper.readValue(path.toFile(), TestCase.class);
-                System.out.println(String.format("TestCase: %s", testCase));
               } catch (Exception e) {
-                System.err.println(e.toString());
                 e.printStackTrace();
               }
               return testCase;
