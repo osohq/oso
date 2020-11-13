@@ -261,10 +261,9 @@ def test_in_multiple_attribute_relationship(session, oso, tag_test_fixture):
 
     posts = authorize_model(oso, tag_test_fixture['user'], "read", session, Post)
     print(str(posts.statement.compile()))
-    import pdb; pdb.set_trace()
     assert tag_test_fixture['user_public_post'] in posts
     assert tag_test_fixture['user_private_post'] in posts
-    assert not tag_test_fixture['other_user_public_post'] in posts
+    assert tag_test_fixture['other_user_public_post'] in posts
     assert not tag_test_fixture['other_user_private_post'] in posts
     assert tag_test_fixture['other_user_random_post'] in posts
 
