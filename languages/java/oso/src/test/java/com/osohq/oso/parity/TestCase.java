@@ -41,6 +41,7 @@ public class TestCase implements ArgumentsProvider {
     Oso getOso() throws Exception {
         Oso oso = new Oso();
 
+        // TODO: Can we auto-register these from com.osohq.oso.parity.classes.* ?
         oso.registerClass(IterableClass.class, "IterableClass");
         oso.registerClass(UnitClass.class, "UnitClass");
 
@@ -61,6 +62,7 @@ public class TestCase implements ArgumentsProvider {
                     System.out.println(String.format("Expected: %s\nGot: %s", caseUnit.err, e.toString()));
                     Pattern p = Pattern.compile(caseUnit.err);
                     Matcher m = p.matcher(e.toString());
+                    // TODO: Return a better exception
                     assertTrue(m.find());
                 } else {
                     throw e;
