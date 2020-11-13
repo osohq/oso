@@ -59,7 +59,8 @@ public class Query implements Enumeration<HashMap<String, Object>> {
   }
 
   /** Helper for `ExternalCall` query events */
-  private void handleCall(String attrName, Optional<JSONArray> jArgs, JSONObject polarInstance, long callId)
+  private void handleCall(
+      String attrName, Optional<JSONArray> jArgs, JSONObject polarInstance, long callId)
       throws Exceptions.OsoException {
     Optional<List<Object>> args = Optional.empty();
     if (jArgs.isPresent()) {
@@ -72,8 +73,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       try {
         Class<?> cls = instance instanceof Class ? (Class<?>) instance : instance.getClass();
         if (args.isPresent()) {
-          Class<?>[] argTypes = args.get().stream().map(a -> a.getClass()).collect(Collectors.toUnmodifiableList())
-              .toArray(new Class[0]);
+          Class<?>[] argTypes =
+              args.get().stream()
+                  .map(a -> a.getClass())
+                  .collect(Collectors.toUnmodifiableList())
+                  .toArray(new Class[0]);
           Method method = MethodUtils.getMatchingAccessibleMethod(cls, attrName, argTypes);
           if (method == null) {
             throw new Exceptions.InvalidCallError(cls.getName(), attrName, argTypes);
@@ -226,8 +230,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           System.out.print("debug> ");
           try {
             String input = br.readLine();
-            if (input == null)
-              break;
+            if (input == null) break;
             String command = host.toPolarTerm(input).toString();
             ffiQuery.debugCommand(command);
           } catch (IOException e) {
@@ -251,10 +254,9 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     }
   }
 
-  /**
-   * Get the next JSONified Polar result of a cached method call (enumeration).
-   */
-  protected JSONObject nextCallResult(long callId) throws NoSuchElementException, Exceptions.OsoException {
+  /** Get the next JSONified Polar result of a cached method call (enumeration). */
+  protected JSONObject nextCallResult(long callId)
+      throws NoSuchElementException, Exceptions.OsoException {
     return host.toPolarTerm(getCall(callId).nextElement());
   }
 }
