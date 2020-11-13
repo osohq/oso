@@ -7,9 +7,9 @@
 //! `visitor::walk_*` to apply the default traversal algorithm, or prevent deeper traversal by
 //! doing nothing.
 
-use super::partial::Constraints;
-use super::rules::*;
-use super::terms::*;
+use crate::partial::Partial;
+use crate::rules::*;
+use crate::terms::*;
 
 /// Paraphrasing from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
 ///
@@ -69,8 +69,8 @@ pub trait Visitor: Sized {
     fn visit_param(&mut self, p: &Parameter) {
         walk_param(self, p)
     }
-    fn visit_constraints(&mut self, c: &Constraints) {
-        walk_constraints(self, c)
+    fn visit_partial(&mut self, p: &Partial) {
+        walk_partial(self, p)
     }
 }
 
@@ -110,7 +110,7 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::Variable(v) => visitor.visit_variable(v),
         Value::RestVariable(r) => visitor.visit_rest_variable(r),
         Value::Expression(o) => visitor.visit_operation(o),
-        Value::Partial(p) => visitor.visit_constraints(p),
+        Value::Partial(p) => visitor.visit_partial(p),
     }
 }
 
@@ -164,9 +164,9 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
     }
 }
 
-pub fn walk_constraints<V: Visitor>(visitor: &mut V, constraints: &Constraints) {
-    visitor.visit_symbol(&constraints.variable);
-    walk_elements!(visitor, visit_operation, constraints.operations());
+pub fn walk_partial<V: Visitor>(visitor: &mut V, partial: &Partial) {
+    visitor.visit_symbol(&partial.variable);
+    walk_elements!(visitor, visit_operation, partial.constraints());
 }
 
 #[cfg(test)]

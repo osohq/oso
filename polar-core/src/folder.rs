@@ -10,9 +10,9 @@
 
 use std::collections::BTreeMap;
 
-use super::partial::Constraints;
-use super::rules::*;
-use super::terms::*;
+use crate::partial::Partial;
+use crate::rules::*;
+use crate::terms::*;
 
 /// Paraphrasing from https://docs.rs/rustc-ap-syntax/71.0.0/src/syntax/fold.rs.html:
 ///
@@ -85,8 +85,8 @@ pub trait Folder: Sized {
     fn fold_param(&mut self, p: Parameter) -> Parameter {
         fold_param(p, self)
     }
-    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
-        fold_constraints(c, self)
+    fn fold_partial(&mut self, p: Partial) -> Partial {
+        fold_partial(p, self)
     }
 }
 
@@ -116,7 +116,7 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::Variable(v) => Value::Variable(fld.fold_variable(v)),
         Value::RestVariable(r) => Value::RestVariable(fld.fold_rest_variable(r)),
         Value::Expression(o) => Value::Expression(fld.fold_operation(o)),
-        Value::Partial(c) => Value::Partial(fld.fold_constraints(c)),
+        Value::Partial(p) => Value::Partial(fld.fold_partial(p)),
     }
 }
 
@@ -214,17 +214,17 @@ pub fn fold_operation<T: Folder>(
     }
 }
 
-pub fn fold_constraints<T: Folder>(
-    Constraints {
-        operations,
+pub fn fold_partial<T: Folder>(
+    Partial {
+        constraints,
         variable,
-    }: Constraints,
+    }: Partial,
     fld: &mut T,
-) -> Constraints {
-    Constraints {
-        operations: operations
+) -> Partial {
+    Partial {
+        constraints: constraints
             .into_iter()
-            .map(|o| fld.fold_operation(o))
+            .map(|c| fld.fold_operation(c))
             .collect(),
         variable: fld.fold_variable(variable),
     }
