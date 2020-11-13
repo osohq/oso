@@ -46,22 +46,24 @@ class TestCase(pytest.Item):
 
     def runtest(self):
         query = self.case["query"]
-        expected_result = self.case["result"]
+        expected_result = self.case.get("result", None)
         try:
             result = [res.get("bindings", {}) for res in self.oso.query(query)]
         except Exception as e:
-            if "err" in expected_result and re.search(expected_result["err"], str(e)):
+            if "err" in self.case and re.search(self.case["err"], str(e)):
                 return
             raise YamlException(self, query, e, expected_result)
-        if "many" in expected_result:
-            if result != expected_result["many"]:
-                raise YamlException(self, query, result, expected_result)
-        elif "one" in expected_result:
-            if result != [expected_result["one"]]:
-                raise YamlException(self, query, result, expected_result)
-        elif "none" in expected_result:
-            if len(result) != 0:
-                raise YamlException(self, query, result, expected_result)
+        if result != expected_result:
+            raise YamlException(self, query, result, expected_result)
+
+        # if "many" in expected_result:
+        #     if result != expected_result["many"]:
+        # elif "one" in expected_result:
+        #     if result != [expected_result["one"]]:
+        #         raise YamlException(self, query, result, expected_result)
+        # elif "none" in expected_result:
+        #     if len(result) != 0:
+        #         raise YamlException(self, query, result, expected_result)
 
     def repr_failure(self, excinfo):
         """ called when self.runtest() raises an exception. """

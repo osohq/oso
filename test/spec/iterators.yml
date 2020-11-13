@@ -5,6 +5,9 @@ cases:
   - description: can be iterated over
     query: x in new IterableClass([1, 2, 3])
     result: [{x: 1}, {x: 2}, {x: 3}]
+  - description: can be empty
+    query: x in new IterableClass([])
+    result: []
   - description: can call methods on them
     query: x = new IterableClass([1, 2, 3]).sum()
     result: [{x: 6}]
