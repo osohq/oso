@@ -56,15 +56,6 @@ class TestCase(pytest.Item):
         if result != expected_result:
             raise YamlException(self, query, result, expected_result)
 
-        # if "many" in expected_result:
-        #     if result != expected_result["many"]:
-        # elif "one" in expected_result:
-        #     if result != [expected_result["one"]]:
-        #         raise YamlException(self, query, result, expected_result)
-        # elif "none" in expected_result:
-        #     if len(result) != 0:
-        #         raise YamlException(self, query, result, expected_result)
-
     def repr_failure(self, excinfo):
         """ called when self.runtest() raises an exception. """
         if isinstance(excinfo.value, YamlException):
