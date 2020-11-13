@@ -57,8 +57,7 @@ public class Exceptions {
     }
   }
 
-  private static PolarRuntimeException runtimeError(
-      String kind, String msg, Map<String, Object> details) {
+  private static PolarRuntimeException runtimeError(String kind, String msg, Map<String, Object> details) {
     switch (kind) {
       case "Serialization":
         return new SerializationError(msg, details);
@@ -73,8 +72,7 @@ public class Exceptions {
     }
   }
 
-  private static OperationalError operationalError(
-      String kind, String msg, Map<String, Object> details) {
+  private static OperationalError operationalError(String kind, String msg, Map<String, Object> details) {
     switch (kind) {
       case "Unknown":
         return new UnknownError(msg, details);
@@ -109,7 +107,9 @@ public class Exceptions {
     }
   }
 
-  /** Expected to find an FFI error to convert into a Java error but found none. */
+  /**
+   * Expected to find an FFI error to convert into a Java error but found none.
+   */
   public static class FFIErrorNotFound extends OsoException {
     public FFIErrorNotFound(String msg, Map<String, Object> details) {
       super(msg, details);
@@ -191,15 +191,7 @@ public class Exceptions {
 
   public static class InvalidCallError extends PolarRuntimeException {
     public InvalidCallError(String className, String callName, Class<?>... argTypes) {
-      super(
-          "Invalid call `"
-              + callName
-              + "` on class "
-              + className
-              + ", with argument types "
-              + "`"
-              + argTypes
-              + "`");
+      super("Invalid call `" + callName + "` on class " + className + ", with argument types " + "`" + argTypes + "`");
     }
 
     public InvalidCallError(String msg) {
@@ -228,12 +220,8 @@ public class Exceptions {
   }
 
   public static class InvalidIteratorError extends PolarRuntimeException {
-    public InvalidIteratorError(String msg) {
-      super(msg);
-    }
-
-    public InvalidIteratorError(String msg, Map<String, Object> details) {
-      super(msg, details);
+    public InvalidIteratorError(Object value) {
+      super(String.format("value %s of type %s is not iterable", value, value.getClass()));
     }
   }
 
@@ -279,14 +267,7 @@ public class Exceptions {
 
   public static class DuplicateClassAliasError extends PolarRuntimeException {
     public DuplicateClassAliasError(String alias, String oldClass, String newClass) {
-      super(
-          "Attempted to alias '"
-              + newClass
-              + "' as '"
-              + alias
-              + "', but "
-              + oldClass
-              + " already has that alias.");
+      super("Attempted to alias '" + newClass + "' as '" + alias + "', but " + oldClass + " already has that alias.");
     }
   }
 
