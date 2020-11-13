@@ -29,7 +29,12 @@ class YamlFile(pytest.File):
 
 class TestCase(pytest.Item):
     def __init__(
-        self, parent: YamlFile, name: str, description: str, policies: list, case: dict,
+        self,
+        parent: YamlFile,
+        name: str,
+        description: str,
+        policies: list,
+        case: dict,
     ):
         super().__init__(name, parent)
         self.name = name
