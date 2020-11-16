@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605546375847,
+  "lastUpdate": 1605562270192,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13317,6 +13317,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 50786,
             "range": "± 4077",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "leina05@gmail.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4b4fd84bbd802db3f8500486aea874f93753e328",
+          "message": "Leina/rbac guide improvements (#525)\n\n* add summary to top of rbac guide\r\n\r\n* update description of older rbac guide\r\n\r\nCo-authored-by: Stephen Olsen <dev@steve.computer>",
+          "timestamp": "2020-11-16T16:27:35-05:00",
+          "tree_id": "92ef650df690c65390d10bfd50882a7a09420f1c",
+          "url": "https://github.com/osohq/oso/commit/4b4fd84bbd802db3f8500486aea874f93753e328"
+        },
+        "date": 1605562268231,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46346,
+            "range": "± 1813",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 52080,
+            "range": "± 3521",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52148,
+            "range": "± 6845",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 51912,
+            "range": "± 3630",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 51870,
+            "range": "± 3731",
             "unit": "ns/iter"
           }
         ]
