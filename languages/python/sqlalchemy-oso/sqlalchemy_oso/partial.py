@@ -94,6 +94,7 @@ def translate_in(expression, session, model):
             model,
             functools.partial(emit_subexpression, left))
     else:
+        # Contains: LHS is not an expression.
         # TODO (dhatch) Missing check, left type must match type of the target?
         path = dot_op_path(right)
         assert path
@@ -104,9 +105,6 @@ def translate_in(expression, session, model):
             model,
             functools.partial(emit_contains, field_name, left))
 
-    # Contains: LHS is not an expression.
-
-
 def translate_dot_op(path: List[str], session: Session, model, func: EmitFunction):
     if len(path) == 0:
         return func(session, model)
@@ -116,7 +114,6 @@ def translate_dot_op(path: List[str], session: Session, model, func: EmitFunctio
             return property.has(translate_dot_op(path[1:], session, model, func))
         else:
             return property.any(translate_dot_op(path[1:], session, model, func))
-
 
 def get_relationship(model, field_name: str):
     """Get the property object for field on model. field must be a relationship field.
@@ -135,7 +132,7 @@ def emit_compare(field_name, value, session, model):
     property = getattr(model, field_name)
     return property == value
 
-def emit_subexpression(sub_expression, session: Session, model):
+def emit_subexpression(sub_expression: Expression, session: Session, model):
     """Emit a sub-expression on ``model``."""
     return translate_expr(sub_expression, session, model)
 
