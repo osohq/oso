@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605545007785,
+  "lastUpdate": 1605546375847,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13263,6 +13263,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 55606,
             "range": "± 5733",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a090efc15f8a4d566df1dd7e8b6189136b5a638b",
+          "message": "Add support for in operations with a RHS partial. (#514)",
+          "timestamp": "2020-11-16T12:02:18-05:00",
+          "tree_id": "ce4bd3a56c5ba4492cb76a105fe45427a57b1d6a",
+          "url": "https://github.com/osohq/oso/commit/a090efc15f8a4d566df1dd7e8b6189136b5a638b"
+        },
+        "date": 1605546373923,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 44757,
+            "range": "± 2077",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 50356,
+            "range": "± 4061",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 50293,
+            "range": "± 4290",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 50087,
+            "range": "± 3623",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 50786,
+            "range": "± 4077",
             "unit": "ns/iter"
           }
         ]
