@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605194812033,
+  "lastUpdate": 1605545007785,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13209,6 +13209,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 54705,
             "range": "± 5293",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b865e3543c4053732dedf4808e08a5f86fc0b61",
+          "message": "A Partial has constraints (#524)\n\n* A Partial has constraints\r\n\r\n* Move partial into separate file + shush clippy\r\n\r\n* Rename operations -> constraints on Python side",
+          "timestamp": "2020-11-16T11:39:37-05:00",
+          "tree_id": "9418de44a1ed1b458b0fae61015b4e5a076e7e37",
+          "url": "https://github.com/osohq/oso/commit/9b865e3543c4053732dedf4808e08a5f86fc0b61"
+        },
+        "date": 1605545002608,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 49651,
+            "range": "± 5596",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 54940,
+            "range": "± 8212",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 54802,
+            "range": "± 5327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 55470,
+            "range": "± 4802",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 55606,
+            "range": "± 5733",
             "unit": "ns/iter"
           }
         ]
