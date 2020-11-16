@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-use crate::folder::{fold_constraints, fold_operation, fold_term, Folder};
+use crate::folder::{fold_operation, fold_partial, fold_term, Folder};
 use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Term, TermList, Value};
 
-use super::Constraints;
+use super::Partial;
 
 /// Simplify the values of the bindings to be returned to the host language.
 ///
@@ -15,10 +15,9 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
         .into_iter()
         .map(|(var, value)| match value.value() {
             Value::Partial(_) => {
-                let mut simplified = simplify_partial(value);
-                if let Value::Partial(partial) = simplified.value() {
-                    simplified = partial.clone().into_expression();
-                }
+                let simplified = simplify_partial(value);
+                assert!(simplified.value().as_expression().is_ok());
+
                 (var, simplified)
             }
             _ => (var, value),
@@ -28,8 +27,20 @@ pub fn simplify_bindings(bindings: Bindings) -> Bindings {
 
 pub struct Simplifier;
 impl Folder for Simplifier {
-    fn fold_term(&mut self, t: Term) -> Term {
-        fn maybe_unwrap_operation(o: &Operation) -> Option<Term> {
+    /// Deduplicate constraints.
+    fn fold_partial(&mut self, partial: Partial) -> Partial {
+        let mut seen: HashSet<&Operation> = HashSet::new();
+        let ops = partial
+            .constraints()
+            .iter()
+            .filter(|o| seen.insert(o))
+            .cloned()
+            .collect();
+        fold_partial(partial.clone_with_constraints(ops), self)
+    }
+
+    fn fold_operation(&mut self, mut o: Operation) -> Operation {
+        fn maybe_unwrap_operation(o: &Operation) -> Option<Operation> {
             match o {
                 // Unwrap a single-arg And or Or expression and fold the inner term.
                 Operation {
@@ -39,36 +50,21 @@ impl Folder for Simplifier {
                 | Operation {
                     operator: Operator::Or,
                     args,
-                } if args.len() == 1 => Some(args[0].clone()),
+                } if args.len() == 1 => {
+                    if let Value::Expression(op) = args[0].value() {
+                        Some(op.clone())
+                    } else {
+                        None
+                    }
+                }
                 _ => None,
             }
         }
 
-        match t.value() {
-            Value::Expression(o) => fold_term(maybe_unwrap_operation(o).unwrap_or(t), self),
-
-            // Elide partial when its constraints are trivial.
-            Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
-                fold_term(maybe_unwrap_operation(&operations[0]).unwrap_or(t), self)
-            }
-
-            _ => fold_term(t, self),
+        if let Some(op) = maybe_unwrap_operation(&o) {
+            o = op;
         }
-    }
 
-    /// Deduplicate constraints.
-    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
-        let mut seen: HashSet<&Operation> = HashSet::new();
-        let ops = c
-            .operations
-            .iter()
-            .filter(|o| seen.insert(o))
-            .cloned()
-            .collect();
-        fold_constraints(c.clone_with_operations(ops), self)
-    }
-
-    fn fold_operation(&mut self, o: Operation) -> Operation {
         /// Given `this` and `x`, return `x`.
         /// Given `this.x` and `this.y`, return `this.x.y`.
         fn sub_this(arg: &Term, expr: &Term) -> Term {
@@ -91,15 +87,15 @@ impl Folder for Simplifier {
             }
         }
 
-        // Optionally sub `expr` into each of the arguments of the partial's operations.
-        let mut map_ops = |partial_ops: &[Operation], expr: &Term| -> TermList {
-            partial_ops
+        // Optionally sub `expr` into each of the arguments of the partial's constraints.
+        let mut map_constraints = |constraints: &[Operation], expr: &Term| -> TermList {
+            constraints
                 .iter()
-                .map(|o| Operation {
-                    operator: o.operator,
-                    args: o.args.iter().map(|arg| sub_this(arg, expr)).collect(),
+                .map(|c| Operation {
+                    operator: c.operator,
+                    args: c.args.iter().map(|arg| sub_this(arg, expr)).collect(),
                 })
-                .map(|o| expr.clone_with_value(Value::Expression(fold_operation(o, self))))
+                .map(|c| expr.clone_with_value(Value::Expression(fold_operation(c, self))))
                 .collect()
         };
 
@@ -112,10 +108,10 @@ impl Folder for Simplifier {
                     args: match (left.value(), right.value()) {
                         // Distribute **inverted** expression over the partial.
                         (Value::Partial(c), Value::Expression(_)) => {
-                            map_ops(&c.inverted_operations(0), right)
+                            map_constraints(&c.inverted_constraints(0), right)
                         }
                         (Value::Expression(_), Value::Partial(c)) => {
-                            map_ops(&c.inverted_operations(0), left)
+                            map_constraints(&c.inverted_constraints(0), left)
                         }
                         _ => return fold_operation(o, self),
                     },
@@ -128,13 +124,27 @@ impl Folder for Simplifier {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
                         // Distribute expression over the partial.
-                        (Value::Partial(c), Value::Expression(_)) => map_ops(c.operations(), right),
-                        (Value::Expression(_), Value::Partial(c)) => map_ops(c.operations(), left),
+                        (Value::Partial(c), Value::Expression(_)) => {
+                            map_constraints(c.constraints(), right)
+                        }
+                        (Value::Expression(_), Value::Partial(c)) => {
+                            map_constraints(c.constraints(), left)
+                        }
                         _ => return fold_operation(o, self),
                     },
                 }
             }
             _ => fold_operation(o, self),
+        }
+    }
+}
+
+struct PartialToExpression;
+impl Folder for PartialToExpression {
+    fn fold_term(&mut self, t: Term) -> Term {
+        match t.value() {
+            Value::Partial(partial) => fold_term(partial.clone().into_expression(), self),
+            _ => fold_term(t, self),
         }
     }
 }
@@ -150,13 +160,31 @@ fn simplify_partial(mut term: Term) -> Term {
         }
         term = new;
     }
-    new
+
+    let mut partial_to_expr = PartialToExpression {};
+
+    partial_to_expr.fold_term(new)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::terms::*;
+
+    macro_rules! assert_expr_eq {
+        ($left:expr, $right:expr) => {{
+            let left = $left;
+            let right = $right;
+
+            assert_eq!(
+                left.clone(),
+                right.clone(),
+                "{} != {}",
+                left.to_polar(),
+                right.to_polar()
+            );
+        }};
+    }
 
     #[test]
     fn test_simplify_non_partial() {
@@ -172,13 +200,55 @@ mod test {
     #[test]
     // TODO(gj): Is this maybe a silly test now that we don't simplify "trivial" unifications?
     fn test_simplify_partial() {
-        let partial = term!(Constraints {
+        let partial = term!(Partial {
             variable: sym!("a"),
-            operations: vec![op!(And, term!(op!(Unify, term!(sym!("_this")), term!(1))))],
+            constraints: vec![op!(And, term!(op!(Unify, term!(sym!("_this")), term!(1))))],
         });
         assert_eq!(
             simplify_partial(partial),
             term!(op!(Unify, term!(sym!("_this")), term!(1)))
+        );
+    }
+
+    #[test]
+    fn test_simplify_single_item_and() {
+        let partial = term!(partial!(
+            "a",
+            [op!(And, term!(op!(Eq, term!(1), term!(2))))]
+        ));
+        assert_eq!(
+            simplify_partial(partial),
+            term!(op!(Eq, term!(1), term!(2)))
+        );
+
+        let partial = term!(partial!(
+            "a",
+            [op!(
+                And,
+                term!(op!(And, term!(op!(Eq, term!(1), term!(2)))))
+            )]
+        ));
+        assert_eq!(
+            simplify_partial(partial),
+            term!(op!(Eq, term!(1), term!(2)))
+        );
+
+        let partial = term!(partial!(
+            "a",
+            [op!(
+                And,
+                term!(op!(Eq, term!(3), term!(4))),
+                term!(op!(And, term!(op!(Eq, term!(1), term!(2)))))
+            )]
+        ));
+
+        assert_expr_eq!(
+            simplify_partial(partial),
+            term!(op!(
+                And,
+                term!(op!(Eq, term!(3), term!(4))),
+                term!(op!(Eq, term!(1), term!(2)))
+            ))
         );
     }
 }

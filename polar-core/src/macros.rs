@@ -1,4 +1,3 @@
-// Uncomment these to see macro traces
 // The build will fail on stable, but traces will still be printed
 // #![feature(trace_macros)]
 // trace_macros!(true);
@@ -8,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::partial::Constraints;
+use crate::partial::Partial;
 use crate::rules::*;
 use crate::terms::*;
 
@@ -77,7 +76,16 @@ macro_rules! instance {
 #[macro_export]
 macro_rules! partial {
     ($arg:expr) => {
-        Value::Partial(Constraints::new(sym!($arg)))
+        Value::Partial(Partial::new(sym!($arg)))
+    };
+    ($arg:expr, [$($args:expr),*]) => {
+        {
+            let mut constraint = Partial::new(sym!($arg));
+            $(
+                constraint.add_constraint($args);
+            )*
+            constraint
+        }
     };
 }
 
@@ -293,8 +301,8 @@ impl From<Operation> for TestHelper<Value> {
         Self(Value::Expression(other))
     }
 }
-impl From<Constraints> for TestHelper<Value> {
-    fn from(other: Constraints) -> Self {
+impl From<Partial> for TestHelper<Value> {
+    fn from(other: Partial) -> Self {
         Self(Value::Partial(other))
     }
 }

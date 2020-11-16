@@ -1,14 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use crate::counter::Counter;
-use crate::error::{OperationalError, PolarResult};
-use crate::events::QueryEvent;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
+
+use super::isa_constraint_check::IsaConstraintCheck;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct Constraints {
-    pub operations: Vec<Operation>,
+pub struct Partial {
+    pub constraints: Vec<Operation>,
     pub variable: Symbol,
 }
 
@@ -31,10 +30,10 @@ fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 }
 
-impl Constraints {
+impl Partial {
     pub fn new(variable: Symbol) -> Self {
         Self {
-            operations: vec![],
+            constraints: vec![],
             variable,
         }
     }
@@ -44,11 +43,11 @@ impl Constraints {
     /// Invariant: both partials must have the same variable.
     pub fn merge_constraints(&mut self, other: Self) {
         assert_eq!(self.variable, other.variable);
-        self.operations.extend(other.operations);
+        self.constraints.extend(other.constraints);
     }
 
-    pub fn inverted_operations(&self, csp: usize) -> Vec<Operation> {
-        let (old, new) = self.operations.split_at(csp);
+    pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
+        let (old, new) = self.constraints.split_at(csp);
         let mut combined = old.to_vec();
         match new.len() {
             // Do nothing to an empty partial.
@@ -72,12 +71,12 @@ impl Constraints {
         combined
     }
 
-    pub fn operations(&self) -> &Vec<Operation> {
-        &self.operations
+    pub fn constraints(&self) -> &Vec<Operation> {
+        &self.constraints
     }
 
     pub fn add_constraint(&mut self, o: Operation) {
-        self.operations.push(o);
+        self.constraints.push(o);
     }
 
     pub fn unify(&mut self, other: Term) {
@@ -89,12 +88,46 @@ impl Constraints {
         let isa_op = op!(Isa, self.variable_term(), other);
 
         let constraint_check = Box::new(IsaConstraintCheck::new(
-            self.operations.clone(),
+            self.constraints.clone(),
             isa_op.clone(),
         ));
 
         self.add_constraint(isa_op);
         constraint_check
+    }
+
+    /// Add a constraint that this must contain some known value.
+    ///
+    /// From OTHER in THIS where other is not a partial or variable.
+    pub fn in_contains(&mut self, other: Term) {
+        // TODO for now, this is represented as an in operation, but we may
+        // want some other representation eventually.
+        // TODO what about non-ground compound terms like [x, 1] in THIS
+
+        assert!(!(other.value().as_symbol().is_ok() || other.value().as_partial().is_ok()));
+
+        let in_op = op!(In, other, self.variable_term());
+        self.add_constraint(in_op);
+    }
+
+    /// Add a constraint that a variable or partial value must be in this.
+    ///
+    /// `other` must be a partial or a variable.
+    ///
+    /// OTHER in THIS
+    ///
+    /// Returns: A new partial to use for additional constraints on `other`.
+    pub fn in_unbound(&mut self, other: Term) -> Term {
+        let name = match other.value() {
+            Value::Partial(constraints) => constraints.name().clone(),
+            Value::Variable(sym) => sym.clone(),
+            _ => panic!("Unexpected in LHS value, maybe you meant to call Constraints::contains()"),
+        };
+
+        let in_op = op!(In, term!(name.clone()), self.variable_term());
+        self.add_constraint(in_op);
+
+        Term::new_temporary(Value::Partial(Partial::new(name)))
     }
 
     pub fn compare(&mut self, operator: Operator, other: Term) {
@@ -130,24 +163,26 @@ impl Constraints {
         ));
 
         let name = value.value().as_symbol().unwrap();
-        Term::new_temporary(Value::Partial(Constraints::new(name.clone())))
+        Term::new_temporary(Value::Partial(Partial::new(name.clone())))
     }
 
     pub fn into_term(self) -> Term {
         Term::new_temporary(Value::Partial(self))
     }
 
-    /// Return the expression represented by this partial's constraints.
-    pub fn into_expression(self) -> Term {
-        // TODO(gj): Ensure we aren't double-wrapping in an And here.
-        Term::new_temporary(Value::Expression(Operation {
-            operator: Operator::And,
-            args: self
-                .operations
-                .into_iter()
-                .map(|op| Term::new_temporary(Value::Expression(op)))
-                .collect(),
-        }))
+    pub fn into_expression(mut self) -> Term {
+        if self.constraints.len() == 1 {
+            Term::new_temporary(Value::Expression(self.constraints.pop().unwrap()))
+        } else {
+            Term::new_temporary(Value::Expression(Operation {
+                operator: Operator::And,
+                args: self
+                    .constraints
+                    .into_iter()
+                    .map(|op| Term::new_temporary(Value::Expression(op)))
+                    .collect(),
+            }))
+        }
     }
 
     pub fn clone_with_name(&self, name: Symbol) -> Self {
@@ -156,9 +191,9 @@ impl Constraints {
         new
     }
 
-    pub fn clone_with_operations(&self, operations: Vec<Operation>) -> Self {
+    pub fn clone_with_constraints(&self, constraints: Vec<Operation>) -> Self {
         let mut new = self.clone();
-        new.operations = operations;
+        new.constraints = constraints;
         new
     }
 
@@ -168,105 +203,6 @@ impl Constraints {
 
     fn variable_term(&self) -> Term {
         Term::new_temporary(Value::Variable(sym!("_this")))
-    }
-}
-
-#[derive(Clone)]
-struct IsaConstraintCheck {
-    existing: Vec<Operation>,
-    proposed_tag: Option<Symbol>,
-    result: Option<bool>,
-    last_call_id: u64,
-}
-
-impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, mut proposed: Operation) -> Self {
-        let right = proposed.args.pop().unwrap();
-        let proposed_tag = if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
-            Some(instance.tag.clone())
-        } else {
-            None
-        };
-
-        Self {
-            existing,
-            proposed_tag,
-            result: None,
-            last_call_id: 0,
-        }
-    }
-
-    /// Check if the existing constraints set is compatible with the proposed
-    /// matches class.
-    ///
-    /// Returns: None if compatible, QueryEvent::Done { false } if incompatible,
-    /// or QueryEvent to ask for compatibility.
-    fn check_constraint(
-        &mut self,
-        mut constraint: Operation,
-        counter: &Counter,
-    ) -> Option<QueryEvent> {
-        if constraint.operator != Operator::Isa {
-            return None;
-        }
-
-        let right = constraint.args.pop().unwrap();
-        if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
-            let call_id = counter.next();
-            self.last_call_id = call_id;
-
-            // is_subclass check of instance tag against proposed
-            return Some(QueryEvent::ExternalIsSubclass {
-                call_id,
-                left_class_tag: self.proposed_tag.clone().unwrap(),
-                right_class_tag: instance.tag.clone(),
-            });
-
-            // TODO check fields for compatibility.
-        }
-
-        None
-    }
-}
-
-impl Runnable for IsaConstraintCheck {
-    fn run(&mut self, counter: Option<&mut Counter>) -> PolarResult<QueryEvent> {
-        if self.proposed_tag.is_none() {
-            return Ok(QueryEvent::Done { result: true });
-        }
-
-        if let Some(result) = self.result.take() {
-            if !result {
-                return Ok(QueryEvent::Done { result: false });
-            }
-        }
-
-        let counter = counter.expect("IsaConstraintCheck requires a Counter");
-        loop {
-            let next = self.existing.pop();
-            if let Some(constraint) = next {
-                if let Some(event) = self.check_constraint(constraint, &counter) {
-                    return Ok(event);
-                }
-
-                continue;
-            } else {
-                return Ok(QueryEvent::Done { result: true });
-            }
-        }
-    }
-
-    fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
-        if call_id != self.last_call_id {
-            return Err(OperationalError::InvalidState(String::from("Unexpected call id")).into());
-        }
-
-        self.result = Some(answer);
-        Ok(())
-    }
-
-    fn clone_runnable(&self) -> Box<dyn Runnable> {
-        Box::new(self.clone())
     }
 }
 
@@ -293,6 +229,21 @@ mod test {
                     .to_polar(),
                 $right
             )
+        };
+    }
+
+    macro_rules! assert_partial_expressions {
+        ($bindings:expr, $($sym:expr => $value:expr),*) => {
+            {
+                let bindings = $bindings;
+                $(assert_partial_expression!(bindings, $sym, $value);)*
+            }
+        };
+    }
+
+    macro_rules! assert_query_done {
+        ($query:expr) => {
+            assert!(matches!($query.next_event()?, QueryEvent::Done { .. }));
         };
     }
 
@@ -422,7 +373,7 @@ mod test {
             "a",
             "_this matches User{} and _this.bar = 1 and _this matches UserSubclass{} and _this.user_subclass = 1"
         );
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -437,11 +388,11 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this > 0");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this > 0 and _this < 0");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("zero", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this == 0");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -481,7 +432,7 @@ mod test {
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 1");
         assert_partial_expression!(next, "b", "_this = 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -553,27 +504,27 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this <= 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 or _this != 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("i", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 and _this != 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("k", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         Ok(())
     }
@@ -589,19 +540,19 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo != 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo != 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo.bar != 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("i", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.foo.bar != 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -616,16 +567,16 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 3 and _this != 1 or _this = 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 or _this = 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this != 2 and _this != 3");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         Ok(())
     }
@@ -639,11 +590,11 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -658,17 +609,17 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this.foo != 1 and _this.foo != 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this != 1 and _this != 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this.foo.bar != 1 and _this.foo.bar != 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -681,15 +632,15 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
     #[test]
-    fn test_in_with_partial() -> TestResult {
+    fn test_in_partial_lhs() -> TestResult {
         let p = Polar::new();
         p.load_str(
             r#"lhs(x) if x in [1, 2];
@@ -701,18 +652,85 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("lhs", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         // Inverting an `in` produces a conjunction of the inverted disjunctive constraints.
         let mut q = p.new_query_from_term(term!(call!("not_lhs", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this != 1 and _this != 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
-        // Partials are not allowed on the RHS of `in`.
-        let mut q = p.new_query_from_term(term!(call!("rhs", [partial!("a")])), false);
-        let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::TypeError { .. }), ..}));
+        Ok(())
+    }
+
+    #[test]
+    fn test_contains_partial() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"contains(x, y) if x in y;
+               contains_dot(x, y) if x in y.foo;
+               contains_dot_dot(x, y) if x in y.foo.bar and y.foo = 2;"#,
+        )?;
+
+        let mut q = p.new_query_from_term(term!(call!("contains", [1, partial!("a")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("contains_dot", [1, partial!("a")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.foo");
+        assert_query_done!(q);
+
+        let mut q =
+            p.new_query_from_term(term!(call!("contains_dot_dot", [1, partial!("a")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "1 in _this.foo.bar and _this.foo = 2"
+        );
+        assert_query_done!(q);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_in_partial() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(x) if y in x.values;
+               g(x, y) if y in x.values;
+               h(x) if y in x.values and (y.bar = 1 and y.baz = 2) or y.bar = 3;"#,
+        )?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        // TODO (dhatch): This doesn't work now, but ultimately this should have
+        // no constraints since nothing is added to `y`.
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "a" => "() in _this.values",
+            "_y_12" => ""
+        );
+        assert_query_done!(q);
+
+        // Not sure about this one, where there's an output binding.  There are still
+        // no constraints on b.
+        let mut q = p.new_query_from_term(term!(call!("g", [partial!("a"), partial!("b")])), false);
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "a" => "() in _this.values",
+            "b" => "",
+            "_y_17" => ""
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("h", [partial!("a")])), false);
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "a" => "(_this.bar = 1 and _this.baz = 2) in _this.values"
+        );
+
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "a" => "(_this.bar = 3) in _this.values"
+        );
 
         Ok(())
     }
@@ -740,7 +758,7 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -755,12 +773,12 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1 and _this = 2");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -775,7 +793,7 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a"), value!(2)])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(2));
         assert_eq!(next_binding(&mut q)?[&sym!("a")], term!(1));
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -793,7 +811,7 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1");
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -802,7 +820,7 @@ mod test {
         let p = Polar::new();
         p.load_str("f(x) if not print(x);")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
-        assert!(matches!(q.next_event()?, QueryEvent::Done { .. }));
+        assert_query_done!(q);
         Ok(())
     }
 }

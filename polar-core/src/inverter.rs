@@ -7,7 +7,7 @@ use crate::error::PolarResult;
 use crate::events::QueryEvent;
 use crate::folder::{fold_value, Folder};
 use crate::kb::Bindings;
-use crate::partial::Constraints;
+use crate::partial::Partial;
 use crate::runnable::Runnable;
 use crate::terms::{Symbol, Term, Value};
 use crate::visitor::{walk_term, Visitor};
@@ -34,9 +34,9 @@ impl Inverter {
         }
 
         impl Visitor for CspVisitor {
-            fn visit_constraints(&mut self, c: &Constraints) {
-                let v = c.variable.clone();
-                let csp = c.operations().len();
+            fn visit_partial(&mut self, p: &Partial) {
+                let v = p.variable.clone();
+                let csp = p.constraints().len();
                 if let Some(prev) = self.csps.insert(v.clone(), csp) {
                     assert_eq!(
                         prev, csp,
@@ -67,12 +67,12 @@ impl Inverter {
     }
 }
 
-struct ConstraintInverter {
+struct PartialInverter {
     pub new_bindings: BindingStack,
     csps: HashMap<Symbol, usize>,
 }
 
-impl ConstraintInverter {
+impl PartialInverter {
     pub fn new(csps: HashMap<Symbol, usize>) -> Self {
         Self {
             csps,
@@ -80,9 +80,9 @@ impl ConstraintInverter {
         }
     }
 
-    fn invert_constraints(&mut self, c: &Constraints) -> Constraints {
-        let csp = self.csps.get(&c.variable).unwrap_or(&0);
-        let partial = c.clone_with_operations(c.inverted_operations(*csp));
+    fn invert_partial(&mut self, p: &Partial) -> Partial {
+        let csp = self.csps.get(&p.variable).unwrap_or(&0);
+        let partial = p.clone_with_constraints(p.inverted_constraints(*csp));
         self.new_bindings.push(Binding(
             partial.variable.clone(),
             Term::new_temporary(Value::Partial(partial.clone())),
@@ -91,19 +91,19 @@ impl ConstraintInverter {
     }
 }
 
-impl Folder for ConstraintInverter {
+impl Folder for PartialInverter {
     /// Invert top-level constraints.
     fn fold_term(&mut self, t: Term) -> Term {
         t.clone_with_value(match t.value() {
-            Value::Partial(c) => Value::Partial(self.invert_constraints(c)),
+            Value::Partial(p) => Value::Partial(self.invert_partial(p)),
             v => fold_value(v.clone(), self),
         })
     }
 }
 
-/// Invert constraints on all partials in `bindings` and return them.
-fn invert_constraints(bindings: BindingStack, csps: HashMap<Symbol, usize>) -> BindingStack {
-    let mut inverter = ConstraintInverter::new(csps);
+/// Invert all partials in `bindings` and return them.
+fn invert_partials(bindings: BindingStack, csps: HashMap<Symbol, usize>) -> BindingStack {
+    let mut inverter = PartialInverter::new(csps);
     for Binding(_, value) in bindings.iter() {
         inverter.fold_term(value.clone());
     }
@@ -126,7 +126,6 @@ fn reduce_constraints(mut acc: Bindings, bindings: BindingStack) -> Bindings {
         .drain()
         .for_each(|(var, value)| match acc.entry(var) {
             Entry::Occupied(mut o) => {
-                // TODO(gj): Does this ever get hit?
                 let mut old = o.get().value().as_partial().expect("Partial").clone();
                 let new = value.value().as_partial().expect("Partial").clone();
                 old.merge_constraints(new);
@@ -159,7 +158,7 @@ impl Runnable for Inverter {
                         self.bindings.borrow_mut().extend(
                             self.results
                                 .drain(..)
-                                .map(|b| invert_constraints(b, csps.clone()))
+                                .map(|b| invert_partials(b, csps.clone()))
                                 .fold(Bindings::new(), reduce_constraints)
                                 .drain()
                                 .map(|(var, value)| {
