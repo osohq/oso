@@ -30,7 +30,10 @@ def partial_to_query_filter(partial, type_name):
         Q(is_private=False)
     """
 
-    q = and_expr(partial, type_name)
+    q = translate_expr(partial, type_name)
+    if q is None:
+        return Q()
+
     return q
 
 
@@ -45,27 +48,34 @@ COMPARISONS = {
 }
 
 
+def translate_expr(expression, type_name):
+    """Return translated expression, or None if the constraint doesn't translate to anything."""
+    assert isinstance(expression, Expression)
+    if expression.operator in COMPARISONS:
+        return compare_expr(expression, type_name)
+    elif expression.operator == "And":
+        return and_expr(expression, type_name)
+    elif expression.operator == "Isa":
+        try:
+            assert expression.args[1].tag == type_name
+        except (AssertionError, IndexError, AttributeError, TypeError):
+            raise UnsupportedError(f"Unimplemented partial isa operation {expression}.")
+
+        return None
+    else:
+        raise UnsupportedError(f"Unimplemented partial operator {expression.operator}")
+
+
 def and_expr(expr, type_name):
     q = Q()
 
     assert expr.operator == "And"
     for expression in expr.args:
-        assert isinstance(expression, Expression)
-        if expression.operator in COMPARISONS:
-            q = q & compare_expr(expression, type_name)
-        elif expression.operator == "And":
-            q = q & and_expr(expression, type_name)
-        elif expression.operator == "Isa":
-            try:
-                assert expression.args[1].tag == type_name
-            except (AssertionError, IndexError, AttributeError, TypeError):
-                raise UnsupportedError(
-                    f"Unimplemented partial isa operation {expression}."
-                )
-        else:
-            raise UnsupportedError(
-                f"Unimplemented partial operator {expression.operator}"
-            )
+        expr = translate_expr(expression, type_name)
+        if expr is None:
+            continue
+
+        q = q & expr
 
     return q
 
