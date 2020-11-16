@@ -60,9 +60,9 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       [
-        build_wheels
+        build_wheels,
       ]
     steps:
       - name: Set version output
