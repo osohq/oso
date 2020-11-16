@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-use crate::folder::{fold_constraints, fold_operation, fold_term, Folder};
+use crate::folder::{fold_operation, fold_partial, fold_term, Folder};
 use crate::kb::Bindings;
 use crate::terms::{Operation, Operator, Term, TermList, Value};
 
-use super::Constraints;
+use super::Partial;
 
 /// Simplify the values of the bindings to be returned to the host language.
 ///
@@ -48,8 +48,8 @@ impl Folder for Simplifier {
             Value::Expression(o) => fold_term(maybe_unwrap_operation(o).unwrap_or(t), self),
 
             // Elide partial when its constraints are trivial.
-            Value::Partial(Constraints { operations, .. }) if operations.len() == 1 => {
-                fold_term(maybe_unwrap_operation(&operations[0]).unwrap_or(t), self)
+            Value::Partial(Partial { constraints, .. }) if constraints.len() == 1 => {
+                fold_term(maybe_unwrap_operation(&constraints[0]).unwrap_or(t), self)
             }
 
             _ => fold_term(t, self),
@@ -57,15 +57,15 @@ impl Folder for Simplifier {
     }
 
     /// Deduplicate constraints.
-    fn fold_constraints(&mut self, c: Constraints) -> Constraints {
+    fn fold_partial(&mut self, p: Partial) -> Partial {
         let mut seen: HashSet<&Operation> = HashSet::new();
-        let ops = c
-            .operations
+        let constraints = p
+            .constraints
             .iter()
-            .filter(|o| seen.insert(o))
+            .filter(|c| seen.insert(c))
             .cloned()
             .collect();
-        fold_constraints(c.clone_with_operations(ops), self)
+        fold_partial(p.clone_with_constraints(constraints), self)
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
@@ -91,15 +91,15 @@ impl Folder for Simplifier {
             }
         }
 
-        // Optionally sub `expr` into each of the arguments of the partial's operations.
-        let mut map_ops = |partial_ops: &[Operation], expr: &Term| -> TermList {
-            partial_ops
+        // Optionally sub `expr` into each of the arguments of the partial's constraints.
+        let mut map_constraints = |constraints: &[Operation], expr: &Term| -> TermList {
+            constraints
                 .iter()
-                .map(|o| Operation {
-                    operator: o.operator,
-                    args: o.args.iter().map(|arg| sub_this(arg, expr)).collect(),
+                .map(|c| Operation {
+                    operator: c.operator,
+                    args: c.args.iter().map(|arg| sub_this(arg, expr)).collect(),
                 })
-                .map(|o| expr.clone_with_value(Value::Expression(fold_operation(o, self))))
+                .map(|c| expr.clone_with_value(Value::Expression(fold_operation(c, self))))
                 .collect()
         };
 
@@ -112,10 +112,10 @@ impl Folder for Simplifier {
                     args: match (left.value(), right.value()) {
                         // Distribute **inverted** expression over the partial.
                         (Value::Partial(c), Value::Expression(_)) => {
-                            map_ops(&c.inverted_operations(0), right)
+                            map_constraints(&c.inverted_constraints(0), right)
                         }
                         (Value::Expression(_), Value::Partial(c)) => {
-                            map_ops(&c.inverted_operations(0), left)
+                            map_constraints(&c.inverted_constraints(0), left)
                         }
                         _ => return fold_operation(o, self),
                     },
@@ -128,8 +128,12 @@ impl Folder for Simplifier {
                     operator: Operator::And,
                     args: match (left.value(), right.value()) {
                         // Distribute expression over the partial.
-                        (Value::Partial(c), Value::Expression(_)) => map_ops(c.operations(), right),
-                        (Value::Expression(_), Value::Partial(c)) => map_ops(c.operations(), left),
+                        (Value::Partial(c), Value::Expression(_)) => {
+                            map_constraints(c.constraints(), right)
+                        }
+                        (Value::Expression(_), Value::Partial(c)) => {
+                            map_constraints(c.constraints(), left)
+                        }
                         _ => return fold_operation(o, self),
                     },
                 }
@@ -172,9 +176,9 @@ mod test {
     #[test]
     // TODO(gj): Is this maybe a silly test now that we don't simplify "trivial" unifications?
     fn test_simplify_partial() {
-        let partial = term!(Constraints {
+        let partial = term!(Partial {
             variable: sym!("a"),
-            operations: vec![op!(And, term!(op!(Unify, term!(sym!("_this")), term!(1))))],
+            constraints: vec![op!(And, term!(op!(Unify, term!(sym!("_this")), term!(1))))],
         });
         assert_eq!(
             simplify_partial(partial),

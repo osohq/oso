@@ -1,14 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use crate::counter::Counter;
-use crate::error::{OperationalError, PolarResult};
-use crate::events::QueryEvent;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
+
+use super::isa_constraint_check::IsaConstraintCheck;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct Constraints {
-    pub operations: Vec<Operation>,
+pub struct Partial {
+    pub constraints: Vec<Operation>,
     pub variable: Symbol,
 }
 
@@ -31,10 +30,10 @@ fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 }
 
-impl Constraints {
+impl Partial {
     pub fn new(variable: Symbol) -> Self {
         Self {
-            operations: vec![],
+            constraints: vec![],
             variable,
         }
     }
@@ -44,11 +43,11 @@ impl Constraints {
     /// Invariant: both partials must have the same variable.
     pub fn merge_constraints(&mut self, other: Self) {
         assert_eq!(self.variable, other.variable);
-        self.operations.extend(other.operations);
+        self.constraints.extend(other.constraints);
     }
 
-    pub fn inverted_operations(&self, csp: usize) -> Vec<Operation> {
-        let (old, new) = self.operations.split_at(csp);
+    pub fn inverted_constraints(&self, csp: usize) -> Vec<Operation> {
+        let (old, new) = self.constraints.split_at(csp);
         let mut combined = old.to_vec();
         match new.len() {
             // Do nothing to an empty partial.
@@ -72,12 +71,12 @@ impl Constraints {
         combined
     }
 
-    pub fn operations(&self) -> &Vec<Operation> {
-        &self.operations
+    pub fn constraints(&self) -> &Vec<Operation> {
+        &self.constraints
     }
 
     pub fn add_constraint(&mut self, o: Operation) {
-        self.operations.push(o);
+        self.constraints.push(o);
     }
 
     pub fn unify(&mut self, other: Term) {
@@ -89,7 +88,7 @@ impl Constraints {
         let isa_op = op!(Isa, self.variable_term(), other);
 
         let constraint_check = Box::new(IsaConstraintCheck::new(
-            self.operations.clone(),
+            self.constraints.clone(),
             isa_op.clone(),
         ));
 
@@ -130,7 +129,7 @@ impl Constraints {
         ));
 
         let name = value.value().as_symbol().unwrap();
-        Term::new_temporary(Value::Partial(Constraints::new(name.clone())))
+        Term::new_temporary(Value::Partial(Partial::new(name.clone())))
     }
 
     pub fn into_term(self) -> Term {
@@ -143,7 +142,7 @@ impl Constraints {
         Term::new_temporary(Value::Expression(Operation {
             operator: Operator::And,
             args: self
-                .operations
+                .constraints
                 .into_iter()
                 .map(|op| Term::new_temporary(Value::Expression(op)))
                 .collect(),
@@ -156,9 +155,9 @@ impl Constraints {
         new
     }
 
-    pub fn clone_with_operations(&self, operations: Vec<Operation>) -> Self {
+    pub fn clone_with_constraints(&self, constraints: Vec<Operation>) -> Self {
         let mut new = self.clone();
-        new.operations = operations;
+        new.constraints = constraints;
         new
     }
 
@@ -168,105 +167,6 @@ impl Constraints {
 
     fn variable_term(&self) -> Term {
         Term::new_temporary(Value::Variable(sym!("_this")))
-    }
-}
-
-#[derive(Clone)]
-struct IsaConstraintCheck {
-    existing: Vec<Operation>,
-    proposed_tag: Option<Symbol>,
-    result: Option<bool>,
-    last_call_id: u64,
-}
-
-impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, mut proposed: Operation) -> Self {
-        let right = proposed.args.pop().unwrap();
-        let proposed_tag = if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
-            Some(instance.tag.clone())
-        } else {
-            None
-        };
-
-        Self {
-            existing,
-            proposed_tag,
-            result: None,
-            last_call_id: 0,
-        }
-    }
-
-    /// Check if the existing constraints set is compatible with the proposed
-    /// matches class.
-    ///
-    /// Returns: None if compatible, QueryEvent::Done { false } if incompatible,
-    /// or QueryEvent to ask for compatibility.
-    fn check_constraint(
-        &mut self,
-        mut constraint: Operation,
-        counter: &Counter,
-    ) -> Option<QueryEvent> {
-        if constraint.operator != Operator::Isa {
-            return None;
-        }
-
-        let right = constraint.args.pop().unwrap();
-        if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
-            let call_id = counter.next();
-            self.last_call_id = call_id;
-
-            // is_subclass check of instance tag against proposed
-            return Some(QueryEvent::ExternalIsSubclass {
-                call_id,
-                left_class_tag: self.proposed_tag.clone().unwrap(),
-                right_class_tag: instance.tag.clone(),
-            });
-
-            // TODO check fields for compatibility.
-        }
-
-        None
-    }
-}
-
-impl Runnable for IsaConstraintCheck {
-    fn run(&mut self, counter: Option<&mut Counter>) -> PolarResult<QueryEvent> {
-        if self.proposed_tag.is_none() {
-            return Ok(QueryEvent::Done { result: true });
-        }
-
-        if let Some(result) = self.result.take() {
-            if !result {
-                return Ok(QueryEvent::Done { result: false });
-            }
-        }
-
-        let counter = counter.expect("IsaConstraintCheck requires a Counter");
-        loop {
-            let next = self.existing.pop();
-            if let Some(constraint) = next {
-                if let Some(event) = self.check_constraint(constraint, &counter) {
-                    return Ok(event);
-                }
-
-                continue;
-            } else {
-                return Ok(QueryEvent::Done { result: true });
-            }
-        }
-    }
-
-    fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
-        if call_id != self.last_call_id {
-            return Err(OperationalError::InvalidState(String::from("Unexpected call id")).into());
-        }
-
-        self.result = Some(answer);
-        Ok(())
-    }
-
-    fn clone_runnable(&self) -> Box<dyn Runnable> {
-        Box::new(self.clone())
     }
 }
 

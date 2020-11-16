@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 pub use super::numerics::Numeric;
-use super::partial::Constraints;
+use super::partial::Partial;
 use super::visitor::{walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
@@ -140,7 +140,7 @@ pub enum Value {
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),
-    Partial(Constraints),
+    Partial(Partial),
 }
 
 impl Value {
@@ -185,7 +185,7 @@ impl Value {
         }
     }
 
-    pub fn as_partial(&self) -> Result<&Constraints, error::RuntimeError> {
+    pub fn as_partial(&self) -> Result<&Partial, error::RuntimeError> {
         match self {
             Value::Partial(e) => Ok(e),
             _ => Err(error::RuntimeError::TypeError {

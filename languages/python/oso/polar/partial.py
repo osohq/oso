@@ -21,7 +21,7 @@ class Partial:
     def to_polar(self):
         return {
             "variable": self.name,
-            "operations": [c.to_polar() for c in self.constraints],
+            "constraints": [c.to_polar() for c in self.constraints],
         }
 
 

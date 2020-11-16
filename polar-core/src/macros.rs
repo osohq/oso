@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::partial::Constraints;
+use crate::partial::Partial;
 use crate::rules::*;
 use crate::terms::*;
 
@@ -77,7 +77,7 @@ macro_rules! instance {
 #[macro_export]
 macro_rules! partial {
     ($arg:expr) => {
-        Value::Partial(Constraints::new(sym!($arg)))
+        Value::Partial(Partial::new(sym!($arg)))
     };
 }
 
@@ -293,8 +293,8 @@ impl From<Operation> for TestHelper<Value> {
         Self(Value::Expression(other))
     }
 }
-impl From<Constraints> for TestHelper<Value> {
-    fn from(other: Constraints) -> Self {
+impl From<Partial> for TestHelper<Value> {
+    fn from(other: Partial) -> Self {
         Self(Value::Partial(other))
     }
 }

@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, Constraints};
+use crate::partial::{simplify_bindings, Partial};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -245,7 +245,7 @@ fn query_contains_partial(goals: &Goals) -> bool {
     }
 
     impl Visitor for PartialVisitor {
-        fn visit_constraints(&mut self, _: &Constraints) {
+        fn visit_partial(&mut self, _: &Partial) {
             self.has_partial = true;
         }
     }
@@ -2138,7 +2138,7 @@ impl PolarVirtualMachine {
 
     /// Unify a partial `left` with a term `right`.
     /// This is sort of a "sub-goal" of `Unify`.
-    fn unify_partial(&mut self, partial: &Constraints, right: &Term) -> PolarResult<()> {
+    fn unify_partial(&mut self, partial: &Partial, right: &Term) -> PolarResult<()> {
         let mut partial = partial.clone();
         if matches!(right.value(), Value::Partial(_)) {
             return Err(self.set_error_context(
