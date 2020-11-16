@@ -1,9 +1,9 @@
 .. meta::
   :description: Role-based access control (RBAC) is a common entrypoint for authorization. Learn how to build it in oso.
 
-====
-RBAC
-====
+===========
+Global RBAC
+===========
 
 .. role:: polar(code)
    :language: prolog
@@ -13,6 +13,9 @@ control <https://en.wikipedia.org/wiki/Role-based_access_control>`_ model. The
 general thesis of RBAC is that the set of permissions for a system --- a
 permission being the ability to perform an :ref:`action <actions>`
 on a :ref:`resource <resources>` --- can be grouped into roles.
+
+This guide shows an example of implementing :ref:`global roles <global-roles>`. For guidance on
+other RBAC use cases, check out :doc:`/getting-started/rbac`.
 
 RBAC Basics
 -----------
