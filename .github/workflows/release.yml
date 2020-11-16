@@ -4,7 +4,7 @@ on:
     tags:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
-      - main
+      - steve/env_file
 
 jobs:
   version:
@@ -13,9 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
-        run: echo "::set-env name=oso_version::$(cat VERSION)"
+        run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Check github ref matches
-        if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/steve/env_file'
         env:
           github_ref: ${{ github.ref }}
         run: grep "${github_ref/refs\/tags\/v/}" VERSION
@@ -127,7 +127,7 @@ jobs:
           working-directory: "languages/ruby"
       - name: Set version env
         id: version
-        run: echo "::set-env name=oso_version::$(cat VERSION)"
+        run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
@@ -373,7 +373,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set version env
         id: version
-        run: echo "::set-env name=oso_version::$(cat VERSION)"
+        run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Set up ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
         with:
@@ -441,7 +441,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set version env
         id: version
-        run: echo "::set-env name=oso_version::$(cat VERSION)"
+        run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Use Node.js
         uses: actions/setup-node@v1
         with:
@@ -506,7 +506,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: github.ref != 'refs/heads/steve/env_file'
     needs:
       [
         build_wheels,
