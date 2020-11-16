@@ -787,7 +787,7 @@ def test_partial(polar):
     first = next(results)
 
     x = first["bindings"]["x"]
-    assert unwrap_and(x) == Expression("Unify", [Variable("_this"), 1])
+    assert Expression("Unify", [Variable("_this"), 1])
 
     second = next(results)
     x = second["bindings"]["x"]
@@ -795,6 +795,7 @@ def test_partial(polar):
     # Top level should be and
     and_args = unwrap_and(x)
     assert and_args[0] == Expression("Unify", [Variable("_this"), 1])
+    assert and_args[1] == Expression("Unify", [Variable("_this"), 2])
 
     polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
 
@@ -804,10 +805,10 @@ def test_partial(polar):
     x = first["bindings"]["x"]
     and_args = unwrap_and(x)
     assert len(and_args) == 2
-    assert unwrap_and(and_args[0]) == Expression(
+    assert and_args[0] == Expression(
         "Unify", [Expression("Dot", [Variable("_this"), "bar"]), 1]
     )
-    assert unwrap_and(and_args[1]) == Expression(
+    assert and_args[1] == Expression(
         "Unify", [Expression("Dot", [Variable("_this"), "baz"]), 2]
     )
 
@@ -835,7 +836,7 @@ def test_partial_constraint(polar):
 
     assert and_args[0] == Expression("Isa", [Variable("_this"), Pattern("User", {})])
 
-    unify = unwrap_and(and_args[1])
+    unify = and_args[1]
     assert unify == Expression(
         "Unify", [Expression("Dot", [Variable("_this"), "user"]), 1]
     )
