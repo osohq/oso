@@ -1917,7 +1917,8 @@ impl PolarVirtualMachine {
             )),
             (Value::Partial(partial), _) => {
                 let mut partial = partial.clone();
-                partial.compare(op, right_term.clone());
+                let operand = Operand::Right(right_term.clone());
+                partial.compare(op, operand);
 
                 let name = partial.name().clone();
                 self.bind(&name, partial.into_term());
@@ -1925,7 +1926,8 @@ impl PolarVirtualMachine {
             }
             (_, Value::Partial(partial)) => {
                 let mut partial = partial.clone();
-                partial.compare(op, left_term.clone());
+                let operand = Operand::Left(left_term.clone());
+                partial.compare(op, operand);
 
                 let name = partial.name().clone();
                 self.bind(&name, partial.into_term());

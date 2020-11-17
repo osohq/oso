@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{Operand, Operation, Operator, Symbol, Term, Value};
 
 use super::isa_constraint_check::IsaConstraintCheck;
 
@@ -130,7 +130,7 @@ impl Partial {
         Term::new_temporary(Value::Partial(Partial::new(name)))
     }
 
-    pub fn compare(&mut self, operator: Operator, other: Term) {
+    pub fn compare(&mut self, operator: Operator, operand: Operand) {
         assert!(matches!(
             operator,
             Operator::Lt
@@ -143,7 +143,10 @@ impl Partial {
 
         let op = Operation {
             operator,
-            args: vec![self.variable_term(), other],
+            args: match operand {
+                Operand::Left(other) => vec![other, self.variable_term()],
+                Operand::Right(other) => vec![self.variable_term(), other],
+            },
         };
 
         self.add_constraint(op);
@@ -399,9 +402,9 @@ mod test {
     #[test]
     fn test_partial_comparison_dot() -> TestResult {
         let p = Polar::new();
-        p.load_str("positive(x) if x.a > 0;")?;
+        p.load_str("positive(x) if x.a > 0 and 0 < x.a;")?;
         let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0 and 0 < _this.a");
         Ok(())
     }
 

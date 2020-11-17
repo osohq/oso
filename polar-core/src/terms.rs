@@ -358,6 +358,12 @@ impl Term {
     }
 }
 
+/// Operand chirality.
+pub enum Operand {
+    Left(Term),
+    Right(Term),
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
