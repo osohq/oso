@@ -7,6 +7,7 @@ from sqlalchemy.sql import expression as sql
 
 from sqlalchemy_oso.partial import partial_to_query
 
+
 def null_query(session: Session) -> Query:
     """Return an intentionally empty query."""
     # TODO (dhatch): Make this not hit the database.
@@ -17,10 +18,11 @@ def register_models(oso: Oso, base):
     """Register all models in model base class ``base`` with oso as classes."""
     # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
     for name, model in base._decl_class_registry.items():
-        if name == '_sa_module_registry':
+        if name == "_sa_module_registry":
             continue
 
         oso.register_class(model)
+
 
 def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
     """Return a query containing filters that apply the policy to ``model``.
