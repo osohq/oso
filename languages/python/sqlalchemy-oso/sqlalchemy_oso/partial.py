@@ -19,7 +19,6 @@ def partial_to_query(expression: Expression, session: Session, model) -> Query:
     """Convert constraints in ``partial`` to a query over ``model``."""
     query = session.query(model)
 
-
     expr = translate_expr(expression, session, model)
     if expr is not None:
         return query.filter(expr)
