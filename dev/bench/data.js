@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605586114534,
+  "lastUpdate": 1605588422188,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13425,6 +13425,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 55209,
             "range": "± 5688",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2355b27d5feb24dd2422633617aa5c9e79b200da",
+          "message": "Replace set-env prints with writes to $GITHUB_ENV file (#528)\n\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-11-16T23:43:43-05:00",
+          "tree_id": "5b834ae4d5d838983a89decb6bd7d82d93ca066e",
+          "url": "https://github.com/osohq/oso/commit/2355b27d5feb24dd2422633617aa5c9e79b200da"
+        },
+        "date": 1605588420144,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 40676,
+            "range": "± 3075",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 46408,
+            "range": "± 3078",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 44893,
+            "range": "± 2900",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 44535,
+            "range": "± 4497",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 46376,
+            "range": "± 5182",
             "unit": "ns/iter"
           }
         ]
