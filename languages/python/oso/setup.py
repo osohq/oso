@@ -8,7 +8,7 @@ here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 try:
-    with open(path.join(here, "../../README.md"), encoding="utf-8") as f:
+    with open(path.join(here, "README.md"), encoding="utf-8") as f:
         long_description = f.read()
 except IOError:
     long_description = ""
@@ -40,7 +40,7 @@ def get_version(rel_path):
 setup(
     name="oso",
     version=get_version("oso/oso.py"),
-    description="oso authorization library.",
+    description="oso is an open source policy engine for authorization that’s embedded in your application",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Oso Security, Inc.",
