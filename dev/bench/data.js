@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605588422188,
+  "lastUpdate": 1605652181448,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13479,6 +13479,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 46376,
             "range": "± 5182",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "eee1207c6f4cd0e3bbf78ca72705e3a9155112b7",
+          "message": "Add link to open GitHub issue on encountering bug (#531)",
+          "timestamp": "2020-11-17T17:25:45-05:00",
+          "tree_id": "c75528a41bb946cd3dbd443722487d0e79228d22",
+          "url": "https://github.com/osohq/oso/commit/eee1207c6f4cd0e3bbf78ca72705e3a9155112b7"
+        },
+        "date": 1605652179572,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 45220,
+            "range": "± 2184",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 51201,
+            "range": "± 3789",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 50551,
+            "range": "± 3815",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 50433,
+            "range": "± 2886",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 51025,
+            "range": "± 4263",
             "unit": "ns/iter"
           }
         ]
