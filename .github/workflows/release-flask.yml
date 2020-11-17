@@ -13,7 +13,7 @@ jobs:
       - name: Set version env
         env:
           github_ref: ${{ github.ref }}
-        run: echo "::set-env name=oso_version::${github_ref/refs\/tags\/flask-v/}"
+        run: echo "oso_version=${github_ref/refs\/tags\/flask-v/}" >> $GITHUB_ENV
       - name: Check python version matches
         run: grep "__version__ = \"$oso_version\"" flask_oso/__init__.py
         working-directory: languages/python/flask-oso
