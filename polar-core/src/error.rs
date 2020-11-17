@@ -310,7 +310,11 @@ impl fmt::Display for OperationalError {
         match self {
             Self::Unimplemented(s) => write!(f, "{} is not yet implemented", s),
             Self::InvalidState(s) => write!(f, "Invalid state: {}", s),
-            Self::Unknown => write!(f, "we hit an error we do not know how to handle or did not expect. Please submit a bug"),
+            Self::Unknown => write!(
+                f,
+                "We hit an unexpected error.\n\
+                Please submit a bug report at <https://github.com/osohq/oso/issues>"
+            ),
         }
     }
 }
