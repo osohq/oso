@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605652181448,
+  "lastUpdate": 1605727259884,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13533,6 +13533,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 51025,
             "range": "± 4263",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c3d3cf656168c4781859b6ea3d547800a5c9ad83",
+          "message": "Fix bug with ordering of comparison operands (#532)",
+          "timestamp": "2020-11-18T14:17:21-05:00",
+          "tree_id": "3c6139a34d85d76eb718c6ddd41cde219c40c9ce",
+          "url": "https://github.com/osohq/oso/commit/c3d3cf656168c4781859b6ea3d547800a5c9ad83"
+        },
+        "date": 1605727258319,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 35020,
+            "range": "± 1366",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 39155,
+            "range": "± 2470",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 39048,
+            "range": "± 2519",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 38953,
+            "range": "± 2519",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 39112,
+            "range": "± 2475",
             "unit": "ns/iter"
           }
         ]
