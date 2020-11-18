@@ -3,5 +3,5 @@ mod isa_constraint_check;
 mod partial;
 mod simplify;
 
-pub use partial::Partial;
+pub use partial::{Operand, Partial};
 pub use simplify::simplify_bindings;

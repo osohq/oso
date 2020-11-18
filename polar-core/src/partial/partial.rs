@@ -104,7 +104,7 @@ impl Partial {
         // want some other representation eventually.
         // TODO what about non-ground compound terms like [x, 1] in THIS
 
-        assert!(!(other.value().as_symbol().is_ok() || other.value().as_partial().is_ok()));
+        assert!(!(matches!(other.value(), Value::Variable(_) | Value::Partial(_))));
 
         let in_op = op!(In, other, self.variable_term());
         self.add_constraint(in_op);
@@ -130,23 +130,25 @@ impl Partial {
         Term::new_temporary(Value::Partial(Partial::new(name)))
     }
 
-    pub fn compare(&mut self, operator: Operator, other: Term) {
-        assert!(matches!(
-            operator,
-            Operator::Lt
-                | Operator::Gt
-                | Operator::Leq
-                | Operator::Geq
-                | Operator::Eq
-                | Operator::Neq
-        ));
+    pub fn compare(&mut self, operator: Operator, operand: Operand) {
+        use Operator::{Eq, Geq, Gt, Leq, Lt, Neq};
+        let asymmetric_op = matches!(operator, Gt | Geq | Lt | Leq);
+        let symmetric_op = matches!(operator, Eq | Neq);
+        assert!(asymmetric_op || symmetric_op);
 
-        let op = Operation {
-            operator,
-            args: vec![self.variable_term(), other],
-        };
-
-        self.add_constraint(op);
+        // Normalize comparison operations so this is always on LHS.
+        let args = vec![self.variable_term(), operand.term];
+        let mut operation = Operation { operator, args };
+        if operand.side == Side::Left && asymmetric_op {
+            operation.operator = match operation.operator {
+                Gt => Lt,
+                Geq => Leq,
+                Lt => Gt,
+                Leq => Geq,
+                _ => unreachable!(),
+            };
+        }
+        self.add_constraint(operation);
     }
 
     /// Add lookup of `field` assigned to `value` on `self.
@@ -203,6 +205,34 @@ impl Partial {
 
     fn variable_term(&self) -> Term {
         Term::new_temporary(Value::Variable(sym!("_this")))
+    }
+}
+
+#[derive(PartialEq)]
+enum Side {
+    Left,
+    Right,
+}
+
+/// Is the non-this arg the left or right operand?
+pub struct Operand {
+    side: Side,
+    term: Term,
+}
+
+impl Operand {
+    pub fn left(term: Term) -> Self {
+        Self {
+            side: Side::Left,
+            term,
+        }
+    }
+
+    pub fn right(term: Term) -> Self {
+        Self {
+            side: Side::Right,
+            term,
+        }
     }
 }
 
@@ -399,7 +429,7 @@ mod test {
     #[test]
     fn test_partial_comparison_dot() -> TestResult {
         let p = Polar::new();
-        p.load_str("positive(x) if x.a > 0;")?;
+        p.load_str("positive(x) if x.a > 0 and 0 < x.a;")?;
         let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0");
         Ok(())
