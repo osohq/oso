@@ -408,6 +408,37 @@ mod test {
     }
 
     #[test]
+    fn test_partial_isa_subclass_superclass() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(x: PostSubclass) if g(x);
+               g(x: Post);"#,
+        )?;
+        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut next_binding = || loop {
+            match q.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                } => {
+                    q.question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))
+                        .unwrap();
+                }
+                _ => panic!("not bindings"),
+            }
+        };
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches PostSubclass{} and _this matches Post{}"
+        );
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
     fn test_partial_comparison() -> TestResult {
         let p = Polar::new();
         p.load_str(

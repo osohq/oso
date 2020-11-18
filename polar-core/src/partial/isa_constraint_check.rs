@@ -9,6 +9,7 @@ pub struct IsaConstraintCheck {
     existing: Vec<Operation>,
     proposed_tag: Option<Symbol>,
     result: Option<bool>,
+    alternative_check: Option<QueryEvent>,
     last_call_id: u64,
 }
 
@@ -25,6 +26,7 @@ impl IsaConstraintCheck {
             existing,
             proposed_tag,
             result: None,
+            alternative_check: None,
             last_call_id: 0,
         }
     }
@@ -38,7 +40,7 @@ impl IsaConstraintCheck {
         &mut self,
         mut constraint: Operation,
         counter: &Counter,
-    ) -> Option<QueryEvent> {
+    ) -> Option<(QueryEvent, QueryEvent)> {
         if constraint.operator != Operator::Isa {
             return None;
         }
@@ -48,12 +50,20 @@ impl IsaConstraintCheck {
             let call_id = counter.next();
             self.last_call_id = call_id;
 
-            // is_subclass check of instance tag against proposed
-            return Some(QueryEvent::ExternalIsSubclass {
-                call_id,
-                left_class_tag: self.proposed_tag.clone().unwrap(),
-                right_class_tag: instance.tag.clone(),
-            });
+            let existing = instance.tag.clone();
+            let proposed = self.proposed_tag.clone().unwrap();
+            return Some((
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag: proposed.clone(),
+                    right_class_tag: existing.clone(),
+                },
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag: existing,
+                    right_class_tag: proposed,
+                },
+            ));
 
             // TODO check fields for compatibility.
         }
@@ -69,20 +79,22 @@ impl Runnable for IsaConstraintCheck {
         }
 
         if let Some(result) = self.result.take() {
-            if !result {
+            if result {
+                self.alternative_check = None;
+            } else if self.alternative_check.is_none() {
                 return Ok(QueryEvent::Done { result: false });
             }
         }
 
         let counter = counter.expect("IsaConstraintCheck requires a Counter");
         loop {
-            let next = self.existing.pop();
-            if let Some(constraint) = next {
-                if let Some(event) = self.check_constraint(constraint, &counter) {
-                    return Ok(event);
+            if let Some(alternative) = self.alternative_check.take() {
+                return Ok(alternative);
+            } else if let Some(constraint) = self.existing.pop() {
+                if let Some((primary, alternative)) = self.check_constraint(constraint, &counter) {
+                    self.alternative_check = Some(alternative);
+                    return Ok(primary);
                 }
-
-                continue;
             } else {
                 return Ok(QueryEvent::Done { result: true });
             }
