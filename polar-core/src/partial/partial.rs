@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::runnable::Runnable;
-use crate::terms::{Operand, Operation, Operator, Symbol, Term, Value};
+use crate::terms::{Operation, Operator, Symbol, Term, Value};
 
 use super::isa_constraint_check::IsaConstraintCheck;
 
@@ -131,25 +131,24 @@ impl Partial {
     }
 
     pub fn compare(&mut self, operator: Operator, operand: Operand) {
-        assert!(matches!(
-            operator,
-            Operator::Lt
-                | Operator::Gt
-                | Operator::Leq
-                | Operator::Geq
-                | Operator::Eq
-                | Operator::Neq
-        ));
+        use Operator::{Eq, Geq, Gt, Leq, Lt, Neq};
+        let asymmetric_op = matches!(operator, Gt | Geq | Lt | Leq);
+        let symmetric_op = matches!(operator, Eq | Neq);
+        assert!(asymmetric_op || symmetric_op);
 
-        let op = Operation {
-            operator,
-            args: match operand {
-                Operand::Left(other) => vec![other, self.variable_term()],
-                Operand::Right(other) => vec![self.variable_term(), other],
-            },
-        };
-
-        self.add_constraint(op);
+        // Normalize comparison operations so this is always on LHS.
+        let args = vec![self.variable_term(), operand.term];
+        let mut operation = Operation { operator, args };
+        if operand.side == Side::Left && asymmetric_op {
+            operation.operator = match operation.operator {
+                Gt => Lt,
+                Geq => Leq,
+                Lt => Gt,
+                Leq => Geq,
+                o => o,
+            };
+        }
+        self.add_constraint(operation);
     }
 
     /// Add lookup of `field` assigned to `value` on `self.
@@ -206,6 +205,34 @@ impl Partial {
 
     fn variable_term(&self) -> Term {
         Term::new_temporary(Value::Variable(sym!("_this")))
+    }
+}
+
+#[derive(PartialEq)]
+enum Side {
+    Left,
+    Right,
+}
+
+/// Is the non-this arg the left or right operand?
+pub struct Operand {
+    side: Side,
+    term: Term,
+}
+
+impl Operand {
+    pub fn left(term: Term) -> Self {
+        Self {
+            side: Side::Left,
+            term,
+        }
+    }
+
+    pub fn right(term: Term) -> Self {
+        Self {
+            side: Side::Right,
+            term,
+        }
     }
 }
 
@@ -404,7 +431,7 @@ mod test {
         let p = Polar::new();
         p.load_str("positive(x) if x.a > 0 and 0 < x.a;")?;
         let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0 and 0 < _this.a");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0");
         Ok(())
     }
 

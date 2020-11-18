@@ -18,7 +18,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, Partial};
+use crate::partial::{simplify_bindings, Operand, Partial};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -1917,8 +1917,7 @@ impl PolarVirtualMachine {
             )),
             (Value::Partial(partial), _) => {
                 let mut partial = partial.clone();
-                let operand = Operand::Right(right_term.clone());
-                partial.compare(op, operand);
+                partial.compare(op, Operand::right(right_term.clone()));
 
                 let name = partial.name().clone();
                 self.bind(&name, partial.into_term());
@@ -1926,8 +1925,7 @@ impl PolarVirtualMachine {
             }
             (_, Value::Partial(partial)) => {
                 let mut partial = partial.clone();
-                let operand = Operand::Left(left_term.clone());
-                partial.compare(op, operand);
+                partial.compare(op, Operand::left(left_term.clone()));
 
                 let name = partial.name().clone();
                 self.bind(&name, partial.into_term());
