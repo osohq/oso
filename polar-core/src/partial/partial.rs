@@ -853,4 +853,26 @@ mod test {
         assert_query_done!(q);
         Ok(())
     }
+
+    #[test]
+    fn test_nested_dot_in() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x, y) if x in y.a.b.c;");
+
+        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false)?;
+
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this");
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_dot_lookup() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x, y) if x = y.a.b.c;")?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
+
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this");
+        Ok(())
+    }
 }
