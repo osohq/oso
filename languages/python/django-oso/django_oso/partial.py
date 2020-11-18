@@ -48,62 +48,89 @@ COMPARISONS = {
 }
 
 
-def translate_expr(expression, type_name):
-    """Return translated expression, or None if the constraint doesn't translate to anything."""
-    assert isinstance(expression, Expression)
-    if expression.operator in COMPARISONS:
-        return compare_expr(expression, type_name)
-    elif expression.operator == "And":
-        return and_expr(expression, type_name)
-    elif expression.operator == "Isa":
+def translate_expr(expr: Expression, type_name: str, **kwargs):
+    """Translate a Polar expression to a Django Q object."""
+    assert isinstance(expr, Expression), "expected a Polar expression"
+
+    if expr.operator in COMPARISONS:
+        return compare_expr(expr, type_name, **kwargs)
+    elif expr.operator == "And":
+        return and_expr(expr, type_name, **kwargs)
+    elif expr.operator == "Isa":
         try:
-            assert expression.args[1].tag == type_name
+            assert expr.args[1].tag == type_name
         except (AssertionError, IndexError, AttributeError, TypeError):
-            raise UnsupportedError(f"Unimplemented partial isa operation {expression}.")
-
+            raise UnsupportedError(f"Unimplemented partial isa operation {expr}.")
         return None
+    elif expr.operator == "In":
+        return in_expr(expr, type_name, **kwargs)
     else:
-        raise UnsupportedError(f"Unimplemented partial operator {expression.operator}")
+        raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
 
 
-def and_expr(expr, type_name):
-    q = Q()
-
+def and_expr(expr: Expression, type_name: str, **kwargs):
     assert expr.operator == "And"
-    for expression in expr.args:
-        expr = translate_expr(expression, type_name)
-        if expr is None:
-            continue
-
-        q = q & expr
-
+    q = Q()
+    for arg in expr.args:
+        expr = translate_expr(arg, type_name, **kwargs)
+        if expr:
+            q = q & expr
     return q
 
 
-def dot_op_field(expr):
-    """Get the field from dot op ``expr`` or return ``False``."""
-    return (
-        isinstance(expr, Expression)
-        and expr.operator == "Dot"
-        and isinstance(expr.args[0], Variable)
-        and expr.args[0] == Variable("_this")
-        and expr.args[1]
-    )
-
-
-def compare_expr(expr, type_name):
+def compare_expr(expr: Expression, _type_name: str, path=[], **kwargs):
     q = Q()
+    (left, right) = expr.args
+    left_path = dot_op_path(left)
+    assert left_path, "this arg should be normalized to LHS"
+    return COMPARISONS[expr.operator](q, "__".join(path + left_path), right)
 
-    assert expr.operator in COMPARISONS
-    left = expr.args[0]
-    right = expr.args[1]
 
-    if dot_op_field(left):
-        field = dot_op_field(left)
-        value = right
-        return COMPARISONS[expr.operator](q, field, value)
+def in_expr(expr: Expression, type_name: str, path=[], **kwargs):
+    assert expr.operator == "In"
+    q = Q()
+    (left, right) = expr.args
+    right_path = dot_op_path(right)
+    assert right_path, "RHS of in must be a dot lookup"
+    right_path = path + right_path
+
+    if isinstance(left, Expression):
+        if left.operator == "And":
+            # Distribute the expression over the "In".
+            return and_expr(left, type_name, path=right_path, **kwargs)
+        elif left.operator == "In":
+            # Nested in operations.
+            return in_expr(left, type_name, path=right_path, **kwargs)
+        elif left.operator in COMPARISONS:
+            # `tag in post.tags and tag.created_by = user` where `post` is a
+            # partial and `user` is a Django instance.
+            return compare_expr(left, type_name, path=right_path, **kwargs)
+        else:
+            assert False, f"Unhandled expression {left}"
     else:
-        field = dot_op_field(right)
-        assert field
-        value = left
-        return COMPARISONS[expr.operator](q, field, value)
+        # `tag in post.tags and user in tag.users` where `post` is a partial
+        # and `user` is a Django instance.
+        return COMPARISONS["Unify"](q, "__".join(right_path), left)
+
+
+# TODO (dhatch): Move this helper into base.
+def dot_op_path(expr):
+    """Get the path components of a lookup.
+
+    The path is returned as a list.
+
+    _this.created_by => ['created_by']
+    _this.created_by.username => ['created_by', 'username']
+
+    None is returned if input is not a dot operation.
+    """
+
+    if not (isinstance(expr, Expression) and expr.operator == "Dot"):
+        return None
+
+    assert len(expr.args) == 2
+
+    if expr.args[0] == Variable("_this"):
+        return [expr.args[1]]
+
+    return dot_op_path(expr.args[0]) + [expr.args[1]]
