@@ -145,7 +145,7 @@ impl Partial {
                 Geq => Leq,
                 Lt => Gt,
                 Leq => Geq,
-                o => o,
+                _ => unreachable!(),
             };
         }
         self.add_constraint(operation);
