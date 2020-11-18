@@ -104,7 +104,7 @@ impl Partial {
         // want some other representation eventually.
         // TODO what about non-ground compound terms like [x, 1] in THIS
 
-        assert!(!(other.value().as_symbol().is_ok() || other.value().as_partial().is_ok()));
+        assert!(!(matches!(other.value(), Value::Variable(_) | Value::Partial(_))));
 
         let in_op = op!(In, other, self.variable_term());
         self.add_constraint(in_op);
