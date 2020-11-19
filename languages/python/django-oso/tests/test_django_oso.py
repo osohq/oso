@@ -180,11 +180,6 @@ def test_partial_errors(rf, settings):
     request = rf.get("/")
     request.user = "test_user"
 
-    Oso.load_str('allow(_, "fail", post: test_app::Post) if post matches {x: 1};')
-
-    with pytest.raises(UnsupportedError):
-        q = Post.objects.authorize(request, action="fail")
-
     # No rules for this.
     q = Post.objects.authorize(request, action="get")
     assert q.count() == 0
