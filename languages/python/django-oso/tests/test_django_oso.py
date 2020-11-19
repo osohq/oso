@@ -145,7 +145,7 @@ def test_partial(rf, settings, partial_policy):
     request = rf.get("/")
     request.user = "test_user"
 
-    authorize_filter = authorize_model(request, action="get", model="test_app::Post")
+    authorize_filter = authorize_model(request, action="get", model=Post)
     assert (
         str(authorize_filter)
         == "(AND: ('is_private', False), ('timestamp__gt', 0), ('option', None))"

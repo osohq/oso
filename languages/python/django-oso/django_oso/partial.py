@@ -1,11 +1,13 @@
-from django.db.models import Q
+from django.db.models import Q, Model
 
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError
+from polar.exceptions import UnsupportedError, UnexpectedPolarTypeError
+
+from .oso import get_model_name
 
 
-def partial_to_query_filter(partial, type_name):
+def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
     """
     Convert a partial expression to a django query ``Q`` object.
 
@@ -30,7 +32,7 @@ def partial_to_query_filter(partial, type_name):
         Q(is_private=False)
     """
 
-    q = translate_expr(partial, type_name)
+    q = translate_expr(partial, model, **kwargs)
     if q is None:
         return Q()
 
@@ -48,31 +50,35 @@ COMPARISONS = {
 }
 
 
-def translate_expr(expr: Expression, type_name: str, **kwargs):
+def translate_expr(expr: Expression, model: Model, **kwargs):
     """Translate a Polar expression to a Django Q object."""
     assert isinstance(expr, Expression), "expected a Polar expression"
 
     if expr.operator in COMPARISONS:
-        return compare_expr(expr, type_name, **kwargs)
+        return compare_expr(expr, model, **kwargs)
     elif expr.operator == "And":
-        return and_expr(expr, type_name, **kwargs)
+        return and_expr(expr, model, **kwargs)
     elif expr.operator == "Isa":
-        try:
-            assert expr.args[1].tag == type_name
-        except (AssertionError, IndexError, AttributeError, TypeError):
-            raise UnsupportedError(f"Unimplemented partial isa operation {expr}.")
+        for attr in dot_op_path(expr.args[0]):
+            model = getattr(model, attr).field.related_model
+        constraint_type = expr.args[1].tag
+        field_type = get_model_name(model)
+        if constraint_type != field_type:
+            raise UnexpectedPolarTypeError(
+                f"Type constraint violation on partial.\nConstraint: {constraint_type}; Field: {field_type}"
+            )
         return None
     elif expr.operator == "In":
-        return in_expr(expr, type_name, **kwargs)
+        return in_expr(expr, model, **kwargs)
     else:
         raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
 
 
-def and_expr(expr: Expression, type_name: str, **kwargs):
+def and_expr(expr: Expression, model: Model, **kwargs):
     assert expr.operator == "And"
     q = Q()
     for arg in expr.args:
-        expr = translate_expr(arg, type_name, **kwargs)
+        expr = translate_expr(arg, model, **kwargs)
         if expr:
             q = q & expr
     return q
@@ -122,11 +128,11 @@ def dot_op_path(expr):
     _this.created_by => ['created_by']
     _this.created_by.username => ['created_by', 'username']
 
-    None is returned if input is not a dot operation.
+    Empty list is returned if input is not a dot operation.
     """
 
     if not (isinstance(expr, Expression) and expr.operator == "Dot"):
-        return None
+        return []
 
     assert len(expr.args) == 2
 

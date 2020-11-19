@@ -146,6 +146,9 @@ def test_authorize_scalar_attribute_condition(post_fixtures):
     """Scalar attribute condition checks."""
     Oso.load_str(
         """
+        banned_user(user: test_app2::User) if
+            user.is_banned = true;
+
         # Object equals another object
         allow(actor: test_app2::User, "read", post: test_app2::Post) if
             post.created_by.is_banned = false and
@@ -159,7 +162,7 @@ def test_authorize_scalar_attribute_condition(post_fixtures):
         # moderator can see posts made by banned users.
         allow(actor: test_app2::User, "read", post: test_app2::Post) if
             actor.is_moderator = true and
-            post.created_by.is_banned = true;
+            banned_user(post.created_by);
         """
     )
 
