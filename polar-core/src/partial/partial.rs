@@ -87,34 +87,38 @@ impl Partial {
     }
 
     pub fn isa(&mut self, other: Term) -> Option<Box<dyn Runnable>> {
-        match other.value().as_pattern().unwrap().clone() {
-            Pattern::Dictionary(fields) => {
-                for (field, value) in fields.fields.into_iter().rev() {
+        match other.value() {
+            Value::Pattern(Pattern::Dictionary(fields)) => {
+                for (field, value) in fields.fields.iter().rev() {
                     self.add_constraint(op!(
                         Unify,
-                        term!(op!(Dot, self.variable_term(), term!(field))),
+                        term!(op!(Dot, self.variable_term(), term!(field.clone()))),
                         value.clone()
                     ));
                 }
                 None
             }
-            Pattern::Instance(InstanceLiteral { fields, tag }) => {
-                let isa_op = op!(Isa, self.variable_term(), term!(pattern!(instance!(tag))));
-                let constraint_check = Box::new(IsaConstraintCheck::new(
-                    self.constraints.clone(),
-                    isa_op.clone(),
-                ));
+            Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                let tag_pattern = term!(pattern!(instance!(tag.clone())));
+                let isa_op = op!(Isa, self.variable_term(), tag_pattern);
+                let existing = self.constraints.clone();
+                let check = Box::new(IsaConstraintCheck::new(existing, isa_op.clone()));
 
                 self.add_constraint(isa_op);
-                for (field, value) in fields.fields.into_iter().rev() {
+
+                for (field, value) in fields.fields.iter().rev() {
                     self.add_constraint(op!(
                         Unify,
-                        term!(op!(Dot, self.variable_term(), term!(field))),
+                        term!(op!(Dot, self.variable_term(), term!(field.clone()))),
                         value.clone()
                     ));
                 }
 
-                Some(constraint_check)
+                Some(check)
+            }
+            _ => {
+                self.unify(other);
+                None
             }
         }
     }
@@ -387,7 +391,8 @@ mod test {
                f(x: {id: 1}) if x matches {id: 2, bar: 2};
                f(x: {id: 1});
                f(x: {id: 1}) if x matches {id: 2};
-               f(x: {id: 1}) if x matches Post{id: 2};"#,
+               f(x: {id: 1}) if x matches Post{id: 2};
+               f(x: 1);"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let mut next_binding = || loop {
@@ -437,6 +442,7 @@ mod test {
             "a",
             "_this.id = 1 and _this matches Post{} and _this.id = 2"
         );
+        assert_partial_expression!(next_binding(), "a", "_this = 1");
         assert_query_done!(q);
         Ok(())
     }

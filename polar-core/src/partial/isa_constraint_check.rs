@@ -15,13 +15,9 @@ pub struct IsaConstraintCheck {
 
 impl IsaConstraintCheck {
     pub fn new(existing: Vec<Operation>, mut proposed: Operation) -> Self {
-        let proposed = proposed.args.pop().unwrap();
-        // TODO(gj): Support x matches 1.
-        assert!(matches!(proposed.value(), Value::Pattern(_)));
-
         Self {
             existing,
-            proposed,
+            proposed: proposed.args.pop().unwrap(),
             result: None,
             alternative_check: None,
             last_call_id: 0,
