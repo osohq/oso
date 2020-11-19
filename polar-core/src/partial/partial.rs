@@ -891,6 +891,4 @@ mod test {
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e.f = 1");
         Ok(())
     }
-
-    // TODO test for nested dot with compare.
 }
