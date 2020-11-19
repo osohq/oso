@@ -301,6 +301,7 @@ mod test {
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 2");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a = 3");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.b = 4");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -310,6 +311,7 @@ mod test {
         p.load_str("f(x, y, z) if x = y and x = z;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a"), 1, 2])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1 and _this = 2");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -328,6 +330,7 @@ mod test {
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 4");
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 5");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -343,6 +346,7 @@ mod test {
         assert_partial_expression!(next, "a", "_this matches Post{} and _this.foo = 1");
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this matches User{} and _this.bar = 1");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -463,6 +467,7 @@ mod test {
         p.load_str("positive(x) if x.a > 0 and 0 < x.a;")?;
         let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -475,6 +480,7 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.y.z > 0");
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(
@@ -482,6 +488,7 @@ mod test {
             "a",
             "_this.y = 0 and _this.y > 1 and _this.y.z > 1 and _this = 2"
         );
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -787,11 +794,11 @@ mod test {
             next_binding(&mut q)?,
             "a" => "(_this.bar = 1 and _this.baz = 2) in _this.values"
         );
-
         assert_partial_expressions!(
             next_binding(&mut q)?,
             "a" => "(_this.bar = 3) in _this.values"
         );
+        assert_query_done!(q);
 
         Ok(())
     }
