@@ -138,16 +138,6 @@ impl Simplifier {
 
         match arg.value() {
             Value::Variable(v) if v.is_this_var() => dot_op.clone(),
-            Value::Expression(Operation {
-                operator: Operator::Dot,
-                args,
-            }) => {
-                assert!(args[0].value().as_symbol().unwrap().is_this_var());
-                arg.clone_with_value(Value::Expression(Operation {
-                    operator: Operator::Dot,
-                    args: vec![dot_op.clone(), args[1].clone()],
-                }))
-            }
             Value::Expression(Operation { operator, args }) => {
                 arg.clone_with_value(Value::Expression(Operation {
                     operator: *operator,

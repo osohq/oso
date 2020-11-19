@@ -870,6 +870,11 @@ mod test {
         let p = Polar::new();
         p.load_str("f(x, y) if x = y.a.b.c;")?;
         p.load_str("f(x, y) if x > y.a.b.c and x < y.a.b and y.a.b.c > x;")?;
+        p.load_str("f(x, y) if x = y.a;")?;
+        p.load_str("f(x, y) if x = y.a.b;")?;
+        p.load_str("f(x, y) if x = y.a.b.c.d;")?;
+        p.load_str("f(x, y) if x = y.a.b.c.d.e;")?;
+        p.load_str("f(x, y) if x = y.a.b.c.d.e.f;")?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
 
@@ -879,6 +884,11 @@ mod test {
             "a",
             "_this.a.b.c < 1 and _this.a.b > 1 and _this.a.b.c > 1"
         );
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e.f = 1");
         Ok(())
     }
 
