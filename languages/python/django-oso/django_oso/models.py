@@ -8,6 +8,9 @@ from django_oso.auth import authorize_model
 class AuthorizedQuerySet(models.QuerySet):
     """``QuerySet`` with ``authorize()`` method."""
 
+    def __repr__(self):
+        return f"<AuthorizedQuerySet {self.query}>"
+
     def authorize(self, request, *, actor=None, action=None):
         """Return a new ``Queryset`` filtered to contain only authorized models.
 
