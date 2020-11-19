@@ -31,11 +31,21 @@ impl IsaConstraintCheck {
         }
     }
 
-    /// Check if the existing constraints set is compatible with the proposed
-    /// matches class.
+    /// Check if existing constraints are compatible with the proposed type constraint (`_this
+    /// matches Post{}`).
     ///
-    /// Returns: None if compatible, QueryEvent::Done { false } if incompatible,
-    /// or QueryEvent to ask for compatibility.
+    /// If the existing constraint is also a type constraint , we return a pair of
+    /// `QueryEvent::ExternalIsSubclass`es to check whether the type constraints are compatible.
+    /// The constraints are compatible if they are the same class or if either is a subclass of the
+    /// other.
+    ///
+    /// If the existing constraint is not a type constraint, there's no external check required,
+    /// and we return `None` to indicate compatibility.
+    ///
+    /// Returns:
+    /// - `None` if compatible.
+    /// - A pair of `QueryEvent::ExternalIsSubclass` checks if compatibility cannot be determined
+    /// locally.
     fn check_constraint(
         &mut self,
         mut constraint: Operation,
@@ -80,14 +90,17 @@ impl Runnable for IsaConstraintCheck {
 
         if let Some(result) = self.result.take() {
             if result {
+                // If the primary check succeeds, there's no need to check the alternative.
                 self.alternative_check = None;
             } else if self.alternative_check.is_none() {
+                // If both checks fail, we fail.
                 return Ok(QueryEvent::Done { result: false });
             }
         }
 
         let counter = counter.expect("IsaConstraintCheck requires a Counter");
         loop {
+            // If there's an alternative waiting to be checked, check it.
             if let Some(alternative) = self.alternative_check.take() {
                 return Ok(alternative);
             } else if let Some(constraint) = self.existing.pop() {
