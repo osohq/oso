@@ -100,9 +100,9 @@ impl Simplifier {
         partial.clone_with_constraints(constraints)
     }
 
-    /// If ``operation`` is an AND or OR operation with 1 argument, return the 1st argument.
+    /// If `operation` is a 1-arg AND or OR operation, return its argument.
     ///
-    /// Returns: Some(op) if a rewrite occured, or None.
+    /// Returns: Some(op) if a rewrite occurred; otherwise None.
     fn maybe_unwrap_single_argument_and_or(&self, operation: &Operation) -> Option<Operation> {
         match operation {
             // Unwrap a single-arg And or Or expression and fold the inner term.
@@ -124,7 +124,7 @@ impl Simplifier {
         }
     }
 
-    /// Subsitute the this variable in a constraint with a dot operation.
+    /// Substitute the this variable in a constraint with a dot operation.
     /// Given `this` and `x`, return `x`.
     /// Given `this.x` and `this.y`, return `this.x.y`.
     fn sub_this(arg: &Term, dot_op: &Term) -> Term {
@@ -148,7 +148,7 @@ impl Simplifier {
         }
     }
 
-    /// Substitute the _this variable in a list of constraints with a dot operation path.
+    /// Substitute the this variable in a list of constraints with a dot operation path.
     fn map_constraints(&mut self, constraints: &[Operation], dot_op: &Term) -> TermList {
         constraints
             .iter()

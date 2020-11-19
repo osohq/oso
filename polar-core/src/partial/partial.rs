@@ -858,9 +858,7 @@ mod test {
     fn test_nested_dot_in() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y) if x in y.a.b.c;")?;
-
         let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
-
         assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.a.b.c");
         Ok(())
     }
@@ -868,13 +866,15 @@ mod test {
     #[test]
     fn test_nested_dot_lookup() -> TestResult {
         let p = Polar::new();
-        p.load_str("f(x, y) if x = y.a.b.c;")?;
-        p.load_str("f(x, y) if x > y.a.b.c and x < y.a.b and y.a.b.c > x;")?;
-        p.load_str("f(x, y) if x = y.a;")?;
-        p.load_str("f(x, y) if x = y.a.b;")?;
-        p.load_str("f(x, y) if x = y.a.b.c.d;")?;
-        p.load_str("f(x, y) if x = y.a.b.c.d.e;")?;
-        p.load_str("f(x, y) if x = y.a.b.c.d.e.f;")?;
+        p.load_str(
+            r#"f(x, y) if x = y.a.b.c;
+               f(x, y) if x > y.a.b.c and x < y.a.b and y.a.b.c > x;
+               f(x, y) if x = y.a;
+               f(x, y) if x = y.a.b;
+               f(x, y) if x = y.a.b.c.d;
+               f(x, y) if x = y.a.b.c.d.e;
+               f(x, y) if x = y.a.b.c.d.e.f;"#
+        )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
 
