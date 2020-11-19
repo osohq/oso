@@ -873,7 +873,7 @@ mod test {
                f(x, y) if x = y.a.b;
                f(x, y) if x = y.a.b.c.d;
                f(x, y) if x = y.a.b.c.d.e;
-               f(x, y) if x = y.a.b.c.d.e.f;"#
+               f(x, y) if x = y.a.b.c.d.e.f;"#,
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
