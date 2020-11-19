@@ -2,12 +2,12 @@ use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Pattern, Symbol, Value};
+use crate::terms::{Operation, Operator, Pattern, Term, Value};
 
 #[derive(Clone)]
 pub struct IsaConstraintCheck {
     existing: Vec<Operation>,
-    proposed_tag: Option<Symbol>,
+    proposed: Term,
     result: Option<bool>,
     alternative_check: Option<QueryEvent>,
     last_call_id: u64,
@@ -15,16 +15,13 @@ pub struct IsaConstraintCheck {
 
 impl IsaConstraintCheck {
     pub fn new(existing: Vec<Operation>, mut proposed: Operation) -> Self {
-        let right = proposed.args.pop().unwrap();
-        let proposed_tag = if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
-            Some(instance.tag.clone())
-        } else {
-            None
-        };
+        let proposed = proposed.args.pop().unwrap();
+        // TODO(gj): Support x matches 1.
+        assert!(matches!(proposed.value(), Value::Pattern(_)));
 
         Self {
             existing,
-            proposed_tag,
+            proposed,
             result: None,
             alternative_check: None,
             last_call_id: 0,
@@ -56,38 +53,34 @@ impl IsaConstraintCheck {
         }
 
         let right = constraint.args.pop().unwrap();
-        if let Value::Pattern(Pattern::Instance(instance)) = right.value() {
-            let call_id = counter.next();
-            self.last_call_id = call_id;
+        match (self.proposed.value(), right.value()) {
+            (
+                Value::Pattern(Pattern::Instance(proposed)),
+                Value::Pattern(Pattern::Instance(existing)),
+            ) if proposed.tag != existing.tag => {
+                let call_id = counter.next();
+                self.last_call_id = call_id;
 
-            let existing = instance.tag.clone();
-            let proposed = self.proposed_tag.clone().unwrap();
-            return Some((
-                QueryEvent::ExternalIsSubclass {
-                    call_id,
-                    left_class_tag: proposed.clone(),
-                    right_class_tag: existing.clone(),
-                },
-                QueryEvent::ExternalIsSubclass {
-                    call_id,
-                    left_class_tag: existing,
-                    right_class_tag: proposed,
-                },
-            ));
-
-            // TODO check fields for compatibility.
+                Some((
+                    QueryEvent::ExternalIsSubclass {
+                        call_id,
+                        left_class_tag: proposed.tag.clone(),
+                        right_class_tag: existing.tag.clone(),
+                    },
+                    QueryEvent::ExternalIsSubclass {
+                        call_id,
+                        left_class_tag: existing.tag.clone(),
+                        right_class_tag: proposed.tag.clone(),
+                    },
+                ))
+            }
+            _ => None,
         }
-
-        None
     }
 }
 
 impl Runnable for IsaConstraintCheck {
     fn run(&mut self, counter: Option<&mut Counter>) -> PolarResult<QueryEvent> {
-        if self.proposed_tag.is_none() {
-            return Ok(QueryEvent::Done { result: true });
-        }
-
         if let Some(result) = self.result.take() {
             if result {
                 // If the primary check succeeds, there's no need to check the alternative.

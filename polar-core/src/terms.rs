@@ -205,6 +205,16 @@ impl Value {
         }
     }
 
+    pub fn as_pattern(&self) -> Result<&Pattern, error::RuntimeError> {
+        match self {
+            Value::Pattern(p) => Ok(p),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected pattern, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
     pub fn is_ground(&self) -> bool {
         match self {
             Value::Call(_)

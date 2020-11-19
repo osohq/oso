@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{
+    Dictionary, InstanceLiteral, Operation, Operator, Pattern, Symbol, Term, Value,
+};
 
 use super::isa_constraint_check::IsaConstraintCheck;
 
@@ -84,16 +86,37 @@ impl Partial {
         self.add_constraint(op);
     }
 
-    pub fn isa(&mut self, other: Term) -> Box<dyn Runnable> {
-        let isa_op = op!(Isa, self.variable_term(), other);
+    pub fn isa(&mut self, other: Term) -> Option<Box<dyn Runnable>> {
+        match other.value().as_pattern().unwrap().clone() {
+            Pattern::Dictionary(fields) => {
+                for (field, value) in fields.fields.into_iter().rev() {
+                    self.add_constraint(op!(
+                        Unify,
+                        term!(op!(Dot, self.variable_term(), term!(field))),
+                        value.clone()
+                    ));
+                }
+                None
+            }
+            Pattern::Instance(InstanceLiteral { fields, tag }) => {
+                let isa_op = op!(Isa, self.variable_term(), term!(pattern!(instance!(tag))));
+                let constraint_check = Box::new(IsaConstraintCheck::new(
+                    self.constraints.clone(),
+                    isa_op.clone(),
+                ));
 
-        let constraint_check = Box::new(IsaConstraintCheck::new(
-            self.constraints.clone(),
-            isa_op.clone(),
-        ));
+                self.add_constraint(isa_op);
+                for (field, value) in fields.fields.into_iter().rev() {
+                    self.add_constraint(op!(
+                        Unify,
+                        term!(op!(Dot, self.variable_term(), term!(field))),
+                        value.clone()
+                    ));
+                }
 
-        self.add_constraint(isa_op);
-        constraint_check
+                Some(constraint_check)
+            }
+        }
     }
 
     /// Add a constraint that this must contain some known value.
@@ -353,11 +376,68 @@ mod test {
     #[test]
     fn test_partial_isa_with_fields() -> TestResult {
         let p = Polar::new();
-        p.load_str("f(x: Post{id: 1});")?;
+        p.load_str(
+            r#"f(x: Post{id: 1});
+               f(x: Post{id: 1}) if x matches {id: 2};
+               f(x: Post{id: 1}) if x matches Post{id: 2};
+               f(x: Post{id: 1}) if x matches User{id: 2}; # Will fail.
+               f(x: Post{id: 1}) if x matches {id: 2, bar: 2};
+               f(x: Post{id: 1, bar: 1}) if x matches User{id: 2}; # Will fail.
+               f(x: {id: 1, bar: 1}) if x matches {id: 2};
+               f(x: {id: 1}) if x matches {id: 2, bar: 2};
+               f(x: {id: 1});
+               f(x: {id: 1}) if x matches {id: 2};
+               f(x: {id: 1}) if x matches Post{id: 2};"#,
+        )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
-        let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        let mut next_binding = || loop {
+            match q.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                } => {
+                    q.question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))
+                        .unwrap();
+                }
+                _ => panic!("not bindings"),
+            }
+        };
+        assert_partial_expression!(next_binding(), "a", "_this matches Post{} and _this.id = 1");
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2 and _this.bar = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this.id = 1 and _this.bar = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this.id = 1 and _this.id = 2 and _this.bar = 2"
+        );
+        assert_partial_expression!(next_binding(), "a", "_this.id = 1");
+        assert_partial_expression!(next_binding(), "a", "_this.id = 1 and _this.id = 2");
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this.id = 1 and _this matches Post{} and _this.id = 2"
+        );
+        assert_query_done!(q);
         Ok(())
     }
 
