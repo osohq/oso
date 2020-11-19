@@ -29,75 +29,13 @@ pub struct Simplifier;
 impl Folder for Simplifier {
     /// Deduplicate constraints.
     fn fold_partial(&mut self, partial: Partial) -> Partial {
-        let mut seen: HashSet<&Operation> = HashSet::new();
-        let ops = partial
-            .constraints()
-            .iter()
-            .filter(|o| seen.insert(o))
-            .cloned()
-            .collect();
-        fold_partial(partial.clone_with_constraints(ops), self)
+        fold_partial(self.deduplicate_constraints(partial), self)
     }
 
     fn fold_operation(&mut self, mut o: Operation) -> Operation {
-        fn maybe_unwrap_operation(o: &Operation) -> Option<Operation> {
-            match o {
-                // Unwrap a single-arg And or Or expression and fold the inner term.
-                Operation {
-                    operator: Operator::And,
-                    args,
-                }
-                | Operation {
-                    operator: Operator::Or,
-                    args,
-                } if args.len() == 1 => {
-                    if let Value::Expression(op) = args[0].value() {
-                        Some(op.clone())
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            }
-        }
-
-        if let Some(op) = maybe_unwrap_operation(&o) {
+        if let Some(op) = self.maybe_unwrap_single_argument_and_or(&o) {
             o = op;
         }
-
-        /// Given `this` and `x`, return `x`.
-        /// Given `this.x` and `this.y`, return `this.x.y`.
-        fn sub_this(arg: &Term, expr: &Term) -> Term {
-            match (arg.value(), expr.value()) {
-                (Value::Variable(v), _) if v.is_this_var() => expr.clone(),
-                (
-                    Value::Expression(Operation {
-                        operator: Operator::Dot,
-                        args,
-                    }),
-                    Value::Expression(Operation {
-                        operator: Operator::Dot,
-                        ..
-                    }),
-                ) => arg.clone_with_value(Value::Expression(Operation {
-                    operator: Operator::Dot,
-                    args: vec![expr.clone(), args[1].clone()],
-                })),
-                _ => arg.clone(),
-            }
-        }
-
-        // Optionally sub `expr` into each of the arguments of the partial's constraints.
-        let mut map_constraints = |constraints: &[Operation], expr: &Term| -> TermList {
-            constraints
-                .iter()
-                .map(|c| Operation {
-                    operator: c.operator,
-                    args: c.args.iter().map(|arg| sub_this(arg, expr)).collect(),
-                })
-                .map(|c| expr.clone_with_value(Value::Expression(fold_operation(c, self))))
-                .collect()
-        };
 
         match o.operator {
             Operator::Neq => {
@@ -108,10 +46,10 @@ impl Folder for Simplifier {
                     args: match (left.value(), right.value()) {
                         // Distribute **inverted** expression over the partial.
                         (Value::Partial(c), Value::Expression(_)) => {
-                            map_constraints(&c.inverted_constraints(0), right)
+                            self.map_constraints(&c.inverted_constraints(0), right)
                         }
                         (Value::Expression(_), Value::Partial(c)) => {
-                            map_constraints(&c.inverted_constraints(0), left)
+                            self.map_constraints(&c.inverted_constraints(0), left)
                         }
                         _ => return fold_operation(o, self),
                     },
@@ -125,10 +63,10 @@ impl Folder for Simplifier {
                     args: match (left.value(), right.value()) {
                         // Distribute expression over the partial.
                         (Value::Partial(c), Value::Expression(_)) => {
-                            map_constraints(c.constraints(), right)
+                            self.map_constraints(c.constraints(), right)
                         }
                         (Value::Expression(_), Value::Partial(c)) => {
-                            map_constraints(c.constraints(), left)
+                            self.map_constraints(c.constraints(), left)
                         }
                         _ => return fold_operation(o, self),
                     },
@@ -146,6 +84,84 @@ impl Folder for PartialToExpression {
             Value::Partial(partial) => fold_term(partial.clone().into_expression(), self),
             _ => fold_term(t, self),
         }
+    }
+}
+
+impl Simplifier {
+    /// Remove duplicate constraints from a partial.
+    fn deduplicate_constraints(&mut self, partial: Partial) -> Partial {
+        let mut seen: HashSet<&Operation> = HashSet::new();
+        let constraints = partial
+            .constraints()
+            .iter()
+            .filter(|o| seen.insert(o))
+            .cloned()
+            .collect();
+        partial.clone_with_constraints(constraints)
+    }
+
+    /// If `operation` is a 1-arg AND or OR operation, return its argument.
+    ///
+    /// Returns: Some(op) if a rewrite occurred; otherwise None.
+    fn maybe_unwrap_single_argument_and_or(&self, operation: &Operation) -> Option<Operation> {
+        match operation {
+            // Unwrap a single-arg And or Or expression and fold the inner term.
+            Operation {
+                operator: Operator::And,
+                args,
+            }
+            | Operation {
+                operator: Operator::Or,
+                args,
+            } if args.len() == 1 => {
+                if let Value::Expression(op) = args[0].value() {
+                    Some(op.clone())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Substitute the this variable in a constraint with a dot operation.
+    /// Given `this` and `x`, return `x`.
+    /// Given `this.x` and `this.y`, return `this.x.y`.
+    fn sub_this(arg: &Term, dot_op: &Term) -> Term {
+        assert!(matches!(
+            dot_op.value(),
+            Value::Expression(Operation {
+                operator: Operator::Dot,
+                ..
+            })
+        ));
+
+        match arg.value() {
+            Value::Variable(v) if v.is_this_var() => dot_op.clone(),
+            Value::Expression(Operation { operator, args }) => {
+                arg.clone_with_value(Value::Expression(Operation {
+                    operator: *operator,
+                    args: args.iter().map(|arg| Self::sub_this(arg, dot_op)).collect(),
+                }))
+            }
+            _ => arg.clone(),
+        }
+    }
+
+    /// Substitute the this variable in a list of constraints with a dot operation path.
+    fn map_constraints(&mut self, constraints: &[Operation], dot_op: &Term) -> TermList {
+        constraints
+            .iter()
+            .map(|c| Operation {
+                operator: c.operator,
+                args: c
+                    .args
+                    .iter()
+                    .map(|arg| Self::sub_this(arg, dot_op))
+                    .collect(),
+            })
+            .map(|c| dot_op.clone_with_value(Value::Expression(fold_operation(c, self))))
+            .collect()
     }
 }
 

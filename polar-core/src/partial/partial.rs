@@ -853,4 +853,42 @@ mod test {
         assert_query_done!(q);
         Ok(())
     }
+
+    #[test]
+    fn test_nested_dot_in() -> TestResult {
+        let p = Polar::new();
+        p.load_str("f(x, y) if x in y.a.b.c;")?;
+        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.a.b.c");
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_dot_lookup() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(x, y) if x = y.a.b.c;
+               f(x, y) if x > y.a.b.c and x < y.a.b and y.a.b.c > x;
+               f(x, y) if x = y.a;
+               f(x, y) if x = y.a.b;
+               f(x, y) if x = y.a.b.c.d;
+               f(x, y) if x = y.a.b.c.d.e;
+               f(x, y) if x = y.a.b.c.d.e.f;"#,
+        )?;
+
+        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
+
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c = 1");
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "_this.a.b.c < 1 and _this.a.b > 1 and _this.a.b.c > 1"
+        );
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e = 1");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c.d.e.f = 1");
+        Ok(())
+    }
 }
