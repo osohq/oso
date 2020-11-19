@@ -461,7 +461,11 @@ mod test {
                g(x: Post) if x.post = 1;
                g(x: PostSubclass) if x.post_subclass = 1;
                g(x: User) if x.user = 1;
-               g(x: UserSubclass) if x.user_subclass = 1;"#,
+               g(x: UserSubclass) if x.user_subclass = 1;
+
+               f(x: Foo) if h(x.y);
+               h(x: Bar) if x.z = 1;
+               h(x: Baz) if x.z = 1;"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let mut next_binding = || loop {
@@ -497,6 +501,16 @@ mod test {
             next_binding(),
             "a",
             "_this matches User{} and _this.bar = 1 and _this matches UserSubclass{} and _this.user_subclass = 1"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Foo{} and _this.y matches Bar{} and _this.y.z = 1"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Foo{} and _this.y matches Baz{} and _this.y.z = 1"
         );
         assert_query_done!(q);
         Ok(())
