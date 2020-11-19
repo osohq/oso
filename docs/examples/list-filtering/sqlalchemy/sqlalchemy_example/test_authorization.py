@@ -3,10 +3,9 @@ from pathlib import Path
 import pytest
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
 from oso import Oso
-from sqlalchemy_oso.hooks import authorize_query
+from sqlalchemy_oso.hooks import authorized_sessionmaker
 from sqlalchemy_oso.auth import register_models
 
 from .models import Post, User, Model
@@ -20,12 +19,20 @@ def engine():
     return engine
 
 @pytest.fixture
-def session(engine):
-    return Session(
+def authorization_data():
+    return {
+        'user': None,
+        'action': "read"
+    }
+
+@pytest.fixture
+def session(engine, oso, authorization_data):
+    return authorized_sessionmaker(
         bind=engine,
-        # Baked queries must be disabled to use oso.
-        enable_baked_queries=False
-    )
+        get_oso=lambda: oso,
+        get_user=lambda: authorization_data['user'],
+        get_action=lambda: authorization_data['action']
+    )()
 
 @pytest.fixture
 def oso():
@@ -62,31 +69,26 @@ def test_data(session):
 
     return models
 
-def test_basic(oso, policy, session, test_data):
+def test_basic(oso, policy, session, test_data, authorization_data):
+    authorization_data['user'] = test_data['user']
     posts = session.query(Post)
 
-    authorized_posts = authorize_query(
-        posts,
-        lambda: oso,
-        lambda: test_data['user'],
-        lambda: 'read')
+    assert posts.count() == 3
+    assert test_data['public_user_post'] in posts
+    assert test_data['private_user_post'] in posts
+    assert test_data['public_manager_post'] in posts
 
-    assert authorized_posts.count() == 3
-    assert test_data['public_user_post'] in authorized_posts
-    assert test_data['private_user_post'] in authorized_posts
-    assert test_data['public_manager_post'] in authorized_posts
-
-def test_manages(oso, policy, session, test_data):
+def test_manages(oso, policy, session, test_data, authorization_data):
+    authorization_data['user'] = test_data['manager']
     posts = session.query(Post)
 
-    authorized_posts = authorize_query(
-        posts,
-        lambda: oso,
-        lambda: test_data['manager'],
-        lambda: 'read')
+    assert posts.count() == 4
+    assert test_data['public_user_post'] in posts
+    assert test_data['private_user_post'] in posts
+    assert test_data['public_manager_post'] in posts
+    assert test_data['private_manager_post'] in posts
 
-    assert authorized_posts.count() == 4
-    assert test_data['public_user_post'] in authorized_posts
-    assert test_data['private_user_post'] in authorized_posts
-    assert test_data['public_manager_post'] in authorized_posts
-    assert test_data['private_manager_post'] in authorized_posts
+def test_user_access(oso, policy, session, test_data, authorization_data):
+    authorization_data['user'] = test_data['user']
+    users = session.query(User)
+    assert users.count() == 2

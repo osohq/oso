@@ -6,3 +6,5 @@ allow(user: User, "read", post: Post) if
 
 allow(user: User, "read", post: Post) if
     post.access_level = "private" and post.created_by in user.manages;
+
+allow(_: User, "read", _: User);
