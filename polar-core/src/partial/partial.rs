@@ -857,11 +857,11 @@ mod test {
     #[test]
     fn test_nested_dot_in() -> TestResult {
         let p = Polar::new();
-        p.load_str("f(x, y) if x in y.a.b.c;");
+        p.load_str("f(x, y) if x in y.a.b.c;")?;
 
-        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false)?;
+        let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
 
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "1 in _this.a.b.c");
         Ok(())
     }
 
@@ -869,10 +869,18 @@ mod test {
     fn test_nested_dot_lookup() -> TestResult {
         let p = Polar::new();
         p.load_str("f(x, y) if x = y.a.b.c;")?;
+        p.load_str("f(x, y) if x > y.a.b.c and x < y.a.b and y.a.b.c > x;")?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [1, partial!("a")])), false);
 
-        assert_partial_expression!(next_binding(&mut q)?, "a", "_this");
+        assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a.b.c = 1");
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "_this.a.b.c < 1 and _this.a.b > 1 and _this.a.b.c > 1"
+        );
         Ok(())
     }
+
+    // TODO test for nested dot with compare.
 }
