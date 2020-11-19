@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605727259884,
+  "lastUpdate": 1605747300162,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13587,6 +13587,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 39112,
             "range": "± 2475",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d39a22401fcb3f9ef14a3dbde6ea6963ee164d1",
+          "message": "Generalize sub_this to handle levels of nesting > 2. (#534)\n\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-11-18T19:51:32-05:00",
+          "tree_id": "2bd02ff82e401a4bf2a18cb12b4e54d1a26a7f70",
+          "url": "https://github.com/osohq/oso/commit/5d39a22401fcb3f9ef14a3dbde6ea6963ee164d1"
+        },
+        "date": 1605747298366,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 39056,
+            "range": "± 1555",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 43834,
+            "range": "± 2954",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 43897,
+            "range": "± 3096",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 44064,
+            "range": "± 3089",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 43901,
+            "range": "± 3067",
             "unit": "ns/iter"
           }
         ]
