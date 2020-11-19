@@ -29,7 +29,7 @@ class AuthorizedQuerySet(models.QuerySet):
         except PermissionDenied:
             return self.none()
 
-        return self.filter(filter)
+        return self.filter(pk__in=self.filter(filter).distinct())
 
 
 class AuthorizedModel(models.Model):
