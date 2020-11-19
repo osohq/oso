@@ -24,16 +24,15 @@ impl IsaConstraintCheck {
         }
     }
 
-    /// Check if existing constraints are compatible with the proposed type constraint (`_this
-    /// matches Post{}`).
+    /// Check if existing constraints are compatible with the proposed constraint.
     ///
-    /// If the existing constraint is also a type constraint , we return a pair of
-    /// `QueryEvent::ExternalIsSubclass`es to check whether the type constraints are compatible.
-    /// The constraints are compatible if they are the same class or if either is a subclass of the
-    /// other.
+    /// If either the existing or proposed constraint is not a type constraint or if they are
+    /// constraints for the same type, there's no external check required, and we return `None` to
+    /// indicate compatibility.
     ///
-    /// If the existing constraint is not a type constraint, there's no external check required,
-    /// and we return `None` to indicate compatibility.
+    /// Otherwise, we return a pair of `QueryEvent::ExternalIsSubclass`es to check whether the type
+    /// constraints are compatible. The constraints are compatible if either of their types is a
+    /// subclass of the other's.
     ///
     /// Returns:
     /// - `None` if compatible.
@@ -44,6 +43,8 @@ impl IsaConstraintCheck {
         mut constraint: Operation,
         counter: &Counter,
     ) -> Option<(QueryEvent, QueryEvent)> {
+        // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
+        // partial, Integer)`.
         if constraint.operator != Operator::Isa {
             return None;
         }

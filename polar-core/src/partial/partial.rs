@@ -89,6 +89,7 @@ impl Partial {
     pub fn isa(&mut self, other: Term) -> Option<Box<dyn Runnable>> {
         match other.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
+                // Add field constraints.
                 for (field, value) in fields.fields.iter().rev() {
                     self.add_constraint(op!(
                         Unify,
@@ -99,13 +100,16 @@ impl Partial {
                 None
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                // Construct field-less Isa operation since field constraints will be added
+                // separately.
                 let tag_pattern = term!(pattern!(instance!(tag.clone())));
-                let isa_op = op!(Isa, self.variable_term(), tag_pattern);
+                let type_constraint = op!(Isa, self.variable_term(), tag_pattern);
                 let existing = self.constraints.clone();
-                let check = Box::new(IsaConstraintCheck::new(existing, isa_op.clone()));
+                let check = Box::new(IsaConstraintCheck::new(existing, type_constraint.clone()));
 
-                self.add_constraint(isa_op);
+                self.add_constraint(type_constraint);
 
+                // Add field constraints.
                 for (field, value) in fields.fields.iter().rev() {
                     self.add_constraint(op!(
                         Unify,
@@ -117,6 +121,7 @@ impl Partial {
                 Some(check)
             }
             _ => {
+                // Punt to unify for non-patterns.
                 self.unify(other);
                 None
             }
