@@ -411,6 +411,9 @@ def tag_nested_many_many_fixtures():
     random_post.tags.set([random])
     all_tagged_post.tags.set([eng, user_posts, random])
 
+    user.posts.set([user_eng_post, user_user_post, not_tagged_post, all_tagged_post])
+    other_user.posts.set([random_post])
+
     return posts
 
 
@@ -447,6 +450,34 @@ def test_nested_relationship_many_many(tag_nested_many_many_fixtures):
     assert tag_nested_many_many_fixtures["random_post"] in posts
     assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
     assert tag_nested_many_many_fixtures["all_tagged_post"] in posts
+
+
+@pytest.mark.django_db
+def test_partial_in_collection(tag_nested_many_many_fixtures):
+    Oso.load_str(
+        """
+            allow(user: test_app2::User, "read", post: test_app2::Post) if
+                post in user.posts.all();
+        """
+    )
+
+    user = User.objects.get(username="user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    assert tag_nested_many_many_fixtures["user_eng_post"] in posts
+    assert tag_nested_many_many_fixtures["user_user_post"] in posts
+    assert tag_nested_many_many_fixtures["random_post"] not in posts
+    assert tag_nested_many_many_fixtures["not_tagged_post"] in posts
+    assert tag_nested_many_many_fixtures["all_tagged_post"] in posts
+
+    user = User.objects.get(username="other_user")
+    authorize_filter = authorize_model(None, Post, actor=user, action="read")
+    posts = Post.objects.filter(authorize_filter)
+    assert tag_nested_many_many_fixtures["user_eng_post"] not in posts
+    assert tag_nested_many_many_fixtures["user_user_post"] not in posts
+    assert tag_nested_many_many_fixtures["random_post"] in posts
+    assert tag_nested_many_many_fixtures["not_tagged_post"] not in posts
+    assert tag_nested_many_many_fixtures["all_tagged_post"] not in posts
 
 
 # todo test_nested_relationship_single_many

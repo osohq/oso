@@ -84,15 +84,21 @@ def and_expr(expr: Expression, model: Model, **kwargs):
     return q
 
 
-def compare_expr(expr: Expression, _type_name: str, path=[], **kwargs):
+def compare_expr(expr: Expression, _model: Model, path=[], **kwargs):
     q = Q()
     (left, right) = expr.args
     left_path = dot_op_path(left)
-    assert left_path, "this arg should be normalized to LHS"
-    return COMPARISONS[expr.operator](q, "__".join(path + left_path), right)
+    if left_path:
+        return COMPARISONS[expr.operator](q, "__".join(path + left_path), right)
+    else:
+        if isinstance(right, Model):
+            right = right.pk
+        else:
+            raise UnsupportedError(f"Unsupported comparison: {expr}")
+        return COMPARISONS[expr.operator](q, "__".join(path + ["pk"]), right)
 
 
-def in_expr(expr: Expression, type_name: str, path=[], **kwargs):
+def in_expr(expr: Expression, model: Model, path=[], **kwargs):
     assert expr.operator == "In"
     q = Q()
     (left, right) = expr.args
@@ -103,14 +109,14 @@ def in_expr(expr: Expression, type_name: str, path=[], **kwargs):
     if isinstance(left, Expression):
         if left.operator == "And":
             # Distribute the expression over the "In".
-            return and_expr(left, type_name, path=right_path, **kwargs)
+            return and_expr(left, model, path=right_path, **kwargs)
         elif left.operator == "In":
             # Nested in operations.
-            return in_expr(left, type_name, path=right_path, **kwargs)
+            return in_expr(left, model, path=right_path, **kwargs)
         elif left.operator in COMPARISONS:
             # `tag in post.tags and tag.created_by = user` where `post` is a
             # partial and `user` is a Django instance.
-            return compare_expr(left, type_name, path=right_path, **kwargs)
+            return compare_expr(left, model, path=right_path, **kwargs)
         else:
             assert False, f"Unhandled expression {left}"
     else:
