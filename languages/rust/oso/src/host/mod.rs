@@ -112,7 +112,7 @@ impl Host {
         tracing::trace!("instances: {:?}", self.instances.keys().collect::<Vec<_>>());
         self.instances
             .get(&id)
-            .ok_or_else(|| OsoError::MissingInstanceError)
+            .ok_or(OsoError::MissingInstanceError)
     }
 
     pub fn cache_instance(&mut self, instance: class::Instance, id: Option<u64>) -> u64 {

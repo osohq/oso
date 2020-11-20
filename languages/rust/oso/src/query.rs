@@ -295,7 +295,7 @@ impl ResultSet {
 
     pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
         self.get(name)
-            .ok_or_else(|| crate::OsoError::FromPolar)
+            .ok_or(crate::OsoError::FromPolar)
             .and_then(T::from_polar)
     }
 }
