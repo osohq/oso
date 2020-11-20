@@ -82,7 +82,7 @@ impl<'kb> SingletonVisitor<'kb> {
                     .get_source_id()
                     .and_then(|id| self.kb.sources.get_source(id))
                 {
-                    msg.push_str("\n");
+                    msg.push('\n');
                     msg.push_str(&source_lines(source, term.offset(), 0));
                 }
                 msg

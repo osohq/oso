@@ -112,7 +112,7 @@ pub fn main() -> anyhow::Result<()> {
     load_files(&mut oso, &mut args)?;
     loop {
         // get input
-        let mut input: String = match repl.oso_input("query> ") {
+        let input: String = match repl.oso_input("query> ") {
             Ok(input) => input,
             Err(e) => {
                 eprintln!("Readline error: {}", e);
@@ -120,13 +120,12 @@ pub fn main() -> anyhow::Result<()> {
             }
         };
 
-        if input.starts_with("%def") {
-            if let Err(e) = oso.load_str(&input[4..]) {
+        if let Some(define) = input.strip_prefix("%def") {
+            if let Err(e) = oso.load_str(define) {
                 println!("{}", e);
             }
             continue;
         }
-        input.pop(); // remove trailing `;`
         let mut query = match oso.query(&input) {
             Err(e) => {
                 println!("{}", e);
