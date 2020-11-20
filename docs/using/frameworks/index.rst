@@ -15,6 +15,7 @@ streamline the process of adding oso to your application.
 
    flask
    django
+   sqlalchemy
 
 What do you think?
 ==================

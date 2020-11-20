@@ -66,6 +66,7 @@ Using oso, you can:
    getting-started/application/index
    Writing Policies <getting-started/policies/index>
    Role-Based Access Control <getting-started/rbac>
+   List Filtering <getting-started/list-filtering/index>
 
 .. toctree::
    :maxdepth: 1

@@ -81,6 +81,7 @@ python-test:
 	cd examples/rbac/python && pytest .
 	cd examples/context/python && pytest .
 	cd examples/user_types/python && pytest .
+	cd examples/list-filtering/sqlalchemy && pytest sqlalchemy_example
 
 ruby-test:
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb
