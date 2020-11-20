@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605747300162,
+  "lastUpdate": 1605906729742,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13641,6 +13641,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 43901,
             "range": "± 3067",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cb9620712de4e99fd947332538ba24d2907c1a13",
+          "message": "Fix new clippy issues. (#539)",
+          "timestamp": "2020-11-20T16:08:21-05:00",
+          "tree_id": "06014d2928d72bb87229a7e8dcf639e14d07700b",
+          "url": "https://github.com/osohq/oso/commit/cb9620712de4e99fd947332538ba24d2907c1a13"
+        },
+        "date": 1605906727823,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46422,
+            "range": "± 1755",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 51602,
+            "range": "± 3612",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 51608,
+            "range": "± 3792",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 51634,
+            "range": "± 3629",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 51549,
+            "range": "± 3674",
             "unit": "ns/iter"
           }
         ]
