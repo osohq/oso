@@ -54,4 +54,66 @@ rules:
 
 Note that these rules are written over single model objects.
 
-Let's test out the policy in a REPL::
+.. todo:: Formatting is unfortunate but continuing...
+
+Let's test out the policy in a REPL:
+
+.. mdinclude:: ../../examples/list-filtering/sqlalchemy/example.md
+
+How oso authorizes SQLAlchemy Data
+==================================
+
+As you can see from the above example, the SQLAlchemy oso integration allows
+regular SQLAlchemy queries to be executed with authorization applied.
+
+To accomplish this, oso has a custom query class that applies authorization
+filters based on the loaded policy before the query is executed.
+
+Before compiling a SQLAlchemy query, the entities in the query are authorized
+with oso.  oso returns authorization decisions for each entity that indicate
+what constraints must be met for the entity to be authorized.  These constraints
+are then translated into filters on the SQLAlchemy query object.
+
+For example, our above policy has the following code:
+
+.. code-block:: polar
+
+    allow(user: User, "read", post: Post) if
+        post.access_level = "private" and post.created_by = user;
+
+The oso library converts the constraints on Post expressed in this policy into a
+SQLAlchemy query like::
+
+    session.query(Post)
+        .filter(Post.access_level == "private" & Post.created_by == user)
+
+This translation makes the policy an effective abstraction for expressing
+policies that must be enforced over objects stored in a database.
+
+Limitations
+===========
+
+This feature is still under active development. Most unsupported policies will
+cause a runtime error rather than incorrect authorization behavior. More
+policies will be supported as we continue working on this feature.  The
+SQLAlchemy adaptor is ready for evaluation and testing. However, we recommending
+getting in touch with us before using it in production.  Join our Slack_.
+
+There are some operators and features of Polar that do not currently work with
+the SQLAlchemy Library when used **anywhere in the policy**:
+
+- the ``cut`` operator
+- rules that rely on ordered execution based on class inheritance
+- negated queries using the ``not`` operator that contain a ``matches`` operator
+  within the negation
+
+Some operations cannot be performed on **resources** in ``allow`` rules used with
+the SQLAlchemy adaptor.  These operations can still be used on the actor or
+action:
+
+- application method calls
+- the ``matches`` operator with fields (``x matches Foo{a: 1}``).
+- rule specializers with fields (``allow(_, _, _: Foo{a: 1}) if ...;``)
+- arithmetic operators
+
+.. _Slack: http://join-slack.osohq.com/
