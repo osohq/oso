@@ -118,13 +118,11 @@ def test_authorize_scalar_attribute_eq(post_fixtures):
     # Object equals another object
     Oso.load_str(
         """
-        allow(actor: test_app2::User, "read", post: test_app2::Post) if
-            post.created_by = actor and
-            post.access_level = "private";
-        allow(_: test_app2::User, "read", post: test_app2::Post) if
-            post.access_level = "public";
+        allow(actor: test_app2::User, "read", post: test_app2::Post{created_by: actor, access_level: "private"});
+        allow(_: test_app2::User, "read", post) if
+            post matches test_app2::Post{access_level: "public"};
         allow(_: test_app2::User{is_moderator: true}, "read", post: test_app2::Post) if
-            post.access_level = "public";
+            post matches {access_level: "public"};
         """
     )
 
