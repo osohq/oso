@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605906729742,
+  "lastUpdate": 1605975009093,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13695,6 +13695,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 51549,
             "range": "± 3674",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a3008689c2cbf86764c46cbf0132d92dc357be81",
+          "message": "Update 'Wrong value type' error message (#540)",
+          "timestamp": "2020-11-21T11:05:24-05:00",
+          "tree_id": "6b2f7921d708851da32a7c03e551ad7a2990fb55",
+          "url": "https://github.com/osohq/oso/commit/a3008689c2cbf86764c46cbf0132d92dc357be81"
+        },
+        "date": 1605975007181,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46913,
+            "range": "± 1955",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 52464,
+            "range": "± 3462",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52423,
+            "range": "± 4887",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52417,
+            "range": "± 3593",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52372,
+            "range": "± 3537",
             "unit": "ns/iter"
           }
         ]
