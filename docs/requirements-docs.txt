@@ -8,3 +8,5 @@ sphinx-tabs
 sphinxcontrib-spelling
 sphinx-copybutton
 sphinx-material
+# Temporary fix
+git+https://github.com/samscott89/sphinx-notfound-page@master
