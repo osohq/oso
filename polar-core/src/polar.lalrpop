@@ -276,7 +276,7 @@ ExpectLogical<T>: Term = {
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Value(term) => {
-                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical".to_string() } })
+                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } })
             },
             ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => Ok(t)
         }
