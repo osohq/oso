@@ -1,7 +1,7 @@
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Model
 
-from .oso import Oso, get_model_name
+from .oso import Oso, polar_model_name
 from polar.partial import Partial, TypeConstraint
 
 from .partial import partial_to_query_filter
@@ -76,7 +76,7 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
         action = request.method
 
     assert issubclass(model, Model), f"Expected a model; received: {model}"
-    partial_resource = Partial("resource", TypeConstraint(get_model_name(model)))
+    partial_resource = Partial("resource", TypeConstraint(polar_model_name(model)))
     results = Oso.query_rule("allow", actor, action, partial_resource)
 
     filter = None

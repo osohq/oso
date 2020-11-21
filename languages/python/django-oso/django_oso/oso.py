@@ -14,10 +14,14 @@ Use for loading policy files and registering classes.
 """
 
 
-def get_model_name(model):
+def polar_model_name(model):
     app_name = model._meta.app_label
     app_namespace = app_name.replace(".", "::")
     return f"{app_namespace}::{model.__name__}"
+
+
+def django_model_name(polar_name: str):
+    return polar_name.replace("::", ".")
 
 
 def init_oso():
@@ -30,7 +34,7 @@ def init_oso():
     # Register all models.
     for app in apps.get_app_configs():
         for model in app.get_models():
-            register_class(model, get_model_name(model))
+            register_class(model, polar_model_name(model))
 
     # Custom registration for auth (AnonymousUser)
     if apps.is_installed("django.contrib.auth"):

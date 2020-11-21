@@ -1,10 +1,11 @@
 from django.db.models import Q, Model
+from django.apps import apps
 
 from polar.expression import Expression
 from polar.variable import Variable
 from polar.exceptions import UnsupportedError, UnexpectedPolarTypeError
 
-from .oso import get_model_name
+from .oso import polar_model_name, django_model_name
 
 
 def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
@@ -61,11 +62,10 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
     elif expr.operator == "Isa":
         for attr in dot_op_path(expr.args[0]):
             model = getattr(model, attr).field.related_model
-        constraint_type = expr.args[1].tag
-        field_type = get_model_name(model)
-        if constraint_type != field_type:
+        constraint_type = apps.get_model(django_model_name(expr.args[1].tag))
+        if not issubclass(constraint_type, model):
             raise UnexpectedPolarTypeError(
-                f"Type constraint violation on partial.\nConstraint: {constraint_type}; Field: {field_type}"
+                f"Type constraint violation on partial.\nConstraint: {polar_model_name(constraint_type)}; Field: {polar_model_name(model)}"
             )
         return None
     elif expr.operator == "In":
