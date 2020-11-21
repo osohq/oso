@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1605975009093,
+  "lastUpdate": 1605977177864,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13749,6 +13749,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52372,
             "range": "± 3537",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "df2fea4282483bd93eabe6ab892617eddb98f382",
+          "message": "Set up 404 page. (#538)",
+          "timestamp": "2020-11-21T11:41:36-05:00",
+          "tree_id": "f30f9c7bc0efde5ae4a7a26f6866383b7cbf9fb4",
+          "url": "https://github.com/osohq/oso/commit/df2fea4282483bd93eabe6ab892617eddb98f382"
+        },
+        "date": 1605977176004,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 47331,
+            "range": "± 3750",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 50518,
+            "range": "± 4989",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 51390,
+            "range": "± 5953",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52035,
+            "range": "± 5103",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 50957,
+            "range": "± 5064",
             "unit": "ns/iter"
           }
         ]
