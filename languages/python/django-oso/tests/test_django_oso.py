@@ -168,6 +168,33 @@ def test_partial(rf, settings, partial_policy):
 
 
 @pytest.mark.django_db
+def test_partial_disjunctive_matches():
+    from test_app.models import Post, User, Guest, Admin
+
+    alice = User(name="alice")
+    alice.save()
+    not_alice = User(name="not alice")
+    not_alice.save()
+
+    Post(created_by=alice).save(),
+    Post(created_by=not_alice).save(),
+    Post(created_by=alice).save(),
+
+    Oso.load_str(
+        """
+            allow(_, _, post: test_app::Post) if check_user(post.created_by);
+            check_user(_: test_app::Admin);
+            check_user(user: test_app::Guest) if user.name = "alice";
+        """
+    )
+
+    authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
+    assert str(authorize_filter) == "(AND: ('created_by__name', 'alice'))"
+    authorized_posts = Post.objects.filter(authorize_filter)
+    assert authorized_posts.count() == 2
+
+
+@pytest.mark.django_db
 def test_partial_errors(rf, settings):
     from test_app.models import Post
 
