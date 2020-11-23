@@ -22,10 +22,6 @@ class User(models.Model):
         app_label = "test_app"
 
 
-class Guest(User):
-    pass
-
-
 class Admin(User):
     pass
 

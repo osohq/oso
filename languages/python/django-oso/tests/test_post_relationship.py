@@ -117,7 +117,7 @@ def test_authorize_scalar_attribute_eq(post_fixtures):
     # Object equals another object
     Oso.load_str(
         """
-        allow(actor: test_app2::User, "read", post: test_app2::Post{created_by: actor, access_level: "private"});
+        allow(actor: test_app2::User, "read", _: test_app2::Post{created_by: actor, access_level: "private"});
         allow(_: test_app2::User, "read", post) if
             post matches test_app2::Post{access_level: "public"};
         allow(_: test_app2::User{is_moderator: true}, "read", post: test_app2::Post) if
@@ -242,7 +242,7 @@ def test_in_multiple_attribute_relationship(tag_fixtures):
             post.created_by = user;
         allow(_: test_app2::User, "read", post: test_app2::Post) if
             tag in post.tags and
-            tag.id > 0 and
+            0 < tag.id and
             (tag.is_public = true or tag.name = "foo");
         """
     )
@@ -354,18 +354,16 @@ def tag_nested_many_many_fixtures():
     user.save()
     other_user = User(username="other_user")
     other_user.save()
-    moderator = User(username="moderator")
-    moderator.save()
 
     eng = Tag(name="eng")
     eng.save()
-    eng.users.set([user, moderator])
+    eng.users.set([user])
     user_posts = Tag(name="user_posts")
     user_posts.save()
-    user_posts.users.set([user, moderator])
+    user_posts.users.set([user])
     random = Tag(name="random", is_public=True)
     random.save()
-    random.users.set([other_user, moderator])
+    random.users.set([other_user])
 
     user_eng_post = Post(
         contents="user eng post", access_level="public", created_by=user
