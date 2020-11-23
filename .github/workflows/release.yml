@@ -14,7 +14,7 @@ jobs:
       - run: |
           curl \
           -X POST \
-          -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "authorization: Bearer ${{ secrets.REPO_API_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
           https://api.github.com/repos/osohq/oso-flask-integration/dispatches \
           -d '{"event_type":"oso_release", "client_payload": "${{ github.ref }}"}'
