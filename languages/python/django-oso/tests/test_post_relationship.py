@@ -316,8 +316,6 @@ def tag_nested_fixtures():
     return posts
 
 
-# TODO (dhatch): This doesn't actually exercise nested attribute code, because
-# the nested piece is in a sub expression.
 @pytest.mark.django_db
 def test_nested_relationship_many_single(tag_nested_fixtures):
     """Test that nested relationships work.
@@ -353,7 +351,6 @@ def test_nested_relationship_many_single(tag_nested_fixtures):
 
 @pytest.fixture
 def tag_nested_many_many_fixtures():
-
     user = User(username="user")
     user.save()
     other_user = User(username="other_user")
@@ -420,8 +417,6 @@ def test_nested_relationship_many_many(tag_nested_many_many_fixtures):
     post - (many) -> tags - (many) -> User
     A user can read a post with a tag if the tag's creator is the user.
     """
-    # TODO This direction doesn't work, because tag in user.tags is a concrete object.
-    # allow(user, "read", post: Post) if tag in post.tags and tag in user.tags;
     Oso.load_str(
         """
             allow(user: test_app2::User, "read", post: test_app2::Post) if
