@@ -320,6 +320,12 @@ def tag_test_fixture(session):
         access_level="private",
         tags=[random],
     )
+    other_user_foo_post = Post(
+        contents="other user foo",
+        created_by=other_user,
+        access_level="private",
+        tags=[foo],
+    )
 
     # HACK!
     objects = {}
@@ -339,17 +345,22 @@ def test_in_multiple_attribute_relationship(session, oso, tag_test_fixture):
         """
         allow(user, "read", post: Post) if post.access_level = "public";
         allow(user, "read", post: Post) if post.access_level = "private" and post.created_by = user;
-        allow(user, "read", post: Post) if tag in post.tags and tag.is_public = true;
+        allow(user, "read", post: Post) if
+            tag in post.tags and
+            tag.id > 0 and
+            (tag.is_public = true or tag.name = "foo");
     """
     )
 
     posts = authorize_model(oso, tag_test_fixture["user"], "read", session, Post)
-    print(str(posts.statement.compile()))
+
     assert tag_test_fixture["user_public_post"] in posts
     assert tag_test_fixture["user_private_post"] in posts
     assert tag_test_fixture["other_user_public_post"] in posts
     assert not tag_test_fixture["other_user_private_post"] in posts
     assert tag_test_fixture["other_user_random_post"] in posts
+    assert tag_test_fixture["other_user_foo_post"] in posts
+    assert posts.count() == 5
 
 
 @pytest.fixture
@@ -424,6 +435,7 @@ def test_nested_relationship_many_single(session, oso, tag_nested_test_fixture):
     assert not tag_nested_test_fixture["random_post"] in posts
     assert not tag_nested_test_fixture["not_tagged_post"] in posts
     assert tag_nested_test_fixture["all_tagged_post"] in posts
+    assert posts.count() == 3
 
     posts = authorize_model(
         oso, tag_nested_test_fixture["other_user"], "read", session, Post
@@ -433,6 +445,7 @@ def test_nested_relationship_many_single(session, oso, tag_nested_test_fixture):
     assert tag_nested_test_fixture["random_post"] in posts
     assert not tag_nested_test_fixture["not_tagged_post"] in posts
     assert tag_nested_test_fixture["all_tagged_post"] in posts
+    assert posts.count() == 2
 
 
 @pytest.fixture
