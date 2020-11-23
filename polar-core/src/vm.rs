@@ -983,36 +983,24 @@ impl PolarVirtualMachine {
             }
 
             (Value::Partial(partial), _) => {
-                if matches!(right.value(), Value::Pattern(Pattern::Instance(InstanceLiteral {
-                    fields,
-                    ..
-                })) if !fields.is_empty())
-                {
-                    return Err(self.set_error_context(
-                        &right,
-                        error::RuntimeError::Unsupported {
-                            msg:
-                                "cannot yet match a partial against an instance pattern with fields"
-                                    .to_string(),
-                        },
-                    ));
-                }
-
                 let mut partial = partial.clone();
-                let compatibility = partial.isa(right.clone());
                 let name = partial.name().clone();
-
-                // Run compatibility check
-                self.choose_conditional(
-                    vec![Goal::Run {
-                        runnable: compatibility,
-                    }],
-                    vec![Goal::Bind {
+                if let Some(runnable) = partial.isa(right.clone()) {
+                    // Run compatibility check
+                    self.choose_conditional(
+                        vec![Goal::Run { runnable }],
+                        vec![Goal::Bind {
+                            var: name,
+                            value: partial.into_term(),
+                        }],
+                        vec![Goal::Backtrack],
+                    )?;
+                } else {
+                    self.push_goal(Goal::Bind {
                         var: name,
                         value: partial.into_term(),
-                    }],
-                    vec![Goal::Backtrack],
-                )?;
+                    })?;
+                }
             }
 
             (Value::List(left), Value::List(right)) => {

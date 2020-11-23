@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
+use crate::terms::{
+    Dictionary, InstanceLiteral, Operation, Operator, Pattern, Symbol, Term, Value,
+};
 
 use super::isa_constraint_check::IsaConstraintCheck;
 
@@ -84,16 +86,53 @@ impl Partial {
         self.add_constraint(op);
     }
 
-    pub fn isa(&mut self, other: Term) -> Box<dyn Runnable> {
-        let isa_op = op!(Isa, self.variable_term(), other);
+    /// Add an isa constraint of the form `_this matches other`.
+    ///
+    /// Returns:
+    ///
+    ///     - Some(Runnable) if a compatibility check needs to be performed.
+    ///       If the runnable succeeds, this partial should be used and the
+    ///       query should continue.
+    ///
+    ///       If the runnable fails, the query should backtrack because the
+    ///       existing constraints are incompatible with the proposed constraint.
+    ///     - None if no compatibility check needs to be performed and the partial
+    ///       is compatible with the new constraint.
+    pub fn isa(&mut self, other: Term) -> Option<Box<dyn Runnable>> {
+        match other.value() {
+            Value::Pattern(Pattern::Dictionary(fields)) => {
+                // Add field constraints.
+                for (field, value) in fields.fields.iter().rev() {
+                    self.add_constraint(op!(
+                        Unify,
+                        term!(op!(Dot, self.variable_term(), term!(field.clone()))),
+                        value.clone()
+                    ));
+                }
+                None
+            }
+            Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                // Construct field-less Isa operation since field constraints will be added
+                // separately.
+                let tag_pattern = term!(pattern!(instance!(tag.clone())));
+                let type_constraint = op!(Isa, self.variable_term(), tag_pattern);
+                let existing = self.constraints.clone();
+                let check = Box::new(IsaConstraintCheck::new(existing, type_constraint.clone()));
 
-        let constraint_check = Box::new(IsaConstraintCheck::new(
-            self.constraints.clone(),
-            isa_op.clone(),
-        ));
+                self.add_constraint(type_constraint);
 
-        self.add_constraint(isa_op);
-        constraint_check
+                // Add field constraints.
+                let fields = term!(pattern!(fields.clone()));
+                assert!(self.isa(fields).is_none());
+
+                Some(check)
+            }
+            _ => {
+                // Punt to unify for non-patterns.
+                self.unify(other);
+                None
+            }
+        }
     }
 
     /// Add a constraint that this must contain some known value.
@@ -353,11 +392,76 @@ mod test {
     #[test]
     fn test_partial_isa_with_fields() -> TestResult {
         let p = Polar::new();
-        p.load_str("f(x: Post{id: 1});")?;
+        p.load_str(
+            r#"f(x: Post{id: 1});
+               f(x: Post{id: 1}) if x matches {id: 2};
+               f(x: Post{id: 1}) if x matches Post{id: 2};
+               f(x: Post{id: 1}) if x matches User{id: 2}; # Will fail.
+               f(x: Post{id: 1}) if x matches {id: 2, bar: 2};
+               f(x: Post{id: 1, bar: 1}) if x matches User{id: 2}; # Will fail.
+               f(x: Post{id: 1, bar: 3}) if x matches Post{id: 2} and x.y = 1;
+               f(x: {id: 1, bar: 1}) if x matches {id: 2};
+               f(x: {id: 1}) if x matches {id: 2, bar: 2};
+               f(x: {id: 1});
+               f(x: {id: 1}) if x matches {id: 2};
+               f(x: {id: 1}) if x matches Post{id: 2};
+               f(x: 1);"#,
+        )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
-        let error = q.next_event().unwrap_err();
-        assert!(matches!(error, PolarError {
-            kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }), ..}));
+        let mut next_binding = || loop {
+            match q.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                } => {
+                    q.question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))
+                        .unwrap();
+                }
+                _ => panic!("not bindings"),
+            }
+        };
+        assert_partial_expression!(next_binding(), "a", "_this matches Post{} and _this.id = 1");
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Post{} and _this.id = 1 and _this.id = 2 and _this.bar = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Post{} and _this.id = 1 and _this.bar = 3 and _this.id = 2 and _this.y = 1"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this.id = 1 and _this.bar = 1 and _this.id = 2"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this.id = 1 and _this.id = 2 and _this.bar = 2"
+        );
+        assert_partial_expression!(next_binding(), "a", "_this.id = 1");
+        assert_partial_expression!(next_binding(), "a", "_this.id = 1 and _this.id = 2");
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this.id = 1 and _this matches Post{} and _this.id = 2"
+        );
+        assert_partial_expression!(next_binding(), "a", "_this = 1");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -370,7 +474,11 @@ mod test {
                g(x: Post) if x.post = 1;
                g(x: PostSubclass) if x.post_subclass = 1;
                g(x: User) if x.user = 1;
-               g(x: UserSubclass) if x.user_subclass = 1;"#,
+               g(x: UserSubclass) if x.user_subclass = 1;
+
+               f(x: Foo) if h(x.y);
+               h(x: Bar) if x.z = 1;
+               h(x: Baz) if x.z = 1;"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let mut next_binding = || loop {
@@ -406,6 +514,16 @@ mod test {
             next_binding(),
             "a",
             "_this matches User{} and _this.bar = 1 and _this matches UserSubclass{} and _this.user_subclass = 1"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Foo{} and _this.y matches Bar{} and _this.y.z = 1"
+        );
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches Foo{} and _this.y matches Baz{} and _this.y.z = 1"
         );
         assert_query_done!(q);
         Ok(())
