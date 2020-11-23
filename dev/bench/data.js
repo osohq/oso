@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606150693576,
+  "lastUpdate": 1606153228542,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13857,6 +13857,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52396,
             "range": "± 4192",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61fa6694a23baa4f5f03132c6536e52b42808900",
+          "message": "Add field constraints to partials (#536)\n\nCo-authored-by: David Hatch <david@osohq.com>",
+          "timestamp": "2020-11-23T12:36:07-05:00",
+          "tree_id": "3a598bcff4003acc98ac129bae262ee5f90893b7",
+          "url": "https://github.com/osohq/oso/commit/61fa6694a23baa4f5f03132c6536e52b42808900"
+        },
+        "date": 1606153226693,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 41648,
+            "range": "± 3257",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 46890,
+            "range": "± 3051",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 46427,
+            "range": "± 4582",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 46362,
+            "range": "± 4252",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 46690,
+            "range": "± 3968",
             "unit": "ns/iter"
           }
         ]
