@@ -314,16 +314,13 @@ jobs:
           override: true
       - name: package polar-core
         working-directory: polar-core
-        run: |
-          cargo package
+        run: cargo package
       - name: package oso-derive
         working-directory: languages/rust/oso-derive
-        run: |
-          cargo package
+        run: cargo package
       - name: package oso
         working-directory: languages/rust/oso
-        run: |
-          cargo package
+        run: cargo package
   # docs:
   #   runs-on: ubuntu-latest
   #   steps:
