@@ -122,13 +122,8 @@ impl Partial {
                 self.add_constraint(type_constraint);
 
                 // Add field constraints.
-                for (field, value) in fields.fields.iter().rev() {
-                    self.add_constraint(op!(
-                        Unify,
-                        term!(op!(Dot, self.variable_term(), term!(field.clone()))),
-                        value.clone()
-                    ));
-                }
+                let fields = term!(pattern!(fields.clone()));
+                assert!(self.isa(fields).is_none());
 
                 Some(check)
             }
