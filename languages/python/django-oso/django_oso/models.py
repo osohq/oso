@@ -29,6 +29,8 @@ class AuthorizedQuerySet(models.QuerySet):
         except PermissionDenied:
             return self.none()
 
+        # SELECT DISTINCT on inner query to support chaining methods on
+        # returned QuerySet.
         return self.filter(pk__in=self.filter(filter).distinct())
 
 
