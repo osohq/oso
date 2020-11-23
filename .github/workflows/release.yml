@@ -10,12 +10,13 @@ jobs:
   test:
     name: Test it out
     runs-on: ubuntu-latest
-    run: |
-      curl \
-      -X POST \
-      -H "Accept: application/vnd.github.v3+json" \
-      https://api.github.com/repos/osohq/oso-flask-integration/dispatches \
-      -d '{"event_type":"oso_release", "client_payload": "${{ github.ref }}"}'
+    steps:
+      - run: |
+          curl \
+          -X POST \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/osohq/oso-flask-integration/dispatches \
+          -d '{"event_type":"oso_release", "client_payload": "${{ github.ref }}"}'
 
   # version:
   #   name: Compute and verify the version number
