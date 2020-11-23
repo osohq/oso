@@ -1,7 +1,6 @@
 """Standardized tests for adapters based on the Post model.
 
-Tests come from the relationship document & operations laid out there
-https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
+Tests come from the relationship document & operations laid out there.
 """
 import pytest
 from django.db import models
