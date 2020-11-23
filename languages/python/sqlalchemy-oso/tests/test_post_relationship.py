@@ -60,7 +60,7 @@ class Post(ModelBase):
     access_level = Column(Enum("public", "private"), nullable=False)
 
     created_by_id = Column(Integer, ForeignKey("users.id"))
-    created_by = relationship("User")
+    created_by = relationship("User", backref="posts")
 
     needs_moderation = Column(Boolean, nullable=False, default=False)
 
@@ -299,6 +299,7 @@ def tag_test_fixture(session):
     moderator = User(username="moderator", is_moderator=True)
 
     eng = Tag(name="eng")
+    foo = Tag(name="foo")
     random = Tag(name="random", is_public=True)
 
     user_public_post = Post(
@@ -535,9 +536,36 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
     assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
 
 
+def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
+    oso.load_str("""
+        allow(user, "read", post: Post) if post in user.posts;
+    """)
+
+    user = tag_nested_many_many_test_fixture['user']
+    posts = authorize_model(oso, user, "read", session, Post)
+    print_query(posts)
+    posts = posts.all()
+
+    assert tag_nested_many_many_test_fixture["user_eng_post"] in posts
+    assert tag_nested_many_many_test_fixture["user_user_post"] in posts
+    assert tag_nested_many_many_test_fixture["random_post"] not in posts
+    assert tag_nested_many_many_test_fixture["not_tagged_post"] in posts
+    assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
+    assert len(posts) == 4
+
+    user = tag_nested_many_many_test_fixture['other_user']
+    posts = authorize_model(oso, user, "read", session, Post).all()
+    assert tag_nested_many_many_test_fixture["user_eng_post"] not in posts
+    assert tag_nested_many_many_test_fixture["user_user_post"] not in posts
+    assert tag_nested_many_many_test_fixture["random_post"] in posts
+    assert tag_nested_many_many_test_fixture["not_tagged_post"] not in posts
+    assert tag_nested_many_many_test_fixture["all_tagged_post"] not in posts
+    assert len(posts) == 1
+
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
 # todo test_nested_relationship_single_single_single ... etc
 
 # TODO test non Eq conditions
 # TODO test f(x) if not x.boolean_attr;
+# TODO test this = ? with multiple pks

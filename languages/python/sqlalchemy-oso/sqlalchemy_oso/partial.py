@@ -3,6 +3,7 @@ from typing import Any, Callable, List
 
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
+from sqlalchemy import inspect
 from sqlalchemy.orm import RelationshipProperty, ColumnProperty
 from sqlalchemy.sql.expression import ClauseElement, BinaryExpression, and_
 
@@ -59,13 +60,24 @@ def translate_compare(expression: Expression, session: Session, model):
     left = expression.args[0]
     right = expression.args[1]
 
-    if dot_op_path(left):
+    left_path = dot_op_path(left)
+    if left_path:
         path = dot_op_path(left)
         value = right
     else:
-        path = dot_op_path(right)
-        assert path
-        value = left
+        assert left == Variable("_this")
+        assert inspect(right)
+
+        primary_keys = [pk.name for pk in inspect(model).primary_key]
+        pk_filter = None
+        for key in primary_keys:
+            key_value = getattr(right, key)
+            if pk_filter is None:
+                pk_filter = getattr(model, key) == key_value
+            else:
+                pk_filter &= getattr(model, key) == key_value
+
+        return pk_filter
 
     path, field_name = path[:-1], path[-1]
     return translate_dot_op(
