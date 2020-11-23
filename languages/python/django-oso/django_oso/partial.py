@@ -60,19 +60,24 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
     elif expr.operator == "And":
         return and_expr(expr, model, **kwargs)
     elif expr.operator == "Isa":
-        for attr in dot_op_path(expr.args[0]):
-            model = getattr(model, attr).field.related_model
-        constraint_type = apps.get_model(django_model_name(expr.args[1].tag))
-        if not issubclass(model, constraint_type):
-            # Always false.
-            return Q(pk__in=[])
-        else:
-            # Always true.
-            return None
+        return isa_expr(expr, model, **kwargs)
     elif expr.operator == "In":
         return in_expr(expr, model, **kwargs)
     else:
         raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
+
+
+def isa_expr(expr: Expression, model: Model, **kwargs):
+    (left, right) = expr.args
+    for attr in dot_op_path(left):
+        model = getattr(model, attr).field.related_model
+    constraint_type = apps.get_model(django_model_name(right.tag))
+    if not issubclass(model, constraint_type):
+        # Always false.
+        return Q(pk__in=[])
+    else:
+        # Always true.
+        return None
 
 
 def and_expr(expr: Expression, model: Model, **kwargs):
