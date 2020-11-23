@@ -85,7 +85,11 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
         if filter is None:
             filter = Q()
 
-        filter |= partial_to_query_filter(resource_partial, model)
+        next_filter = partial_to_query_filter(resource_partial, model)
+        if next_filter == Q():
+            return next_filter
+
+        filter |= next_filter
 
     if filter is None:
         raise PermissionDenied()

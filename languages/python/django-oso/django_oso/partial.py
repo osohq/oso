@@ -63,11 +63,12 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
         for attr in dot_op_path(expr.args[0]):
             model = getattr(model, attr).field.related_model
         constraint_type = apps.get_model(django_model_name(expr.args[1].tag))
-        if not issubclass(constraint_type, model):
-            raise UnexpectedPolarTypeError(
-                f"Type constraint violation on partial.\nConstraint: {polar_model_name(constraint_type)}; Field: {polar_model_name(model)}"
-            )
-        return None
+        if not issubclass(model, constraint_type):
+            # Always false.
+            return Q(pk__in=[])
+        else:
+            # Always true.
+            return None
     elif expr.operator == "In":
         return in_expr(expr, model, **kwargs)
     else:
