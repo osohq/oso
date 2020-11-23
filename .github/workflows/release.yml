@@ -20,6 +20,7 @@ jobs:
           -d '{"event_type":"oso_release", "client_payload": {"commit": "${{ github.sha }}"}}'
 
   # version:
+
   #   name: Compute and verify the version number
   #   runs-on: ubuntu-latest
   #   steps:
