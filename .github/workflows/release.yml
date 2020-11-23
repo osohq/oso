@@ -316,10 +316,6 @@ jobs:
         working-directory: polar-core
         run: |
           cargo package
-      - name: package polar-core
-        working-directory: polar-core
-        run: |
-          cargo package
       - name: package oso-derive
         working-directory: languages/rust/oso-derive
         run: |
