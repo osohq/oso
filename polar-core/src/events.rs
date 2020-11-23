@@ -9,7 +9,7 @@ use super::traces::*;
 
 #[allow(clippy::large_enum_variant)]
 #[must_use]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum QueryEvent {
     None,
 

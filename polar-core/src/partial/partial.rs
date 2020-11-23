@@ -301,6 +301,7 @@ mod test {
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 2");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a = 3");
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.b = 4");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -310,6 +311,7 @@ mod test {
         p.load_str("f(x, y, z) if x = y and x = z;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a"), 1, 2])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this = 1 and _this = 2");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -328,6 +330,7 @@ mod test {
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 4");
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this = 1 and _this = 2 and _this = 5");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -343,6 +346,7 @@ mod test {
         assert_partial_expression!(next, "a", "_this matches Post{} and _this.foo = 1");
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this matches User{} and _this.bar = 1");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -408,6 +412,37 @@ mod test {
     }
 
     #[test]
+    fn test_partial_isa_subclass_superclass() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"f(x: PostSubclass) if g(x);
+               g(x: Post);"#,
+        )?;
+        let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
+        let mut next_binding = || loop {
+            match q.next_event().unwrap() {
+                QueryEvent::Result { bindings, .. } => return bindings,
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                } => {
+                    q.question_result(call_id, left_class_tag.0.starts_with(&right_class_tag.0))
+                        .unwrap();
+                }
+                _ => panic!("not bindings"),
+            }
+        };
+        assert_partial_expression!(
+            next_binding(),
+            "a",
+            "_this matches PostSubclass{} and _this matches Post{}"
+        );
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    #[test]
     fn test_partial_comparison() -> TestResult {
         let p = Polar::new();
         p.load_str(
@@ -432,6 +467,7 @@ mod test {
         p.load_str("positive(x) if x.a > 0 and 0 < x.a;")?;
         let mut q = p.new_query_from_term(term!(call!("positive", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.a > 0");
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -444,6 +480,7 @@ mod test {
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         assert_partial_expression!(next_binding(&mut q)?, "a", "_this.y.z > 0");
+        assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [partial!("a")])), false);
         assert_partial_expression!(
@@ -451,6 +488,7 @@ mod test {
             "a",
             "_this.y = 0 and _this.y > 1 and _this.y.z > 1 and _this = 2"
         );
+        assert_query_done!(q);
         Ok(())
     }
 
@@ -756,11 +794,11 @@ mod test {
             next_binding(&mut q)?,
             "a" => "(_this.bar = 1 and _this.baz = 2) in _this.values"
         );
-
         assert_partial_expressions!(
             next_binding(&mut q)?,
             "a" => "(_this.bar = 3) in _this.values"
         );
+        assert_query_done!(q);
 
         Ok(())
     }
