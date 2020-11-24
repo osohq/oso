@@ -33,7 +33,7 @@ jobs:
       # Used in build.py to find right files
       CIBW_ENVIRONMENT: OSO_ENV=CI
 
-      CIBW_BEFORE_TEST: make -B test-requirements
+      CIBW_BEFORE_TEST: make -C {project} -B test-requirements
       CIBW_TEST_COMMAND: make -C {project} test
 
     steps:
