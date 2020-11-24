@@ -18,6 +18,7 @@ from sphinxcontrib.spelling.filters import ContractionFilter
 
 from enchant.tokenize import Filter
 
+sys.path.insert(0, os.path.join(os.path.abspath("."), "examples", "list-filtering", "sqlalchemy"))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 import lexer

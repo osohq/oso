@@ -80,11 +80,133 @@ rules:
 
 These rules are written over single model objects.
 
-.. todo:: Formatting is unfortunate but continuing...
+Trying it out
+-------------
 
-Let's test out the policy in a REPL:
+Let's test out the policy in a REPL.
 
-.. mdinclude:: ../../examples/list-filtering/sqlalchemy/example.md
+.. testsetup::
+
+    import os
+
+    os.chdir("examples/list-filtering/sqlalchemy")
+
+First, import ``sqlalchemy``, ``oso`` and ``sqlalchemy_oso``.
+
+.. doctest::
+
+    >>> from sqlalchemy import create_engine
+    >>> from sqlalchemy.orm import Session
+    >>> from oso import Oso
+    >>> from sqlalchemy_oso import authorized_sessionmaker, register_models
+    >>> from sqlalchemy_example.models import Model, User, Post
+
+Then, setup ``oso`` and register our models.
+
+.. doctest::
+
+    >>> oso = Oso()
+    >>> register_models(oso, Model)
+    >>> oso.load_file("sqlalchemy_example/policy.polar")
+
+Next, setup some test data...
+
+.. doctest::
+
+    >>> user = User(username='user')
+    >>> manager = User(username='manager', manages=[user])
+
+    >>> public_user_post = Post(contents='public_user_post',
+    ...                         access_level='public',
+    ...                         created_by=user)
+    >>> private_user_post = Post(contents='private_user_post',
+    ...                          access_level='private',
+    ...                          created_by=user)
+    >>> private_manager_post = Post(contents='private_manager_post',
+    ...                             access_level='private',
+    ...                             created_by=manager)
+    >>> public_manager_post = Post(contents='public_manager_post',
+    ...                            access_level='public',
+    ...                            created_by=manager)
+
+... and load that data into SQLAlchemy.
+
+.. doctest::
+
+    >>> engine = create_engine('sqlite:///:memory:')
+    >>> Model.metadata.create_all(engine)
+    >>> session = Session(bind=engine)
+    >>> session.add_all([
+    ...     user, manager, public_user_post, private_user_post, private_manager_post,
+    ...     public_manager_post])
+    >>> session.commit()
+
+Now that we've setup some test data, let's use **oso** to authorize
+``Post``\ s that ``User(username="user")`` can see.
+
+We'll start by making an :py:func:`~sqlalchemy_oso.authorized_sessionmaker`.
+
+.. doctest::
+
+   >>> AuthorizedSession = authorized_sessionmaker(bind=engine,
+   ...                                             get_oso=lambda: oso,
+   ...                                             get_user=lambda: user,
+   ...                                             get_action=lambda: "read")
+   >>> session = AuthorizedSession()
+
+Then, issue a query for all posts.
+
+.. doctest::
+
+    >>> posts = session.query(Post).all()
+    >>> [p.contents for p in posts]
+    ['public_user_post', 'private_user_post', 'public_manager_post']
+
+
+Since we used :py:func:`~sqlalchemy_oso.authorized_sessionmaker`, the query only
+returned authorized posts based on the policy.
+
+``user`` can see their own public and private posts, and other public
+posts.
+
+Now we’ll authorize access to ``manager``\ 's ``Post``\ s. We create a new
+authorized session with user set to manager.
+
+.. note::
+
+    In a real application, ``get_user`` would be a function returning the
+    current user, based on the current request context.  For example in Flask
+    this might be ``lambda: flask.g.current_user`` or some other proxy object.
+
+.. doctest::
+
+    >>> AuthorizedSession = authorized_sessionmaker(bind=engine,
+    ...                                             get_oso=lambda: oso,
+    ...                                             get_user=lambda: manager,
+    ...                                             get_action=lambda: "read")
+    >>> manager_session = AuthorizedSession()
+
+And issue the same query as before...
+
+.. doctest::
+
+    >>> posts = manager_session.query(Post).all()
+    >>> [p.contents for p in posts]
+    ['public_user_post', 'private_user_post', 'private_manager_post', 'public_manager_post']
+
+This time, the query returned four posts! Since the ``manager`` user manages
+``user``, the private post of user is also authorized (based on our third rule
+above).
+
+.. doctest::
+
+   >>> manager.manages[0].username
+   'user'
+
+
+This full example is available on GitHub_.
+
+.. _GitHub: https://github.com/osohq/oso/tree/main/docs/examples/list-filtering/sqlalchemy
 
 How oso authorizes SQLAlchemy Data
 ==================================
@@ -115,6 +237,10 @@ authorization logic over collections.
 
 Limitations
 ===========
+
+.. todo:: Wording here still needs a smidge of work once the top level page is
+    in, and should link back to that page.  It might not be clear what
+    "non-partial" setting means just from reading this page.
 
 This feature is still under active development. Not all policies that work in a
 non-partial setting will currently work with partials. More policies will be
