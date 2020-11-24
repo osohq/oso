@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606231963202,
+  "lastUpdate": 1606242280971,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14181,6 +14181,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 57420,
             "range": "± 7085",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5e67d042cb60626539b5dd82d5a7bf0d637105ec",
+          "message": "0.8.1 (#545)\n\nChangelog.\r\n\r\nCo-authored-by: Alex Plotnick <alex@osohq.com>",
+          "timestamp": "2020-11-24T11:20:59-07:00",
+          "tree_id": "789d569d4c494d907c19801157ab663187b3b3be",
+          "url": "https://github.com/osohq/oso/commit/5e67d042cb60626539b5dd82d5a7bf0d637105ec"
+        },
+        "date": 1606242279204,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 42011,
+            "range": "± 2208",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 48486,
+            "range": "± 3491",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 47015,
+            "range": "± 4417",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 44779,
+            "range": "± 4346",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 45484,
+            "range": "± 3587",
             "unit": "ns/iter"
           }
         ]
