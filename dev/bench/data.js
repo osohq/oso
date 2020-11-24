@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606156357405,
+  "lastUpdate": 1606177371844,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -13965,6 +13965,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 51639,
             "range": "± 4024",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c676d595277677d8d84dc35bf227812b4af9221",
+          "message": "Improved list filtering support for Django integration (#533)\n\n* Add @samscott89's test\r\n\r\n* Django list filtering at parity with other adapters\r\n\r\n* Test matches with fields\r\n\r\n* Don't run query while repr-ing\r\n\r\n* SELECT DISTINCT\r\n\r\n* Check type constraints on related fields\r\n\r\n- No more passing a stringified model name.\r\n\r\n* Handle partial in collection case\r\n\r\n* Check if constraint type is subclass of model\r\n\r\n* Don't early return on empty ANDs\r\n\r\n* Appease the CTO\r\n\r\n* Remove outdated comments\r\n\r\nNote that the example in the second comment is tested below\r\n\r\n* Bring back early returning on AND and flip type check\r\n\r\n- Return False on type mismatch instead of raising an error.\r\n\r\n* Clean up from code review\r\n\r\n* Add comment about 'pk__in' subquery\r\n\r\n* Extract isa_expr() function\r\n\r\n* Remove Notion link\r\n\r\n* Minor cleanup\r\n\r\n* Tuplify dot_op_path()\r\n\r\nCo-authored-by: Alex Plotnick <alex@osohq.com>",
+          "timestamp": "2020-11-23T17:18:09-07:00",
+          "tree_id": "68ba37b95505102979a6015ad3fdb10807800d0a",
+          "url": "https://github.com/osohq/oso/commit/5c676d595277677d8d84dc35bf227812b4af9221"
+        },
+        "date": 1606177369965,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 48846,
+            "range": "± 4800",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 52688,
+            "range": "± 3587",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52393,
+            "range": "± 3900",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 51937,
+            "range": "± 3462",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52368,
+            "range": "± 3556",
             "unit": "ns/iter"
           }
         ]
