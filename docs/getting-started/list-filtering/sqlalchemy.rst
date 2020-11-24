@@ -1,5 +1,5 @@
 ==================
-SQLAlchemy Adaptor
+SQLAlchemy Adapter
 ==================
 
 The ``sqlalchemy_oso`` library can enforce policies over SQLAlchemy models.
@@ -13,12 +13,28 @@ Usage
    section.
 
 The ``sqlalchemy_oso`` library works over your existing SQLAlchemy ORM models
-without modification.  To get started, we write a policy over our model types.
-:py:func:`sqlalchemy.auth.register_models` can be used to register all models
-that descend from a declarative base class with oso as types that are available
+without modification.
+
+To get started, we need to:
+
+1. Make oso aware of our SQLAlchemy model types so that we can write policies
+   over them.
+2. Create a SQLAlchemy Session_ that uses oso to authorize access to data.
+
+**Register models with oso**
+
+We write a policy over our SQLAlchemy models.
+:py:func:`sqlalchemy_oso.register_models` registers all models
+that descend from a declarative base class as types that are available
 in the policy.
 
-Then, use the :py:func:`sqlalchemy.hooks.authorized_sessionmaker` session
+Alternatively, the :py:meth:`oso.Oso.register_class` method can be called on
+each SQLAlchemy model that you will write rules for.
+
+**Create a SQLAlchemy Session that uses oso**
+
+oso performs authorization by integrating with SQLAlchemy sessions.
+Use the :py:func:`sqlalchemy_oso.authorized_sessionmaker` session
 factory instead of the default SQLAlchemy ``sessionmaker``. Every query made
 using sessions from this factory will have authorization applied.
 
@@ -26,6 +42,8 @@ Before executing a query, oso consults the policy and obtains a list of
 conditions that must be met for an object to be authorized.  These conditions
 are translated into SQLAlchemy expressions and added to the query before
 retrieving objects from the database.
+
+.. _Session: https://docs.sqlalchemy.org/en/13/orm/session_api.html#sqlalchemy.orm.session.Session
 
 Example
 =======
@@ -52,7 +70,15 @@ rules:
     :caption: :fa:`oso` policy.polar
     :language: polar
 
-Note that these rules are written over single model objects.
+.. note::
+
+    The SQLAlchemy integration is deny by default.  The final rule for ``User``
+    is needed to allow access to user objects for any user.
+
+    If a query is made for a model that does not have an explict rule in the
+    policy, no results will be returned.
+
+These rules are written over single model objects.
 
 .. todo:: Formatting is unfortunate but continuing...
 
@@ -65,9 +91,6 @@ How oso authorizes SQLAlchemy Data
 
 As you can see from the above example, the SQLAlchemy oso integration allows
 regular SQLAlchemy queries to be executed with authorization applied.
-
-To accomplish this, oso has a custom query class that applies authorization
-filters based on the loaded policy before the query is executed.
 
 Before compiling a SQLAlchemy query, the entities in the query are authorized
 with oso.  oso returns authorization decisions for each entity that indicate
@@ -88,16 +111,16 @@ SQLAlchemy query like::
         .filter(Post.access_level == "private" & Post.created_by == user)
 
 This translation makes the policy an effective abstraction for expressing
-policies that must be enforced over objects stored in a database.
+authorization logic over collections.
 
 Limitations
 ===========
 
-This feature is still under active development. Most unsupported policies will
-cause a runtime error rather than incorrect authorization behavior. More
-policies will be supported as we continue working on this feature.  The
-SQLAlchemy adaptor is ready for evaluation and testing. However, we recommending
-getting in touch with us before using it in production.  Join our Slack_.
+This feature is still under active development. Not all policies that work in a
+non-partial setting will currently work with partials. More policies will be
+supported as we continue working on this feature.  The SQLAlchemy adapter is
+ready for evaluation and testing. However, we recommending getting in touch with
+us before using it in production.  Join our Slack_.
 
 There are some operators and features of Polar that do not currently work with
 the SQLAlchemy Library when used **anywhere in the policy**:
@@ -108,7 +131,7 @@ the SQLAlchemy Library when used **anywhere in the policy**:
   within the negation
 
 Some operations cannot be performed on **resources** in ``allow`` rules used with
-the SQLAlchemy adaptor.  These operations can still be used on the actor or
+the SQLAlchemy adapter.  These operations can still be used on the actor or
 action:
 
 - application method calls
