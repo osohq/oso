@@ -39,7 +39,7 @@ factory instead of the default SQLAlchemy ``sessionmaker``. Every query made
 using sessions from this factory will have authorization applied.
 
 Before executing a query, oso consults the policy and obtains a list of
-conditions that must be met for an object to be authorized.  These conditions
+conditions that must be met for a model to be authorized. These conditions
 are translated into SQLAlchemy expressions and added to the query before
 retrieving objects from the database.
 
