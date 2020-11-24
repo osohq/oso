@@ -537,11 +537,13 @@ def test_nested_relationship_many_many(session, oso, tag_nested_many_many_test_f
 
 
 def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
-    oso.load_str("""
+    oso.load_str(
+        """
         allow(user, "read", post: Post) if post in user.posts;
-    """)
+    """
+    )
 
-    user = tag_nested_many_many_test_fixture['user']
+    user = tag_nested_many_many_test_fixture["user"]
     posts = authorize_model(oso, user, "read", session, Post)
     print_query(posts)
     posts = posts.all()
@@ -553,7 +555,7 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert tag_nested_many_many_test_fixture["all_tagged_post"] in posts
     assert len(posts) == 4
 
-    user = tag_nested_many_many_test_fixture['other_user']
+    user = tag_nested_many_many_test_fixture["other_user"]
     posts = authorize_model(oso, user, "read", session, Post).all()
     assert tag_nested_many_many_test_fixture["user_eng_post"] not in posts
     assert tag_nested_many_many_test_fixture["user_user_post"] not in posts
@@ -561,6 +563,7 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert tag_nested_many_many_test_fixture["not_tagged_post"] not in posts
     assert tag_nested_many_many_test_fixture["all_tagged_post"] not in posts
     assert len(posts) == 1
+
 
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
