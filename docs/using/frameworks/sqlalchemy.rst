@@ -21,8 +21,6 @@ Usage
 See the :doc:`list filtering usage guide </getting-started/list-filtering/sqlalchemy>`
 for more information.
 
-.. todo:: Link above ^
-
 API Reference
 =============
 
