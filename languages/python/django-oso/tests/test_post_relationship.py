@@ -242,7 +242,6 @@ def test_in_multiple_attribute_relationship(tag_fixtures):
             post.created_by = user;
         allow(_: test_app2::User, "read", post: test_app2::Post) if
             tag in post.tags and
-            0 < tag.id and
             (tag.is_public = true or tag.name = "foo");
         """
     )
