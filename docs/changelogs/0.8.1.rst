@@ -15,12 +15,22 @@ New features
 Updated list filtering capabilities of the Django adapter
 ---------------------------------------------------------
 
+More policies and Polar operations can now be used in the context of list
+filtering. In particular, the ``in`` and ``matches`` operators (including
+specializers in rule heads and embedded fields) now work in more cases,
+as do nested lookups and comparison operators. The list filtering feature
+remains in preview; we would love to hear feedback if you're trying to use
+it in your application.
+
 Install the latest version from pip: ``pip install django-oso``.
 
 Check out `the documentation <TODO>`_.
 
 SQLAlchemy adapter for list filtering
 -------------------------------------
+
+We've added our second list filtering adapter: SQLAlchemy! It is
+roughly at feature parity with the Django adapter.
 
 Try it out: ``pip install sqlalchemy-oso``.
 
