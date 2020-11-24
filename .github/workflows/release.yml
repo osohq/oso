@@ -294,33 +294,6 @@ jobs:
           name: oso_js_node
           path: languages/js/*
 
-  build_rust:
-    name: Build rust.
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install Rust stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: package polar-core
-        working-directory: polar-core
-        run: cargo package
-      - name: package oso-derive
-        working-directory: languages/rust/oso-derive
-        run: cargo package
-      - name: package oso
-        working-directory: languages/rust/oso
-        run: cargo package
   # docs:
   #   runs-on: ubuntu-latest
   #   steps:
