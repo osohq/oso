@@ -90,7 +90,7 @@ def and_expr(expr: Expression, model: Model, **kwargs):
     return q
 
 
-def compare_expr(expr: Expression, _model: Model, path=[], **kwargs):
+def compare_expr(expr: Expression, _model: Model, path=(), **kwargs):
     q = Q()
     (left, right) = expr.args
     left_path = dot_op_path(left)
@@ -101,10 +101,10 @@ def compare_expr(expr: Expression, _model: Model, path=[], **kwargs):
             right = right.pk
         else:
             raise UnsupportedError(f"Unsupported comparison: {expr}")
-        return COMPARISONS[expr.operator](q, "__".join(path + ["pk"]), right)
+        return COMPARISONS[expr.operator](q, "__".join(path + ("pk",)), right)
 
 
-def in_expr(expr: Expression, model: Model, path=[], **kwargs):
+def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert expr.operator == "In"
     q = Q()
     (left, right) = expr.args
@@ -122,20 +122,20 @@ def in_expr(expr: Expression, model: Model, path=[], **kwargs):
 def dot_op_path(expr):
     """Get the path components of a lookup.
 
-    The path is returned as a list.
+    The path is returned as a tuple.
 
-    _this.created_by => ['created_by']
-    _this.created_by.username => ['created_by', 'username']
+    _this.created_by => ('created_by',)
+    _this.created_by.username => ('created_by', 'username')
 
-    Empty list is returned if input is not a dot operation.
+    Empty tuple is returned if input is not a dot operation.
     """
 
     if not (isinstance(expr, Expression) and expr.operator == "Dot"):
-        return []
+        return ()
 
     assert len(expr.args) == 2
 
     if expr.args[0] == Variable("_this"):
-        return [expr.args[1]]
+        return (expr.args[1],)
 
-    return dot_op_path(expr.args[0]) + [expr.args[1]]
+    return dot_op_path(expr.args[0]) + (expr.args[1],)
