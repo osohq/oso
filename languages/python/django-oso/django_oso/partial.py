@@ -1,11 +1,14 @@
-from django.db.models import Q
+from django.db.models import Q, Model
+from django.apps import apps
 
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError
+from polar.exceptions import UnsupportedError, UnexpectedPolarTypeError
+
+from .oso import polar_model_name, django_model_name
 
 
-def partial_to_query_filter(partial, type_name):
+def partial_to_query_filter(partial: Expression, model: Model, **kwargs):
     """
     Convert a partial expression to a django query ``Q`` object.
 
@@ -30,7 +33,7 @@ def partial_to_query_filter(partial, type_name):
         Q(is_private=False)
     """
 
-    q = translate_expr(partial, type_name)
+    q = translate_expr(partial, model, **kwargs)
     if q is None:
         return Q()
 
@@ -48,62 +51,91 @@ COMPARISONS = {
 }
 
 
-def translate_expr(expression, type_name):
-    """Return translated expression, or None if the constraint doesn't translate to anything."""
-    assert isinstance(expression, Expression)
-    if expression.operator in COMPARISONS:
-        return compare_expr(expression, type_name)
-    elif expression.operator == "And":
-        return and_expr(expression, type_name)
-    elif expression.operator == "Isa":
-        try:
-            assert expression.args[1].tag == type_name
-        except (AssertionError, IndexError, AttributeError, TypeError):
-            raise UnsupportedError(f"Unimplemented partial isa operation {expression}.")
+def translate_expr(expr: Expression, model: Model, **kwargs):
+    """Translate a Polar expression to a Django Q object."""
+    assert isinstance(expr, Expression), "expected a Polar expression"
 
-        return None
+    if expr.operator in COMPARISONS:
+        return compare_expr(expr, model, **kwargs)
+    elif expr.operator == "And":
+        return and_expr(expr, model, **kwargs)
+    elif expr.operator == "Isa":
+        return isa_expr(expr, model, **kwargs)
+    elif expr.operator == "In":
+        return in_expr(expr, model, **kwargs)
     else:
-        raise UnsupportedError(f"Unimplemented partial operator {expression.operator}")
+        raise UnsupportedError(f"Unimplemented partial operator {expr.operator}")
 
 
-def and_expr(expr, type_name):
-    q = Q()
+def isa_expr(expr: Expression, model: Model, **kwargs):
+    (left, right) = expr.args
+    for attr in dot_op_path(left):
+        model = getattr(model, attr).field.related_model
+    constraint_type = apps.get_model(django_model_name(right.tag))
+    if not issubclass(model, constraint_type):
+        # Always false.
+        return Q(pk__in=[])
+    else:
+        # Always true.
+        return None
 
+
+def and_expr(expr: Expression, model: Model, **kwargs):
     assert expr.operator == "And"
-    for expression in expr.args:
-        expr = translate_expr(expression, type_name)
-        if expr is None:
-            continue
-
-        q = q & expr
-
+    q = Q()
+    for arg in expr.args:
+        expr = translate_expr(arg, model, **kwargs)
+        if expr:
+            q = q & expr
     return q
 
 
-def dot_op_field(expr):
-    """Get the field from dot op ``expr`` or return ``False``."""
-    return (
-        isinstance(expr, Expression)
-        and expr.operator == "Dot"
-        and isinstance(expr.args[0], Variable)
-        and expr.args[0] == Variable("_this")
-        and expr.args[1]
-    )
-
-
-def compare_expr(expr, type_name):
+def compare_expr(expr: Expression, _model: Model, path=(), **kwargs):
     q = Q()
-
-    assert expr.operator in COMPARISONS
-    left = expr.args[0]
-    right = expr.args[1]
-
-    if dot_op_field(left):
-        field = dot_op_field(left)
-        value = right
-        return COMPARISONS[expr.operator](q, field, value)
+    (left, right) = expr.args
+    left_path = dot_op_path(left)
+    if left_path:
+        return COMPARISONS[expr.operator](q, "__".join(path + left_path), right)
     else:
-        field = dot_op_field(right)
-        assert field
-        value = left
-        return COMPARISONS[expr.operator](q, field, value)
+        if isinstance(right, Model):
+            right = right.pk
+        else:
+            raise UnsupportedError(f"Unsupported comparison: {expr}")
+        return COMPARISONS[expr.operator](q, "__".join(path + ("pk",)), right)
+
+
+def in_expr(expr: Expression, model: Model, path=(), **kwargs):
+    assert expr.operator == "In"
+    q = Q()
+    (left, right) = expr.args
+    right_path = dot_op_path(right)
+    assert right_path, "RHS of in must be a dot lookup"
+    right_path = path + right_path
+
+    if isinstance(left, Expression):
+        return translate_expr(left, model, path=right_path, **kwargs)
+    else:
+        return COMPARISONS["Unify"](q, "__".join(right_path), left)
+
+
+# TODO (dhatch): Move this helper into base.
+def dot_op_path(expr):
+    """Get the path components of a lookup.
+
+    The path is returned as a tuple.
+
+    _this.created_by => ('created_by',)
+    _this.created_by.username => ('created_by', 'username')
+
+    Empty tuple is returned if input is not a dot operation.
+    """
+
+    if not (isinstance(expr, Expression) and expr.operator == "Dot"):
+        return ()
+
+    assert len(expr.args) == 2
+
+    if expr.args[0] == Variable("_this"):
+        return (expr.args[1],)
+
+    return dot_op_path(expr.args[0]) + (expr.args[1],)

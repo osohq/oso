@@ -15,11 +15,23 @@ class TestRegistration2(models.Model):
         app_label = "test_app"
 
 
-class Post(AuthorizedModel):
-    is_private = models.BooleanField()
+class User(models.Model):
     name = models.CharField(max_length=256)
-    timestamp = models.IntegerField()
+
+    class Meta:
+        app_label = "test_app"
+
+
+class Admin(User):
+    pass
+
+
+class Post(AuthorizedModel):
+    is_private = models.BooleanField(null=True)
+    name = models.CharField(max_length=256, null=True)
+    timestamp = models.IntegerField(null=True)
     option = models.BooleanField(null=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return f"Post(name={self.name}, is_private={self.is_private})"
