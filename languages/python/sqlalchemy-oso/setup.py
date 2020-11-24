@@ -44,6 +44,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Oso Security, Inc.",
+    author_email="support@osohq.com",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3.6",
@@ -92,5 +93,8 @@ setup(
     # issues, where the source is hosted, where to say thanks to the package
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
-    project_urls={},  # Optional
+    project_urls={
+        "Source": "https://github.com/osohq/oso/tree/main/languages/python/sqlalchemy-oso",
+        # "Docs": "...",
+    },
 )
