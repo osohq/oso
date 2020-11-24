@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606177371844,
+  "lastUpdate": 1606188403742,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14019,6 +14019,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52368,
             "range": "± 3556",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "78bdcda8969bfe450827410c7561ea300b980516",
+          "message": "SQLAlchemy adapter (#512)",
+          "timestamp": "2020-11-23T22:22:11-05:00",
+          "tree_id": "5628762e8cd18ca623079a429e439c4ace785fcb",
+          "url": "https://github.com/osohq/oso/commit/78bdcda8969bfe450827410c7561ea300b980516"
+        },
+        "date": 1606188401886,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46669,
+            "range": "± 2186",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 51950,
+            "range": "± 3551",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52058,
+            "range": "± 3844",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 51742,
+            "range": "± 3579",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52026,
+            "range": "± 3587",
             "unit": "ns/iter"
           }
         ]
