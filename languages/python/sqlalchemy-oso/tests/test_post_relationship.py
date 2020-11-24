@@ -348,7 +348,6 @@ def test_in_multiple_attribute_relationship(session, oso, tag_test_fixture):
         allow(user, "read", post: Post) if post.access_level = "private" and post.created_by = user;
         allow(user, "read", post: Post) if
             tag in post.tags and
-            tag.id > 0 and
             (tag.is_public = true or tag.name = "foo");
     """
     )
