@@ -120,34 +120,39 @@ def authorized_sessionmaker(get_oso, get_user, get_action, *args, **kwargs):
         "query_cls" not in kwargs
     ), "Cannot use custom query class with authorized_sessionmaker."
 
-    oso = get_oso()
-    user = get_user()
-    action = get_action()
+    # oso = get_oso()
+    # user = get_user()
+    # action = get_action()
 
     # oso, user and action must remain unchanged for the entire session.
     # If they change before a query runs, an error is thrown.
     # This is to prevent objects that are unauthorized from ending up in the
     # session's identity map.
 
-    def checked_get_oso():
-        if get_oso() != oso:
-            # TODO proper error type.
-            raise Exception("oso object changed during session.")
-        return oso
+    # TODO (dhatch): The scope of these is wrong. They should be run when
+    # a session is created, which probably requires a custom session class or
+    # more customization of the sessionmaker.
+    # def checked_get_oso():
+    #     if get_oso() != oso:
+    #         # TODO proper error type.
+    #         raise Exception("oso object changed during session.")
+    #     return oso
 
-    def checked_get_user():
-        if get_user() != user:
-            raise Exception("user object changed during session.")
-        return user
+    # def checked_get_user():
+    #     if get_user() != user:
+    #         raise Exception("user object changed during session.")
+    #     return user
 
-    def checked_get_action():
-        if get_action() != action:
-            raise Exception("action changed during session.")
-        return action
+    # def checked_get_action():
+    #     if get_action() != action:
+    #         raise Exception("action changed during session.")
+    #     return action
 
     return sessionmaker(
         query_cls=make_authorized_query_cls(
-            checked_get_oso, checked_get_user, checked_get_action
+            get_oso,
+            get_user,
+            get_action
         ),
         *args,
         **kwargs

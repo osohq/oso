@@ -74,6 +74,7 @@ def test_basic(oso, policy, session, test_data, authorization_data):
     posts = session.query(Post)
 
     assert posts.count() == 3
+    posts = posts.all()
     assert test_data['public_user_post'] in posts
     assert test_data['private_user_post'] in posts
     assert test_data['public_manager_post'] in posts
@@ -83,6 +84,7 @@ def test_manages(oso, policy, session, test_data, authorization_data):
     posts = session.query(Post)
 
     assert posts.count() == 4
+    posts = posts.all()
     assert test_data['public_user_post'] in posts
     assert test_data['private_user_post'] in posts
     assert test_data['public_manager_post'] in posts
