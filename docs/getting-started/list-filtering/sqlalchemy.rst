@@ -128,15 +128,25 @@ the SQLAlchemy Library when used **anywhere in the policy**:
 - the ``cut`` operator
 - rules that rely on ordered execution based on class inheritance
 - negated queries using the ``not`` operator that contain a ``matches`` operator
-  within the negation
+  within the negation or call a rule that contains a specializer. For example:
 
-Some operations cannot be performed on **resources** in ``allow`` rules used with
-the SQLAlchemy adapter.  These operations can still be used on the actor or
+  .. code-block:: polar
+
+        # Not supported.
+        allow(actor, action, resource) if
+            not resource matches User;
+
+        # Also not supported.
+        is_user(user: User);
+        allow(actor, action, resource) if
+            not is_user(resource);
+
+Some operations cannot be performed on **resources** in ``allow`` rules used
+with the SQLAlchemy adapter.  These operations can still be used on the actor or
 action:
 
 - application method calls
-- the ``matches`` operator with fields (``x matches Foo{a: 1}``).
-- rule specializers with fields (``allow(_, _, _: Foo{a: 1}) if ...;``)
 - arithmetic operators
+- comparison operators
 
 .. _Slack: http://join-slack.osohq.com/
