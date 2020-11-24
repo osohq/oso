@@ -1,9 +1,9 @@
 .PHONY: test rust-test rust-build python-build python-test python-flask-build \
-	python-flask-test python-django-test ruby-test java-test docs-test fmt \
-	clippy lint wasm-build wasm-test js-test
+	python-flask-test python-django-test python-sqlalchemy-test ruby-test \
+	java-test docs-test fmt clippy lint wasm-build wasm-test js-test
 
 test: rust-test python-test ruby-test java-test python-flask-test \
-	python-django-test wasm-test js-test
+	python-django-test python-sqlalchemy-test wasm-test js-test
 
 rust-test:
 	cargo test --all-targets
@@ -20,6 +20,9 @@ python-flask-build: python-build
 python-django-build: python-build
 	$(MAKE) -C languages/python/django-oso build
 
+python-sqlalchemy-build: python-build
+	$(MAKE) -C languages/python/sqlalchemy-oso build
+
 python-test: python-build
 	$(MAKE) -C languages/python/oso test
 	python examples/expenses-py/app.py
@@ -30,6 +33,9 @@ python-flask-test: python-build python-flask-build
 
 python-django-test: python-build python-django-build
 	$(MAKE) -C languages/python/django-oso test
+
+python-sqlalchemy-test: python-build python-sqlalchemy-build
+	$(MAKE) -C languages/python/sqlalchemy-oso test
 
 ruby-test:
 	$(MAKE) -C languages/ruby test
@@ -59,6 +65,7 @@ fmt: java-fmt
 	$(MAKE) -C languages/python/oso fmt
 	$(MAKE) -C languages/python/flask-oso fmt
 	$(MAKE) -C languages/python/django-oso fmt
+	$(MAKE) -C languages/python/sqlalchemy-oso fmt
 	$(MAKE) -C languages/js fmt
 
 clippy:

@@ -153,14 +153,15 @@ impl Partial {
     ///
     /// `other` must be a partial or a variable.
     ///
-    /// OTHER in THIS
-    ///
     /// Returns: A new partial to use for additional constraints on `other`.
     pub fn in_unbound(&mut self, other: Term) -> Term {
         let name = match other.value() {
             Value::Partial(constraints) => constraints.name().clone(),
             Value::Variable(sym) => sym.clone(),
-            _ => panic!("Unexpected in LHS value, maybe you meant to call Constraints::contains()"),
+            _ => panic!(
+                "Unexpected in LHS value {:?}, maybe you meant to call Constraints::contains()",
+                other.value()
+            ),
         };
 
         let in_op = op!(In, term!(name.clone()), self.variable_term());
