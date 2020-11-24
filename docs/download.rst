@@ -204,6 +204,7 @@ Releases
     :maxdepth: 1
     :caption: See below for release notes:
 
+    v0.8.1 <changelogs/0.8.1>
     v0.8.0 <changelogs/0.8.0>
     v0.7.1 <changelogs/0.7.1>
     v0.7.0 <changelogs/0.7.0>

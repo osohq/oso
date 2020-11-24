@@ -1,0 +1,26 @@
+=====
+0.8.1
+=====
+
+**Release date:** 2020-11-24
+
+Breaking changes
+================
+
+None
+
+New features
+============
+
+SQLAlchemy adapter for list filtering!
+--------------------------------------
+
+- pip install blahblahblah
+- sample policy:
+
+Other bugs & improvements
+=========================
+
+- Added `a new RBAC guide <https://docs.osohq.com/getting-started/rbac.html>`_.
+- Updated a few runtime error messages.
+- New `documentation for the experimental list filtering feature <TODO>`_.
