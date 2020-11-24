@@ -8,6 +8,9 @@ from django_oso.auth import authorize_model
 class AuthorizedQuerySet(models.QuerySet):
     """``QuerySet`` with ``authorize()`` method."""
 
+    def __repr__(self):
+        return f"<AuthorizedQuerySet {self.query}>"
+
     def authorize(self, request, *, actor=None, action=None):
         """Return a new ``Queryset`` filtered to contain only authorized models.
 
@@ -26,7 +29,9 @@ class AuthorizedQuerySet(models.QuerySet):
         except PermissionDenied:
             return self.none()
 
-        return self.filter(filter)
+        # SELECT DISTINCT on inner query to support chaining methods on
+        # returned QuerySet.
+        return self.filter(pk__in=self.filter(filter).distinct())
 
 
 class AuthorizedModel(models.Model):

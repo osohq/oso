@@ -378,13 +378,21 @@ mod test {
         let p = Polar::new();
         p.load_str(
             r#"f(x: Post) if x.foo = 1;
-               f(x: User) if x.bar = 1;"#,
+               f(x: User) if x.bar = 1;
+
+               f(x: Post) if g(x.y);
+               g(x: User) if x.z = 1;"#,
         )?;
         let mut q = p.new_query_from_term(term!(call!("f", [partial!("a")])), false);
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this matches Post{} and _this.foo = 1");
         let next = next_binding(&mut q)?;
         assert_partial_expression!(next, "a", "_this matches User{} and _this.bar = 1");
+        assert_partial_expression!(
+            next_binding(&mut q)?,
+            "a",
+            "_this matches Post{} and _this.y matches User{} and _this.y.z = 1"
+        );
         assert_query_done!(q);
         Ok(())
     }

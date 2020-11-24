@@ -1,8 +1,7 @@
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
-from django.db import models
+from django.db.models import Q, Model
 
-from .oso import Oso, get_model_name
+from .oso import Oso, polar_model_name
 from polar.partial import Partial, TypeConstraint
 
 from .partial import partial_to_query_filter
@@ -65,8 +64,7 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
     :param actor: The actor making the request. Defaults to ``request.user``.
     :param action: The action to authorize the actor to perform. Defaults to
                     ``request.method``.
-    :param model: The model to authorize access for, or the string name of the model
-                  class in Polar (``app_name::ModelName``).
+    :param model: The model to authorize access for.
 
     :raises django.core.exceptions.PermissionDenied: If the request is not authorized.
     :returns: A django ``Q`` object representing the authorization filter.
@@ -77,14 +75,8 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
     if action is None:
         action = request.method
 
-    try:
-        if issubclass(model, models.Model):
-            resource_type = get_model_name(model)
-    except TypeError:
-        assert isinstance(model, str)
-        resource_type = model
-
-    partial_resource = Partial("resource", TypeConstraint(resource_type))
+    assert issubclass(model, Model), f"Expected a model; received: {model}"
+    partial_resource = Partial("resource", TypeConstraint(polar_model_name(model)))
     results = Oso.query_rule("allow", actor, action, partial_resource)
 
     filter = None
@@ -93,7 +85,7 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
         if filter is None:
             filter = Q()
 
-        next_filter = partial_to_query_filter(resource_partial, resource_type)
+        next_filter = partial_to_query_filter(resource_partial, model)
         if next_filter == Q():
             return next_filter
 

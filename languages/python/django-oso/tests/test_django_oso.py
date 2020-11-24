@@ -145,7 +145,7 @@ def test_partial(rf, settings, partial_policy):
     request = rf.get("/")
     request.user = "test_user"
 
-    authorize_filter = authorize_model(request, action="get", model="test_app::Post")
+    authorize_filter = authorize_model(request, action="get", model=Post)
     assert (
         str(authorize_filter)
         == "(AND: ('is_private', False), ('timestamp__gt', 0), ('option', None))"
@@ -165,6 +165,36 @@ def test_partial(rf, settings, partial_policy):
 
     q = Post.objects.authorize(request, action="get")
     assert q.count() == len(posts)
+
+
+@pytest.mark.django_db
+def test_partial_disjunctive_matches():
+    from test_app.models import Post, User, Admin
+
+    alice = User(name="alice")
+    alice.save()
+    not_alice = User(name="not alice")
+    not_alice.save()
+
+    Post(created_by=alice).save(),
+    Post(created_by=not_alice).save(),
+    Post(created_by=alice).save(),
+
+    Oso.load_str(
+        """
+            allow(_, _, post: test_app::Post) if check_user(post.created_by);
+            check_user(user: test_app::Admin) if user.name = "not alice";
+            check_user(user: test_app::User) if user.name = "alice";
+        """
+    )
+
+    authorize_filter = authorize_model(None, Post, actor="foo", action="bar")
+    assert (
+        str(authorize_filter)
+        == "(OR: (AND: ('pk__in', []), ('created_by__name', 'not alice')), ('created_by__name', 'alice'))"
+    )
+    authorized_posts = Post.objects.filter(authorize_filter)
+    assert authorized_posts.count() == 2
 
 
 @pytest.mark.django_db
