@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606242280971,
+  "lastUpdate": 1606246541048,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14235,6 +14235,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 45484,
             "range": "± 3587",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "15d35a754720aca3265c55949d862c769bbcf1ce",
+          "message": "Revert release workflow change of \"Rust release job (#542)\" (#546)",
+          "timestamp": "2020-11-24T14:32:08-05:00",
+          "tree_id": "8fe928dffceac4e717f5033c31dc4aa1664f6d2d",
+          "url": "https://github.com/osohq/oso/commit/15d35a754720aca3265c55949d862c769bbcf1ce"
+        },
+        "date": 1606246533658,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 45361,
+            "range": "± 2620",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 50925,
+            "range": "± 4254",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52414,
+            "range": "± 4013",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52023,
+            "range": "± 3924",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 50453,
+            "range": "± 3648",
             "unit": "ns/iter"
           }
         ]
