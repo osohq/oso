@@ -1,0 +1,55 @@
+=====
+0.8.1
+=====
+
+**Release date:** 2020-11-24
+
+Breaking changes
+================
+
+None
+
+New features
+============
+
+List filtering
+--------------
+
+This release is a step towards stabilizing our list filtering functionality.
+We've expanded the set of operators that you can use in a policy with list
+filtering, added new adapter capabilities, and started `documenting the
+list filtering use cases and adapters <TODO>`_. We're actively seeking
+feedback on this feature, so please try it out and get in touch with any
+suggestions, bug reports, etc.
+
+Updated list filtering capabilities of the Django integration
+-------------------------------------------------------------
+
+More policies and Polar operations can now be used with list filtering:
+
+* The ``in`` operator now supports relationship fields.
+* Specializers & the ``matches`` operator support embedded fields,
+  e.g., ``resource matches Post{id: 1}``.
+* Nested field lookups are supported, e.g., ``resource.related_model.id = 1``.
+
+Install the latest version from pip: ``pip install django-oso``.
+
+Check out `the documentation <TODO>`_.
+
+SQLAlchemy integration
+----------------------
+
+We've added our third framework integration (after Flask & Django):
+SQLAlchemy! With this library, you can apply authorization filters
+to arbitrary database queries. The initial release is roughly at
+feature parity with the Django adapter's list filtering capabilities.
+
+Try it out: ``pip install sqlalchemy-oso``.
+
+Check out `the documentation <TODO>`_.
+
+Other bugs & improvements
+=========================
+
+- Added `a new RBAC guide <https://docs.osohq.com/getting-started/rbac.html>`_.
+- Updated a few runtime error messages.

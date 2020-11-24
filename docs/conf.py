@@ -39,7 +39,7 @@ project = "oso"
 copyright = "2020 Oso Security, Inc"
 author = "oso"
 version = "0.8"
-release = "0.8.0"
+release = "0.8.1"
 
 
 # -- General configuration ---------------------------------------------------
@@ -133,11 +133,11 @@ pygments_style = "borland"
 notfound_urls_prefix = "/"
 
 notfound_context = {
-    'title': 'Page Not Found',
-    'body': '''
+    "title": "Page Not Found",
+    "body": """
 <h1>Page Not Found</h1>
 <p>Sorry, we couldn't find that page.</p>
-'''
+""",
 }
 
 ### Show/hide TODOs
