@@ -44,8 +44,8 @@ def translate_expr(expression: Expression, session: Session, model):
 
 
 def translate_and_expr(expression: Expression, session: Session, model):
-    expr = and_()
     assert expression.operator == "And"
+    expr = and_()
     for expression in expression.args:
         translated = translate_expr(expression, session, model)
         if translated is None:
