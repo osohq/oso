@@ -12,7 +12,7 @@ Usage
 .. todo:: (dhatch) More precise terminology (declarative models, etc.) in this
    section.
 
-The ``sqlalchemy_oso`` library works over your existing SQLAlchemy ORM models
+``sqlalchemy_oso`` works over your existing SQLAlchemy ORM models
 without modification.
 
 To get started, we need to:
@@ -141,6 +141,8 @@ Next, setup some test data...
     ...     public_manager_post])
     >>> session.commit()
 
+**Authorizing user's posts**
+
 Now that we've setup some test data, let's use **oso** to authorize
 ``Post``\ s that ``User(username="user")`` can see.
 
@@ -169,14 +171,10 @@ returned authorized posts based on the policy.
 ``user`` can see their own public and private posts, and other public
 posts.
 
+**Authorizing manager's posts**
+
 Now we’ll authorize access to ``manager``\ 's ``Post``\ s. We create a new
 authorized session with user set to manager.
-
-.. note::
-
-    In a real application, ``get_user`` would be a function returning the
-    current user, based on the current request context.  For example in Flask
-    this might be ``lambda: flask.g.current_user`` or some other proxy object.
 
 .. doctest::
 
@@ -185,6 +183,13 @@ authorized session with user set to manager.
     ...                                             get_user=lambda: manager,
     ...                                             get_action=lambda: "read")
     >>> manager_session = AuthorizedSession()
+
+.. note::
+
+    In a real application, ``get_user`` would be a function returning the
+    current user, based on the current request context.  For example in Flask
+    this might be ``lambda: flask.g.current_user`` or some other proxy object.
+
 
 And issue the same query as before...
 

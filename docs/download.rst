@@ -17,17 +17,14 @@ oso is available as a library in several languages:
 
             $ pip install oso=={release}
 
-        The Python version is known to work on glibc-based distributions but not on musl-based ones (like Alpine Linux).
-        Wheels built against musl that you can use on Alpine Linux can be downloaded from `the releases page on GitHub <https://github.com/osohq/oso/releases/latest>`_.
+        To install Python framework integrations, see:
+
+        - :doc:`/using/frameworks/flask`
+        - :doc:`/using/frameworks/django`
+        - :doc:`/using/frameworks/sqlalchemy`
 
         For more information on the oso Python library, see the
         :doc:`library documentation </using/libraries/python/index>`.
-
-        To use or install the oso Flask integration, see
-        :doc:`/using/frameworks/flask`.
-
-        To use or install the oso Django integration, see
-        :doc:`/using/frameworks/django`.
 
         .. admonition:: What's next
             :class: tip
@@ -42,6 +39,11 @@ oso is available as a library in several languages:
             - Linux
             - OS X
             - Windows
+
+        The Python version is known to work on glibc-based distributions but not on musl-based ones
+        (like Alpine Linux).  Wheels built against musl that you can use on
+        Alpine Linux can be downloaded from `the releases page on GitHub
+        <https://github.com/osohq/oso/releases/latest>`_.
 
         .. _PyPI: https://pypi.org/project/oso/
 
