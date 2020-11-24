@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606192366276,
+  "lastUpdate": 1606231963202,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14127,6 +14127,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 49036,
             "range": "± 5653",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "767a019b39f018c30cf9f15f646fc4dee46ff6e2",
+          "message": "Setup SQLAlchemy release scripts (#544)\n\n\r\nCo-authored-by: David Hatch <david@osohq.com>",
+          "timestamp": "2020-11-24T10:27:24-05:00",
+          "tree_id": "08ad90697d17f5b68f203bbc8a19a77424f7f5b5",
+          "url": "https://github.com/osohq/oso/commit/767a019b39f018c30cf9f15f646fc4dee46ff6e2"
+        },
+        "date": 1606231951121,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 57746,
+            "range": "± 11246",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 56522,
+            "range": "± 5818",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 60938,
+            "range": "± 9453",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 63149,
+            "range": "± 15286",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 57420,
+            "range": "± 7085",
             "unit": "ns/iter"
           }
         ]
