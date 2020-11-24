@@ -149,11 +149,7 @@ def authorized_sessionmaker(get_oso, get_user, get_action, *args, **kwargs):
     #     return action
 
     return sessionmaker(
-        query_cls=make_authorized_query_cls(
-            get_oso,
-            get_user,
-            get_action
-        ),
+        query_cls=make_authorized_query_cls(get_oso, get_user, get_action),
         *args,
         **kwargs
     )
