@@ -27,7 +27,7 @@ def get_version(rel_path):
 
 setup(
     name="sqlalchemy-example",
-    version=get_version("sqlalchemy_exampl/__init__.py"),
+    version=get_version("sqlalchemy_example/__init__.py"),
     description="oso sqlalchemy integration example app",
     long_description=long_description,
     long_description_content_type="text/markdown",
