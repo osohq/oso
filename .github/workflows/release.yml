@@ -216,7 +216,7 @@ jobs:
           cp target/release/polar.lib languages/python/oso/native/
       - name: Build wheels
         run: |
-          python -m cibuildwheel --output-dir wheelhouse languages/python/oso
+          python -m cibuildwheel --output-dir languages/python/oso/wheelhouse languages/python/oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel

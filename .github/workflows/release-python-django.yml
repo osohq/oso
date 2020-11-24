@@ -49,7 +49,7 @@ jobs:
 
       - name: Build wheels
         run: |
-          python -m cibuildwheel --output-dir wheelhouse languages/python/django-oso
+          python -m cibuildwheel --output-dir languages/python/django-oso/wheelhouse languages/python/django-oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel

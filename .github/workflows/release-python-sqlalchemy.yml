@@ -49,7 +49,7 @@ jobs:
 
       - name: Build wheels
         run: |
-          python -m cibuildwheel --output-dir wheelhouse languages/python/sqlalchemy-oso
+          python -m cibuildwheel --output-dir languages/python/sqlalchemy-oso/wheelhouse languages/python/sqlalchemy-oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
