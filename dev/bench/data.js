@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606188403742,
+  "lastUpdate": 1606192366276,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14073,6 +14073,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52026,
             "range": "± 3587",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bbb1e6788d537c138f4d60193fce4f1756e99bbb",
+          "message": "Add authorized_sessionmaker for sqlalchemy. (#530)",
+          "timestamp": "2020-11-23T23:28:24-05:00",
+          "tree_id": "756ef2dddcb04d48e8a454ac20691ec3321941c1",
+          "url": "https://github.com/osohq/oso/commit/bbb1e6788d537c138f4d60193fce4f1756e99bbb"
+        },
+        "date": 1606192364570,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 43383,
+            "range": "± 3906",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 47111,
+            "range": "± 8046",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 48729,
+            "range": "± 5007",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 48214,
+            "range": "± 4663",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 49036,
+            "range": "± 5653",
             "unit": "ns/iter"
           }
         ]
