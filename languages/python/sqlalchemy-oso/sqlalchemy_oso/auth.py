@@ -55,12 +55,6 @@ def authorize_model(oso: Oso, actor, action, session: Session, model) -> Query:
             # TODO (dhatch): Use OR here?
             combined_query = combined_query.union(query)
 
-        # if query is empty?
-
-        # if query is everything?
-
-        # otherwise
-
     if combined_query is None:
         return null_query(session)
 
