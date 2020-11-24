@@ -9,7 +9,7 @@ needing to authorize each object individually.
 Usage
 =====
 
-.. todo:: (dhatch) More precise terminology (declarative models, etc.) in this
+.. todo:: More precise terminology (declarative models, etc.) in this
    section.
 
 ``sqlalchemy_oso`` works over your existing SQLAlchemy ORM models
@@ -75,7 +75,7 @@ rules:
     The SQLAlchemy integration is deny by default.  The final rule for ``User``
     is needed to allow access to user objects for any user.
 
-    If a query is made for a model that does not have an explict rule in the
+    If a query is made for a model that does not have an explicit rule in the
     policy, no results will be returned.
 
 These rules are written over single model objects.
@@ -243,7 +243,7 @@ authorization logic over collections.
 Limitations
 ===========
 
-.. todo:: Wording here still needs a smidge of work once the top level page is
+.. todo:: Wording here still needs a bit of work once the top level page is
     in, and should link back to that page.  It might not be clear what
     "non-partial" setting means just from reading this page.
 
