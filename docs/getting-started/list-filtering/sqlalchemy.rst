@@ -3,7 +3,7 @@ SQLAlchemy Adapter
 ==================
 
 The ``sqlalchemy_oso`` library can enforce policies over SQLAlchemy models.
-This allows policies to enforce access to collections of objects without
+This allows policies to control access to collections of objects without
 needing to authorize each object individually.
 
 Usage
