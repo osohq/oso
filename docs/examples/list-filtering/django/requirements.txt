@@ -1,0 +1,5 @@
+django~=3.0
+django-oso==0.4.1
+oso==0.8.1
+pytest==5.3.5
+pytest-django==3.9.0
