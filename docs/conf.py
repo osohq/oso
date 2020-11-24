@@ -60,7 +60,6 @@ extensions = [
     "email_role",
     "form_role",
     "fontawesome",
-    "m2r2",
     "sphinx_copybutton",
     "sphinx_tabs.tabs",
     "sphinx.ext.autodoc",
