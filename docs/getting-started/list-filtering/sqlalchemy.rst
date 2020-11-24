@@ -258,7 +258,7 @@ the SQLAlchemy Library when used **anywhere in the policy**:
 
 - the ``cut`` operator
 - rules that rely on ordered execution based on class inheritance
-- negated queries using the ``not`` operator that contain a ``matches`` operator
+- negated queries using the ``not`` operator that contain a ``matches`` operation
   within the negation or call a rule that contains a specializer. For example:
 
   .. code-block:: polar
