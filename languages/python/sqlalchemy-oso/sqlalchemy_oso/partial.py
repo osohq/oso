@@ -16,15 +16,9 @@ from polar.exceptions import UnsupportedError
 EmitFunction = Callable[[Session, Any], Any]
 
 
-def partial_to_query(expression: Expression, session: Session, model) -> Query:
-    """Convert constraints in ``partial`` to a query over ``model``."""
-    query = session.query(model)
-
-    expr = translate_expr(expression, session, model)
-    if expr is not None:
-        return query.filter(expr)
-
-    return query
+def partial_to_filter(expression: Expression, session: Session, model):
+    """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
+    return translate_expr(expression, session, model)
 
 
 # Returns None or the translated expression.

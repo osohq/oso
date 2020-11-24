@@ -5,180 +5,11 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 """
 import pytest
 
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker, relationship
-from sqlalchemy.orm.session import Session
-from sqlalchemy.schema import Table
-from sqlalchemy.ext.declarative import declarative_base
-
-from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey
-
 from oso import Oso
-from sqlalchemy_oso.auth import authorize_model, register_models
+from sqlalchemy_oso.auth import authorize_model
 
-ModelBase = declarative_base(name="ModelBase")
-
-
-def print_query(query):
-    print(query.statement.compile(), query.statement.compile().params)
-
-
-class Tag(ModelBase):
-    __tablename__ = "tags"
-
-    name = Column(String, primary_key=True)
-    created_by_id = Column(Integer, ForeignKey("users.id"))
-    created_by = relationship("User", foreign_keys=[created_by_id])
-
-    users = relationship("User", secondary="user_tags")
-
-    # If provided, posts in this tag always have the public access level.
-    is_public = Column(Boolean, default=False, nullable=False)
-
-
-post_tags = Table(
-    "post_tags",
-    ModelBase.metadata,
-    Column("post_id", Integer, ForeignKey("posts.id")),
-    Column("tag_id", Integer, ForeignKey("tags.name")),
-)
-
-user_tags = Table(
-    "user_tags",
-    ModelBase.metadata,
-    Column("user_id", Integer, ForeignKey("users.id")),
-    Column("tag_id", Integer, ForeignKey("tags.name")),
-)
-
-
-class Post(ModelBase):
-    __tablename__ = "posts"
-
-    id = Column(Integer, primary_key=True)
-    contents = Column(String)
-    access_level = Column(Enum("public", "private"), nullable=False)
-
-    created_by_id = Column(Integer, ForeignKey("users.id"))
-    created_by = relationship("User", backref="posts")
-
-    needs_moderation = Column(Boolean, nullable=False, default=False)
-
-    tags = relationship("Tag", secondary=post_tags)
-
-
-class User(ModelBase):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True)
-    username = Column(String, nullable=False)
-
-    is_moderator = Column(Boolean, nullable=False, default=False)
-    is_banned = Column(Boolean, nullable=False, default=False)
-
-    # Single tag
-    tag_name = Column(Integer, ForeignKey("tags.name"))
-    tag = relationship("Tag", foreign_keys=[tag_name])
-
-    # Many tags
-    tags = relationship("Tag", secondary=user_tags)
-
-
-@pytest.fixture
-def post_fixtures():
-    def create(session: Session):
-        foo = User(id=0, username="foo")
-        admin_user = User(id=1, username="admin_user", is_moderator=True)
-        bad_user = User(id=2, username="bad_user", is_banned=True)
-        users = [foo, admin_user, bad_user]
-
-        posts = [
-            Post(
-                id=0, contents="foo public post", access_level="public", created_by=foo
-            ),
-            Post(
-                id=1,
-                contents="foo public post 2",
-                access_level="public",
-                created_by=foo,
-            ),
-            Post(
-                id=3,
-                contents="foo private post",
-                access_level="private",
-                created_by=foo,
-            ),
-            Post(
-                id=4,
-                contents="foo private post 2",
-                access_level="private",
-                created_by=foo,
-            ),
-            Post(
-                id=5,
-                contents="private for moderation",
-                access_level="private",
-                needs_moderation=True,
-                created_by=foo,
-            ),
-            Post(
-                id=6,
-                contents="public for moderation",
-                access_level="public",
-                needs_moderation=True,
-                created_by=foo,
-            ),
-            Post(
-                id=7,
-                contents="admin post",
-                access_level="public",
-                needs_moderation=True,
-                created_by=admin_user,
-            ),
-            Post(
-                id=8,
-                contents="admin post",
-                access_level="private",
-                needs_moderation=True,
-                created_by=admin_user,
-            ),
-            Post(
-                id=9, contents="banned post", access_level="public", created_by=bad_user
-            ),
-        ]
-
-        for p in posts:
-            session.add(p)
-
-        for u in users:
-            session.add(u)
-
-    return create
-
-
-@pytest.fixture
-def fixture_data(session, post_fixtures):
-    post_fixtures(session)
-    session.commit()
-
-
-@pytest.fixture
-def engine():
-    engine = create_engine("sqlite:///:memory:")
-    ModelBase.metadata.create_all(engine)
-    return engine
-
-
-@pytest.fixture
-def session(engine):
-    return Session(bind=engine)
-
-
-@pytest.fixture
-def oso():
-    oso = Oso()
-    register_models(oso, ModelBase)
-    return oso
+from .models import *
+from .conftest import print_query
 
 
 def test_authorize_model_basic(session, oso, fixture_data):
@@ -564,9 +395,9 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert len(posts) == 1
 
 
-# todo test_nested_relationship_single_many
-# todo test_nested_relationship_single_single
-# todo test_nested_relationship_single_single_single ... etc
+# TODO test_nested_relationship_single_many
+# TODO test_nested_relationship_single_single
+# TODO test_nested_relationship_single_single_single ... etc
 
 # TODO test non Eq conditions
 # TODO test f(x) if not x.boolean_attr;
