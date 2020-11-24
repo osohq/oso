@@ -12,11 +12,19 @@ None
 New features
 ============
 
-SQLAlchemy adapter for list filtering!
---------------------------------------
+Updated list filtering capabilities of the Django adapter
+---------------------------------------------------------
 
-- pip install blahblahblah
-- sample policy:
+Install the latest version from pip: ``pip install django-oso``.
+
+Check out `the documentation <TODO>`_.
+
+SQLAlchemy adapter for list filtering
+-------------------------------------
+
+Try it out: ``pip install sqlalchemy-oso``.
+
+Check out `the documentation <TODO>`_.
 
 Other bugs & improvements
 =========================
