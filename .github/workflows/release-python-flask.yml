@@ -49,8 +49,7 @@ jobs:
 
       - name: Build wheels
         run: |
-          python -m cibuildwheel --output-dir wheelhouse
-        working-directory: languages/python/flask-oso
+          python -m cibuildwheel --output-dir wheelhouse languages/python/flask-oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
