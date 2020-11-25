@@ -2,8 +2,8 @@
 SQLAlchemy
 ==========
 
-The oso SQLAlchemy integration enables list filtering to be used with SQLAlchemy
-models.
+The oso SQLAlchemy integration enables :doc:`list filtering </getting-started/list-filtering/index>`
+to be used with SQLAlchemy models.
 
 Installation
 ============
