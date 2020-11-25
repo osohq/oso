@@ -69,9 +69,3 @@ def test_manager_access_to_posts(users, posts):
     assert posts["private_user_post"] in authorized_posts
     assert posts["public_manager_post"] in authorized_posts
     assert posts["private_manager_post"] in authorized_posts
-
-
-@pytest.mark.django_db
-def test_user_access_to_users(users):
-    authorized_users = User.objects.authorize(None, actor=users["user"], action="read")
-    assert authorized_users.count() == 2
