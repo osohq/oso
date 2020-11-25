@@ -84,4 +84,3 @@ abstraction.
     - Odoo (coming soon)
 
 - More framework integrations are coming soon - join us in Slack to discuss your use case or open an issue on github.
->>>>>>> 6397d8e4 (WIP main authorizing collections doc)
