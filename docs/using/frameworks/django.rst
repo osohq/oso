@@ -33,6 +33,13 @@ authorization with oso and django easy.  To use, ensure ``django_oso`` is in
         ...
     ]
 
+By default, ``django_oso`` will consider policy files as source code and restart the
+server on any changes. To prevent this, add the configuration option:
+``OSO_RELOAD_SERVER = False`` to your application's ``settings.py`` file.
+
+An alternate approach is to use the ``ReloadPolicyMiddleware`` to reload policies
+on each request when in ``DEBUG`` mode.
+
 Loading policies
 ----------------
 
@@ -147,6 +154,8 @@ Authorization
 
 Middleware
 ----------
+
+.. autoclass:: django_oso.middleware.ReloadPolicyMiddleware
 
 .. autoclass:: django_oso.middleware.RequireAuthorization
 
