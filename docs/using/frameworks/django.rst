@@ -37,8 +37,9 @@ By default, ``django_oso`` will consider policy files as source code and restart
 server on any changes. To prevent this, add the configuration option:
 ``OSO_RELOAD_SERVER = False`` to your application's ``settings.py`` file.
 
-An alternate approach is to use the ``ReloadPolicyMiddleware`` to reload policies
-on each request when in ``DEBUG`` mode.
+To reload policies on each request in ``DEBUG`` mode without restarting the
+server, you can use the ``ReloadPolicyMiddleware`` as a complement to the above
+configuration change.
 
 Loading policies
 ----------------
@@ -194,4 +195,3 @@ Oso
 ---
 
 .. autodata:: django_oso.oso.Oso
-
