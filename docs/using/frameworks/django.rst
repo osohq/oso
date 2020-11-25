@@ -152,6 +152,8 @@ Authorization
 
 .. autofunction:: django_oso.auth.skip_authorization
 
+.. _django-middleware:
+
 Middleware
 ----------
 
