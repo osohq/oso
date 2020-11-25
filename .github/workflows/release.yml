@@ -214,6 +214,10 @@ jobs:
           mkdir -p languages/python/oso/native
           cp polar-c-api/polar.h languages/python/oso/native/
           cp target/release/polar.lib languages/python/oso/native/
+      - name: Copy in readme
+        run: |
+          rm languages/python/oso/README.md
+          cp README.md languages/python/oso/README.md
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse
