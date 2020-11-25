@@ -18,7 +18,9 @@ from sphinxcontrib.spelling.filters import ContractionFilter
 
 from enchant.tokenize import Filter
 
-sys.path.insert(0, os.path.join(os.path.abspath("."), "examples", "list-filtering", "sqlalchemy"))
+sys.path.insert(
+    0, os.path.join(os.path.abspath("."), "examples", "list-filtering", "sqlalchemy")
+)
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 import lexer
@@ -40,7 +42,7 @@ project = "oso"
 copyright = "2020 Oso Security, Inc"
 author = "oso"
 version = "0.8"
-release = "0.8.1"
+release = "0.8.2"
 
 
 # -- General configuration ---------------------------------------------------
