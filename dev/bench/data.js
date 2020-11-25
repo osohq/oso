@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606324086301,
+  "lastUpdate": 1606325096179,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14505,6 +14505,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52334,
             "range": "± 3756",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2436aff50261f233e41e9a5769778080f4512ddc",
+          "message": "Remove obsolete changelog entry (#551)\n\n* Remove incorrect changelog entry\r\n\r\n* versions\r\n\r\nCo-authored-by: steve olsen <dev@steve.computer>",
+          "timestamp": "2020-11-25T12:20:55-05:00",
+          "tree_id": "3d3278ccaed7097af1aab788145a55ccd685ae79",
+          "url": "https://github.com/osohq/oso/commit/2436aff50261f233e41e9a5769778080f4512ddc"
+        },
+        "date": 1606325094283,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 48769,
+            "range": "± 3204",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 51632,
+            "range": "± 5437",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52575,
+            "range": "± 4090",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52980,
+            "range": "± 4478",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 53090,
+            "range": "± 3632",
             "unit": "ns/iter"
           }
         ]
