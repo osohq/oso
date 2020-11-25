@@ -250,7 +250,7 @@ Limitations
 This feature is still under active development. Not all policies that work in a
 non-partial setting will currently work with partials. More policies will be
 supported as we continue working on this feature. The SQLAlchemy adapter is
-ready for evaluation and testing. However, we recommending getting in touch with
+ready for evaluation and testing. However, we recommend getting in touch with
 us before using it in production. Join our Slack_.
 
 There are some operators and features of Polar that do not currently work with
