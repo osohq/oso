@@ -6,9 +6,6 @@ from app.models import Post, User
 class Command(BaseCommand):
     help = "seed database for testing and development."
 
-    # def add_arguments(self, parser):
-    #     parser.add_argument('--mode', type=str, help="Mode")
-
     def handle(self, *args, **options):
         seed()
 
