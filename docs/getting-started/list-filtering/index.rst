@@ -1,6 +1,6 @@
-=======================
+==============
 List Filtering
-=======================
+==============
 
 With oso, you write your authorization policy directly over your application
 data. The policy encodes who may do what to which resources — but what happens
