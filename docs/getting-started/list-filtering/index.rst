@@ -14,14 +14,17 @@ the supported ORMs (currently Django & SQLAlchemy).
 How it works
 ============
 
-Let's take our authorization rule from above: a user may view a post if it was
-created by a friend:
+Imagine the following authorization rule. A user is allowed to view any public
+social media posts as well as their own private posts:
 
 .. code-block:: polar
 
-  allow(user, "view", post) if post.creator in user.friends;
+  allow(user, "view", post) if
+      post.access_level = "public" or
+      post.creator = user;
 
-For a particular user, we can ask two fundamental questions:
+For a particular user, we can ask two fundamental questions in the context of
+the above rule:
 
 1. Is that user allowed to view a specific post, say, ``Post{id: 1}``?
 2. Which posts is that user allowed to view?
@@ -38,7 +41,7 @@ expressions:
 
 .. code-block:: polar
 
-  constraints here
+  _this.access_level = "public" or _this.creator.id = 1
 
 Partial evaluation is a generic capability of the oso engine, but making use of
 it requires an adapter that translates the emitted constraint expressions into
@@ -51,7 +54,7 @@ clauses:
 
 .. code-block:: sql
 
-  SQL here
+  WHERE access_level = "public" AND creator.id = 1
 
 In effect, authorization is being enforced by the policy engine and the ORM
 cooperatively.
@@ -78,9 +81,13 @@ abstraction.
 
 ## Frameworks
 
-- To learn more about this feature and see usage examples, see our ORM specific documentation:
-    - Django
-    - SQLAlchemy
-    - Odoo (coming soon)
+To learn more about this feature and see usage examples, see our ORM specific documentation:
+  - :doc:`Django </getting-started/list-filtering/django>`
+  - :doc:`SQLAlchemy </getting-started/list-filtering/sqlalchemy>`
+  - Odoo (coming soon)
 
-- More framework integrations are coming soon - join us in Slack to discuss your use case or open an issue on github.
+More framework integrations are coming soon - join us on Slack_ to discuss your
+use case or open an issue on GitHub_.
+
+.. _Slack: http://join-slack.osohq.com/
+.. _GitHub: https://github.com/osohq/oso
