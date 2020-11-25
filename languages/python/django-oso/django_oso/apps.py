@@ -7,6 +7,7 @@ from django.http import HttpRequest
 from django.utils.autoreload import autoreload_started
 
 from .oso import init_oso
+from .settings import OSO_RELOAD_SERVER
 
 
 def watch_files(files, sender, **kwargs):
@@ -19,6 +20,7 @@ class DjangoOsoConfig(AppConfig):
 
     def ready(self):
         loaded_files = init_oso()
-        autoreload_started.connect(
-            functools.partial(watch_files, files=loaded_files), weak=False
-        )
+        if OSO_RELOAD_SERVER:
+            autoreload_started.connect(
+                functools.partial(watch_files, files=loaded_files), weak=False
+            )

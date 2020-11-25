@@ -1,4 +1,6 @@
 """Middleware"""
+from django.conf import settings
+from django_oso.oso import reset_oso
 
 from oso import OsoError
 
@@ -73,6 +75,19 @@ def RouteAuthorization(get_response):
 
     def middleware(request):
         authorize(request, resource=request)
+        return get_response(request)
+
+    return middleware
+
+
+def ReloadPolicyMiddleware(get_response):
+    """Reloads all oso policies on every request when in DEBUG mode"""
+
+    if not settings.DEBUG:
+        return lambda request: get_response(request)
+
+    def middleware(request):
+        reset_oso()
         return get_response(request)
 
     return middleware

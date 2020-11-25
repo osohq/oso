@@ -53,3 +53,5 @@ Other bugs & improvements
 
 - Added `a new RBAC guide <https://docs.osohq.com/getting-started/rbac.html>`_.
 - Updated a few runtime error messages.
+- Added new ``ReloadPolicyMiddleware`` :ref:`middleware <django-middleware>`
+  for ``django_oso`` to control when/how policies are reloaded.
