@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606330388698,
+  "lastUpdate": 1606344151268,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14613,6 +14613,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 43705,
             "range": "± 3597",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4e7bd06177b1e5388646d5ea84280aec0d984ec4",
+          "message": "List filtering docs (#553)\n\nCo-authored-by: Alex Plotnick <alex@osohq.com>\r\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-11-25T17:38:42-05:00",
+          "tree_id": "2292ad6450c9d99b39410c036391a6b5fef401c7",
+          "url": "https://github.com/osohq/oso/commit/4e7bd06177b1e5388646d5ea84280aec0d984ec4"
+        },
+        "date": 1606344149452,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46490,
+            "range": "± 1724",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 52247,
+            "range": "± 3665",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52006,
+            "range": "± 3645",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52114,
+            "range": "± 3717",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52087,
+            "range": "± 3631",
             "unit": "ns/iter"
           }
         ]
