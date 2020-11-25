@@ -1,5 +1,5 @@
 =======================
-Authorizing Collections
+List Filtering
 =======================
 
 The oso policy engine can now produce such filters from your policy. Below
