@@ -16,7 +16,7 @@ export JS_DIR := $(abspath ../languages/js)
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.8.0.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/target/oso-0.8.2.jar
 
 RUBY_FILES := $(call rwildcard,../languages/ruby/lib,*.rb)
 JAVA_FILES := $(call rwildcard ../languages/java/oso/src, *.java)
@@ -81,6 +81,7 @@ python-test:
 	cd examples/rbac/python && pytest .
 	cd examples/context/python && pytest .
 	cd examples/user_types/python && pytest .
+	cd examples/list-filtering/sqlalchemy && pytest sqlalchemy_example
 
 ruby-test:
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb

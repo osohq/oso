@@ -46,7 +46,10 @@ jobs:
       - name: Install cibuildwheel
         run: |
           python -m pip install cibuildwheel==1.4.2
-
+      - name: Copy in readme
+        run: |
+          rm languages/python/sqlalchemy-oso/README.md
+          cp README.md languages/python/sqlalchemy-oso/README.md
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse

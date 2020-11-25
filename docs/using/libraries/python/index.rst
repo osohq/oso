@@ -7,7 +7,7 @@ Python Authorization Library
 
 oso is available as a :doc:`package</download>` for use in Python applications.
 
-Code-level documentation is :doc:`here<api>`.
+API Reference is :doc:`here<api>`.
 
 .. toctree::
     :hidden:
@@ -22,6 +22,7 @@ oso provides integrations for popular frameworks:
 
 * :doc:`/using/frameworks/flask`
 * :doc:`/using/frameworks/django`
+* :doc:`/using/frameworks/sqlalchemy`
 
 
 Working with Python Objects
