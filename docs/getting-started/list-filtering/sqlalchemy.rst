@@ -251,15 +251,16 @@ This feature is still under active development. Not all policies that work in a
 non-partial setting will currently work with partials. More policies will be
 supported as we continue working on this feature. The SQLAlchemy adapter is
 ready for evaluation and testing. However, we recommend getting in touch with
-us before using it in production. Join our Slack_.
+us on Slack_ before using it in production.
 
-There are some operators and features of Polar that do not currently work with
-the SQLAlchemy Library when used **anywhere in the policy**:
+There are some operators and features that do not currently work with the
+SQLAlchemy adapter when used **anywhere in the policy**:
 
 - the ``cut`` operator
 - rules that rely on ordered execution based on class inheritance
-- negated queries using the ``not`` operator that contain a ``matches`` operation
-  within the negation or call a rule that contains a specializer. For example:
+- negated queries using the ``not`` operator that contain a ``matches``
+  operation within the negation or call a rule that contains a specializer. For
+  example:
 
   .. code-block:: polar
 
