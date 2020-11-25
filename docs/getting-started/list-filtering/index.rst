@@ -77,19 +77,16 @@ Alternative solutions
 =====================
 
 Partial evaluation is not the only way to efficiently apply authorization to
-collections of data. On the :doc:`Access
-Patterns <getting-started/application/patterns>`
-page, we describe [several
-alternatives](https://docs.osohq.com/getting-started/application/patterns.html#authorizing-list-endpoints).
-Manually applying `WHERE` clauses to reduce the search space (or using
-[ActiveRecord-style
-scopes](https://guides.rubyonrails.org/active_record_querying.html#scopes))
-requires additional application code and still needs to iterate over a
-potentially large collection. Authorizing the filter to be applied (or having
-oso output the filter) doesn't require iterating over individual records, but
-it does force you to write policy over filters instead of over application
-types, which can lead to more complex policies and is a bit of a leaky
-abstraction.
+collections of data. On the :doc:`Access Patterns
+</getting-started/application/patterns>` page, we describe :ref:`several
+alternatives <authorizing-list-endpoints>`. Manually applying ``WHERE`` clauses
+to reduce the search space (or using `ActiveRecord-style scopes
+<https://guides.rubyonrails.org/active_record_querying.html#scopes>`_) requires
+additional application code and still needs to iterate over a potentially large
+collection. Authorizing the filter to be applied (or having oso output the
+filter) doesn't require iterating over individual records, but it does force
+you to write policy over filters instead of over application types, which can
+lead to more complex policies and is a bit of a leaky abstraction.
 
 ## Frameworks
 
