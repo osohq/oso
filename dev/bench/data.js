@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606246541048,
+  "lastUpdate": 1606266356366,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14289,6 +14289,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 50453,
             "range": "± 3648",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e3bb1a22ef1ea01893978959450ee933d9cbcf45",
+          "message": "SQLAlchemy list filtering example for documentation (#537)\n\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-11-24T20:02:45-05:00",
+          "tree_id": "c411eb2df204e7f063c47b162df53d5055f171e8",
+          "url": "https://github.com/osohq/oso/commit/e3bb1a22ef1ea01893978959450ee933d9cbcf45"
+        },
+        "date": 1606266354585,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 39633,
+            "range": "± 1530",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 44017,
+            "range": "± 2880",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 44053,
+            "range": "± 2996",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 44112,
+            "range": "± 2977",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 43968,
+            "range": "± 2988",
             "unit": "ns/iter"
           }
         ]
