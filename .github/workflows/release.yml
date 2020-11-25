@@ -662,7 +662,7 @@ jobs:
         validate_js,
         test_quickstarts,
       ]
-    steps:remote
+    steps:
       - uses: rtCamp/action-slack-notify@master
         env:
           SLACK_CHANNEL: firehose
