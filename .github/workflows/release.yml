@@ -5,7 +5,6 @@ on:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
       - main
-      - steve/wowhack-python-readmes
 
 jobs:
   version:
@@ -16,7 +15,7 @@ jobs:
       - name: Set version env
         run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Check github ref matches
-        if: github.ref != 'refs/heads/steve/wowhack-python-readmes'
+        if: github.ref != 'refs/heads/main'
         env:
           github_ref: ${{ github.ref }}
         run: grep "${github_ref/refs\/tags\/v/}" VERSION
@@ -511,7 +510,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/steve/wowhack-python-readmes'
+    if: github.ref != 'refs/heads/main'
     needs:
       [
         build_wheels,
