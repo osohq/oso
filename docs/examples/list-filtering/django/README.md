@@ -5,6 +5,7 @@
 - `pip install -r requirements.txt`
 - `python example/manage.py makemigrations app`
 - `python example/manage.py migrate`
+- `python example/manage.py seed`
 - `python example/manage.py runserver`
 
 ## Usage
