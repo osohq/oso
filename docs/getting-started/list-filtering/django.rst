@@ -51,13 +51,13 @@ Trying it out
 -------------
 
 If you want to follow along, clone the oso repository from GitHub_ and ``cd``
-into the ``docs/examples/list-filtering/django`` directory. Then, run ``make
-setup`` to install dependencies (primarily Django and ``django-oso``) and seed
-the database.
+into it and then into the ``docs/examples/list-filtering/django`` directory.
+Then, run ``make setup`` to install dependencies (primarily Django and
+``django-oso``) and seed the database.
 
 .. _GitHub: https://github.com/osohq/oso
 
-The database will now contain a set of four posts made by two users:
+The database now contains a set of four posts made by two users:
 
 .. code-block:: python
 
@@ -100,35 +100,28 @@ their direct reports:
     3 - @manager - public - public manager post
     4 - @manager - private - private manager post
 
-How oso authorizes Django data
-==============================
+How it works
+============
 
-As you can see from the above example, the ``django-oso`` integration applies
-authorization to regular Django QuerySets.
+QuerySets containing authorized models are automatically filtered using
+constraints derived from the policy.
 
-Before evaluating a Django QuerySet, the authorized models in the QuerySet are...
+For example, the above policy has the following rule:
 
-Before compiling a SQLAlchemy query, the entities in the query are authorized
-with oso. oso returns authorization decisions for each entity that indicate
-what constraints must be met for the entity to be authorized. These constraints
-are then translated into filters on the SQLAlchemy query object.
+.. literalinclude:: /examples/list-filtering/django/example/app/policy/example.polar
+    :caption: :fa:`oso` example.polar
+    :language: polar
+    :lines: 4-6
 
-For example, our above policy has the following code:
+When determining which ``Post`` objects ``User(id=1)`` is authorized to see,
+the ``django-oso`` adapter converts the constraints on Post expressed in this
+rule into a Django ``Q`` filter::
 
-.. code-block:: polar
+    (AND: ('access_level', 'private'), ('creator__pk', 1))
 
-    allow(user: User, "read", post: Post) if
-        post.access_level = "private" and post.created_by = user;
-
-The oso library converts the constraints on Post expressed in this policy into a
-SQLAlchemy query like::
-
-    session.query(Post)
-        .filter(Post.access_level == "private" & Post.created_by == user)
-
-This translation makes the policy an effective abstraction for expressing
-authorization logic over collections.
-
+This filter then scopes down the QuerySet to only include authorized objects.
+Translating from policy to filter to authorized data makes the policy an
+effective abstraction for expressing authorization logic over collections.
 
 Limitations
 ===========
