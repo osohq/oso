@@ -1,8 +1,8 @@
 =====
-0.8.1
+0.8.2
 =====
 
-**Release date:** 2020-11-24
+**Release date:** 2020-11-25
 
 Breaking changes
 ================
