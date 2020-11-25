@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606325096179,
+  "lastUpdate": 1606330388698,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14559,6 +14559,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 53090,
             "range": "± 3632",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ec1798e8928ca4afa86cf9deea32c8ccd3a14912",
+          "message": "sqlalchemy lib for docs build (#552)",
+          "timestamp": "2020-11-25T13:49:43-05:00",
+          "tree_id": "c8a960f6eb3248f00a68e762399baae528f6aa34",
+          "url": "https://github.com/osohq/oso/commit/ec1798e8928ca4afa86cf9deea32c8ccd3a14912"
+        },
+        "date": 1606330387075,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 39552,
+            "range": "± 1964",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 42873,
+            "range": "± 4575",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 43490,
+            "range": "± 4387",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 42819,
+            "range": "± 4309",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 43705,
+            "range": "± 3597",
             "unit": "ns/iter"
           }
         ]
