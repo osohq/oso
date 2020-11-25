@@ -5,6 +5,7 @@ on:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
       - main
+      - steve/wowhack-python-readmes
 
 jobs:
   version:
@@ -214,6 +215,8 @@ jobs:
           mkdir -p languages/python/oso/native
           cp polar-c-api/polar.h languages/python/oso/native/
           cp target/release/polar.lib languages/python/oso/native/
+      - name: Copy in readme
+        run: cp README.md languages/python/oso/README.md
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse
