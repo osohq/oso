@@ -88,7 +88,8 @@ filter) doesn't require iterating over individual records, but it does force
 you to write policy over filters instead of over application types, which can
 lead to more complex policies and is a bit of a leaky abstraction.
 
-## Frameworks
+Frameworks
+==========
 
 To learn more about this feature and see usage examples, see our ORM specific documentation:
   - :doc:`Django </getting-started/list-filtering/django>`
