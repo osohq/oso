@@ -27,7 +27,7 @@ Example
 =======
 
 Let’s look at an example usage of this library. Our example is a social media
-app that allows users to view posts. There is a ``Post`` model and a ``User``
+app that allows users to view posts. There is a ``User`` model and a ``Post``
 model:
 
 .. literalinclude:: /examples/list-filtering/django/example/app/models.py
