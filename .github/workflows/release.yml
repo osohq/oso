@@ -216,7 +216,9 @@ jobs:
           cp polar-c-api/polar.h languages/python/oso/native/
           cp target/release/polar.lib languages/python/oso/native/
       - name: Copy in readme
-        run: cp README.md languages/python/oso/README.md
+        run: |
+          rm languages/python/oso/README.md
+          cp README.md languages/python/oso/README.md
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse
@@ -660,7 +662,7 @@ jobs:
         validate_js,
         test_quickstarts,
       ]
-    steps:
+    steps:remote
       - uses: rtCamp/action-slack-notify@master
         env:
           SLACK_CHANNEL: firehose
