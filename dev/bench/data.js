@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606323366975,
+  "lastUpdate": 1606324086301,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14451,6 +14451,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 53599,
             "range": "± 4523",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4c868ee25b9e2a58fe7c6dc76c990543ebcb6663",
+          "message": "Add setting to turn off server reload and policy reload middleware for django_oso (#550)\n\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\n\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>\r\nCo-authored-by: steve olsen <dev@steve.computer>",
+          "timestamp": "2020-11-25T12:04:18-05:00",
+          "tree_id": "059148628e63edccb6fbbe6aec4d681fe2843dbe",
+          "url": "https://github.com/osohq/oso/commit/4c868ee25b9e2a58fe7c6dc76c990543ebcb6663"
+        },
+        "date": 1606324082897,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46552,
+            "range": "± 1883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 52210,
+            "range": "± 3666",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 56606,
+            "range": "± 9853",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52200,
+            "range": "± 3649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52334,
+            "range": "± 3756",
             "unit": "ns/iter"
           }
         ]
