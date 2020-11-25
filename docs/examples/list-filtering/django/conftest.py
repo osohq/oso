@@ -3,6 +3,8 @@ import sys
 
 from django.conf import settings
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 def pytest_configure():
     # Add example app to sys path.
@@ -11,13 +13,16 @@ def pytest_configure():
 
     settings.configure(
         INSTALLED_APPS=[
-            "example",
+            "app",
             "django_oso",
             "django.contrib.auth",
             "django.contrib.contenttypes",
         ],
-        ROOT_URLCONF="django_oso.test_urls",
         DATABASES={
-            "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
         },
+        AUTH_USER_MODEL="app.User",
     )

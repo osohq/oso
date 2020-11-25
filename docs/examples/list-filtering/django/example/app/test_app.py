@@ -2,8 +2,9 @@ import pytest
 
 from django_oso.models import AuthorizedModel, authorize_model
 from django_oso.oso import Oso, reset_oso
+from django.core.management import call_command
 
-from example.models import Post, User
+from app.models import Post, User
 
 
 @pytest.fixture(autouse=True)
@@ -13,35 +14,29 @@ def reset():
 
 @pytest.fixture
 def users():
-    manager = User(username="manager")
-    manager.save()
-    user = User(username="user", manager=manager)
-    user.save()
+    (manager, _) = User.objects.get_or_create(username="manager")
+    (user, _) = User.objects.get_or_create(username="user", manager=manager)
     return {"user": user, "manager": manager}
 
 
 @pytest.fixture
 def posts(users):
-    public_user_post = Post(
+    (public_user_post, _) = Post.objects.get_or_create(
         contents="public user post", access_level="public", creator=users["user"]
     )
-    public_user_post.save()
-    private_user_post = Post(
+    (private_user_post, _) = Post.objects.get_or_create(
         contents="private user post", access_level="private", creator=users["user"]
     )
-    private_user_post.save()
-    public_manager_post = Post(
+    (public_manager_post, _) = Post.objects.get_or_create(
         contents="public manager post",
         access_level="public",
         creator=users["manager"],
     )
-    public_manager_post.save()
-    private_manager_post = Post(
+    (private_manager_post, _) = Post.objects.get_or_create(
         contents="private manager post",
         access_level="private",
         creator=users["manager"],
     )
-    private_manager_post.save()
     return {
         "public_user_post": public_user_post,
         "private_user_post": private_user_post,
@@ -52,7 +47,7 @@ def posts(users):
 
 @pytest.mark.django_db
 def test_user_access_to_posts(users, posts):
-    authorized_posts = Post.objects.authorize(None, actor=users["user"], action="read")
+    authorized_posts = Post.objects.authorize(None, actor=users["user"], action="GET")
     assert authorized_posts.count() == 3
     assert posts["public_user_post"] in authorized_posts
     assert posts["private_user_post"] in authorized_posts
@@ -62,7 +57,7 @@ def test_user_access_to_posts(users, posts):
 @pytest.mark.django_db
 def test_manager_access_to_posts(users, posts):
     authorized_posts = Post.objects.authorize(
-        None, actor=users["manager"], action="read"
+        None, actor=users["manager"], action="GET"
     )
     assert authorized_posts.count() == 4
     assert posts["public_user_post"] in authorized_posts

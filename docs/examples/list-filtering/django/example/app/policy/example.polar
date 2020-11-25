@@ -1,10 +1,10 @@
-allow(_: example::User, "read", post: example::Post) if
+allow(_: app::User, "GET", post: app::Post) if
     post.access_level = "public";
 
-allow(user: example::User, "read", post: example::Post) if
+allow(user: app::User, "GET", post: app::Post) if
     post.access_level = "private" and
     post.creator = user;
 
-allow(user: example::User, "read", post: example::Post) if
+allow(user: app::User, "GET", post: app::Post) if
     post.access_level = "private" and
     post.creator in user.direct_reports.all();
