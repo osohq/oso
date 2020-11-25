@@ -7,6 +7,7 @@ we'll briefly explain how it works and link to instructions and examples for
 the supported ORMs (currently Django & SQLAlchemy).
 
 .. toctree::
+    :maxdepth: 1
 
     django
     sqlalchemy
