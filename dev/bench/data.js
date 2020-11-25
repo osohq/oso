@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606320139206,
+  "lastUpdate": 1606323366975,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14397,6 +14397,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 51318,
             "range": "± 3812",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1a1d505f48b66901b54b6f609203b71ea38e48d7",
+          "message": "0.8.2 (#549)",
+          "timestamp": "2020-11-25T11:52:12-05:00",
+          "tree_id": "ed9ff2f7b76f3c1939cc40eae4a28df3681a6853",
+          "url": "https://github.com/osohq/oso/commit/1a1d505f48b66901b54b6f609203b71ea38e48d7"
+        },
+        "date": 1606323364962,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 48471,
+            "range": "± 4674",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 53630,
+            "range": "± 6290",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 53201,
+            "range": "± 5701",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52545,
+            "range": "± 6559",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 53599,
+            "range": "± 4523",
             "unit": "ns/iter"
           }
         ]
