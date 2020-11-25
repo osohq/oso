@@ -80,6 +80,8 @@ Rego
 Hashicorp
 JShell
 js
+Odoo
+cURL
 
 
 ## Misc terms
