@@ -82,6 +82,7 @@ python-test:
 	cd examples/context/python && pytest .
 	cd examples/user_types/python && pytest .
 	cd examples/list-filtering/sqlalchemy && pytest sqlalchemy_example
+	$(MAKE) -C examples/list-filtering/django test
 
 ruby-test:
 	cd examples/abac/ruby && bundle exec rspec test_spec.rb

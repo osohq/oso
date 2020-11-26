@@ -2,8 +2,6 @@ from django.db import models
 
 from django_oso.models import AuthorizedModel
 
-import pytest
-
 
 class User(models.Model):
     username = models.CharField(max_length=255)
