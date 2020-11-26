@@ -122,3 +122,19 @@ extern crate oso_derive;
 #[cfg(feature = "derive")]
 #[doc(hidden)]
 pub use oso_derive::*;
+
+#[cfg(feature = "uuid")]
+use uuid::Uuid;
+#[cfg(feature = "uuid")]
+impl PolarClass for Uuid {
+    fn get_polar_class_builder() -> ClassBuilder<Uuid> {
+        Class::builder()
+            .name("Uuid")
+            .set_equality_check(|a, b| a == b)
+    }
+
+    fn get_polar_class() -> Class {
+        let builder = Uuid::get_polar_class_builder();
+        builder.build()
+    }
+}

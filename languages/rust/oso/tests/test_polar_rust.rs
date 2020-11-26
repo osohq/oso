@@ -609,3 +609,16 @@ fn test_option() {
     test.qeval("12 in new Foo().get_some()");
     test.qeval("new Foo().get_none() = nil");
 }
+
+#[cfg(feature = "uuid")]
+#[test]
+fn test_uuid() {
+    use uuid::Uuid;
+    use oso::PolarClass;
+
+    let mut test = OsoTest::new();
+    test.oso.register_class(Uuid::get_polar_class()).unwrap();
+    test.load_str("allow(actor: Uuid, \"EqUuid\", id: Uuid) if actor = id;");
+    let result = test.oso.is_allowed(Uuid::nil(), "EqUuid", Uuid::nil()).expect("test failed");
+    assert_eq!(result, true);
+}
