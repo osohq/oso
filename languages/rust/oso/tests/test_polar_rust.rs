@@ -613,12 +613,15 @@ fn test_option() {
 #[cfg(feature = "uuid")]
 #[test]
 fn test_uuid() {
-    use uuid::Uuid;
     use oso::PolarClass;
+    use uuid::Uuid;
 
     let mut test = OsoTest::new();
     test.oso.register_class(Uuid::get_polar_class()).unwrap();
     test.load_str("allow(actor: Uuid, \"EqUuid\", id: Uuid) if actor = id;");
-    let result = test.oso.is_allowed(Uuid::nil(), "EqUuid", Uuid::nil()).expect("test failed");
+    let result = test
+        .oso
+        .is_allowed(Uuid::nil(), "EqUuid", Uuid::nil())
+        .expect("test failed");
     assert_eq!(result, true);
 }
