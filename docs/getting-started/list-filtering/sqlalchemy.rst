@@ -48,8 +48,8 @@ retrieving objects from the database.
 Example
 =======
 
-Let's look at an example usage of this library.  Our example is a social media
-app that allows users to create posts.  There is a ``Post`` model and a ``User``
+Let's look at an example usage of this library. Our example is a social media
+app that allows users to create posts. There is a ``Post`` model and a ``User``
 model:
 
 .. literalinclude:: /examples/list-filtering/sqlalchemy/sqlalchemy_example/models.py
@@ -57,7 +57,7 @@ model:
     :language: python
 
 
-Now, we'll write a policy over these models.  Our policy contains the following
+Now, we'll write a policy over these models. Our policy contains the following
 rules:
 
 1. A user can read any public post.
@@ -72,7 +72,7 @@ rules:
 
 .. note::
 
-    The SQLAlchemy integration is deny by default.  The final rule for ``User``
+    The SQLAlchemy integration is deny by default. The final rule for ``User``
     is needed to allow access to user objects for any user.
 
     If a query is made for a model that does not have an explicit rule in the
@@ -187,7 +187,7 @@ authorized session with user set to manager.
 .. note::
 
     In a real application, ``get_user`` would be a function returning the
-    current user, based on the current request context.  For example in Flask
+    current user, based on the current request context. For example in Flask
     this might be ``lambda: flask.g.current_user`` or some other proxy object.
 
 
@@ -220,8 +220,8 @@ As you can see from the above example, the SQLAlchemy oso integration allows
 regular SQLAlchemy queries to be executed with authorization applied.
 
 Before compiling a SQLAlchemy query, the entities in the query are authorized
-with oso.  oso returns authorization decisions for each entity that indicate
-what constraints must be met for the entity to be authorized.  These constraints
+with oso. oso returns authorization decisions for each entity that indicate
+what constraints must be met for the entity to be authorized. These constraints
 are then translated into filters on the SQLAlchemy query object.
 
 For example, our above policy has the following code:
@@ -244,22 +244,23 @@ Limitations
 ===========
 
 .. todo:: Wording here still needs a bit of work once the top level page is
-    in, and should link back to that page.  It might not be clear what
+    in, and should link back to that page. It might not be clear what
     "non-partial" setting means just from reading this page.
 
 This feature is still under active development. Not all policies that work in a
 non-partial setting will currently work with partials. More policies will be
-supported as we continue working on this feature.  The SQLAlchemy adapter is
-ready for evaluation and testing. However, we recommending getting in touch with
-us before using it in production.  Join our Slack_.
+supported as we continue working on this feature. The SQLAlchemy adapter is
+ready for evaluation and testing. However, we recommend getting in touch with
+us on Slack_ before using it in production.
 
-There are some operators and features of Polar that do not currently work with
-the SQLAlchemy Library when used **anywhere in the policy**:
+There are some operators and features that do not currently work with the
+SQLAlchemy adapter when used **anywhere in the policy**:
 
 - the ``cut`` operator
 - rules that rely on ordered execution based on class inheritance
-- negated queries using the ``not`` operator that contain a ``matches`` operation
-  within the negation or call a rule that contains a specializer. For example:
+- negated queries using the ``not`` operator that contain a ``matches``
+  operation within the negation or call a rule that contains a specializer. For
+  example:
 
   .. code-block:: polar
 
@@ -273,7 +274,7 @@ the SQLAlchemy Library when used **anywhere in the policy**:
             not is_user(resource);
 
 Some operations cannot be performed on **resources** in ``allow`` rules used
-with the SQLAlchemy adapter.  These operations can still be used on the actor or
+with the SQLAlchemy adapter. These operations can still be used on the actor or
 action:
 
 - application method calls
