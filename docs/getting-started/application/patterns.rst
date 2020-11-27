@@ -326,6 +326,8 @@ policy is evaluated both **before and after data fetch** for greater efficiency.
     defined in our policy.  This flexibility derives directly from writing a
     :doc:`declarative policy in Polar </more/language/polar-foundations>`!
 
+.. _authorizing-list-endpoints:
+
 Authorizing List Endpoints
 ==========================
 
