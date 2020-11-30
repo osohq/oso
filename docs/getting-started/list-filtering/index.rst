@@ -2,16 +2,15 @@
 List Filtering
 ==============
 
-With oso, you write your authorization policy directly over your application
-data. The policy encodes who may do what to which resources — but what happens
-when you have *many* resources, and wish to authorize access to a subset of
-them? For example, suppose you have millions of posts in a social media
-application created by thousands of users, and regular users are only
-authorized to view posts from their friends. It would be inefficient to fetch
-all of the posts and authorize them one by one. It would be much more efficient
-to distill from the policy a *filter* that can be applied by the database to
-return only the authorized posts. This idea can be used in any scenario where
-you need to authorize a subset of a large collection of data.
+oso supports applying authorization logic at the ORM layer so that you can
+efficiently authorize entire data sets. For example, suppose you have millions
+of posts in a social media application created by thousands of users, and
+regular users are only authorized to view posts from their friends. It would be
+inefficient to fetch all of the posts and authorize them one by one. It would
+be much more efficient to distill from the policy a *filter* that can be
+applied by the ORM to return only the authorized posts. This idea can be used
+in any scenario where you need to authorize a subset of a large collection of
+data.
 
 The oso policy engine can now produce such filters from your policy. Below
 we'll briefly explain how it works and link to instructions and examples for
@@ -57,7 +56,7 @@ expressions:
 
 Partial evaluation is a generic capability of the oso engine, but making use of
 it requires an adapter that translates the emitted constraint expressions into
-database filters. Our first two supported adapters are for the :doc:`Django
+ORM filters. Our first two supported adapters are for the :doc:`Django
 </using/frameworks/django>` and :doc:`SQLAlchemy
 </using/frameworks/sqlalchemy>` ORMs, with more on the way.
 

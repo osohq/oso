@@ -135,11 +135,11 @@ Next, setup some test data...
 
     >>> engine = create_engine('sqlite:///:memory:')
     >>> Model.metadata.create_all(engine)
-    >>> session = Session(bind=engine)
-    >>> session.add_all([
+    >>> fixture_session = Session(bind=engine)
+    >>> fixture_session.add_all([
     ...     user, manager, public_user_post, private_user_post, private_manager_post,
     ...     public_manager_post])
-    >>> session.commit()
+    >>> fixture_session.commit()
 
 **Authorizing user's posts**
 
