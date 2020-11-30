@@ -41,6 +41,23 @@ jobs:
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - name: Run benchmark
         run: cargo bench -- --output-format bencher | tee output.txt
+      - name: Upload benchmark result artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: bench_result
+          path: output.txt
+
+  # Split the benchmark testing step into a separate
+  # step that runs with no checked-out code and access to secrets
+  bench-check:
+    name: Check benchmark result
+    runs-on: ubuntu-latest
+    needs: "bench"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: bench_result
       - name: Get HEAD commit message
         id: head_commit
         run: echo "::set-output name=message::$(git log -1 --format=%B | tr -d '\n')"
