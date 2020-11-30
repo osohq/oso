@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606767339917,
+  "lastUpdate": 1606768583925,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14883,6 +14883,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52853,
             "range": "± 4534",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f6ff4470633ec5f61bb9e867c044caa20c515236",
+          "message": "Django list filtering documentation edits (#557)\n\n* Link from Django integration page to list filtering pages\r\n\r\n* Quicker intro\r\n\r\n* Turn on SQL logging and add example to doc",
+          "timestamp": "2020-11-30T15:32:21-05:00",
+          "tree_id": "f1aba71d3087e67a0c3a8f7d0d67d36fd98d1c8d",
+          "url": "https://github.com/osohq/oso/commit/f6ff4470633ec5f61bb9e867c044caa20c515236"
+        },
+        "date": 1606768582041,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46285,
+            "range": "± 5205",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 51209,
+            "range": "± 5113",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52809,
+            "range": "± 5668",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 50328,
+            "range": "± 7753",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52051,
+            "range": "± 6467",
             "unit": "ns/iter"
           }
         ]
