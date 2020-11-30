@@ -51,11 +51,11 @@ def init_oso():
         # Register the user model, possibly customized
         try:
             from django.contrib.auth import get_user_model
+
             User = get_user_model()
             register_class(User, polar_model_name(User))
         except ImproperlyConfigured:
             pass
-
 
     # Register request
     register_class(HttpRequest)
