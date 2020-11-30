@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606752593059,
+  "lastUpdate": 1606753725105,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14721,6 +14721,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52130,
             "range": "± 3619",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alex@osohq.com",
+            "name": "Alex Plotnick",
+            "username": "plotnick"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a49b152ccf321438c34fa6a2dc2bbbd7b555b096",
+          "message": "Fix changelog links to list filtering docs (#555)",
+          "timestamp": "2020-11-30T09:24:41-07:00",
+          "tree_id": "48fe62f9515f70a0cad6be6c86171197cd1e11bf",
+          "url": "https://github.com/osohq/oso/commit/a49b152ccf321438c34fa6a2dc2bbbd7b555b096"
+        },
+        "date": 1606753723213,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46586,
+            "range": "± 4006",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 50590,
+            "range": "± 6534",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 49867,
+            "range": "± 4638",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 49258,
+            "range": "± 3928",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 50982,
+            "range": "± 15975",
             "unit": "ns/iter"
           }
         ]
