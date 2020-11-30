@@ -130,7 +130,7 @@ impl PolarClass for Uuid {
     fn get_polar_class_builder() -> ClassBuilder<Uuid> {
         Class::builder()
             .name("Uuid")
-            .set_equality_check(|a, b| a == b)
+            .with_equality_check()
     }
 
     fn get_polar_class() -> Class {
