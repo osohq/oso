@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606344151268,
+  "lastUpdate": 1606752593059,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14667,6 +14667,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52087,
             "range": "± 3631",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@steve.computer",
+            "name": "Stephen Olsen",
+            "username": "saolsen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb69027f93c8fd6b0d0e57bd37709cd8545ff2e8",
+          "message": "Trigger release jobs in other repos. (#543)",
+          "timestamp": "2020-11-30T11:06:04-05:00",
+          "tree_id": "6e154b01d57f9d86ef18865dcf43e9981aad48e7",
+          "url": "https://github.com/osohq/oso/commit/bb69027f93c8fd6b0d0e57bd37709cd8545ff2e8"
+        },
+        "date": 1606752591155,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46464,
+            "range": "± 1954",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 52144,
+            "range": "± 3630",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52316,
+            "range": "± 3862",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52139,
+            "range": "± 3563",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52130,
+            "range": "± 3619",
             "unit": "ns/iter"
           }
         ]
