@@ -128,13 +128,6 @@ use uuid::Uuid;
 #[cfg(feature = "uuid")]
 impl PolarClass for Uuid {
     fn get_polar_class_builder() -> ClassBuilder<Uuid> {
-        Class::builder()
-            .name("Uuid")
-            .with_equality_check()
-    }
-
-    fn get_polar_class() -> Class {
-        let builder = Uuid::get_polar_class_builder();
-        builder.build()
+        Class::builder().name("Uuid").with_equality_check()
     }
 }
