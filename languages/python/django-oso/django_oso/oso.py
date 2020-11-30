@@ -1,11 +1,15 @@
+import logging
 import os.path
 
 from django.apps import AppConfig, apps
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest
-from django.utils.autoreload import autoreload_started
 
 from oso import Oso as _Oso
 from polar.exceptions import DuplicateClassAliasError
+
+
+_logger = logging.getLogger(__name__)
 
 Oso = _Oso()
 """Singleton :py:class:`oso.Oso` instance.
@@ -36,11 +40,22 @@ def init_oso():
         for model in app.get_models():
             register_class(model, polar_model_name(model))
 
-    # Custom registration for auth (AnonymousUser)
+    # Custom registration for auth (AnonymousUser, User)
     if apps.is_installed("django.contrib.auth"):
         from django.contrib.auth.models import AnonymousUser
 
-    register_class(AnonymousUser, name=f"django::contrib::auth::AnonymousUser")
+        # Register under `auth` app_label to match default User model, but also fully-qualified name
+        register_class(AnonymousUser, "auth::AnonymousUser")
+        register_class(AnonymousUser, "django::contrib::auth::AnonymousUser")
+
+        # Register the user model, possibly customized
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            register_class(User, polar_model_name(User))
+        except ImproperlyConfigured:
+            pass
+
 
     # Register request
     register_class(HttpRequest)
@@ -59,8 +74,9 @@ def load_policy_files():
                 file_path = os.path.join(path, file)
                 if os.path.splitext(file)[1] == ".polar":
                     Oso.load_file(file_path)
-                    print(f"load {file_path}")
                     loaded_files.append(file_path)
+
+    _logger.debug(f"Loaded policies: {loaded_files}")
 
     return loaded_files
 
