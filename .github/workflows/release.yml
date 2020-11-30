@@ -36,6 +36,21 @@ jobs:
         run: grep "release = \"$oso_version\"" conf.py
         working-directory: docs
 
+  # Dispatch an oso_release event to other repos to test against this commit
+  dispatch:
+    strategy:
+      matrix:
+        repo: ["osohq/oso-flask-integration"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.REPO_API_TOKEN }}
+          repository: ${{ matrix.repo }}
+          event-type: oso_release
+          client-payload: '{"commit": "${{ github.sha }}"}'
+
   build_dylib:
     name: Build release dylib on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
