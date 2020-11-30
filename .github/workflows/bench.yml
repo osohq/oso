@@ -48,7 +48,8 @@ jobs:
           path: output.txt
 
   # Split the benchmark testing step into a separate
-  # step that runs with no checked-out code and access to secrets
+  # step that runs against the existing code on the
+  # _target_ branch (typically `main`)
   bench-check:
     name: Check benchmark result
     runs-on: ubuntu-latest
