@@ -113,15 +113,27 @@ For example, the above policy has the following rule:
     :language: polar
     :lines: 4-6
 
-When determining which ``Post`` objects ``User(id=1)`` is authorized to see,
+When determining which ``Post`` objects ``User(id=2)`` is authorized to see,
 the ``django-oso`` adapter converts the constraints on Post expressed in this
 rule into a Django ``Q`` filter::
 
-    (AND: ('access_level', 'private'), ('creator__pk', 1))
+    (AND: ('access_level', 'private'), ('creator__pk', 2))
 
-This filter then scopes down the QuerySet to only include authorized objects.
-Translating from policy to filter to authorized data makes the policy an
-effective abstraction for expressing authorization logic over collections.
+When composed with filters generated from the other rules, the QuerySet is
+scoped down to include only authorized objects. The result is the following SQL
+statement, with the highlighted clause corresponding to the above filter:
+
+.. code-block:: sql
+    :emphasize-lines: 8
+
+    SELECT "app_post"."id", "app_post"."contents", "app_post"."access_level", "app_post"."creator_id"
+    FROM "app_post"
+    WHERE "app_post"."id" IN (
+      SELECT DISTINCT U0."id"
+      FROM "app_post" U0
+      WHERE (
+        U0."access_level" = 'public' OR
+        (U0."access_level" = 'private' AND U0."creator_id" = 2)));
 
 Limitations
 ===========
