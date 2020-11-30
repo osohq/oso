@@ -41,7 +41,7 @@ rustyline = { version = "6.3.0", optional = true }
 rustyline-derive = { version = "0.3.1", optional = true }
 lazy_static = "1.4.0"
 
-uuid = { version = "0.6.5", optional = true }
+uuid_v06 = { package = "uuid", version = "0.6.5", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0.33"
@@ -49,10 +49,10 @@ criterion = "0.3.3"
 oso-derive = { path = "../oso-derive", version = "=0.8.2" }
 tempfile = "3.1.0"
 static_assertions = "1.1.0"
-uuid = "0.6.5"
+uuid_v06 = { package = "uuid", version  = "0.6.5" }
 
 [features]
 default = ["derive"]
 cli = ["rustyline", "rustyline-derive", "anyhow"]
 derive = ["oso-derive"]
-extra = ["uuid"]
+diesel = ["uuid_v06"]

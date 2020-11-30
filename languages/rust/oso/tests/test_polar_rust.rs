@@ -610,11 +610,11 @@ fn test_option() {
     test.qeval("new Foo().get_none() = nil");
 }
 
-#[cfg(feature = "uuid")]
+#[cfg(feature = "uuid_v06")]
 #[test]
 fn test_uuid() {
     use oso::PolarClass;
-    use uuid::Uuid;
+    use uuid_v06::Uuid;
 
     let mut test = OsoTest::new();
     test.oso.register_class(Uuid::get_polar_class()).unwrap();

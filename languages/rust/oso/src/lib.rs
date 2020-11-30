@@ -75,6 +75,7 @@
 pub mod macros;
 
 pub(crate) mod builtins;
+mod diesel;
 pub mod errors;
 mod host;
 mod oso;
@@ -122,12 +123,3 @@ extern crate oso_derive;
 #[cfg(feature = "derive")]
 #[doc(hidden)]
 pub use oso_derive::*;
-
-#[cfg(feature = "uuid")]
-use uuid::Uuid;
-#[cfg(feature = "uuid")]
-impl PolarClass for Uuid {
-    fn get_polar_class_builder() -> ClassBuilder<Uuid> {
-        Class::builder().name("Uuid").with_equality_check()
-    }
-}
