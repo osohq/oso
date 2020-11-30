@@ -176,11 +176,23 @@ View Decorators
 List endpoint authorization
 ---------------------------
 
+The oso Django integration includes :doc:`list filtering
+</getting-started/list-filtering/index>` support for Django models.
+
 .. note::
 
     These features are in preview and will be stabilized in a
     future release. Please `join our Slack`_ to provide feedback or discuss with
     the engineering team.
+
+Usage
++++++
+
+See the :doc:`list filtering usage guide
+</getting-started/list-filtering/django>` for more information.
+
+API Reference
++++++++++++++
 
 .. autofunction:: django_oso.auth.authorize_model
 
