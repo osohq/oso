@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         # Q: Is there any benefit to building on multiple platforms?
-        os: [ubuntu-18.04]
+        os: [ubuntu-latest]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
