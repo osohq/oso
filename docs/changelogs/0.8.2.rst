@@ -17,10 +17,10 @@ List filtering
 
 This release is a step towards stabilizing our list filtering functionality.
 We've expanded the set of operators that you can use in a policy with list
-filtering, added new adapter capabilities, and started `documenting the
-list filtering use cases and adapters <https://docs.osohq.com/getting-started/list-filtering/index.html>`_. We're actively seeking
-feedback on this feature, so please try it out and get in touch with any
-suggestions, bug reports, etc.
+filtering, added new adapter capabilities, and started :doc:`documenting the
+list filtering use cases and adapters </getting-started/list-filtering/index>`.
+We're actively seeking feedback on this feature, so please try it out and
+get in touch with any suggestions, bug reports, etc.
 
 Updated list filtering capabilities of the Django integration
 -------------------------------------------------------------
@@ -34,7 +34,8 @@ More policies and Polar operations can now be used with list filtering:
 
 Install the latest version from pip: ``pip install django-oso``.
 
-Check out `the documentation <https://docs.osohq.com/getting-started/list-filtering/django.html>`_.
+Check out :doc:`the Django adapter documentation
+</getting-started/list-filtering/django>`.
 
 SQLAlchemy integration
 ----------------------
@@ -46,7 +47,8 @@ feature parity with the Django adapter's list filtering capabilities.
 
 Try it out: ``pip install sqlalchemy-oso``.
 
-Check out `the documentation <https://docs.osohq.com/getting-started/list-filtering/sqlalchemy.html>`_.
+Check out :doc:`the SQLAlchemy adapter documentation
+</getting-started/list-filtering/sqlalchemy>`.
 
 Other bugs & improvements
 =========================
