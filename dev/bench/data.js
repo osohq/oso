@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606764429698,
+  "lastUpdate": 1606767339917,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14829,6 +14829,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 46528,
             "range": "± 4282",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "david@osohq.com",
+            "name": "David Hatch",
+            "username": "dhatch"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6f9683b067290de42c873dcbeb094957655a6270",
+          "message": "Fix SQLAlchemy doc test flake. (#559)\n\nThe session was gc'ed causing fixture data to be detached.",
+          "timestamp": "2020-11-30T15:11:25-05:00",
+          "tree_id": "60ffbfe58ebba2d8610976bb350a0329845f3ee5",
+          "url": "https://github.com/osohq/oso/commit/6f9683b067290de42c873dcbeb094957655a6270"
+        },
+        "date": 1606767337932,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 50572,
+            "range": "± 3717",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 56327,
+            "range": "± 6945",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 54185,
+            "range": "± 8449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52373,
+            "range": "± 9577",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52853,
+            "range": "± 4534",
             "unit": "ns/iter"
           }
         ]
