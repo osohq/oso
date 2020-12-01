@@ -40,22 +40,13 @@ def init_oso():
         for model in app.get_models():
             register_class(model, polar_model_name(model))
 
-    # Custom registration for auth (AnonymousUser, User)
+    # Custom registration for auth (AnonymousUser)
     if apps.is_installed("django.contrib.auth"):
         from django.contrib.auth.models import AnonymousUser
 
         # Register under `auth` app_label to match default User model, but also fully-qualified name
         register_class(AnonymousUser, "auth::AnonymousUser")
         register_class(AnonymousUser, "django::contrib::auth::AnonymousUser")
-
-        # Register the user model, possibly customized
-        try:
-            from django.contrib.auth import get_user_model
-
-            User = get_user_model()
-            register_class(User, polar_model_name(User))
-        except ImproperlyConfigured:
-            pass
 
     # Register request
     register_class(HttpRequest)
