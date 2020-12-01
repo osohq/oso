@@ -37,7 +37,5 @@ contribution!
 Other bugs & improvements
 =========================
 
-- bulleted list
-- improvements
-- of smaller
-- potentially with doc links
+- Matches operations on fields of partials are now handled correctly in the
+  SQLAlchemy adapter. Previously these operations would result in an error.
