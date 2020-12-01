@@ -395,6 +395,26 @@ def test_partial_in_collection(session, oso, tag_nested_many_many_test_fixture):
     assert len(posts) == 1
 
 
+# TODO combine with test in test_django_oso.
+def test_partial_subfield_isa(session, oso, tag_nested_many_many_test_fixture):
+    oso.load_str(
+        """
+            allow(_, _, post: Post) if check_user(post.created_by);
+            # User is not a tag.
+            check_user(user: Tag) if user.username = "other_user";
+            check_user(user: User) if user.username = "user";
+        """
+    )
+
+    user = tag_nested_many_many_test_fixture['user']
+    posts = authorize_model(oso, user, "read", session, Post)
+    # Should only get posts created by user.
+    posts = posts.all()
+    for post in posts:
+        assert post.created_by.username == "user"
+
+    assert len(posts) == 4
+
 # TODO test_nested_relationship_single_many
 # TODO test_nested_relationship_single_single
 # TODO test_nested_relationship_single_single_single ... etc

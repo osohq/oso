@@ -194,6 +194,13 @@ class Polar:
         """Register `value` as a Polar constant variable called `name`."""
         self.ffi_polar.register_constant(self.host.to_polar(value), name)
 
+    def get_class(self, name):
+        """Return class registered for ``name``.
+
+        :raises UnregisteredClassError: If the class is not registered.
+        """
+        return self.host.get_class(name)
+
 
 def polar_class(_cls=None, *, name=None):
     """Decorator to register a Python class with Polar.

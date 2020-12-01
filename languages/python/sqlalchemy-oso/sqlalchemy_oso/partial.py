@@ -6,6 +6,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy import inspect
 from sqlalchemy.orm import RelationshipProperty, ColumnProperty
 from sqlalchemy.sql.expression import ClauseElement, BinaryExpression, and_
+from sqlalchemy.sql import expression as sql
 
 from polar.partial import dot_path
 from polar.expression import Expression
@@ -16,32 +17,31 @@ from polar.exceptions import UnsupportedError
 EmitFunction = Callable[[Session, Any], Any]
 
 
-def partial_to_filter(expression: Expression, session: Session, model):
+def partial_to_filter(expression: Expression, session: Session, model, get_model):
     """Convert constraints in ``partial`` to a filter over ``model`` that should be applied to query."""
-    return translate_expr(expression, session, model)
+    return translate_expr(expression, session, model, get_model)
 
 
 # Returns None or the translated expression.
-def translate_expr(expression: Expression, session: Session, model):
+def translate_expr(expression: Expression, session: Session, model, get_model):
     assert isinstance(expression, Expression)
     if expression.operator == "Eq" or expression.operator == "Unify":
-        return translate_compare(expression, session, model)
+        return translate_compare(expression, session, model, get_model)
     elif expression.operator == "Isa":
-        assert expression.args[1].tag == model.__name__
-        return None
+        return translate_isa(expression, session, model, get_model)
     elif expression.operator == "In":
-        return translate_in(expression, session, model)
+        return translate_in(expression, session, model, get_model)
     elif expression.operator == "And":
-        return translate_and_expr(expression, session, model)
+        return translate_and(expression, session, model, get_model)
     else:
         raise UnsupportedError(f"Unsupported {expression}")
 
 
-def translate_and_expr(expression: Expression, session: Session, model):
+def translate_and(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "And"
     expr = and_()
     for expression in expression.args:
-        translated = translate_expr(expression, session, model)
+        translated = translate_expr(expression, session, model, get_model)
         if translated is None:
             continue
 
@@ -49,8 +49,23 @@ def translate_and_expr(expression: Expression, session: Session, model):
 
     return expr
 
+def translate_isa(expression: Expression, session: Session, model, get_model):
+    assert expression.operator == "Isa"
+    left, right = expression.args
+    if dot_path(left) == ():
+        assert left == Variable("_this")
+    else:
+        for field_name in dot_path(left):
+            _, model, __ = get_relationship(model, field_name)
 
-def translate_compare(expression: Expression, session: Session, model):
+    assert not right.fields, "Unexpected fields in isa expression"
+    constraint_type = get_model(right.tag)
+    if not issubclass(model, constraint_type):
+        return sql.false()
+    else:
+        return None
+
+def translate_compare(expression: Expression, session: Session, model, get_model):
     left = expression.args[0]
     right = expression.args[1]
 
@@ -79,7 +94,7 @@ def translate_compare(expression: Expression, session: Session, model):
     )
 
 
-def translate_in(expression, session, model):
+def translate_in(expression, session, model, get_model):
     assert expression.operator == "In"
     left = expression.args[0]
     right = expression.args[1]
@@ -95,7 +110,7 @@ def translate_in(expression, session, model):
         assert path
 
         return translate_dot(
-            path, session, model, functools.partial(emit_subexpression, left)
+            path, session, model, functools.partial(emit_subexpression, left, get_model)
         )
     else:
         # Contains: LHS is not an expression.
@@ -138,9 +153,9 @@ def emit_compare(field_name, value, session, model):
     return property == value
 
 
-def emit_subexpression(sub_expression: Expression, session: Session, model):
+def emit_subexpression(sub_expression: Expression, get_model, session: Session, model):
     """Emit a sub-expression on ``model``."""
-    return translate_expr(sub_expression, session, model)
+    return translate_expr(sub_expression, session, model, get_model)
 
 
 def emit_contains(field_name, value, session, model):

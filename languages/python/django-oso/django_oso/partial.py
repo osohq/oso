@@ -73,6 +73,8 @@ def isa_expr(expr: Expression, model: Model, **kwargs):
     for attr in dot_path(left):
         model = getattr(model, attr).field.related_model
     constraint_type = apps.get_model(django_model_name(right.tag))
+    assert not right.fields, "Unexpected fields in isa expression"
+
     if not issubclass(model, constraint_type):
         # Always false.
         return Q(pk__in=[])

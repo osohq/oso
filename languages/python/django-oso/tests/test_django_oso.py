@@ -168,7 +168,7 @@ def test_partial(rf, partial_policy):
 
 
 @pytest.mark.django_db
-def test_partial_disjunctive_matches():
+def test_partial_subfield_isa():
     from test_app.models import Post, User, Admin
 
     alice = User(name="alice")
