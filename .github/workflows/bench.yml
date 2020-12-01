@@ -73,8 +73,8 @@ jobs:
           alert-comment-cc-users: "@osohq/eng"
           alert-threshold: "150%"
           # Only push and save on pushes to main.
-          auto-push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          auto-push: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
           # Comment on pushes to main AND on any commit that includes `[bench]`
           # in the message.
-          comment-always: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(steps.head_commit.outputs.message, '[bench]') }}
-          save-data-file: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          comment-always: ${{ (github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main') || contains(steps.head_commit.outputs.message, '[bench]') }}
+          save-data-file: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}

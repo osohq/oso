@@ -76,6 +76,7 @@ pub mod macros;
 
 pub(crate) mod builtins;
 pub mod errors;
+mod extras;
 mod host;
 mod oso;
 mod query;
