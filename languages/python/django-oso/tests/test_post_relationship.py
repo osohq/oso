@@ -469,6 +469,25 @@ def test_partial_in_collection(tag_nested_many_many_fixtures):
     assert tag_nested_many_many_fixtures["all_tagged_post"] not in posts
 
 
+@pytest.mark.django_db
+def test_many_many_with_other_condition(tag_nested_many_many_fixtures):
+    """Test that using a many-to-many condition OR any other condition does not
+    result in duplicate results."""
+    Oso.load_str(
+        """
+            allow(_: test_app2::User, "read", post: test_app2::Post) if
+                tag in post.tags and
+                tag.name = "eng";
+            allow(_: test_app2::User, "read", post: test_app2::Post) if
+                post.access_level = "public";
+        """
+    )
+    user = User.objects.get(username="user")
+    posts = Post.objects.authorize(None, actor=user, action="read")
+    # all should be returned with no duplicates
+    assert list(posts) == list(tag_nested_many_many_fixtures.values())
+
+
 # todo test_nested_relationship_single_many
 # todo test_nested_relationship_single_single
 # todo test_nested_relationship_single_single_single ... etc
