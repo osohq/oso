@@ -4,6 +4,7 @@ from django.apps import apps
 from polar.expression import Expression
 from polar.variable import Variable
 from polar.exceptions import UnsupportedError, UnexpectedPolarTypeError
+from polar.partial import dot_path
 
 from .oso import polar_model_name, django_model_name
 
@@ -69,7 +70,7 @@ def translate_expr(expr: Expression, model: Model, **kwargs):
 
 def isa_expr(expr: Expression, model: Model, **kwargs):
     (left, right) = expr.args
-    for attr in dot_op_path(left):
+    for attr in dot_path(left):
         model = getattr(model, attr).field.related_model
     constraint_type = apps.get_model(django_model_name(right.tag))
     if not issubclass(model, constraint_type):
@@ -93,7 +94,7 @@ def and_expr(expr: Expression, model: Model, **kwargs):
 def compare_expr(expr: Expression, _model: Model, path=(), **kwargs):
     q = Q()
     (left, right) = expr.args
-    left_path = dot_op_path(left)
+    left_path = dot_path(left)
     if left_path:
         return COMPARISONS[expr.operator](q, "__".join(path + left_path), right)
     else:
@@ -108,7 +109,7 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
     assert expr.operator == "In"
     q = Q()
     (left, right) = expr.args
-    right_path = dot_op_path(right)
+    right_path = dot_path(right)
     assert right_path, "RHS of in must be a dot lookup"
     right_path = path + right_path
 
@@ -116,26 +117,3 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
         return translate_expr(left, model, path=right_path, **kwargs)
     else:
         return COMPARISONS["Unify"](q, "__".join(right_path), left)
-
-
-# TODO (dhatch): Move this helper into base.
-def dot_op_path(expr):
-    """Get the path components of a lookup.
-
-    The path is returned as a tuple.
-
-    _this.created_by => ('created_by',)
-    _this.created_by.username => ('created_by', 'username')
-
-    Empty tuple is returned if input is not a dot operation.
-    """
-
-    if not (isinstance(expr, Expression) and expr.operator == "Dot"):
-        return ()
-
-    assert len(expr.args) == 2
-
-    if expr.args[0] == Variable("_this"):
-        return (expr.args[1],)
-
-    return dot_op_path(expr.args[0]) + (expr.args[1],)

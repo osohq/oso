@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 from math import inf, isnan, nan
 from pathlib import Path
 
-from polar import polar_class
 from polar import (
+    polar_class,
     exceptions,
     Polar,
     Predicate,
