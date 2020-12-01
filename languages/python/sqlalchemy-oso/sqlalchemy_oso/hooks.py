@@ -27,7 +27,8 @@ from typing import Any, Callable
 
 from sqlalchemy.event import listen, remove
 from sqlalchemy.orm.query import Query
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import aliased, sessionmaker, Session
+from sqlalchemy import orm
 
 from oso import Oso
 
@@ -35,27 +36,24 @@ from sqlalchemy_oso.auth import authorize_model_filter
 
 
 def enable_hooks(
-    get_oso: Callable[[], Oso],
-    get_user: Callable[[], Any],
-    get_action: Callable[[], Any],
-    target=None,
+    target,
+    oso,
+    user,
+    action,
 ):
     """Enable all SQLAlchemy hooks."""
-    if target is None:
-        target = Query
-
-    return enable_before_compile(target, get_oso, get_user, get_action)
+    return enable_before_compile(target, oso, user, action)
 
 
 def enable_before_compile(
     target,
-    get_oso: Callable[[], Oso],
-    get_user: Callable[[], Any],
-    get_action: Callable[[], Any],
+    oso,
+    user,
+    action
 ):
     """Enable before compile hook."""
     auth = functools.partial(
-        authorize_query, get_oso=get_oso, get_user=get_user, get_action=get_action
+        authorize_query, oso=oso, user=user, action=action
     )
 
     listen(target, "before_compile", auth, retval=True)
@@ -63,12 +61,8 @@ def enable_before_compile(
     return lambda: remove(target, "before_compile", auth)
 
 
-def authorize_query(query: Query, get_oso, get_user, get_action) -> Query:
+def authorize_query(query: Query, oso, user, action) -> Query:
     """Authorize an existing query with an oso instance, user and action."""
-    oso = get_oso()
-    action = get_action()
-    actor = get_user()
-
     # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
     # on queries that have already been made.  If a query has a LIMIT or OFFSET
     # applied, SQLAlchemy will by default throw an error if filters are applied.
@@ -83,7 +77,7 @@ def authorize_query(query: Query, get_oso, get_user, get_action) -> Query:
             continue
 
         authorized_filter = authorize_model_filter(
-            oso, actor, action, query.session, entity
+            oso, user, action, query.session, entity
         )
         if authorized_filter is not None:
             query = query.filter(authorized_filter)
@@ -91,65 +85,94 @@ def authorize_query(query: Query, get_oso, get_user, get_action) -> Query:
     return query
 
 
-def make_authorized_query_cls(get_oso, get_user, get_action) -> Query:
-    class AuthorizedQuery(Query):
+def make_authorized_query_cls(oso, user, action, query_base_cls=None) -> Query:
+    query_base_cls = query_base_cls or Query
+
+    class AuthorizedQuery(query_base_cls):
         """Query object that always applies authorization for ORM entities."""
 
-    enable_hooks(get_oso, get_user, get_action, target=AuthorizedQuery)
-
+    enable_hooks(AuthorizedQuery, oso, user, action)
     return AuthorizedQuery
 
 
-def authorized_sessionmaker(get_oso, get_user, get_action, *args, **kwargs):
+def authorized_sessionmaker(get_oso, get_user, get_action, **kwargs):
     """Session factory for sessions with oso authorization applied.
 
     :param get_oso: Callable that return oso instance to use for authorization.
     :param get_user: Callable that returns user for an authorization request.
     :param get_action: Callable that returns action for the authorization request.
 
-    The ``query_cls`` parameter cannot be used with ``authorize_sessionmaker``.
-
-    Baked queries will be disabled for this session, because they are incompatible
-    with authorization.
-
     All other positional and keyword arguments are passed through to
     :py:func:`sqlalchemy.orm.session.sessionmaker` unchanged.
     """
-    # TODO (dhatch): Should be possible with additional wrapping.
-    assert (
-        "query_cls" not in kwargs
-    ), "Cannot use custom query class with authorized_sessionmaker."
-
-    # oso = get_oso()
-    # user = get_user()
-    # action = get_action()
-
     # oso, user and action must remain unchanged for the entire session.
     # If they change before a query runs, an error is thrown.
     # This is to prevent objects that are unauthorized from ending up in the
     # session's identity map.
+    class Sess(AuthorizedSession):
+        def __init__(self, **options):
+            options.setdefault('oso', get_oso())
+            options.setdefault('user', get_user())
+            options.setdefault('action', get_action())
+            super().__init__(**options)
+    session = type("Session", (Sess,), {})
 
-    # TODO (dhatch): The scope of these is wrong. They should be run when
-    # a session is created, which probably requires a custom session class or
-    # more customization of the sessionmaker.
-    # def checked_get_oso():
-    #     if get_oso() != oso:
-    #         # TODO proper error type.
-    #         raise Exception("oso object changed during session.")
-    #     return oso
-
-    # def checked_get_user():
-    #     if get_user() != user:
-    #         raise Exception("user object changed during session.")
-    #     return user
-
-    # def checked_get_action():
-    #     if get_action() != action:
-    #         raise Exception("action changed during session.")
-    #     return action
-
+    # We call sessionmaker here because sessionmaker adds a configure
+    # method to the returned session and we want to replicate that
+    # functionality.
     return sessionmaker(
-        query_cls=make_authorized_query_cls(get_oso, get_user, get_action),
-        *args,
+        class_=session,
         **kwargs
     )
+
+
+def scoped_session(get_oso,
+                   get_action,
+                   get_user,
+                   scopefunc=None,
+                   **kwargs):
+    """Return a scoped session maker that uses the user and action as part of the scope function.
+
+    Uses authorized_sessionmaker as the factory.
+
+    :param scopefunc: Additional scope function to use for scoping sessions.
+                      Output will be combined with the oso, action and user objects.
+    :param kwargs: Additional keyword arguments to pass to
+                   authorized_sessionmaker.
+    """
+    scopefunc = scopefunc or (lambda: None)
+
+    def _scopefunc():
+        return (get_oso(), get_action(), get_user(), scopefunc())
+
+    factory = authorized_sessionmaker(get_oso, get_action, get_user, **kwargs)
+
+    return orm.scoped_session(
+        factory,
+        scopefunc=_scopefunc)
+
+
+class AuthorizedSessionBase(object):
+    """Session that uses oso authorization for queries."""
+    def __init__(self, oso: Oso, user, action, **options):
+        """Create an authorized session using ``oso``.
+
+        :param user: The user to perform authorization for.
+        :param action: The action to authorize.
+        :param options: Additional keyword arguments to pass to ``Session``.
+
+        The user and action parameters are fixed for a given session. This
+        prevents authorization responses from changing, ensuring that the
+        identity map never contains unauthorized objects.
+        """
+        self._oso = oso
+        self._oso_user = user
+        self._oso_action = action
+
+        query_cls = make_authorized_query_cls(oso, user, action,
+                                              options.pop('query_cls', None))
+        options['query_cls'] = query_cls
+
+        super().__init__(**options)
+
+class AuthorizedSession(AuthorizedSessionBase, Session): pass
