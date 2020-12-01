@@ -8,23 +8,11 @@
 from pathlib import Path
 
 import os
-import shutil
-import tempfile
+import pytest
 
 from polar.exceptions import PolarRuntimeError
+from .test_polar_externals import Qux, Bar, Foo, MyClass, YourClass, OurClass
 
-from test_polar_externals import Qux, Bar, Foo, MyClass, YourClass, OurClass
-
-try:
-    # This import is required when running the rust version of the library
-    # so that the fixture is registered with pytest.
-    from polar.test_helpers import polar
-except ImportError:
-    pass
-
-from polar.test_helpers import load_file, tell, query, qeval, qvar
-
-import pytest
 
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
@@ -156,11 +144,11 @@ def test_defining_things(tell, qeval):
 
 
 def test_dictionaries(tell, qeval, qvar):
-    # basic dictionary lookup
+    # *** basic dictionary lookup ***
     tell('dict({hello: "world", foo: "bar"})')
     assert qeval('dict(d) and d.hello = "world"')
 
-    ### dictionary lookups with variable fields ###
+    # dictionary lookups with variable fields ###
     tell("attr(d, k, d.(k))")
 
     # k = "hello", {hello: "steve"}.(k) = "steve"
@@ -172,7 +160,7 @@ def test_dictionaries(tell, qeval, qvar):
     # k = key, {hello: "steve"}.(k) = "steve", key = "hello"
     assert qvar('attr({hello: "steve"}, key, "steve")', "key", one=True) == "hello"
 
-    ### nested lookups ###
+    # *** nested lookups ***
     assert qeval(
         'attr({hello: {this: {is: "nested"}}}, "hello", {this: {is: "nested"}})'
     )
@@ -190,7 +178,7 @@ def test_dictionaries(tell, qeval, qvar):
     tell("lookup(dict, result) if result = dict.a.b.c;")
     assert qeval('lookup({a: {b: {c: "nested"}}}, "nested")')
 
-    ### more basic lookup tests ###
+    # *** more basic lookup tests ***
     tell('user({name: "steve", job: "programmer", state: "NY"})')
     tell('user({name: "alex", job: "programmer", state: "CO"})')
     tell('user({name: "graham", job: "business", state: "NY"})')
@@ -371,7 +359,7 @@ def test_bool_from_external_call(polar, qeval, qvar, query):
 
     polar.register_class(Booler)
 
-    result = qvar("new Booler().whats_up() = var", "var", one=True)
+    assert qvar("new Booler().whats_up() = var", "var", one=True)
     assert qeval("new Booler().whats_up()")
 
 

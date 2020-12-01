@@ -1,18 +1,12 @@
 from collections.abc import Iterable
 import json
 
-from _polar_lib import lib
 from .exceptions import (
     InvalidIteratorError,
-    PolarApiError,
     InvalidCallError,
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .ffi import Polar as FfiPolar, Query as FfiQuery
-from .host import Host
-from .predicate import Predicate
-from .variable import Variable
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 

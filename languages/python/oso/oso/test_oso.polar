@@ -2,11 +2,6 @@ allow(actor, action, resource) if
     allowRole(role, action, resource) and
     actorInRole(actor, role, resource);
 
-allow(token: String, action, resource) if
-    jwt = new Jwt(token: token) and
-    jwt.attributes() = attributes and
-    allow(attributes, action, resource);
-
 allow(_: {sub: sub}, action, resource) if
     allow(new Actor(name: sub), action, resource);
 

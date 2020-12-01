@@ -1,7 +1,5 @@
 import functools
 
-from flask import g, current_app, request, Request
-
 from .context import _app_oso
 
 

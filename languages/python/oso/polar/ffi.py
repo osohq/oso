@@ -1,11 +1,8 @@
-from contextlib import contextmanager
-from dataclasses import dataclass
 import json
 
 from _polar_lib import ffi, lib
 
 from .errors import get_python_error
-from .exceptions import PolarRuntimeError
 
 
 class Polar:

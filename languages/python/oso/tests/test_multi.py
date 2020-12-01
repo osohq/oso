@@ -1,11 +1,7 @@
-import threading
 import random
 import time
-import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
-
-import pytest
 
 from oso import Oso, OsoError
 

@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 
 from django_oso.models import AuthorizedModel, authorize_model
 from django_oso.oso import Oso, reset_oso
-from test_app2.models import Post, Tag, User
+from .test_app2.models import Post, Tag, User
 
 
 @pytest.fixture(autouse=True)

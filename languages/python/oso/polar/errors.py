@@ -1,7 +1,24 @@
 import json
 
-from _polar_lib import ffi, lib
-from .exceptions import *
+from polar.exceptions import (
+    ExtraToken,
+    IntegerOverflow,
+    InvalidToken,
+    UnrecognizedToken,
+    SerializationError,
+    PolarTypeError,
+    StackOverflowError,
+    FileLoadingError,
+    PolarRuntimeError,
+    UnknownError,
+    OperationalError,
+    InvalidTokenCharacter,
+    UnrecognizedEOF,
+    ParserError,
+    UnsupportedError,
+    ParameterError,
+    PolarApiError,
+)
 
 
 def get_python_error(err_str):

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import inf, isnan, nan
 from pathlib import Path
 
@@ -7,15 +7,13 @@ from polar import (
     exceptions,
     Polar,
     Predicate,
-    Query,
     Variable,
     Partial,
     Expression,
     Pattern,
 )
 from polar.partial import TypeConstraint
-from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
-from polar.exceptions import ParserError, PolarRuntimeError, InvalidCallError
+from polar.exceptions import InvalidCallError
 
 import pytest
 
@@ -49,19 +47,21 @@ def test_data_conversions(polar, qvar, query):
 def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
     # Loading the same file twice doesn't mess stuff up.
-    polar.load_file(Path(__file__).parent / "test_file.polar")
+    filename = Path(__file__).parent / "test_file.polar"
+    polar.load_file(filename)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
-        polar.load_file(Path(__file__).parent / "test_file.polar")
+        polar.load_file(filename)
     assert (
         str(e.value)
-        == f"Problem loading file: File {Path(__file__).parent}/test_file.polar has already been loaded."
+        == f"Problem loading file: File {filename} has already been loaded."
     )
+
+    renamed = Path(__file__).parent / "test_file_renamed.polar"
     with pytest.raises(exceptions.PolarRuntimeError) as e:
-        polar.load_file(Path(__file__).parent / "test_file_renamed.polar")
-    assert (
-        str(e.value)
-        == f"Problem loading file: A file with the same contents as {Path(__file__).parent}/test_file_renamed.polar named {Path(__file__).parent}/test_file.polar has already been loaded."
-    )
+        polar.load_file(renamed)
+
+    expected = f"Problem loading file: A file with the same contents as {renamed} named {filename} has already been loaded."
+    assert str(e.value) == expected
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
@@ -850,7 +850,7 @@ def test_iterators(polar, qeval, qvar):
         pass
 
     polar.register_class(Foo)
-    with pytest.raises(exceptions.InvalidIteratorError) as e:
+    with pytest.raises(exceptions.InvalidIteratorError):
         qeval("x in new Foo()")
 
     class Bar(list):

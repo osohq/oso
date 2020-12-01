@@ -1,7 +1,7 @@
 from flask import g, current_app, request, Request
 from werkzeug.exceptions import Forbidden
 
-from oso import OsoError, Oso
+from oso import OsoError
 
 from .context import _app_context
 
@@ -55,7 +55,7 @@ class FlaskOso:
 
         # TODO config parameters
 
-    ## Initialization
+    # Initialization
 
     def set_oso(self, oso):
         """Set the oso instance to use for authorization
@@ -96,7 +96,7 @@ class FlaskOso:
         """
         self._unauthorized_action = func
 
-    ## Middleware-like functions that affect every request.
+    # Middleware-like functions that affect every request.
 
     def require_authorization(self, app=None):
         """Enforce authorization on every request to ``app``.
@@ -132,7 +132,7 @@ class FlaskOso:
 
         app.before_request(self._perform_route_authorization)
 
-    ## During request decorator or functions.
+    # During request decorator or functions.
 
     def skip_authorization(self, reason=None):
         """Opt-out of authorization for the current request.
@@ -199,7 +199,7 @@ class FlaskOso:
     def current_actor(self):
         return self._get_actor()
 
-    ## Before / after
+    # Before / after
     def _provide_oso(self):
         top = _app_context()
         if not hasattr(top, "oso_flask_oso"):
