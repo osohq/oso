@@ -115,7 +115,7 @@ jobs:
         working-directory: "oso-js-node-${{ github.event.inputs.version }}"
   rust:
     name: Publish Rust crates to Crates.io
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
