@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Callable, List
+from typing import Any, Callable, Tuple
 
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
@@ -7,7 +7,7 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import RelationshipProperty, ColumnProperty
 from sqlalchemy.sql.expression import ClauseElement, BinaryExpression, and_
 
-from polar.partial import Partial
+from polar.partial import Partial, dot_path
 from polar.expression import Expression
 from polar.variable import Variable
 from polar.exceptions import UnsupportedError
@@ -54,9 +54,9 @@ def translate_compare(expression: Expression, session: Session, model):
     left = expression.args[0]
     right = expression.args[1]
 
-    left_path = dot_op_path(left)
+    left_path = dot_path(left)
     if left_path:
-        path = dot_op_path(left)
+        path = left_path
         value = right
     else:
         assert left == Variable("_this")
@@ -91,7 +91,7 @@ def translate_in(expression, session, model):
 
     # Partial In: LHS is an expression
     if isinstance(left, Expression):
-        path = dot_op_path(right)
+        path = dot_path(right)
         assert path
 
         return translate_dot_op(
@@ -100,7 +100,7 @@ def translate_in(expression, session, model):
     else:
         # Contains: LHS is not an expression.
         # TODO (dhatch) Missing check, left type must match type of the target?
-        path = dot_op_path(right)
+        path = dot_path(right)
         assert path
         path, field_name = path[:-1], path[-1]
         return translate_dot_op(
@@ -108,7 +108,7 @@ def translate_in(expression, session, model):
         )
 
 
-def translate_dot_op(path: List[str], session: Session, model, func: EmitFunction):
+def translate_dot_op(path: Tuple[str], session: Session, model, func: EmitFunction):
     if len(path) == 0:
         return func(session, model)
     else:
@@ -150,28 +150,3 @@ def emit_contains(field_name, value, session, model):
     assert is_multi_valued
 
     return property.contains(value)
-
-
-# TODO (dhatch): Move this helper into base.
-def dot_op_path(expr):
-    """Get the path components of a lookup.
-
-    The path is returned as a list.
-
-    _this.created_by => ['created_by']
-    _this.created_by.username => ['created_by', 'username']
-
-    None is returned if input is not a dot operation.
-    """
-    if not isinstance(expr, Expression):
-        return None
-
-    if not expr.operator == "Dot":
-        return None
-
-    assert len(expr.args) == 2
-
-    if expr.args[0] == Variable("_this"):
-        return [expr.args[1]]
-
-    return dot_op_path(expr.args[0]) + [expr.args[1]]
