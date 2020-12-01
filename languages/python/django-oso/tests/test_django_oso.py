@@ -130,7 +130,7 @@ def test_route_authorization(client, settings, simple_policy):
 
 
 @pytest.mark.django_db
-def test_partial(rf, settings, partial_policy):
+def test_partial(rf, partial_policy):
     from test_app.models import Post
 
     posts = [
@@ -198,7 +198,7 @@ def test_partial_disjunctive_matches():
 
 
 @pytest.mark.django_db
-def test_partial_errors(rf, settings):
+def test_partial_errors(rf):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
@@ -213,3 +213,22 @@ def test_partial_errors(rf, settings):
     # No rules for this.
     q = Post.objects.authorize(request, action="get")
     assert q.count() == 0
+
+
+@pytest.mark.django_db
+def test_null_with_partial(rf):
+    from test_app.models import Post
+
+    Post(name="test", is_private=False, timestamp=1).save()
+    Oso.load_str("allow(_, _, post: test_app::Post) if post.option = nil;")
+    request = rf.get("/")
+    request.user = "test_user"
+
+    authorize_filter = authorize_model(request, Post)
+    assert str(authorize_filter) == "(AND: ('option', None))"
+    authorized_posts = Post.objects.filter(authorize_filter)
+    assert (
+        str(authorized_posts.query)
+        == 'SELECT "test_app_post"."id", "test_app_post"."is_private", "test_app_post"."name", "test_app_post"."timestamp", "test_app_post"."option", "test_app_post"."created_by_id" FROM "test_app_post" WHERE "test_app_post"."option" IS NULL'
+    )
+    assert authorized_posts.count() == 1
