@@ -47,6 +47,9 @@ jobs:
         run: pip install black
       - name: Check Python formatting
         run: black --check languages/python
+      - name: Lint Python code
+        working-directory: "languages/python"
+        run: make lint
 
       ## Check Ruby
       - name: Install Ruby + gems

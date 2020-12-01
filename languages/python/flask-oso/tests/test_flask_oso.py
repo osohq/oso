@@ -207,8 +207,6 @@ def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
 
 def test_no_oso_error(flask_app, oso):
     """Test that using authorize without init app throws an error."""
-    flask_oso = FlaskOso(oso=oso)
-
     with pytest.raises(OsoError, match="Application context"):
 
         @authorize(resource="test")
