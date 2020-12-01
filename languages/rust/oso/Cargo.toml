@@ -54,4 +54,3 @@ static_assertions = "1.1.0"
 default = ["derive"]
 cli = ["rustyline", "rustyline-derive", "anyhow"]
 derive = ["oso-derive"]
-diesel = ["uuid_v06"]
