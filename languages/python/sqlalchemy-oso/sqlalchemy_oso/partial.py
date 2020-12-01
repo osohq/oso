@@ -74,7 +74,7 @@ def translate_compare(expression: Expression, session: Session, model):
         return pk_filter
 
     path, field_name = path[:-1], path[-1]
-    return translate_dot_op(
+    return translate_dot(
         path, session, model, functools.partial(emit_compare, field_name, value)
     )
 
@@ -94,7 +94,7 @@ def translate_in(expression, session, model):
         path = dot_path(right)
         assert path
 
-        return translate_dot_op(
+        return translate_dot(
             path, session, model, functools.partial(emit_subexpression, left)
         )
     else:
@@ -103,20 +103,20 @@ def translate_in(expression, session, model):
         path = dot_path(right)
         assert path
         path, field_name = path[:-1], path[-1]
-        return translate_dot_op(
+        return translate_dot(
             path, session, model, functools.partial(emit_contains, field_name, left)
         )
 
 
-def translate_dot_op(path: Tuple[str], session: Session, model, func: EmitFunction):
+def translate_dot(path: Tuple[str], session: Session, model, func: EmitFunction):
     if len(path) == 0:
         return func(session, model)
     else:
         property, model, is_multi_valued = get_relationship(model, path[0])
         if not is_multi_valued:
-            return property.has(translate_dot_op(path[1:], session, model, func))
+            return property.has(translate_dot(path[1:], session, model, func))
         else:
-            return property.any(translate_dot_op(path[1:], session, model, func))
+            return property.any(translate_dot(path[1:], session, model, func))
 
 
 def get_relationship(model, field_name: str):
