@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606845476071,
+  "lastUpdate": 1606864927798,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -15333,6 +15333,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 6182,
             "range": "± 77",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "093550c8368c450bbf860649819748ec1127be06",
+          "message": "Add null partial tests for Django + SQLAlchemy adapters (#565)\n\nCo-authored-by: Alex Plotnick <alex@osohq.com>",
+          "timestamp": "2020-12-01T18:15:14-05:00",
+          "tree_id": "b09471fad6139b6f5cf5fc7272ab6c9bbb25ae0a",
+          "url": "https://github.com/osohq/oso/commit/093550c8368c450bbf860649819748ec1127be06"
+        },
+        "date": 1606864926168,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 40834,
+            "range": "± 3496",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1590353,
+            "range": "± 100875",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 7595012,
+            "range": "± 393940",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 14984319,
+            "range": "± 903779",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 736,
+            "range": "± 70",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2134,
+            "range": "± 185",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 58965,
+            "range": "± 4586",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 456448,
+            "range": "± 46908",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15884,
+            "range": "± 2647",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 16209,
+            "range": "± 1579",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 16218,
+            "range": "± 1437",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 16004,
+            "range": "± 1832",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14429,
+            "range": "± 1234",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5500,
+            "range": "± 2373",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6529,
+            "range": "± 1820",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 7994,
+            "range": "± 833",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 13025,
+            "range": "± 3939",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5242,
+            "range": "± 461",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 10334,
+            "range": "± 914",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 6654,
+            "range": "± 649",
             "unit": "ns/iter"
           }
         ]
