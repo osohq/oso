@@ -10,7 +10,7 @@ from sqlalchemy_oso.hooks import (
     authorized_sessionmaker,
 )
 
-from .models import *
+from .models import User, Post
 from .conftest import print_query
 
 
