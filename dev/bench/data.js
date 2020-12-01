@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606796177555,
+  "lastUpdate": 1606805217408,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14991,6 +14991,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52289,
             "range": "± 7258",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "johnhalbert@gmail.com",
+            "name": "John Halbert",
+            "username": "johnhalbert"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d5b3020021dd0313636b8e171c2835237bcd954",
+          "message": "Add PolarClass implementation for uuid::Uuid (#554)\n\nCo-authored-by: Sam Scott <sam.scott89@gmail.com>\r\nCo-authored-by: Gabe Jackson <gj@mail.co.de>",
+          "timestamp": "2020-12-01T01:43:02-05:00",
+          "tree_id": "7f9c9e3c5490eb63b798f1bdc3e28014ce6c8d76",
+          "url": "https://github.com/osohq/oso/commit/2d5b3020021dd0313636b8e171c2835237bcd954"
+        },
+        "date": 1606805215495,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 43667,
+            "range": "± 2426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 47448,
+            "range": "± 3500",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 48454,
+            "range": "± 3775",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 49142,
+            "range": "± 2866",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 47542,
+            "range": "± 3931",
             "unit": "ns/iter"
           }
         ]
