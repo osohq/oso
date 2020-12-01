@@ -43,8 +43,8 @@ pub fn rust_get_attribute(c: &mut Criterion) {
 pub fn n_plus_one_queries(c: &mut Criterion) {
     let policy = "
         has_grandchild_called(grandparent: Person, name) if
-            child in grandparent.children and
-            grandchild in child.childern and
+            child in grandparent.children() and
+            grandchild in child.children() and
             grandchild.name = name;
     ";
 
@@ -60,7 +60,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
         }
     }
 
-    let n_array = [100, 500, 1000, 10_000];
+    let n_array = [100, 500, 1000];
 
     let mut group = c.benchmark_group("n_plus_one");
     for &n in &n_array {
@@ -88,7 +88,7 @@ pub fn n_plus_one_queries(c: &mut Criterion) {
                     oso.query("has_grandchild_called(new Person(), \"cora\")")
                         .unwrap()
                 },
-                |query| assert!(query.next_result().is_some()),
+                |query| assert!(query.next_result().unwrap().is_ok()),
                 criterion::BatchSize::SmallInput,
             )
         });

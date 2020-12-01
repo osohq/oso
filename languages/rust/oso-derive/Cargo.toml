@@ -12,6 +12,7 @@ edition = "2018"
 
 [lib]
 proc-macro = true
+bench = false
 
 [dependencies]
 quote = "1.0.7"
