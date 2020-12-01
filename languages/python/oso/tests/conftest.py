@@ -1,5 +1,6 @@
 """Set of test helpers to match test helpers from Python Polar."""
 import pytest
+from typing import Dict
 
 from polar import Polar
 
@@ -9,6 +10,9 @@ from polar import Polar
 def db():
     """ Set up the polar database """
     raise NotImplementedError()
+
+
+TEST_CLASSES: Dict[str, type] = {}
 
 
 @pytest.fixture

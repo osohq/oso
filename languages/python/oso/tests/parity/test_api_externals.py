@@ -6,6 +6,7 @@ from polar import polar_class
 from typing import List, Optional
 
 
+@polar_class
 class Http:
     """A resource accessed via HTTP."""
 
@@ -25,7 +26,7 @@ class Http:
         field_str = ", ".join(x for x in [host_str, path_str, query_str] if x)
         return f"Http({field_str})"
 
-
+@polar_class
 class PathMapper:
     """Map from a template string with capture groups of the form
     ``{name}`` to a dictionary of the form ``{name: captured_value}``

@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from oso import Oso, polar_class
-from polar import Predicate
 
 # Fake global actor name → company ID map.
 # Should be an external database lookup.
@@ -57,9 +56,9 @@ class Company:
 @pytest.fixture
 def test_oso():
     oso = Oso()
-    oso.register_class(Actor)
-    oso.register_class(Widget)
-    oso.register_class(Company)
+    oso.register_class(Actor, name="test_oso::Actor")
+    oso.register_class(Widget, name="test_oso::Widget")
+    oso.register_class(Company, name="test_oso::Company")
     oso.load_file(Path(__file__).parent / "test_oso.polar")
 
     return oso
@@ -70,20 +69,20 @@ def test_sanity(test_oso):
 
 
 def test_decorators(test_oso):
-    actor = Actor(name="president")
-    action = "create"
-    resource = Company(id="1")
-    assert list(test_oso.query(Predicate(name="allow", args=(actor, action, resource))))
+    assert test_oso.is_allowed(FooDecorated(foo=1), "read", BarDecorated(bar=1))
 
 
 @polar_class
-class Foo:
-    foo: int = 0
+class FooDecorated:
+    def __init__(self, foo):
+        self.foo = foo
 
 
 @polar_class
-class Bar(Foo):
-    bar: int = 1
+class BarDecorated(FooDecorated):
+    def __init__(self, bar):
+        super()
+        self.bar = bar
 
 
 def test_is_allowed(test_oso):

@@ -33,8 +33,6 @@ EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
 @pytest.fixture
 def load_policy(polar):
-    polar.register_class(Http)
-    polar.register_class(PathMapper)
     polar.load_file(Path(__file__).parent / "policies" / "test_api.polar")
 
 
