@@ -23,14 +23,16 @@ Link to migration guide
 New features
 ============
 
-Feature 1
----------
+``PolarClass`` implemented for ``uuid`` crate
+---------------------------------------------
 
-- summary
-- of
-- user facing changes
+``PolarClass`` is now implemented for `version 0.6 of the uuid crate
+<https://docs.rs/uuid/0.6/uuid/>`_ behind the optional ``uuid-06`` feature
+flag. Version 0.6 was chosen for compatibility with `Diesel
+<https://crates.io/crates/diesel>`_.
 
-Link to relevant documentation section
+Thanks to `John Halbert <https://github.com/johnhalbert>`_ for the
+contribution!
 
 Other bugs & improvements
 =========================
