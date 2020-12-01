@@ -6,7 +6,7 @@ test: rust-test python-test ruby-test java-test python-flask-test \
 	python-django-test python-sqlalchemy-test wasm-test js-test
 
 rust-test:
-	cargo test --all-targets
+	cargo test --all-targets --all-features
 
 rust-build:
 	cargo build
