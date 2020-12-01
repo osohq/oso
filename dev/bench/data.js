@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606768583925,
+  "lastUpdate": 1606796177555,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -14937,6 +14937,60 @@ window.BENCHMARK_DATA = {
             "name": "n_plus_one/10000",
             "value": 52051,
             "range": "± 6467",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sam@osohq.com",
+            "name": "Sam Scott",
+            "username": "samscott89"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cf1af7570bdcea0ee888a2d2c10eea59c050ebf2",
+          "message": "Set os to ubuntu-latest. (#561)",
+          "timestamp": "2020-11-30T23:12:09-05:00",
+          "tree_id": "94a2ed9e5da61c0d812f923253dfdd6bb38490b2",
+          "url": "https://github.com/osohq/oso/commit/cf1af7570bdcea0ee888a2d2c10eea59c050ebf2"
+        },
+        "date": 1606796172272,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 46893,
+            "range": "± 1827",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 52537,
+            "range": "± 3740",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 52527,
+            "range": "± 3604",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 52339,
+            "range": "± 3566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/10000",
+            "value": 52289,
+            "range": "± 7258",
             "unit": "ns/iter"
           }
         ]
