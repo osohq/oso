@@ -4,6 +4,8 @@ on:
     branches:
       - main
   pull_request:
+    # all branches
+    branches:
     types: [opened, synchronize, reopened]
 
 jobs:
