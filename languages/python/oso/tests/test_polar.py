@@ -13,7 +13,7 @@ from polar import (
     Expression,
     Pattern,
 )
-from polar.partial import TypeConstraint
+from polar.partial import TypeConstraint, dot_path
 from polar.test_helpers import db, polar, tell, load_file, query, qeval, qvar
 from polar.exceptions import ParserError, PolarRuntimeError, InvalidCallError
 
@@ -843,6 +843,17 @@ def test_partial_constraint(polar):
 
     with pytest.raises(StopIteration):
         next(results)
+
+
+def test_dot_path():
+    single = Expression("Dot", [Variable("_this"), "created_by"])
+    assert dot_path(single) == ("created_by",)
+
+    double = Expression("Dot", [single, "username"])
+    assert dot_path(double) == ("created_by", "username")
+
+    triple = Expression("Dot", [double, "first"])
+    assert dot_path(triple) == ("created_by", "username", "first")
 
 
 def test_iterators(polar, qeval, qvar):
