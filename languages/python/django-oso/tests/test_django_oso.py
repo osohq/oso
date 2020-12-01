@@ -1,15 +1,11 @@
 from pathlib import Path
-import sys
 
 import pytest
 
-from django.conf import settings
-from django.test import RequestFactory
 from django.core.exceptions import PermissionDenied
 
 from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
-from polar.errors import UnsupportedError
 
 from oso import OsoError
 
@@ -169,7 +165,7 @@ def test_partial(rf, partial_policy):
 
 @pytest.mark.django_db
 def test_partial_disjunctive_matches():
-    from test_app.models import Post, User, Admin
+    from test_app.models import Post, User
 
     alice = User(name="alice")
     alice.save()

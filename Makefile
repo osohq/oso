@@ -72,6 +72,7 @@ clippy:
 	cargo clippy --all-features --all-targets -- -D warnings
 
 lint: clippy
+	$(MAKE) -C languages/python lint
 	$(MAKE) -C languages/ruby lint typecheck
 	$(MAKE) -C languages/js lint
 	$(MAKE) fmt
