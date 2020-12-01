@@ -45,16 +45,9 @@ def enable_hooks(
     return enable_before_compile(target, oso, user, action)
 
 
-def enable_before_compile(
-    target,
-    oso,
-    user,
-    action
-):
+def enable_before_compile(target, oso, user, action):
     """Enable before compile hook."""
-    auth = functools.partial(
-        authorize_query, oso=oso, user=user, action=action
-    )
+    auth = functools.partial(authorize_query, oso=oso, user=user, action=action)
 
     listen(target, "before_compile", auth, retval=True)
 
@@ -111,26 +104,20 @@ def authorized_sessionmaker(get_oso, get_user, get_action, **kwargs):
     # session's identity map.
     class Sess(AuthorizedSession):
         def __init__(self, **options):
-            options.setdefault('oso', get_oso())
-            options.setdefault('user', get_user())
-            options.setdefault('action', get_action())
+            options.setdefault("oso", get_oso())
+            options.setdefault("user", get_user())
+            options.setdefault("action", get_action())
             super().__init__(**options)
+
     session = type("Session", (Sess,), {})
 
     # We call sessionmaker here because sessionmaker adds a configure
     # method to the returned session and we want to replicate that
     # functionality.
-    return sessionmaker(
-        class_=session,
-        **kwargs
-    )
+    return sessionmaker(class_=session, **kwargs)
 
 
-def scoped_session(get_oso,
-                   get_action,
-                   get_user,
-                   scopefunc=None,
-                   **kwargs):
+def scoped_session(get_oso, get_action, get_user, scopefunc=None, **kwargs):
     """Return a scoped session maker that uses the user and action as part of the scope function.
 
     Uses authorized_sessionmaker as the factory.
@@ -147,13 +134,12 @@ def scoped_session(get_oso,
 
     factory = authorized_sessionmaker(get_oso, get_action, get_user, **kwargs)
 
-    return orm.scoped_session(
-        factory,
-        scopefunc=_scopefunc)
+    return orm.scoped_session(factory, scopefunc=_scopefunc)
 
 
 class AuthorizedSessionBase(object):
     """Session that uses oso authorization for queries."""
+
     def __init__(self, oso: Oso, user, action, **options):
         """Create an authorized session using ``oso``.
 
@@ -169,10 +155,13 @@ class AuthorizedSessionBase(object):
         self._oso_user = user
         self._oso_action = action
 
-        query_cls = make_authorized_query_cls(oso, user, action,
-                                              options.pop('query_cls', None))
-        options['query_cls'] = query_cls
+        query_cls = make_authorized_query_cls(
+            oso, user, action, options.pop("query_cls", None)
+        )
+        options["query_cls"] = query_cls
 
         super().__init__(**options)
 
-class AuthorizedSession(AuthorizedSessionBase, Session): pass
+
+class AuthorizedSession(AuthorizedSessionBase, Session):
+    pass

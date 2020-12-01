@@ -9,7 +9,7 @@ from sqlalchemy_oso.hooks import (
     make_authorized_query_cls,
     authorized_sessionmaker,
     scoped_session,
-    AuthorizedSession
+    AuthorizedSession,
 )
 
 from .models import User, Post
@@ -113,13 +113,12 @@ def test_authorize_query_multiple_types(session, oso, fixture_data):
     # Could this leak data somehow? Maybe if users are allowed to filter arbitrary
     # values and see a count, but not retrieve the objects?
     query = session.query(Post).join(User).filter(User.username == "admin_user")
-    authorized = authorize_query(
-        query, oso, "all_posts", "read"
-    )
+    authorized = authorize_query(query, oso, "all_posts", "read")
     print_query(authorized)
     assert authorized.count() == 2
 
     # TODO (dhatch): What happens for aggregations?
+
 
 @pytest.mark.xfail(reason="Subqueries are an escape hatch with authorize_query API.")
 def test_authorize_query_subquery(session, oso, fixture_data):
@@ -138,7 +137,9 @@ def test_authorize_query_subquery(session, oso, fixture_data):
 def test_hooks_alias(session, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
 
-    class LocalQueryClass(Query): pass
+    class LocalQueryClass(Query):
+        pass
+
     session.configure(query_cls=LocalQueryClass)
 
     try:
@@ -161,9 +162,7 @@ def test_make_authorize_query_cls_relationship(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", user: User) if user.id = 0;')
 
     Session = sessionmaker(
-        query_cls=make_authorized_query_cls(
-            oso, "user", "read"
-        ),
+        query_cls=make_authorized_query_cls(oso, "user", "read"),
         bind=engine,
         enable_baked_queries=False,
     )
@@ -214,6 +213,7 @@ def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):
     # created_by isn't actually none, but we can't see it
     assert post_7.created_by is None
 
+
 def test_authorized_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
     # Post with creator id = 1
@@ -241,6 +241,7 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
     # created_by isn't actually none, but we can't see it
     assert post_7.created_by is None
 
+
 def test_scoped_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
     # Post with creator id = 1
@@ -249,8 +250,8 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     oso.load_str('allow("other", "read", post: Post) if post.id = 3;')
     oso.load_str('allow("other", "write", post: Post) if post.id = 4;')
 
-    data = {'user': "user", 'action': "read"}
-    session = scoped_session(lambda: oso, lambda: data['user'], lambda: data['action'])
+    data = {"user": "user", "action": "read"}
+    session = scoped_session(lambda: oso, lambda: data["user"], lambda: data["action"])
     session.configure(bind=engine)
 
     posts = session.query(Post)
@@ -268,7 +269,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert post_7.created_by is None
     assert len(session.identity_map.values()) == 3
 
-    data['user'] = 'other'
+    data["user"] = "other"
 
     # Ensure this changed the session.
     assert len(session.identity_map.values()) == 0
@@ -278,7 +279,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert posts[0].id == 3
     assert len(session.identity_map.values()) == 1
 
-    data['action'] = 'write'
+    data["action"] = "write"
     assert len(session.identity_map.values()) == 0
     posts = session.query(Post)
     assert posts.count() == 1
@@ -287,7 +288,7 @@ def test_scoped_session_relationship(engine, oso, fixture_data):
     assert len(session.identity_map.values()) == 1
 
     # Change back to original.
-    data = {'user': "user", 'action': "read"}
+    data = {"user": "user", "action": "read"}
     assert len(session.identity_map.values()) == 3
 
 
