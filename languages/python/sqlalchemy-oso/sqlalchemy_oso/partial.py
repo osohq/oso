@@ -7,7 +7,7 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import RelationshipProperty, ColumnProperty
 from sqlalchemy.sql.expression import ClauseElement, BinaryExpression, and_
 
-from polar.partial import Partial, dot_path
+from polar.partial import dot_path
 from polar.expression import Expression
 from polar.variable import Variable
 from polar.exceptions import UnsupportedError
