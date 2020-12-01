@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1606833940339,
+  "lastUpdate": 1606845476071,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -15189,6 +15189,150 @@ window.BENCHMARK_DATA = {
             "name": "De_Morgan_not",
             "value": 8347,
             "range": "± 402",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gj@mail.co.de",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e17a2878e5eb70318854c13d52c375d3612384fa",
+          "message": "Add comment re: overridden repr() in django-oso (#563)\n\nCo-authored-by: Sam Scott <sam@osohq.com>",
+          "timestamp": "2020-12-01T11:42:50-05:00",
+          "tree_id": "ec4a89cb26cb6bdbc2ae5b371bf6bd6eb12025ed",
+          "url": "https://github.com/osohq/oso/commit/e17a2878e5eb70318854c13d52c375d3612384fa"
+        },
+        "date": 1606845474272,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 39695,
+            "range": "± 1758",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 1692625,
+            "range": "± 21580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 7728921,
+            "range": "± 13506",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 15197793,
+            "range": "± 117403",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 789,
+            "range": "± 42",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2292,
+            "range": "± 78",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 58288,
+            "range": "± 1014",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 457851,
+            "range": "± 6176",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 15724,
+            "range": "± 472",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 15746,
+            "range": "± 477",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 15744,
+            "range": "± 468",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 15759,
+            "range": "± 490",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 14058,
+            "range": "± 594",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5224,
+            "range": "± 476",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6211,
+            "range": "± 1489",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 7694,
+            "range": "± 191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 13250,
+            "range": "± 1628",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 5003,
+            "range": "± 79",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 9824,
+            "range": "± 150",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 6182,
+            "range": "± 77",
             "unit": "ns/iter"
           }
         ]
