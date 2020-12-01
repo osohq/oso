@@ -116,26 +116,3 @@ def in_expr(expr: Expression, model: Model, path=(), **kwargs):
         return translate_expr(left, model, path=right_path, **kwargs)
     else:
         return COMPARISONS["Unify"](q, "__".join(right_path), left)
-
-
-# TODO (dhatch): Move this helper into base.
-def dot_op_path(expr):
-    """Get the path components of a lookup.
-
-    The path is returned as a tuple.
-
-    _this.created_by => ('created_by',)
-    _this.created_by.username => ('created_by', 'username')
-
-    Empty tuple is returned if input is not a dot operation.
-    """
-
-    if not (isinstance(expr, Expression) and expr.operator == "Dot"):
-        return ()
-
-    assert len(expr.args) == 2
-
-    if expr.args[0] == Variable("_this"):
-        return (expr.args[1],)
-
-    return dot_op_path(expr.args[0]) + (expr.args[1],)
