@@ -130,7 +130,7 @@ def test_route_authorization(client, settings, simple_policy):
 
 
 @pytest.mark.django_db
-def test_partial(rf, settings, partial_policy):
+def test_partial(rf, partial_policy):
     from test_app.models import Post
 
     posts = [
@@ -198,7 +198,7 @@ def test_partial_disjunctive_matches():
 
 
 @pytest.mark.django_db
-def test_partial_errors(rf, settings):
+def test_partial_errors(rf):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
