@@ -3,9 +3,10 @@ from pathlib import Path
 import pytest
 
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from oso import Oso
-from sqlalchemy_oso.hooks import authorized_sessionmaker
+from sqlalchemy_oso.session import scoped_session
 from sqlalchemy_oso.auth import register_models
 
 from .models import Post, User, Model
@@ -27,12 +28,12 @@ def authorization_data():
 
 @pytest.fixture
 def session(engine, oso, authorization_data):
-    return authorized_sessionmaker(
+    return scoped_session(
         bind=engine,
         get_oso=lambda: oso,
         get_user=lambda: authorization_data['user'],
         get_action=lambda: authorization_data['action']
-    )()
+    )
 
 @pytest.fixture
 def oso():
@@ -44,7 +45,9 @@ def policy(oso):
     oso.load_file(POLICY_FILE)
 
 @pytest.fixture
-def test_data(session):
+def test_data(engine):
+    session = Session(bind=engine, expire_on_commit=False)
+
     user = User(username='user')
     manager = User(username='manager', manages=[user])
 
@@ -74,21 +77,21 @@ def test_basic(oso, policy, session, test_data, authorization_data):
     posts = session.query(Post)
 
     assert posts.count() == 3
-    posts = posts.all()
-    assert test_data['public_user_post'] in posts
-    assert test_data['private_user_post'] in posts
-    assert test_data['public_manager_post'] in posts
+    posts = [p.id for p in posts.all()]
+    assert test_data['public_user_post'].id in posts
+    assert test_data['private_user_post'].id in posts
+    assert test_data['public_manager_post'].id in posts
 
 def test_manages(oso, policy, session, test_data, authorization_data):
     authorization_data['user'] = test_data['manager']
     posts = session.query(Post)
 
     assert posts.count() == 4
-    posts = posts.all()
-    assert test_data['public_user_post'] in posts
-    assert test_data['private_user_post'] in posts
-    assert test_data['public_manager_post'] in posts
-    assert test_data['private_manager_post'] in posts
+    posts = [p.id for p in posts.all()]
+    assert test_data['public_user_post'].id in posts
+    assert test_data['private_user_post'].id in posts
+    assert test_data['public_manager_post'].id in posts
+    assert test_data['private_manager_post'].id in posts
 
 def test_user_access(oso, policy, session, test_data, authorization_data):
     authorization_data['user'] = test_data['user']
